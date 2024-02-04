@@ -49,7 +49,6 @@ use mime::Mime;
 use serde::Deserialize;
 use serde::Serialize;
 use time_ext::DurationExt;
-use tunables::tunables;
 
 use crate::context::ServerContext;
 use crate::middleware::request_dumper::RequestDumper;
@@ -80,6 +79,8 @@ pub(crate) use handler::HandlerResult;
 pub(crate) use handler::PathExtractorWithRepo;
 
 use self::handler::EdenApiContext;
+
+const REPORTING_LOOP_WAIT: u64 = 5;
 
 /// Enum identifying the EdenAPI method that each handler corresponds to.
 /// Used to identify the handler for logging and stats collection.
@@ -243,9 +244,9 @@ fn proxygen_health_handler(state: State) -> (State, &'static str) {
         (state, EXITING)
     } else {
         if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
-            let threshold = tunables::tunables()
-                .edenapi_high_load_threshold()
-                .unwrap_or_default();
+            let threshold =
+                justknobs::get_as::<i64>("scm/mononoke:edenapi_high_load_threshold", None)
+                    .unwrap_or_default();
             if threshold > 0 && request_load.0 > threshold {
                 return (state, HIGH_LOAD_SIGNAL);
             }
@@ -343,16 +344,7 @@ where
 
     let reporting_loop = async move {
         loop {
-            let interval = match tunables()
-                .edenapi_request_monitor_interval()
-                .unwrap_or_default()
-                .try_into()
-            {
-                Ok(interval) if interval > 0 => interval,
-                _ => break,
-            };
-
-            tokio::time::sleep(Duration::from_secs(interval)).await;
+            tokio::time::sleep(Duration::from_secs(REPORTING_LOOP_WAIT)).await;
             let mut scuba = base_scuba.clone();
             ctx.perf_counters().insert_perf_counters(&mut scuba);
             scuba.log_with_msg(

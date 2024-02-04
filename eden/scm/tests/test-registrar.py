@@ -7,8 +7,8 @@ from __future__ import absolute_import
 
 import unittest
 
-import edenscm.error as error
-import edenscm.registrar as registrar
+import sapling.error as error
+import sapling.registrar as registrar
 import silenttestrunner
 
 command = registrar.command(dict())

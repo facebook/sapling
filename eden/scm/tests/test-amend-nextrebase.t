@@ -420,7 +420,8 @@ Test a situation where there is a conflict.
 In this mid-rebase state, we can't use `hg previous` or `hg next`:
   $ hg previous
   abort: rebase in progress
-  (use 'hg rebase --continue' or 'hg rebase --abort')
+  (use 'hg rebase --continue' to continue or
+       'hg rebase --abort' to abort)
   [255]
 Now resolve the conflict and resume the rebase.
   $ rm c

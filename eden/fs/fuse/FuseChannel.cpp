@@ -10,12 +10,11 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include <boost/cast.hpp>
 #include <fmt/core.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
-#include <signal.h>
 #include <chrono>
+#include <csignal>
 #include <type_traits>
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/fuse/FuseDirList.h"
@@ -783,10 +782,11 @@ FuseChannel::FuseChannel(
     PrivHelper* privHelper,
     folly::File fuseDevice,
     AbsolutePathPiece mountPath,
+    std::shared_ptr<folly::Executor> threadPool,
     size_t numThreads,
     std::unique_ptr<FuseDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
@@ -797,6 +797,7 @@ FuseChannel::FuseChannel(
     size_t fuseTraceBusCapacity)
     : privHelper_{privHelper},
       bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
+      threadPool_{std::move(threadPool)},
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
@@ -808,7 +809,7 @@ FuseChannel::FuseChannel(
       maximumBackgroundRequests_{maximumBackgroundRequests},
       useWriteBackCache_{useWriteBackCache},
       fuseDevice_(std::move(fuseDevice)),
-      processAccessLog_(std::move(processNameCache)),
+      processAccessLog_(std::move(processInfoCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(TraceBus<FuseTraceEvent>::create(
           "FuseTrace" + mountPath.asString(),
@@ -1174,7 +1175,7 @@ TraceDetailedArgumentsHandle FuseChannel::traceDetailedArguments() const {
       });
   traceDetailedArguments_->fetch_add(1, std::memory_order_acq_rel);
   return handle;
-};
+}
 
 void FuseChannel::requestSessionExit(StopReason reason) {
   requestSessionExit(state_.wlock(), reason);
@@ -1785,10 +1786,17 @@ void FuseChannel::processSession() {
                         dispatcher_->getStats().copy(),
                         handlerEntry->stat,
                         *(liveRequestWatches_.get()));
-                    return (this->*handlerEntry->handler)(
-                               *request, request->getReq(), arg)
-                        .semi()
-                        .via(&folly::QueuedImmediateExecutor::instance());
+                    auto fut = (this->*handlerEntry->handler)(
+                        *request, request->getReq(), arg);
+                    if (fut.isReady()) {
+                      // In the case where the handler executed immediately,
+                      // let's avoid an expensive context switch by simply
+                      // extracting the value from the future.
+                      return folly::makeFuture<folly::Unit>(
+                          std::move(fut).get());
+                    } else {
+                      return std::move(fut).semi().via(threadPool_.get());
+                    }
                   }).ensure([request] {
                     }).within(requestTimeout_),
                   notifier_.get())

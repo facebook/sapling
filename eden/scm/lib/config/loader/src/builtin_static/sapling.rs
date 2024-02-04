@@ -22,6 +22,10 @@ restack:doc=automatically restack commits
  "    the stack linear again."
 sl=smartlog -T '{sl}'
 ssl=smartlog -T '{ssl}'
+top=next --top
+top:doc=check out the top commit in the current stack
+bottom=prev --bottom
+bottom:doc=check out the bottom commit in the current stack
 
 [annotate]
 default-flags=user short-date
@@ -38,6 +42,11 @@ track=command, command_alias, command_finish, command_exception,
  profile, hgsql, sqllock, pushrebase, status, metrics, visibility, perftrace
 
 [color]
+alerts.critical=bold purple_background
+alerts.high=bold red_background
+alerts.medium=bold black yellow_background
+alerts.low=bold blue_background
+alerts.advice=bold black_background
 log.changeset=bold blue
 sl.active=yellow
 sl.amended=brightblack:none
@@ -101,7 +110,6 @@ bundle2-exp=True
 changegroup3=True
 copytrace=off
 crecord=True
-disallowhgignorefileset=True
 evolution=obsolete
 fsmonitor.transaction_notify=True
 graphstyle.grandparent=|
@@ -111,7 +119,6 @@ narrow-heads=True
 new-clone-path=True
 rebase.multidest=True
 samplestatus=3
-updatecheck=noconflict
 verifyhiddencache=False
 worddiff=True
 mmapindexthreshold=1
@@ -120,6 +127,7 @@ graph.renderer=lines
 nativecheckout=True
 numworkerswriter=2
 network-doctor=True
+windows-symlinks=True
 
 [extensions]
 absorb=
@@ -152,7 +160,6 @@ myparent=
 obsshelve=
 patchrmdir=!
 progressfile=
-pullcreatemarkers=
 pushrebase=!
 rage=!
 rebase=
@@ -170,7 +177,7 @@ tweakdefaults=
 undo=
 
 [extorder]
-fsmonitor=sqldirstate, sparse
+fsmonitor=sparse
 journal=eden
 
 [format]
@@ -188,7 +195,6 @@ use-symlink-atomic-write=False
 mode=on
 timeout=600
 track-ignore-files=False
-walk_on_invalidate=False
 warn-fresh-instance=True
 # TODO: T130638905 Update this
 sockpath=/opt/facebook/watchman/var/run/watchman/%i-state/sock
@@ -223,14 +229,9 @@ publish=False
 
 [remotefilelog]
 cachelimit=20GB
-cleanoldpacks=True
-fastdatapack=True
-historypackv1=True
-localdatarepack=True
 useruststore=True
 manifestlimit=4GB
 http=True
-userustrepack=True
 cachepath=~/.sl_cache
 retryprefetch=True
 fetchpacks=True
@@ -355,7 +356,8 @@ phab_sl_difflabel="{case(phabstatus,
  'Needs Final Review', 'ssl.finalreview',
  'sl.diff'
  )}"
-sl_date="{label('sl.date', '{smartdate(date, sl_date_threshold, age(date), simpledate(date, sl_date_timezone))}')}"
+sl_date = "{label('sl.date', '{smartdate(sl_date_timestamp, sl_date_threshold, age(sl_date_timestamp), simpledate(sl_date_timestamp, sl_date_timezone))}')}"
+sl_date_timestamp = date
 sl_date_threshold=5400
 sl_diff="{label('sl.diff', sl_difflink)}"
 sl_task="{label('sl.tasks', 'T{task}')}"
@@ -387,10 +389,13 @@ sl_header_debug="{separate('  ', sl_userdefined_prefix, sl_node_info_debug, sl_d
 sl_header_short="{separate('  ', sl_userdefined_prefix, sl_node_info, sl_date, sl_books, sl_stablecommit, sl_userdefined_suffix)}"
 sl_desc="{label(sl_desclabel, truncatelonglines(desc|firstline, termwidth - graphwidth - 2, ellipsis))}"
 ellipsis='…'
+sl_file_change_summary='{ifeq(sl_show_file_change_summary,"true",ifeq(phase, "draft", "{label(\"status.modified\", pathsummary(file_mods) % \" M {path}\n\")}{label(\"status.added\", pathsummary(file_adds, 3) % \" A {path}\n\")}{label(\"status.removed\", pathsummary(file_dels, 3) % \" R {path}\n\")}\n"))}'
+sl_show_file_change_summary='false'
+sl_extra="{sl_file_change_summary}"
 sl_use_short_header="{ifeq(verbosity, 'verbose', '', ifeq(graphnode, '@', '', ifeq(phase, 'public', ifeq('{username|email}', '{author|email}', '', 'true'))))}"
-sl="{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_normal, sl_desc, '\n')))}"
-ssl="{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_super, sl_desc, '\n')))}"
-csl="{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_colors, sl_desc, '\n')))}"
+sl="{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_normal, sl_desc, '\n')))}{sl_extra}"
+ssl="{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_super, sl_desc, '\n')))}{sl_extra}"
+csl="{label(sl_label, if(sl_use_short_header, sl_header_short, separate('\n', sl_header_colors, sl_desc, '\n')))}{sl_extra}"
 sl_debug="{label(sl_label, separate('\n', sl_header_debug, sl_desc, '\n'))}"
 undo_newwp="{if(oldworkingcopyparent(UNDOINDEX), '(working copy will move here)')}"
 undopreview="{separate('\n', separate('  ', undo_node_info, undo_newwp, sl_user, sl_diff, sl_tasks, sl_bookchanges), '{sl_desc}', '\n')}"
@@ -418,6 +423,7 @@ jf_submit_template='\{
  "phase": {phase|json}
  },\n'
 sl_backup="{if(enabled('commitcloud'),sl_backupstatus)}"
+alerts="\n     Ongoing issue\n 🔥  {label(severity_color, ' {severity} ')} {hyperlink(url, title)}\n     {description}\n\n"
 
 [ui]
 style=sl_default
@@ -427,6 +433,7 @@ sb(n)=first(sort(bookmark(), -rev), n)
 sba=sort(bookmark(), -rev)
 top=top()
 bottom=bottom()
+bot=bottom()
 next=next()
 prev=previous
 previous=previous()
@@ -474,7 +481,7 @@ threaded=False
 merge=internal:merge
 
 [progress]
-renderer=rust:simple
+renderer=simple
 
 [verify]
 skipmanifests=True
@@ -517,10 +524,8 @@ filechangesplain={
 filechangesdetailed={ifeq(verbosity,"verbose",diff()|hgprefix,stat("status")|hgprefix)}\n
 
 [copytrace]
-maxmovescandidatestocheck=0
-
-[perftweaks]
-disablecasecheck=True
+dagcopytrace=True
+hint-with-commit=True
 
 [profiling:background]
 enabled=1
@@ -584,7 +589,7 @@ largeworkingcopy=True
 
 [runlog]
 enable=True
-boring-commands=debugrunlog config version debugdynamicconfig
+boring-commands=debugrunlog config version debugrefreshconfig
 
 [deprecate]
 rev-option=true

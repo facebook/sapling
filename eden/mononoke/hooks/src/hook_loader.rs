@@ -7,6 +7,9 @@
 
 //! This sub module contains functions to load hooks for the server
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::HashSet;
 
 use anyhow::Error;
@@ -16,13 +19,13 @@ use permission_checker::AclProvider;
 
 use crate::errors::*;
 #[cfg(fbcode_build)]
-use crate::facebook::rust_hooks::hook_name_to_changeset_hook;
+use crate::facebook::implementations::make_changeset_hook;
 #[cfg(fbcode_build)]
-use crate::facebook::rust_hooks::hook_name_to_file_hook;
+use crate::facebook::implementations::make_file_hook;
 #[cfg(not(fbcode_build))]
-use crate::rust_hooks::hook_name_to_changeset_hook;
+use crate::implementations::make_changeset_hook;
 #[cfg(not(fbcode_build))]
-use crate::rust_hooks::hook_name_to_file_hook;
+use crate::implementations::make_file_hook;
 use crate::ChangesetHook;
 use crate::FileHook;
 use crate::HookManager;
@@ -51,10 +54,9 @@ pub async fn load_hooks(
         }
 
         let rust_hook = {
-            if let Some(hook) = hook_name_to_changeset_hook(
+            if let Some(hook) = make_changeset_hook(
                 fb,
-                &hook.name,
-                &hook.config,
+                &hook,
                 acl_provider,
                 hook_manager.get_reviewers_perm_checker(),
                 hook_manager.repo_name(),
@@ -62,7 +64,7 @@ pub async fn load_hooks(
             .await?
             {
                 ChangesetHook(hook)
-            } else if let Some(hook) = hook_name_to_file_hook(fb, &hook.name, &hook.config)? {
+            } else if let Some(hook) = make_file_hook(fb, &hook)? {
                 FileHook(hook)
             } else {
                 return Err(ErrorKind::InvalidRustHook(hook.name.clone()).into());

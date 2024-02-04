@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "cmdlib_displaying",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:unicode-truncate",
+        "fbsource//third-party/rust:unicode-width",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)

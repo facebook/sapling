@@ -22,7 +22,7 @@ namespace facebook::eden {
 class FsEventLogger;
 class Notifier;
 class NfsDispatcher;
-class ProcessNameCache;
+class ProcessInfoCache;
 class PrivHelper;
 class Rpcbindd;
 class Nfsd3;
@@ -33,9 +33,8 @@ class NfsServer {
    * Create a new NFS server.
    *
    * This will handle the lifetime of the various programs involved in the NFS
-   * protocol including mountd and nfsd. The requests will be serviced by a
-   * blocking thread pool initialized with numServicingThreads and
-   * maxInflightRequests.
+   * protocol including mountd and nfsd. The requests will be serviced by the
+   * passed in threadPool.
    *
    * One mountd program will be created per NfsServer, while one nfsd program
    * will be created per-mount point, this allows nfsd program to be only aware
@@ -44,8 +43,7 @@ class NfsServer {
   NfsServer(
       PrivHelper* privHelper,
       folly::EventBase* evb,
-      uint64_t numServicingThreads,
-      uint64_t maxInflightRequests,
+      std::shared_ptr<folly::Executor> threadPool,
       bool shouldRunOurOwnRpcbindServer,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
 
@@ -79,7 +77,7 @@ class NfsServer {
       InodeNumber rootIno,
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
       const std::shared_ptr<StructuredLogger>& structuredLogger,
       folly::Duration requestTimeout,

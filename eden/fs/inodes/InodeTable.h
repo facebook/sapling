@@ -7,11 +7,13 @@
 
 #pragma once
 
+#include "Overlay.h"
 #ifndef _WIN32
 
 #include <optional>
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/MappedDiskVector.h"
 #include "eden/fs/utils/StaticAssert.h"
@@ -92,10 +94,13 @@ class InodeTable {
    * Create or open an InodeTable at the specified path.
    */
   template <typename... OldRecords>
-  static std::unique_ptr<InodeTable> open(folly::StringPiece path) {
-    return std::unique_ptr<InodeTable>{
-        new InodeTable{MappedDiskVector<Entry>::template open<
-            detail::InodeTableEntry<OldRecords>...>(path, true)}};
+  static std::unique_ptr<InodeTable> open(
+      folly::StringPiece path,
+      EdenStatsPtr stats) {
+    return std::unique_ptr<InodeTable>{new InodeTable{
+        MappedDiskVector<Entry>::template open<
+            detail::InodeTableEntry<OldRecords>...>(path, true),
+        std::move(stats)}};
   }
 
   /**
@@ -159,10 +164,12 @@ class InodeTable {
     auto state = state_.rlock();
     auto iter = state->indices.find(ino);
     if (iter == state->indices.end()) {
+      stats_->increment(&InodeMetadataTableStats::getMiss);
       return std::nullopt;
     } else {
       auto index = iter->second;
       XCHECK_LT(index, state->storage.size());
+      stats_->increment(&InodeMetadataTableStats::getHit);
       return state->storage[index].record;
     }
   }
@@ -238,8 +245,8 @@ class InodeTable {
   }
 
  private:
-  explicit InodeTable(MappedDiskVector<Entry>&& storage)
-      : state_{folly::in_place, std::move(storage)} {}
+  explicit InodeTable(MappedDiskVector<Entry>&& storage, EdenStatsPtr stats)
+      : state_{folly::in_place, std::move(storage)}, stats_{std::move(stats)} {}
 
   /**
    * Helper function that, in the common case that this inode number
@@ -330,6 +337,7 @@ class InodeTable {
   };
 
   folly::Synchronized<State> state_;
+  EdenStatsPtr stats_;
 }; // namespace eden
 
 static_assert(

@@ -30,21 +30,25 @@ export function simulateMessageFromServer(message: ServerToClientMessage): void 
   testMessageBus.simulateMessage(serializeToString(message));
 }
 
+/** Filter out binary messages, and filter by wanted type. */
+function filterMessages(wantedType?: string) {
+  let messages = testMessageBus.sent
+    .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
+    .map(deserializeFromString) as Array<Partial<ClientToServerMessage>>;
+  if (wantedType != null) {
+    messages = messages.filter(msg => msg.type == null || msg.type === wantedType);
+  }
+  return messages;
+}
+
 export function expectMessageSentToServer(
   message: Partial<ClientToServerMessage | ClientToServerMessageWithPayload>,
 ): void {
-  expect(
-    testMessageBus.sent
-      .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
-      .map(deserializeFromString),
-  ).toContainEqual(message);
+  expect(filterMessages(message.type)).toContainEqual(message);
 }
+
 export function expectMessageNOTSentToServer(message: Partial<ClientToServerMessage>): void {
-  expect(
-    testMessageBus.sent
-      .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
-      .map(deserializeFromString),
-  ).not.toContainEqual(message);
+  expect(filterMessages(message.type)).not.toContainEqual(message);
 }
 
 /**
@@ -108,7 +112,27 @@ export function resetTestMessages() {
   testMessageBus.resetTestMessages();
 }
 
+export function commitInfoIsOpen(): boolean {
+  return (
+    screen.queryByTestId('commit-info-view') != null ||
+    screen.queryByTestId('commit-info-view-loading') != null
+  );
+}
+
 export function closeCommitInfoSidebar() {
+  if (!commitInfoIsOpen()) {
+    return;
+  }
+  screen.queryAllByTestId('drawer-label').forEach(el => {
+    const commitInfoTab = within(el).queryByText('Commit Info');
+    commitInfoTab?.click();
+  });
+}
+
+export function openCommitInfoSidebar() {
+  if (commitInfoIsOpen()) {
+    return;
+  }
   screen.queryAllByTestId('drawer-label').forEach(el => {
     const commitInfoTab = within(el).queryByText('Commit Info');
     commitInfoTab?.click();
@@ -272,6 +296,7 @@ export function dragAndDropCommits(draggedCommit: Hash | HTMLElement, onto: Hash
 
   act(() => {
     dragAndDrop(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
+    jest.advanceTimersByTime(2);
   });
 }
 

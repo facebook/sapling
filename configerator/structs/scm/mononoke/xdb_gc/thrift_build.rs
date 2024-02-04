@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("xdb_gc_structs__types");
+        conf.clients_crate("xdb_gc_structs__clients");
+        conf.services_crate("xdb_gc_structs__services");
 
         let options = "serde";
         if !options.is_empty() {

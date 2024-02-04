@@ -76,7 +76,7 @@ TreePtr Tree::tryDeserialize(ObjectId hash, folly::StringPiece data) {
     entries.emplace(entry->first, std::move(entry->second));
   }
 
-  if (data.size() != 0u) {
+  if (!data.empty()) {
     XLOG(ERR) << "Corrupted tree data, extra bytes remaining " << data.size();
     return nullptr;
   }

@@ -31,7 +31,6 @@ use cross_repo_sync::types::Small;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::validation::report_different;
-use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
 use futures::future;
 use futures::future::try_join_all;
@@ -55,7 +54,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::get_movers;
 use movers::Mover;
@@ -73,7 +72,7 @@ use crate::reporting::log_validation_result_to_scuba;
 use crate::tail::QueueSize;
 
 type LargeBookmarkKey = Large<BookmarkKey>;
-type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
+type PathToFileNodeIdMapping = HashMap<NonRootMPath, (FileType, HgFileNodeId)>;
 
 define_stats! {
     prefix = "mononoke.commit_validation";
@@ -113,7 +112,7 @@ impl Debug for EntryCommitId {
     }
 }
 
-/// Enum, representing a change to a single `MPath` in
+/// Enum, representing a change to a single `NonRootMPath` in
 /// a `FullManifestDiff`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum FilenodeDiffPayload {
@@ -125,14 +124,14 @@ enum FilenodeDiffPayload {
 /// A unit of change in a `FullManifestDiff`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct FilenodeDiff {
-    /// An `MPath`, being changed
-    mpath: MPath,
+    /// An `NonRootMPath`, being changed
+    mpath: NonRootMPath,
     /// A change, happening to the `mpath`
     payload: FilenodeDiffPayload,
 }
 
 impl FilenodeDiff {
-    fn new(mpath: MPath, payload: FilenodeDiffPayload) -> Self {
+    fn new(mpath: NonRootMPath, payload: FilenodeDiffPayload) -> Self {
         Self { mpath, payload }
     }
 
@@ -141,23 +140,47 @@ impl FilenodeDiff {
         use Diff::*;
         use Entry::*;
         match diff {
-            // We don't care about repo root diffs!
-            Added(None, _) | Removed(None, _) | Changed(None, _, _) => None,
             // We don't care about tree diffs!
             Added(_, Tree(_)) | Removed(_, Tree(_)) | Changed(_, _, Tree(_)) => None,
-            Added(Some(mpath), Leaf((file_type, hg_filenode_id))) => Some(Self::new(
-                mpath,
-                FilenodeDiffPayload::Added(file_type, hg_filenode_id),
-            )),
-            Removed(Some(mpath), Leaf(_)) => Some(Self::new(mpath, FilenodeDiffPayload::Removed)),
-            Changed(Some(mpath), _, Leaf((file_type, hg_filenode_id))) => Some(Self::new(
-                mpath,
-                FilenodeDiffPayload::ChangedTo(file_type, hg_filenode_id),
-            )),
+            Added(mpath, Leaf((file_type, hg_filenode_id))) => {
+                // We don't care about repo root diffs!
+                if mpath.is_root() {
+                    None
+                } else {
+                    // Safe to unwrap since the path is not root
+                    Some(Self::new(
+                        mpath.try_into().unwrap(),
+                        FilenodeDiffPayload::Added(file_type, hg_filenode_id),
+                    ))
+                }
+            }
+            Removed(mpath, Leaf(_)) => {
+                // We don't care about repo root diffs!
+                if mpath.is_root() {
+                    None
+                } else {
+                    // Safe to unwrap since the path is not root
+                    Some(Self::new(
+                        mpath.try_into().unwrap(),
+                        FilenodeDiffPayload::Removed,
+                    ))
+                }
+            }
+            Changed(mpath, _, Leaf((file_type, hg_filenode_id))) => {
+                // We don't care about repo root diffs!
+                if mpath.is_root() {
+                    None
+                } else {
+                    Some(Self::new(
+                        mpath.try_into().unwrap(), // Safe to unwrap since the path is not root
+                        FilenodeDiffPayload::ChangedTo(file_type, hg_filenode_id),
+                    ))
+                }
+            }
         }
     }
 
-    fn from_added_file(added_file: (MPath, (FileType, HgFileNodeId))) -> Self {
+    fn from_added_file(added_file: (NonRootMPath, (FileType, HgFileNodeId))) -> Self {
         let (mpath, (file_type, hg_filenode_id)) = added_file;
         let payload = FilenodeDiffPayload::Added(file_type, hg_filenode_id);
         Self { mpath, payload }
@@ -170,7 +193,7 @@ impl FilenodeDiff {
         })
     }
 
-    pub fn as_tuple(&self) -> (&MPath, &FilenodeDiffPayload) {
+    pub fn as_tuple(&self) -> (&NonRootMPath, &FilenodeDiffPayload) {
         let Self {
             ref mpath,
             ref payload,
@@ -217,8 +240,6 @@ impl ValidationHelper {
         let large_repo_id = self.large_repo.0.repo_identity().id();
         let small_repo_id = self.small_repo.0.repo_identity().id();
 
-        let commit_sync_data_provider =
-            CommitSyncDataProvider::Live(Arc::new(self.live_commit_sync_config.clone()));
         let maybe_commit_sync_outcome: Option<CommitSyncOutcome> = get_commit_sync_outcome(
             ctx,
             Source(large_repo_id),
@@ -226,7 +247,7 @@ impl ValidationHelper {
             Source(hash.0),
             mapping,
             CommitSyncDirection::LargeToSmall,
-            &commit_sync_data_provider,
+            Arc::new(self.live_commit_sync_config.clone()),
         )
         .await?;
 
@@ -265,7 +286,7 @@ impl ValidationHelper {
     /// B C  ->  B' C'
     ///
     /// -> represents a x-repo sync
-    /// A and B share the same `HgFilenodeId` for some `MPath`, while
+    /// A and B share the same `HgFilenodeId` for some `NonRootMPath`, while
     /// A' and B' have different `HgFilenodeId`s. At the same time, in all
     /// cases the actual `ContentId` and `FileType` is the same!
     async fn is_true_change(
@@ -273,7 +294,7 @@ impl ValidationHelper {
         ctx: &CoreContext,
         repo: &BlobRepo,
         p1_root_mf_id: &HgManifestId,
-        mpath: &MPath,
+        mpath: &NonRootMPath,
         payload: &FilenodeDiffPayload,
     ) -> Result<bool, Error> {
         debug!(
@@ -292,7 +313,7 @@ impl ValidationHelper {
                     .find_entry(
                         ctx.clone(),
                         repo.repo_blobstore().clone(),
-                        Some(mpath.clone()),
+                        mpath.clone().into(),
                     )
                     .await?;
 
@@ -376,8 +397,8 @@ impl ValidationHelper {
         ctx: &CoreContext,
         repo: &BlobRepo,
         cs_id: &ChangesetId,
-        paths_and_payloads: Vec<(MPath, &FilenodeDiffPayload)>,
-    ) -> Result<Vec<MPath>, Error> {
+        paths_and_payloads: Vec<(NonRootMPath, &FilenodeDiffPayload)>,
+    ) -> Result<Vec<NonRootMPath>, Error> {
         let maybe_p1 = repo
             .changeset_fetcher()
             .get_parents(ctx, cs_id.clone())
@@ -422,8 +443,8 @@ impl ValidationHelper {
         &self,
         ctx: &CoreContext,
         large_cs_id: &Large<ChangesetId>,
-        paths_and_payloads: Vec<(Large<MPath>, Large<&FilenodeDiffPayload>)>,
-    ) -> Result<Vec<Large<MPath>>, Error> {
+        paths_and_payloads: Vec<(Large<NonRootMPath>, Large<&FilenodeDiffPayload>)>,
+    ) -> Result<Vec<Large<NonRootMPath>>, Error> {
         let v: Vec<_> = self
             .filter_out_noop_filenode_id_changes(
                 ctx,
@@ -446,8 +467,8 @@ impl ValidationHelper {
         &self,
         ctx: &CoreContext,
         small_cs_id: &Small<ChangesetId>,
-        paths_and_payloads: Vec<(Small<MPath>, Small<&FilenodeDiffPayload>)>,
-    ) -> Result<Vec<Small<MPath>>, Error> {
+        paths_and_payloads: Vec<(Small<NonRootMPath>, Small<&FilenodeDiffPayload>)>,
+    ) -> Result<Vec<Small<NonRootMPath>>, Error> {
         let v: Vec<_> = self
             .filter_out_noop_filenode_id_changes(
                 ctx,
@@ -965,7 +986,7 @@ async fn validate_topological_order<
     small_repo: &'a Small<R>,
     small_cs_id: Small<ChangesetId>,
     mapping: &'a SqlSyncedCommitMapping,
-    commit_sync_data_provider: &'a CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     debug!(
         ctx.logger(),
@@ -982,7 +1003,7 @@ async fn validate_topological_order<
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =
         try_join_all(small_parents.into_iter().map(|small_parent| {
-            cloned!(ctx, commit_sync_data_provider);
+            cloned!(ctx, live_commit_sync_config);
             async move {
                 let maybe_commit_sync_outcome = get_commit_sync_outcome(
                     &ctx,
@@ -991,7 +1012,7 @@ async fn validate_topological_order<
                     Source(small_parent),
                     mapping,
                     CommitSyncDirection::SmallToLarge,
-                    &commit_sync_data_provider,
+                    live_commit_sync_config,
                 )
                 .await?;
 
@@ -1054,17 +1075,17 @@ async fn validate_topological_order<
     Ok(())
 }
 
-/// Given changes to equivalent `MPath`s in two synced repos,
+/// Given changes to equivalent `NonRootMPath`s in two synced repos,
 /// return the differences between the changes
 fn compare_diffs_at_mpath(
-    mpath: &MPath,
+    mpath: &NonRootMPath,
     small_payload: Small<&FilenodeDiffPayload>,
     large_payload: Large<&FilenodeDiffPayload>,
 ) -> (
-    Option<(MPath, Small<HgFileNodeId>, Large<HgFileNodeId>)>,
-    Option<(MPath, Small<FileType>, Large<FileType>)>,
+    Option<(NonRootMPath, Small<HgFileNodeId>, Large<HgFileNodeId>)>,
+    Option<(NonRootMPath, Small<FileType>, Large<FileType>)>,
     Option<(
-        MPath,
+        NonRootMPath,
         Small<FilenodeDiffPayload>,
         Large<FilenodeDiffPayload>,
     )>,
@@ -1129,11 +1150,11 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
 
     // Let's remove all `FilenodeDiff` structs, which are strictly equivalent
     // Note that `in_small_but_not_in_large` and `in_large_but_not_in_small`
-    // do *not* represent different `MPath`s, but `FilenodeDiff` structs. That is, it
+    // do *not* represent different `NonRootMPath`s, but `FilenodeDiff` structs. That is, it
     // is possible that there are two different `FilenodeDiff` structs in the
-    // large and small repos, but they correspond to the same `MPath` and may
+    // large and small repos, but they correspond to the same `NonRootMPath` and may
     // even represent the exact same `ContentId`!
-    let in_small_but_not_in_large: HashMap<Small<&MPath>, Small<&FilenodeDiffPayload>> =
+    let in_small_but_not_in_large: HashMap<Small<&NonRootMPath>, Small<&FilenodeDiffPayload>> =
         small_repo_full_manifest_diff
             .0
             .difference(&moved_large_repo_full_manifest_diff.0)
@@ -1145,7 +1166,7 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
 
     // Note that this hashmap maps small paths to large payloads. This is
     // intentional and represents the idea that paths are already moved
-    let mut in_large_but_not_in_small: HashMap<Small<&MPath>, Large<&FilenodeDiffPayload>> =
+    let mut in_large_but_not_in_small: HashMap<Small<&NonRootMPath>, Large<&FilenodeDiffPayload>> =
         moved_large_repo_full_manifest_diff
             .0
             .difference(&small_repo_full_manifest_diff.0)
@@ -1157,12 +1178,13 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
 
     // This is set of *small* repo changes, which do not have an equivalent
     // in the large repo
-    let mut missing_in_large_repo: Vec<(Small<MPath>, Small<&FilenodeDiffPayload>)> = vec![];
+    let mut missing_in_large_repo: Vec<(Small<NonRootMPath>, Small<&FilenodeDiffPayload>)> = vec![];
 
-    let mut should_be_equivalent: Vec<(MPath, Small<HgFileNodeId>, Large<HgFileNodeId>)> = vec![];
-    let mut different_filetypes: Vec<(MPath, Small<FileType>, Large<FileType>)> = vec![];
+    let mut should_be_equivalent: Vec<(NonRootMPath, Small<HgFileNodeId>, Large<HgFileNodeId>)> =
+        vec![];
+    let mut different_filetypes: Vec<(NonRootMPath, Small<FileType>, Large<FileType>)> = vec![];
     let mut different_actions: Vec<(
-        MPath,
+        NonRootMPath,
         Small<FilenodeDiffPayload>,
         Large<FilenodeDiffPayload>,
     )> = vec![];
@@ -1177,7 +1199,7 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
             None => {
                 // `small_mpath` is present in the small repo, `small_to_large_mover`
                 // does not rewrite it into `None`. Seems like a problem!
-                let small_mpath: Small<MPath> = small_mpath.cloned();
+                let small_mpath: Small<NonRootMPath> = small_mpath.cloned();
                 missing_in_large_repo.push((small_mpath, small_payload));
             }
             Some(large_payload) => {
@@ -1196,11 +1218,11 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
 
     // This is a set of *large* repo changes, which do not have an equivalent
     // in the small repo. We need large paths to filter noop ones from these.
-    let missing_in_small_repo: Vec<(Large<MPath>, Large<&FilenodeDiffPayload>)> =
+    let missing_in_small_repo: Vec<(Large<NonRootMPath>, Large<&FilenodeDiffPayload>)> =
         in_large_but_not_in_small
             .into_iter()
             .map(
-                |(small_mpath, payload): (Small<&MPath>, Large<&FilenodeDiffPayload>)| {
+                |(small_mpath, payload): (Small<&NonRootMPath>, Large<&FilenodeDiffPayload>)| {
                     // `in_large_but_not_in_small` was initially populated by small
                     // paths, so let's convert
                     let large_mpath = small_to_large_mover(small_mpath.0)?.ok_or_else(|| {
@@ -1215,18 +1237,18 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
             )
             .collect::<Result<Vec<_>, Error>>()?;
 
-    let missing_in_small_repo: Vec<Large<MPath>> = validation_helper
+    let missing_in_small_repo: Vec<Large<NonRootMPath>> = validation_helper
         .filter_out_large_noop_filenode_id_changes(ctx, large_cs_id, missing_in_small_repo)
         .await?;
 
     // Note: we populated `missing_in_small_repo` with large repo paths,
     // and `missing_in_large_repo` with small repo paths. Let's unify this
     // to small repo paths, so that we always report the same kind of path.
-    let missing_in_large_repo: Vec<Large<MPath>> = validation_helper
+    let missing_in_large_repo: Vec<Large<NonRootMPath>> = validation_helper
         .filter_out_small_noop_filenode_id_changes(ctx, small_cs_id, missing_in_large_repo)
         .await?
         .into_iter()
-        .map(|small_mpath: Small<MPath>| {
+        .map(|small_mpath: Small<NonRootMPath>| {
             let large_mpath = small_to_large_mover(&small_mpath.0)?.ok_or_else(|| {
                 format_err!(
                     "{:?} surprisingly produces None when moved small-to-large",
@@ -1310,7 +1332,7 @@ fn small_large_to_source_target<T, P>(
 /// but missing in a commit in another repo
 fn report_missing(
     ctx: &CoreContext,
-    missing_things: Vec<Large<MPath>>,
+    missing_things: Vec<Large<NonRootMPath>>,
     large_cs_id: &Large<ChangesetId>,
     where_present: &str,
     where_missing: &str,
@@ -1370,7 +1392,7 @@ async fn validate_in_a_single_repo(
         &validation_helper.small_repo,
         small_cs_id,
         &mapping,
-        &CommitSyncDataProvider::Live(Arc::new(validation_helper.live_commit_sync_config.clone())),
+        Arc::new(validation_helper.live_commit_sync_config.clone()),
     )
     .await
 }
@@ -1489,7 +1511,9 @@ async fn list_all_filenode_ids(
         .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_filter_map(move |(path, entry)| {
             let res = match entry {
-                Entry::Leaf(leaf_payload) => path.map(|path| (path, leaf_payload)),
+                Entry::Leaf(leaf_payload) => {
+                    Option::<NonRootMPath>::from(path).map(|path| (path, leaf_payload))
+                }
                 Entry::Tree(_) => None,
             };
             future::ready(Ok(res))
@@ -1507,8 +1531,8 @@ async fn list_all_filenode_ids(
 }
 
 async fn verify_filenodes_have_same_contents<
-    // item is a tuple: (MPath, large filenode id, small filenode id)
-    I: IntoIterator<Item = (MPath, Source<HgFileNodeId>, Target<HgFileNodeId>)>,
+    // item is a tuple: (NonRootMPath, large filenode id, small filenode id)
+    I: IntoIterator<Item = (NonRootMPath, Source<HgFileNodeId>, Target<HgFileNodeId>)>,
 >(
     ctx: &CoreContext,
     target_repo: &Target<BlobRepo>,
@@ -1648,7 +1672,7 @@ mod tests {
             &small_repo,
             Small(small_commits[small_index_to_test].clone()),
             &small_to_large_commit_syncer.mapping,
-            small_to_large_commit_syncer.get_commit_sync_data_provider(),
+            small_to_large_commit_syncer.live_commit_sync_config,
         )
         .await?;
 

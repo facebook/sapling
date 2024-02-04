@@ -15,7 +15,7 @@
 
   $ eagerepo
   $ cat > commitwrapper.py << 'EOF'
-  > from edenscm import extensions, node, revlog
+  > from sapling import extensions, node, revlog
   > def reposetup(ui, repo):
   >     class wraprepo(repo.__class__):
   >         def commit(self, *args, **kwargs):

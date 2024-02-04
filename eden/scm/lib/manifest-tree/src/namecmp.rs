@@ -10,17 +10,17 @@
 
 use std::cmp::Ordering;
 
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use types::PathComponent;
 
 use crate::Flag;
 
 type NameCmpFunc = fn(&PathComponent, Flag, &PathComponent, Flag) -> Ordering;
 
-pub(crate) fn get_namecmp_func(format: TreeFormat) -> NameCmpFunc {
+pub(crate) fn get_namecmp_func(format: SerializationFormat) -> NameCmpFunc {
     match format {
-        TreeFormat::Git => namecmp_git,
-        TreeFormat::Hg => namecmp_hg,
+        SerializationFormat::Git => namecmp_git,
+        SerializationFormat::Hg => namecmp_hg,
     }
 }
 
@@ -83,7 +83,7 @@ pub(crate) mod tests {
         let (name1, flag1) = get_name_flag(s1);
         let (name2, flag2) = get_name_flag(s2);
 
-        let cmp = get_namecmp_func(TreeFormat::Git);
+        let cmp = get_namecmp_func(SerializationFormat::Git);
         let actual = cmp(&name1, flag1, &name2, flag2);
         assert_eq!(actual, expected);
     }

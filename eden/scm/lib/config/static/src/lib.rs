@@ -133,7 +133,7 @@ impl Config for StaticConfig {
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
         match self.get(section, name) {
             Some(value) => Cow::Owned(vec![ValueSource {
-                value: Some(value.clone()),
+                value: Some(value),
                 source: Text::from_static(self.name),
                 location: None,
             }]),

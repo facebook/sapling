@@ -87,6 +87,7 @@ class DiffTest {
     DiffContext diffContext{
         &callback,
         folly::CancellationToken{},
+        ObjectFetchContext::getNullContext(),
         listIgnored,
         caseSensitive,
         true,
@@ -109,6 +110,7 @@ class DiffTest {
         mount_.getRootInode(),
         commitHash,
         folly::CancellationToken{},
+        ObjectFetchContext::getNullContext(),
         listIgnored,
         /*enforceCurrentParent=*/false);
     return std::move(diffFuture)
@@ -1499,6 +1501,7 @@ TEST(DiffTest, fileNotReady) {
                             mount.getRootInode(),
                             commitHash2,
                             folly::CancellationToken{},
+                            ObjectFetchContext::getNullContext(),
                             /*listIgnored=*/false,
                             /*enforceCurrentParent=*/false)
                         .semi()
@@ -1627,6 +1630,7 @@ TEST(DiffTest, cancelledDiff) {
                             mount.getRootInode(),
                             commitHash2,
                             cancellationSource.getToken(),
+                            ObjectFetchContext::getNullContext(),
                             /*listIgnored=*/false,
                             /*enforceCurrentParent=*/false)
                         .semi()
@@ -1679,6 +1683,7 @@ class DiffTestNonMateralized : public ::testing::Test {
                        testMount_.getRootInode(),
                        hash,
                        folly::CancellationToken{},
+                       ObjectFetchContext::getNullContext(),
                        /*listIgnored=*/true,
                        /*enforceCurrentParent=*/false)
                    .semi()
@@ -1773,7 +1778,7 @@ TEST_F(
   EXPECT_THAT(
       *result->entries_ref(),
       UnorderedElementsAre(
-          std::make_pair("root/src/test/t.txt", ScmFileStatus::IGNORED),
+          std::make_pair("root/src/test/t.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/src/s.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/src/t.txt", ScmFileStatus::MODIFIED),
@@ -1857,7 +1862,7 @@ TEST_F(
   EXPECT_THAT(
       *result->entries_ref(),
       UnorderedElementsAre(
-          std::make_pair("root/doc/src/test/t.txt", ScmFileStatus::IGNORED),
+          std::make_pair("root/doc/src/test/t.txt", ScmFileStatus::ADDED),
           std::make_pair("root/doc/src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/doc/src/s.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/doc/src/t.txt", ScmFileStatus::MODIFIED),
@@ -1933,7 +1938,7 @@ TEST_F(
   EXPECT_THAT(
       *result->entries_ref(),
       UnorderedElementsAre(
-          std::make_pair("root/src/foo/r.txt", ScmFileStatus::IGNORED),
+          std::make_pair("root/src/foo/r.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/r.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/s.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/t.txt", ScmFileStatus::ADDED),
@@ -2090,6 +2095,7 @@ TEST(DiffTest, multiTreeDiff) {
   DiffContext diffContext{
       &callback,
       folly::CancellationToken{},
+      ObjectFetchContext::getNullContext(),
       false, // listIgnored
       kPathMapDefaultCaseSensitive,
       true,

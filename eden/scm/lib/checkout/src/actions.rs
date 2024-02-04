@@ -27,7 +27,7 @@ use types::RepoPathBuf;
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct ActionMap {
-    map: HashMap<RepoPathBuf, Action>,
+    pub map: HashMap<RepoPathBuf, Action>,
 }
 
 /// Basic update action.
@@ -43,6 +43,17 @@ pub enum Action {
 pub struct UpdateAction {
     pub from: Option<FileMetadata>,
     pub to: FileMetadata,
+}
+
+pub fn changed_metadata_to_action(old: FileMetadata, new: FileMetadata) -> Option<Action> {
+    match (old.hgid == new.hgid, old.file_type, new.file_type) {
+        (true, FileType::Executable, FileType::Regular) => Some(Action::UpdateExec(false)),
+        (true, FileType::Regular, FileType::Executable) => Some(Action::UpdateExec(true)),
+        _ if new.file_type != FileType::GitSubmodule => {
+            Some(Action::Update(UpdateAction::new(Some(old), new)))
+        }
+        _ => None,
+    }
 }
 
 impl ActionMap {
@@ -63,21 +74,8 @@ impl ActionMap {
                     }
                 }
                 DiffType::Changed(old, new) => {
-                    match (old.hgid == new.hgid, old.file_type, new.file_type) {
-                        (true, FileType::Executable, FileType::Regular) => {
-                            map.insert(entry.path, Action::UpdateExec(false));
-                        }
-                        (true, FileType::Regular, FileType::Executable) => {
-                            map.insert(entry.path, Action::UpdateExec(true));
-                        }
-                        _ => {
-                            if new.file_type != FileType::GitSubmodule {
-                                map.insert(
-                                    entry.path,
-                                    Action::Update(UpdateAction::new(Some(old), new)),
-                                );
-                            }
-                        }
+                    if let Some(action) = changed_metadata_to_action(old, new) {
+                        map.insert(entry.path, action);
                     }
                 }
             }
@@ -95,7 +93,7 @@ impl ActionMap {
         old_manifest: &impl Manifest,
         new_manifest: &impl Manifest,
     ) -> Result<Self> {
-        let _prog = ProgressBar::register_new("sparse config", 0, "");
+        let _prog = ProgressBar::new_adhoc("sparse config", 0, "");
 
         // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
         let mut result = Ok(());
@@ -282,12 +280,8 @@ mod tests {
             rp("c"),
             Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
         );
-        let actions = actions.with_sparse_profile_change(
-            ab_profile.clone(),
-            ac_profile.clone(),
-            &old_manifest,
-            &manifest,
-        )?;
+        let actions =
+            actions.with_sparse_profile_change(ab_profile, ac_profile, &old_manifest, &manifest)?;
 
         assert_eq!(expected_actions, actions);
 

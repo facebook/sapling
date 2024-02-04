@@ -26,7 +26,7 @@ Symlink is local parent, executable is other:
   $ hg merge --debug
     searching for copies back to 3574f3e69b1c
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -61,7 +61,7 @@ Symlink is other parent, executable is local:
   $ hg merge --debug --tool :union
     searching for copies back to 3574f3e69b1c
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -87,7 +87,7 @@ Symlink is other parent, executable is local:
   $ hg merge --debug --tool :merge3
     searching for copies back to 3574f3e69b1c
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -113,7 +113,7 @@ Symlink is other parent, executable is local:
   $ hg merge --debug --tool :merge-local
     searching for copies back to 3574f3e69b1c
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -138,7 +138,7 @@ Symlink is other parent, executable is local:
   $ hg merge --debug --tool :merge-other
     searching for copies back to 3574f3e69b1c
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -175,7 +175,7 @@ Update to link with local change should cause a merge prompt (issue3200):
   $ HGMERGE= hg up -y --debug
     searching for copies back to c334dc3be0da
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: False
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m (premerge)

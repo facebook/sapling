@@ -1,0 +1,95 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "constants",
+    headers = [
+        "WindowsNotifierConstants.h",
+    ],
+)
+
+buck_genrule(
+    name = "WindowsNotifier.res",
+    srcs = [
+        "WindowsNotifier.rc",
+        "WindowsNotifierConstants.h",
+        "edenfs.exe.manifest",
+        "edeng256.ico",
+        "edeno256.ico",
+        "edenr256.ico",
+        "edenw256.ico",
+    ],
+    out = "WindowsNotifier.res",
+    cmd_exe = "$(exe fbsource//third-party/toolchains/windows10sdk:invoke_rc) -d EDENFS_INCLUDE_MANIFEST -fo $OUT WindowsNotifier.rc",
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+)
+
+cpp_library(
+    name = "notifier",
+    srcs = ["Notifier.cpp"],
+    headers = ["Notifier.h"],
+    deps = [
+        "//eden/fs/utils:system_error",
+        "//folly/futures:core",
+    ],
+    exported_deps = [
+        "//eden/fs/config:config",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "windows_notifier",
+    srcs = ["WindowsNotifier.cpp"],
+    headers = [
+        "NullNotifier.h",
+        "WindowsNotifier.h",
+    ],
+    os_deps = [(
+        "windows",
+        [
+            "fbsource//third-party/toolchains/win:ComCtl32.Lib",
+            "fbsource//third-party/toolchains/win:shell32.lib",
+        ],
+    )],
+    os_linker_flags = [
+        (
+            "windows",
+            ["$(location :WindowsNotifier.res)"],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":constants",
+        "//eden/common/utils:stringconv",
+        "//eden/fs/config:config",
+        "//eden/fs/utils:process",
+        "//eden/fs/utils:system_error",
+        "//folly/futures:core",
+        "//folly/portability:windows",
+    ],
+    exported_deps = [
+        ":notifier",
+        "//eden/fs/utils:utils",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "command_notifier",
+    srcs = ["CommandNotifier.cpp"],
+    headers = ["CommandNotifier.h"],
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/utils:process",
+        "//eden/fs/utils:system_error",
+        "//folly/futures:core",
+    ],
+    exported_deps = [
+        ":notifier",
+    ],
+)

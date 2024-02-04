@@ -81,8 +81,9 @@ def prepareargsenv(runtestsdir, port=None):
     if watchman:
         args += ["--with-watchman", watchman]
     # set HGDATAPATH
-    datapath = os.path.join(runtestsdir, "../edenscm")
+    datapath = os.path.join(runtestsdir, "../sapling")
     env["HGDATAPATH"] = datapath
+    env["PYTHONPATH"] = os.path.join(runtestsdir, "../")
     # set HGPYTHONPATH since PYTHONPATH might be discarded
     pythonpath = os.pathsep.join([runtestsdir])
     env["HGPYTHONPATH"] = pythonpath
@@ -101,6 +102,7 @@ def prepareargsenv(runtestsdir, port=None):
 
 def gettestmethod(name, port):
     def runsingletest(self):
+        sys.tracebacklimit = 1000  # Unhide stacktraces.
         reportskips = os.getenv("HGTEST_REPORT_SKIPS")
         with chdir(self._runtests_dir):
             args, env = prepareargsenv(self._runtests_dir, port)
@@ -125,9 +127,9 @@ def gettestmethod(name, port):
                     reason = b"skipped by run-tests.py"
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(
-                    message.decode("utf-8", errors="surrogateescape")
-                )
+                decoded_message = message.decode("utf-8", errors="surrogateescape")
+                sys.tracebacklimit = 0  # Hide stacktraces.
+                raise self.failureException(decoded_message)
 
     return runsingletest
 
@@ -177,8 +179,12 @@ class hgtests(unittest.TestCase):
                 setattr(cls, method_name, gettestmethod(name, port))
 
 
-if __name__ == "__main__":
+def main() -> None:
     args, env = prepareargsenv(os.getcwd())
     os.execvpe(args[0], args + sys.argv[1:], env)
+
+
+if __name__ == "__main__":
+    main()
 else:
     hgtests.collecttests(os.environ.get("HGTEST_DIR", "."))

@@ -1,0 +1,120 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "local_store_test",
+    headers = ["LocalStoreTest.h"],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/store:store",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:utils",
+        "//folly/io:iobuf",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "filtered_backing_store_test",
+    srcs = [
+        "FilteredBackingStoreTest.cpp",
+    ],
+    # TODO(T159481899): make HgRepo compile/run on Windows
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/model:testutil",
+        "//eden/fs/store:filtered_backing_store",
+        "//eden/fs/store:store",
+        "//eden/fs/store/filter:hg_sparse_filter",
+        "//eden/fs/store/hg:hg_queued_backing_store",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:fake_filter",
+        "//eden/fs/testharness:hg_repo",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:varint",
+        "//folly/executors:manual_executor",
+        "//folly/experimental:test_util",
+        "//folly/io:iobuf",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "test",
+    srcs = [
+        "BlobAccessTest.cpp",
+        "BlobCacheTest.cpp",
+        "DiffTest.cpp",
+        "ImportPriorityTest.cpp",
+        "LocalStoreTest.cpp",
+        "ObjectCacheTest.cpp",
+        "ObjectStoreTest.cpp",
+        "RocksDbLocalStoreTest.cpp",
+        "TreeCacheTest.cpp",
+        "TreeTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/model:testutil",
+        "//eden/fs/model/git:gitignore",
+        "//eden/fs/store:context",
+        "//eden/fs/store:rocksdb",
+        "//eden/fs/store:sqlite",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:logging_fetch_context",
+        "//eden/fs/testharness:stored_object",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:static_assert",
+        "//eden/fs/utils:utils",
+        "//folly/executors:manual_executor",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_binary(
+    name = "object_cache_benchmark",
+    srcs = ["ObjectCacheBench.cpp"],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/store:store",
+    ],
+)
+
+cpp_binary(
+    name = "rocksdb_benchmark",
+    srcs = ["RocksDbLocalStoreBench.cpp"],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/model:model",
+        "//eden/fs/store:rocksdb",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:utils",
+    ],
+)

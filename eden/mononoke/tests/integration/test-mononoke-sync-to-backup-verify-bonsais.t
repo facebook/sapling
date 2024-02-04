@@ -27,8 +27,8 @@ setup repo
   exporting bookmark master_bookmark
 
 get content_id for file B
-  $ mononoke_admin bonsai-fetch master_bookmark 2> /dev/null | grep BonsaiChangesetId
-  BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da 
+  $ mononoke_newadmin fetch -R repo -B master_bookmark 2> /dev/null | grep BonsaiChangesetId
+  BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da
   $ mononoke_newadmin filestore -R repo store B
   Wrote 122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14 (2 bytes)
 
@@ -83,10 +83,10 @@ Sync to backup repo
   $ mononoke_backup_sync backup sync-loop 0 2>&1 | grep 'should map' | head -n 1
   remote:     Hg changeset 1ef6b45b6561464f92b16aba791974a9bb858ce2 should map to 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f, but it actually maps to 732435121e2c431e5111573abe055768657d653cda568f959c472721aca5b074 in backup
 
-  $ mononoke_admin bonsai-fetch master_bookmark 2> /dev/null | grep BonsaiChangesetId
-  BonsaiChangesetId: 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f 
-  $ REPOID=1 mononoke_admin bonsai-fetch master_bookmark 2> /dev/null | grep BonsaiChangesetId
-  BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da 
+  $ mononoke_newadmin fetch -R repo -B master_bookmark 2> /dev/null | grep BonsaiChangesetId
+  BonsaiChangesetId: 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
+  $ REPOID=1 mononoke_newadmin fetch --repo-id=1 -B master_bookmark 2> /dev/null | grep BonsaiChangesetId
+  BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da
 
 Run again, and make sure it fails again. This case tests that after restart hg sync job
 does not accidentally skip the bundle

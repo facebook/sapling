@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "mutable-rename-thrift",
+    languages = [
+        "rust",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_srcs = {
+        "mutable_rename.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

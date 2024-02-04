@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("mononoke")
+
+python_binary(
+    name = "sqlblob_gc_py",
+    srcs = glob([
+        "*.py",
+    ]),
+    main_function = "eden.mononoke.facebook.sqlblob_gc_py.main.main",
+    deps = [
+        "//configerator/common:crypto_utils",
+        "//configerator/configo/client/thrift_py3:client",
+        "//configerator/distribution/api/py:configerator_config",
+        "//configerator/structs/scm/mononoke/xdb_gc:xdb_gc_structs-py",
+        "//dba/asyncio:bulk_dml",
+        "//dsi/logger/configs/MononokeSQLBlobGCKeysLoggerConfig:py3-logger",
+        "//libfb/py/asyncio:limit_concurrency",
+        "//libfb/py/asyncio:mysql",
+    ],
+    external_deps = [
+    ],
+)

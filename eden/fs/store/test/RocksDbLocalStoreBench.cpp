@@ -32,7 +32,7 @@ void getBlobMetadata(benchmark::State& st) {
   std::vector<ObjectId> ids;
   ids.reserve(N);
   for (size_t i = 0; i < N; ++i) {
-    ids.push_back(ObjectId{fmt::format("{:08x}", i)});
+    ids.emplace_back(fmt::format("{:08x}", i));
   }
 
   std::vector<BlobMetadata> metadata;

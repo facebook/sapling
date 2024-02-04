@@ -58,6 +58,7 @@ define_perf_counters! {
         BlobGetsDeduplicated,
         BlobGetsDeduplicatedLarge,
         BlobGetsTotalSize,
+        BlobGetsMaxSize,
         BlobPresenceChecks,
         BlobPresenceChecksMaxLatency,
         BlobPuts,
@@ -66,9 +67,9 @@ define_perf_counters! {
         BlobPutsMaxLatency,
         BlobPutsDeduplicated,
         BlobPutsTotalSize,
+        BlobPutsMaxSize,
         BlobUnlinks,
         BlobUnlinksMaxLatency,
-        BlobUnlinksTotalSize,
         BytesSent,
         CachelibHits,
         CachelibMisses,
@@ -131,14 +132,15 @@ impl PerfCounterType {
             | BlobGetsMaxLatency
             | BlobGetsNotFoundMaxLatency
             | BlobGetsTotalSize
+            | BlobGetsMaxSize
             | BlobPresenceChecks
             | BlobPresenceChecksMaxLatency
             | BlobPuts
             | BlobPutsMaxLatency
             | BlobPutsTotalSize
+            | BlobPutsMaxSize
             | BlobUnlinks
             | BlobUnlinksMaxLatency
-            | BlobUnlinksTotalSize
             | CachelibHits
             | CachelibMisses
             | GetpackNumPossibleLFSFiles
@@ -171,7 +173,6 @@ impl PerfCounterType {
             | BlobPutsDeduplicated
             | BlobPutsTotalSize
             | BlobUnlinks
-            | BlobUnlinksTotalSize
             | BytesSent
             | CachelibHits
             | CachelibMisses
@@ -219,6 +220,8 @@ impl PerfCounterType {
             | BlobPresenceChecksMaxLatency
             | BlobPutsMaxLatency
             | BlobUnlinksMaxLatency
+            | BlobGetsMaxSize
+            | BlobPutsMaxSize
             | GetpackMaxFileSize => PerfCounterTypeUpdateFunc::Max,
         }
     }

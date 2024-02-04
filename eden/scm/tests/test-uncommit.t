@@ -8,8 +8,7 @@ Test uncommit - set up the config
 
 Build up a repo
 
-  $ hg init repo
-  $ cd repo
+  $ newrepo
   $ hg bookmark foo
 
 Help for uncommit
@@ -320,9 +319,7 @@ Partial uncommit with public parent
 
 Uncommit leaving an empty changeset
 
-  $ cd $TESTTMP
-  $ hg init repo1
-  $ cd repo1
+  $ newrepo
   $ hg debugdrawdag <<'EOS'
   > Q
   > |
@@ -338,13 +335,9 @@ Uncommit leaving an empty changeset
   $ hg status
   A Q
 
-  $ cd ..
-  $ rm -rf repo1
-
 Testing uncommit while merge
 
-  $ hg init repo2
-  $ cd repo2
+  $ newrepo
 
 Create some history
 
@@ -427,3 +420,16 @@ Recover added / deleted files
   $ ls * | sort
   A
   C
+
+Don't mess up with copies when "dest" of copy was added in the commit we are undoing,
+and we have a pending removal of the copied file.
+  $ newrepo
+  $ touch foo
+  $ hg commit -Aqm foo
+  $ hg cp foo bar
+  $ hg commit -Aqm bar
+  $ hg rm bar
+  $ hg uncommit
+  $ hg st
+  $ find .
+  foo

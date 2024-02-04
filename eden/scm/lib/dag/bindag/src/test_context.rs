@@ -83,7 +83,7 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
             let mut heads: HashSet<usize> = (0..n).collect();
             for ps in parents.iter().take(n) {
                 for p in ps.as_ref().iter() {
-                    heads.remove(&p);
+                    heads.remove(p);
                 }
             }
             let mut names: Vec<VertexName> = Vec::new();

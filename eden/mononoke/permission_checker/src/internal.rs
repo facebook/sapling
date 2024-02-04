@@ -23,11 +23,12 @@ use crate::MembershipChecker;
 use crate::MononokeIdentitySet;
 use crate::PermissionChecker;
 
+#[derive(Default)]
 pub struct InternalAclProvider {
     acls: Acls,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Acls {
     #[serde(default)]
     pub repos: HashMap<String, Arc<Acl>>,
@@ -145,7 +146,7 @@ mod test {
 
     #[fbinit::test]
     async fn json_acls(_fb: FacebookInit) -> Result<()> {
-        let json = r##"
+        let json = r#"
             {
                 "repos": {
                     "repo1": {
@@ -161,7 +162,7 @@ mod test {
                     ]
                 }
             }
-        "##;
+        "#;
         let acls = serde_json::from_str(json)?;
         let prov = InternalAclProvider::new(acls);
         let users_group = prov.group("users").await?;

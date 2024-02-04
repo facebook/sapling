@@ -17,7 +17,7 @@ Setup the server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > [remotefilelog]

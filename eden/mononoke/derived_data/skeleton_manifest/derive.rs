@@ -28,9 +28,11 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestDirectory;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
@@ -40,9 +42,10 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::SkeletonManifestDerivationError;
@@ -50,7 +53,10 @@ use crate::SkeletonManifestDerivationError;
 pub(crate) async fn derive_skeleton_manifest_stack(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    file_changes: Vec<(
+        ChangesetId,
+        BTreeMap<NonRootMPath, Option<(ContentId, FileType)>>,
+    )>,
     parent: Option<SkeletonManifestId>,
 ) -> Result<HashMap<ChangesetId, SkeletonManifestId>, Error> {
     let blobstore = derivation_ctx.blobstore();
@@ -90,7 +96,7 @@ pub(crate) async fn derive_skeleton_manifest(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     parents: Vec<SkeletonManifestId>,
-    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
+    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
 ) -> Result<SkeletonManifestId> {
     let blobstore = derivation_ctx.blobstore();
 
@@ -121,7 +127,7 @@ pub(crate) async fn derive_skeleton_manifest(
         None => {
             // All files have been deleted, generate empty fsnode
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };
@@ -227,11 +233,22 @@ async fn create_skeleton_manifest(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
-    tree_info: TreeInfo<SkeletonManifestId, (), Option<SkeletonManifestSummary>>,
+    tree_info: TreeInfo<
+        SkeletonManifestId,
+        (),
+        Option<SkeletonManifestSummary>,
+        TrieMap<Entry<SkeletonManifestId, ()>>,
+    >,
 ) -> Result<(Option<SkeletonManifestSummary>, SkeletonManifestId)> {
-    let entries =
-        collect_skeleton_subentries(ctx, blobstore, &tree_info.parents, tree_info.subentries)
-            .await?;
+    let entries = collect_skeleton_subentries(
+        ctx,
+        blobstore,
+        &tree_info.parents,
+        flatten_subentries(ctx, &(), tree_info.subentries)
+            .await?
+            .collect(),
+    )
+    .await?;
 
     // Build a summary of the entries and store it as the new skeleton
     // manifest.
@@ -328,6 +345,7 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use mononoke_types::ChangesetId;
+    use mononoke_types::PrefixTrie;
     use pretty_assertions::assert_eq;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
@@ -427,7 +445,7 @@ mod test {
         let changesets = create_from_dag_with_changes(
             ctx,
             &repo,
-            r##"
+            r"
                     J-K
                      /
                 A-B-C-D-E-F-G
@@ -435,7 +453,7 @@ mod test {
                       H
                        \
                       L-M
-            "##,
+            ",
             changes! {
                 "B" => |c| add_files(c, B_FILES),
                 "C" => |c| add_files(c, C_FILES),
@@ -558,18 +576,41 @@ mod test {
                 .first_case_conflict(&ctx, repo.repo_blobstore())
                 .await?,
             Some((
-                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
-                MPath::new(b"dir1/subdir1/subsubdir2")?
+                NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                NonRootMPath::new(b"dir1/subdir1/subsubdir2")?
             ))
         );
         assert_eq!(
             c_skeleton
                 .clone()
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![b_skeleton])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![b_skeleton.clone()],
+                    &PrefixTrie::new()
+                )
                 .await?,
             Some((
-                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
-                MPath::new(b"dir1/subdir1/subsubdir2")?
+                NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                NonRootMPath::new(b"dir1/subdir1/subsubdir2")?
+            ))
+        );
+
+        let mut excluded_paths = PrefixTrie::new();
+        excluded_paths.add(&NonRootMPath::new(b"dir1/subdir1")?);
+        assert_eq!(
+            c_skeleton
+                .clone()
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![b_skeleton],
+                    &excluded_paths
+                )
+                .await?,
+            Some((
+                NonRootMPath::new(b"dir1/subdir2/SUBSUBDIR1")?,
+                NonRootMPath::new(b"dir1/subdir2/subsubdir1")?
             ))
         );
 
@@ -620,14 +661,19 @@ mod test {
                 .first_case_conflict(&ctx, repo.repo_blobstore())
                 .await?,
             Some((
-                MPath::new(b"dir1/subdir1/subsubdir1/FILE1")?,
-                MPath::new(b"dir1/subdir1/subsubdir1/file1")?
+                NonRootMPath::new(b"dir1/subdir1/subsubdir1/FILE1")?,
+                NonRootMPath::new(b"dir1/subdir1/subsubdir1/file1")?
             ))
         );
         assert_eq!(
             d_skeleton
                 .clone()
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![c_skeleton.clone()])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![c_skeleton.clone()],
+                    &PrefixTrie::new()
+                )
                 .await?,
             None,
         );
@@ -786,18 +832,23 @@ mod test {
                 .first_case_conflict(&ctx, repo.repo_blobstore())
                 .await?,
             Some((
-                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
-                MPath::new(b"dir1/subdir1/subsubdir2")?
+                NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                NonRootMPath::new(b"dir1/subdir1/subsubdir2")?
             ))
         );
         assert_eq!(
             h_skeleton
                 .clone()
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![c_skeleton])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![c_skeleton],
+                    &PrefixTrie::new()
+                )
                 .await?,
             Some((
-                MPath::new(b"dir1/subdir1/SUBSUBDIR3/FILE3")?,
-                MPath::new(b"dir1/subdir1/SUBSUBDIR3/File3")?,
+                NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR3/FILE3")?,
+                NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR3/File3")?,
             ))
         );
 
@@ -811,7 +862,10 @@ mod test {
             j_skeleton
                 .first_case_conflict(&ctx, repo.repo_blobstore())
                 .await?,
-            Some((MPath::new(b"dir3/FILE1")?, MPath::new(b"dir3/file1")?))
+            Some((
+                NonRootMPath::new(b"dir3/FILE1")?,
+                NonRootMPath::new(b"dir3/file1")?
+            ))
         );
 
         // Changeset K is a merge of H and J, both of which have case
@@ -830,7 +884,8 @@ mod test {
                 .first_new_case_conflict(
                     &ctx,
                     repo.repo_blobstore(),
-                    vec![h_skeleton.clone(), j_skeleton]
+                    vec![h_skeleton.clone(), j_skeleton],
+                    &PrefixTrie::new()
                 )
                 .await?,
             None,
@@ -865,17 +920,22 @@ mod test {
                 .first_case_conflict(&ctx, repo.repo_blobstore())
                 .await?,
             Some((
-                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
-                MPath::new(b"dir1/subdir1/subsubdir2")?
+                NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                NonRootMPath::new(b"dir1/subdir1/subsubdir2")?
             ))
         );
         assert_eq!(
             m_skeleton
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![h_skeleton, l_skeleton])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![h_skeleton, l_skeleton],
+                    &PrefixTrie::new()
+                )
                 .await?,
             Some((
-                MPath::new(b"dir2/subdir1/subsubdir1/FILE1")?,
-                MPath::new(b"dir2/subdir1/subsubdir1/file1")?
+                NonRootMPath::new(b"dir2/subdir1/subsubdir1/FILE1")?,
+                NonRootMPath::new(b"dir2/subdir1/subsubdir1/file1")?
             )),
         );
 

@@ -6,7 +6,8 @@
  */
 
 import {findParentWithClassName} from './utils';
-import {useEffect, useRef, useState} from 'react';
+import {getZoomLevel} from './zoom';
+import {useEffect, useRef} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 
 import './ContextMenu.css';
@@ -29,7 +30,8 @@ export function useContextMenu<T>(
 ): React.MouseEventHandler<T> {
   const setState = useSetRecoilState(contextMenuState);
   return e => {
-    setState({x: e.clientX, y: e.clientY, items: creator()});
+    const zoom = getZoomLevel();
+    setState({x: e.clientX / zoom, y: e.clientY / zoom, items: creator()});
 
     e.preventDefault();
     e.stopPropagation();
@@ -48,9 +50,6 @@ const contextMenuState = atom<null | ContextMenuData>({
 
 export function ContextMenus() {
   const [state, setState] = useRecoilState(contextMenuState);
-
-  // after you click on an item, flash it as selected, then fade out tooltip
-  const [acceptedSuggestion, setAcceptedSuggestion] = useState<null | number>(null);
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -87,8 +86,9 @@ export function ContextMenus() {
     return null;
   }
 
-  const topOrBottom = state.y > window.innerHeight / 2 ? 'bottom' : 'top';
-  const leftOrRight = state.x > window.innerWidth / 2 ? 'right' : 'left';
+  const zoom = getZoomLevel();
+  const topOrBottom = state.y > window.innerHeight / zoom / 2 ? 'bottom' : 'top';
+  const leftOrRight = state.x > window.innerWidth / zoom / 2 ? 'right' : 'left';
   const yOffset = 10;
   const xOffset = -10; // var(--pad)
   let position: React.CSSProperties;
@@ -96,29 +96,27 @@ export function ContextMenus() {
     if (leftOrRight === 'left') {
       position = {top: state.y + yOffset, left: state.x + xOffset};
     } else {
-      position = {top: state.y + yOffset, right: window.innerWidth - (state.x + xOffset)};
+      position = {top: state.y + yOffset, right: window.innerWidth / zoom - (state.x - xOffset)};
     }
   } else {
     if (leftOrRight === 'left') {
-      position = {bottom: window.innerHeight - (state.y - yOffset), left: state.x + xOffset};
+      position = {bottom: window.innerHeight / zoom - (state.y - yOffset), left: state.x + xOffset};
     } else {
       position = {
-        bottom: window.innerHeight - (state.y - yOffset),
-        right: window.innerWidth - (state.x + xOffset),
+        bottom: window.innerHeight / zoom - (state.y - yOffset),
+        right: window.innerWidth / zoom - (state.x + xOffset),
       };
     }
   }
   position.maxHeight =
-    window.innerHeight -
+    window.innerHeight / zoom -
     ((position.top as number | null) ?? 0) -
     ((position.bottom as number | null) ?? 0);
 
   return (
     <div
       ref={ref}
-      className={
-        'context-menu-container' + (acceptedSuggestion != null ? ' context-menu-fadeout' : '')
-      }
+      className={'context-menu-container'}
       data-testid="context-menu-container"
       style={position}>
       {topOrBottom === 'top' ? (
@@ -133,25 +131,14 @@ export function ContextMenus() {
           ) : (
             <div
               key={i}
-              onClick={
+              onClick={() => {
                 // don't allow double-clicking to run the action twice
-                acceptedSuggestion != null
-                  ? undefined
-                  : () => {
-                      item.onClick?.();
-                      setAcceptedSuggestion(i);
-                      setTimeout(() => {
-                        setState(null);
-                        setAcceptedSuggestion(null);
-                      }, 300);
-                    }
-              }
-              className={
-                'context-menu-item' +
-                (acceptedSuggestion != null && acceptedSuggestion === i
-                  ? ' context-menu-item-selected'
-                  : '')
-              }>
+                if (state != null) {
+                  item.onClick?.();
+                  setState(null);
+                }
+              }}
+              className={'context-menu-item'}>
               {item.label}
             </div>
           ),

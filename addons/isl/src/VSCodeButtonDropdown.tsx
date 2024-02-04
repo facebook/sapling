@@ -9,6 +9,7 @@ import type {ButtonAppearance} from '@vscode/webview-ui-toolkit';
 import type {ReactNode} from 'react';
 
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {Icon} from 'shared/Icon';
 
 import './VSCodeButtonDropdown.css';
 
@@ -57,6 +58,7 @@ export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
           </option>
         ))}
       </select>
+      <Icon icon="chevron-down" />
     </div>
   );
 }

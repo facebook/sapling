@@ -6,14 +6,13 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use fs_err as fs;
 use util::errors::IOContext;
-use util::errors::IOResult;
 
 use crate::errors::RequirementsOpenError;
 use crate::errors::UnsupportedRequirements;
@@ -82,7 +81,7 @@ impl Requirements {
     ///
     /// This is usually part of a complex operation and protected by a
     /// filesystem lock.
-    pub fn flush(&mut self) -> IOResult<()> {
+    pub fn flush(&mut self) -> io::Result<()> {
         if self.dirty {
             util::file::atomic_write(&self.path, |f| {
                 let mut requires: Vec<&str> =

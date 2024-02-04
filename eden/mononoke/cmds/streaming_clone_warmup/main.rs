@@ -216,7 +216,8 @@ impl StreamingCloneWarmup {
             &config.storage_config.metadata,
             mysql_options,
             true, /*read-only*/
-        )?
+        )
+        .await?
         .build(config.repoid, repo_blobstore);
 
         Ok(Self {

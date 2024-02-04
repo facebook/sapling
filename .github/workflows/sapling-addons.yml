@@ -1,4 +1,7 @@
 name: Verify addons/ folder
+env:
+  CI: false
+
 on:
   # Run on any branch to support ghstack's synthetic base/head branches.
   pull_request:
@@ -14,6 +17,8 @@ jobs:
     container:
       image: ${{ format('ghcr.io/{0}/build_ubuntu_20_04:latest', github.repository) }}
     steps:
+      - name: Install fb-watchman
+        run: curl -fsSL https://github.com/facebook/watchman/releases/download/v2023.09.18.00/watchman_ubuntu20.04_v2023.09.18.00.deb -o watchman.deb && apt -y -f install ./watchman.deb
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Grant Access

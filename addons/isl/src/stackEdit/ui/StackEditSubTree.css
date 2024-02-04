@@ -1,0 +1,66 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.stack-edit-button-group {
+  display: flex;
+}
+
+.stack-edit-right-side-buttons {
+  opacity: 0;
+}
+
+.stack-edit-subtree {
+  position: relative;
+}
+
+.stack-edit-subtree .commit {
+  background: var(--background);
+  margin-bottom: var(--pad);
+  cursor: default;
+}
+
+.stack-edit-subtree .commit:hover .stack-edit-right-side-buttons {
+  opacity: 1;
+}
+
+.stack-edit-subtree .drag-handle {
+  cursor: grab;
+  display: flex;
+  padding: var(--button-icon-padding);
+  touch-action: none;
+}
+
+.stack-edit-dragging {
+  position: fixed;
+  pointer-events: none;
+  left: calc(0px - var(--pad));
+  top: 0px;
+  opacity: 0;
+  z-index: 1000;
+}
+
+.stack-edit-dragging-commit-list {
+  padding-right: var(--pad);
+  background: var(--background);
+  border: 1px solid var(--tooltip-border);
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.stack-edit-subtree .stack-edit-dragging-commit-list .commit {
+  margin-bottom: 0px;
+}
+
+.commit-reorder-preview {
+  opacity: 0.5;
+}
+
+.stack-edit-dragging-hint-container {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--pad);
+  user-select: none;
+}

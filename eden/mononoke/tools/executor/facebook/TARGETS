@@ -1,0 +1,10 @@
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+fbpkg.builder(
+    name = "mononoke.shardmanager.test",
+    path_actions = {
+        "executor": "//eden/mononoke/tools/executor:executor",
+    },
+)

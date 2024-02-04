@@ -9,7 +9,6 @@ mod errors;
 mod redaction_config_blobstore;
 pub mod store;
 
-use std::num::NonZeroU64;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -27,7 +26,6 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
-use tunables::tunables;
 
 pub use crate::errors::ErrorKind;
 pub use crate::redaction_config_blobstore::ArcRedactionConfigBlobstore;
@@ -155,7 +153,7 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
                             ctx.logger(),
                             "{} operation with redacted blobstore with key {:?}", operation, key
                         );
-                        self.to_scuba_redacted_blob_accessed(ctx, key, operation);
+                        self.log_redacted_blob_access_to_scuba(ctx, key, operation, metadata);
 
                         if metadata.log_only {
                             Ok(&self.blobstore)
@@ -171,25 +169,21 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
         }
     }
 
-    pub fn to_scuba_redacted_blob_accessed(&self, ctx: &CoreContext, key: &str, operation: &str) {
-        let sampling_rate = tunables()
-            .redacted_logging_sampling_rate()
-            .unwrap_or_default()
-            .try_into()
-            .ok()
-            .and_then(NonZeroU64::new);
-
+    fn log_redacted_blob_access_to_scuba(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+        operation: &str,
+        metadata: &RedactedMetadata,
+    ) {
         let mut scuba_builder = self.config.scuba_builder.clone();
-
-        if let Some(sampling_rate) = sampling_rate {
-            scuba_builder.sampled(sampling_rate);
-        } else {
-            scuba_builder.unsampled();
-        }
+        scuba_builder.unsampled();
 
         scuba_builder
             .add("operation", operation)
             .add("key", key.to_string())
+            .add("reason", metadata.task.to_string())
+            .add("enforced", (!metadata.log_only) as u32)
             .add("session_uuid", ctx.metadata().session_id().to_string());
 
         if let Some(unix_username) = ctx.metadata().unix_name() {

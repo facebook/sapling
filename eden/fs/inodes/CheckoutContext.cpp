@@ -16,7 +16,6 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
 
-using folly::Future;
 using std::vector;
 
 namespace facebook::eden {
@@ -37,7 +36,7 @@ CheckoutContext::CheckoutContext(
       windowsSymlinksEnabled_{
           mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
-CheckoutContext::~CheckoutContext() {}
+CheckoutContext::~CheckoutContext() = default;
 
 void CheckoutContext::start(
     RenameLock&& renameLock,
@@ -73,7 +72,8 @@ void CheckoutContext::start(
   }
 }
 
-Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
+ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::finish(
+    RootId newSnapshot) {
   auto config = mount_->getCheckoutConfig();
 
   auto parentCommit = config->getParentCommit();
@@ -93,7 +93,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   return flush();
 }
 
-Future<vector<CheckoutConflict>> CheckoutContext::flush() {
+ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::flush() {
   if (!isDryRun()) {
     // If we have a FUSE channel, flush all invalidations we sent to the kernel
     // as part of the checkout operation.  This will ensure that other processes
@@ -102,10 +102,8 @@ Future<vector<CheckoutConflict>> CheckoutContext::flush() {
     // We do this after releasing the rename lock since some of the invalidation
     // operations may be blocked waiting on FUSE unlink() and rename()
     // operations complete.
-    return mount_->flushInvalidations()
-        .thenValue([this](auto&&) { return std::move(*conflicts_.wlock()); })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+    return mount_->flushInvalidations().thenValue(
+        [this](auto&&) { return std::move(*conflicts_.wlock()); });
   }
 
   // Return conflicts_ via a move operation.  We don't need them any more, and

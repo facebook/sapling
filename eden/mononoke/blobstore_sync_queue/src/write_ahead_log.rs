@@ -45,7 +45,6 @@ use sql_common::mysql::IsolationLevel;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
-use tunables::tunables;
 use vec1::Vec1;
 
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
@@ -399,24 +398,16 @@ impl BlobstoreWal for SqlBlobstoreWal {
     }
 
     async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
-        if !tunables()
-            .wal_disable_rendezvous_on_deletes()
-            .unwrap_or_default()
-        {
-            self.delete_rendezvous
-                .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
-                    let connections = self.write_connections.clone();
-                    |keys| async move {
-                        Self::inner_delete_by_key(&connections, keys).await?;
-                        // We don't care about results
-                        Ok(HashMap::new())
-                    }
-                })
-                .await?;
-        } else {
-            Self::inner_delete_by_key(&self.write_connections, entries.iter().cloned().collect())
-                .await?;
-        }
+        self.delete_rendezvous
+            .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
+                let connections = self.write_connections.clone();
+                |keys| async move {
+                    Self::inner_delete_by_key(&connections, keys).await?;
+                    // We don't care about results
+                    Ok(HashMap::new())
+                }
+            })
+            .await?;
         Ok(())
     }
 }
@@ -432,17 +423,15 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             mut read_master_connections,
             mut write_connections,
         } = connections;
-        if !tunables().disable_wal_read_committed().unwrap_or_default() {
-            for conn in read_master_connections
-                .iter_mut()
-                .chain(write_connections.iter_mut())
-            {
-                if let Connection::Mysql(conn) = conn {
-                    // We don't care about strong locking of the queries, we just a simple "bag".
-                    // Having stronger locking causes deadlocks. Let's use a weaker isolation level.
-                    // See https://fb.workplace.com/groups/mysql.users/posts/24130604319894856
-                    conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
-                }
+        for conn in read_master_connections
+            .iter_mut()
+            .chain(write_connections.iter_mut())
+        {
+            if let Connection::Mysql(conn) = conn {
+                // We don't care about strong locking of the queries, we just a simple "bag".
+                // Having stronger locking causes deadlocks. Let's use a weaker isolation level.
+                // See https://fb.workplace.com/groups/mysql.users/posts/24130604319894856
+                conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
             }
         }
         let write_connections = Arc::new(write_connections);
@@ -462,13 +451,11 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             // - It's fine to wait up to 5 secs to remove, though this likely won't happen.
             // - We're batching underlying requests at 10k
             delete_rendezvous: RendezVous::new(
-                ConfigurableRendezVousController::new(
-                    RendezVousOptions {
-                        free_connections: 1,
-                    },
-                    || Duration::from_secs(5),
-                    || DEL_CHUNK,
-                ),
+                ConfigurableRendezVousController::new(RendezVousOptions {
+                    free_connections: 1,
+                    max_delay: Duration::from_secs(5),
+                    max_threshold: DEL_CHUNK,
+                }),
                 Arc::new(RendezVousStats::new("wal_delete".to_owned())),
             ),
         }
@@ -484,6 +471,8 @@ async fn insert_entries(
         .cloned()
         .map(|entry| entry.into_sql_tuple())
         .collect();
+    // This pattern is used to convert a ref to tuple into a tuple of refs.
+    #[allow(clippy::map_identity)]
     let entries_ref: Vec<_> = entries
         .iter()
         .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)

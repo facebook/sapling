@@ -1,0 +1,116 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "lmdb_file_content_store",
+    srcs = [
+        "LMDBFileContentStore.cpp",
+    ],
+    headers = [
+        "LMDBFileContentStore.cpp",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    exported_deps = [
+        ":lmdbstoreif",
+        "//eden/common/utils:file_utils",
+        "//eden/fs/inodes:file_content_store",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/io:iobuf",
+    ],
+)
+
+cpp_library(
+    name = "lmdb_inode_catalog",
+    srcs = [
+        "LMDBInodeCatalog.cpp",
+    ],
+    headers = [
+        "LMDBInodeCatalog.h",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        ":lmdb_file_content_store",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/utils:eden_error",
+        "//folly/io:iobuf",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        ":lmdbstoreif",
+        "//eden/common/utils:file_utils",
+        "//eden/fs/inodes:file_content_store",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//folly:file",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "buffered_lmdb_inode_catalog",
+    srcs = ["BufferedLMDBInodeCatalog.cpp"],
+    headers = ["BufferedLMDBInodeCatalog.h"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        ":lmdb_file_content_store",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_number",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/system:thread_name",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
+        ":lmdb_inode_catalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//folly:function",
+        "//folly:synchronized",
+        "//folly/synchronization:lifo_sem",
+    ],
+)
+
+cpp_library(
+    name = "lmdbstoreif",
+    srcs = ["LMDBStoreInterface.cpp"],
+    headers = ["LMDBStoreInterface.h"],
+    deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:utils",
+        "//folly:range",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "fbsource//third-party/googletest:gtest_headers",
+        "//eden/common/utils:file_utils",
+        "//eden/fs/lmdb:lmdb",
+        "//eden/fs/utils:path",
+        "//folly/portability:sys_uio",
+    ],
+)

@@ -81,46 +81,37 @@ normally the tailer runs forever, but for this test we will make it
 stop when it becomes idle.
   $ REPOS="--repo-id=0:--repo-id=1" backfill_derived_data_multiple_repos tail --stop-on-idle --backfill --batched --parallel --sliced --slice-size=4 &>/dev/null
 
-Helpers for check derived data for commit:
-  $ function prod_derived_data_exists() {
-  >   mononoke_admin --log-level ERROR derived-data exists "$@"
-  > }
-
-  $ function backup_derived_data_exists() {
-  >   REPOID=1 mononoke_admin --log-level ERROR derived-data exists "$@"
-  > }
-
-  $ prod_derived_data_exists fsnodes main
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ prod_derived_data_exists fsnodes other
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ prod_derived_data_exists unodes main
+  $ mononoke_newadmin derived-data -R repo exists -T unodes -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ prod_derived_data_exists unodes other
+  $ mononoke_newadmin derived-data -R repo exists -T unodes -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ prod_derived_data_exists --backfill blame main
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ prod_derived_data_exists --backfill blame other
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ prod_derived_data_exists --backfill skeleton_manifests other
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ prod_derived_data_exists --backfill skeleton_manifests main
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
 
 
-  $ backup_derived_data_exists fsnodes main
+  $ mononoke_newadmin derived-data -R backup exists -T fsnodes -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ backup_derived_data_exists fsnodes other
+  $ mononoke_newadmin derived-data -R backup exists -T fsnodes -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ backup_derived_data_exists unodes main
+  $ mononoke_newadmin derived-data -R backup exists -T unodes -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ backup_derived_data_exists unodes other
+  $ mononoke_newadmin derived-data -R backup exists -T unodes -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ backup_derived_data_exists --backfill blame main
+  $ mononoke_newadmin derived-data -R backup exists --backfill -T blame -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ backup_derived_data_exists --backfill blame other
+  $ mononoke_newadmin derived-data -R backup exists --backfill -T blame -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ backup_derived_data_exists --backfill skeleton_manifests other
+  $ mononoke_newadmin derived-data -R backup exists --backfill -T skeleton_manifests -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ backup_derived_data_exists --backfill skeleton_manifests main
+  $ mononoke_newadmin derived-data -R backup exists --backfill -T skeleton_manifests -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7

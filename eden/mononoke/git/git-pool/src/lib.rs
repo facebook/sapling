@@ -53,7 +53,7 @@ impl GitPool {
         // Note - this tokio::spawn() is an attempt to fix deadlock D31541432.
         let ret = tokio::spawn(async move {
             let permit = sem.acquire_owned().await?;
-            let ret = tokio_shim::task::spawn_blocking(move || {
+            let ret = tokio::task::spawn_blocking(move || {
                 let result_repo = pool.get()?;
                 let repo = match &*result_repo {
                     Ok(repo) => repo,

@@ -24,7 +24,9 @@ export type PlatformName =
   | 'androidStudio'
   | 'androidStudioRemote'
   | 'vscode'
-  | 'standalone';
+  | 'standalone'
+  | 'webview'
+  | 'chromelike_app';
 
 export type AbsolutePath = string;
 /**
@@ -69,13 +71,25 @@ export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSumm
  */
 export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-signal';
 
+/**
+ * Information about a land request, specific to each Code Review Provider.
+ */
+export type LandInfo = undefined | InternalTypes['PhabricatorLandInfo'];
+
+/**
+ * Information used to confirm a land from a given initiation LandInfo.
+ */
+export type LandConfirmationInfo = undefined | InternalTypes['PhabricatorLandConfirmationInfo'];
+
 /** An error causing the entire Repository to not be accessible */
 export type RepositoryError =
   | {
       type: 'invalidCommand';
       command: string;
+      path: string | undefined;
     }
   | {type: 'cwdNotARepository'; cwd: string}
+  | {type: 'cwdDoesNotExist'; cwd: string}
   | {
       type: 'unknownError';
       error: Error;
@@ -143,16 +157,16 @@ export type CommitInfo = {
    * could be 2 or more parents. The initial commit (and initial commits of
    * other merged-in repos) have no parents.
    */
-  parents: Hash[];
+  parents: ReadonlyArray<Hash>;
   phase: CommitPhaseType;
   isHead: boolean;
   author: string;
   date: Date;
   description: string;
-  bookmarks: Array<string>;
-  remoteBookmarks: Array<string>;
+  bookmarks: ReadonlyArray<string>;
+  remoteBookmarks: ReadonlyArray<string>;
   /** if this commit is obsolete, it is succeeded by another commit */
-  successorInfo?: SuccessorInfo;
+  successorInfo?: Readonly<SuccessorInfo>;
   /**
    * Closest predecessors (not all recursive predecessors, which can be a long
    * chain and hurt performance). Useful to deal with optimistic states where
@@ -162,13 +176,13 @@ export type CommitInfo = {
    * Most of the time a commit only has one predecessor. In case of a fold
    * there are multiple predecessors.
    */
-  closestPredecessors?: Hash[];
+  closestPredecessors?: ReadonlyArray<Hash>;
   /** only a subset of the total files for this commit */
-  filesSample: Array<ChangedFile>;
+  filesSample: ReadonlyArray<ChangedFile>;
   totalFileCount: number;
   /** @see {@link DiffId} */
   diffId?: DiffId;
-  stableCommitMetadata?: Array<StableCommitMetadata>;
+  stableCommitMetadata?: ReadonlyArray<StableCommitMetadata>;
 };
 export type SuccessorInfo = {
   hash: string;
@@ -186,6 +200,9 @@ export type ChangedFile = {
   copy?: RepoRelativePath;
 };
 
+export type SucceedableRevset = {type: 'succeedable-revset'; revset: Revset};
+export type ExactRevset = {type: 'exact-revset'; revset: Revset};
+
 /**
  * Most arguments to eden commands are literal `string`s, except:
  * - When specifying file paths, the server needs to know which args are files to convert them to be cwd-relative.
@@ -193,12 +210,16 @@ export type ChangedFile = {
  *   The server can re-write hashes using a revset that transforms into the latest successor instead.
  *   This allows you to act on the optimistic versions of commits in queued commands,
  *   without a race with the server telling you new versions of those hashes.
- *   TODO: what if you WANT to act on an obsolete commit?
+ * - If you want an exact commit that's already obsolete or should never be replaced with a succeeded version,
+ *   you can use an exact revset.
+ * - Specifying config values to override for just this command, so they can be processed separately.
  */
 export type CommandArg =
   | string
   | {type: 'repo-relative-file'; path: RepoRelativePath}
-  | {type: 'succeedable-revset'; revset: Revset};
+  | {type: 'config'; key: string; value: string}
+  | ExactRevset
+  | SucceedableRevset;
 
 /**
  * What process to execute a given operation in, such as `sl`
@@ -220,8 +241,18 @@ export enum CommandRunner {
  * This enables queued commands to act on optimistic state without knowing
  * the optimistic commit's hashes directly.
  */
-export function SucceedableRevset(revset: Revset): CommandArg {
+export function succeedableRevset(revset: Revset): SucceedableRevset {
   return {type: 'succeedable-revset', revset};
+}
+
+/**
+ * {@link CommandArg} representing a hash or revset which should *not* be re-written
+ * to the latest successor of that revset when being run.
+ * This uses the revset directly in the command run. Useful if you want to specifically
+ * use an obsolete commit in an operation.
+ */
+export function exactRevset(revset: Revset): ExactRevset {
+  return {type: 'exact-revset', revset};
 }
 
 /* Subscriptions */
@@ -263,6 +294,54 @@ export type FetchedCommits = {
 export type BeganFetchingSmartlogCommitsEvent = {
   type: 'beganFetchingSmartlogCommitsEvent';
 };
+
+export type ShelvedChange = {
+  hash: Hash;
+  name: string;
+  date: Date;
+  filesSample: Array<ChangedFile>;
+  totalFileCount: number;
+  description: string;
+};
+
+export enum CommitCloudBackupStatus {
+  InProgress = 'IN_PROGRESS',
+  Pending = 'PENDING',
+  Failed = 'FAILED',
+}
+export type CommitCloudSyncState = {
+  isFetching?: boolean;
+  /** Last time we ran commands to check the cloud status */
+  lastChecked: Date;
+  /** Last time there was an actual sync */
+  lastBackup?: Date;
+  currentWorkspace?: string;
+  workspaceChoices?: Array<string>;
+  commitStatuses?: Map<Hash, CommitCloudBackupStatus>;
+  fetchError?: Error;
+  syncError?: Error;
+  workspaceError?: Error;
+};
+
+export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';
+export type Alert = {
+  key: string;
+  title: string;
+  description: string;
+  url: string;
+  severity: AlertSeverity;
+  ['show-in-isl']: boolean;
+};
+
+/**
+ * A file can be auto-generated, partially auto-generated, or not generated (manual).
+ * Numbered according to expected visual sort order.
+ */
+export enum GeneratedStatus {
+  Manual = 0,
+  PartiallyGenerated = 1,
+  Generated = 2,
+}
 
 type ConflictInfo = {
   command: string;
@@ -332,6 +411,7 @@ export type OneIndexedLineNumber = Exclude<number, 0>;
  */
 export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openFile'; path: RepoRelativePath; options?: {line?: OneIndexedLineNumber}}
+  | {type: 'platform/openContainingFolder'; path: RepoRelativePath}
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openExternal'; url: string}
   | {type: 'platform/confirm'; message: string; details?: string | undefined}
@@ -343,6 +423,7 @@ export type PlatformSpecificClientToServerMessages =
       scope: 'workspace' | 'global';
     }
   | {type: 'platform/executeVSCodeCommand'; command: string; args: Array<Json>}
+  | {type: 'platform/gotUiState'; state: string}
   | {type: 'platform/subscribeToVSCodeConfig'; config: string};
 
 /**
@@ -350,6 +431,7 @@ export type PlatformSpecificClientToServerMessages =
  * usually in response to a platform-specific ClientToServer message
  */
 export type PlatformSpecificServerToClientMessages =
+  | {type: 'platform/getUiState'}
   | {
       type: 'platform/confirmResult';
       result: boolean;
@@ -363,6 +445,10 @@ export type PlatformSpecificServerToClientMessages =
       config: string;
       value: Json | undefined;
     };
+
+export type CodeReviewProviderSpecificClientToServerMessages =
+  | never
+  | InternalTypes['PhabricatorClientToServerMessages'];
 
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 
@@ -386,21 +472,39 @@ export type ClientToServerMessageWithPayload = {
 
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
-export type ConfigName =
+export const allConfigNames = [
   // these config names are for compatibility.
-  | 'isl.submitAsDraft'
-  | 'isl.changedFilesDisplayType'
-  | 'isl.hasShownGettingStarted'
+  'isl.submitAsDraft',
+  'isl.changedFilesDisplayType',
+  'isl.hasShownGettingStarted',
   // sapling config prefers foo-bar naming.
-  | 'isl.pull-button-choice'
-  | 'isl.show-diff-number'
-  | 'isl.experimental-features';
+  'isl.pull-button-choice',
+  'isl.show-stack-submit-confirmation',
+  'isl.show-diff-number',
+  'isl.render-compact',
+  'isl.download-commit-should-goto',
+  'isl.download-commit-rebase-type',
+  'isl.experimental-features',
+  'isl.hold-off-refresh-ms',
+  // which graph renderer to use (0: tree; 1: dag; 2: show both).
+  'isl.experimental-graph-renderer',
+] as const;
+
+/** sl configs written by ISL */
+export type ConfigName = (typeof allConfigNames)[number];
+
+/** local storage keys written by ISL */
+export type LocalStorageName =
+  | 'isl.drawer-state'
+  | 'isl.ui-zoom'
+  | 'isl.has-shown-getting-started'
+  | 'isl.amend-autorestack'
+  | 'isl.dismissed-alerts'
+  | 'isl-color-theme';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
-  | {
-      type: 'refresh';
-    }
+  | {type: 'refresh'}
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: ConfigName; value: string}
   | {type: 'changeCwd'; cwd: string}
@@ -408,19 +512,25 @@ export type ClientToServerMessage =
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
-  | {type: 'deleteFile'; filePath: RepoRelativePath}
+  | {type: 'fetchActiveAlerts'}
+  | {type: 'fetchGeneratedStatuses'; paths: Array<RepoRelativePath>}
   | {type: 'fetchCommitMessageTemplate'}
+  | {type: 'fetchShelvedChanges'}
+  | {type: 'fetchLatestCommit'; revset: string}
+  | {type: 'fetchAllCommitChangedFiles'; hash: Hash}
+  | {type: 'renderMarkup'; markup: string; id: number}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
+  | {type: 'fetchAvatars'; authors: Array<string>}
+  | {type: 'fetchCommitCloudState'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
+  | {type: 'fetchLandInfo'; topOfStack: DiffId}
+  | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
-  | {
-      type: 'requestComparison';
-      comparison: Comparison;
-    }
+  | {type: 'requestComparison'; comparison: Comparison}
   | {
       type: 'requestComparisonContextLines';
       id: {
@@ -443,6 +553,7 @@ export type ClientToServerMessage =
       title: string;
       comparison: Comparison;
     }
+  | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages;
 
 export type SubscriptionResultsData = {
@@ -467,12 +578,25 @@ export type ServerToClientMessage =
   | FileABugProgressMessage
   | {type: 'heartbeat'; id: string}
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
+  | {
+      type: 'fetchedGeneratedStatuses';
+      results: Record<RepoRelativePath, GeneratedStatus>;
+    }
+  | {type: 'fetchedActiveAlerts'; alerts: Array<Alert>}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
+  | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
+  | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
+  | {type: 'fetchedAllCommitChangedFiles'; hash: Hash; result: Result<Array<ChangedFile>>}
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
+  | {type: 'fetchedAvatars'; avatars: Map<string, string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
+  | {type: 'confirmedLand'; result: Result<undefined>}
+  | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
+  | {type: 'renderedMarkup'; html: string; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}

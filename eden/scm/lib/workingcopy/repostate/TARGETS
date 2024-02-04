@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "repostate",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/repolock:repolock",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+    ],
+)

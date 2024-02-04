@@ -23,14 +23,16 @@ import type {
   ClientToServerMessageWithPayload,
   FetchedCommits,
   FetchedUncommittedChanges,
+  LandInfo,
+  CodeReviewProviderSpecificClientToServerMessages,
 } from 'isl/src/types';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
+import {generatedFilesDetector} from './GeneratedFiles';
 import {Internal} from './Internal';
-import {Repository, absolutePathForFileInRepo} from './Repository';
+import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
-import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetForComparison} from 'shared/Comparison';
 import {randomId, unwrap} from 'shared/utils';
@@ -194,7 +196,7 @@ export default class ServerToClientAPI {
     // This ensures new messages coming in will be queued and handled only with the new repository
     this.currentState = {type: 'loading'};
     const command = this.connection.command ?? 'sl';
-    this.activeRepoRef = repositoryCache.getOrCreate(command, this.logger, newCwd);
+    this.activeRepoRef = repositoryCache.getOrCreate(command, this.logger, this.tracker, newCwd);
     this.activeRepoRef.promise.then(repoOrError => {
       if (repoOrError instanceof Repository) {
         this.setCurrentRepo(repoOrError, newCwd);
@@ -487,25 +489,6 @@ export default class ServerToClientAPI {
         });
         break;
       }
-      case 'deleteFile': {
-        const {filePath} = data;
-        const absolutePath = absolutePathForFileInRepo(filePath, repo);
-        // security: don't trust client messages to allow us to delete files outside the repository
-        if (absolutePath == null) {
-          logger.warn("can't delete file outside of the repo", filePath);
-          return;
-        }
-
-        fs.promises
-          .rm(absolutePath)
-          .then(() => {
-            logger.info('deleted file from filesystem', absolutePath);
-          })
-          .catch(err => {
-            logger.error('unable to delete file', absolutePath, err);
-          });
-        break;
-      }
       case 'requestComparison': {
         const {comparison} = data;
         const diff: Promise<Result<string>> = repo
@@ -563,23 +546,83 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchCommitMessageTemplate': {
+        this.handleFetchCommitMessageTemplate(repo);
+        break;
+      }
+      case 'fetchShelvedChanges': {
         repo
-          .runCommand(['debugcommitmessage', 'isl'])
-          .then(result => {
-            const template = result.stdout
-              .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')
-              .replace(/^<Replace this line with a title. Use 1 line only, 67 chars or less>/, '');
-            this.postMessage({type: 'fetchedCommitMessageTemplate', template});
+          .getShelvedChanges()
+          .then(shelvedChanges => {
+            this.postMessage({
+              type: 'fetchedShelvedChanges',
+              shelvedChanges: {value: shelvedChanges},
+            });
           })
           .catch(err => {
-            logger?.error('Could not fetch commit message template', err);
+            logger?.error('Could not fetch shelved changes', err);
+            this.postMessage({type: 'fetchedShelvedChanges', shelvedChanges: {error: err}});
+          });
+        break;
+      }
+      case 'fetchLatestCommit': {
+        repo
+          .lookupCommits([data.revset])
+          .then(commits => {
+            this.postMessage({
+              type: 'fetchedLatestCommit',
+              revset: data.revset,
+              info: {value: commits.values().next().value},
+            });
+          })
+          .catch(err => {
+            this.postMessage({
+              type: 'fetchedLatestCommit',
+              revset: data.revset,
+              info: {error: err as Error},
+            });
+          });
+        break;
+      }
+      case 'fetchAllCommitChangedFiles': {
+        repo
+          .getAllChangedFiles(data.hash)
+          .then(files => {
+            this.postMessage({
+              type: 'fetchedAllCommitChangedFiles',
+              hash: data.hash,
+              result: {value: files},
+            });
+          })
+          .catch(err => {
+            this.postMessage({
+              type: 'fetchedAllCommitChangedFiles',
+              hash: data.hash,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
+      case 'fetchCommitCloudState': {
+        repo.getCommitCloudState(cwd).then(state => {
+          this.postMessage({
+            type: 'fetchedCommitCloudState',
+            state: {value: state},
+          });
+        });
+        break;
+      }
+      case 'fetchGeneratedStatuses': {
+        generatedFilesDetector
+          .queryFilesGenerated(repo.logger, repo.info.repoRoot, data.paths)
+          .then(results => {
+            this.postMessage({type: 'fetchedGeneratedStatuses', results});
           });
         break;
       }
       case 'typeahead': {
         // Current repo's code review provider should be able to handle all
         // TypeaheadKinds for the fields in its defined schema.
-        repo.codeReviewProvider?.typeahead?.(data.kind, data.query)?.then(result =>
+        repo.codeReviewProvider?.typeahead?.(data.kind, data.query, cwd)?.then(result =>
           this.postMessage({
             type: 'typeaheadResult',
             id: data.id,
@@ -590,6 +633,64 @@ export default class ServerToClientAPI {
       }
       case 'fetchDiffSummaries': {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
+        break;
+      }
+      case 'fetchLandInfo': {
+        repo.codeReviewProvider
+          ?.fetchLandInfo?.(data.topOfStack)
+          ?.then((landInfo: LandInfo) => {
+            this.postMessage({
+              type: 'fetchedLandInfo',
+              topOfStack: data.topOfStack,
+              landInfo: {value: landInfo},
+            });
+          })
+          .catch(err => {
+            this.postMessage({
+              type: 'fetchedLandInfo',
+              topOfStack: data.topOfStack,
+              landInfo: {error: err as Error},
+            });
+          });
+
+        break;
+      }
+      case 'confirmLand': {
+        if (data.landConfirmationInfo == null) {
+          break;
+        }
+        repo.codeReviewProvider
+          ?.confirmLand?.(data.landConfirmationInfo)
+          ?.then((result: Result<undefined>) => {
+            this.postMessage({
+              type: 'confirmedLand',
+              result,
+            });
+          });
+        break;
+      }
+      case 'fetchAvatars': {
+        repo.codeReviewProvider?.fetchAvatars?.(data.authors)?.then(avatars => {
+          this.postMessage({
+            type: 'fetchedAvatars',
+            avatars,
+          });
+        });
+        break;
+      }
+      case 'renderMarkup': {
+        repo.codeReviewProvider
+          ?.renderMarkup?.(data.markup)
+          ?.then(html => {
+            this.postMessage({
+              type: 'renderedMarkup',
+              id: data.id,
+              html,
+            });
+          })
+          ?.catch(err => {
+            this.logger.error('Error rendering markup:', err);
+          });
         break;
       }
       case 'getSuggestedReviewers': {
@@ -624,9 +725,11 @@ export default class ServerToClientAPI {
         const assumeTrackedArgs = (assumeTracked ?? []).map(path => `--assume-tracked=${path}`);
         const exec = repo.runCommand(
           ['debugexportstack', '-r', revs, ...assumeTrackedArgs],
+          'ExportStackCommand',
           undefined,
           undefined,
           /* don't timeout */ 0,
+          this.tracker,
         );
         const reply = (stack?: ExportStack, error?: string) => {
           this.postMessage({
@@ -644,9 +747,11 @@ export default class ServerToClientAPI {
         const stdinStream = Readable.from(JSON.stringify(data.stack));
         const exec = repo.runCommand(
           ['debugimportstack'],
+          'ImportStackCommand',
           undefined,
           {stdin: stdinStream},
           /* don't timeout */ 0,
+          this.tracker,
         );
         const reply = (imported?: ImportedStack, error?: string) => {
           this.postMessage({type: 'importedStack', imported: imported ?? [], error});
@@ -688,10 +793,30 @@ export default class ServerToClientAPI {
         });
         break;
       }
+      case 'fetchActiveAlerts': {
+        repo
+          .getActiveAlerts()
+          .then(alerts => {
+            if (alerts.length === 0) {
+              return;
+            }
+            this.postMessage({
+              type: 'fetchedActiveAlerts',
+              alerts,
+            });
+          })
+          .catch(err => {
+            this.logger.error('Failed to fetch active alerts:', err);
+          });
+        break;
+      }
       default: {
+        if (repo.codeReviewProvider?.handleClientToServerMessage?.(data) === true) {
+          break;
+        }
         this.platform.handleMessageFromClient(
           repo,
-          data,
+          data as Exclude<typeof data, CodeReviewProviderSpecificClientToServerMessages>,
           message => this.postMessage(message),
           (dispose: () => unknown) => {
             this.repoDisposables.push({dispose});
@@ -708,6 +833,40 @@ export default class ServerToClientAPI {
     const listeners = this.listenersByType.get(data.type);
     if (listeners) {
       listeners.forEach(handle => handle(data));
+    }
+  }
+
+  private async handleFetchCommitMessageTemplate(repo: Repository) {
+    const {logger} = repo;
+    try {
+      const [result, customTemplate] = await Promise.all([
+        repo.runCommand(
+          ['debugcommitmessage', 'isl'],
+          'FetchCommitTemplateCommand',
+          undefined,
+          undefined,
+          undefined,
+          this.tracker,
+        ),
+        Internal.getCustomDefaultCommitTemplate?.(repo),
+      ]);
+
+      let template = result.stdout
+        .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')
+        .replace(/^<Replace this line with a title. Use 1 line only, 67 chars or less>/, '');
+
+      if (customTemplate?.trim() !== '') {
+        template = customTemplate as string;
+
+        this.tracker.track('UseCustomCommitMessageTemplate');
+      }
+
+      this.postMessage({
+        type: 'fetchedCommitMessageTemplate',
+        template,
+      });
+    } catch (err) {
+      logger?.error('Could not fetch commit message template', err);
     }
   }
 }

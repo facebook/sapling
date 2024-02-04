@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "commit_graph crate
-mononoke_types_thrift mononoke_types_thrift",
+mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -45,6 +45,8 @@ mononoke_types_thrift mononoke_types_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("commit_graph_thrift__types");
+        conf.clients_crate("commit_graph_thrift__clients");
+        conf.services_crate("commit_graph_thrift__services");
 
         let options = "";
         if !options.is_empty() {

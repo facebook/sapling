@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/portability/SysTypes.h>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -268,27 +269,6 @@ struct ServerDataFetch {
   }
 };
 
-struct EdenApiMiss {
-  enum MissType : bool {
-    Blob = 0,
-    Tree = 1,
-  };
-
-  static constexpr const char* type = "edenapi_miss";
-
-  std::string repo_name;
-  MissType miss_type;
-
-  void populate(DynamicEvent& event) const {
-    event.addString("repo_source", repo_name);
-    if (miss_type == Blob) {
-      event.addString("edenapi_miss_type", "blob");
-    } else {
-      event.addString("edenapi_miss_type", "tree");
-    }
-  }
-};
-
 struct NfsParsingError {
   std::string proc;
   std::string reason;
@@ -398,7 +378,7 @@ struct NfsCrawlDetected {
   int64_t readDirThreshold = 0;
   // root->leaf formatted as:
   //   "[simple_name (pid): full_name] -> [simple_name (pid): full_name] -> ..."
-  std::string processHierarchy = "";
+  std::string processHierarchy;
 
   void populate(DynamicEvent& event) const {
     event.addInt("read_count", readCount);
@@ -406,6 +386,30 @@ struct NfsCrawlDetected {
     event.addInt("readdir_count", readDirCount);
     event.addInt("readdir_threshold", readDirThreshold);
     event.addString("process_hierarchy", processHierarchy);
+  }
+};
+
+struct FetchMiss {
+  enum MissType : uint8_t { Tree = 0, Blob = 1, BlobMetadata = 2 };
+
+  static constexpr const char* type = "fetch_miss";
+
+  std::string_view repo_source;
+  MissType miss_type;
+  std::string reason;
+  bool retry;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("repo_source", std::string(repo_source));
+    if (miss_type == Tree) {
+      event.addString("miss_type", "tree");
+    } else if (miss_type == Blob) {
+      event.addString("miss_type", "blob");
+    } else {
+      event.addString("miss_type", "aux");
+    }
+    event.addString("reason", reason);
+    event.addBool("retry", retry);
   }
 };
 

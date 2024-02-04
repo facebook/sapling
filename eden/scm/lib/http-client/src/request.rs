@@ -17,7 +17,7 @@ use std::sync::atomic::Ordering::AcqRel;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use curl::easy::Easy2;
+use clientinfo::CLIENT_INFO_HEADER;
 use curl::easy::HttpVersion;
 use curl::easy::List;
 use http::header;
@@ -42,6 +42,7 @@ use crate::receiver::ChannelReceiver;
 use crate::receiver::Receiver;
 use crate::response::AsyncResponse;
 use crate::response::Response;
+use crate::Easy2H;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Method {
@@ -212,12 +213,12 @@ impl RequestContext {
 
     /// Obtain the HTTP url of the request.
     pub fn url(&self) -> &Url {
-        &self.info.url()
+        self.info.url()
     }
 
     /// Obtain the HTTP method of the request.
     pub fn method(&self) -> &Method {
-        &self.info.method()
+        self.info.method()
     }
 
     /// Obtain the request Id.
@@ -539,7 +540,7 @@ impl Request {
 
     pub fn set_client_info(&mut self, client_info: &Option<String>) -> &mut Self {
         if let Some(info) = client_info {
-            self.set_header("X-Client-Info", info);
+            self.set_header(CLIENT_INFO_HEADER, info);
         }
         self
     }
@@ -587,7 +588,7 @@ impl Request {
     /// concurrent requests or large requests that require
     /// progress reporting.
     pub fn send(self) -> Result<Response, HttpClientError> {
-        let mut easy: Easy2<Buffered> = self.try_into()?;
+        let mut easy: Easy2H = self.try_into()?;
         let res = easy.perform();
         let ctx = easy.get_mut().request_context_mut();
         let info = ctx.info().clone();
@@ -609,11 +610,11 @@ impl Request {
     pub async fn send_async(self) -> Result<AsyncResponse, HttpClientError> {
         let request_info = self.ctx().info().clone();
         let (receiver, streams) = ChannelReceiver::new();
-        let request = self.into_streaming(receiver);
+        let request = self.into_streaming(Box::new(receiver));
 
         // Spawn the request as another task, which will block
         // the worker it is scheduled on until completion.
-        let io_task = tokio::task::spawn_blocking(move || request.send());
+        let io_task = async_runtime::spawn_blocking(move || request.send());
 
         match AsyncResponse::new(streams, request_info).await {
             Ok(res) => Ok(res),
@@ -629,7 +630,7 @@ impl Request {
     /// Turn this `Request` into a streaming request. The
     /// received data for this request will be passed as
     /// it arrives to the given `Receiver`.
-    pub fn into_streaming<R>(self, receiver: R) -> StreamRequest<R> {
+    pub fn into_streaming(self, receiver: Box<dyn Receiver>) -> StreamRequest {
         StreamRequest {
             request: self,
             receiver,
@@ -638,10 +639,10 @@ impl Request {
 
     /// Turn this `Request` into a `curl::Easy2` handle using the given
     /// `Handler` to process the response.
-    pub(crate) fn into_handle<H: HandlerExt>(
+    pub(crate) fn into_handle(
         mut self,
-        create_handler: impl FnOnce(RequestContext) -> H,
-    ) -> Result<Easy2<H>, HttpClientError> {
+        create_handler: impl FnOnce(RequestContext) -> Box<dyn HandlerExt>,
+    ) -> Result<Easy2H, HttpClientError> {
         // Allow request creation listeners to configure the Request before we
         // use it, potentially overriding settings explicitly configured via
         // the methods on Request.
@@ -664,7 +665,7 @@ impl Request {
         }
         let handler = create_handler(self.ctx);
 
-        let mut easy = Easy2::new(handler);
+        let mut easy = Easy2H::new(handler);
 
         easy.url(url.as_str())?;
         easy.verbose(self.verbose)?;
@@ -750,15 +751,28 @@ impl Request {
             None => {}
         }
 
-        // Windows enables ssl revocation checking by default, which doesn't work inside the
-        // datacenter.
         #[cfg(windows)]
-        {
-            use curl::easy::SslOpt;
-            let mut ssl_opts = SslOpt::new();
-            ssl_opts.no_revoke(true);
-            easy.ssl_options(&ssl_opts)?;
-        }
+        unsafe {
+            // Call directly since curl crate doesn't expose CURLSSLOPT_NATIVE_CA option.
+            let rc = curl_sys::curl_easy_setopt(
+                easy.raw(),
+                curl_sys::CURLOPT_SSL_OPTIONS,
+                // Windows enables ssl revocation checking by default, which doesn't work inside the
+                // datacenter.
+                curl_sys::CURLSSLOPT_NO_REVOKE |
+                // When using openssl, this imports CAs from Windows cert store.
+                curl_sys::CURLSSLOPT_NATIVE_CA,
+            );
+            if rc == curl_sys::CURLE_OK {
+                Ok(())
+            } else {
+                let mut err = curl::Error::new(rc);
+                if let Some(msg) = easy.take_error_buf() {
+                    err.set_extra(msg);
+                }
+                Err(err)
+            }
+        }?;
 
         if let Some(cainfo) = self.cainfo {
             easy.cainfo(cainfo)?;
@@ -787,22 +801,22 @@ impl Request {
     }
 }
 
-impl TryFrom<Request> for Easy2<Buffered> {
+impl TryFrom<Request> for Easy2H {
     type Error = HttpClientError;
 
     fn try_from(req: Request) -> Result<Self, Self::Error> {
-        req.into_handle(Buffered::new)
+        req.into_handle(|c| Box::new(Buffered::new(c)))
     }
 }
 
-pub struct StreamRequest<R> {
+pub struct StreamRequest {
     pub(crate) request: Request,
-    pub(crate) receiver: R,
+    pub(crate) receiver: Box<dyn Receiver>,
 }
 
-impl<R: Receiver> StreamRequest<R> {
+impl StreamRequest {
     pub fn send(self) -> Result<(), HttpClientError> {
-        let mut easy: Easy2<Streaming<R>> = self.try_into()?;
+        let mut easy: Easy2H = self.try_into()?;
         let res = easy.perform().map_err(Into::into);
         let _ = easy
             .get_mut()
@@ -813,12 +827,12 @@ impl<R: Receiver> StreamRequest<R> {
     }
 }
 
-impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
+impl TryFrom<StreamRequest> for Easy2H {
     type Error = HttpClientError;
 
-    fn try_from(req: StreamRequest<R>) -> Result<Self, Self::Error> {
+    fn try_from(req: StreamRequest) -> Result<Self, Self::Error> {
         let StreamRequest { request, receiver } = req;
-        request.into_handle(|ctx| Streaming::new(receiver, ctx))
+        request.into_handle(|ctx| Box::new(Streaming::new(receiver, ctx)))
     }
 }
 
@@ -1196,7 +1210,10 @@ mod tests {
 
         // Make sure convert_cert defaults to cfg!(windows) and gets
         // passed along to request.
-        assert_eq!(cfg!(windows), client.get(url.clone()).convert_cert);
+        assert_eq!(
+            curl::Version::get().ssl_version() == Some("Schannel"),
+            client.get(url.clone()).convert_cert
+        );
 
         let client = HttpClient::from_config(Config {
             convert_cert: true,

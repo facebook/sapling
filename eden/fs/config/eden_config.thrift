@@ -9,18 +9,17 @@ namespace cpp2 facebook.eden
 namespace java com.facebook.eden.thrift
 namespace py facebook.eden.eden_config
 namespace py3 eden.fs.config
+namespace hack edenfs.config
 
 /**
- * Identifies the point of origin of a config setting. It is ordered from
- * low to high precedence. Higher precedence configuration values over-ride
- * lower precedence values. A config setting of CommandLine takes precedence
- * over all other settings.
+ * Identifies the point of origin of a config setting. Precedence is defined by ConfigSetting::getIdx()
  */
 enum ConfigSourceType {
   Default = 0,
   SystemConfig = 1,
   UserConfig = 2,
   CommandLine = 3,
+  Dynamic = 4,
 }
 
 enum ConfigReloadBehavior {

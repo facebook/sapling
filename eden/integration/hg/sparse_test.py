@@ -19,6 +19,7 @@ class SparseTest(EdenHgTestCase):
     def test_sparse(self) -> None:
         """Verify that we show a reasonable error if someone has managed
         to load the sparse extension, rather than an ugly stack trace"""
+        filtered = self.repo.get_type() == "filteredhg"
 
         for sub in [
             "clear",
@@ -38,6 +39,6 @@ class SparseTest(EdenHgTestCase):
             with self.assertRaises(hgrepo.HgError) as context:
                 self.hg("--config", "extensions.sparse=", "sparse", *sub.split())
             self.assertIn(
-                "don't need sparse profiles",
+                "filteredfs" if filtered else "don't need sparse profiles",
                 context.exception.stderr.decode("utf-8", errors="replace"),
             )

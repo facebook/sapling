@@ -6,6 +6,8 @@
  */
 
 use std::env;
+use std::io::IsTerminal;
+use std::io::Read;
 use std::io::Write;
 use std::mem;
 use std::process::Command;
@@ -74,6 +76,16 @@ fn child_main() {
         }
     } else {
         println!("Child: no IPC singleton");
+    }
+
+    let mut stdin = std::io::stdin();
+    let stdin_is_terminal = stdin.is_terminal();
+    println!("Child: stdin.is_terminal: {}", stdin_is_terminal);
+    if !stdin_is_terminal {
+        println!("Child: reading from stdin");
+        let mut content = String::new();
+        stdin.read_to_string(&mut content).unwrap();
+        println!("Child: got: {:?}", content);
     }
 }
 

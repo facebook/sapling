@@ -7,11 +7,22 @@ file(GLOB STORE_SRCS "*.cpp")
 list(
   REMOVE_ITEM STORE_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/eden_store_util.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/BackingStoreType.cpp"
 )
 
 add_library(
+  eden_store_type STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/BackingStoreType.cpp"
+)
+add_library(
   eden_store STATIC
     ${STORE_SRCS}
+)
+
+target_link_libraries(
+  eden_store_type
+  PUBLIC
+    eden_utils
 )
 target_link_libraries(
   eden_store
@@ -22,6 +33,7 @@ target_link_libraries(
     eden_model_git
     eden_service_thrift_cpp
     eden_sqlite
+    eden_store_type
     eden_store_filter
     eden_telemetry
     eden_utils

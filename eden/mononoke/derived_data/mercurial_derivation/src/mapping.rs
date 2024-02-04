@@ -148,7 +148,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         ctx,
                         derivation_ctx.blobstore(),
                         bonsais,
-                        derived_parents.get(0).cloned(),
+                        derived_parents.first().cloned(),
                         &derivation_opts,
                     )
                     .await
@@ -156,6 +156,8 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         format!("failed deriving stack of {:?} to {:?}", first, last,)
                     })?;
 
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
                 res.extend(derived.into_iter().map(|(csid, hg_cs_id)| (csid, hg_cs_id)));
             }
             bonsais = left_bonsais;

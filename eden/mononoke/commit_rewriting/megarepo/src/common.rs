@@ -7,7 +7,6 @@
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::save_bonsai_changesets;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
@@ -15,7 +14,7 @@ use changesets::ChangesetsRef;
 use context::CoreContext;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -51,7 +50,7 @@ pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,
     repo: &impl Repo,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     changeset_args: ChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
     let bcs_id = create_and_save_bonsai(ctx, repo, parents, file_changes, changeset_args).await?;
@@ -62,7 +61,7 @@ pub async fn create_and_save_bonsai(
     ctx: &CoreContext,
     repo: &impl Repo,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     changeset_args: ChangesetArgs,
 ) -> Result<ChangesetId, Error> {
     let ChangesetArgs {
@@ -89,7 +88,7 @@ async fn save_and_maybe_mark_public(
     mark_public: bool,
 ) -> Result<ChangesetId, Error> {
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo).await?;
+    changesets_creation::save_changesets(ctx, repo, vec![bcs]).await?;
 
     if mark_public {
         repo.phases()
@@ -140,7 +139,7 @@ async fn create_bookmark(
 
 fn create_bonsai_changeset_only(
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
     author: String,
     message: String,
     datetime: DateTime,
@@ -166,13 +165,13 @@ pub async fn delete_files_in_chunks<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
-    mpaths: Vec<MPath>,
-    chunker: &Chunker<MPath>,
+    mpaths: Vec<NonRootMPath>,
+    chunker: &Chunker<NonRootMPath>,
     delete_commits_changeset_args_factory: &impl ChangesetArgsFactory,
     skip_last_chunk: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "Chunking mpaths");
-    let mpath_chunks: Vec<Vec<MPath>> = chunker(mpaths);
+    let mpath_chunks: Vec<Vec<NonRootMPath>> = chunker(mpaths);
     info!(ctx.logger(), "Done chunking working copy contents");
 
     let mut delete_commits: Vec<ChangesetId> = Vec::new();
@@ -184,7 +183,7 @@ pub async fn delete_files_in_chunks<'a>(
         }
 
         let changeset_args = delete_commits_changeset_args_factory(StackPosition(i));
-        let file_changes: SortedVectorMap<MPath, _> = mpath_chunk
+        let file_changes: SortedVectorMap<NonRootMPath, _> = mpath_chunk
             .into_iter()
             .map(|mp| (mp, FileChange::Deletion))
             .collect();

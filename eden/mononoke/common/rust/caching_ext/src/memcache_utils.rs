@@ -104,4 +104,11 @@ impl MemcacheHandler {
             }
         }
     }
+
+    pub fn mock_store(&self) -> Option<&MockStore<Bytes>> {
+        match self {
+            MemcacheHandler::Real(_) | MemcacheHandler::Noop => None,
+            MemcacheHandler::Mock(ref mock) => Some(mock),
+        }
+    }
 }

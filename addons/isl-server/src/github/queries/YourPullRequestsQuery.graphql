@@ -13,6 +13,9 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         comments {
           totalCount
         }
+        mergeQueueEntry {
+          estimatedTimeToMerge
+        }
         commits(last: 1) {
           nodes {
             commit {

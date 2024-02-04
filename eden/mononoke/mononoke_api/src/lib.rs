@@ -6,7 +6,7 @@
  */
 
 #![feature(error_generic_member_access)]
-#![feature(provide_any)]
+#![feature(trait_alias)]
 
 use std::sync::Arc;
 
@@ -62,7 +62,6 @@ pub use crate::file::FileId;
 pub use crate::file::FileMetadata;
 pub use crate::file::FileType;
 pub use crate::file::HeaderlessUnifiedDiff;
-pub use crate::path::MononokePath;
 pub use crate::repo::create_changeset::CreateChange;
 pub use crate::repo::create_changeset::CreateChangeFile;
 pub use crate::repo::create_changeset::CreateCopyInfo;
@@ -73,6 +72,7 @@ pub use crate::repo::BookmarkInfo;
 pub use crate::repo::Repo;
 pub use crate::repo::RepoContext;
 pub use crate::repo::StoreRequest;
+pub use crate::repo::XRepoLookupSyncBehaviour;
 pub use crate::specifiers::ChangesetId;
 pub use crate::specifiers::ChangesetIdPrefix;
 pub use crate::specifiers::ChangesetPrefixSpecifier;

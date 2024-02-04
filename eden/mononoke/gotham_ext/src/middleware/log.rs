@@ -36,7 +36,7 @@ const DIRECTION_RESPONSE_OUT: &str = "OUT <";
 
 macro_rules! SLOG_FORMAT {
     () => {
-        "{} {} {} \"{} {} {:?}\" {} {} {} {}"
+        "{} {} {} {} \"{} {} {:?}\" {} {} {} {}"
     };
 }
 
@@ -94,6 +94,9 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
     if uri.path() == "/health_check" {
         return None;
     }
+    if uri.path() == "/proxygen/health_check" {
+        return None;
+    }
     let uri = uri.to_string();
 
     let load = *RequestLoad::borrow_from(state);
@@ -103,6 +106,9 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
     let address = MetadataState::try_borrow_from(state)
         .and_then(|metadata| metadata.metadata().client_ip())
         .map(|addr| addr.to_string());
+    let client_port = MetadataState::try_borrow_from(state)
+        .and_then(|metadata| metadata.metadata().client_port())
+        .map(|port| port.to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
     let logger = logger.new(o!("request_id" => request_id));
@@ -114,6 +120,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                 SLOG_FORMAT!(),
                 DIRECTION_REQUEST_IN,
                 address.as_ref().map_or("-", String::as_ref),
+                client_port.unwrap_or("-".to_string()),
                 "-",
                 method,
                 uri,
@@ -131,6 +138,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                     SLOG_FORMAT!(),
                     DIRECTION_RESPONSE_OUT,
                     address.as_ref().map_or("-", String::as_ref),
+                    client_port.unwrap_or("-".to_string()),
                     info.client_hostname.as_ref().map_or("-", String::as_ref),
                     method,
                     uri,

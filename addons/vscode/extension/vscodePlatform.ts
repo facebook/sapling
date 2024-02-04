@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {EnabledSCMApiFeature} from './types';
 import type {Repository} from 'isl-server/src/Repository';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {
@@ -21,6 +22,7 @@ import * as vscode from 'vscode';
 
 export const VSCodePlatform: ServerPlatform = {
   platformName: 'vscode',
+  sessionId: vscode.env.sessionId,
   handleMessageFromClient: async (
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,

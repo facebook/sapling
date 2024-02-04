@@ -4,11 +4,11 @@
 Short help:
 
   $ hg
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -61,11 +61,11 @@ Short help:
    templating    customizing output with templates
 
   $ hg -q
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -118,11 +118,11 @@ Short help:
    templating    customizing output with templates
 
   $ hg help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -175,11 +175,11 @@ Short help:
    templating    customizing output with templates
 
   $ hg -q help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -236,11 +236,11 @@ Test extension help:
   Using Additional Features
   """""""""""""""""""""""""
   
-      Mercurial has the ability to add new features through the use of
-      extensions. Extensions may add new commands, add options to existing
-      commands, change the default behavior of commands, or implement hooks.
+      Sapling has the ability to add new features through the use of extensions.
+      Extensions may add new commands, add options to existing commands, change
+      the default behavior of commands, or implement hooks.
   
-      To enable the "foo" extension, either shipped with Mercurial or in the
+      To enable the "foo" extension, either shipped with Sapling or in the
       Python search path, create an entry for it in your configuration file,
       like this:
   
@@ -258,8 +258,8 @@ Test extension help:
       increase startup overhead; they may be meant for advanced usage only; they
       may provide potentially dangerous abilities (such as letting you destroy
       or modify history); they might not be ready for prime time; or they may
-      alter some usual behaviors of stock Mercurial. It is thus up to the user
-      to activate extensions as needed.
+      alter some usual behaviors of stock Sapling. It is thus up to the user to
+      activate extensions as needed.
   
       To explicitly disable an extension enabled in a configuration file of
       broader scope, prepend its path with !:
@@ -276,7 +276,7 @@ Test extension help:
        debugshell    a python shell with repo, changelog & manifest objects
        errorredirect
                      redirect error message
-       githelp       try mapping git commands to Mercurial commands
+       githelp       try mapping git commands to Sapling commands
        mergedriver   custom merge drivers for autoresolved files
        progressfile  allows users to have JSON progress bar information written
                      to a path
@@ -309,14 +309,13 @@ Test extension help:
        disablesymlinks
                      disables symlink support when enabled
        drop          drop specified changeset from the stack
+       edensparse    allow sparse EdenFS checkouts
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)
        fastlog
+       fbcodereview  integration with Meta internal code review systems
        fbhistedit    extends the existing histedit functionality
-       fbscmquery    (no help text available)
-       generic_bisect
-                     (no help text available)
        gitrevset     map a git hash to a Mercurial hash:
        globalrevs    extension for providing strictly increasing revision
                      numbers
@@ -333,16 +332,11 @@ Test extension help:
                      this extension logs different pieces of information that
                      will be used
        megarepo      provides support for cross repo commit resolution
-       memcommit     make commits without a working copy
        morestatus    make status give a bit more context
        myparent
        ownercheck    prevent operations on repos not owned by the current user
-       phabdiff      (no help text available)
-       phabstatus    (no help text available)
-       phrevset      provides support for Phabricator revsets
        preventpremegarepoupdateshook
                      (no help text available)
-       pullcreatemarkers
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
@@ -357,7 +351,6 @@ Test extension help:
        smartlog      command to display a relevant subgraph
        snapshot      stores snapshots of uncommitted changes
        sparse        allow sparse checkouts of the working directory
-       sshaskpass    ssh-askpass implementation that works with chg
        stablerev     provide a way to expose the "stable" commit via a revset
        traceprof     (no help text available)
        treemanifestserver
@@ -366,11 +359,14 @@ Test extension help:
        undo          (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
 
+Only show documented aliases:
 
+  $ hg help goto | grep '^aliases:'
+  aliases: goto, go
 
 Verify that extension keywords appear in help templates
 
-  $ hg help --config extensions.phabdiff= templating|grep phabdiff > /dev/null
+  $ hg help --config extensions.fbcodereview= templating|grep phabdiff > /dev/null
 
 Normal help for add
 
@@ -379,7 +375,7 @@ Normal help for add
   
   start tracking the specified files
   
-      Specify files to be tracked by Mercurial. The files will be added to the
+      Specify files to be tracked by Sapling. The files will be added to the
       repository at the next commit.
   
       To undo an add before files have been committed, use 'hg forget'. To undo
@@ -405,7 +401,7 @@ Verbose help for add
   
   start tracking the specified files
   
-      Specify files to be tracked by Mercurial. The files will be added to the
+      Specify files to be tracked by Sapling. The files will be added to the
       repository at the next commit.
   
       To undo an add before files have been committed, use 'hg forget'. To undo
@@ -543,16 +539,6 @@ Test help on a self-referencing alias that is a rust command
     --shared show root of the shared repo
   
   (some details hidden, use --verbose to show complete help)
-
-Test help option with version option
-
-  $ hg add -h --version
-  Mercurial * (glob)
-
-  $ hg add --skjdfks
-  hg add: option --skjdfks not recognized
-  (use 'hg add -h' to get help)
-  [255]
 
 Test ambiguous command help
 
@@ -747,7 +733,7 @@ this is a section and erroring out weirdly.
 
   $ cat > helpext.py <<EOF
   > import os
-  > from edenscm import commands, registrar
+  > from sapling import commands, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -848,11 +834,11 @@ for the module itself.
 Test that default list of commands omits extension commands
 
   $ hg help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -907,233 +893,10 @@ Test that default list of commands omits extension commands
 
 Test list of internal help commands
 
-  $ hg help debug
+  $ hg help debug | grep -E 'Debug|debugshell|debugapi'
   Debug commands (internal and unsupported):
-  
-   debug-args    print arguments received
-   debugancestor
-                 find the ancestor revision of two revisions in a given index
    debugapi      send an EdenAPI request and print its output
-   debugapplystreamclonebundle
-                 apply a stream clone bundle file
-   debugbenchmarkrevsets
-                 benchmark revsets
-   debugbindag   serialize dag to a compat binary format
-   debugbuilddag
-                 builds a repo with a given DAG from scratch in the current
-                 empty repo
-   debugbundle   lists the contents of a bundle
-   debugcapabilities
-                 lists the capabilities of a remote peer
-   debugchangelog
-                 show or migrate changelog backend
-   debugcheckcasecollisions
-                 check for case collisions against a commit
-   debugcheckoutidentifier
-                 display the current checkout unique identifier
-   debugcheckstate
-                 validate the correctness of the current dirstate
-   debugcleanremotenames
-                 remove non-essential remote bookmarks
-   debugcolor    show available color, effects or style
-   debugcommands
-                 list all available commands and options
-   debugcommitmessage
-                 show commit template
-   debugcompactmetalog
-                 compact the metalog by dropping history
-   debugcomplete
-                 returns the completion list associated with the given command
-   debugcopytrace
-                 trace the copy of the given files from source to dest commit
-   debugcreatestreamclonebundle
-                 create a stream clone bundle file
-   debugdag      format the changelog or an index DAG as a concise textual
-                 description
-   debugdata     dump the contents of a data file revision
-   debugdatapack
-                 (no help text available)
-   debugdate     parse and display a date
-   debugdetectissues
-                 various repository integrity and health checks. for automatic
-                 remediation, use doctor.
-   debugdiffdirs
-                 print the changed directories between two commits
-   debugdifftree
-                 diff two trees
-   debugdirs     list directories
-   debugdirstate
-                 show the contents of the current dirstate
-   debugdiscovery
-                 runs the changeset discovery protocol in isolation
-   debugdrawdag  read an ASCII graph from stdin and create changesets
-   debugdryup    Execute native checkout (update) without actually writing to
-                 working copy
-   debugdumpdynamicconfig
-                 print the dynamic configuration
-   debugdumpindexedlog
-                 dump indexedlog data
-   debugdumptrace
-                 export tracing information
-   debugduplicatedconfig
-                 find duplicated or overridden configs
-   debugdynamicconfig
-                 generate the dynamic configuration
-   debugedenimporthelper
-                 Obtain data for edenfs
-   debugedenrunpostupdatehook
-                 Run post-update hooks for edenfs
-   debugexistingcasecollisions
-                 check for existing case collisions in a commit
-   debugexportmetalog
-                 export metalog to a repo for easier investigation
-   debugexportrevlog
-                 exports to a legacy revlog repo
-   debugexportstack
-                 dump content of commits for automation consumption
-   debugextensions
-                 show information about active extensions
-   debugfilerevision
-                 dump internal metadata for given file revisions
-   debugfileset  parse and apply a fileset specification
-   debugfsinfo   show information detected about current filesystem
-   debugfsync    call fsync on newly modified key storage files
-   debuggetbundle
-                 retrieves a bundle from a repo
-   debuggetroottree
-                 (no help text available)
-   debughistorypack
-                 (no help text available)
-   debughttp     check whether the EdenAPI server is reachable
-   debugignore   display the combined ignore pattern and information about
-                 ignored files
-   debugimportstack
-                 import a stack of commits
-   debugindex    dump the contents of an index file
-   debugindexdot
-                 dump an index DAG as a graphviz dot file
-   debugindexedlogdatastore
-                 (no help text available)
-   debugindexedloghistorystore
-                 (no help text available)
-   debuginitgit  init a repo from a git backend
-   debuginstall  test Mercurial installation
-   debuginternals
-                 list or export internal files
-   debugknown    test whether node ids are known to a repo
-   debuglocks    show or modify state of locks
-   debugmakepublic
-                 make revisions public
-   debugmanifestdirs
-                 print treemanifest id, and paths
-   debugmergestate
-                 print merge state
-   debugmetalog  show changes in commit graph over time
-   debugmetalogroots
-                 list roots stored in metalog
-   debugmutation
-                 display the mutation history (or future) of a commit
-   debugmutationfromobsmarkers
-                 convert obsolescence markers to mutation records
-   debugnamecomplete
-                 complete "names" - tags, open branch names, bookmark names
-   debugnetworkdoctor
-                 run the (Rust) network doctor
-   debugobsolete
-                 create arbitrary obsolete marker
-   debugoptADV   (no help text available)
-   debugoptDEP   (no help text available)
-   debugoptEXP   (no help text available)
-   debugpathcomplete
-                 complete part or all of a tracked path
-   debugpickmergetool
-                 examine which merge tool is chosen for specified file
-   debugpreviewbindag
-                 print dag generated by debugbindag
-   debugprocesstree
-                 show process tree related to hg
-   debugprogress
-                 (no help text available)
-   debugpull     test repo.pull interface
-   debugpushkey  access the pushkey key/value protocol
-   debugpvec     (no help text available)
-   debugpython   run python interpreter
-   debugracyoutput
-                 exercise racy stdout / stderr / progress outputs
-   debugreadauthforuri
-                 (no help text available)
-   debugrebuildchangelog
-                 rebuild changelog by recloning and copying draft commits
-   debugrebuilddirstate
-                 rebuild the dirstate as it would look like for the given
-                 revision
-   debugrebuildfncache
-                 rebuild the fncache file
-   debugremotefilelog
-                 (no help text available)
-   debugrename   dump rename information
-   debugresetheads
-                 reset heads of repo so it looks like after a fresh clone
-   debugrevlogclone
-                 download revlog and bookmarks into a newly initialized repo
-   debugrevset   resolves a single revset and outputs its commit hash
-   debugrevspec  parse and apply a revision specification
-   debugrunlog   display runlog entries
-   debugrunshell
-                 run a shell command
-   debugruntest  run .t or Python doctest test
-   debugscmstore
-                 test file and tree fetching using scmstore
-   debugscmstorereplay
-                 replay scmstore activity log
-   debugsegmentclone
-                 clone a repository using segmented changelog
-   debugsegmentgraph
-                 display segment graph for a given group and level
-   debugsegmentpull
-                 pull a repository using segmented changelog. This command does
-                 not do discovery and requrires specifying old/new master
-                 revisions
-   debugsendunbundle
-                 Send unbundle wireproto command to a given server
-   debugsetparents
-                 manually set the parents of the current working directory
    debugshell    (no help text available)
-   debugsmallcommitmetadata
-                 store string metadata for a commit
-   debugssl      test a secure connection to a server
-   debugstatus   common performance issues for status
-   debugstore    print information about blobstore
-   debugstrip    strip commits and all their descendants from the repository
-   debugsuccessorssets
-                 show set of successors for revision
-   debugtemplate
-                 parse and apply a template
-   debugthrowexception
-                 cause an intentional exception to be raised in the command
-   debugthrowrustbail
-                 cause an error to be returned from rust and propagated to
-                 python using bail
-   debugthrowrustexception
-                 cause an error to be returned from rust and propagated to
-                 python
-   debugtop      outputs information about all running commands for the current
-                 repository
-   debugtreestate
-                 manage treestate
-   debugupdatecaches
-                 warm all known caches in the repository
-   debugvisibility
-                 control visibility tracking
-   debugvisibleheads
-                 print visible heads
-   debugwaitonprefetch
-                 (no help text available)
-   debugwaitonrepack
-                 (no help text available)
-   debugwalk     show how files match on given patterns
-   debugwireargs
-                 (no help text available)
 
 Test list of commands with command with no help text
 
@@ -1173,17 +936,6 @@ test advanced, deprecated and experimental options are shown with -v
     --dopt option is (DEPRECATED)
   $ hg help -v debugoptEXP | grep eopt
     --eopt option is (EXPERIMENTAL)
-
-#if gettext normal-layout
-test deprecated option is hidden with translation with untranslated description
-(use many globy for not failing on changed transaction)
-  $ LANGUAGE=sv hg help debugoptDEP
-  hg debugoptDEP
-  
-  (*) (glob)
-  
-  (some details hidden, use --verbose to show complete help)
-#endif
 
 Test commands that collide with topics (issue4240)
 
@@ -1226,7 +978,7 @@ Test a help topic
       - "yesterday" (midnight)
       - "now" - right now
   
-      Lastly, there is Mercurial's internal format:
+      Lastly, there is Sapling's internal format:
   
       - "1165411109 0" (Wed Dec 6 13:18:29 2006 UTC)
   
@@ -1325,7 +1077,7 @@ Test deprecated items
 Test help hooks
 
   $ cat > helphook1.py <<EOF
-  > from edenscm import help
+  > from sapling import help
   > 
   > def rewrite(ui, topic, doc):
   >     return doc + '\nhelphook1\n'
@@ -1334,7 +1086,7 @@ Test help hooks
   >     help.addtopichook('revisions', rewrite)
   > EOF
   $ cat > helphook2.py <<EOF
-  > from edenscm import help
+  > from sapling import help
   > 
   > def rewrite(ui, topic, doc):
   >     return doc + '\nhelphook2\n'
@@ -1453,7 +1205,7 @@ Test omit indicating for help
   > This paragraph is never omitted, too (for extension)
   > '''
   > from __future__ import absolute_import
-  > from edenscm import commands, help
+  > from sapling import commands, help
   > testtopic = """This paragraph is never omitted (for topic).
   > 
   > .. container:: verbose
@@ -1523,7 +1275,7 @@ Test section lookup
           (DVCS) can be described as a directed acyclic graph (DAG), consisting
           of nodes and edges, where nodes correspond to changesets and edges
           imply a parent -> child relation. This graph can be visualized by
-          graphical tools such as 'hg log --graph'. In Mercurial, the DAG is
+          graphical tools such as 'hg log --graph'. In Sapling, the DAG is
           limited by the requirement for children to have at most two parents.
   
 
@@ -1654,7 +1406,7 @@ Test dynamic list of merge tools only shows up once
   Merge Tools
   """""""""""
   
-      To merge files Mercurial uses merge tools.
+      To merge files Sapling uses merge tools.
   
       A merge tool combines two different versions of a file into a merged file.
       Merge tools are given the two files and the greatest common ancestor of
@@ -1669,7 +1421,7 @@ Test dynamic list of merge tools only shows up once
       different evolutions of the same initial base file. Furthermore, some
       interactive merge programs make it easier to manually resolve conflicting
       merges, either in a graphical way, or by inserting some conflict markers.
-      Mercurial does not include any interactive merge programs but relies on
+      Sapling does not include any interactive merge programs but relies on
       external tools for that.
   
       Available merge tools
@@ -1757,7 +1509,7 @@ Test dynamic list of merge tools only shows up once
       Choosing a merge tool
       =====================
   
-      Mercurial uses these rules when deciding which merge tool to use:
+      Sapling uses these rules when deciding which merge tool to use:
   
       1. If a tool has been specified with the --tool option to merge or
          resolve, it is used.  If it is the name of a tool in the merge-tools
@@ -1782,9 +1534,9 @@ Test dynamic list of merge tools only shows up once
       8. Otherwise, ":prompt" is used.
   
       Note:
-         After selecting a merge program, Mercurial will by default attempt to
+         After selecting a merge program, Sapling will by default attempt to
          merge the files using a simple merge algorithm first. Only if it
-         doesn't succeed because of conflicting changes will Mercurial actually
+         doesn't succeed because of conflicting changes will Sapling actually
          execute the merge program. Whether to use the simple merge algorithm
          first can be controlled by the premerge setting of the merge tool.
          Premerge is enabled by default unless the file is binary or a symlink.

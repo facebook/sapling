@@ -114,7 +114,7 @@ impl ToWire for CommitHashToLocationRequestBatch {
     type Wire = WireCommitHashToLocationRequestBatch;
 
     fn to_wire(self) -> Self::Wire {
-        let client_head = self.master_heads.get(0).copied().to_wire();
+        let client_head = self.master_heads.first().copied().to_wire();
         Self::Wire {
             client_head,
             hgids: self.hgids.to_wire(),
@@ -366,7 +366,7 @@ impl ToWire for BonsaiChangesetContent {
                 .map(|(a, b)| (a.to_wire(), b.to_wire()))
                 .collect(),
             message: self.message,
-            snapshot_state: self.is_snapshot.then(|| WireSnapshotState {}),
+            snapshot_state: self.is_snapshot.then_some(WireSnapshotState {}),
         }
     }
 }

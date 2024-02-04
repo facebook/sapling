@@ -10,9 +10,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
-use futures::FutureExt;
 use futures::Stream;
 use futures::TryStreamExt;
 use futures_ext::future::TryShared;
@@ -82,14 +80,6 @@ impl UploadableHgBlob for TreemanifestEntry {
             path: node_key.path.clone(),
         };
         let (_node, value) = upload.upload(ctx.clone(), repo.repo_blobstore_arc())?;
-        Ok((
-            node_key,
-            (
-                manifest_content,
-                p1,
-                p2,
-                value.compat().boxed().try_shared(),
-            ),
-        ))
+        Ok((node_key, (manifest_content, p1, p2, value.try_shared())))
     }
 }

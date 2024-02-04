@@ -12,6 +12,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use async_stream::try_stream;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
@@ -65,6 +66,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
+use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
@@ -72,7 +74,6 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
 use serde::Deserialize;
-use tunables::tunables;
 use types::HgId;
 use types::Parents;
 
@@ -92,7 +93,7 @@ use crate::utils::parse_cbor_request;
 use crate::utils::parse_wire_request;
 use crate::utils::to_create_change;
 use crate::utils::to_hg_path;
-use crate::utils::to_mononoke_path;
+use crate::utils::to_mpath;
 use crate::utils::to_revlog_changeset;
 
 /// XXX: This number was chosen arbitrarily.
@@ -285,7 +286,7 @@ impl EdenApiHandler for HashLookupHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         use CommitHashLookupRequest::*;
-        Ok(stream::iter(request.batch.into_iter())
+        Ok(stream::iter(request.batch)
             .then(move |request| {
                 let hg_repo_ctx = repo.clone();
                 async move {
@@ -404,7 +405,7 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
                     .map(|(path, fc)| {
                         let create_change = to_create_change(fc, bubble_id)
                             .with_context(|| anyhow!("Parsing file changes for {}", path))?;
-                        Ok((to_mononoke_path(path)?, create_change))
+                        Ok((to_mpath(path)?, create_change))
                     })
                     .collect::<anyhow::Result<_>>()?,
                 match bubble_id {
@@ -449,12 +450,12 @@ impl EdenApiHandler for FetchSnapshotHandler {
         let cs_id = ChangesetId::from(request.cs_id);
         let bubble_id = repo
             .ephemeral_store()
-            .bubble_from_changeset(&cs_id)
+            .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
             .context("Snapshot not in a bubble")?;
         let labels = repo
             .ephemeral_store()
-            .labels_from_bubble(&bubble_id)
+            .labels_from_bubble(repo.ctx(), &bubble_id)
             .await
             .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
@@ -539,7 +540,7 @@ impl EdenApiHandler for AlterSnapshotHandler {
         let cs_id = ChangesetId::from(request.cs_id);
         let id = repo
             .ephemeral_store()
-            .bubble_from_changeset(&cs_id)
+            .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
             .context("Snapshot does not exist or has already expired")?;
         let (label_addition, label_removal) = (
@@ -554,16 +555,19 @@ impl EdenApiHandler for AlterSnapshotHandler {
         } else if label_addition {
             // Input has labels to add, so let's add the input labels.
             repo.ephemeral_store()
-                .add_bubble_labels(id, request.labels_to_add.clone())
+                .add_bubble_labels(repo.ctx(), id, request.labels_to_add.clone())
                 .await?;
         } else {
             // Input has labels to remove, or no labels as input at all. In either case,
             // we need to remove specific or all labels corresponding to the bubble.
             repo.ephemeral_store()
-                .remove_bubble_labels(id, request.labels_to_remove.clone())
+                .remove_bubble_labels(repo.ctx(), id, request.labels_to_remove.clone())
                 .await?;
         }
-        let current_labels = repo.ephemeral_store().labels_from_bubble(&id).await?;
+        let current_labels = repo
+            .ephemeral_store()
+            .labels_from_bubble(repo.ctx(), &id)
+            .await?;
         let response = AlterSnapshotResponse { current_labels };
         Ok(stream::once(async move { Ok(response) }).boxed())
     }
@@ -629,9 +633,12 @@ impl EdenApiHandler for GraphHandlerV2 {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
-        if tunables()
-            .enable_streaming_commit_graph_edenapi_endpoint()
-            .unwrap_or_default()
+        if justknobs::eval(
+            "scm/mononoke:enable_streaming_commit_graph_edenapi_endpoint",
+            None,
+            None,
+        )
+        .unwrap_or_default()
         {
             // If all the requested heads are public, return stream.
             if heads.len() < PHASES_CHECK_LIMIT && repo.is_all_public(&heads).await? {
@@ -699,30 +706,31 @@ impl EdenApiHandler for GraphSegmentsHandler {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
-        let graph_segment_entries =
-            repo.graph_segments(common, heads)
-                .await?
-                .into_iter()
-                .map(|segment| {
-                    Ok(CommitGraphSegmentsEntry {
-                        head: HgId::from(segment.head.into_nodehash()),
-                        base: HgId::from(segment.base.into_nodehash()),
-                        length: segment.length,
-                        parents: segment
-                            .parents
-                            .into_iter()
-                            .map(|parent| CommitGraphSegmentParent {
-                                hgid: HgId::from(parent.hgid.into_nodehash()),
-                                location: parent.location.map(|location| {
-                                    location.map_descendant(|descendant| {
-                                        HgId::from(descendant.into_nodehash())
-                                    })
-                                }),
-                            })
-                            .collect(),
-                    })
-                });
-        Ok(stream::iter(graph_segment_entries).boxed())
+        Ok(try_stream! {
+            let graph_segments = repo.graph_segments(common, heads).await?;
+
+            for await segment in graph_segments {
+                let segment = segment?;
+                yield CommitGraphSegmentsEntry {
+                    head: HgId::from(segment.head.into_nodehash()),
+                    base: HgId::from(segment.base.into_nodehash()),
+                    length: segment.length,
+                    parents: segment
+                        .parents
+                        .into_iter()
+                        .map(|parent| CommitGraphSegmentParent {
+                            hgid: HgId::from(parent.hgid.into_nodehash()),
+                            location: parent.location.map(|location| {
+                                location.map_descendant(|descendant| {
+                                    HgId::from(descendant.into_nodehash())
+                                })
+                            }),
+                        })
+                        .collect(),
+                }
+            }
+        }
+        .boxed())
     }
 }
 
@@ -742,9 +750,7 @@ impl EdenApiHandler for CommitMutationsHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        if !tunables().mutation_generate_for_draft().unwrap_or_default() {
-            return Ok(stream::empty().boxed());
-        }
+
         let commits = request
             .commits
             .into_iter()
@@ -832,7 +838,12 @@ impl EdenApiHandler for CommitTranslateId {
                         (
                             id,
                             from_repo
-                                .xrepo_commit_lookup(&to_repo, bs.clone(), None)
+                                .xrepo_commit_lookup(
+                                    &to_repo,
+                                    bs.clone(),
+                                    None,
+                                    XRepoLookupSyncBehaviour::SyncIfAbsent,
+                                )
                                 .await,
                         )
                     }

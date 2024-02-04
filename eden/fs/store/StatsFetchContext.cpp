@@ -13,7 +13,7 @@ namespace facebook::eden {
 StatsFetchContext::StatsFetchContext(
     OptionalProcessId pid,
     Cause cause,
-    std::string_view causeDetail,
+    std::optional<std::string_view> causeDetail,
     const std::unordered_map<std::string, std::string>* requestInfo)
     : clientPid_{pid}, cause_{cause}, causeDetail_{std::move(causeDetail)} {
   if (requestInfo) {

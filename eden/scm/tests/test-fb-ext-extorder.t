@@ -38,4 +38,4 @@ Conflicting deps
   $ hg id > out.txt 2>&1
   [1]
   $ grep MercurialExtOrderException: < out.txt
-  edenscm.ext.extorder.MercurialExtOrderException: extorder: conflicting extension order
+  sapling.ext.extorder.MercurialExtOrderException: extorder: conflicting extension order

@@ -50,23 +50,23 @@ doc/*.[0-9].html
 MANIFEST
 MANIFEST.in
 patches
-edenscm/__modulepolicy__.py
-edenscm/__version__.py
-edenscm/hgpythonlib.h
-edenscm/mercurial.egg-info
+sapling/__modulepolicy__.py
+sapling/__version__.py
+sapling/hgpythonlib.h
+sapling/mercurial.egg-info
 .DS_Store
 tags
 cscope.*
 .idea/
 .asv/
 i18n/hg.pot
-edenscm/locale/*/LC_MESSAGES/hg.mo
-edenscm/hgext/__index__.py
-edenscmnative/clindex.c
-edenscmnative/linelog.c
-edenscmnative/litemmap.c
-edenscmnative/patchrmdir.c
-edenscmnative/traceprof.cpp
+sapling/locale/*/LC_MESSAGES/hg.mo
+sapling/hgext/__index__.py
+saplingnative/clindex.c
+saplingnative/linelog.c
+saplingnative/litemmap.c
+saplingnative/patchrmdir.c
+saplingnative/traceprof.cpp
 
 # Build output
 build
@@ -75,6 +75,7 @@ install/
 .pytype/
 rpmbuild/
 getdeps_build.log
+/isl-dist.tar.xz
 
 # Rust libraries and extensions
 Cargo.lock

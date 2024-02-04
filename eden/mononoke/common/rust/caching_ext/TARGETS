@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "caching_ext",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    test_deps = [
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:quickcheck",
+    ],
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cachelib_stub:cachelib",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/stats:stats",
+    ],
+)

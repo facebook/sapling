@@ -1,9 +1,0 @@
-[package]
-name = "pyconchparser"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-conch-parser = { path = "../../../../lib/third-party/conch-parser" }
-cpython_ext = { path = "../../../../lib/cpython-ext" }
-cpython = { version = "0.7", default-features = false }

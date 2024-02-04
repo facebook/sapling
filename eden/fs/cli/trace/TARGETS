@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+
+oncall("scm_client_infra")
+
+cpp_binary(
+    name = "trace_stream",
+    srcs = [
+        "trace_stream.cpp",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+        "ovr_config//os:windows",
+    ],
+    deps = [
+        "fbsource//third-party/cpptoml:cpptoml",
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/service:thrift-streaming-cpp2-clients",
+        "//eden/fs/service:thrift-streaming-cpp2-types",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:portability",
+        "//folly/init:init",
+        "//folly/io/async:async_socket",
+        "//folly/io/async:scoped_event_base_thread",
+        "//folly/lang:to_ascii",
+        "//thrift/lib/cpp/util:enum_utils",
+        "//thrift/lib/cpp2/async:rocket_client_channel",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)

@@ -7,6 +7,7 @@
 
 use std::env;
 use std::ffi::OsStr;
+use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -27,7 +28,6 @@ use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPath;
 use util::errors::IOContext;
-use util::errors::IOError;
 use util::file::atomic_write;
 use util::path::absolute;
 use util::path::expand_path;
@@ -61,7 +61,7 @@ pub enum WorkingCopyError {
     NoSuchTarget(HgId),
 
     #[error(transparent)]
-    Io(#[from] IOError),
+    Io(#[from] io::Error),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -69,7 +69,7 @@ pub enum WorkingCopyError {
 
 #[instrument(skip(logger), err)]
 pub fn init_working_copy(
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     repo: &mut Repo,
     target: Option<HgId>,
     sparse_profiles: Vec<String>,
@@ -118,7 +118,7 @@ pub fn init_working_copy(
 
     for profile in &sparse_profiles {
         let path = RepoPath::from_str(profile).map_err(|e| anyhow!(e))?;
-        if matches!(target_mf.get(path)?, None) {
+        if target_mf.get(path)?.is_none() {
             logger.warn(format!(
                 "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with '@prog@ sparse disableprofile'."
             ));
@@ -216,6 +216,10 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         clone_command.args(["-r", &rev.to_hex()]);
     } else {
         clone_command.arg("--allow-empty-repo");
+    }
+
+    if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
+        clone_command.args(["--backing-store", "filteredhg"]);
     }
 
     tracing::info!(?clone_command, "running edenfsctl clone");

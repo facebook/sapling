@@ -62,9 +62,6 @@ impl<'a, T> IntoIterator for &'a UnionStore<T> {
 
 impl<T: ToKeys> ToKeys for UnionStore<T> {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        self.into_iter()
-            .map(|store| store.to_keys())
-            .flatten()
-            .collect()
+        self.into_iter().flat_map(|store| store.to_keys()).collect()
     }
 }

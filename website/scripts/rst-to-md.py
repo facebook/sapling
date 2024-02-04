@@ -39,7 +39,8 @@ for (command, rst) in rsts.items():
     if not isinstance(rst, str):
         raise TypeError
 
-    mds[command] = e.minirst.format(rst, style="md", keep=["verbose"])[0]  # noqa: F821
+    text = sapling.minirst.format(rst, style="md", keep=["verbose"])[0]  # noqa: F821
+    mds[command] = text
 
 
 stdout = os.fdopen(1, "w")

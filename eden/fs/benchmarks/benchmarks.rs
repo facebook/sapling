@@ -143,15 +143,12 @@ fn random_4k_reads_direct(b: &mut Bencher) {
 
     let path = get_tempfile_path("random_reads.tmp");
 
-    let mut options = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create_new(true)
-        .clone();
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create_new(true);
     #[cfg(target_os = "linux")]
-    let options = options.custom_flags(libc::O_DIRECT);
+    options.custom_flags(libc::O_DIRECT);
     #[cfg(windows)]
-    let options = options.custom_flags(winapi::um::winbase::FILE_FLAG_NO_BUFFERING);
+    options.custom_flags(winapi::um::winbase::FILE_FLAG_NO_BUFFERING);
     let file = options
         .open(&path)
         .expect(&format!("failed to open {}", path.display()));

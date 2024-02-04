@@ -288,14 +288,19 @@ def run_tests(
 @click.command()
 @click.option("--dry-run", default=False, is_flag=True, help="list tests")
 @click.option(
-    "--interactive", default=False, is_flag=True, help="prompt to accept changed output"
+    "-i",
+    "--interactive",
+    default=False,
+    is_flag=True,
+    help="prompt to accept changed output",
 )
 @click.option(
-    "--update-output", default=False, is_flag=True, help="accept changed output"
+    "-u", "--update-output", default=False, is_flag=True, help="accept changed output"
 )
 @click.option("--output", default=None, help="output directory")
 @click.option("--verbose", default=False, is_flag=True, help="output verbose messages")
 @click.option(
+    "-d",
     "--debug",
     default=False,
     is_flag=True,

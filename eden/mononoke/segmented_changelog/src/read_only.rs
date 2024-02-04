@@ -174,8 +174,8 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let common_id_set = DagIdSet::from_spans(common_ids.into_iter());
-        let missing_id_set = DagIdSet::from_spans(missing_ids.into_iter());
+        let common_id_set = DagIdSet::from_spans(common_ids);
+        let missing_id_set = DagIdSet::from_spans(missing_ids);
         let common_ancestors_id_set = self.iddag.ancestors(common_id_set)?;
         let missing_ancestors_id_set = self.iddag.ancestors(missing_id_set)?;
 

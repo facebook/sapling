@@ -12,7 +12,6 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use itertools::Itertools;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -41,11 +40,15 @@ impl MononokeIdentity {
     pub fn id_data(&self) -> &str {
         &self.id_data
     }
+
+    pub fn is_of_type(&self, id_type: &str) -> bool {
+        self.id_type == id_type
+    }
 }
 
 impl fmt::Display for MononokeIdentity {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{}:{}", self.id_type(), self.id_data())
+        write!(fmt, "{}:{}", self.id_type, self.id_data)
     }
 }
 
@@ -82,10 +85,6 @@ impl<'de> Deserialize<'de> for MononokeIdentity {
     }
 }
 
-pub fn pretty_print(identities: &MononokeIdentitySet) -> String {
-    identities.iter().map(ToString::to_string).join(",")
-}
-
 pub trait MononokeIdentitySetExt {
     fn is_quicksand(&self) -> bool;
 
@@ -98,6 +97,10 @@ pub trait MononokeIdentitySetExt {
     fn hostname(&self) -> Option<&str>;
 
     fn username(&self) -> Option<&str>;
+    fn identity_type_filtered_concat(&self, id_type: &str) -> Option<String>;
+    fn main_client_identity(&self) -> String;
+
+    fn to_string(&self) -> String;
 }
 
 #[test]

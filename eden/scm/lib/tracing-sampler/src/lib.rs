@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
-use once_cell::sync::OnceCell;
 use sampling::SamplingConfig;
-use serde::ser::SerializeMap;
-use serde::ser::Serializer;
-use serde_json::Serializer as JsonSerializer;
 use tracing::subscriber::Interest;
 use tracing::Event;
 use tracing::Metadata;
@@ -24,7 +20,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
 pub struct SamplingLayer {
-    config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
+    config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
 }
 
 impl SamplingLayer {
@@ -33,7 +29,7 @@ impl SamplingLayer {
     }
 
     fn new_with_config<S: Subscriber + for<'a> LookupSpan<'a>>(
-        config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
+        config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
     ) -> impl Layer<S> {
         Self { config }.with_filter(SamplingFilter { config })
     }
@@ -51,26 +47,12 @@ impl<S: Subscriber> Layer<S> for SamplingLayer {
             None => return,
         };
 
-        let serialize = || -> std::io::Result<()> {
-            let mut file = config.file();
-            let mut serializer = JsonSerializer::new(&*file);
-
-            let mut serializer = serializer.serialize_map(None)?;
-            serializer.serialize_entry("category", category)?;
-            serializer.serialize_entry("data", &event.field_map())?;
-            serializer.end()?;
-
-            file.write_all(b"\0")?;
-
-            Ok(())
-        };
-
-        let _ = serialize();
+        let _ = config.append(category, &event.field_map());
     }
 }
 
 struct SamplingFilter {
-    config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
+    config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
 }
 
 impl SamplingFilter {
@@ -106,7 +88,7 @@ mod tests {
 
     use super::*;
 
-    static TEST_CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
+    static TEST_CONFIG: OnceLock<Option<Arc<SamplingConfig>>> = OnceLock::new();
 
     #[test]
     fn test_sampling_layer() {

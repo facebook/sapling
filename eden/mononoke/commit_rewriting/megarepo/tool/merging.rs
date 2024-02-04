@@ -7,7 +7,6 @@
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cloned::cloned;
 use context::CoreContext;
@@ -20,9 +19,11 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;
 
+use crate::Repo;
+
 async fn fail_on_path_conflicts(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     hg_cs_id_1: HgChangesetId,
     hg_cs_id_2: HgChangesetId,
 ) -> Result<(), Error> {
@@ -46,7 +47,7 @@ async fn fail_on_path_conflicts(
 
 pub async fn perform_merge(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     first_bcs_id: ChangesetId,
     second_bcs_id: ChangesetId,
     resulting_changeset_args: ChangesetArgs,
@@ -83,7 +84,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_path_conflict_detection(fb: FacebookInit) {
-        let repo = MergeEven::getrepo(fb).await;
+        let repo = MergeEven::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let p1 = HgChangesetId::from_str("4f7f3fd428bec1a48f9314414b063c706d9c1aed").unwrap();
         let p2 = HgChangesetId::from_str("16839021e338500b3cf7c9b871c8a07351697d68").unwrap();

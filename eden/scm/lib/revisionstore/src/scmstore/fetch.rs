@@ -19,9 +19,9 @@ use types::Key;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum FetchMode {
-    /// The fetch may hit memcache or other servers.
+    /// The fetch may hit remote servers.
     AllowRemote,
     /// The fetch is limited to RAM and disk.
     LocalOnly,
@@ -38,6 +38,8 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     pub found: HashMap<Key, T>,
 
     pub found_tx: Sender<Result<(Key, T), KeyFetchError>>,
+
+    pub mode: FetchMode,
 }
 
 impl<T: StoreValue> CommonFetchState<T> {
@@ -45,12 +47,14 @@ impl<T: StoreValue> CommonFetchState<T> {
         keys: impl Iterator<Item = Key>,
         attrs: T::Attrs,
         found_tx: Sender<Result<(Key, T), KeyFetchError>>,
+        mode: FetchMode,
     ) -> Self {
         Self {
             pending: keys.collect(),
             request_attrs: attrs,
             found: HashMap::new(),
             found_tx,
+            mode,
         }
     }
 
@@ -105,7 +109,7 @@ impl<T: StoreValue> CommonFetchState<T> {
             }
         };
 
-        return false;
+        false
     }
 
     pub(crate) fn results(mut self, errors: FetchErrors) {
@@ -114,9 +118,13 @@ impl<T: StoreValue> CommonFetchState<T> {
         for key in self.pending.into_iter() {
             self.found.remove(&key);
             incomplete.entry(key).or_insert_with(|| {
-                // This should really never happen. If a key fails to fetch, it should've been
-                // associated with a keyed error and put in incomplete already.
-                vec![anyhow!("unknown error while fetching")]
+                let msg = match self.mode {
+                    FetchMode::LocalOnly => "not found locally and not contacting server",
+                    // This should really never happen. If a key fails to fetch, it should've been
+                    // associated with a keyed error and put in incomplete already.
+                    FetchMode::AllowRemote => "server did not provide content",
+                };
+                vec![anyhow!("{}", msg)]
             });
         }
 
@@ -128,7 +136,7 @@ impl<T: StoreValue> CommonFetchState<T> {
         for (key, errors) in incomplete {
             let _ = self
                 .found_tx
-                .send(Err(KeyFetchError::KeyedError { key, errors }.into()));
+                .send(Err(KeyFetchError::KeyedError { key, errors }));
         }
 
         for err in errors.other_errors {
@@ -153,8 +161,8 @@ impl<T: StoreValue> CommonFetchState<T> {
             (available, fetchable)
         };
         let missing = self.request_attrs - available;
-        let actionable = missing & fetchable;
-        actionable
+
+        missing & fetchable
     }
 }
 
@@ -214,12 +222,12 @@ impl FetchErrors {
 }
 
 pub struct FetchResults<T> {
-    iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>,
+    iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>,
 }
 
 impl<T> IntoIterator for FetchResults<T> {
     type Item = Result<(Key, T), KeyFetchError>;
-    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>;
+    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iterator
@@ -227,7 +235,7 @@ impl<T> IntoIterator for FetchResults<T> {
 }
 
 impl<T> FetchResults<T> {
-    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>) -> Self {
+    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>) -> Self {
         FetchResults { iterator }
     }
 

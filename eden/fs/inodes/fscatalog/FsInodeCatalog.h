@@ -13,7 +13,7 @@
 #include <array>
 #include <condition_variable>
 #include <optional>
-#include "eden/fs/inodes/IFileContentStore.h"
+#include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -36,9 +36,10 @@ class InodePath;
 /**
  * Class to manage the on disk data.
  */
-class FileContentStore : public IFileContentStore {
+class FsFileContentStore : public FileContentStore {
  public:
-  explicit FileContentStore(AbsolutePathPiece localDir) : localDir_{localDir} {}
+  explicit FsFileContentStore(AbsolutePathPiece localDir)
+      : localDir_{localDir} {}
 
   /**
    * Initialize the FileContentStore, acquire the "info" file lock and load the
@@ -56,7 +57,7 @@ class FileContentStore : public IFileContentStore {
   void close() override;
 
   /**
-   * Was FileContentStore initialized - i.e., is cleanup (close) necessary.
+   * Was FsFileContentStore initialized - i.e., is cleanup (close) necessary.
    */
   bool initialized() const override {
     return bool(infoFile_);
@@ -80,7 +81,7 @@ class FileContentStore : public IFileContentStore {
   /**
    * Helper function that creates an overlay file for a new FileInode.
    */
-  folly::File createOverlayFile(
+  std::variant<folly::File, InodeNumber> createOverlayFile(
       InodeNumber inodeNumber,
       folly::ByteRange contents) override;
 
@@ -88,7 +89,7 @@ class FileContentStore : public IFileContentStore {
    * Helper function to write an overlay file for a FileInode with existing
    * contents.
    */
-  folly::File createOverlayFile(
+  std::variant<folly::File, InodeNumber> createOverlayFile(
       InodeNumber inodeNumber,
       const folly::IOBuf& contents) override;
 
@@ -101,13 +102,15 @@ class FileContentStore : public IFileContentStore {
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header, and returns the file.
    */
-  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId)
-      override;
+  std::variant<folly::File, InodeNumber> openFile(
+      InodeNumber inodeNumber,
+      folly::StringPiece headerId) override;
 
   /**
    * Open an existing overlay file without verifying the header.
    */
-  folly::File openFileNoVerify(InodeNumber inodeNumber) override;
+  std::variant<folly::File, InodeNumber> openFileNoVerify(
+      InodeNumber inodeNumber) override;
 
   bool hasOverlayFile(InodeNumber inodeNumber) override;
 
@@ -252,7 +255,7 @@ class FileContentStore : public IFileContentStore {
  */
 class FsInodeCatalog : public InodeCatalog {
  public:
-  explicit FsInodeCatalog(FileContentStore* core) : core_(core) {}
+  explicit FsInodeCatalog(FsFileContentStore* core) : core_(core) {}
 
   bool supportsSemanticOperations() const override {
     return false;
@@ -304,7 +307,7 @@ class FsInodeCatalog : public InodeCatalog {
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:
-  FileContentStore* core_;
+  FsFileContentStore* core_;
 };
 
 } // namespace facebook::eden

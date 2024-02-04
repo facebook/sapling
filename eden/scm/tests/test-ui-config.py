@@ -1,7 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from edenscm import dispatch, error, ui as uimod
-from hghave import require
+from sapling import error, ui as uimod
 
 
 testui = uimod.ui.load()

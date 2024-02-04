@@ -9,9 +9,11 @@
 //!
 //! The graph of all commits in the repository.
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
@@ -21,9 +23,13 @@ use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
+use futures::stream::FuturesUnordered;
 use futures::Future;
+use futures::FutureExt;
 use futures::StreamExt;
+use futures::TryFutureExt;
 use futures::TryStreamExt;
+use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -67,8 +73,11 @@ impl CommitGraph {
     ) -> Result<bool> {
         let parent_edges = self
             .storage
-            .fetch_many_edges_required(ctx, &parents, Prefetch::None)
-            .await?;
+            .fetch_many_edges(ctx, &parents, Prefetch::None)
+            .await?
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
 
         self.storage
             .add(
@@ -90,7 +99,7 @@ impl CommitGraph {
 
     /// Returns true if the changeset exists.
     pub async fn exists(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        let edges = self.storage.maybe_fetch_edges(ctx, cs_id).await?;
         Ok(edges.is_some())
     }
 
@@ -99,24 +108,8 @@ impl CommitGraph {
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> Result<Option<ChangesetParents>> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.map(|edges| {
-            edges
-                .parents
-                .into_iter()
-                .map(|parent| parent.cs_id)
-                .collect()
-        }))
-    }
-
-    /// Returns the parents of a single changeset that must exist.
-    pub async fn changeset_parents_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
     ) -> Result<ChangesetParents> {
-        let edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges
             .parents
             .into_iter()
@@ -129,18 +122,8 @@ impl CommitGraph {
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> Result<Option<Generation>> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.map(|edges| edges.node.generation))
-    }
-
-    /// Returns the generation number of a single changeset that must exist.
-    pub async fn changeset_generation_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
     ) -> Result<Generation> {
-        let edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges.node.generation)
     }
 
@@ -150,14 +133,14 @@ impl CommitGraph {
     /// Note: The property needs to be monotonic i.e. if the
     /// property holds for one changeset then it has to hold
     /// for all its parents.
-    pub async fn ancestors_frontier_with<MonotonicProperty, Out>(
-        &self,
-        ctx: &CoreContext,
+    pub async fn ancestors_frontier_with<'a, MonotonicProperty, Out>(
+        &'a self,
+        ctx: &'a CoreContext,
         heads: Vec<ChangesetId>,
         monotonic_property: MonotonicProperty,
     ) -> Result<Vec<ChangesetId>>
     where
-        MonotonicProperty: Fn(ChangesetId) -> Out + Send + Sync + 'static,
+        MonotonicProperty: Fn(ChangesetId) -> Out + Send + Sync + 'a,
         Out: Future<Output = Result<bool>>,
     {
         let mut ancestors_frontier = vec![];
@@ -190,7 +173,7 @@ impl CommitGraph {
     ) -> Result<bool> {
         let (mut frontier, target_gen) = futures::try_join!(
             self.single_frontier(ctx, descendant),
-            self.changeset_generation_required(ctx, ancestor)
+            self.changeset_generation(ctx, ancestor)
         )?;
         debug_assert!(!frontier.is_empty(), "frontier should contain descendant");
         self.lower_frontier(ctx, &mut frontier, target_gen).await?;
@@ -209,7 +192,7 @@ impl CommitGraph {
     ) -> Result<bool> {
         let (mut frontier, target_gen) = futures::try_join!(
             self.frontier(ctx, descendants),
-            self.changeset_generation_required(ctx, ancestor)
+            self.changeset_generation(ctx, ancestor)
         )?;
         self.lower_frontier(ctx, &mut frontier, target_gen).await?;
         Ok(frontier.highest_generation_contains(ancestor, target_gen))
@@ -296,7 +279,7 @@ impl CommitGraph {
                 .last_key_value()
                 .and_then(|(_, cs_ids)| cs_ids.iter().next())
             {
-                Some(cs_id) => self.storage.fetch_edges_required(ctx, *cs_id).await?,
+                Some(cs_id) => self.storage.fetch_edges(ctx, *cs_id).await?,
                 None => return Ok(vec![]),
             };
 
@@ -348,7 +331,7 @@ impl CommitGraph {
         heads: Vec<ChangesetId>,
         needs_processing: NeedsProcessing,
         slice_size: u64,
-    ) -> Result<Vec<(u64, Vec<ChangesetId>)>>
+    ) -> Result<Vec<(Generation, Vec<ChangesetId>)>>
     where
         NeedsProcessing: Fn(Vec<ChangesetId>) -> Out,
         Out: Future<Output = Result<HashSet<ChangesetId>>>,
@@ -381,10 +364,14 @@ impl CommitGraph {
             // Only push changesets that are in this slice's range.
             // Any remaining changesets will be pushed in the next iterations.
             slices.push((
-                slice_start,
-                frontier.changesets_in_range(
-                    Generation::new(slice_start)..Generation::new(slice_start + slice_size),
-                ),
+                Generation::new(slice_start),
+                frontier
+                    .changesets_in_range(
+                        Generation::new(slice_start)..Generation::new(slice_start + slice_size),
+                    )
+                    // Sort to make the output deterministic.
+                    .sorted()
+                    .collect(),
             ));
 
             if slice_start > 1 {
@@ -398,6 +385,78 @@ impl CommitGraph {
         }
 
         Ok(slices.into_iter().rev().collect())
+    }
+
+    /// Runs the given `process` closure on all of the given changesets in local topological
+    /// order, running as many of them concurrently as possible.
+    ///
+    /// Note: local topological order here means that all parents of a changeset that are
+    /// contained in the input `cs_ids` are processed before itself, but if two changesets
+    /// are ancestors of each other and some of the changesets in the path betwen them are
+    /// not given in `cs_ids`, they are not guaranteed to be processed in topological order.
+    pub async fn process_topologically<Process, Fut>(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+        process: Process,
+    ) -> Result<()>
+    where
+        Process: Fn(ChangesetId) -> Fut,
+        Fut: Future<Output = Result<()>> + Send,
+    {
+        // For each changeset in `cs_ids` this stores all other changesets that are in
+        // `cs_ids` that are immediate children of it.
+        let mut rdeps: HashMap<ChangesetId, HashSet<ChangesetId>> = Default::default();
+
+        // For each changeset in `cs_ids` this stores the number of other changesets in
+        // `cs_ids` that are immediate parents of it.
+        let mut deps_count: HashMap<ChangesetId, usize> = Default::default();
+
+        let all_edges = self
+            .storage
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .await?;
+
+        let cs_ids = cs_ids.into_iter().collect::<HashSet<_>>();
+
+        for (cs_id, edges) in all_edges.iter() {
+            for parent in edges.parents.iter() {
+                if cs_ids.contains(&parent.cs_id) {
+                    rdeps.entry(parent.cs_id).or_default().insert(*cs_id);
+                    *deps_count.entry(*cs_id).or_default() += 1;
+                }
+            }
+        }
+
+        // futs contain a future produced by `process` for all changesets that have
+        // no dependencies left. All executing concurrently.
+        let mut futs: FuturesUnordered<_> = Default::default();
+
+        for cs_id in cs_ids {
+            if !deps_count.contains_key(&cs_id) {
+                futs.push(process(cs_id).map_ok(move |()| cs_id).boxed());
+            }
+        }
+
+        while let Some(result) = futs.next().await {
+            let cs_id = result?;
+
+            // After we finish process a changeset, we go through it's reverse dependencies
+            // and subtract one from their dependency count. If the count reaches zero, we
+            // add a new future to futs to begin processing it.
+            let children = rdeps.get(&cs_id).into_iter().flatten();
+            for child in children {
+                let entry = deps_count.get_mut(child).ok_or_else(|| {
+                    anyhow!("deps_count for a child can't be 0 (in process_topologically)")
+                })?;
+                *entry -= 1;
+                if *entry == 0 {
+                    futs.push(process(*child).map_ok(move |()| *child).boxed());
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns the children of a single changeset.

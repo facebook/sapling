@@ -1,0 +1,71 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "revset",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "futures-old": "fbsource//third-party/rust:futures-old",
+        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/failure_ext:failure_ext",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/revset:revset_test_helper",
+        "//eden/mononoke/tests/fixtures:fixtures",
+    ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanatizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/cloned:cloned",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/common/uniqueheap:uniqueheap",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "revset_test_helper",
+    srcs = glob(["revset-test-helper/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "revset-test-helper"},
+    named_deps = {
+        "futures-old": "fbsource//third-party/rust:futures-old",
+        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
+    },
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/tests/fixtures:fixtures",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

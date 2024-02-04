@@ -85,7 +85,7 @@ Criss cross merging
     checking for directory renames
      discovered dir src: 'd1/' -> dst: 'd2/'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0e415ae82418, local: 78d7b604d909+, remote: f05367a88590
    preserving f1 for resolve of f1
    f1: versions differ -> m (premerge)
@@ -158,7 +158,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
     checking for directory renames
      discovered dir src: 'd1/' -> dst: 'd2/'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0e415ae82418, local: 78d7b604d909+, remote: f05367a88590
    f1: versions differ -> m
    f2: remote unchanged -> k
@@ -177,7 +177,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
      pending file src: 'd1/f3' -> dst: 'd2/f3'
      pending file src: 'd1/f4' -> dst: 'd2/f4'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0f6b37dbe527, local: 78d7b604d909+, remote: f05367a88590
    d2/f3: local directory rename - get from d1/f3 -> dg
    d2/f4: local directory rename, both created -> m
@@ -237,7 +237,7 @@ The other way around:
     checking for directory renames
      discovered dir src: 'd1/' -> dst: 'd2/'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0e415ae82418, local: f05367a88590+, remote: 78d7b604d909
    d1/f3: other deleted -> r
    d1/f4: other deleted -> r
@@ -259,7 +259,7 @@ The other way around:
      pending file src: 'd1/f3' -> dst: 'd2/f3'
      pending file src: 'd1/f4' -> dst: 'd2/f4'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0f6b37dbe527, local: f05367a88590+, remote: 78d7b604d909
    d2/f3: remote directory rename - move from d1/f3 -> dm
    d2/f4: remote directory rename, both created -> m
@@ -348,7 +348,7 @@ Verify how the output looks and how verbose it is:
     checking for directory renames
      discovered dir src: 'd1/' -> dst: 'd2/'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0e415ae82418, local: 78d7b604d909+, remote: f05367a88590
    f1: versions differ -> m
    f2: remote unchanged -> k
@@ -367,7 +367,7 @@ Verify how the output looks and how verbose it is:
      pending file src: 'd1/f3' -> dst: 'd2/f3'
      pending file src: 'd1/f4' -> dst: 'd2/f4'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: 0f6b37dbe527, local: 78d7b604d909+, remote: f05367a88590
    d2/f3: local directory rename - get from d1/f3 -> dg
    d2/f4: local directory rename, both created -> m

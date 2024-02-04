@@ -4,7 +4,7 @@
   $ eagerepo
   $ enable progress
   $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
-  $ setconfig progress.delay=0 progress.assume-tty=true progress.lockstep=True progress.renderer=rust:simple
+  $ setconfig progress.delay=0 progress.assume-tty=true progress.lockstep=True progress.renderer=simple
 
 simple test
   $ hg progresstest 4 4
@@ -20,27 +20,25 @@ test nested topics
    (clear) (no-eol)
      Progress test  [>              ]  0/2 cycles  loop 0\x1b[55D (clear) (no-eol) (esc)
      Progress test  [>              ]  0/2 cycles  loop 0\r (esc)
-   Nested progress  [>              ]  0/2   nest 0\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [>              ]  0/2  nest 0\x1b[A\x1b[48D (clear) (no-eol) (esc)
      Progress test  [>              ]  0/2 cycles  loop 0\r (esc)
-   Nested progress  [=======>       ]  1/2   nest 1\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [=======>       ]  1/2  nest 1\x1b[A\x1b[48D (clear) (no-eol) (esc)
      Progress test  [>              ]  0/2 cycles  loop 0\r (esc)
-   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [===============]  2/2  nest 2\x1b[A\x1b[48D (clear) (no-eol) (esc)
+     Progress test  [=======>       ]  1/2 cycles  loop 1\x1b[55D (clear) (no-eol) (esc)
      Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
-   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [>              ]  0/2  nest 0\x1b[A\x1b[48D (clear) (no-eol) (esc)
      Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
-   Nested progress  [>              ]  0/2   nest 0\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [=======>       ]  1/2  nest 1\x1b[A\x1b[48D (clear) (no-eol) (esc)
      Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
-   Nested progress  [=======>       ]  1/2   nest 1\x1b[A\x1b[49D (clear) (no-eol) (esc)
-     Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
-   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [===============]  2/2  nest 2\x1b[A\x1b[48D (clear) (no-eol) (esc)
+     Progress test  [===============]  2/2 cycles  loop 2\x1b[55D (clear) (no-eol) (esc)
      Progress test  [===============]  2/2 cycles  loop 2\r (esc)
-   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [>              ]  0/2  nest 0\x1b[A\x1b[48D (clear) (no-eol) (esc)
      Progress test  [===============]  2/2 cycles  loop 2\r (esc)
-   Nested progress  [>              ]  0/2   nest 0\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [=======>       ]  1/2  nest 1\x1b[A\x1b[48D (clear) (no-eol) (esc)
      Progress test  [===============]  2/2 cycles  loop 2\r (esc)
-   Nested progress  [=======>       ]  1/2   nest 1\x1b[A\x1b[49D (clear) (no-eol) (esc)
-     Progress test  [===============]  2/2 cycles  loop 2\r (esc)
-   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+   Nested progress  [===============]  2/2  nest 2\x1b[A\x1b[48D (clear) (no-eol) (esc)
 
 
 test count over total
@@ -81,7 +79,7 @@ test unicode topic
 test iter adapter
   $ hg iterprogresstest
    (clear) (no-eol)
-           Numbers  [===>           ]  1/4 \x1b[41D (clear) (no-eol) (esc)
-           Numbers  [=======>       ]  2/4 \x1b[41D (clear) (no-eol) (esc)
-           Numbers  [===========>   ]  3/4 \x1b[41D (clear) (no-eol) (esc)
-           Numbers  [===============]  4/4 \x1b[41D (clear) (no-eol) (esc)
+           Numbers  [===>           ]  1/4\x1b[40D (clear) (no-eol) (esc)
+           Numbers  [=======>       ]  2/4\x1b[40D (clear) (no-eol) (esc)
+           Numbers  [===========>   ]  3/4\x1b[40D (clear) (no-eol) (esc)
+           Numbers  [===============]  4/4\x1b[40D (clear) (no-eol) (esc)

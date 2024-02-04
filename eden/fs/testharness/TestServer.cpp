@@ -56,7 +56,7 @@ TestServer::TestServer() : tmpDir_(makeTempDir()) {
   (void)prepareResult;
 }
 
-TestServer::~TestServer() {}
+TestServer::~TestServer() = default;
 
 AbsolutePath TestServer::getTmpDir() const {
   return canonicalPath(tmpDir_.path().string());
@@ -84,6 +84,7 @@ unique_ptr<EdenServer> TestServer::createServer(
       tmpDir + "etc"_pc,
       EdenConfig::SourceVector{
           std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
+          std::make_shared<NullConfigSource>(ConfigSourceType::Dynamic),
           std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
   auto privHelper = make_unique<FakePrivHelper>();
   config->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);

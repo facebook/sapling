@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "context",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:governor",
+        "fbsource//third-party/rust:slog",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
+        "//eden/mononoke/common/async_limiter:async_limiter",
+        "//eden/mononoke/common/scribe_ext:scribe_ext",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/rate_limiting:rate_limiting",
+        "//eden/mononoke/server/metadata:metadata",
+        "//eden/mononoke/server/session_id:session_id",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)
+
+rust_binary(
+    name = "benchmark",
+    srcs = glob(["benchmark/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "doc": False,
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:chrono",
+        ":context",
+    ],
+)

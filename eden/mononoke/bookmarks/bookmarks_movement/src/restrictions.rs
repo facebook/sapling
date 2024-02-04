@@ -17,17 +17,19 @@ use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
-use tunables::tunables;
 
 use crate::BookmarkMovementError;
 use crate::Repo;
 
 pub(crate) fn should_run_hooks(authz: &AuthorizationContext, reason: BookmarkUpdateReason) -> bool {
     if authz.is_service() {
-        reason == BookmarkUpdateReason::Pushrebase
-            && tunables()
-                .enable_hooks_on_service_pushrebase()
-                .unwrap_or_default()
+        let disable_running_hooks_in_pushredirected_repo = justknobs::eval(
+            "scm/mononoke:enable_hooks_on_service_pushrebase",
+            None,
+            None,
+        )
+        .unwrap_or_default();
+        reason == BookmarkUpdateReason::Pushrebase && disable_running_hooks_in_pushredirected_repo
     } else {
         true
     }

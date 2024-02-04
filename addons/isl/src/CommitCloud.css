@@ -1,0 +1,78 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.commit-cloud-info {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1 * var(--pad));
+  margin-top: calc(-1 * var(--pad));
+}
+
+.commit-cloud-header {
+  font-size: 90%;
+  margin-bottom: calc(-1 * var(--pad));
+}
+
+.commit-cloud-row,
+.commit-cloud-row > .subtle {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.commit-cloud-sync-status-badge {
+  padding-block: var(--pad);
+}
+.commit-cloud-sync-status-badge > * {
+  display: flex;
+  gap: var(--halfpad);
+  align-items: center;
+}
+
+.commit-cloud-dropdown-container {
+  width: 100%;
+  z-index: 3;
+  box-sizing: border-box;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.commit-cloud-dropdown-container label {
+  display: block;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  line-height: normal;
+  margin-bottom: 2px;
+  font-size: 90%;
+}
+
+.commit-cloud-dropdown-container vscode-dropdown {
+  min-width: 200px;
+}
+
+.commit-cloud-backup-list {
+  margin-left: calc(3 * var(--pad));
+}
+
+.commit-cloud-workspace-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  width: 100%;
+}
+
+.commit-cloud-new-workspace-input vscode-text-field {
+  flex-grow: 1;
+}
+.commit-cloud-new-workspace-input {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--halfpad);
+}

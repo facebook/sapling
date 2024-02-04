@@ -12,7 +12,7 @@
   $ cat >> testmocks.py << 'EOF'
   > # mock out util.getuser() and util.makedate() to supply testable values
   > import os
-  > from edenscm import util
+  > from sapling import util
   > def mockgetuser():
   >     return 'foobar'
   > 

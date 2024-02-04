@@ -54,7 +54,11 @@ pub async fn list_ancestors<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
     let repo: BlobRepo =
         args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let rev = sub_m

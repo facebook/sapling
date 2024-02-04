@@ -7,12 +7,12 @@
 
 use anyhow::Result;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
-use mononoke_types::MPath;
+use mononoke_types::path::MPath;
 use mutable_renames::MutableRenamesRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct GetArgs {
@@ -34,7 +34,7 @@ pub struct GetArgs {
 pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetArgs) -> Result<()> {
     let target_commit = parse_commit_id(ctx, repo, &get_args.commit_id).await?;
 
-    let mpath = MPath::new_opt(&get_args.path)?;
+    let mpath = MPath::new(&get_args.path)?;
 
     let maybe_entry = if get_args.bypass_cache {
         repo.mutable_renames()
@@ -51,10 +51,7 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetArgs) -> Result<()
         Some(entry) => {
             println!(
                 "Source path `{}`, source bonsai CS {}, source unode {:?}",
-                entry
-                    .src_path()
-                    .as_ref()
-                    .map_or(String::new(), |p| p.to_string()),
+                entry.src_path(),
                 entry.src_cs_id(),
                 entry.src_unode()
             );

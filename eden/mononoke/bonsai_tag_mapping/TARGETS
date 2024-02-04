@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "bonsai_tag_mapping",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)
+
+rust_unittest(
+    name = "bonsai_tag_mapping_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "bonsai_tag_mapping_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":bonsai_tag_mapping",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+)

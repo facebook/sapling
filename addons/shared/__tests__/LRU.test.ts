@@ -7,7 +7,7 @@
 
 import type {LRUWithStats} from '../LRU';
 
-import {cached, LRU} from '../LRU';
+import {cached, LRU, clearTrackedCache} from '../LRU';
 import {SelfUpdate} from '../immutableExt';
 import {List, Record} from 'immutable';
 
@@ -248,6 +248,19 @@ describe('cached()', () => {
       expect(max(1, 2, v => v)).toBe(2);
       expect(stats).toMatchObject({skip: 3});
     });
+
+    it('can audit results', () => {
+      let n = 0;
+      const inc = cached(
+        (rhs: number): number => {
+          n += 1;
+          return n + rhs;
+        },
+        {audit: true},
+      );
+      expect(inc(1)).toBe(2);
+      expect(() => inc(1)).toThrow();
+    });
   });
 
   describe('for class methods', () => {
@@ -317,6 +330,51 @@ describe('cached()', () => {
       expect(p3).not.toBe(p1);
       expect(p3.offset(1, 2)).toMatchObject([31, 42]);
       expect(stats).toMatchObject({miss: 2, hit: 5});
+    });
+
+    it('can audit results', () => {
+      let n = 0;
+      class Impure {
+        @cached({audit: true})
+        inc(rhs: number): number {
+          n += 1;
+          return n + rhs;
+        }
+      }
+      const obj = new Impure();
+      expect(obj.inc(1)).toBe(2);
+      expect(() => obj.inc(1)).toThrow();
+    });
+
+    it('can clear cache', () => {
+      let fCalled = 0;
+      let gCalled = 0;
+
+      class A {
+        @cached({track: true})
+        f() {
+          fCalled += 1;
+          return 1;
+        }
+        @cached({track: false})
+        g() {
+          gCalled += 1;
+          return 1;
+        }
+      }
+
+      const a = new A();
+      a.f();
+      a.f();
+      a.g();
+      a.g();
+      expect(fCalled).toBe(1);
+      expect(gCalled).toBe(1);
+      clearTrackedCache();
+      a.f();
+      a.g();
+      expect(fCalled).toBe(2);
+      expect(gCalled).toBe(1);
     });
   });
 });

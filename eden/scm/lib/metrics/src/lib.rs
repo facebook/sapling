@@ -86,7 +86,7 @@ pub struct Registry {
 impl Registry {
     pub fn global() -> &'static Self {
         static REGISTRY: Lazy<Registry> = Lazy::new(Registry::default);
-        &*REGISTRY
+        &REGISTRY
     }
 
     pub fn register_counter(&self, counter: &'static Counter) {

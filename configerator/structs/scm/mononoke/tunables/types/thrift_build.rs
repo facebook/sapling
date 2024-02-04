@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("tunables_structs__types");
+        conf.clients_crate("tunables_structs__clients");
+        conf.services_crate("tunables_structs__services");
 
         let options = "serde";
         if !options.is_empty() {

@@ -49,6 +49,7 @@ pub mod Badness {
 
 // `Revlog` features
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct Features: u16 {
         const INLINE        = 1 << 0;
         const GENERAL_DELTA = 1 << 1;
@@ -57,6 +58,7 @@ bitflags! {
 
 // Per-revision flags
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct IdxFlags: u16 {
         const OCTOPUS_MERGE = 1 << 12;
         const EXTSTORED     = 1 << 13;

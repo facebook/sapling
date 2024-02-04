@@ -70,17 +70,14 @@ impl PreparedFlatSegments {
     pub fn parents_head_and_roots(&self) -> BTreeSet<Id> {
         self.segments
             .iter()
-            .map(|seg| {
+            .flat_map(|seg| {
                 // `seg.high` is either a head, or a parent referred by another seg
                 // `seg.low` is either a room, or something unnecessary for lazy protocol,
                 // but speeds up graph shape verification (see `check_isomorphic_graph`).
                 // `parents` are either "universally known", essential for lazy protocol,
                 // or something necessary for the pull protocol to re-map the IdMap.
-                [seg.high, seg.low]
-                    .into_iter()
-                    .chain(seg.parents.clone().into_iter())
+                [seg.high, seg.low].into_iter().chain(seg.parents.clone())
             })
-            .flatten()
             .collect()
     }
 }

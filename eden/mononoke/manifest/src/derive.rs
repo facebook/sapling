@@ -10,10 +10,11 @@ use std::collections::HashSet;
 use std::fmt;
 use std::future::Future;
 use std::hash::Hash;
+use std::iter::Iterator;
 use std::sync::Arc;
 
 use anyhow::format_err;
-use anyhow::Error;
+use anyhow::Result;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -21,30 +22,88 @@ use futures::channel::mpsc;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_types::MPath;
+use itertools::Either;
+use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
+use mononoke_types::TrieMap;
+use smallvec::smallvec;
+use smallvec::SmallVec;
 
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::PathTree;
 use crate::StoreLoadable;
+use crate::TrieMapOps;
 
 /// Information passed to `create_tree` function when tree node is constructed
 ///
 /// `Ctx` is any additional data which is useful for particular implementation of
 /// manifest. It is `Some` for subentries for which `create_{tree|leaf}` was called to
 /// generate them, and `None` if subentry was reused from one of its parents.
-pub struct TreeInfo<TreeId, LeafId, Ctx> {
-    pub path: Option<MPath>,
+pub struct TreeInfo<TreeId, LeafId, Ctx, TrieMapType> {
+    pub path: MPath,
     pub parents: Vec<TreeId>,
-    pub subentries: BTreeMap<MPathElement, (Option<Ctx>, Entry<TreeId, LeafId>)>,
+    pub subentries: TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType>,
+}
+
+/// Represents the subentries of a tree node as a combination of singular subentries and
+/// reused parent maps. The key for singular subentries is their name, while the key for
+/// reused maps is a prefix that's prepended to all of the keys of the map.
+pub type TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType> =
+    BTreeMap<SmallVec<[u8; 24]>, Either<(Option<Ctx>, Entry<TreeId, LeafId>), TrieMapType>>;
+
+pub async fn flatten_subentries<Store, TreeId, IntermediateLeafId, LeafId, Ctx, TrieMapType>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    subentries: TreeInfoSubentries<TreeId, IntermediateLeafId, Ctx, TrieMapType>,
+) -> Result<
+    impl Iterator<
+        Item = (
+            MPathElement,
+            (Option<Ctx>, Entry<TreeId, IntermediateLeafId>),
+        ),
+    >,
+>
+where
+    TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
+    IntermediateLeafId: From<LeafId>,
+{
+    Ok(stream::iter(subentries)
+        .map(|(prefix, entry_or_map)| async move {
+            match entry_or_map {
+                Either::Left((ctx, entry)) => {
+                    Ok(vec![(MPathElement::from_smallvec(prefix)?, (ctx, entry))])
+                }
+                Either::Right(map) => map
+                    .into_stream(ctx, blobstore)
+                    .await?
+                    .map_ok(|(mut path, entry)| {
+                        path.insert_from_slice(0, prefix.as_ref());
+                        Ok((
+                            MPathElement::from_smallvec(path)?,
+                            (None, convert_to_intermediate_entry(entry)),
+                        ))
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?
+                    .into_iter()
+                    .collect::<Result<_>>(),
+            }
+        })
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .flatten())
 }
 
 /// Information passed to `create_leaf` function when leaf node is constructed
 pub struct LeafInfo<LeafId, Leaf> {
-    pub path: MPath,
+    pub path: NonRootMPath,
     pub parents: Vec<LeafId>,
     /// Leaf value, if it is not provided it means we have leaves only conflict
     /// which can potentially be resolved by `create_leaf`, in case of mercurial
@@ -74,10 +133,10 @@ pub fn derive_manifest<TreeId, LeafId, IntermediateLeafId, Leaf, T, TFut, L, LFu
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree: T,
     create_leaf: L,
-) -> impl Future<Output = Result<Option<TreeId>, Error>>
+) -> impl Future<Output = Result<Option<TreeId>>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
@@ -86,10 +145,22 @@ where
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
-    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
+    T: Fn(
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+        ) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + Sync + 'static,
     Ctx: Send + 'static,
 {
     derive_manifest_inner(ctx, store, parents, changes, create_tree, create_leaf)
@@ -139,7 +210,6 @@ where
 ///   - Mix of leaves/trees: all leaves are removed, recurse into the trees.
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
-///
 pub fn derive_manifest_inner<
     TreeId,
     LeafId,
@@ -155,10 +225,10 @@ pub fn derive_manifest_inner<
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree: T,
     create_leaf: L,
-) -> impl Future<Output = Result<Option<TreeId>, Error>>
+) -> impl Future<Output = Result<Option<TreeId>>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
@@ -167,17 +237,29 @@ where
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
-    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
+    T: Fn(
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+        ) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + 'static,
     Ctx: Send + 'static,
 {
     bounded_traversal::bounded_traversal(
         256,
         MergeNode {
             name: None,
-            path: None,
+            path: MPath::ROOT,
             changes: PathTree::from_iter(
                 changes
                     .into_iter()
@@ -193,7 +275,7 @@ where
         {
             let create_tree = Arc::new(create_tree);
             let create_leaf = Arc::new(create_leaf);
-            move |merge_result: MergeResult<_, IntermediateLeafId, _>, subentries| {
+            move |merge_result: MergeResult<_, IntermediateLeafId, _, _>, subentries| {
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
@@ -207,22 +289,35 @@ where
                                 name,
                                 path,
                                 parents,
+                                reused_maps,
                             } => {
-                                let subentries: BTreeMap<_, _> = subentries
+                                let mut subentries = subentries
                                     .flatten()
                                     .filter_map(
                                         |(name, context, entry): (
                                             Option<MPathElement>,
                                             Option<Ctx>,
-                                            _,
+                                            Entry<TreeId, IntermediateLeafId>,
                                         )| {
                                             name.map(move |name| (name, (context, entry)))
                                         },
                                     )
-                                    .collect();
-                                if subentries.is_empty() {
+                                    .peekable();
+
+                                if subentries.peek().is_none() && reused_maps.is_empty() {
                                     Ok(None)
                                 } else {
+                                    let subentries = subentries
+                                        .map(|(name, (context, entry))| {
+                                            (name.to_smallvec(), Either::Left((context, entry)))
+                                        })
+                                        .chain(
+                                            reused_maps
+                                                .into_iter()
+                                                .map(|(prefix, map)| (prefix, Either::Right(map))),
+                                        )
+                                        .collect();
+
                                     let (context, tree_id) = create_tree(TreeInfo {
                                         path: path.clone(),
                                         parents,
@@ -269,7 +364,7 @@ where
     }
 }
 
-type BoxFuture<T, E> = future::BoxFuture<'static, Result<T, E>>;
+type BoxFuture<T> = future::BoxFuture<'static, Result<T>>;
 
 /// A convenience wrapper around `derive_manifest` that allows for the tree and leaf creation
 /// closures to send IO work onto a channel that is then fed into a buffered stream. NOTE: don't
@@ -294,10 +389,10 @@ pub fn derive_manifest_with_io_sender<
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
     create_tree_with_sender: T,
     create_leaf_with_sender: L,
-) -> impl Future<Output = Result<Option<TreeId>, Error>>
+) -> impl Future<Output = Result<Option<TreeId>>>
 where
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     Leaf: Send + 'static,
@@ -307,18 +402,25 @@ where
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
     T: Fn(
-            TreeInfo<TreeId, IntermediateLeafId, Ctx>,
-            mpsc::UnboundedSender<BoxFuture<(), Error>>,
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+            mpsc::UnboundedSender<BoxFuture<()>>,
         ) -> TFut
         + Send
         + Sync
         + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
-    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> LFut
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<()>>) -> LFut
         + Send
         + Sync
         + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + 'static,
     Ctx: Send + 'static,
 {
     let (sender, receiver) = mpsc::unbounded();
@@ -356,7 +458,7 @@ impl<Leaf> From<Option<Leaf>> for Change<Leaf> {
     }
 }
 
-enum MergeResult<TreeId, LeafId, Leaf> {
+enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
     Delete,
     Reuse {
         name: Option<MPathElement>,
@@ -365,13 +467,14 @@ enum MergeResult<TreeId, LeafId, Leaf> {
     CreateLeaf {
         leaf: Option<Leaf>,
         name: Option<MPathElement>,
-        path: MPath,
+        path: NonRootMPath,
         parents: Vec<LeafId>,
     },
     CreateTree {
         name: Option<MPathElement>,
-        path: Option<MPath>,
+        path: MPath,
         parents: Vec<TreeId>,
+        reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
     },
 }
 
@@ -379,7 +482,7 @@ enum MergeResult<TreeId, LeafId, Leaf> {
 /// between changes and parents.
 struct MergeNode<TreeId, LeafId, Leaf> {
     name: Option<MPathElement>, // name of this node in parent manifest
-    path: Option<MPath>,        // path to this node from root of the manifest
+    path: MPath,                // path to this node from root of the manifest
     changes: PathTree<Option<Change<Leaf>>>, // changes associated with current subtree
     parents: Vec<Entry<TreeId, LeafId>>, // unmerged parents of current node
 }
@@ -388,19 +491,18 @@ async fn merge<TreeId, LeafId, IntermediateLeafId, Leaf, Store>(
     ctx: CoreContext,
     store: Store,
     node: MergeNode<TreeId, IntermediateLeafId, Leaf>,
-) -> Result<
-    (
-        MergeResult<TreeId, IntermediateLeafId, Leaf>,
-        Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
-    ),
-    Error,
->
+) -> Result<(
+    MergeResult<TreeId, IntermediateLeafId, Leaf, <TreeId::Value as Manifest<Store>>::TrieMapType>,
+    Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
+)>
 where
     Store: Sync + Send + Clone + 'static,
     IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
-    LeafId: Clone + Eq + Hash + fmt::Debug,
-    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Sync,
+    LeafId: Send + Clone + Eq + Hash + fmt::Debug,
+    Leaf: Send,
+    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync,
     TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
+    <TreeId::Value as Manifest<Store>>::TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
 {
     let MergeNode {
         name,
@@ -480,7 +582,9 @@ where
                         MergeResult::CreateLeaf {
                             leaf: None,
                             name,
-                            path: path.expect("leaf can not have empty path"),
+                            path: path
+                                .into_optional_non_root_path()
+                                .expect("leaf can not have empty path"),
                             parents: leaves,
                         },
                         Vec::new(),
@@ -514,7 +618,9 @@ where
                 MergeResult::CreateLeaf {
                     leaf: Some(leaf),
                     name,
-                    path: path.expect("leaf can not have empty path"),
+                    path: path
+                        .into_optional_non_root_path()
+                        .expect("leaf can not have empty path"),
                     parents: parents.into_iter().filter_map(Entry::into_leaf).collect(),
                 },
                 Vec::new(),
@@ -531,45 +637,190 @@ where
 
     // Fetch parent trees and merge them.
     borrowed!(ctx, store);
-    let manifests = future::try_join_all(parent_subtrees.iter().map(move |tree_id| {
-        cloned!(ctx);
-        async move { tree_id.load(&ctx, store).await }
-    }))
-    .await?;
+    let parent_manifests_trie_maps =
+        future::try_join_all(parent_subtrees.iter().map(move |tree_id| {
+            cloned!(ctx);
+            async move {
+                tree_id
+                    .load(&ctx, store)
+                    .await?
+                    .into_trie_map(&ctx, store)
+                    .await
+            }
+        }))
+        .await?;
 
-    let mut deps: BTreeMap<MPathElement, _> = Default::default();
-    // add subentries from all parents
-    for manifest in manifests {
-        // TODO(T123518092): Do this concurrently where possible. Also, skip
-        // it altogether if possible, instead using lookup.
-        let mut stream = manifest.list(ctx, store).await?;
-        while let Some((name, entry)) = stream.try_next().await? {
-            let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-                path: Some(MPath::join_opt_element(path.as_ref(), &name)),
-                name: Some(name),
-                changes: Default::default(),
-                parents: Default::default(),
-            });
-            subentry.parents.push(convert_to_intermediate_entry(entry));
-        }
-    }
-    // add subentries from changes
-    for (name, change) in subentries {
-        let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
-            path: Some(MPath::join_opt_element(path.as_ref(), &name)),
-            name: Some(name),
-            changes: Default::default(),
-            parents: Default::default(),
-        });
-        subentry.changes = change;
-    }
+    let MergeSubentriesResult {
+        reused_maps,
+        merge_nodes,
+    } = merge_subentries(ctx, store, &path, subentries, parent_manifests_trie_maps).await?;
 
     Ok((
         MergeResult::CreateTree {
             name,
             path,
             parents: parent_subtrees,
+            reused_maps,
         },
-        deps.into_values().collect(),
+        merge_nodes,
     ))
+}
+
+struct MergeSubentriesNode<'a, Leaf, TrieMapType> {
+    path: &'a MPath,
+    prefix: SmallVec<[u8; 24]>,
+    changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
+    parents: Vec<TrieMapType>,
+}
+
+struct MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType> {
+    reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
+    merge_nodes: Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
+}
+
+async fn merge_subentries<TreeId, LeafId, IntermediateLeafId, Leaf, TrieMapType, Store>(
+    ctx: &CoreContext,
+    store: &Store,
+    path: &MPath,
+    changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
+    parents: Vec<TrieMapType>,
+) -> Result<MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType>>
+where
+    TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>> + Send,
+    Store: Sync + Send,
+    IntermediateLeafId: Send + From<LeafId> + Clone,
+    TreeId: Send + Clone,
+    LeafId: Send,
+    Leaf: Send,
+{
+    bounded_traversal::bounded_traversal(
+        256,
+        MergeSubentriesNode {
+            path,
+            prefix: smallvec![],
+            changes,
+            parents,
+        },
+        move |MergeSubentriesNode::<_, _> {
+                  path,
+                  prefix,
+                  changes,
+                  parents,
+              }| {
+            async move {
+                // If there are no changes and only one parent then we can reuse the parent's map.
+                // TODO(youssefsalama): In case of multiple identical parent maps, reuse one of their maps. This
+                // will only become possible once sharded map nodes are extended with aggregate information.
+                if changes.is_empty() && parents.len() <= 1 {
+                    return Ok((
+                        MergeSubentriesResult {
+                            reused_maps: parents
+                                .into_iter()
+                                .next()
+                                .map(|parent| (prefix, parent))
+                                .into_iter()
+                                .collect(),
+                            merge_nodes: vec![],
+                        },
+                        vec![],
+                    ));
+                }
+
+                // Expand changes and parent maps by the first byte, group changes and parent subentries that
+                // correspond to the current prefix into current_merge_node, then recurse on changes and parent
+                // maps that start with each byte, accumulating the resulting merge nodes and reused maps.
+
+                let mut child_merge_subentries_nodes: BTreeMap<u8, MergeSubentriesNode<_, _>> =
+                    Default::default();
+                let mut current_merge_node = None;
+
+                let (current_change, child_changes) = changes.expand();
+
+                if let Some(current_change) = current_change {
+                    let name = MPathElement::new_from_slice(&prefix)?;
+                    current_merge_node = Some(MergeNode {
+                        path: path.join_element(Some(&name)),
+                        name: Some(name),
+                        changes: current_change,
+                        parents: Default::default(),
+                    })
+                }
+
+                for (next_byte, changes) in child_changes {
+                    child_merge_subentries_nodes
+                        .entry(next_byte)
+                        .or_insert_with(|| MergeSubentriesNode {
+                            path,
+                            prefix: prefix
+                                .iter()
+                                .copied()
+                                .chain(std::iter::once(next_byte))
+                                .collect(),
+                            changes: Default::default(),
+                            parents: Default::default(),
+                        })
+                        .changes = changes;
+                }
+
+                for parent in parents {
+                    let (current_entry, child_trie_maps) = parent.expand(ctx, store).await?;
+
+                    if let Some(current_entry) = current_entry {
+                        let name = MPathElement::new_from_slice(&prefix)?;
+                        let current_entry = convert_to_intermediate_entry(current_entry);
+
+                        current_merge_node
+                            .get_or_insert_with(|| MergeNode {
+                                path: path.join(Some(&name)),
+                                name: Some(name),
+                                changes: Default::default(),
+                                parents: Default::default(),
+                            })
+                            .parents
+                            .push(current_entry.clone());
+                    }
+
+                    for (next_byte, trie_map) in child_trie_maps {
+                        child_merge_subentries_nodes
+                            .entry(next_byte)
+                            .or_insert_with(|| MergeSubentriesNode {
+                                path,
+                                prefix: prefix
+                                    .iter()
+                                    .copied()
+                                    .chain(std::iter::once(next_byte))
+                                    .collect(),
+                                changes: Default::default(),
+                                parents: Default::default(),
+                            })
+                            .parents
+                            .push(trie_map);
+                    }
+                }
+
+                Ok((
+                    MergeSubentriesResult {
+                        reused_maps: vec![],
+                        merge_nodes: current_merge_node.into_iter().collect::<Vec<_>>(),
+                    },
+                    child_merge_subentries_nodes.into_values().collect(),
+                ))
+            }
+            .boxed()
+        },
+        |mut result,
+         child_results: std::iter::Flatten<
+            std::vec::IntoIter<Option<MergeSubentriesResult<_, _, _, _>>>,
+        >| {
+            async {
+                for child_result in child_results {
+                    result.reused_maps.extend(child_result.reused_maps);
+                    result.merge_nodes.extend(child_result.merge_nodes);
+                }
+                Ok(result)
+            }
+            .boxed()
+        },
+    )
+    .await
 }

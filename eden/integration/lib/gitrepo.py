@@ -29,7 +29,7 @@ class GitRepository(repobase.Repository):
     def __init__(self, path: str, temp_mgr: Optional[TempFileManager] = None) -> None:
         super().__init__(path)
         self.git_bin = FindExe.GIT
-        self.temp_mgr = temp_mgr or TempFileManager("gitrepo")
+        self.temp_mgr = temp_mgr or TempFileManager()
 
     def git(
         self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None

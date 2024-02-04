@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//common/automock:automock.bzl", "thrift_plugin_automock")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "source_control",
+    languages = [
+        "rust",
+        "py",
+        "py3",
+        "cpp2",
+    ],
+    plugins = [
+        thrift_plugin_automock,
+    ],
+    py3_namespace = "scm.service.thrift",
+    py_base_module = "scm.service.thrift",
+    py_remote_service_router = True,
+    rust_deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_cpp2_options = [
+        "reflection",
+    ],
+    thrift_py_options = "utf8strings",
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {
+        "source_control.thrift": ["SourceControlService"],
+    },
+    deps = [
+        "//configerator/structs/scm/mononoke/megarepo:megarepo_configs",
+        "//fb303/thrift:fb303_core",
+    ],
+)

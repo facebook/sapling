@@ -9,21 +9,22 @@
 import configparser
 import io
 import os
+import re
 import sys
 import unittest
 from collections import namedtuple
 from pathlib import Path
 from typing import Dict
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import toml
 import toml.decoder
+from eden.fs.cli import configinterpolator
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.test_support.testcase import EdenTestCaseBase
 
-from .. import config as config_mod, configutil, util
+from .. import config as config_mod, configutil
 from ..configinterpolator import EdenConfigInterpolator
 from ..configutil import EdenConfigParser, UnexpectedType
 
@@ -62,6 +63,14 @@ scribe-cat = "/usr/local/bin/scribe_cat"
     return cfg_file
 
 
+def get_toml_test_file_dynamic_rc() -> str:
+    cfg_file = """
+[core]
+ignoreFile = "/bad/path/to/.gitignore-override"
+"""
+    return cfg_file
+
+
 def get_toml_test_file_system_rc() -> str:
     cfg_file = """
 ["telemetry"]
@@ -95,6 +104,9 @@ class TomlConfigTest(EdenTestCaseBase):
         path = self._home_dir / ".edenrc"
         path.write_text(get_toml_test_file_user_rc())
 
+        path = self._etc_eden_dir / "edenfs_dynamic.rc"
+        path.write_text(get_toml_test_file_dynamic_rc())
+
         path = self._etc_eden_dir / "edenfs.rc"
         path.write_text(get_toml_test_file_system_rc())
 
@@ -118,6 +130,10 @@ class TomlConfigTest(EdenTestCaseBase):
 
     def assert_config_precedence(self, cfg: EdenInstance) -> None:
         self.assertEqual(
+            cfg.get_config_value("core.ignoreFile", default=""),
+            f"/home/{self._user}/.gitignore-override",
+        )
+        self.assertEqual(
             cfg.get_config_value("telemetry.scribe-cat", default=""),
             "/usr/local/bin/scribe_cat",
         )
@@ -134,6 +150,7 @@ class TomlConfigTest(EdenTestCaseBase):
         exp_rc_files = [
             self._config_d / "defaults.toml",
             self._etc_eden_dir / "edenfs.rc",
+            self._etc_eden_dir / "edenfs_dynamic.rc",
             self._home_dir / ".edenrc",
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)
@@ -151,7 +168,7 @@ class TomlConfigTest(EdenTestCaseBase):
         )
         self.assertEqual(
             cfg.get_config_value("core.ignoreFile", default=""),
-            f"/home/{self._user}/.gitignore",
+            "/bad/path/to/.gitignore-override",
         )
         self.assertEqual(
             cfg.get_config_value("core.systemIgnoreFile", default=""),
@@ -166,9 +183,11 @@ class TomlConfigTest(EdenTestCaseBase):
         cfg = self.get_config()
         with self.assertLogs() as logs_assertion:
             cfg._loadConfig()
-        self.assertIn(
-            "toml config is either missing or corrupted",
-            "\n".join(logs_assertion.output),
+        self.assertTrue(
+            re.search(
+                "toml config file .* is either missing or corrupted",
+                "\n".join(logs_assertion.output),
+            )
         )
 
     def test_get_config_value_returns_default_if_section_is_missing(self) -> None:
@@ -253,8 +272,8 @@ path = "/data/users/${USER}/fbsource"
     def test_printed_config_writes_booleans_as_booleans(self) -> None:
         self.write_user_config(
             """
-[experimental]
-use-edenapi = true
+[prefetch-profiles]
+prefetching-enable = true
 """
         )
 
@@ -262,7 +281,7 @@ use-edenapi = true
         self.get_config().print_full_config(printed_config)
         parsed_config = printed_config.getvalue().decode("utf-8")
 
-        self.assertRegex(parsed_config, r"use-edenapi\s*=\s*true")
+        self.assertRegex(parsed_config, r"prefetching-enable\s*=\s*true")
 
     def get_config(self) -> EdenInstance:
         return EdenInstance(
@@ -451,11 +470,11 @@ class EdenConfigParserTest(unittest.TestCase):
 
     def test_unexpected_type_error_messages_are_helpful(self) -> None:
         self.assertEqual(
-            'Expected boolean for service.experimental_systemd, but got string: "true"',
+            'Expected boolean for telemetry.enable-inodetracebus, but got string: "true"',
             str(
                 UnexpectedType(
-                    section="service",
-                    option="experimental_systemd",
+                    section="telemetry",
+                    option="enable-inodetracebus",
                     value="true",
                     expected_type=bool,
                 )
@@ -517,7 +536,13 @@ class EdenInstanceConstructionTest(unittest.TestCase):
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
 
-    def test_sparse_cmd_line(self) -> None:
+    @patch("eden.fs.cli.config.EdenInstance.read_configs")
+    def test_sparse_cmd_line(self, config: Mock) -> None:
+        # We need to mock out the config
+        # Otherwise it will priorize using the user's config on disk
+        config.return_value = configutil.EdenConfigParser(
+            interpolation=configinterpolator.EdenConfigInterpolator({})
+        )
         cmdline = [
             b"/usr/local/libexec/eden/edenfs",
             b"--edenfs",
@@ -538,7 +563,11 @@ class EdenInstanceConstructionTest(unittest.TestCase):
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
 
-    def test_malformed_cmd_line(self) -> None:
+    @patch("eden.fs.cli.config.EdenInstance.read_configs")
+    def test_malformed_cmd_line(self, config: Mock) -> None:
+        config.return_value = configutil.EdenConfigParser(
+            interpolation=configinterpolator.EdenConfigInterpolator({})
+        )
         cmdline = [
             b"/usr/local/libexec/eden/edenfs",
             b"--configPath",

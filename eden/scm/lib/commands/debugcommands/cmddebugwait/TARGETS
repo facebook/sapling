@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "cmddebugwait",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                ],
+            },
+            "features": {
+                "default": [],
+                "eden": [
+                    "edenfs-client",
+                    "workingcopy/eden",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["eden"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/edenfs-client:edenfs-client",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/workingcopy:workingcopy",
+    ],
+)

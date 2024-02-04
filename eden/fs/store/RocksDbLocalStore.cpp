@@ -466,7 +466,7 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
   return StoreResult(std::move(value));
 }
 
-FOLLY_NODISCARD folly::Future<std::vector<StoreResult>>
+FOLLY_NODISCARD ImmediateFuture<std::vector<StoreResult>>
 RocksDbLocalStore::getBatch(
     KeySpace keySpace,
     const std::vector<folly::ByteRange>& keys) const {
@@ -535,8 +535,8 @@ RocksDbLocalStore::getBatch(
             }));
   }
 
-  return folly::collectUnsafe(futures).thenValue(
-      [](std::vector<std::vector<StoreResult>>&& tries) {
+  return folly::collect(std::move(futures))
+      .deferValue([](std::vector<std::vector<StoreResult>>&& tries) {
         std::vector<StoreResult> results;
         for (auto& batch : tries) {
           results.insert(

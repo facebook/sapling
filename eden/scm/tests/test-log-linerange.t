@@ -1,5 +1,4 @@
-#require py2
-#chg-compatible
+#debugruntest-compatible
 
   $ setconfig diff.git=true
 
@@ -76,7 +75,7 @@ Add some changes with two diff hunks
   +11+
   $ sed 's/3/3+/' foo > foo.new
   $ mv foo.new foo
-  $ sed 's/^11+$/11-/' foo > foo.new
+  $ sed 's/^11[+]$/11-/' foo > foo.new
   $ mv foo.new foo
   $ sed 's/a/a+/' bar > bar.new
   $ mv bar.new bar
@@ -183,7 +182,7 @@ With --template.
   $ hg log -f -L foo,5:7 -T json
   [
    {
-    "rev": 5,
+    "rev": *, (glob)
     "node": "cfdf972b3971a2a59638bf9583c0debbffee5404",
     "branch": "default",
     "phase": "draft",
@@ -194,7 +193,7 @@ With --template.
     "parents": ["eaec41c1a0c9ad0a5e999611d0149d171beffb8c"]
    },
    {
-    "rev": 4,
+    "rev": *, (glob)
     "node": "eaec41c1a0c9ad0a5e999611d0149d171beffb8c",
     "branch": "default",
     "phase": "draft",
@@ -205,7 +204,7 @@ With --template.
     "parents": ["730a61fbaecf426c17c2c66bc42d195b5d5b0ba8"]
    },
    {
-    "rev": 2,
+    "rev": *, (glob)
     "node": "63a884426fd0b277fcd55895bbb2f230434576eb",
     "branch": "default",
     "phase": "draft",
@@ -216,7 +215,7 @@ With --template.
     "parents": ["29a1e7c6b80024f63f310a2d71de979e9d2996d7"]
    },
    {
-    "rev": 0,
+    "rev": *, (glob)
     "node": "5ae1f82b9a000ff1e0967d0dac1c58b9d796e1b4",
     "branch": "default",
     "phase": "draft",
@@ -224,7 +223,7 @@ With --template.
     "date": [0, 0],
     "desc": "init",
     "bookmarks": [],
-    "parents": ["0000000000000000000000000000000000000000"]
+    "parents": []
    }
   ]
 
@@ -698,7 +697,7 @@ Renames are followed.
   +1+0
   +1+1-
   $ hg log -f -L relpath:baz,5:7 -p
-  commit:      6af29c3a778f
+  commit:      c0c9f8843170
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo -> dir/baz; 1-1+
@@ -791,12 +790,12 @@ Renames are followed.
 Binary files work but without diff hunks filtering.
 (Checking w/ and w/o diff.git option.)
 
-  >>> _ = open('binary', 'wb').write('this\nis\na\nbinary\0')
+  >>> _ = open('binary', 'wb').write(b'this\nis\na\nbinary\0')
   $ hg add binary
   $ hg ci -m 'add a binary file' --quiet
 #if common-zlib
   $ hg log -f -L binary,1:2 -p
-  commit:      c96381c229df
+  commit:      fc5ce739fb7c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a binary file
@@ -812,12 +811,12 @@ Binary files work but without diff hunks filtering.
 #endif
 
   $ hg log -f -L binary,1:2 -p --config diff.git=false
-  commit:      c96381c229df
+  commit:      fc5ce739fb7c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a binary file
   
-  diff -r 6af29c3a778f -r c96381c229df dir/binary
+  diff -r c0c9f8843170 -r fc5ce739fb7c dir/binary
   Binary file dir/binary has changed
   
 

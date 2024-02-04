@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "mercurial_thrift crate
-mononoke_types_thrift mononoke_types_thrift",
+mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -45,6 +45,8 @@ mononoke_types_thrift mononoke_types_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("mercurial-thrift__types");
+        conf.clients_crate("mercurial-thrift__clients");
+        conf.services_crate("mercurial-thrift__services");
 
         let options = "";
         if !options.is_empty() {

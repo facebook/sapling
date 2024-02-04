@@ -28,7 +28,6 @@ use crate::Matcher;
 /// The [RegexMatcher::match_prefix] method can be used to rule out
 /// unnecessary directory visit early.
 #[derive(Clone)]
-#[allow(dead_code)]
 pub struct RegexMatcher {
     // The regular expression pattern.
     pattern: String,
@@ -149,6 +148,35 @@ impl Matcher for RegexMatcher {
     }
 }
 
+/// A matcher that supports PCRE style lookarounds and backreferences.
+///
+/// Not only can these regexes suffer from exponential time complexity, there's
+/// no way to implement matches_directory search pruning, so this matcher will
+/// force a full traversal.
+///
+/// This is deprecated and should not be used except to maintain backwards
+/// compatibility.
+pub struct SlowRegexMatcher(fancy_regex::Regex);
+
+impl SlowRegexMatcher {
+    pub fn new(pattern: &str, case_sensitive: bool) -> Result<Self> {
+        let flags = if case_sensitive { "-i" } else { "i" };
+        Ok(Self(fancy_regex::Regex::new(&format!(
+            "^(?{flags}:{pattern})"
+        ))?))
+    }
+}
+
+impl Matcher for SlowRegexMatcher {
+    fn matches_directory(&self, _path: &RepoPath) -> Result<DirectoryMatch> {
+        Ok(DirectoryMatch::ShouldTraverse)
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        Ok(self.0.is_match(path.as_str())?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,5 +288,23 @@ mod tests {
             assert_eq!(m.matches("A/b/c"), !sensitive);
             assert_eq!(m.matches("B/c"), !sensitive);
         }
+    }
+
+    #[test]
+    fn test_slow_regex() -> Result<()> {
+        let m = SlowRegexMatcher::new(r".*(?<!bad)(good)\1(?=next)", true)?;
+
+        // Always need to traverse.
+        assert_eq!(
+            m.matches_directory("whatever".try_into()?)?,
+            DirectoryMatch::ShouldTraverse
+        );
+
+        // Sanity check fancy features.
+        assert!(m.matches_file("okgoodgoodnext".try_into()?)?);
+        assert!(!m.matches_file("badgoodgoodnext".try_into()?)?);
+        assert!(!m.matches_file("okgoodgood".try_into()?)?);
+
+        Ok(())
     }
 }

@@ -8,8 +8,8 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
   $ setconfig format.aggressivemergedeltas=True
   $ configure dummyssh
 
-  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
-  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  $ newrepo server --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   $ enable pushrebase
 
   $ newrepo client

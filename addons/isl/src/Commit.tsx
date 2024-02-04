@@ -5,48 +5,65 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {Snapshot} from 'recoil';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
+import {globalRecoil} from './AccessGlobalRecoil';
+import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
-import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
+import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
-import {highlightedCommits} from './HighlightedCommits';
+import {FlexRow} from './ComponentUtils';
+import {EducationInfoTip} from './Education';
+import {HighlightCommitsWhileHovering, isHighlightedCommit} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
+import {Subtle} from './Subtle';
+import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
-import {latestCommitMessage} from './codeReview/CodeReviewInfo';
+import {tracker} from './analytics';
+import {codeReviewProvider, latestCommitMessageTitle} from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
+import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
-import {isDescendant} from './getCommitTree';
+import {FoldButton, useRunFoldPreview} from './fold';
 import {t, T} from './i18n';
+import {IconStack} from './icons/IconStack';
+import {writeAtom} from './jotaiUtils';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import platform from './platform';
-import {CommitPreview} from './previews';
+import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
-import {useCommitSelection} from './selection';
+import {selectedCommits, useCommitSelection} from './selection';
 import {
   inlineProgressByHash,
   isFetchingUncommittedChanges,
-  latestCommitTreeMap,
+  latestDag,
   latestUncommittedChanges,
   operationBeingPreviewed,
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
+import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
+import {SplitButton} from './stackEdit/ui/SplitButton';
+import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
+import {useShowToast} from './toast';
+import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import React, {memo, useEffect, useState} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
+import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty} from 'shared/utils';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
@@ -84,6 +101,8 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
     case CommitPreview.REBASE_ROOT:
     case CommitPreview.HIDDEN_ROOT:
     case CommitPreview.HIDDEN_DESCENDANT:
+    case CommitPreview.FOLD:
+    case CommitPreview.FOLD_PREVIEW:
     case CommitPreview.NON_ACTIONABLE_COMMIT:
       return true;
   }
@@ -95,43 +114,59 @@ export const Commit = memo(
     commit,
     previewType,
     hasChildren,
+    bodyOnly = false,
   }: {
-    commit: CommitInfo;
+    commit: DagCommitInfo | CommitInfo;
     previewType?: CommitPreview;
     hasChildren: boolean;
+    bodyOnly?: boolean;
   }) => {
-    const setDrawerState = useSetRecoilState(islDrawerState);
     const isPublic = commit.phase === 'public';
+    const isObsoleted = commit.successorInfo != null;
 
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
-    const isHighlighted = useRecoilValue(highlightedCommits).has(commit.hash);
+    const setEditStackIntentionHashes = useSetRecoilState(editingStackIntentionHashes);
+
+    const isHighlighted = useAtomValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
 
     const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
 
-    const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
+    const {isSelected, onClickToSelect, overrideSelection} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
 
-    const isNarrow = useRecoilValue(isNarrowCommitTree);
+    const isNarrow = useAtomValue(isNarrowCommitTree);
 
-    const [title] = useRecoilValue(latestCommitMessage(commit.hash));
+    const title = useRecoilValue(latestCommitMessageTitle(commit.hash));
+
+    const toast = useShowToast();
+    const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
-    function onDoubleClickToShowDrawer(e: React.MouseEvent<HTMLDivElement>) {
-      // Select the commit if it was deselected.
-      if (!isSelected) {
-        onClickToSelect(e);
-      }
-      // Show the drawer.
-      setDrawerState(state => ({
-        ...state,
-        right: {
-          ...state.right,
-          collapsed: false,
+    const onDoubleClickToShowDrawer = useRecoilCallback(
+      ({set}) =>
+        () => {
+          // Select the commit if it was deselected.
+          if (!isSelected) {
+            overrideSelection([commit.hash]);
+          }
+          // Show the drawer.
+          writeAtom(islDrawerState, state => ({
+            ...state,
+            right: {
+              ...state.right,
+              collapsed: false,
+            },
+          }));
+          if (commit.isHead) {
+            // if we happened to be in commit mode, swap to amend mode so you see the details instead
+            set(commitMode, 'amend');
+          }
         },
-      }));
-    }
+      [overrideSelection, isSelected, commit.hash, commit.isHead],
+    );
+
     const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
 
     const viewChangesCallback = useRecoilCallback(({set}) => () => {
@@ -141,30 +176,84 @@ export const Commit = memo(
       });
     });
 
-    const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
+    const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
+    async function handleSplit() {
+      if (!(await confirmUnsavedEditsBeforeSplit([commit], 'split'))) {
+        return;
+      }
+      setEditStackIntentionHashes(['split', new Set([commit.hash])]);
+      tracker.track('SplitOpenFromCommitContextMenu');
+    }
+
+    const makeContextMenuOptions = useRecoilCallback(({snapshot, set}) => () => {
+      const hasUncommittedChanges =
+        (snapshot.getLoadable(uncommittedChangesWithPreviews).valueMaybe()?.length ?? 0) > 0;
+      const syncStatus = snapshot.getLoadable(syncStatusAtom).valueMaybe()?.get(commit.hash);
+
       const items: Array<ContextMenuItem> = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
-          onClick: () => platform.clipboardCopy(commit.hash),
+          onClick: () => clipboardCopy(commit.hash),
         },
       ];
+      if (!isPublic && commit.diffId != null) {
+        items.push({
+          label: <T replace={{$number: commit.diffId}}>Copy Diff Number "$number"</T>,
+          onClick: () => clipboardCopy(commit.diffId ?? ''),
+        });
+      }
       if (!isPublic) {
         items.push({
           label: <T>View Changes in Commit</T>,
           onClick: viewChangesCallback,
         });
       }
+      if (
+        !isPublic &&
+        (syncStatus === SyncStatus.LocalIsNewer || syncStatus === SyncStatus.RemoteIsNewer)
+      ) {
+        const provider = snapshot.getLoadable(codeReviewProvider).valueMaybe();
+        if (provider?.supportsComparingSinceLastSubmit) {
+          items.push({
+            label: <T replace={{$provider: provider?.label ?? 'remote'}}>Compare with $provider</T>,
+            onClick: () => {
+              set(currentComparisonMode, {
+                comparison: {type: ComparisonType.SinceLastCodeReviewSubmit, hash: commit.hash},
+                visible: true,
+              });
+            },
+          });
+        }
+      }
       if (!isPublic && !actionsPrevented) {
-        items.push({type: 'divider'});
+        bodyOnly || items.push({type: 'divider'});
         if (isAmendToAllowedForCommit(commit, snapshot)) {
           items.push({
             label: <T>Amend changes to here</T>,
             onClick: () => runOperation(getAmendToOperation(commit, snapshot)),
           });
         }
+        if (!isObsoleted) {
+          items.push({
+            label: hasUncommittedChanges ? (
+              <span className="context-menu-disabled-option">
+                <T>Split... </T>
+                <Subtle>
+                  <T>(disabled due to uncommitted changes)</T>
+                </Subtle>
+              </span>
+            ) : (
+              <T>Split...</T>
+            ),
+            onClick: hasUncommittedChanges ? () => null : handleSplit,
+          });
+        }
         items.push({
-          label: <T>Hide Commit and Descendants</T>,
-          onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
+          label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
+          onClick: () =>
+            setOperationBeingPreviewed(
+              new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
+            ),
         });
       }
       return items;
@@ -197,36 +286,73 @@ export const Commit = memo(
             onClick={() => handlePreviewedOperation(/* cancel */ true)}>
             <T>Cancel</T>
           </VSCodeButton>
-          <VSCodeButton
-            appearance="primary"
-            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
-            <T>Hide</T>
-          </VSCodeButton>
+          <ConfirmHideButton onClick={() => handlePreviewedOperation(/* cancel */ false)} />
         </React.Fragment>,
       );
+    } else if (previewType === CommitPreview.FOLD_PREVIEW) {
+      commitActions.push(<ConfirmCombineButtons key="fold" />);
     }
+
+    if (!isPublic && !actionsPrevented && isSelected) {
+      commitActions.push(<FoldButton key="fold-button" commit={commit} />);
+    }
+
     if (!actionsPrevented && !commit.isHead) {
       commitActions.push(
         <span className="goto-button" key="goto-button">
-          <VSCodeButton
-            appearance="secondary"
-            onClick={event => {
-              runOperation(
-                new GotoOperation(
-                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                  // and works better with optimistic state
-                  commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
-                ),
-              );
-              event.stopPropagation(); // don't select commit
-            }}>
-            <T>Goto</T> <Icon icon="arrow-right" />
-          </VSCodeButton>
+          <Tooltip
+            title={t(
+              'Update files in the working copy to match this commit. Mark this commit as the "current commit".',
+            )}
+            delayMs={250}>
+            <VSCodeButton
+              appearance="secondary"
+              aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
+              onClick={event => {
+                runOperation(
+                  new GotoOperation(
+                    // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+                    // and works better with optimistic state
+                    commit.remoteBookmarks.length > 0
+                      ? succeedableRevset(commit.remoteBookmarks[0])
+                      : latestSuccessorUnlessExplicitlyObsolete(commit),
+                  ),
+                );
+                event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
+                // Instead, ensure we remove the selection, so we view the new head commit by default
+                // (since the head commit is the default thing shown in the sidebar)
+                globalRecoil().reset(selectedCommits);
+              }}>
+              <T>Goto</T> <Icon icon="newline" />
+            </VSCodeButton>
+          </Tooltip>
         </span>,
       );
     }
+
     if (!isPublic && !actionsPrevented && commit.isHead) {
       commitActions.push(<UncommitButton key="uncommit" />);
+    }
+    if (!isPublic && !actionsPrevented && commit.isHead && !isObsoleted) {
+      commitActions.push(<SplitButton key="split" commit={commit} />);
+    }
+
+    if (!isPublic && !actionsPrevented) {
+      commitActions.push(
+        <OpenCommitInfoButton
+          key="open-sidebar"
+          revealCommit={onDoubleClickToShowDrawer}
+          commit={commit}
+        />,
+      );
+    }
+
+    if (bodyOnly && (commit as DagCommitInfo).isYouAreHere) {
+      return (
+        <div className="head-commit-info">
+          <UncommittedChanges place="main" />
+        </div>
+      );
     }
 
     return (
@@ -236,17 +362,16 @@ export const Commit = memo(
           (commit.isHead ? ' head-commit' : '') +
           (commit.successorInfo != null ? ' obsolete' : '') +
           (isHighlighted ? ' highlighted' : '') +
-          (isPublic || hasChildren ? '' : ' topmost')
+          (isPublic || hasChildren || bodyOnly ? '' : ' topmost')
         }
+        onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
         {!isNonActionable &&
+        !bodyOnly &&
         (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
           <HeadCommitInfo commit={commit} previewType={previewType} hasChildren={hasChildren} />
         ) : null}
-        <div
-          className={
-            'commit-rows' + (isNarrow ? ' narrow' : '') + (isSelected ? ' selected-commit' : '')
-          }>
+        <div className={'commit-rows' + (isSelected ? ' selected-commit' : '')}>
           {isSelected ? (
             <div className="selected-commit-background" data-testid="selected-commit" />
           ) : null}
@@ -257,9 +382,8 @@ export const Commit = memo(
             commit={commit}
             draggable={!isPublic && isDraggablePreview(previewType)}
             onClick={onClickToSelect}
-            onContextMenu={contextMenu}
             onDoubleClick={onDoubleClickToShowDrawer}>
-            <div className="commit-avatar" />
+            {bodyOnly || <Avatar username={commit.author} />}
             {isPublic ? null : (
               <span className="commit-title">
                 <span>{title}</span>
@@ -288,7 +412,9 @@ export const Commit = memo(
             {isNarrow ? commitActions : null}
           </DraggableCommit>
           <DivIfChildren className="commit-second-row">
-            {commit.diffId && !isPublic ? <DiffInfo diffId={commit.diffId} /> : null}
+            {commit.diffId && !isPublic ? (
+              <DiffInfo commit={commit} hideActions={actionsPrevented || inlineProgress != null} />
+            ) : null}
             {commit.successorInfo != null ? (
               <SuccessorInfoToDisplay successorInfo={commit.successorInfo} />
             ) : null}
@@ -303,11 +429,73 @@ export const Commit = memo(
       </div>
     );
   },
+  (prevProps, nextProps) => {
+    const prevCommit = prevProps.commit;
+    const nextCommit = nextProps.commit;
+    const commitEqual =
+      'equals' in nextCommit ? nextCommit.equals(prevCommit) : nextCommit === prevCommit;
+    return (
+      commitEqual &&
+      nextProps.previewType === prevProps.previewType &&
+      nextProps.bodyOnly === prevProps.bodyOnly &&
+      nextProps.hasChildren === prevProps.hasChildren
+    );
+  },
 );
+
+function OpenCommitInfoButton({
+  commit,
+  revealCommit,
+}: {
+  commit: CommitInfo;
+  revealCommit: () => unknown;
+}) {
+  return (
+    <Tooltip title={t("Open commit's details in sidebar")} delayMs={250}>
+      <VSCodeButton
+        appearance="icon"
+        onClick={e => {
+          revealCommit();
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        className="open-commit-info-button"
+        aria-label={t('Open commit "$title"', {replace: {$title: commit.title}})}
+        data-testid="open-commit-info-button">
+        <Icon icon="chevron-right" />
+      </VSCodeButton>
+    </Tooltip>
+  );
+}
+
+function ConfirmHideButton({onClick}: {onClick: () => unknown}) {
+  const ref = useAutofocusRef() as React.MutableRefObject<null>;
+  return (
+    <VSCodeButton ref={ref} appearance="primary" onClick={onClick}>
+      <T>Hide</T>
+    </VSCodeButton>
+  );
+}
+
+function ConfirmCombineButtons() {
+  const ref = useAutofocusRef() as React.MutableRefObject<null>;
+  const [cancel, run] = useRunFoldPreview();
+
+  return (
+    <>
+      <VSCodeButton appearance="secondary" onClick={cancel}>
+        <T>Cancel</T>
+      </VSCodeButton>
+      <VSCodeButton ref={ref} appearance="primary" onClick={run}>
+        <T>Run Combine</T>
+      </VSCodeButton>
+    </>
+  );
+}
 
 function CommitDate({date}: {date: Date}) {
   return (
-    <span className="commit-date">
+    <span className="commit-date" title={date.toLocaleString()}>
       <RelativeDate date={date} useShortVariant />
     </span>
   );
@@ -331,7 +519,10 @@ function UnsavedEditedMessageIndicator({commit}: {commit: CommitInfo}) {
   return (
     <div className="unsaved-message-indicator" data-testid="unsaved-message-indicator">
       <Tooltip title={t('This commit has unsaved changes to its message')}>
-        <Icon icon="circle-large-filled" />
+        <IconStack>
+          <Icon icon="output" />
+          <Icon icon="circle-large-filled" />
+        </IconStack>
       </Tooltip>
     </div>
   );
@@ -410,6 +601,10 @@ export function YouAreHere({
 
 let commitBeingDragged: CommitInfo | undefined = undefined;
 
+// This is a global state outside React because commit DnD is a global
+// concept: there won't be 2 DnD happening at once in the same window.
+let lastDndId = 0;
+
 function preventDefault(e: Event) {
   e.preventDefault();
 }
@@ -444,32 +639,60 @@ function DraggableCommit({
   const handleDragEnter = useRecoilCallback(
     ({snapshot, set}) =>
       () => {
-        const loadable = snapshot.getLoadable(latestCommitTreeMap);
-        if (loadable.state !== 'hasValue') {
-          return;
-        }
-        const treeMap = loadable.contents;
+        // Capture the environment.
+        const currentBeingDragged = commitBeingDragged;
+        const currentDndId = ++lastDndId;
+        const release = snapshot.retain();
 
-        if (commitBeingDragged != null && commit.hash !== commitBeingDragged.hash) {
-          const draggedTree = treeMap.get(commitBeingDragged.hash);
-          if (draggedTree) {
-            if (
-              // can't rebase a commit onto its descendants
-              !isDescendant(commit.hash, draggedTree) &&
-              // can't rebase a commit onto its parent... it's already there!
-              !(commitBeingDragged.parents as Array<string>).includes(commit.hash)
-            ) {
-              // if the dest commit has a remote bookmark, use that instead of the hash.
-              // this is easier to understand in the command history and works better with optimistic state
-              const destination =
-                commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash;
-              set(
-                operationBeingPreviewed,
-                new RebaseOperation(commitBeingDragged.hash, destination),
-              );
+        const handleDnd = () => {
+          // Skip handling if there was a new "DragEnter" event that invalidates this one.
+          if (lastDndId != currentDndId) {
+            return;
+          }
+          const loadable = snapshot.getLoadable(latestDag);
+          if (loadable.state !== 'hasValue') {
+            return;
+          }
+          const dag = loadable.contents;
+
+          if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
+            const beingDragged = currentBeingDragged;
+            if (dag.has(beingDragged.hash)) {
+              if (
+                // can't rebase a commit onto its descendants
+                !dag.isAncestor(beingDragged.hash, commit.hash) &&
+                // can't rebase a commit onto its parent... it's already there!
+                !(beingDragged.parents as Array<string>).includes(commit.hash)
+              ) {
+                // if the dest commit has a remote bookmark, use that instead of the hash.
+                // this is easier to understand in the command history and works better with optimistic state
+                const destination =
+                  commit.remoteBookmarks.length > 0
+                    ? succeedableRevset(commit.remoteBookmarks[0])
+                    : latestSuccessorUnlessExplicitlyObsolete(commit);
+                set(operationBeingPreviewed, op => {
+                  const newRebase = new RebaseOperation(
+                    latestSuccessorUnlessExplicitlyObsolete(beingDragged),
+                    destination,
+                  );
+                  const isEqual = newRebase.equals(op);
+                  return isEqual ? op : newRebase;
+                });
+              }
             }
           }
-        }
+        };
+
+        // This allows us to recieve a list of "queued" DragEnter events
+        // before actually handling them. This way we can skip "invalidated"
+        // events and only handle the last (valid) one.
+        window.setTimeout(() => {
+          try {
+            handleDnd();
+          } finally {
+            release();
+          }
+        }, 1);
       },
     [commit],
   );
@@ -480,6 +703,10 @@ function DraggableCommit({
         // can't rebase with uncommitted changes
         if (hasUncommittedChanges(snapshot)) {
           setDragDisabledMessage(t('Cannot drag to rebase with uncommitted changes.'));
+          event.preventDefault();
+        }
+        if (commit.successorInfo != null) {
+          setDragDisabledMessage(t('Cannot rebase obsoleted commits.'));
           event.preventDefault();
         }
 
@@ -516,7 +743,6 @@ function DraggableCommit({
         }
       }}
       onContextMenu={onContextMenu}
-      tabIndex={0}
       data-testid={'draggable-commit'}>
       <div className="commit-wide-drag-target" onDragEnter={handleDragEnter} />
       {dragDisabledMessage != null ? (
@@ -531,7 +757,7 @@ function DraggableCommit({
 }
 
 function hasUncommittedChanges(snapshot: Snapshot): boolean {
-  const loadable = snapshot.getLoadable(latestUncommittedChanges);
+  const loadable = snapshot.getLoadable(uncommittedChangesWithPreviews);
   return (
     loadable.state === 'hasValue' &&
     loadable.contents.filter(
@@ -541,21 +767,60 @@ function hasUncommittedChanges(snapshot: Snapshot): boolean {
 }
 
 export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: SuccessorInfo}) {
-  switch (successorInfo.type) {
-    case 'land':
-    case 'pushrebase':
-      return <T>Landed as a newer commit</T>;
-    case 'amend':
-      return <T>Amended as a newer commit</T>;
-    case 'rebase':
-      return <T>Rebased as a newer commit</T>;
-    case 'split':
-      return <T>Split as a newer commit</T>;
-    case 'fold':
-      return <T>Folded as a newer commit</T>;
-    case 'histedit':
-      return <T>Histedited as a newer commit</T>;
-    default:
-      return <T>Rewritten as a newer commit</T>;
-  }
+  const successorType = successorInfo.type;
+  const inner: JSX.Element = {
+    pushrebase: <T>Landed as a newer commit</T>,
+    land: <T>Landed as a newer commit</T>,
+    amend: <T>Amended as a newer commit</T>,
+    rebase: <T>Rebased as a newer commit</T>,
+    split: <T>Split as a newer commit</T>,
+    fold: <T>Folded as a newer commit</T>,
+    histedit: <T>Histedited as a newer commit</T>,
+  }[successorType] ?? <T>Rewritten as a newer commit</T>;
+  const isSuccessorPublic = successorType === 'land' || successorType === 'pushrebase';
+  return (
+    <FlexRow style={{gap: 'var(--halfpad)'}}>
+      <HighlightCommitsWhileHovering toHighlight={[successorInfo.hash]}>
+        {inner}
+      </HighlightCommitsWhileHovering>
+      <EducationInfoTip>
+        <ObsoleteTip isSuccessorPublic={isSuccessorPublic} />
+      </EducationInfoTip>
+    </FlexRow>
+  );
 }
+
+function ObsoleteTipInner(props: {isSuccessorPublic?: boolean}) {
+  const tips: string[] = props.isSuccessorPublic
+    ? [
+        t('Avoid editing (e.g., amend, rebase) this obsoleted commit. It cannot be landed again.'),
+        t(
+          'The new commit was landed in a public branch and became immutable. It cannot be edited or hidden.',
+        ),
+        t('If you want to make changes, create a new commit.'),
+      ]
+    : [
+        t(
+          'Avoid editing (e.g., amend, rebase) this obsoleted commit. You should use the new commit instead.',
+        ),
+        t(
+          'If you do edit, there will be multiple new versions. They look like duplications and there is no easy way to de-duplicate (e.g. merge all edits back into one commit).',
+        ),
+        t(
+          'To revert to this obsoleted commit, simply hide the new one. It will remove the "obsoleted" status.',
+        ),
+      ];
+
+  return (
+    <div style={{maxWidth: '60vw'}}>
+      <T>This commit is "obsoleted" because a newer version exists.</T>
+      <ul>
+        {tips.map((tip, i) => (
+          <li key={i}>{tip}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const ObsoleteTip = React.memo(ObsoleteTipInner);

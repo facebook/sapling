@@ -488,9 +488,10 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  if (auto blob = backingStore_->getDatapackStore().getBlobLocal(proxyHash)) {
+  auto blob = backingStore_->getDatapackStore().getBlobLocal(proxyHash);
+  if (blob.hasValue()) {
     return folly::makeSemiFuture(GetBlobResult{
-        std::move(blob), ObjectFetchContext::Origin::FromDiskCache});
+        std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobImpl(id, proxyHash, context)
@@ -569,10 +570,12 @@ HgQueuedBackingStore::getBlobMetadata(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::BlobMetadata);
 
-  if (auto metadata =
-          backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash)) {
+  auto metadata =
+      backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash);
+  if (metadata.hasValue()) {
     return folly::makeSemiFuture(GetBlobMetaResult{
-        std::move(metadata), ObjectFetchContext::Origin::FromDiskCache});
+        std::move(metadata.value()),
+        ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobMetadataImpl(id, proxyHash, context)
@@ -640,8 +643,8 @@ HgQueuedBackingStore::getBlobMetadataImpl(
 ImmediateFuture<BackingStore::GetRootTreeResult>
 HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
-    const ObjectFetchContextPtr& /*context*/) {
-  return backingStore_->getRootTree(rootId);
+    const ObjectFetchContextPtr& context) {
+  return backingStore_->getRootTree(rootId, context);
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
@@ -682,7 +685,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
             t.throwUnlessValue();
           }
         });
-      });
+      })
+      .semi();
 }
 
 void HgQueuedBackingStore::logMissingProxyHash() {
@@ -785,9 +789,10 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
   return paths;
 }
 
-folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
+ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
     const RootId& root,
-    const Hash20& manifest) {
+    const Hash20& manifest,
+    const ObjectFetchContextPtr& context) {
   // This method is used when the client informs us about a target manifest
   // that it is about to update to, for the scenario when a manifest has
   // just been created.  Since the manifest has just been created locally, and
@@ -796,7 +801,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
   //
   // When the local store is populated with metadata for newly-created
   // manifests then we can update this so that is true when appropriate.
-  return backingStore_->importTreeManifestForRoot(root, manifest);
+  return backingStore_->importTreeManifestForRoot(root, manifest, context);
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {

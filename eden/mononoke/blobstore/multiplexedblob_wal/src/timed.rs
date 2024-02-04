@@ -9,6 +9,7 @@ use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -106,7 +107,9 @@ impl TimedStore {
         };
 
         let pc = ctx.clone().fork_perf_counters();
-        let (stats, result) = with_timeout(put_fut, self.timeout.write).timed().await;
+        let (stats, result) = with_timeout(put_fut, self.timeout.write, "put")
+            .timed()
+            .await;
 
         record_put_stats(
             &mut scuba,
@@ -132,7 +135,9 @@ impl TimedStore {
     ) -> Result<(), (BlobstoreId, Error)> {
         let unlink_fut = self.inner.unlink(ctx, key);
         let pc = ctx.clone().fork_perf_counters();
-        let (stats, result) = with_timeout(unlink_fut, self.timeout.write).timed().await;
+        let (stats, result) = with_timeout(unlink_fut, self.timeout.write, "unlink")
+            .timed()
+            .await;
 
         record_unlink_stats(
             &mut scuba,
@@ -156,7 +161,7 @@ impl TimedStore {
         mut scuba: MononokeScubaSampleBuilder,
     ) -> Result<Option<BlobstoreGetData>, Error> {
         let pc = ctx.clone().fork_perf_counters();
-        let (stats, result) = with_timeout(self.inner.get(ctx, key), self.timeout.read)
+        let (stats, result) = with_timeout(self.inner.get(ctx, key), self.timeout.read, "get")
             .timed()
             .await;
 
@@ -182,9 +187,13 @@ impl TimedStore {
         mut scuba: MononokeScubaSampleBuilder,
     ) -> (BlobstoreId, Result<BlobstoreIsPresent>) {
         let pc = ctx.clone().fork_perf_counters();
-        let (stats, result) = with_timeout(self.inner.is_present(ctx, key), self.timeout.read)
-            .timed()
-            .await;
+        let (stats, result) = with_timeout(
+            self.inner.is_present(ctx, key),
+            self.timeout.read,
+            "is_present",
+        )
+        .timed()
+        .await;
 
         record_is_present_stats(
             &mut scuba,
@@ -211,7 +220,11 @@ pub(crate) fn with_timed_stores(
         .collect()
 }
 
-async fn with_timeout<T>(fut: impl Future<Output = Result<T>>, to: Duration) -> Result<T> {
+async fn with_timeout<T>(
+    fut: impl Future<Output = Result<T>>,
+    to: Duration,
+    operation: &str,
+) -> Result<T> {
     let timeout_or_result = timeout(to, fut).await;
-    timeout_or_result.unwrap_or_else(|_| Err(Error::msg("blobstore operation timeout")))
+    timeout_or_result.unwrap_or_else(|_| Err(anyhow!("blobstore {} timeout", operation)))
 }

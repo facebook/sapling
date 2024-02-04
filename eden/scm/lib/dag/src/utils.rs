@@ -42,7 +42,7 @@ where
                 if !visited.insert(v) {
                     continue;
                 }
-                if let Some(parents) = self.known.get(&v) {
+                if let Some(parents) = self.known.get(v) {
                     for p in parents {
                         if p == ancestor {
                             return true;
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_break_parent_func_cycle_linear() -> Result<()> {
         let parent_func = |n: Vertex| -> Result<Vec<Vertex>> {
-            let list = "0123456789".chars().map(|c| v(c)).collect::<Vec<_>>();
+            let list = "0123456789".chars().map(v).collect::<Vec<_>>();
             let parents = match list.iter().position(|x| x == &n) {
                 Some(i) if i > 0 => vec![list[i - 1].clone()],
                 _ => vec![],
@@ -323,7 +323,7 @@ mod tests {
     #[test]
     fn test_beautify_graph() {
         let t = |text: &str| -> Vec<usize> {
-            let split: Vec<&str> = text.split("#").chain(std::iter::once("")).take(2).collect();
+            let split: Vec<&str> = text.split('#').chain(std::iter::once("")).take(2).collect();
             let parents = parents_from_drawdag(split[0]);
             let priorities: Vec<usize> = split[1]
                 .split_whitespace()
@@ -428,7 +428,7 @@ mod tests {
                 None => break,
             };
             let parents: Vec<usize> = parents
-                .into_iter()
+                .iter()
                 .map(|p| p.parse::<usize>().unwrap())
                 .collect();
             parents_vec.push(parents);

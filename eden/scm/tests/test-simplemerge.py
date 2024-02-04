@@ -1,4 +1,8 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
+# Portions Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Copyright (C) 2004, 2005 Canonical Ltd
 #
 # This program is free software; you can redistribute it and/or modify
@@ -18,9 +22,9 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm import error, util
-from edenscm.pycompat import decodeutf8
-from edenscm.simplemerge import Merge3Text, wordmergemode
+from sapling import error, util
+from sapling.pycompat import decodeutf8
+from sapling.simplemerge import Merge3Text, render_minimized
 
 
 TestCase = unittest.TestCase
@@ -32,13 +36,13 @@ class Merge3(Merge3Text):
     incorporating the changes from both BASE->OTHER and BASE->THIS.
     All three will typically be sequences of lines."""
 
-    def __init__(self, base, a, b, wordmerge=wordmergemode.disabled):
+    def __init__(self, base, a, b):
         basetext = b"\n".join([i.strip(b"\n") for i in base] + [b""])
         atext = b"\n".join([i.strip(b"\n") for i in a] + [b""])
         btext = b"\n".join([i.strip(b"\n") for i in b] + [b""])
         if util.binary(basetext) or util.binary(atext) or util.binary(btext):
             raise error.Abort("don't know how to merge binary files")
-        Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
+        Merge3Text.__init__(self, basetext, atext, btext)
         self.base = base
         self.a = a
         self.b = b
@@ -136,8 +140,6 @@ class TestMerge3(TestCase):
         """No conflicts because nothing changed"""
         m3 = Merge3([b"aaa", b"bbb"], [b"aaa", b"bbb"], [b"aaa", b"bbb"])
 
-        self.assertEqual(m3.find_unconflicted(), [(0, 2)])
-
         self.assertEqual(
             list(m3.find_sync_regions()), [(0, 2, 0, 2, 0, 2), (2, 2, 2, 2, 2, 2)]
         )
@@ -169,13 +171,11 @@ class TestMerge3(TestCase):
 
         self.assertEqual(list(m3.merge_regions()), [("a", 0, 2)])
 
-        self.assertEqual(list(m3.merge_lines()), [b"aaa", b"bbb"])
+        self.assertEqual(render_minimized(m3), ([b"aaa", b"bbb"], 0))
 
     def test_no_conflicts(self):
         """No conflicts because only one side changed"""
         m3 = Merge3([b"aaa", b"bbb"], [b"aaa", b"111", b"bbb"], [b"aaa", b"bbb"])
-
-        self.assertEqual(m3.find_unconflicted(), [(0, 1), (1, 2)])
 
         self.assertEqual(
             list(m3.find_sync_regions()),
@@ -192,14 +192,14 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n", b"222\n"], [b"aaa\n", b"bbb\n"]
         )
 
-        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(render_minimized(m3)[0]), b"aaa\nbbb\n222\n")
 
     def test_append_b(self):
         m3 = Merge3(
             [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n", b"222\n"]
         )
 
-        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(render_minimized(m3)[0]), b"aaa\nbbb\n222\n")
 
     def test_append_agreement(self):
         m3 = Merge3(
@@ -208,7 +208,7 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"bbb\n", b"222\n"],
         )
 
-        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(render_minimized(m3)[0]), b"aaa\nbbb\n222\n")
 
     def test_append_clash(self):
         m3 = Merge3(
@@ -217,7 +217,8 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"bbb\n", b"333\n"],
         )
 
-        ml = m3.merge_lines(
+        ml, conflictscount = render_minimized(
+            m3,
             name_a=b"a",
             name_b=b"b",
             start_marker=b"<<",
@@ -228,6 +229,7 @@ class TestMerge3(TestCase):
             b"".join(ml),
             b"aaa\n" b"bbb\n" b"<< a\n" b"222\n" b"--\n" b"333\n" b">> b\n",
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_insert_agreement(self):
         m3 = Merge3(
@@ -236,7 +238,8 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"222\n", b"bbb\n"],
         )
 
-        ml = m3.merge_lines(
+        ml, conflictscount = render_minimized(
+            m3,
             name_a=b"a",
             name_b=b"b",
             start_marker=b"<<",
@@ -244,6 +247,7 @@ class TestMerge3(TestCase):
             end_marker=b">>",
         )
         self.assertEqual(b"".join(ml), b"aaa\n222\nbbb\n")
+        self.assertEqual(conflictscount, 0)
 
     def test_insert_clash(self):
         """Both try to insert lines in the same place."""
@@ -252,8 +256,6 @@ class TestMerge3(TestCase):
             [b"aaa\n", b"111\n", b"bbb\n"],
             [b"aaa\n", b"222\n", b"bbb\n"],
         )
-
-        self.assertEqual(m3.find_unconflicted(), [(0, 1), (1, 2)])
 
         self.assertEqual(
             list(m3.find_sync_regions()),
@@ -269,12 +271,13 @@ class TestMerge3(TestCase):
             list(m3.merge_groups()),
             [
                 ("unchanged", [b"aaa\n"]),
-                ("conflict", [], [b"111\n"], [b"222\n"]),
+                ("conflict", ([], [b"111\n"], [b"222\n"])),
                 ("unchanged", [b"bbb\n"]),
             ],
         )
 
-        ml = m3.merge_lines(
+        ml, conflictscount = render_minimized(
+            m3,
             name_a=b"a",
             name_b=b"b",
             start_marker=b"<<",
@@ -292,14 +295,13 @@ class TestMerge3(TestCase):
 bbb
 """,
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_replace_clash(self):
         """Both try to insert lines in the same place."""
         m3 = Merge3(
             [b"aaa", b"000", b"bbb"], [b"aaa", b"111", b"bbb"], [b"aaa", b"222", b"bbb"]
         )
-
-        self.assertEqual(m3.find_unconflicted(), [(0, 1), (2, 3)])
 
         self.assertEqual(
             list(m3.find_sync_regions()),
@@ -314,8 +316,6 @@ bbb
             [b"aaa", b"222", b"222", b"222", b"222", b"bbb"],
         )
 
-        self.assertEqual(m3.find_unconflicted(), [(0, 1), (3, 4)])
-
         self.assertEqual(
             list(m3.find_sync_regions()),
             [(0, 1, 0, 1, 0, 1), (3, 4, 4, 5, 5, 6), (4, 4, 5, 5, 6, 6)],
@@ -324,10 +324,11 @@ bbb
     def test_merge_poem(self):
         """Test case from diff3 manual"""
         m3 = Merge3(TZU, LAO, TAO)
-        ml = list(m3.merge_lines(b"LAO", b"TAO"))
+        ml, conflictscount = render_minimized(m3, b"LAO", b"TAO")
         self.log("merge result:")
         self.log(decodeutf8(b"".join(ml)))
         self.assertEqual(ml, MERGED_RESULT)
+        self.assertEqual(conflictscount, 1)
 
     def test_binary(self):
         with self.assertRaises(error.Abort):
@@ -342,12 +343,13 @@ bbb
             other_text.splitlines(True),
             this_text.splitlines(True),
         )
-        m_lines = m3.merge_lines(b"OTHER", b"THIS")
+        m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
         self.assertEqual(
             b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n"
             b">>>>>>> THIS\r\n".splitlines(True),
-            list(m_lines),
+            m_lines,
         )
+        self.assertEqual(conflictscount, 1)
 
     def test_mac_text(self):
         base_text = b"a\r"
@@ -358,38 +360,12 @@ bbb
             other_text.splitlines(True),
             this_text.splitlines(True),
         )
-        m_lines = m3.merge_lines(b"OTHER", b"THIS")
+        m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
         self.assertEqual(
             b"<<<<<<< OTHER\rc\r=======\rb\r" b">>>>>>> THIS\r".splitlines(True),
             list(m_lines),
         )
-
-    def test_adjacent_import_line_changes_with_wordmerge(self):
-        base_text = b"""
-import {List} from 'immutable';
-import {cacheMethod} from 'shared/LRU';
-"""
-        this_text = b"""
-import {List, Record} from 'immutable';
-import {cacheMethod} from 'shared/LRU';
-"""
-        other_text = b"""
-import {List} from 'immutable';
-import {cached, LRU} from 'shared/LRU';
-"""
-        expected = b"""
-import {List, Record} from 'immutable';
-import {cached, LRU} from 'shared/LRU';
-"""
-        m3 = Merge3(
-            base_text.splitlines(True),
-            other_text.splitlines(True),
-            this_text.splitlines(True),
-            wordmerge=wordmergemode.ondemand,
-        )
-        m_lines = m3.merge_lines(b"OTHER", b"THIS")
-        self.assertEqual(expected.splitlines(True), list(m_lines))
-        self.assertEqual(0, m3.conflictscount)
+        self.assertEqual(conflictscount, 1)
 
 
 if __name__ == "__main__":

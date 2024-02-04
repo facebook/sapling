@@ -21,9 +21,9 @@ TEST(FilteredObjectIdTest, test_blob) {
   folly::ByteRange objectIdBytes{folly::StringPiece{objectIdString}};
   ObjectId object{objectIdBytes};
 
-  FilteredObjectId filterId{object};
+  FilteredObjectId filterId{object, FilteredObjectIdType::OBJECT_TYPE_BLOB};
 
-  EXPECT_EQ(filterId.objectType(), FilteredObjectId::OBJECT_TYPE_BLOB);
+  EXPECT_EQ(filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_BLOB);
   EXPECT_EQ(filterId.object(), object);
 }
 
@@ -32,11 +32,40 @@ TEST(FilteredObjectIdTest, test_blob_getters_throw) {
   folly::ByteRange objectIdBytes{folly::StringPiece{objectIdString}};
   ObjectId object{objectIdBytes};
 
-  FilteredObjectId filterId{object};
+  FilteredObjectId filterId{object, FilteredObjectIdType::OBJECT_TYPE_BLOB};
 
-  // Blob objects don't have path/filters associated with them. Using the
+  // Blob objects don't have paths/filters associated with them. Using the
   // getters results in an exception.
-  EXPECT_EQ(filterId.objectType(), FilteredObjectId::OBJECT_TYPE_BLOB);
+  EXPECT_EQ(filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_BLOB);
+  EXPECT_THROW(filterId.filter(), std::invalid_argument);
+  EXPECT_THROW(filterId.path(), std::invalid_argument);
+}
+
+TEST(FilteredObjectIdTest, test_unfiltered_tree) {
+  std::string objectIdString = "deadbeeffacebooc";
+  folly::ByteRange objectIdBytes{folly::StringPiece{objectIdString}};
+  ObjectId object{objectIdBytes};
+
+  FilteredObjectId filterId{
+      object, FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE};
+
+  EXPECT_EQ(
+      filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE);
+  EXPECT_EQ(filterId.object(), object);
+}
+
+TEST(FilteredObjectIdTest, test_unfiltered_tree_getters_throw) {
+  std::string objectIdString = "deadbeef facebooc";
+  folly::ByteRange objectIdBytes{folly::StringPiece{objectIdString}};
+  ObjectId object{objectIdBytes};
+
+  FilteredObjectId filterId{
+      object, FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE};
+
+  // Unfiltered tree objects don't have paths/filters associated with them.
+  // Using the getters results in an exception.
+  EXPECT_EQ(
+      filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE);
   EXPECT_THROW(filterId.filter(), std::invalid_argument);
   EXPECT_THROW(filterId.path(), std::invalid_argument);
 }
@@ -51,7 +80,7 @@ TEST(FilteredObjectIdTest, test_tree_short_filter_and_path) {
 
   FilteredObjectId filterId{pathPiece, filterSet, object};
 
-  EXPECT_EQ(filterId.objectType(), FilteredObjectId::OBJECT_TYPE_TREE);
+  EXPECT_EQ(filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_TREE);
   EXPECT_EQ(filterId.path(), pathPiece);
   EXPECT_EQ(filterId.filter(), filterSet);
   EXPECT_EQ(filterId.object(), object);
@@ -76,7 +105,7 @@ TEST(FilteredObjectIdTest, test_tree_long_filter_and_path) {
 
   FilteredObjectId filterId{pathPiece, filterSet, object};
 
-  EXPECT_EQ(filterId.objectType(), FilteredObjectId::OBJECT_TYPE_TREE);
+  EXPECT_EQ(filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_TREE);
   EXPECT_EQ(filterId.path(), pathPiece);
   EXPECT_EQ(filterId.filter(), filterSet);
   EXPECT_EQ(filterId.object(), object);
@@ -91,11 +120,11 @@ TEST(FilteredObjectIdTest, test_copy_and_move) {
 
   FilteredObjectId filterId{pathPiece, filterSet, object};
   FilteredObjectId filterIdCopy{filterId};
-  EXPECT_EQ(filterId.objectType(), FilteredObjectId::OBJECT_TYPE_TREE);
-  EXPECT_EQ(filterIdCopy.objectType(), FilteredObjectId::OBJECT_TYPE_TREE);
+  EXPECT_EQ(filterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_TREE);
+  EXPECT_EQ(filterIdCopy.objectType(), FilteredObjectIdType::OBJECT_TYPE_TREE);
   EXPECT_EQ(filterId, filterIdCopy);
 
   FilteredObjectId movedFilterId{std::move(filterId)};
-  EXPECT_EQ(movedFilterId.objectType(), FilteredObjectId::OBJECT_TYPE_TREE);
+  EXPECT_EQ(movedFilterId.objectType(), FilteredObjectIdType::OBJECT_TYPE_TREE);
   EXPECT_EQ(movedFilterId, movedFilterId);
 }

@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "http",
+    srcs = ["HttpBackingStore.cpp"],
+    headers = ["HttpBackingStore.h"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/fs/model:model",
+        "//folly:dynamic",
+        "//folly/experimental/coro:future_util",
+        "//folly/experimental/coro:task",
+        "//folly/io/async:event_base_manager",
+        "//proxygen/facebook/lib/experimental/coro/client:http_client_lib",
+    ],
+    exported_deps = [
+        "//eden/fs/store:store",
+    ],
+)

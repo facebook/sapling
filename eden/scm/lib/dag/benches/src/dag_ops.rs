@@ -29,8 +29,8 @@ type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + 
 pub fn main() {
     let dag_dir = tempdir().unwrap();
 
-    bench_with_iddag(|| IdDag::open(&dag_dir.path()).unwrap());
-    bench_with_iddag(|| IdDag::new_in_process());
+    bench_with_iddag(|| IdDag::open(dag_dir.path()).unwrap());
+    bench_with_iddag(IdDag::new_in_process);
 
     bench_many_heads_namedag();
 }
@@ -57,7 +57,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     let mut covered_ids = IdSet::empty();
     let reserved_ids = IdSet::empty();
     let outcome = nbr(id_map.assign_head(
-        head_name.clone(),
+        head_name,
         &parents_by_name,
         Group::MASTER,
         &mut covered_ids,
@@ -282,7 +282,7 @@ fn bench_many_heads_namedag() {
         .with_highest_group(Group::MASTER)
         .chain(non_master_heads);
     let dag_dir = tempdir().unwrap();
-    let mut dag = NameDag::open(&dag_dir.path()).unwrap();
+    let mut dag = NameDag::open(dag_dir.path()).unwrap();
     nbr(dag.add_heads_and_flush(&parent_func, &heads)).unwrap();
 
     let to_set = |v: &str| -> Set {

@@ -153,6 +153,10 @@ impl Status {
     pub fn contains(&self, path: &RepoPath) -> bool {
         self.all.contains_key(path)
     }
+
+    pub fn len(&self) -> usize {
+        self.all.len()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

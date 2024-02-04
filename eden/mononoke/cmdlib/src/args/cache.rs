@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use clap_old::App;
@@ -15,7 +16,6 @@ use environment::Caching;
 pub use environment::LocalCacheConfig;
 use fbinit::FacebookInit;
 use once_cell::sync::Lazy;
-use once_cell::sync::OnceCell;
 
 const CACHE_MODE: &str = "cache-mode";
 const CACHE_SIZE_GB: &str = "cache-size-gb";
@@ -107,7 +107,7 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
         )
     });
 
-    static CACHE_SIZE_GB_DEFAULT: OnceCell<String> = OnceCell::new();
+    static CACHE_SIZE_GB_DEFAULT: OnceLock<String> = OnceLock::new();
 
     app.arg(
         Arg::with_name(CACHE_SIZE_GB)

@@ -27,8 +27,8 @@ setup repo
   exporting bookmark master_bookmark
 
 get content_id for file B
-  $ mononoke_admin bonsai-fetch master_bookmark 2> /dev/null | grep BonsaiChangesetId
-  BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da 
+  $ mononoke_newadmin fetch -R repo -B master_bookmark 2> /dev/null | grep BonsaiChangesetId
+  BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da
   $ mononoke_newadmin filestore -R repo store B
   Wrote 122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14 (2 bytes)
 
@@ -87,18 +87,18 @@ Sync to backup repo
   $ mononoke_backup_sync backup sync-loop 0 2>&1 | grep 'should map' | head -n 1
 
 Check that bonsais are the same
-  $ mononoke_admin bonsai-fetch master_bookmark --json 2> /dev/null | jq .
+  $ mononoke_newadmin fetch -R repo -B master_bookmark --json 2> /dev/null | jq .
   {
+    "changeset_id": "2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f",
     "parents": [
       "d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da"
     ],
     "author": "test",
-    "author_date": "1970-01-01T00:00:00+00:00",
+    "author_date": "1970-01-01T00:00:00Z",
     "committer": null,
     "committer_date": null,
     "message": "C",
     "hg_extra": {},
-    "git_extra_headers": null,
     "file_changes": {
       "B": {
         "Change": {
@@ -120,21 +120,20 @@ Check that bonsais are the same
           "copy_from": null
         }
       }
-    },
-    "git_tree_hash": null
+    }
   }
-  $ REPOID=1 mononoke_admin bonsai-fetch master_bookmark --json 2> /dev/null | jq .
+  $ REPOID=1 mononoke_newadmin fetch --repo-id 1 -B master_bookmark --json 2> /dev/null | jq .
   {
+    "changeset_id": "2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f",
     "parents": [
       "d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da"
     ],
     "author": "test",
-    "author_date": "1970-01-01T00:00:00+00:00",
+    "author_date": "1970-01-01T00:00:00Z",
     "committer": null,
     "committer_date": null,
     "message": "C",
     "hg_extra": {},
-    "git_extra_headers": null,
     "file_changes": {
       "B": {
         "Change": {
@@ -156,6 +155,5 @@ Check that bonsais are the same
           "copy_from": null
         }
       }
-    },
-    "git_tree_hash": null
+    }
   }

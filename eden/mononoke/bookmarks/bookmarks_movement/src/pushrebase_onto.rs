@@ -9,26 +9,17 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use anyhow::anyhow;
-use bonsai_git_mapping::BonsaiGitMappingArc;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
-use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
-use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
-use pushrebase_hook::PushrebaseHook;
-use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
+use pushrebase_hooks::get_pushrebase_hooks;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
-use repo_bookmark_attrs::RepoBookmarkAttrsRef;
-use repo_cross_repo::RepoCrossRepoRef;
-use repo_identity::RepoIdentityRef;
 use repo_update_logger::log_bookmark_operation;
 use repo_update_logger::log_new_commits;
 use repo_update_logger::BookmarkInfo;
@@ -179,7 +170,14 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         // pushrebase operation, and then once more as part of the pushrebase
         // bookmark update transaction, to check if the repo got locked while
         // we were peforming the pushrebase.
-        check_repo_lock(repo, kind, self.pushvars, ctx.metadata().identities()).await?;
+        check_repo_lock(
+            repo,
+            kind,
+            self.pushvars,
+            ctx.metadata().identities(),
+            authz,
+        )
+        .await?;
 
         if let Some(hook) = RepoLockPushrebaseHook::new(
             repo.repo_identity().id(),
@@ -187,6 +185,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             self.pushvars,
             repo.repo_permission_checker(),
             ctx.metadata().identities(),
+            authz,
         )
         .await
         {
@@ -262,81 +261,17 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                     reason,
                 };
                 log_bookmark_operation(ctx, repo, &info).await;
+
+                // Marking the pushrebased changeset as public.
+                if kind.is_public() {
+                    repo.phases()
+                        .add_reachable_as_public(ctx, vec![outcome.head.clone()])
+                        .await?;
+                }
             }
             Err(err) => scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err))),
         }
 
         result.map_err(BookmarkMovementError::PushrebaseError)
     }
-}
-
-/// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this repo when
-/// required by those hooks.
-pub fn get_pushrebase_hooks(
-    ctx: &CoreContext,
-    repo: &(
-         impl BonsaiGitMappingArc
-         + BonsaiGlobalrevMappingArc
-         + PushrebaseMutationMappingRef
-         + RepoBookmarkAttrsRef
-         + RepoCrossRepoRef
-         + RepoIdentityRef
-     ),
-    bookmark: &BookmarkKey,
-    pushrebase_params: &PushrebaseParams,
-) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
-    let mut pushrebase_hooks = Vec::new();
-
-    match pushrebase_params.globalrev_config.as_ref() {
-        Some(config) if config.publishing_bookmark == *bookmark => {
-            let add_hook = if let Some(small_repo_id) = config.small_repo_id {
-                // Only add hook if pushes are being redirected
-                repo.repo_cross_repo()
-                    .live_commit_sync_config()
-                    .push_redirector_enabled_for_public(small_repo_id)
-            } else {
-                true
-            };
-            if add_hook {
-                let hook = GlobalrevPushrebaseHook::new(
-                    ctx.clone(),
-                    repo.bonsai_globalrev_mapping_arc().clone(),
-                    repo.repo_identity().id(),
-                    config.small_repo_id,
-                );
-                pushrebase_hooks.push(hook);
-            }
-        }
-        Some(config) if config.small_repo_id.is_none() => {
-            return Err(BookmarkMovementError::PushrebaseInvalidGlobalrevsBookmark {
-                bookmark: bookmark.clone(),
-                globalrevs_publishing_bookmark: config.publishing_bookmark.clone(),
-            });
-        }
-        _ => {
-            // No hook necessary
-        }
-    };
-
-    for attr in repo.repo_bookmark_attrs().select(bookmark) {
-        if let Some(descendant_bookmark) = &attr.params().ensure_ancestor_of {
-            return Err(
-                BookmarkMovementError::PushrebaseNotAllowedRequiresAncestorsOf {
-                    bookmark: bookmark.clone(),
-                    descendant_bookmark: descendant_bookmark.clone(),
-                },
-            );
-        }
-    }
-
-    if pushrebase_params.populate_git_mapping {
-        let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping_arc().clone());
-        pushrebase_hooks.push(hook);
-    }
-
-    match repo.pushrebase_mutation_mapping().get_hook() {
-        Some(hook) => pushrebase_hooks.push(hook),
-        None => {}
-    }
-    Ok(pushrebase_hooks)
 }

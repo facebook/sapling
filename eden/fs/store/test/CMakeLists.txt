@@ -12,6 +12,8 @@ target_link_libraries(
   eden_store_test
   PUBLIC
     eden_store
+    eden_store_filter
+    eden_store_hg
     eden_model
     eden_telemetry
     eden_testharness

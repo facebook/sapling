@@ -1,0 +1,72 @@
+# Common elements for the Watcom makefiles
+
+CFLAGS += -wx -zq -i=$(PDCURSES_SRCDIR)
+
+!ifeq DEBUG Y
+CFLAGS		+= -d2 -DPDCDEBUG
+LDFLAGS		= D W A op q sys $(TARGET)
+!else
+CFLAGS		+= -oneatx
+LDFLAGS		= op q sys $(TARGET)
+!endif
+
+RM		= del
+LIBEXE		= wlib -q -n -b -c -t
+
+srcdir = $(PDCURSES_SRCDIR)/pdcurses
+demodir = $(PDCURSES_SRCDIR)/demos
+
+LIBOBJS = addch.obj addchstr.obj addstr.obj attr.obj beep.obj bkgd.obj &
+border.obj clear.obj color.obj delch.obj deleteln.obj &
+getch.obj getstr.obj getyx.obj inch.obj inchstr.obj initscr.obj inopts.obj &
+insch.obj insstr.obj instr.obj kernel.obj keyname.obj mouse.obj move.obj &
+outopts.obj overlay.obj pad.obj panel.obj printw.obj refresh.obj &
+scanw.obj scr_dump.obj scroll.obj slk.obj termattr.obj &
+touch.obj util.obj window.obj debug.obj
+
+PDCOBJS = pdcclip.obj pdcdisp.obj pdcgetsc.obj pdckbd.obj pdcscrn.obj &
+pdcsetsc.obj pdcutil.obj
+
+DEMOS = testcurs.exe ozdemo.exe xmas.exe tuidemo.exe firework.exe &
+ptest.exe rain.exe worm.exe
+
+LIBCURSES = pdcurses.lib
+
+LINK = wlink
+
+!ifdef __LOADDLL__
+! loaddll wcc    wccd
+! loaddll wcc386 wccd386
+! loaddll wlink  wlinkd
+! loaddll wlib   wlibd
+!endif
+
+all:	$(LIBCURSES)
+
+clean
+	-$(RM) *.obj
+	-$(RM) *.lib
+	-$(RM) *.exe
+	-$(RM) *.err
+
+demos:	$(DEMOS)
+
+.c: $(srcdir);$(osdir);$(demodir)
+.c.obj: .autodepend
+	$(CC) $(CFLAGS) $<
+
+.obj.exe:
+	$(LINK) $(LDFLAGS) n $@ f $*.obj l $(LIBCURSES)
+
+testcurs.exe:	testcurs.obj $(LIBCURSES)
+ozdemo.exe:	ozdemo.obj $(LIBCURSES)
+xmas.exe:	xmas.obj $(LIBCURSES)
+firework.exe:	firework.obj $(LIBCURSES)
+rain.exe:	rain.obj $(LIBCURSES)
+worm.exe:	worm.obj $(LIBCURSES)
+ptest.exe:	ptest.obj $(LIBCURSES)
+
+tuidemo.exe:	tuidemo.obj tui.obj $(LIBCURSES)
+	$(LINK) $(LDFLAGS) n $@ f tuidemo.obj f tui.obj l $(LIBCURSES)
+
+dist: .symbolic

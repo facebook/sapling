@@ -10,7 +10,7 @@
 #include <folly/executors/ManualExecutor.h>
 #include <memory>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -35,8 +35,9 @@ std::shared_ptr<ServerState> createTestServerState() {
       makeRefPtr<EdenStats>(),
       std::make_shared<FakePrivHelper>(),
       std::make_shared<UnboundedQueueExecutor>(executor),
+      executor,
       std::make_shared<FakeClock>(),
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       std::make_shared<NullHiveLogger>(),
       std::make_shared<ReloadableConfig>(edenConfig),

@@ -1,0 +1,45 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "filestore",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:digest",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:strum",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+    ],
+)

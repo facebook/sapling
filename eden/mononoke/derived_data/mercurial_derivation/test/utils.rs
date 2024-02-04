@@ -17,7 +17,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfigRef;
-use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
 use futures::stream::FuturesUnordered;
 use futures::FutureExt;
@@ -32,7 +31,7 @@ use mercurial_types::HgBlobNode;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mononoke_types::DateTime;
 use repo_blobstore::RepoBlobstoreArc;
@@ -118,8 +117,7 @@ fn upload_hg_tree_entry(
         p2: p2.map(|mfid| mfid.into_nodehash()),
         path,
     };
-    let (hgcsid, fut) = upload.upload(ctx, repo.repo_blobstore_arc()).unwrap();
-    (hgcsid, fut.compat().boxed())
+    upload.upload(ctx, repo.repo_blobstore_arc()).unwrap()
 }
 
 fn upload_hg_file_entry(
@@ -229,8 +227,8 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
 }
 
-pub fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
-    let bad_mpath = Error::msg("RepoPath did not convert to MPath");
+pub fn to_mpath(path: RepoPath) -> Result<NonRootMPath, Error> {
+    let bad_mpath = Error::msg("RepoPath did not convert to NonRootMPath");
     path.into_mpath().ok_or(bad_mpath)
 }
 

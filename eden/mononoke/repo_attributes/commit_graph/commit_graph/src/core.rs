@@ -130,7 +130,7 @@ impl CommitGraph {
             None => return Ok(None),
         };
 
-        let parent_edges = self.storage.fetch_edges_required(ctx, parent.cs_id).await?;
+        let parent_edges = self.storage.fetch_edges(ctx, parent.cs_id).await?;
 
         let parent_skew_ancestor = match get_skew_ancestor(&parent_edges) {
             Some(node) => node,
@@ -139,7 +139,7 @@ impl CommitGraph {
 
         let parent_skew_ancestor_edges = self
             .storage
-            .fetch_edges_required(ctx, parent_skew_ancestor.cs_id)
+            .fetch_edges(ctx, parent_skew_ancestor.cs_id)
             .await?;
 
         let parent_second_skew_ancestor = match get_skew_ancestor(&parent_skew_ancestor_edges) {
@@ -173,7 +173,7 @@ impl CommitGraph {
         H: Fn(ChangesetNode) -> u64,
     {
         loop {
-            let node_edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+            let node_edges = self.storage.fetch_edges(ctx, cs_id).await?;
 
             if get_depth(node_edges.node) == target_depth {
                 return Ok(Some(node_edges.node));
@@ -252,8 +252,8 @@ impl CommitGraph {
         H: Fn(ChangesetNode) -> u64 + Copy,
     {
         let (edges1, edges2) = futures::try_join!(
-            self.storage.fetch_edges_required(ctx, cs_id1),
-            self.storage.fetch_edges_required(ctx, cs_id2),
+            self.storage.fetch_edges(ctx, cs_id1),
+            self.storage.fetch_edges(ctx, cs_id2),
         )?;
 
         let (mut u, mut v) = (edges1.node, edges2.node);
@@ -289,8 +289,8 @@ impl CommitGraph {
         // up in the lowest common ancestor.
         while u.cs_id != v.cs_id {
             let (u_edges, v_edges) = futures::try_join!(
-                self.storage.fetch_edges_required(ctx, u.cs_id),
-                self.storage.fetch_edges_required(ctx, v.cs_id),
+                self.storage.fetch_edges(ctx, u.cs_id),
+                self.storage.fetch_edges(ctx, v.cs_id),
             )?;
 
             match (

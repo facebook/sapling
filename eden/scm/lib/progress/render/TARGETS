@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "progress-render",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+    ],
+    deps = [
+        "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:unicode-segmentation",
+        "fbsource//third-party/rust:unicode-width",
+        "//eden/scm/lib/progress/model:progress-model",
+    ],
+)

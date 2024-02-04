@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 import eden.dirstate
-import facebook.eden.ttypes as eden_ttypes
 from eden.fs.cli import mtab, version as version_mod
 from eden.fs.cli.config import (
     AbstractEdenInstance,
@@ -152,7 +151,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             typing.cast(EdenInstance, self), Path(full_path), state_dir
         )
         eden_checkout.save_config(config)
-        eden_checkout.save_snapshot(snapshot)
+        eden_checkout.save_snapshot(snapshot.encode())
 
         if active and self._status == fb303_status.ALIVE:
             # Report the mount in /proc/mounts

@@ -13,6 +13,7 @@ import logging
 import platform
 import random
 import subprocess
+import sys
 import time
 import types
 from pathlib import Path
@@ -169,6 +170,12 @@ class TelemetryLogger(abc.ABC):
         sample.add_fields(**kwargs)
         return sample
 
+    def new_empty_sample(self, log_session_id: bool = False) -> TelemetrySample:
+        sample = self._create_sample()
+        if log_session_id:
+            sample.add_int("session_id", self.session_id)
+        return sample
+
     def log(self, event_type: str, **kwargs: TelemetryTypes) -> None:
         self.new_sample(event_type, **kwargs).log()
 
@@ -248,8 +255,16 @@ class ExternalTelemetryLogger(BaseJsonTelemetryLogger):
 
     def log_sample(self, sample: JsonTelemetrySample) -> None:
         cmd = self.cmd + [sample.get_json()]
+        kwargs = {}
+        if sys.platform == "win32":
+            kwargs = {
+                "creationflags": subprocess.CREATE_NO_WINDOW,
+                "startupinfo": subprocess.STARTUPINFO(
+                    dwFlags=subprocess.STARTF_USESHOWWINDOW
+                ),
+            }
         try:
-            rc = subprocess.call(cmd)
+            rc = subprocess.call(cmd, **kwargs)
             if rc != 0:
                 log.warning(f"telemetry log command returned non-zero exit code {rc}")
         except Exception as ex:

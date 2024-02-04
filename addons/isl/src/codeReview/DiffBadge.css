@@ -47,8 +47,11 @@
   align-items: center;
 }
 .diff-signal-pass {
-  color: var(--scm-added-foreground);
+  color: var(--signal-good-bg);
 }
 .diff-signal-failed {
-  color: var(--scm-removed-foreground);
+  color: var(--signal-bad-bg);
+}
+.diff-signal-warning {
+  color: var(--signal-medium-bg);
 }

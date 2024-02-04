@@ -10,7 +10,6 @@
 use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::mem::size_of;
 
 pub trait VLQEncode<T> {
     /// Encode an integer to a VLQ byte array and write it directly to a stream.
@@ -22,11 +21,13 @@ pub trait VLQEncode<T> {
     /// let mut v = vec![];
     ///
     /// let x = 120u8;
-    /// v.write_vlq(x).expect("writing an encoded u8 to a vec should work");
+    /// v.write_vlq(x)
+    ///     .expect("writing an encoded u8 to a vec should work");
     /// assert_eq!(v, vec![120]);
     ///
     /// let x = 22742734291u64;
-    /// v.write_vlq(x).expect("writing an encoded u64 to a vec should work");
+    /// v.write_vlq(x)
+    ///     .expect("writing an encoded u64 to a vec should work");
     ///
     /// assert_eq!(v, vec![120, 211, 171, 202, 220, 84]);
     /// ```
@@ -38,11 +39,13 @@ pub trait VLQEncode<T> {
     /// let mut v = vec![];
     ///
     /// let x = -3i8;
-    /// v.write_vlq(x).expect("writing an encoded i8 to a vec should work");
+    /// v.write_vlq(x)
+    ///     .expect("writing an encoded i8 to a vec should work");
     /// assert_eq!(v, vec![5]);
     ///
     /// let x = 1000i16;
-    /// v.write_vlq(x).expect("writing an encoded i16 to a vec should work");
+    /// v.write_vlq(x)
+    ///     .expect("writing an encoded i16 to a vec should work");
     /// assert_eq!(v, vec![5, 208, 15]);
     /// ```
     fn write_vlq(&mut self, value: T) -> io::Result<()>;
@@ -54,8 +57,12 @@ pub trait VLQDecode<T> {
     /// # Examples
     ///
     /// ```
+    /// use std::io::Cursor;
+    /// use std::io::ErrorKind;
+    /// use std::io::Seek;
+    /// use std::io::SeekFrom;
+    ///
     /// use vlqencoding::VLQDecode;
-    /// use std::io::{Cursor,Seek,SeekFrom,ErrorKind};
     ///
     /// let mut c = Cursor::new(vec![120u8, 211, 171, 202, 220, 84]);
     ///
@@ -73,8 +80,12 @@ pub trait VLQDecode<T> {
     /// Signed integers are decoded via zig-zag:
     ///
     /// ```
+    /// use std::io::Cursor;
+    /// use std::io::ErrorKind;
+    /// use std::io::Seek;
+    /// use std::io::SeekFrom;
+    ///
     /// use vlqencoding::VLQDecode;
-    /// use std::io::{Cursor,Seek,SeekFrom,ErrorKind};
     ///
     /// let mut c = Cursor::new(vec![5u8, 208, 15]);
     ///
@@ -102,8 +113,9 @@ pub trait VLQDecodeAt<T> {
     /// # Examples
     ///
     /// ```
-    /// use vlqencoding::VLQDecodeAt;
     /// use std::io::ErrorKind;
+    ///
+    /// use vlqencoding::VLQDecodeAt;
     ///
     /// let c = &[120u8, 211, 171, 202, 220, 84, 255];
     ///
@@ -209,7 +221,7 @@ macro_rules! impl_signed_primitive {
     ($T: ty, $U: ty) => {
         impl<W: Write + ?Sized> VLQEncode<$T> for W {
             fn write_vlq(&mut self, v: $T) -> io::Result<()> {
-                self.write_vlq(((v << 1) ^ (v >> (size_of::<$U>() * 8 - 1))) as $U)
+                self.write_vlq(((v << 1) ^ (v >> (<$U>::BITS - 1))) as $U)
             }
         }
 
@@ -280,7 +292,7 @@ mod tests {
             assert!(check_round_trip!(i as u8));
             assert!(check_round_trip!(i as u16));
             assert!(check_round_trip!(i as u32));
-            assert!(check_round_trip!(i as u64));
+            assert!(check_round_trip!(i));
             assert!(check_round_trip!(i as usize));
         }
     }

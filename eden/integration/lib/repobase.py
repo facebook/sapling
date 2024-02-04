@@ -109,9 +109,7 @@ class Repository:
             contents = contents.encode()
 
         with open(full_path, "wb") as f:
-            # pyre-fixme[6]: Expected `Union[array.array[typing.Any], bytearray,
-            #  bytes, memoryview, mmap.mmap]` for 1st param but got `Union[bytes,
-            #  Variable[AnyStr <: [str, bytes]]]`.
+            # pyre-fixme[6]: For 1st argument expected `Buffer` but got `AnyStr`.
             f.write(contents)
 
         os.chmod(full_path, mode)

@@ -9,27 +9,30 @@ import type {CommitInfo} from '../types';
 
 import {Tooltip} from '../Tooltip';
 import {t, T} from '../i18n';
-import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
+import {configBackedAtom} from '../jotaiUtils';
 import {codeReviewProvider} from './CodeReviewInfo';
 import {VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilState, useRecoilValue} from 'recoil';
+import {useAtom} from 'jotai';
+import {useRecoilValue} from 'recoil';
 
-export const submitAsDraft = atom<boolean>({
-  key: 'submitAsDraft',
-  default: false,
-  effects: [persistAtomToConfigEffect('isl.submitAsDraft')],
-});
+export const submitAsDraft = configBackedAtom<boolean>('isl.submitAsDraft', false);
 
-export function SubmitAsDraftCheckbox({commitsToBeSubmit}: {commitsToBeSubmit: Array<CommitInfo>}) {
-  const [isDraft, setIsDraft] = useRecoilState(submitAsDraft);
+export function SubmitAsDraftCheckbox({
+  commitsToBeSubmit,
+  forceShow,
+}:
+  | {commitsToBeSubmit: Array<CommitInfo>; forceShow?: undefined}
+  | {forceShow: true; commitsToBeSubmit?: undefined}) {
+  const [isDraft, setIsDraft] = useAtom(submitAsDraft);
   const provider = useRecoilValue(codeReviewProvider);
   if (
-    provider == null ||
-    (provider?.supportSubmittingAsDraft === 'newDiffsOnly' &&
-      // empty array => commit to submit is not yet created (this counts as a new Diff)
-      commitsToBeSubmit.length > 0 &&
-      // some commits don't have a diff ID => those are "new" Diffs
-      commitsToBeSubmit.some(commit => commit.diffId != null))
+    !forceShow &&
+    (provider == null ||
+      (provider?.supportSubmittingAsDraft === 'newDiffsOnly' &&
+        // empty array => commit to submit is not yet created (this counts as a new Diff)
+        commitsToBeSubmit.length > 0 &&
+        // some commits don't have a diff ID => those are "new" Diffs
+        commitsToBeSubmit.some(commit => commit.diffId != null)))
   ) {
     // hide draft button for diffs being resubmitted, if the provider doesn't support drafts on resubmission
     return null;
@@ -40,10 +43,14 @@ export function SubmitAsDraftCheckbox({commitsToBeSubmit}: {commitsToBeSubmit: A
       checked={isDraft}
       onChange={e => setIsDraft((e.target as HTMLInputElement).checked)}>
       <Tooltip
-        title={t('whetherToSubmitDiffAsDraft', {
-          // we don't actually support submitting zero commits, instead this means we're submitting the head commit.
-          count: commitsToBeSubmit.length || 1,
-        })}>
+        title={
+          forceShow
+            ? t('Whether to submit diffs as drafts')
+            : t('whetherToSubmitDiffAsDraft', {
+                // we don't actually support submitting zero commits, instead this means we're submitting the head commit.
+                count: commitsToBeSubmit?.length || 1,
+              })
+        }>
         <T>Submit as Draft</T>
       </Tooltip>
     </VSCodeCheckbox>

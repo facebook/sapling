@@ -85,7 +85,7 @@ extensions.push(
   new LanguageExtensionOnGitHub({
     organization: 'slackhq',
     project: 'vscode-hack',
-    commit: '4b8dc3e067e09932e346fe7dad49b8a6f8f88d6f', // v2.13.0
+    commit: 'e73b8dcca54e3af373f0804162a2b16926d58d44', // v2.17.1
   }),
 );
 

@@ -45,6 +45,7 @@ use mercurial_bundles::PartId;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -52,7 +53,6 @@ use rate_limiting::RateLimitBody;
 use repo_identity::RepoIdentityRef;
 use slog::trace;
 use topo_sort::sort_topological;
-use tunables::tunables;
 use wirepack::TreemanifestBundle2Parser;
 use wireproto_handler::BackupSourceRepo;
 
@@ -264,7 +264,7 @@ pub async fn resolve<'a>(
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-    pure_push_allowed: bool,
+    push_params: &'a PushParams,
     pushrebase_flags: PushrebaseFlags,
     maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
@@ -273,7 +273,7 @@ pub async fn resolve<'a>(
         repo,
         infinitepush_writes_allowed,
         bundle2,
-        pure_push_allowed,
+        push_params,
         pushrebase_flags,
         maybe_backup_repo_source,
     )
@@ -287,11 +287,17 @@ async fn resolve_impl<'a>(
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-    pure_push_allowed: bool,
+    push_params: &'a PushParams,
     pushrebase_flags: PushrebaseFlags,
     maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
-    let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
+    let resolver = Bundle2Resolver::new(
+        ctx,
+        repo,
+        infinitepush_writes_allowed,
+        push_params.unbundle_commit_limit,
+        pushrebase_flags,
+    );
     let bundle2 = resolver.resolve_stream_params(bundle2).await?;
     let bundle2 = resolver.resolve_replycaps(bundle2).await?;
 
@@ -342,6 +348,7 @@ async fn resolve_impl<'a>(
             .await
         }
     } else {
+        let pure_push_allowed = push_params.pure_push_allowed;
         resolve_push(
             ctx,
             resolver,
@@ -793,6 +800,7 @@ struct Bundle2Resolver<'r> {
     ctx: &'r CoreContext,
     repo: &'r BlobRepo,
     infinitepush_writes_allowed: bool,
+    unbundle_commit_limit: Option<u64>,
     #[allow(dead_code)]
     pushrebase_flags: PushrebaseFlags,
 }
@@ -802,11 +810,13 @@ impl<'r> Bundle2Resolver<'r> {
         ctx: &'r CoreContext,
         repo: &'r BlobRepo,
         infinitepush_writes_allowed: bool,
+        unbundle_commit_limit: Option<u64>,
         pushrebase_flags: PushrebaseFlags,
     ) -> Self {
         Self {
             ctx,
             repo,
+            unbundle_commit_limit,
             infinitepush_writes_allowed,
             pushrebase_flags,
         }
@@ -965,28 +975,22 @@ impl<'r> Bundle2Resolver<'r> {
                         .try_collect()
                         .await?;
 
-                let commit_limit = tunables()
-                    .unbundle_limit_num_of_commits_in_push()
-                    .unwrap_or_default();
-                // Ignore commit limit if hg sync job is pushing. Hg sync job is used
-                // to mirror one repository into another, and we can't discard a push
-                // even if it's too big
-                if commit_limit > 0 && !self.ctx.session().is_hg_sync_job() {
-                    let commit_limit: usize = commit_limit.try_into().unwrap();
-                    if changesets.len() > commit_limit {
-                        bail!(
-                            "Trying to push too many commits! Limit is {}, tried to push {}",
-                            commit_limit,
-                            changesets.len()
-                        );
+                if let Some(commit_limit) = self.unbundle_commit_limit {
+                    // Ignore commit limit if hg sync job is pushing. Hg sync job is used
+                    // to mirror one repository into another, and we can't discard a push
+                    // even if it's too big
+                    if !self.ctx.session().is_hg_sync_job() {
+                        if changesets.len() as u64 > commit_limit {
+                            bail!(
+                                "Trying to push too many commits! Limit is {}, tried to push {}",
+                                commit_limit,
+                                changesets.len()
+                            );
+                        }
                     }
                 }
 
-                let changesets = if is_infinitepush
-                    && tunables()
-                        .filter_pre_existing_commits_on_infinitepush()
-                        .unwrap_or_default()
-                {
+                let changesets = if is_infinitepush {
                     let hg_cs_ids = changesets.iter().map(|(id, _)| *id).collect::<Vec<_>>();
 
                     let mapping = self
@@ -1030,9 +1034,12 @@ impl<'r> Bundle2Resolver<'r> {
 
                 let mut ctx = self.ctx.clone();
                 if is_infinitepush
-                    && tunables::tunables()
-                        .commit_cloud_use_background_session_class()
-                        .unwrap_or_default()
+                    && justknobs::eval(
+                        "scm/mononoke:commit_cloud_use_background_session_class",
+                        None,
+                        None,
+                    )
+                    .unwrap_or_default()
                 {
                     ctx.session_mut()
                         .override_session_class(SessionClass::BackgroundUnlessTooSlow);
@@ -1183,6 +1190,23 @@ impl<'r> Bundle2Resolver<'r> {
         maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
+        // Get the list of Hg changeset for which Bonsai changeset mapping already exists based on the input.
+        // These changesets won't be re-uploaded and instead the stored existing bonsai changesets will be returned
+        let existing_changesets = self
+            .repo
+            .get_hg_bonsai_mapping(
+                self.ctx.clone(),
+                changesets
+                    .iter()
+                    .map(|(hg_cs_id, _)| *hg_cs_id)
+                    .collect::<Vec<_>>(),
+            )
+            .await
+            .context("Error fetching bonsai_hg_mapping")?
+            .into_iter()
+            .map(|(hg_id, _)| hg_id)
+            .collect::<HashSet<_>>();
+
         let filelogs = cg_push.filelogs;
 
         self.ctx
@@ -1216,19 +1240,31 @@ impl<'r> Bundle2Resolver<'r> {
         for chunk in changesets.chunks(chunk_size) {
             let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
             for (node, revlog_cs) in chunk {
-                uploaded_changesets = upload_changeset(
-                    self.ctx.clone(),
-                    self.repo.clone(),
-                    self.ctx.scuba().clone(),
-                    *node,
-                    revlog_cs,
-                    uploaded_changesets,
-                    &filelogs,
-                    &manifests,
-                    maybe_backup_repo_source.clone(),
-                )
-                .await
-                .with_context(err_context)?;
+                uploaded_changesets = if existing_changesets.contains(node) {
+                    // If the mapping was already created in the past, do not create a new bonsai changeset to upload
+                    // but reuse the existing one to create the ChangesetHandle
+                    let existing_changeset_handle = ChangesetHandle::ready_cs_handle(
+                        self.ctx.clone(),
+                        self.repo.clone(),
+                        *node,
+                    );
+                    uploaded_changesets.insert(*node, existing_changeset_handle);
+                    uploaded_changesets
+                } else {
+                    upload_changeset(
+                        self.ctx.clone(),
+                        self.repo.clone(),
+                        self.ctx.scuba().clone(),
+                        *node,
+                        revlog_cs,
+                        uploaded_changesets,
+                        &filelogs,
+                        &manifests,
+                        maybe_backup_repo_source.clone(),
+                    )
+                    .await
+                    .with_context(err_context)?
+                };
             }
 
             let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)

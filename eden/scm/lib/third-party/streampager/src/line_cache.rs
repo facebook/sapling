@@ -33,7 +33,7 @@ impl LineCache {
             Some(Cow::Borrowed(cache.get_mut(&line_index).unwrap()))
         } else {
             let line = file.with_line(line_index, |line| {
-                if let Some(ref regex) = regex {
+                if let Some(regex) = regex {
                     Line::new_search(line_index, line, regex)
                 } else {
                     Line::new(line_index, line)

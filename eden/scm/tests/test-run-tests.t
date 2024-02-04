@@ -635,29 +635,6 @@ Parallel runs
   python hash seed: * (glob)
   [1]
 
-failures in parallel with --first should only print one failure
-  $ rt --jobs 2 --first test-failure*.t
-  
-  --- test-failure*.t (glob)
-  +++ test-failure*.t.err (glob)
-  @@ -1,5 +1,5 @@
-     $ echo babar
-  -  rataxes
-  +  babar
-   This is a noop statement so that
-   this test is still more bytes than success.
-   pad pad pad pad............................................................
-  
-  ----------------------------------------------------------------------
-  Failed 2 tests (output changed):
-    test-failure-copy.t
-    test-failure.t
-  
-  # Ran 2 tests, 0 skipped, 2 failed.
-  python hash seed: * (glob)
-  [1]
-
-
 (delete the duplicated test file)
   $ rm test-failure-copy.t
 
@@ -981,7 +958,7 @@ test --record support
 timeouts
 ========
   $ cat > test-timeout.t <<EOF
-  >   $ sleep 2
+  >   $ sleep 10
   >   $ echo pass
   >   pass
   > EOF

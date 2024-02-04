@@ -50,7 +50,9 @@ impl ToApi for WireError {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         let message = self
             .message
-            .ok_or_else(|| WireToApiConversionError::CannotPopulateRequiredField("message"))?;
+            .ok_or(WireToApiConversionError::CannotPopulateRequiredField(
+                "message",
+            ))?;
         let code = self.code.unwrap_or(0);
         Ok(ServerError::new(message, code))
     }

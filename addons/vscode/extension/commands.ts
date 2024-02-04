@@ -11,8 +11,10 @@ import type {Operation} from 'isl/src/operations/Operation';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
+import {encodeDeletedFileUri} from './DeletedFileContentProvider';
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
+import fs from 'fs';
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {RevertOperation} from 'isl/src/operations/RevertOperation';
@@ -58,6 +60,7 @@ export const vscodeCommands = {
 type ExternalVSCodeCommands = {
   'vscode.diff': (left: vscode.Uri, right: vscode.Uri, title: string) => Thenable<unknown>;
   'workbench.action.closeSidebar': () => Thenable<void>;
+  'fb.survey.initStateUIByNamespace': (surveyID: string) => Thenable<void>;
   'sapling.open-isl': () => Thenable<void>;
   'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;
@@ -122,12 +125,24 @@ export function registerCommands(tracker: ServerSideTracker): Array<vscode.Dispo
   return disposables;
 }
 
-function openDiffView(uri: vscode.Uri, comparison: Comparison): Thenable<unknown> {
+function fileExists(uri: vscode.Uri): Promise<boolean> {
+  return fs.promises
+    .access(uri.fsPath)
+    .then(() => true)
+    .catch(() => false);
+}
+
+async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<unknown> {
   const {fsPath} = uri;
   const title = `${path.basename(fsPath)} (${t(labelForComparison(comparison))})`;
   const uriForComparison = encodeSaplingDiffUri(uri, comparison);
   if (comparison.type !== ComparisonType.Committed) {
-    return executeVSCodeCommand('vscode.diff', uriForComparison, uri, title);
+    return executeVSCodeCommand(
+      'vscode.diff',
+      uriForComparison,
+      (await fileExists(uri)) ? uri : encodeDeletedFileUri(uri),
+      title,
+    );
   }
   const uriForComparisonParent = encodeSaplingDiffUri(uri, {
     type: ComparisonType.Committed,

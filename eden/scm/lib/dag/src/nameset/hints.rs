@@ -22,6 +22,7 @@ use crate::Id;
 use crate::VerLink;
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct Flags: u32 {
         /// Full. A full Set & other set X with compatible Dag results in X.
         const FULL = 0x1;

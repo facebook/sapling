@@ -8,10 +8,6 @@
   $ enable rebase
   $ export HGIDENTITY=sl
 
-Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
-  $ export XDG_CONFIG_HOME=$TESTTMP
-  $ git config --global protocol.file.allow always
-
 Submodule that refers to itself in mod/doc/
 
   $ git init -q -b main git-sub

@@ -22,6 +22,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::str::FromStr;
 use std::time::Duration;
 use std::vec;
 
@@ -37,12 +38,15 @@ use edenfs_error::ResultExt;
 use edenfs_utils::path_from_bytes;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
+use edenfs_utils::varint::decode_varint;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
+use strum::EnumString;
+use strum::EnumVariantNames;
+use strum::VariantNames;
 use thrift_types::edenfs::errors::eden_service::PrefetchFilesError;
-use thrift_types::edenfs::types::Glob;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
 use thrift_types::edenfs::types::MountState;
@@ -68,16 +72,52 @@ const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
 const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
-const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
-const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
-const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory"];
+// List of supported repository types. This should stay in sync with the list
+// in the Python CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
+// the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
+#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[serde(rename_all = "lowercase")]
+enum RepositoryType {
+    #[strum(serialize = "git")]
+    Git,
+    #[strum(serialize = "hg")]
+    Hg,
+    #[strum(serialize = "recas")]
+    Recas,
+    #[strum(serialize = "filteredhg")]
+    FilteredHg,
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[serde(rename_all = "lowercase")]
+enum MountProtocol {
+    #[strum(serialize = "fuse")]
+    Fuse,
+    #[strum(serialize = "nfs")]
+    Nfs,
+    #[strum(serialize = "prjfs")]
+    Prjfs,
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[serde(rename_all = "lowercase")]
+enum InodeCatalogType {
+    #[strum(serialize = "legacy")]
+    Legacy,
+    #[strum(serialize = "sqlite")]
+    Sqlite,
+    #[strum(serialize = "inmemory")]
+    InMemory,
+    #[strum(serialize = "lmdb")]
+    Lmdb,
+}
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {
     path: PathBuf,
 
     #[serde(rename = "type", deserialize_with = "deserialize_repo_type")]
-    repo_type: String,
+    repo_type: RepositoryType,
 
     #[serde(default = "default_guid")]
     guid: Uuid,
@@ -86,7 +126,7 @@ struct Repository {
         deserialize_with = "deserialize_protocol",
         default = "default_protocol"
     )]
-    protocol: String,
+    protocol: MountProtocol,
 
     #[serde(rename = "case-sensitive", default = "default_case_sensitive")]
     case_sensitive: bool,
@@ -104,7 +144,11 @@ struct Repository {
     #[serde(rename = "use-write-back-cache", default)]
     use_write_back_cache: bool,
 
-    #[serde(rename = "enable-windows-symlinks", default)]
+    #[serde(
+        rename = "enable-windows-symlinks",
+        default = "default_enable_windows_symlinks",
+        deserialize_with = "deserialize_enable_windows_symlinks"
+    )]
     enable_windows_symlinks: bool,
 
     #[serde(
@@ -112,7 +156,19 @@ struct Repository {
         default = "default_inode_catalog_type",
         deserialize_with = "deserialize_inode_catalog_type"
     )]
-    inode_catalog_type: Option<String>,
+    inode_catalog_type: Option<InodeCatalogType>,
+}
+
+fn default_enable_windows_symlinks() -> bool {
+    cfg!(target_os = "windows")
+}
+
+fn deserialize_enable_windows_symlinks<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = bool::deserialize(deserializer)?;
+    Ok(s)
 }
 
 fn default_sqlite_overlay() -> bool {
@@ -132,28 +188,29 @@ where
     }
 }
 
-fn deserialize_repo_type<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_repo_type<'de, D>(deserializer: D) -> Result<RepositoryType, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
 
-    if SUPPORTED_REPOS.iter().any(|v| v == &s) {
-        Ok(s)
-    } else {
-        Err(serde::de::Error::custom(format!(
+    match RepositoryType::from_str(&s) {
+        Ok(t) => Ok(t),
+        Err(_) => Err(serde::de::Error::custom(format!(
             "Unsupported value: `{}`. Must be one of: {}",
             s,
-            SUPPORTED_REPOS.join(", ")
-        )))
+            RepositoryType::VARIANTS.join(", ")
+        ))),
     }
 }
 
-fn default_inode_catalog_type() -> Option<String> {
+fn default_inode_catalog_type() -> Option<InodeCatalogType> {
     None
 }
 
-fn deserialize_inode_catalog_type<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+fn deserialize_inode_catalog_type<'de, D>(
+    deserializer: D,
+) -> Result<Option<InodeCatalogType>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -161,43 +218,38 @@ where
 
     match s {
         None => Ok(None),
-        Some(mut s) => {
-            s = s.to_lowercase();
-            if SUPPORTED_INODE_CATALOG_TYPES.iter().any(|v| v == &s) {
-                Ok(Some(s))
-            } else {
-                Err(serde::de::Error::custom(format!(
-                    "Unsupported value: `{}`. Must be one of: {}",
-                    s,
-                    SUPPORTED_INODE_CATALOG_TYPES.join(", ")
-                )))
-            }
-        }
+        Some(s) => match InodeCatalogType::from_str(&s) {
+            Ok(t) => Ok(Some(t)),
+            Err(_) => Err(serde::de::Error::custom(format!(
+                "Unsupported value: `{}`. Must be one of: {}",
+                s,
+                InodeCatalogType::VARIANTS.join(", ")
+            ))),
+        },
     }
 }
 
-fn deserialize_protocol<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_protocol<'de, D>(deserializer: D) -> Result<MountProtocol, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
 
-    if SUPPORTED_MOUNT_PROTOCOLS.iter().any(|v| v == &s) {
-        Ok(s)
-    } else {
-        Err(serde::de::Error::custom(format!(
+    match MountProtocol::from_str(&s) {
+        Ok(m) => Ok(m),
+        Err(_) => Err(serde::de::Error::custom(format!(
             "Unsupported value: `{}`. Must be one of: {}",
             s,
-            SUPPORTED_MOUNT_PROTOCOLS.join(", ")
-        )))
+            MountProtocol::VARIANTS.join(", ")
+        ))),
     }
 }
 
-fn default_protocol() -> String {
+fn default_protocol() -> MountProtocol {
     if cfg!(windows) {
-        "prjfs".to_string()
+        MountProtocol::Prjfs
     } else {
-        "fuse".to_string()
+        MountProtocol::Fuse
     }
 }
 
@@ -277,14 +329,6 @@ impl CheckoutConfig {
         let content = String::from_utf8(std::fs::read(config_path).from_err()?).from_err()?;
         let config: CheckoutConfig = toml::from_str(&content).from_err()?;
         Ok(config)
-    }
-
-    pub fn print_prefetch_profiles(&self) {
-        if let Some(profiles) = &self.profiles {
-            for s in profiles.active.iter() {
-                println!("{}", s);
-            }
-        }
     }
 
     pub fn get_prefetch_profiles(&self) -> Result<&Vec<String>> {
@@ -380,23 +424,15 @@ impl CheckoutConfig {
     }
 
     /// Add a profile to the config (read the config file and write it back
-    /// with profile added). Returns true if we should fetch, false otherwise.
-    pub fn activate_profile(
-        &mut self,
-        profile: &str,
-        config_dir: PathBuf,
-        force_fetch: &bool,
-    ) -> Result<bool> {
+    /// with profile added).
+    pub fn activate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
-                // The profile is already activated so we don't need to update the profile list,
-                // but we want to return a success so we continue with the fetch
-                if *force_fetch {
-                    return Ok(true);
-                }
+                // The profile is already activated so we don't need to update the profile list
                 eprintln!("{} is already an active prefetch profile", profile);
-                return Ok(false);
+                return Ok(());
             }
+
             profiles.push(profile);
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
@@ -404,8 +440,13 @@ impl CheckoutConfig {
                     &config_dir.display()
                 )
             })?;
+            Ok(())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "failed to activate prefetch profile '{}'; could not find active profile list",
+                profile
+            )))
         }
-        Ok(true)
     }
 
     /// Switch on predictive prefetch profiles (read the config file and write
@@ -486,13 +527,22 @@ impl CheckoutConfig {
 pub struct SnapshotState {
     pub working_copy_parent: String,
     pub last_checkout_hash: String,
+    pub parent_filter_id: Option<String>,
+    pub last_filter_id: Option<String>,
 }
 
 impl SnapshotState {
-    fn new(working_copy_parent: String, last_checkout_hash: String) -> Self {
+    fn new(
+        working_copy_parent: String,
+        last_checkout_hash: String,
+        parent_filter_id: Option<String>,
+        last_filter_id: Option<String>,
+    ) -> Self {
         Self {
             working_copy_parent,
             last_checkout_hash,
+            parent_filter_id,
+            last_filter_id,
         }
     }
 }
@@ -545,24 +595,66 @@ impl EdenFsCheckout {
         s
     }
 
+    /// Determines the hash and filter id for a given Snapshot component.
+    pub fn parse_snapshot_component(
+        &self,
+        component_buf: &Vec<u8>,
+    ) -> Result<(String, Option<String>)> {
+        let checkout_config = CheckoutConfig::parse_config(self.data_dir.clone())?;
+
+        if checkout_config.repository.repo_type == RepositoryType::FilteredHg {
+            // FilteredRootIds are in the form: <VarInt><RootId><FilterId>. We first parse out the
+            // VarInt to determine where the RootId ends.
+            let cursor = std::io::Cursor::new(component_buf);
+            let (component_hash_len, varint_len) = decode_varint(&mut BufReader::new(cursor))
+                .context("Could not decode varint in Snapshot file")?;
+            let filter_offset = varint_len + (component_hash_len as usize);
+
+            // We can then parse out the RootId, FilterId, and convert them into strings.
+            let decoded_hash = std::str::from_utf8(&component_buf[varint_len..filter_offset])
+                .from_err()?
+                .to_string();
+            let decoded_filter = std::str::from_utf8(&component_buf[filter_offset..])
+                .from_err()?
+                .to_string();
+            Ok((decoded_hash, Some(decoded_filter)))
+        } else {
+            // The entire buffer corresponds to the hash. There is no filter id present.
+            let decoded_hash = std::str::from_utf8(component_buf).from_err()?.to_string();
+            Ok((decoded_hash, None))
+        }
+    }
+
     /// Returns a SnapshotState representing EdenFS working copy parent as well as the last checked
     /// out revision.
     pub fn get_snapshot(&self) -> Result<SnapshotState> {
         let snapshot_path = self.data_dir.join(SNAPSHOT);
-        let mut f = File::open(&snapshot_path).from_err()?;
+        let mut f = File::open(snapshot_path).from_err()?;
         let mut header = [0u8; 8];
         f.read(&mut header).from_err()?;
+
         if header == SNAPSHOT_MAGIC_1 {
             let mut snapshot = [0u8; 20];
             f.read(&mut snapshot).from_err()?;
             let decoded = EdenFsCheckout::encode_hex(&snapshot);
-            Ok(SnapshotState::new(decoded.clone(), decoded))
+            Ok(SnapshotState::new(decoded.clone(), decoded, None, None))
         } else if header == SNAPSHOT_MAGIC_2 {
+            // The first byte of the snapshot file is the length of the working copy parent.
             let body_length = f.read_u32::<BigEndian>().from_err()?;
             let mut buf = vec![0u8; body_length as usize];
             f.read_exact(&mut buf).from_err()?;
-            let decoded = std::str::from_utf8(&buf).from_err()?.to_string();
-            Ok(SnapshotState::new(decoded.clone(), decoded))
+
+            // We must parse out the working copy parent hash. For Filtered repos, we also have to
+            // parse out the active filter id.
+            let (decoded_hash, decoded_filter) = self
+                .parse_snapshot_component(&buf)
+                .context("Could not parse snapshot component")?;
+            Ok(SnapshotState::new(
+                decoded_hash.clone(),
+                decoded_hash,
+                decoded_filter.clone(),
+                decoded_filter,
+            ))
         } else if header == SNAPSHOT_MAGIC_3 {
             let _pid = f.read_u32::<BigEndian>().from_err()?;
 
@@ -574,11 +666,21 @@ impl EdenFsCheckout {
             let mut to_buf = vec![0u8; to_length as usize];
             f.read_exact(&mut to_buf).from_err()?;
 
+            let (from_hash, from_filter) = self
+                .parse_snapshot_component(&from_buf)
+                .context("Could not parse snapshot component")?;
+
+            let (to_hash, to_filter) = self
+                .parse_snapshot_component(&to_buf)
+                .context("Could not parse snapshot component")?;
+
             // TODO(xavierd): return a proper object that the caller could use.
             Err(EdenFsError::Other(anyhow!(
-                "A checkout operation is ongoing from {} to {}",
-                std::str::from_utf8(&from_buf).from_err()?,
-                std::str::from_utf8(&to_buf).from_err()?
+                "A checkout operation is ongoing from {} (filter: {:?}) to {} (filter: {:?})",
+                from_hash,
+                from_filter,
+                to_hash,
+                to_filter,
             )))
         } else if header == SNAPSHOT_MAGIC_4 {
             let working_copy_parent_length = f.read_u32::<BigEndian>().from_err()?;
@@ -589,13 +691,19 @@ impl EdenFsCheckout {
             let mut checked_out_buf = vec![0u8; checked_out_length as usize];
             f.read_exact(&mut checked_out_buf).from_err()?;
 
+            let (parent_hash, parent_filter) = self
+                .parse_snapshot_component(&working_copy_parent_buf)
+                .context("Could not parse snapshot component")?;
+
+            let (checked_out_hash, checked_out_filter) = self
+                .parse_snapshot_component(&checked_out_buf)
+                .context("Could not parse snapshot component")?;
+
             Ok(SnapshotState::new(
-                std::str::from_utf8(&working_copy_parent_buf)
-                    .from_err()?
-                    .to_string(),
-                std::str::from_utf8(&checked_out_buf)
-                    .from_err()?
-                    .to_string(),
+                parent_hash,
+                checked_out_hash,
+                parent_filter,
+                checked_out_filter,
             ))
         } else {
             Err(EdenFsError::Other(anyhow!(
@@ -688,7 +796,7 @@ impl EdenFsCheckout {
         background: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<Glob> {
+    ) -> Result<()> {
         let mut commit_vec = vec![];
         if predict_revisions {
             // The arc and hg commands need to be run in the mount mount, so we need
@@ -799,8 +907,11 @@ impl EdenFsCheckout {
                 predictiveGlob: Some(predictive_params),
                 ..Default::default()
             };
-            let res = client.predictiveGlobFiles(&glob_params).await;
-            Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
+            client
+                .predictiveGlobFiles(&glob_params)
+                .await
+                .context("Failed predictiveGlobFiles() thrift call")?;
+            Ok(())
         } else {
             let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
             let prefetch_params = PrefetchParams {
@@ -814,7 +925,7 @@ impl EdenFsCheckout {
             let res = client.prefetchFiles(&prefetch_params).await;
 
             match res {
-                Ok(_) => Ok(Glob::default()),
+                Ok(_) => Ok(()),
                 Err(error) => {
                     if is_unknown_method_error(&error) {
                         let glob_params = GlobParams {
@@ -827,8 +938,11 @@ impl EdenFsCheckout {
                             background,
                             ..Default::default()
                         };
-                        let glob_res = client.globFiles(&glob_params).await;
-                        Ok(glob_res.context("Failed globFiles() thrift call")?)
+                        client
+                            .globFiles(&glob_params)
+                            .await
+                            .context("Failed globFiles() thrift call")?;
+                        Ok(())
                     } else {
                         Err(EdenFsError::Other(error.into()))
                     }
@@ -859,7 +973,7 @@ impl EdenFsCheckout {
         predict_revisions: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<Vec<Glob>> {
+    ) -> Result<()> {
         let mut profiles_to_fetch = profiles.clone();
 
         let config = instance
@@ -874,7 +988,7 @@ impl EdenFsCheckout {
                     the EdenFS configs.",
                 );
             } else {
-                return Ok(vec![Glob::default()]);
+                return Ok(());
             }
         }
 
@@ -886,38 +1000,56 @@ impl EdenFsCheckout {
                     the EdenFS configs."
                 );
             }
-            return Ok(vec![Glob::default()]);
+            return Ok(());
         }
 
         let mut profile_contents = HashSet::new();
-        let mut glob_results = vec![];
 
         if !predictive {
             // special trees prefetch profile which fetches all of the trees in the repo, kick this
             // off before activating the rest of the prefetch profiles
             let tree_profile = "trees";
+            // special trees-mobile prefetch profile which fetches a subset of trees in fbsource, kick this
+            // off only if not fetching the overarching trees profile, and before activating the rest of the prefetch profiles
+            let tree_mobile_profile = "trees-mobile";
+
+            let mut trees_profile_set = HashSet::new();
+
+            // Check for trees first, if it exists, then kick off the prefetch request.
             if profiles_to_fetch.iter().any(|x| x == tree_profile) {
                 profiles_to_fetch.retain(|x| *x != *tree_profile);
-                let mut profile_set = HashSet::new();
-                profile_set.insert("**/*".to_owned());
+                // also remove the trees-mobile profile if it exists, but don't fetch it because it is a subset of trees
+                profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
 
-                let blob_res = self
-                    .make_prefetch_request(
-                        instance,
-                        profile_set,
-                        true, // only prefetch directories
-                        silent,
-                        revisions.clone(),
-                        predict_revisions,
-                        background,
-                        predictive,
-                        predictive_num_dirs,
-                    )
-                    .await
-                    .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-                glob_results.push(blob_res);
+                trees_profile_set.insert("**/*".to_owned());
+            } else if profiles_to_fetch.iter().any(|x| x == tree_mobile_profile) {
+                profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
+
+                trees_profile_set.insert("arvr/**/*".to_owned());
+                trees_profile_set.insert("fbandroid/**/*".to_owned());
+                trees_profile_set.insert("fbcode/**/*".to_owned());
+                trees_profile_set.insert("fbobjc/**/*".to_owned());
+                trees_profile_set.insert("third-party/**/*".to_owned());
+                trees_profile_set.insert("tools/**/*".to_owned());
+                trees_profile_set.insert("xplat/**/*".to_owned());
+            }
+
+            if !trees_profile_set.is_empty() {
+                self.make_prefetch_request(
+                    instance,
+                    trees_profile_set,
+                    true, // only prefetch directories
+                    silent,
+                    revisions.clone(),
+                    predict_revisions,
+                    background,
+                    predictive,
+                    predictive_num_dirs,
+                )
+                .await
+                .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
                 if profiles_to_fetch.is_empty() {
-                    return Ok(glob_results);
+                    return Ok(());
                 }
             }
 
@@ -930,22 +1062,20 @@ impl EdenFsCheckout {
                 profile_contents.extend(res);
             }
         }
-        let blob_res = self
-            .make_prefetch_request(
-                instance,
-                profile_contents,
-                directories_only,
-                silent,
-                revisions,
-                predict_revisions,
-                background,
-                predictive,
-                predictive_num_dirs,
-            )
-            .await
-            .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-        glob_results.push(blob_res);
-        Ok(glob_results)
+        self.make_prefetch_request(
+            instance,
+            profile_contents,
+            directories_only,
+            silent,
+            revisions,
+            predict_revisions,
+            background,
+            predictive,
+            predictive_num_dirs,
+        )
+        .await
+        .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
+        Ok(())
     }
 }
 
@@ -1053,7 +1183,7 @@ fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathB
     let mut checkout_state_dir = None;
 
     // On Windows, walk backwards through the path until you find the `.eden` folder
-    let mut curr_dir = Some(path.clone());
+    let mut curr_dir = Some(path);
     while let Some(candidate_dir) = curr_dir {
         if candidate_dir.join(".eden").exists() {
             let config_file = candidate_dir.join(".eden").join("config");

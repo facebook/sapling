@@ -32,7 +32,7 @@ Or overriden by a different path:
 
   $ cat > githelp2.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import registrar
+  > from sapling import registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -49,7 +49,7 @@ A default extension's reposetup and extsetup are run:
   $ cd $TESTTMP
   $ mkdir ext
   $ cat > ext/mofunc.py <<EOF
-  > from edenscm.ext import githelp
+  > from sapling.ext import githelp
   > def extsetup(ui):
   >     # Only print reposetup() once so that this test output doesn't change
   >     # the number of times repo gets wrapped as we enable extensions.

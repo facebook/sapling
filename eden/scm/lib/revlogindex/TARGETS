@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "revlogindex",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bit-vec",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/lz4-pyframe:lz4-pyframe",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/radixbuf:radixbuf",
+        "//eden/scm/lib/util:util",
+    ],
+)

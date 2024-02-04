@@ -62,6 +62,13 @@ impl GitSymbolicRefsEntry {
             ref_type,
         })
     }
+
+    pub fn ref_name_with_type(&self) -> String {
+        match self.ref_type {
+            RefType::Branch => format!("refs/heads/{}", self.ref_name),
+            RefType::Tag => format!("refs/tags/{}", self.ref_name),
+        }
+    }
 }
 
 #[facet::facet]
@@ -87,4 +94,7 @@ pub trait GitSymbolicRefs: Send + Sync {
 
     /// Delete symrefs if they exists
     async fn delete_symrefs(&self, symrefs: Vec<String>) -> Result<()>;
+
+    /// List all symrefs for a given repo
+    async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>>;
 }

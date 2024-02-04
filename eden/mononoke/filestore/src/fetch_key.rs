@@ -54,6 +54,12 @@ impl From<hash::Sha1> for FetchKey {
     }
 }
 
+impl From<hash::RichGitSha1> for FetchKey {
+    fn from(hash: hash::RichGitSha1) -> Self {
+        FetchKey::Aliased(Alias::GitSha1(hash.sha1()))
+    }
+}
+
 impl From<hash::Blake3> for FetchKey {
     fn from(hash: hash::Blake3) -> Self {
         FetchKey::Aliased(Alias::SeededBlake3(hash))

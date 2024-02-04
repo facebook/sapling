@@ -32,7 +32,6 @@ use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::DeletedManifestV2Id;
@@ -104,13 +103,16 @@ struct InternedId<K> {
 }
 
 // Can't auto-derive as dont want to make K Copy
+// Implementing it by hand allows us to omit this bound on the type parameter. See [the Rust
+// documentation](https://doc.rust-lang.org/core/marker/trait.Copy.html#how-can-i-implement-copy)
 impl<K> Copy for InternedId<K> {}
+
+// Can't auto-derive as dont want to make K Clone
+// Implementing it by hand allows us to omit this bound on the type parameter. See [the Rust
+// documentation](https://doc.rust-lang.org/core/clone/trait.Clone.html#how-can-i-implement-clone)
 impl<K> Clone for InternedId<K> {
     fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            _phantom: PhantomData,
-        }
+        *self
     }
 }
 
@@ -234,8 +236,6 @@ pub struct WalkState {
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
     visited_skeleton_manifest: StateMap<SkeletonManifestId>,
     visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
-    visited_basename_suffix_skeleton_manifest: StateMap<BasenameSuffixSkeletonManifestId>,
-    visited_basename_suffix_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_unode_file: StateMap<UnodeInterned<FileUnodeId>>,
     visited_unode_manifest: StateMap<UnodeInterned<ManifestUnodeId>>,
     visited_unode_mapping: StateMap<InternedId<ChangesetId>>,
@@ -297,8 +297,6 @@ impl WalkState {
             visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
             visited_skeleton_manifest: StateMap::with_hasher(fac.clone()),
             visited_skeleton_manifest_mapping: StateMap::with_hasher(fac.clone()),
-            visited_basename_suffix_skeleton_manifest: StateMap::with_hasher(fac.clone()),
-            visited_basename_suffix_skeleton_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_unode_file: StateMap::with_hasher(fac.clone()),
             visited_unode_manifest: StateMap::with_hasher(fac.clone()),
             visited_unode_mapping: StateMap::with_hasher(fac),
@@ -385,12 +383,6 @@ impl WalkState {
             (Node::SkeletonManifestMapping(bcs_id), Some(_)) => {
                 self.record(
                     &self.visited_skeleton_manifest_mapping,
-                    &self.bcs_ids.interned(bcs_id),
-                );
-            }
-            (Node::BasenameSuffixSkeletonManifestMapping(bcs_id), Some(_)) => {
-                self.record(
-                    &self.visited_basename_suffix_skeleton_manifest_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
@@ -501,12 +493,6 @@ impl WalkState {
             NodeType::FsnodeMapping => self.visited_fsnode_mapping.clear(),
             NodeType::SkeletonManifest => self.visited_skeleton_manifest.clear(),
             NodeType::SkeletonManifestMapping => self.visited_skeleton_manifest_mapping.clear(),
-            NodeType::BasenameSuffixSkeletonManifest => {
-                self.visited_basename_suffix_skeleton_manifest.clear()
-            }
-            NodeType::BasenameSuffixSkeletonManifestMapping => self
-                .visited_basename_suffix_skeleton_manifest_mapping
-                .clear(),
             NodeType::UnodeFile => self.visited_unode_file.clear(),
             NodeType::UnodeManifest => self.visited_unode_manifest.clear(),
             NodeType::UnodeMapping => self.visited_unode_mapping.clear(),
@@ -662,19 +648,6 @@ impl WalkState {
             (Node::SkeletonManifestMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_skeleton_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
-                } else {
-                    true
-                }
-            }
-            (Node::BasenameSuffixSkeletonManifest(_), true) => true,
-            (Node::BasenameSuffixSkeletonManifest(id), false) => {
-                self.record(&self.visited_basename_suffix_skeleton_manifest, id)
-            }
-            (Node::BasenameSuffixSkeletonManifestMapping(bcs_id), _) => {
-                if let Some(id) = self.bcs_ids.get(bcs_id) {
-                    !self
-                        .visited_basename_suffix_skeleton_manifest_mapping
-                        .contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }

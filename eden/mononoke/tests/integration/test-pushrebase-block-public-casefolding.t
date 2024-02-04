@@ -17,10 +17,10 @@ setup configuration
   > hooks_skip_ancestors_of=["main"]
   > CONFIG
 
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "killswitches": {
-  >     "run_hooks_on_additional_changesets": true
+  >   "bools": {
+  >     "scm/mononoke:run_hooks_on_additional_changesets": true
   >   }
   > }
   > EOF
@@ -79,8 +79,8 @@ attempt to push a case conflict onto main
   remote:         changeset_id: ChangesetId(
   remote:             Blake2(faaf8134514581fac83a1feaf35cee8ece18561a89bcac7e2be927395465938a),
   remote:         ),
-  remote:         path1: MPath("CaseConflict.txt"),
-  remote:         path2: MPath("caseconflict.txt"),
+  remote:         path1: NonRootMPath("CaseConflict.txt"),
+  remote:         path2: NonRootMPath("caseconflict.txt"),
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
@@ -108,8 +108,8 @@ if we stack a commit that fixes the case conflict, we still can't land the stack
   remote:         changeset_id: ChangesetId(
   remote:             Blake2(faaf8134514581fac83a1feaf35cee8ece18561a89bcac7e2be927395465938a),
   remote:         ),
-  remote:         path1: MPath("CaseConflict.txt"),
-  remote:         path2: MPath("caseconflict.txt"),
+  remote:         path1: NonRootMPath("CaseConflict.txt"),
+  remote:         path2: NonRootMPath("caseconflict.txt"),
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
@@ -135,8 +135,8 @@ attempt to push a commit that introduces a case conflict onto main
   remote:         changeset_id: ChangesetId(
   remote:             Blake2(273fd0b40d61b2582af82625cbd3d60f2c35f4e5ec819191f4f3a7adbc21dec2),
   remote:         ),
-  remote:         path1: MPath("SomeFile"),
-  remote:         path2: MPath("somefile"),
+  remote:         path1: NonRootMPath("SomeFile"),
+  remote:         path2: NonRootMPath("somefile"),
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
@@ -172,8 +172,8 @@ we can't move the bookmark to a commit with a pre-existing case conflict via boo
   remote:                 changeset_id: ChangesetId(
   remote:                     Blake2(34931495583238beb776a43e216288f3d2a73946ef3b9e72d77f83e2aafe04c9),
   remote:                 ),
-  remote:                 path1: MPath("existing/CaseConflict"),
-  remote:                 path2: MPath("existing/caseconflict"),
+  remote:                 path1: NonRootMPath("existing/CaseConflict"),
+  remote:                 path2: NonRootMPath("existing/caseconflict"),
   remote:             },
   remote:         },
   remote:     }
@@ -202,8 +202,8 @@ we can't land to the other if we introduce a new case conflict
   remote:         changeset_id: ChangesetId(
   remote:             Blake2(a1b0639259bc3524b3d1db9b85b9300b1fb9f17c0c60d39e0bd64efa879c5dd5),
   remote:         ),
-  remote:         path1: MPath("TestFile"),
-  remote:         path2: MPath("testfile"),
+  remote:         path1: NonRootMPath("TestFile"),
+  remote:         path2: NonRootMPath("testfile"),
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
@@ -241,8 +241,8 @@ we can't land if we try to make an existing case conflict worse
   remote:         changeset_id: ChangesetId(
   remote:             Blake2(b6801c5486aaa96f45805ddd8c874a5e602888e94cc2c93e44aacdc106e8ed9d),
   remote:         ),
-  remote:         path1: MPath("existing/CASECONFLICT"),
-  remote:         path2: MPath("existing/CaseConflict"),
+  remote:         path1: NonRootMPath("existing/CASECONFLICT"),
+  remote:         path2: NonRootMPath("existing/CaseConflict"),
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]

@@ -6,10 +6,9 @@
  */
 
 #include "eden/fs/store/BlobAccess.h"
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/portability/GTest.h>
 #include <chrono>
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/LocalStore.h"
@@ -83,7 +82,7 @@ struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
       : localStore{std::make_shared<NullLocalStore>()},
         backingStore{std::make_shared<FakeBackingStore>()},
-        blobCache{BlobCache::create(10, 0)} {
+        blobCache{BlobCache::create(10, 0, makeRefPtr<EdenStats>())} {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
@@ -99,7 +98,7 @@ struct BlobAccessTest : ::testing::Test {
         backingStore,
         treeCache,
         makeRefPtr<EdenStats>(),
-        std::make_shared<ProcessNameCache>(),
+        std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig,
         true,
@@ -139,13 +138,13 @@ TEST_F(BlobAccessTest, remembers_blobs) {
 }
 
 TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
-  auto blob1 = getBlobBlocking(hash6);
-  auto blob2 = getBlobBlocking(hash5);
-  auto blob3 = getBlobBlocking(hash6);
+  auto blob0 = getBlobBlocking(hash6);
+  auto blob1 = getBlobBlocking(hash5);
+  auto blob2 = getBlobBlocking(hash6);
 
-  EXPECT_EQ(6, blob1->getSize());
-  EXPECT_EQ(5, blob2->getSize());
-  EXPECT_EQ(6, blob3->getSize());
+  EXPECT_EQ(6, blob0->getSize());
+  EXPECT_EQ(5, blob1->getSize());
+  EXPECT_EQ(6, blob2->getSize());
 
   EXPECT_EQ(1, backingStore->getAccessCount(hash5));
   EXPECT_EQ(2, backingStore->getAccessCount(hash6));

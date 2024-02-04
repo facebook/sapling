@@ -77,7 +77,7 @@
 
 
 # Create Git bundle out of this Git repo
-  $ mononoke_newadmin git-bundle create -o $BUNDLE_OUTPUT --git-repo-path $GIT_REPO_ORIGIN/.git
+  $ mononoke_newadmin git-bundle create from-path -o $BUNDLE_OUTPUT --git-repo-path $GIT_REPO_ORIGIN/.git
 # Ensure that Git considers this a valid bundle
   $ git bundle verify $BUNDLE_OUTPUT
   $TESTTMP/repo.bundle is okay
@@ -87,6 +87,7 @@
   * (glob)
   * (glob)
   The bundle records a complete history.
+  The bundle uses this hash algorithm: sha1 (?)
 # Create a new empty repo
   $ mkdir $TESTTMP/git_client_repo
   $ cd $TESTTMP

@@ -11,6 +11,7 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use metaconfig_types::LocalDatabaseConfig;
 use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use sql::sqlite::SqliteMultithreaded;
@@ -44,6 +45,9 @@ pub enum MetadataSqlConnectionsFactory {
     Remote {
         remote_config: RemoteMetadataDatabaseConfig,
         mysql_options: MysqlOptions,
+    },
+    OssRemote {
+        remote_config: OssRemoteMetadataDatabaseConfig,
     },
 }
 
@@ -89,6 +93,9 @@ impl MetadataSqlFactory {
                     mysql_options,
                 }
             }
+            MetadataDatabaseConfig::OssRemote(remote_config) => {
+                MetadataSqlConnectionsFactory::OssRemote { remote_config }
+            }
         };
         Ok(Self {
             fb,
@@ -118,6 +125,10 @@ impl MetadataSqlFactory {
                 mysql_options,
                 self.readonly.0,
             ),
+            MetadataSqlConnectionsFactory::OssRemote { remote_config } => {
+                T::with_oss_remote_metadata_database_config(self.fb, remote_config, self.readonly.0)
+                    .await
+            }
         }
     }
 
@@ -154,6 +165,10 @@ impl MetadataSqlFactory {
                 })
                 .await?
             }
+            MetadataSqlConnectionsFactory::OssRemote { remote_config } => {
+                T::with_oss_remote_metadata_database_config(self.fb, remote_config, self.readonly.0)
+                    .await
+            }
         }
     }
 
@@ -181,6 +196,10 @@ impl MetadataSqlFactory {
                     ),
                 }
             }
+            MetadataSqlConnectionsFactory::OssRemote { .. } => SqlTierInfo {
+                tier_name: "oss_mysql".to_string(),
+                shard_num: None,
+            },
         })
     }
 }

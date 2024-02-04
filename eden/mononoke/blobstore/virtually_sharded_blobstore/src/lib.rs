@@ -43,7 +43,6 @@ use shard::Shards;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use stats::prelude::*;
-use tunables::tunables;
 use twox_hash::XxHash;
 
 use crate::ratelimit::AccessReason;
@@ -412,15 +411,18 @@ async fn shared_read<T: Blobstore + 'static>(
 
 fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
     STATS::puts_deduped.add_value(1);
-
     let mut scuba = ctx.scuba().clone();
-    if let Ok(Some(v)) = tunables()
-        .deduplicated_put_sampling_rate()
-        .unwrap_or_default()
-        .try_into()
-        .map(NonZeroU64::new)
-    {
-        scuba.sampled(v);
+
+    const DEFAULT_SAMPLING_RATE: u64 = 100000;
+
+    if let Some(sampling_rate) = NonZeroU64::new(
+        justknobs::get_as::<u64>(
+            "scm/mononoke:blobstore_deduplicated_put_sampling_rate",
+            None,
+        )
+        .unwrap_or(DEFAULT_SAMPLING_RATE),
+    ) {
+        scuba.sampled(sampling_rate);
     }
     scuba.add("key", key).log_with_msg("Put deduplicated", None);
 
@@ -484,32 +486,17 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
                     SemaphoreAcquisition::Cancelled(CacheData::NotStorable, ticket) => {
                         // The data cannot be cached. We'll have to go to the blobstore.
                         STATS::gets_not_storable.add_value(1);
-                        if !tunables()
-                            .disable_large_blob_read_deduplication()
-                            .unwrap_or_default()
-                        {
-                            // Attempt to share with other readers of this blob.
-                            return shared_read(&inner, &ctx, key, ticket).await;
-                        } else {
-                            ticket.finish().await?;
-                            None
-                        }
+                        // Attempt to share with other readers of this blob.
+                        return shared_read(&inner, &ctx, key, ticket).await;
                     }
                     SemaphoreAcquisition::Acquired(permit) => Some(permit),
                 }
             } else {
                 // We already know the data can't be cached, so we'll have to go to the
                 // blobstore.
-                if !tunables()
-                    .disable_large_blob_read_deduplication()
-                    .unwrap_or_default()
-                {
-                    // Attempt to share with other reads of this blob.
-                    return shared_read(&inner, &ctx, key, ticket).await;
-                } else {
-                    ticket.finish().await?;
-                    None
-                }
+
+                // Attempt to share with other reads of this blob.
+                return shared_read(&inner, &ctx, key, ticket).await;
             };
 
             // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
@@ -609,10 +596,11 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
 #[cfg(all(test, fbcode_build))]
 mod test {
+    use std::sync::OnceLock;
+
     use fbinit::FacebookInit;
     use futures_stats::TimedTryFutureExt;
     use nonzero_ext::nonzero;
-    use once_cell::sync::OnceCell;
     use time_ext::DurationExt;
 
     use super::*;
@@ -638,7 +626,7 @@ mod test {
         blob_pool_name: &str,
         cache_filter: fn(&Bytes) -> Result<()>,
     ) -> Result<Cache> {
-        static INSTANCE: OnceCell<()> = OnceCell::new();
+        static INSTANCE: OnceLock<()> = OnceLock::new();
         INSTANCE.get_or_init(|| {
             let config = cachelib::LruCacheConfig::new(64 * 1024 * 1024);
             cachelib::init_cache(fb, config).unwrap();

@@ -42,7 +42,7 @@ fn format_bytes(value: &[u8], out: &mut String) {
             b'\r' => out.push_str("\\r"),
             b'\t' => out.push_str("\\t"),
             _ => {
-                if b >= b' ' && b < 0x7f {
+                if (b' '..0x7f).contains(&b) {
                     out.push(b as char)
                 } else {
                     out.push_str("\\x");
@@ -74,12 +74,12 @@ fn format_value(value: &Value, indent: usize, out: &mut String) {
             if [20, 32].contains(&v.len()) {
                 out.push_str(&format!("bin({:?})", to_hex(v)));
             } else {
-                format_bytes(&v, out);
+                format_bytes(v, out);
             }
         }
         Text(v) => out.push_str(&format!("{:?}", v)),
         Array(a) => {
-            out.push_str("[");
+            out.push('[');
             for (i, v) in a.iter().enumerate() {
                 if i > 0 {
                     out.push('\n');

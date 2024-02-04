@@ -17,8 +17,6 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::AsBlobRepo;
-use blobrepo::BlobRepo;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
@@ -57,16 +55,17 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metaconfig_types::CommitSyncConfigVersion;
-use mononoke_api_types::InnerRepo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use slog::warn;
 use sorted_vector_map::SortedVectorMap;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+
+use crate::Repo;
 
 /// The function syncs merge commit M from a small repo into a large repo.
 /// It's designed to handle a case described below
@@ -115,8 +114,8 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 /// ```
 pub async fn do_sync_diamond_merge(
     ctx: &CoreContext,
-    small_repo: InnerRepo,
-    large_repo: InnerRepo,
+    small_repo: &Repo,
+    large_repo: &Repo,
     small_merge_cs_id: ChangesetId,
     mapping: SqlSyncedCommitMapping,
     onto_bookmark: BookmarkKey,
@@ -129,14 +128,13 @@ pub async fn do_sync_diamond_merge(
     );
 
     let parents = small_repo
-        .blob_repo
         .changeset_fetcher()
         .get_parents(ctx, small_merge_cs_id)
         .await?;
 
     let (p1, p2) = validate_parents(parents)?;
 
-    let new_branch = find_new_branch_oldest_first(ctx.clone(), &small_repo, p1, p2).await?;
+    let new_branch = find_new_branch_oldest_first(ctx.clone(), small_repo, p1, p2).await?;
 
     let syncers = create_commit_syncers(
         ctx,
@@ -175,6 +173,7 @@ pub async fn do_sync_diamond_merge(
                 cs_id,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::SyncDiamondMerge,
+                None,
             )
             .await?;
     }
@@ -190,8 +189,8 @@ pub async fn do_sync_diamond_merge(
     let (rewritten, version_for_merge) = create_rewritten_merge_commit(
         ctx.clone(),
         small_merge_cs_id,
-        &small_repo,
-        &large_repo,
+        small_repo,
+        large_repo,
         &syncers,
         small_root,
         onto_value,
@@ -200,7 +199,7 @@ pub async fn do_sync_diamond_merge(
 
     let new_merge_cs_id = rewritten.get_changeset_id();
     info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
-    upload_commits(ctx, vec![rewritten], &small_repo.blob_repo, &large_repo).await?;
+    upload_commits(ctx, vec![rewritten], &small_repo, &large_repo).await?;
 
     update_mapping_with_version(
         ctx,
@@ -228,9 +227,9 @@ pub async fn do_sync_diamond_merge(
 async fn create_rewritten_merge_commit(
     ctx: CoreContext,
     small_merge_cs_id: ChangesetId,
-    small_repo: &InnerRepo,
-    large_repo: &InnerRepo,
-    syncers: &Syncers<SqlSyncedCommitMapping, InnerRepo>,
+    small_repo: &Repo,
+    large_repo: &Repo,
+    syncers: &Syncers<SqlSyncedCommitMapping, Repo>,
     small_root: ChangesetId,
     onto_value: ChangesetId,
 ) -> Result<(BonsaiChangeset, CommitSyncConfigVersion), Error> {
@@ -286,6 +285,7 @@ async fn create_rewritten_merge_commit(
             .await?,
         syncers.small_to_large.get_source_repo(),
         Default::default(),
+        Default::default(),
     )
     .await?;
     let mut rewritten =
@@ -314,12 +314,12 @@ async fn create_rewritten_merge_commit(
 async fn generate_additional_file_changes(
     ctx: CoreContext,
     root: ChangesetId,
-    large_repo: &(impl AsBlobRepo + RepoBlobstoreRef),
-    large_to_small: &CommitSyncer<SqlSyncedCommitMapping, InnerRepo>,
+    large_repo: &Repo,
+    large_to_small: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
-) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
-    let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo.as_blob_repo(), root, onto_value)
+) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
+    let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo, root, onto_value)
         .collect()
         .compat()
         .await?;
@@ -348,7 +348,7 @@ async fn generate_additional_file_changes(
 
 async fn remap_commit(
     ctx: CoreContext,
-    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, InnerRepo>,
+    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
     cs_id: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer
@@ -393,7 +393,7 @@ fn find_root(new_branch: &Vec<BonsaiChangeset>) -> Result<ChangesetId, Error> {
 
 async fn find_new_branch_oldest_first(
     ctx: CoreContext,
-    small_repo: &InnerRepo,
+    small_repo: &Repo,
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
@@ -405,7 +405,7 @@ async fn find_new_branch_oldest_first(
             cloned!(ctx, small_repo);
             move |cs| {
                 cloned!(ctx, small_repo);
-                async move { Ok(cs.load(&ctx, small_repo.blob_repo.repo_blobstore()).await?) }
+                async move { Ok(cs.load(&ctx, small_repo.repo_blobstore()).await?) }
             }
         })
         .try_buffered(100)
@@ -423,7 +423,7 @@ fn validate_parents(parents: Vec<ChangesetId>) -> Result<(ChangesetId, Changeset
         ));
     }
     let p1 = parents
-        .get(0)
+        .first()
         .ok_or_else(|| Error::msg("not a merge commit"))?;
     let p2 = parents
         .get(1)
@@ -438,14 +438,14 @@ fn validate_roots(roots: Vec<&ChangesetId>) -> Result<&ChangesetId, Error> {
     }
 
     roots
-        .get(0)
+        .first()
         .cloned()
         .ok_or_else(|| Error::msg("no roots found, this is not a diamond merge"))
 }
 
 fn find_bonsai_diff(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> BoxStream<BonsaiDiffFileChange<HgFileNodeId>, Error> {
@@ -473,7 +473,7 @@ fn find_bonsai_diff(
 
 fn id_to_manifestid(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     bcs_id: ChangesetId,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
     async move {

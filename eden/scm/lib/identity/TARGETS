@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "identity",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [],
+                "fb": [],
+                "sl_only": [],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+    ],
+)

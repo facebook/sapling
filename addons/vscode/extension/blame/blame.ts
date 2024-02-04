@@ -19,8 +19,9 @@ import type {
   TextEditorSelectionChangeEvent,
 } from 'vscode';
 
+import {Internal} from '../Internal';
 import {getDiffBlameHoverMarkup} from './blameHover';
-import {getRealignedBlameInfo} from './blameUtils';
+import {getRealignedBlameInfo, shortenAuthorName} from './blameUtils';
 import {getUsername} from 'isl-server/src/analytics/environment';
 import {relativeDate} from 'isl/src/relativeDate';
 import {LRU} from 'shared/LRU';
@@ -90,7 +91,11 @@ export class InlineBlameProvider implements Disposable {
 
   initBasedOnConfig() {
     const config = 'sapling.showInlineBlame';
-    if (workspace.getConfiguration().get<boolean>(config)) {
+    const enableBlameByDefault =
+      Internal?.shouldEnableBlameByDefault == null
+        ? /* OSS */ true
+        : Internal?.shouldEnableBlameByDefault();
+    if (workspace.getConfiguration().get<boolean>(config, enableBlameByDefault)) {
       this.init();
     }
     this.disposables.push(
@@ -173,6 +178,8 @@ export class InlineBlameProvider implements Disposable {
         }
       }),
     );
+
+    this.logger.info('Initialized inline blame');
   }
 
   deinit(): void {
@@ -386,8 +393,14 @@ export class InlineBlameProvider implements Disposable {
   }
 
   private authorHint(author: string): string {
-    // Don't show author inline unless it's you. Hover to see the author.
-    return areYouTheAuthor(author) ? '(you) ' : '';
+    if (areYouTheAuthor(author)) {
+      return '(you) ';
+    }
+    if (Internal?.showAuthorNameInInlineBlame?.() === false) {
+      // Internally, don't show author inline unless it's you. Hover to see the author.
+      return '';
+    }
+    return shortenAuthorName(author) + ', ';
   }
 
   private initRepoCaches(repoUri: string): void {

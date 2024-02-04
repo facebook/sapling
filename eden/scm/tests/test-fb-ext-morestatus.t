@@ -8,7 +8,7 @@
   $ setconfig morestatus.show=true
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys
-  > from edenscm import merge
+  > from sapling import merge
   > def extsetup(ui):
   >     merge.applyupdates = lambda *args, **kwargs: sys.exit()
   > EOF
@@ -51,9 +51,9 @@ Test bisect state
   
   # The repository is in an unfinished *bisect* state.
   # Current bisect state: 1 good commit(s), 0 bad commit(s), 0 skip commit(s)
-  # To mark the changeset good:    hg bisect --good
-  # To mark the changeset bad:     hg bisect --bad
-  # To abort:                      hg bisect --reset
+  # To mark the commit good:     hg bisect --good
+  # To mark the commit bad:      hg bisect --bad
+  # To abort:                    hg bisect --reset
 
 
 Verify that suppressing a morestatus state warning works with the config knob:
@@ -81,16 +81,17 @@ Test graft state
   ? a.orig
   
   # The repository is in an unfinished *graft* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg graft --continue
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg graft --abort
 
 
 Test hg status is normal after graft abort
+  $ hg graft --abort -q
   $ hg up --clean -q
   $ hg status
   ? a.orig
@@ -111,7 +112,7 @@ Test unshelve state
   ? a.orig
   
   # The repository is in an unfinished *unshelve* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -142,7 +143,7 @@ Test rebase state
   ? a.orig
   
   # The repository is in an unfinished *rebase* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -200,7 +201,7 @@ Test conflicted merge state
   ? a.orig
   
   # The repository is in an unfinished *merge* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -217,7 +218,7 @@ Test if listed files have a relative path to current location
   ? ../../a.orig
   
   # The repository is in an unfinished *merge* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     ../../a
   # 
@@ -322,13 +323,13 @@ Test bisect search status (after cleaning up previous setup)
   # The repository is in an unfinished *bisect* state.
   # Current bisect state: 1 good commit(s), 1 bad commit(s), 0 skip commit(s)
   # 
-  # Current Tracker: bad commit     current        good commit
-  #                  547e426ae373...69a19f24e505...0efcea34f18a
+  # Current Tracker: good commit    current        bad commit
+  #                  0efcea34f18a...69a19f24e505...547e426ae373
   # Commits remaining:           5
   # Estimated bisects remaining: 3
-  # To mark the changeset good:    hg bisect --good
-  # To mark the changeset bad:     hg bisect --bad
-  # To abort:                      hg bisect --reset
+  # To mark the commit good:     hg bisect --good
+  # To mark the commit bad:      hg bisect --bad
+  # To abort:                    hg bisect --reset
 
 
 Test hg status is normal after bisect reset

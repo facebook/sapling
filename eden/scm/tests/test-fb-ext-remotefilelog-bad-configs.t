@@ -18,7 +18,10 @@ Verify error message when no cachepath specified
   $ cp $HGRCPATH $HGRCPATH.bak
   $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
   $ hg up tip
-  abort: config remotefilelog.cachepath is not set
+  abort: get_cache_path
+  
+  Caused by:
+      config remotefilelog.cachepath is not set
   [255]
   $ mv $HGRCPATH.bak $HGRCPATH
 
@@ -28,5 +31,5 @@ Verify error message when no fallback specified
   $ rm .hg/hgrc
   $ clearcache
   $ hg up tip
-  abort: cannot initialize working copy: EdenAPI is requested but not available for this repo
+  abort: cannot initialize working copy: *The commit graph requires a remote peer but the repo does not have one. (glob)
   [255]

@@ -19,26 +19,14 @@ use configmodel::ConfigExt;
 use http_client::Encoding;
 use http_client::HttpVersion;
 use http_client::MinTransferSpeed;
-use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
-use rand::Rng;
 use url::Url;
 
 use crate::client::Client;
 use crate::errors::ConfigError;
 use crate::errors::EdenApiError;
 use crate::EdenApi;
-
-lazy_static! {
-    pub static ref DEFAULT_CORRELATOR: String = thread_rng()
-        .sample_iter(Alphanumeric)
-        .take(16)
-        .map(char::from)
-        .collect();
-}
 
 /// External function that constructs other kinds of `EdenApi` from config.
 static CUSTOM_BUILD_FUNCS: Lazy<
@@ -57,7 +45,6 @@ static CUSTOM_BUILD_FUNCS: Lazy<
 /// Builder for creating new EdenAPI clients.
 pub struct Builder<'a> {
     config: &'a dyn configmodel::Config,
-    correlator: Option<String>,
     repo_name: Option<String>,
 }
 
@@ -66,19 +53,9 @@ impl<'a> Builder<'a> {
     pub fn from_config(config: &'a dyn configmodel::Config) -> Result<Self, EdenApiError> {
         let builder = Self {
             config,
-            correlator: None,
             repo_name: None,
         };
         Ok(builder)
-    }
-
-    /// Unique identifier that will be logged by both the client and server for
-    /// every request, allowing log entries on both sides to be correlated. Also
-    /// allows correlating multiple requests that were made by the same instance
-    /// of the client.
-    pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
-        self.correlator = correlator.map(|s| s.to_string());
-        self
     }
 
     /// Configure repo name for client. This is only used by the Http Client.
@@ -90,6 +67,7 @@ impl<'a> Builder<'a> {
     /// Build the client.
     pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
         {
+            // Hook in other EdenAPI implementations such as eagerepo (used for tests).
             let funcs = CUSTOM_BUILD_FUNCS.read();
             for func in funcs.iter() {
                 if let Some(client) = func(self.config)? {
@@ -98,7 +76,7 @@ impl<'a> Builder<'a> {
             }
         }
 
-        let mut builder = HttpClientBuilder::from_config(self.config)?.correlator(self.correlator);
+        let mut builder = HttpClientBuilder::from_config(self.config)?;
 
         if let Some(repo_name) = &self.repo_name {
             builder = builder.repo_name(repo_name);
@@ -141,7 +119,6 @@ pub struct HttpClientBuilder {
     max_commit_translate_id: Option<usize>,
     timeout: Option<Duration>,
     debug: bool,
-    correlator: Option<String>,
     http_version: Option<HttpVersion>,
     log_dir: Option<PathBuf>,
     encoding: Option<Encoding>,
@@ -180,11 +157,11 @@ impl HttpClientBuilder {
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
             .transpose()
-            .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e.into()))?
+            .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e))?
             .unwrap_or_default();
         headers.insert(
             "User-Agent".to_string(),
-            format!("EdenSCM/{}", version::VERSION),
+            format!("Sapling/{}", version::VERSION),
         );
 
         let max_requests = get_config(config, "edenapi", "maxrequests")?;
@@ -243,7 +220,6 @@ impl HttpClientBuilder {
             max_commit_translate_id,
             timeout,
             debug,
-            correlator: None,
             http_version,
             log_dir,
             encoding,
@@ -334,15 +310,6 @@ impl HttpClientBuilder {
         self
     }
 
-    /// Unique identifier that will be logged by both the client and server for
-    /// every request, allowing log entries on both sides to be correlated. Also
-    /// allows correlating multiple requests that were made by the same instance
-    /// of the client.
-    pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
-        self.correlator = correlator.map(|s| s.to_string());
-        self
-    }
-
     /// Set the HTTP version that the client should use.
     pub fn http_version(mut self, version: HttpVersion) -> Self {
         self.http_version = Some(version);
@@ -381,8 +348,8 @@ fn get_required_config<T: FromConfigValue>(
     section: &str,
     name: &str,
 ) -> Result<T, ConfigError> {
-    Ok(get_config::<T>(config, section, name)?
-        .ok_or_else(|| ConfigError::Missing(format!("{}.{}", section, name)))?)
+    get_config::<T>(config, section, name)?
+        .ok_or_else(|| ConfigError::Missing(format!("{}.{}", section, name)))
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
@@ -404,7 +371,6 @@ pub(crate) struct Config {
     pub(crate) timeout: Option<Duration>,
     #[allow(dead_code)]
     pub(crate) debug: bool,
-    pub(crate) correlator: Option<String>,
     pub(crate) http_version: Option<HttpVersion>,
     pub(crate) log_dir: Option<PathBuf>,
     pub(crate) encoding: Option<Encoding>,
@@ -430,7 +396,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_commit_translate_id,
             timeout,
             debug,
-            correlator,
             http_version,
             log_dir,
             encoding,
@@ -468,7 +433,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_commit_translate_id,
             timeout,
             debug,
-            correlator,
             http_version,
             log_dir,
             encoding,
@@ -481,6 +445,6 @@ impl TryFrom<HttpClientBuilder> for Config {
 
 /// Parse headers from a JSON object.
 fn parse_headers(headers: impl AsRef<str>) -> Result<HashMap<String, String>, Error> {
-    Ok(serde_json::from_str(headers.as_ref())
-        .context(format!("Not a valid JSON object: {:?}", headers.as_ref()))?)
+    serde_json::from_str(headers.as_ref())
+        .context(format!("Not a valid JSON object: {:?}", headers.as_ref()))
 }

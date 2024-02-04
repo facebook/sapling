@@ -178,14 +178,14 @@ but let's  say we synced that commit manually
   * target cs id is Some(ChangesetId(Blake2(5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb))) (glob)
 
 it still doesn't have any data derived
-  $ quiet_grep Derived -- mononoke_admin derived-data exists changeset_info 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_newadmin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
 and tried again, this time in dry run mode with limit 0 to ensure such command wouldn't do anything
   $ crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 0|& grep bookmark | strip_glog | sort
 
 it still doesn't have any data derived
-  $ quiet_grep Derived -- mononoke_admin derived-data exists changeset_info 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_newadmin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
 and tried again, this time in dry run mode with no limit
@@ -194,7 +194,7 @@ and tried again, this time in dry run mode with no limit
   skipping master_bookmark because it's a common bookmark
 
 and the data is derived
-  $ quiet_grep Derived -- mononoke_admin derived-data exists changeset_info 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_newadmin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
 and tried again

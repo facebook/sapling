@@ -26,5 +26,8 @@ pub mod tree;
 pub mod treestate;
 pub mod vecmap;
 pub mod vecstack;
+mod wait;
+
+pub use wait::Wait;
 
 pub use crate::errors::*;

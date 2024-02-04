@@ -29,7 +29,7 @@ use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::RwLock;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -64,7 +64,7 @@ use crate::Result;
 /// for atomic metadata changes.
 pub struct EagerRepo {
     pub(crate) dag: Dag,
-    store: EagerRepoStore,
+    pub(crate) store: EagerRepoStore,
     metalog: MetaLog,
     pub(crate) dir: PathBuf,
 }
@@ -166,7 +166,7 @@ impl EagerRepoStore {
         };
         // Check subfiles or subtrees.
         if matches!(flag, Flag::Directory) {
-            let entry = TreeEntry(content, TreeFormat::Hg);
+            let entry = TreeEntry(content, SerializationFormat::Hg);
             for element in entry.elements() {
                 let element = element?;
                 let name = element.component.into_string();
@@ -284,6 +284,7 @@ impl EagerRepo {
         }
         let path = Path::new(value);
         if is_eager_repo(path) {
+            tracing::trace!("url_to_dir {} => {}", value, path.display());
             return Some(path.to_path_buf());
         }
         None
@@ -469,7 +470,7 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
     }
     let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
     let (p1, p2) = (
-        parents.get(0).cloned().unwrap_or_else(null_id),
+        parents.first().cloned().unwrap_or_else(null_id),
         parents.get(1).cloned().unwrap_or_else(null_id),
     );
     if p1 < p2 {
@@ -479,7 +480,7 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
         result.extend_from_slice(p2.as_ref());
         result.extend_from_slice(p1.as_ref());
     }
-    result.extend_from_slice(&raw_text);
+    result.extend_from_slice(raw_text);
     result
 }
 
@@ -662,7 +663,7 @@ mod tests {
                 TreeElement::new(p("a"), missing_id, Flag::Directory),
                 TreeElement::new(p("b"), missing_id, Flag::File(FileType::Regular)),
             ],
-            TreeFormat::Hg,
+            SerializationFormat::Hg,
         )
         .to_bytes();
         let subtree_id = repo
@@ -673,7 +674,7 @@ mod tests {
                 TreeElement::new(p("c"), subtree_id, Flag::Directory),
                 TreeElement::new(p("d"), missing_id, Flag::File(FileType::Regular)),
             ],
-            TreeFormat::Hg,
+            SerializationFormat::Hg,
         )
         .to_bytes();
         let root_tree_id = repo

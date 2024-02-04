@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {Hash} from '../types';
+import type {Dag} from '../previews';
+import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
 export class HideOperation extends Operation {
-  constructor(private source: Hash) {
+  constructor(private source: ExactRevset | SucceedableRevset) {
     super('HideOperation');
   }
 
@@ -22,46 +22,32 @@ export class HideOperation extends Operation {
     return ['hide', '--rev', this.source];
   }
 
-  makePreviewApplier(_context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const func: ApplyPreviewsFuncType = (tree, previewType) => {
-      if (tree.info.hash === this.source) {
-        return {
-          info: tree.info,
-          children: tree.children,
-          previewType: CommitPreview.HIDDEN_ROOT,
-          childPreviewType: CommitPreview.HIDDEN_DESCENDANT,
-        };
-      }
-      return {
-        info: tree.info,
-        children: tree.children,
-        previewType,
-        childPreviewType: previewType,
-      };
-    };
-    return func;
+  previewDag(dag: Dag): Dag {
+    const hash = this.source.revset;
+    const toHide = dag.descendants(hash);
+    return dag.replaceWith(toHide, (h, c) => {
+      const previewType = h === hash ? CommitPreview.HIDDEN_ROOT : CommitPreview.HIDDEN_DESCENDANT;
+      return c?.merge({previewType});
+    });
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const {treeMap} = context;
-    const originalSourceNode = treeMap.get(this.source);
-    if (originalSourceNode == null) {
-      return undefined;
-    }
-
-    const func: ApplyPreviewsFuncType = (tree, previewType, childPreviewType) => {
-      if (tree.info.hash === this.source) {
-        return {
-          info: null,
-        };
+  optimisticDag(dag: Dag): Dag {
+    const hash = this.source.revset;
+    const toHide = dag.descendants(hash);
+    const toCleanup = dag.parents(hash);
+    // If the head is being hidden, we need to move the head to the parent.
+    const newHead = [];
+    if (toHide.toHashes().some(h => dag.get(h)?.isHead == true)) {
+      const parent = dag.get(hash)?.parents?.at(0);
+      if (parent && dag.has(parent)) {
+        newHead.push(parent);
       }
-      return {
-        info: tree.info,
-        children: tree.children,
-        previewType,
-        childPreviewType,
-      };
-    };
-    return func;
+    }
+    return dag
+      .remove(toHide)
+      .replaceWith(newHead, (_h, c) => {
+        return c?.merge({isHead: true, previewType: CommitPreview.GOTO_DESTINATION});
+      })
+      .cleanup(toCleanup);
   }
 }

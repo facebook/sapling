@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+# the library itself
+rust_library(
+    name = "xdiff-sys",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "build-dependencies": ["fbsource//third-party/rust:cc"],
+            },
+        },
+    },
+    cpp_deps = ["//eden/scm/lib/third-party/xdiff:xdiff"],
+    crate_root = "src/lib.rs",
+)
+
+# small demo binary using the bindings
+rust_binary(
+    name = "xdiff-sys-bin",
+    srcs = ["src/bin/xdiff-sys-bin.rs"],
+    crate_root = "src/bin/xdiff-sys-bin.rs",
+    deps = [":xdiff-sys"],
+)

@@ -7,8 +7,8 @@ import asyncio
 from typing import Any, Dict, Sequence, Union
 
 import ghstack.github
-from edenscm.result import Result
 from ghstack.github_gh_cli import JsonDict, make_request
+from sapling.result import Result
 
 
 class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):

@@ -15,6 +15,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -79,7 +80,6 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
-use once_cell::sync::OnceCell;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -93,7 +93,6 @@ use stats::prelude::*;
 use time_ext::DurationExt;
 use tokio::runtime::Runtime;
 use topo_sort::sort_topological;
-use tunables::tunables;
 use wait_for_replication::WaitForReplication;
 
 mod commit_discovery;
@@ -597,7 +596,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     match process.matches.value_of("sharded-service-name") {
         Some(service_name) => {
             // The service name needs to be 'static to satisfy SM contract
-            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
             let mut executor = ShardedProcessExecutor::new(
@@ -1075,10 +1074,16 @@ async fn get_batch_ctx(ctx: &CoreContext, limit_qps: bool) -> CoreContext {
     if limit_qps {
         // create new context so each derivation batch has its own trace
         // and is rate-limited
+        const FALLBACK_READ_QPS_LIMIT: u64 = 8000;
+        let read_qps_limit = justknobs::get_as::<u64>("scm/mononoke:backfill_read_qps", None)
+            .unwrap_or(FALLBACK_READ_QPS_LIMIT);
+        const FALLBACK_WRITE_QPS_LIMIT: u64 = 4000;
+        let write_qps_limit = justknobs::get_as::<u64>("scm/mononoke:backfill_write_qps", None)
+            .unwrap_or(FALLBACK_WRITE_QPS_LIMIT);
         let session = SessionContainer::builder(ctx.fb)
-            .blobstore_maybe_read_qps_limiter(tunables().backfill_read_qps().unwrap_or_default())
+            .blobstore_maybe_read_qps_limiter(read_qps_limit)
             .await
-            .blobstore_maybe_write_qps_limiter(tunables().backfill_write_qps().unwrap_or_default())
+            .blobstore_maybe_write_qps_limiter(write_qps_limit)
             .await
             .build();
         session.new_context(

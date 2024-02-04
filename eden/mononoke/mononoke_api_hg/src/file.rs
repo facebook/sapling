@@ -22,7 +22,7 @@ use mercurial_types::HgParents;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::ContentMetadataV2;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use remotefilelog::create_getpack_v2_blob;
 use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
@@ -83,7 +83,7 @@ impl HgFileContext {
     /// file to query.
     pub fn history(
         &self,
-        path: MPath,
+        path: NonRootMPath,
         max_length: Option<u32>,
     ) -> impl TryStream<Ok = HgFileHistoryEntry, Error = MononokeError> {
         let ctx = self.repo.ctx().clone();
@@ -274,7 +274,7 @@ mod tests {
         let file_id = HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
         let hg_file = HgFileContext::new(hg.clone(), file_id).await?;
 
-        let path = MPath::new("1")?;
+        let path = NonRootMPath::new("1")?;
         let history = hg_file.history(path, None).try_collect::<Vec<_>>().await?;
 
         let expected = vec![HgFileHistoryEntry::new(

@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "configset",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/hgrc-parser:hgrc-parser",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/util:util",
+    ],
+)

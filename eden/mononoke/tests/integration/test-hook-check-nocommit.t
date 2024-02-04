@@ -36,14 +36,14 @@ Has @nocommit in the title
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     check_nocommit_message for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Commit message for contains a nocommit marker: @nocommit
+  remote:     check_nocommit_message for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Commit message contains a nocommit marker: @nocommit
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     check_nocommit_message for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Commit message for contains a nocommit marker: @nocommit
+  remote:     check_nocommit_message for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Commit message contains a nocommit marker: @nocommit
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\ncheck_nocommit_message for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Commit message for contains a nocommit marker: @nocommit"
+  remote:     "hooks failed:\ncheck_nocommit_message for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Commit message contains a nocommit marker: @nocommit"
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg hide -q .

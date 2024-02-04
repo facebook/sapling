@@ -26,8 +26,6 @@ pub use scrub::ScrubPackLogArgs;
 use strum::AsRefStr;
 use strum::EnumString;
 use strum::EnumVariantNames;
-pub use tail_args::CheckpointArgs;
-pub use tail_args::ChunkingArgs;
 pub use tail_args::TailArgs;
 pub use validate::ValidateCheckTypeArgs;
 pub use walk_params::WalkerGraphArgs;

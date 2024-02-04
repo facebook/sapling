@@ -37,7 +37,7 @@ pub struct PathHistory {
     root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
 
     /// Resolve and prefetch trees in batch.
-    tree_store: Arc<dyn TreeStore + Send + Sync>,
+    tree_store: Arc<dyn TreeStore>,
 
     // Derived from input
     //
@@ -105,7 +105,7 @@ impl PathHistory {
         set: Set,
         paths: Vec<RepoPathBuf>,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
-        tree_store: Arc<dyn TreeStore + Send + Sync>,
+        tree_store: Arc<dyn TreeStore>,
     ) -> Result<Self> {
         Self::new_internal(set, paths, root_tree_reader, tree_store, false).await
     }
@@ -119,7 +119,7 @@ impl PathHistory {
         set: Set,
         paths: Vec<RepoPathBuf>,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
-        tree_store: Arc<dyn TreeStore + Send + Sync>,
+        tree_store: Arc<dyn TreeStore>,
         ignore_file_content: bool,
     ) -> Result<Self> {
         tracing::debug!("PathHistory::new(set={:.12?}, paths={:?})", &set, &paths);

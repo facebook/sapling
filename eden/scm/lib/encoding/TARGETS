@@ -1,0 +1,43 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "encoding",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "target": {
+                    "'cfg(windows)'": {
+                        "dependencies": {
+                            "local-encoding": {"version": "*"},
+                            "winapi": {"version": "0.3"},
+                        },
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    test_os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:local-encoding",
+            ],
+        ),
+    ],
+    deps = [
+        "//eden/scm/lib/types:types",
+    ],
+)

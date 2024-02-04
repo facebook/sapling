@@ -249,7 +249,6 @@
 
 .getting-started-modal .subtitle {
   margin-bottom: 0;
-  margin-top: var(--gs-pad);
   background-color: var(--hero-green-fg);
   background-image: linear-gradient(0deg, var(--hero-green-fg), var(--hero-green-bg));
   background-size: 100%;
@@ -330,6 +329,7 @@
   gap: 10px;
 }
 
+.getting-started-modal .callout,
 .getting-started-modal .feature-list,
 .getting-started-modal p {
   font-family: Helvetica, Arial, sans-serif;
@@ -361,4 +361,29 @@
   100% {
     opacity: 1;
   }
+}
+
+.callouts {
+  margin: var(--gs-pad);
+  display: flex;
+  gap: var(--gs-pad);
+}
+
+.callout {
+  display: flex;
+  text-align: center;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--gs-pad);
+  background-color: var(--card-bg);
+  color: var(--foreground);
+  padding: var(--gs-pad);
+  border-radius: 10px;
+  box-shadow: var(--shadow-elevation-medium);
+  transition: transform 0.2s;
+}
+
+.callout img {
+  max-height: 80px;
 }

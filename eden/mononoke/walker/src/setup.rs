@@ -141,7 +141,8 @@ pub async fn setup_common<'a>(
         mysql_options,
         &repos,
         &walk_roots,
-    )?;
+    )
+    .await?;
 
     let mut per_repo = Vec::new();
     let mut error_as_data_node_types_for_all_repos = error_as_data_node_types;
@@ -353,7 +354,7 @@ fn setup_repo_factory<'a>(
     repo_factory
 }
 
-fn parse_tail_params(
+async fn parse_tail_params(
     fb: FacebookInit,
     tail_args: &TailArgs,
     mysql_options: &MysqlOptions,
@@ -366,7 +367,9 @@ fn parse_tail_params(
         let tail_params = match parsed_tail_params.get(metadatadb_config) {
             Some(tail_params) => tail_params.clone(),
             None => {
-                let tail_params = tail_args.parse_args(fb, metadatadb_config, mysql_options)?;
+                let tail_params = tail_args
+                    .parse_args(fb, metadatadb_config, mysql_options)
+                    .await?;
                 parsed_tail_params.insert(metadatadb_config.clone(), tail_params.clone());
                 tail_params
             }

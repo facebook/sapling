@@ -1,0 +1,490 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps")
+
+oncall("scm_client_infra")
+
+artifacts = get_integration_test_env_and_deps()
+
+python_unittest(
+    name = "absorb",
+    srcs = ["absorb_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "add",
+    srcs = ["add_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "commit",
+    srcs = ["commit_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "copy",
+    srcs = ["copy_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "debug_clear_local_caches",
+    srcs = ["debug_clear_local_caches_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "debug_get_parents",
+    srcs = ["debug_get_parents.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "debug_hg_dirstate",
+    srcs = ["debug_hg_dirstate_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "diff",
+    srcs = ["diff_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "doctor",
+    srcs = ["doctor_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "eden_journal",
+    srcs = ["eden_journal_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-python-types",
+        "//eden/fs/service:thrift-streaming-python-clients",
+        "//eden/fs/service:thrift-streaming-python-types",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+        "//thrift/lib/python/client:base",
+    ],
+)
+
+python_unittest(
+    name = "files",
+    srcs = ["files_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "filteredhg",
+    srcs = ["filteredhg_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "filteredhg_clone",
+    srcs = ["filteredhg_clone_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "fold",
+    srcs = ["fold_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "graft",
+    srcs = ["graft_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "grep",
+    srcs = ["grep_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "histedit",
+    srcs = ["histedit_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "journal",
+    srcs = ["journal_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "legacy_filter",
+    srcs = ["legacy_filter_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "merge",
+    srcs = ["merge_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "move",
+    srcs = ["move_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "negative_caching",
+    srcs = ["negative_caching_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "non_eden_operation",
+    srcs = ["non_eden_operation_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "post_clone",
+    srcs = ["post_clone_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "pull",
+    srcs = ["pull_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rebase",
+    srcs = ["rebase_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "revert",
+    srcs = ["revert_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rm",
+    srcs = ["rm_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rollback",
+    srcs = ["rollback_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "shelve",
+    srcs = ["shelve_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "sparse",
+    srcs = ["sparse_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "split",
+    srcs = ["split_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "status_deadlock",
+    srcs = ["status_deadlock_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "status",
+    srcs = ["status_test.py"],
+    env = artifacts["env"],
+    os_deps = [
+        (
+            "windows",
+            ["//eden/fs/py/eden/thrift:windows_thrift"],
+        ),
+    ],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "storage_engine",
+    srcs = ["storage_engine_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "symlink",
+    srcs = ["symlink_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "undo",
+    srcs = ["undo_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "update",
+    srcs = ["update_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "uncommit",
+    srcs = ["uncommit_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)

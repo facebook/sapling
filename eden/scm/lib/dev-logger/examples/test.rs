@@ -35,7 +35,7 @@ fn run_child(rust_log: &str) -> String {
     std::env::set_var("RUST_LOG", rust_log);
     let exe = std::env::current_exe().unwrap();
     let out = Command::new(exe)
-        .args(&[MESSAGE])
+        .args([MESSAGE])
         .output()
         .expect("failed to execute process");
     String::from_utf8_lossy(&out.stderr).to_string()

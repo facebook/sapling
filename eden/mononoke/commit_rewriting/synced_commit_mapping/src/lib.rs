@@ -233,6 +233,27 @@ pub trait SyncedCommitMapping: Send + Sync {
         target_repo_id: RepositoryId,
     ) -> Result<Option<WorkingCopyEquivalence>, Error>;
 
+    /// Insert version for large repo commit without mapping to any small repo
+    /// commits
+    async fn insert_large_repo_commit_version(
+        &self,
+        ctx: &CoreContext,
+        large_repo_id: RepositoryId,
+        large_repo_cs_id: ChangesetId,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<bool, Error>;
+
+    /// Same as previous command, but it overwrites existing value.
+    /// This is not intended to be used in production, but just as a debug tool
+    /// commits
+    async fn overwrite_large_repo_commit_version(
+        &self,
+        ctx: &CoreContext,
+        large_repo_id: RepositoryId,
+        large_repo_cs_id: ChangesetId,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<bool, Error>;
+
     /// Get version for large repo commit
     async fn get_large_repo_commit_version(
         &self,
@@ -639,7 +660,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         )
         .await?;
         let maybe_row = if !rows.is_empty() {
-            rows.get(0).cloned()
+            rows.first().cloned()
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -650,7 +671,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 &target_repo_id,
             )
             .await
-            .map(|rows| rows.get(0).cloned())?
+            .map(|rows| rows.first().cloned())?
         };
 
         Ok(match maybe_row {
@@ -684,6 +705,42 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             }
             None => None,
         })
+    }
+
+    async fn insert_large_repo_commit_version(
+        &self,
+        ctx: &CoreContext,
+        large_repo_id: RepositoryId,
+        large_repo_cs_id: ChangesetId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<bool, Error> {
+        self.insert_version_for_large_repo_commit(
+            ctx,
+            &self.write_connection,
+            large_repo_id,
+            large_repo_cs_id,
+            version_name,
+            false, /* should overwrite */
+        )
+        .await
+    }
+
+    async fn overwrite_large_repo_commit_version(
+        &self,
+        ctx: &CoreContext,
+        large_repo_id: RepositoryId,
+        large_repo_cs_id: ChangesetId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<bool, Error> {
+        self.insert_version_for_large_repo_commit(
+            ctx,
+            &self.write_connection,
+            large_repo_id,
+            large_repo_cs_id,
+            version_name,
+            true, /* should overwrite */
+        )
+        .await
     }
 
     async fn get_large_repo_commit_version(

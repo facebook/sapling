@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "blackbox",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "blackbox",
+                },
+            ],
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "//eden/scm/lib/minibench:minibench",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = ["fbsource//third-party/rust:tempfile"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_cbor",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:serde_json",
+        "//eden/scm/lib/blackbox/serde_alt:serde_alt",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/indexedlog:indexedlog",
+    ],
+)

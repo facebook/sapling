@@ -30,6 +30,9 @@ mod repair;
 pub mod rotate;
 pub mod utils;
 
+#[cfg(all(unix, feature = "sigbus-handler"))]
+mod sigbus;
+
 pub use errors::Error;
 pub use errors::Result;
 pub use repair::DefaultOpenOptions;

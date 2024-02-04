@@ -44,8 +44,10 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("mononoke_types-thrift__types");
+        conf.clients_crate("mononoke_types-thrift__clients");
+        conf.services_crate("mononoke_types-thrift__services");
 
-        let options = "";
+        let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
             conf.options(options);
         }

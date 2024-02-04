@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <assert.h>
-#include <stdint.h>
+#include <cassert>
+#include <cstdint>
 #include <string_view>
 #include <type_traits>
 

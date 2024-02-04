@@ -36,7 +36,7 @@ class Notifier {
  public:
   explicit Notifier(std::shared_ptr<ReloadableConfig> edenConfig)
       : config_(std::move(edenConfig)) {}
-  virtual ~Notifier() {}
+  virtual ~Notifier() = default;
 
   /**
    * Show a custom notification to the interactive user.

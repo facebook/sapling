@@ -125,7 +125,7 @@ impl HgTime {
 
     pub fn to_utc(self) -> DateTime<Utc> {
         let naive = NaiveDateTime::from_timestamp_opt(self.unixtime, 0).unwrap();
-        DateTime::from_utc(naive, Utc)
+        naive.and_utc()
     }
 
     /// Converts to `NaiveDateTime` with local timezone specified by `offset`.
@@ -226,8 +226,8 @@ impl HgTime {
                 let phrases: Vec<_> = date.split(" to ").collect();
                 if phrases.len() == 2 {
                     if let (Some(start), Some(end)) = (
-                        Self::parse_range_internal(&phrases[0], false),
-                        Self::parse_range_internal(&phrases[1], false),
+                        Self::parse_range_internal(phrases[0], false),
+                        Self::parse_range_internal(phrases[1], false),
                     ) {
                         Some(start.start..end.end)
                     } else {
@@ -253,6 +253,29 @@ impl HgTime {
         }
     }
 
+    /// Parse a date from a Sapling-internal format. Tolerates floating point timestamps for compatibility reasons.
+    ///
+    /// Return `None` if cannot be parsed, `Option<None>` if the parsed date is invalid
+    pub fn parse_hg_internal_format(date: &str) -> Option<Option<Self>> {
+        let parts: Vec<_> = date.split(' ').collect();
+        if parts.len() == 2 {
+            let unixtime = parts[0].parse::<i64>().ok();
+            let unixtime = if unixtime.is_none() {
+                parts[0].parse::<f64>().map(|x| x as i64).ok()
+            } else {
+                unixtime
+            };
+            if let Some(unixtime) = unixtime {
+                if let Ok(offset) = parts[1].parse() {
+                    if is_valid_offset(offset) {
+                        return Some(Self { unixtime, offset }.bounded());
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Parse date in an absolute form.
     ///
     /// Return None if it cannot be parsed.
@@ -262,16 +285,8 @@ impl HgTime {
     fn parse_absolute(date: &str, default_date: &dyn Fn(char) -> &'static str) -> Option<Self> {
         let date = date.trim();
 
-        // Hg internal format. "unixtime offset"
-        let parts: Vec<_> = date.split(' ').collect();
-        if parts.len() == 2 {
-            if let Ok(unixtime) = parts[0].parse() {
-                if let Ok(offset) = parts[1].parse() {
-                    if is_valid_offset(offset) {
-                        return Self { unixtime, offset }.bounded();
-                    }
-                }
-            }
+        if let Some(hg_internal) = Self::parse_hg_internal_format(date) {
+            return hg_internal;
         }
 
         // Normalize UTC timezone name to +0000. The parser does not know
@@ -476,7 +491,7 @@ pub fn set_default_offset(offset: i32) {
 
 fn is_valid_offset(offset: i32) -> bool {
     // UTC-12 to UTC+14.
-    offset >= -50400 && offset <= 43200
+    (-50400..=43200).contains(&offset)
 }
 
 /// Lower bound for default values in dates.
@@ -624,6 +639,33 @@ mod tests {
         assert!(range.end.unixtime - range.start.unixtime >= (24 + 20) * 3600);
     }
 
+    #[test]
+    fn test_parse_internal_format() {
+        assert_eq!(
+            HgTime::parse_hg_internal_format("123 456")
+                .unwrap()
+                .unwrap(),
+            HgTime {
+                unixtime: 123,
+                offset: 456
+            }
+        );
+        assert_eq!(
+            HgTime::parse_hg_internal_format("123.7 456")
+                .unwrap()
+                .unwrap(),
+            HgTime {
+                unixtime: 123,
+                offset: 456
+            }
+        );
+        assert_eq!(HgTime::parse_hg_internal_format("foobar"), None);
+        assert_eq!(
+            HgTime::parse_hg_internal_format("100000000000000000 1400"),
+            Some(None)
+        );
+    }
+
     /// String representation of parse result.
     fn t(date: &str) -> String {
         match HgTime::parse(date) {
@@ -636,7 +678,7 @@ mod tests {
     fn d(date: &str, duration: Duration) -> String {
         match HgTime::parse(date) {
             Some(time) => {
-                let value = (time.unixtime as i64 - HgTime::now().unwrap().unixtime as i64).abs()
+                let value = (time.unixtime - HgTime::now().unwrap().unixtime).abs()
                     / duration.num_seconds();
                 format!("{}", value)
             }

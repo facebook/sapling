@@ -95,7 +95,9 @@ export default class FilepathClassifier {
    * so that both `py` and `python` are mapped to `Python`.
    */
   getDisplayNameForLanguageId(languageIdOrAlias: string): string {
-    const scopeName = this.findScopeNameForAlias(languageIdOrAlias);
+    const scopeName =
+      this.findScopeNameForLanguage(languageIdOrAlias) ??
+      this.findScopeNameForAlias(languageIdOrAlias);
     if (scopeName == null) {
       return languageIdOrAlias;
     }
@@ -111,7 +113,7 @@ export default class FilepathClassifier {
    * with the scope name.
    */
   findDisplayNameForScopeName(scopeName: string): string | null {
-    const {language} = this.grammars[scopeName];
+    const {language} = this.grammars[scopeName] ?? {};
     if (language != null) {
       const aliases = this.languages[language].aliases ?? [];
       // As a braindead heuristic, we pick the first alias that starts with a

@@ -9,40 +9,47 @@ import type {
   ApplyUncommittedChangesPreviewsFuncType,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {UncommittedChanges} from '../types';
+import type {CommandArg, RepoRelativePath, UncommittedChanges} from '../types';
 
 import {Operation} from './Operation';
 
 /**
  * This deletes untracked files from disk. Often used in conjunction with "Discard" aka `goto --clean .`
+ * If an array of files is provided, only purge those files.
  */
 export class PurgeOperation extends Operation {
   static opName = 'Purge';
 
-  constructor() {
+  constructor(private files: Array<RepoRelativePath> = []) {
     super('PurgeOperation');
   }
 
   getArgs() {
-    const args = ['purge', '--files'];
+    const args: Array<CommandArg> = ['purge', '--files'];
+    args.push(
+      ...this.files.map(file => ({
+        type: 'repo-relative-file' as const,
+        path: file,
+      })),
+    );
     return args;
   }
 
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,
   ): ApplyUncommittedChangesPreviewsFuncType | undefined {
-    const untrackedChangeTypes = ['?'];
+    const filesToHide = new Set(this.files);
     if (
       context.uncommittedChanges.length === 0 ||
       // no untracked files should be left
-      context.uncommittedChanges.every(change => !untrackedChangeTypes.includes(change.status))
+      context.uncommittedChanges.every(change => !filesToHide.has(change.path))
     ) {
       return undefined;
     }
 
     const func: ApplyUncommittedChangesPreviewsFuncType = (changes: UncommittedChanges) => {
       // remove all untracked files
-      return changes.filter(change => !untrackedChangeTypes.includes(change.status));
+      return changes.filter(change => !filesToHide.has(change.path));
     };
     return func;
   }

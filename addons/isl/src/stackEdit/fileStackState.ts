@@ -12,27 +12,17 @@ import {LineLog} from '../linelog';
 import {Record, List} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
 
-export const Source = Record<SourceProps>({
-  type: 'plain',
-  value: List([]),
-  revLength: 0,
-});
-type Source = RecordOf<SourceProps>;
-
-const State = Record<FileStackStateProps>({source: Source()});
-type State = RecordOf<FileStackStateProps>;
-
 /**
  * A stack of file contents with stack editing features.
  */
-export class FileStackState extends SelfUpdate<State> {
-  constructor(value: RecordOf<SourceProps> | string[]) {
+export class FileStackState extends SelfUpdate<FileStackStateRecord> {
+  constructor(value: Source | string[]) {
     if (Array.isArray(value)) {
       const contents: string[] = value;
       const source = Source({type: 'plain', value: List(contents), revLength: contents.length});
-      super(State({source}));
+      super(FileStackStateRecord({source}));
     } else {
-      super(State({source: value}));
+      super(FileStackStateRecord({source: value}));
     }
   }
 
@@ -185,9 +175,17 @@ export class FileStackState extends SelfUpdate<State> {
     return this.mapAllLines(editLine);
   }
 
-  /** Edit lines for all revisions using a callback. */
-  mapAllLines(editLineFunc: (line: FlattenLine, i: number) => FlattenLine): FileStackState {
-    const lines = this.convertToFlattenLines().map(editLineFunc);
+  /**
+   * Edit lines for all revisions using a callback.
+   * The return type can be an array (like flatMap), to insert or delete lines.
+   */
+  mapAllLines(
+    editLineFunc: (line: FlattenLine, i: number) => FlattenLine | FlattenLine[],
+  ): FileStackState {
+    const lines = this.convertToFlattenLines().flatMap((line, i) => {
+      const mapped = editLineFunc(line, i);
+      return Array.isArray(mapped) ? mapped : [mapped];
+    });
     return this.fromFlattenLines(lines, this.revLength);
   }
 
@@ -255,8 +253,17 @@ type SourceProps =
       revLength: number;
     };
 
+export const Source = Record<SourceProps>({
+  type: 'plain',
+  value: List([]),
+  revLength: 0,
+});
+type Source = RecordOf<SourceProps>;
+
 type FileStackStateProps = {
   source: Source;
 };
+const FileStackStateRecord = Record<FileStackStateProps>({source: Source()});
+type FileStackStateRecord = RecordOf<FileStackStateProps>;
 
 export type {Rev};

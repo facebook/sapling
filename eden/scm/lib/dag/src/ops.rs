@@ -348,7 +348,7 @@ pub trait DagExportCloneData {
 #[async_trait::async_trait]
 pub trait DagExportPullData {
     /// Export `CloneData` for vertexes in the given set.
-    /// The set is typcially calculated by `only(heads, common)`.
+    /// The set is typically calculated by `only(heads, common)`.
     async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<VertexName>>;
 }
 
@@ -544,7 +544,7 @@ where
             Some(vertex_fn) => vertex_fn,
             None => |s: &str| VertexName::copy_from(s.as_bytes()),
         };
-        let parents = drawdag::parse(&text);
+        let parents = drawdag::parse(text);
         let heads: Vec<_> = match heads {
             Some(heads) => heads.iter().map(|s| vertex_fn(s.as_ref())).collect(),
             None => {

@@ -203,6 +203,7 @@ enum CompoundCmdKeyword {
 
 /// Used to configure when `Parser::command_group` stops parsing commands.
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Default)]
 pub struct CommandGroupDelimiters<'a, 'b, 'c> {
     /// Any token which appears after a complete command separator (e.g. `;`, `&`, or a
     /// newline) will be considered a delimeter for the command group.
@@ -214,15 +215,7 @@ pub struct CommandGroupDelimiters<'a, 'b, 'c> {
     pub exact_tokens: &'c [Token],
 }
 
-impl Default for CommandGroupDelimiters<'static, 'static, 'static> {
-    fn default() -> Self {
-        CommandGroupDelimiters {
-            reserved_tokens: &[],
-            reserved_words: &[],
-            exact_tokens: &[],
-        }
-    }
-}
+
 
 /// An `Iterator` adapter around a `Parser`.
 ///
@@ -702,7 +695,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
 
                 // Literals and can be statically checked if they have non-numeric characters
                 SimpleWordKind::Escaped(ref s) | SimpleWordKind::Literal(ref s) => {
-                    s.chars().all(|c| c.is_digit(10))
+                    s.chars().all(|c| c.is_ascii_digit())
                 }
 
                 // These could end up evaluating to a numeric,
@@ -714,7 +707,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
 
             match *word {
                 Simple(ref s) => simple_could_be_numeric(s),
-                SingleQuoted(ref s) => s.chars().all(|c| c.is_digit(10)),
+                SingleQuoted(ref s) => s.chars().all(|c| c.is_ascii_digit()),
                 DoubleQuoted(ref fragments) => fragments.iter().all(simple_could_be_numeric),
             }
         }
@@ -1000,7 +993,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
             let mut line = Vec::new();
             'line: loop {
                 if strip_tabs {
-                    let skip_next = if let Some(&Whitespace(ref w)) = self.iter.peek() {
+                    let skip_next = if let Some(Whitespace(w)) = self.iter.peek() {
                         let stripped = w.trim_start_matches('\t');
                         let num_tabs = w.len() - stripped.len();
                         line_start_pos.advance_tabs(num_tabs);
@@ -2497,8 +2490,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
                 && slf
                     .iter
                     .peek()
-                    .map(|peeked| cfg.exact_tokens.iter().any(|tok| tok == peeked))
-                    .unwrap_or(false);
+                    .map_or(false, |peeked| cfg.exact_tokens.iter().any(|tok| tok == peeked));
 
             found_exact
                 || slf.peek_reserved_word(cfg.reserved_words).is_some()
@@ -2833,7 +2825,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
             }
         });
 
-        let num = if let Some(&Literal(ref s)) = self.iter.peek() {
+        let num = if let Some(Literal(s)) = self.iter.peek() {
             if s.starts_with("0x") || s.starts_with("0X") {
                 // from_str_radix does not like it when 0x is present
                 // in the string to parse, thus we should strip it off.

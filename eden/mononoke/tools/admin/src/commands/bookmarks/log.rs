@@ -11,13 +11,13 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Args;
+use commit_id::IdentityScheme;
 use context::CoreContext;
 use futures::stream::TryStreamExt;
 use mononoke_types::DateTime;
 
 use super::Repo;
 use crate::bookmark_log_entry::BookmarkLogEntry;
-use crate::commit_id::IdentityScheme;
 
 #[derive(Args)]
 pub struct BookmarksLogArgs {

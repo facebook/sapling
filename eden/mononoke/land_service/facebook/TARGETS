@@ -1,0 +1,19 @@
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
+
+oncall("mononoke")
+
+tw.container(
+    name = "tw.mononoke.land_service",
+    features = [
+        tw.build_fbpkg(
+            fbpkg.builder(
+                name = "mononoke.land_service",
+                path_actions = {
+                    "land_service": "//eden/mononoke/land_service:land_service",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
+)

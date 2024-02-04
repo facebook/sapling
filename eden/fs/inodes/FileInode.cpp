@@ -169,6 +169,43 @@ void FileInode::LockedState::setMaterialized() {
 #endif
 }
 
+class FileInodeState::BlobLoadingPromise {
+ public:
+  /**
+   * Return the ImmediateFuture associated with this promise.
+   *
+   * This will complete either when the blob is loaded, or when the inode is
+   * truncated. In the second case, the future will return with a nullptr
+   */
+  ImmediateFuture<BlobPtr> getImmediateFuture() {
+    return ImmediateFuture{
+        promise.getSemiFuture().deferError<folly::BrokenPromise>(
+            [](auto&&) -> BlobPtr { return nullptr; })};
+  }
+
+  /**
+   * Obtain the raw underlying SemiFuture.
+   *
+   * The main difference with the above is how this method will return an
+   * error when the inode is truncated. This should only be used by
+   * startLoadingData as that code needs to interrupt the loading.
+   */
+  folly::SemiFuture<BlobPtr> getRawSemiFuture() {
+    return promise.getSemiFuture();
+  }
+
+  void setValue(BlobPtr&& blob) {
+    promise.setValue(std::move(blob));
+  }
+
+  void setException(folly::exception_wrapper&& ex) {
+    promise.setException(std::move(ex));
+  }
+
+ private:
+  folly::SharedPromise<BlobPtr> promise;
+};
+
 /*********************************************************************
  * Implementations of FileInode private template methods
  * These definitions need to appear before any functions that use them.
@@ -204,7 +241,7 @@ FileInode::runWhileDataLoaded(
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
-      future = state->blobLoadingPromise->getSemiFuture();
+      future = state->blobLoadingPromise->getImmediateFuture();
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
@@ -259,7 +296,7 @@ FileInode::runWhileMaterialized(
         getNameRacy()));
   }
 
-  auto future = ImmediateFuture<std::shared_ptr<const Blob>>::makeEmpty();
+  auto future = ImmediateFuture<BlobPtr>::makeEmpty();
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
@@ -311,7 +348,7 @@ FileInode::runWhileMaterialized(
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
-      future = state->blobLoadingPromise->getSemiFuture();
+      future = state->blobLoadingPromise->getImmediateFuture();
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
@@ -369,23 +406,13 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
           InodeEventProgress::START,
           getNameRacy()));
 
-      std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
-          loadingPromise;
-      SCOPE_EXIT {
-        if (loadingPromise) {
-          // If transitioning from the loading state to materialized, fulfill
-          // the loading promise will null. Callbacks will have to handle the
-          // case that the state is now materialized.
-          loadingPromise->setValue(nullptr);
-        }
-      };
-
       // Call materializeAndTruncate()
       materializeAndTruncate(state);
 
       // Now that materializeAndTruncate() has succeeded, extract the
-      // blobLoadingPromise so we can fulfill it as we exit.
-      loadingPromise = std::move(state->blobLoadingPromise);
+      // blobLoadingPromise, it'll be fulfilled with a BrokenPromise on scope
+      // exit.
+      auto loadingPromise = std::move(state->blobLoadingPromise);
       state->blobLoadingPromise.reset();
       // Also call materializeInParent() as we exit, before fulfilling the
       // blobLoadingPromise.
@@ -454,7 +481,7 @@ FileInodeState::~FileInodeState() {
       materializedState.~MaterializedState();
       break;
   }
-};
+}
 
 void FileInodeState::checkInvariants() {
   // FileInode is the most allocated structure in EdenFS, make sure that its
@@ -492,7 +519,9 @@ Hash20 FileInodeState::MaterializedState::getSha1(FileInode& inode) {
   }
 
 #ifdef _WIN32
-  auto sha1 = getFileSha1(inode.getMaterializedFilePath());
+  auto sha1 = getFileSha1(
+      inode.getMaterializedFilePath(),
+      inode.getMount()->getCheckoutConfig()->getEnableWindowsSymlinks());
 #else
   auto sha1 = inode.getMount()->getOverlayFileAccess()->getSha1(inode);
 #endif // _WIN32
@@ -507,8 +536,10 @@ Hash32 FileInodeState::MaterializedState::getBlake3(
   // always delegate to overlayFileAccess to save on the materialized state
   // memory footprint
 #ifdef _WIN32
-  const auto blake3 =
-      getFileBlake3(inode.getMaterializedFilePath(), maybeBlake3Key);
+  const auto blake3 = getFileBlake3(
+      inode.getMaterializedFilePath(),
+      maybeBlake3Key,
+      inode.getMount()->getCheckoutConfig()->getEnableWindowsSymlinks());
 #else
   const auto blake3 = inode.getMount()->getOverlayFileAccess()->getBlake3(
       inode, maybeBlake3Key);
@@ -1250,7 +1281,53 @@ ImmediateFuture<size_t> FileInode::write(
 }
 #endif
 
-ImmediateFuture<std::shared_ptr<const Blob>> FileInode::startLoadingData(
+/**
+ * Simple class to track when the loading future is alive.
+ *
+ * In the case where the future returned by startLoadingData is dropped, the
+ * loading future would not have a chance to be added to an executor, thus
+ * leaving the state to BLOB_LOADING. Subsequent loads of this blob would
+ * thus never trigger a load and hang.
+ *
+ * In that case, the state needs to be reset to BLOB_NOT_LOADING to let
+ * future loads restart the loading process.
+ */
+class FileInode::LoadingOngoing {
+ public:
+  explicit LoadingOngoing(FileInodePtr inode) : inode_{std::move(inode)} {}
+
+  LoadingOngoing(LoadingOngoing&&) = default;
+  LoadingOngoing& operator=(LoadingOngoing&&) = default;
+  LoadingOngoing(const LoadingOngoing&) = delete;
+  LoadingOngoing& operator=(const LoadingOngoing&) = delete;
+
+  ~LoadingOngoing() {
+    if (!inode_) {
+      // The load finished, nothing to do.
+      return;
+    }
+
+    inode_->completeDataLoad(folly::Try<BlobCache::GetResult>(
+        folly::BrokenPromise{folly::tag<BlobCache::GetResult>}));
+  }
+
+  /**
+   * Get the stored FileInodePtr
+   *
+   * If this function isn't called, the LoadingOngoing class assumes blob
+   * loading didn't complete and will reset the loading state for the stored
+   * inode.
+   */
+  FileInodePtr extractInodePtr() && {
+    FileInodePtr ret{std::move(inode_)};
+    return ret;
+  }
+
+ private:
+  FileInodePtr inode_;
+};
+
+ImmediateFuture<BlobPtr> FileInode::startLoadingData(
     LockedState state,
     BlobCache::Interest interest,
     const ObjectFetchContextPtr& fetchContext) {
@@ -1262,70 +1339,95 @@ ImmediateFuture<std::shared_ptr<const Blob>> FileInode::startLoadingData(
   auto getBlobFuture = getMount()->getBlobAccess()->getBlob(
       state->nonMaterializedState.hash, fetchContext, interest);
   auto blobLoadingPromise =
-      std::make_unique<folly::SharedPromise<std::shared_ptr<const Blob>>>();
+      std::make_unique<FileInodeState::BlobLoadingPromise>();
 
   // Everything from here through blobFuture.then should be noexcept.
   state->blobLoadingPromise = std::move(blobLoadingPromise);
-  auto resultFuture = state->blobLoadingPromise->getSemiFuture();
+  auto resultFuture = state->blobLoadingPromise->getRawSemiFuture();
   state->tag = State::BLOB_LOADING;
 
   // Unlock state_ while we wait on the blob data to load
   state.unlock();
 
-  auto self = inodePtrFromThis(); // separate line for formatting
-  std::move(getBlobFuture)
-      .thenTry([self](folly::Try<BlobCache::GetResult> tryResult) mutable {
-        auto state = LockedState{self};
+  auto loadingFuture =
+      std::move(getBlobFuture)
+          .thenTry([load = LoadingOngoing{inodePtrFromThis()}](
+                       folly::Try<BlobCache::GetResult> tryResult) mutable {
+            auto self = std::move(load).extractInodePtr();
+            self->completeDataLoad(std::move(tryResult));
+          })
+          .thenError([](folly::exception_wrapper&&) {
+            // We get here if EDEN_BUG() didn't terminate the process, or if we
+            // threw in the preceding block.  Both are bad because we won't
+            // automatically propagate the exception to resultFuture and we
+            // can't trust the state of anything if we get here.  Rather than
+            // leaving something hanging, we suicide.  We could probably do a
+            // bit better with the error handling here :-/
+            //
+            // TODO(xavierd): Calling FileInode::completeDataLoad with the
+            // exception might be sufficient to propagate the error and reset
+            // the loading state.
+            XLOG(FATAL)
+                << "Failed to propagate failure in getBlob(), no choice but to die";
+          });
 
-        switch (state->tag) {
-          case State::BLOB_NOT_LOADING:
-            EDEN_BUG()
-                << "A blob load finished when the inode was in BLOB_NOT_LOADING state";
+  // This is using `collect` instead of `collectAll` to handle the case where
+  // the blobLoadingPromise is being cancelled as a result of a truncation. In
+  // the case of a truncation, the resultFuture will early return with a
+  // `BrokenPromise` error and the loadingFuture will not complete due to
+  // collect short-circuiting in that case. However, when loadingFuture
+  // completes, it'll set the loadingPromise which will then complete the
+  // collect below.
+  return ImmediateFuture{
+      folly::collect(std::move(resultFuture), std::move(loadingFuture).semi())
+          .deferValue([](std::tuple<BlobPtr, folly::Unit>&& res) {
+            return std::get<BlobPtr>(std::move(res));
+          })
+          .deferError<folly::BrokenPromise>(
+              [](auto&&) -> BlobPtr { return nullptr; })};
+}
 
-          // Since the load doesn't hold the state lock for its duration,
-          // sanity check that the inode is still in loading state.
-          //
-          // Note that someone else may have grabbed the lock before us and
-          // materialized the FileInode, so we may already be
-          // MATERIALIZED_IN_OVERLAY at this point.
-          case State::BLOB_LOADING: {
-            auto promise = std::move(*state->blobLoadingPromise);
-            state->blobLoadingPromise.reset();
-            state->tag = State::BLOB_NOT_LOADING;
+void FileInode::completeDataLoad(folly::Try<BlobCache::GetResult> tryResult) {
+  auto state = LockedState{this};
 
-            // Call the Future's subscribers while the state_ lock is not
-            // held. Even if the FileInode has transitioned to a materialized
-            // state, any pending loads must be unblocked.
-            if (tryResult.hasValue()) {
-              state->interestHandle = std::move(tryResult->interestHandle);
-              state.unlock();
-              promise.setValue(std::move(tryResult->object));
-            } else {
-              state.unlock();
-              promise.setException(std::move(tryResult).exception());
-            }
-            return;
-          }
+  switch (state->tag) {
+    case State::BLOB_NOT_LOADING:
+      EDEN_BUG()
+          << "A blob load finished when the inode was in BLOB_NOT_LOADING state";
 
-          case State::MATERIALIZED_IN_OVERLAY:
-            // The load raced with a someone materializing the file to truncate
-            // it.  Nothing left to do here. The truncation completed the
-            // promise with a null blob.
-            XCHECK_EQ(state->blobLoadingPromise.get(), nullptr);
-            return;
-        }
-      })
-      .thenError([](folly::exception_wrapper&&) {
-        // We get here if EDEN_BUG() didn't terminate the process, or if we
-        // threw in the preceding block.  Both are bad because we won't
-        // automatically propagate the exception to resultFuture and we
-        // can't trust the state of anything if we get here.
-        // Rather than leaving something hanging, we suicide.
-        // We could probably do a bit better with the error handling here :-/
-        XLOG(FATAL)
-            << "Failed to propagate failure in getBlob(), no choice but to die";
-      });
-  return resultFuture;
+    // Since the load doesn't hold the state lock for its duration, sanity
+    // check that the inode is still in loading state.
+    //
+    // Note that someone else may have grabbed the lock before us and
+    // materialized the FileInode, so we may already be MATERIALIZED_IN_OVERLAY
+    // at this point.
+    case State::BLOB_LOADING: {
+      auto promise = std::move(*state->blobLoadingPromise);
+      state->blobLoadingPromise.reset();
+      state->tag = State::BLOB_NOT_LOADING;
+
+      // Call the Future's subscribers while the state_ lock is not held. Even
+      // if the FileInode has transitioned to a materialized state, any pending
+      // loads must be unblocked.
+      if (tryResult.hasValue()) {
+        auto& result = tryResult.value();
+        state->interestHandle = std::move(result.interestHandle);
+        state.unlock();
+        promise.setValue(std::move(result.object));
+      } else {
+        state.unlock();
+        promise.setException(std::move(tryResult).exception());
+      }
+      return;
+    }
+
+    case State::MATERIALIZED_IN_OVERLAY:
+      // The load raced with a someone materializing the file to truncate it.
+      // Nothing left to do here. The truncation completed the promise with a
+      // null blob.
+      XCHECK_EQ(state->blobLoadingPromise.get(), nullptr);
+      return;
+  }
 }
 
 #ifndef _WIN32

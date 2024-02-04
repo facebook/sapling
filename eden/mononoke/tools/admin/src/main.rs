@@ -18,7 +18,6 @@ use mononoke_app::MononokeAppBuilder;
 
 mod bookmark_log_entry;
 mod commands;
-mod commit_id;
 #[cfg(fbcode_build)]
 mod facebook;
 

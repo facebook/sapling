@@ -69,6 +69,13 @@ pub struct ImportArgs {
     ///File path to store the importing state for recovery in case the tool breaks
     #[clap(long)]
     pub recovery_file_path: String,
+    /// If this is an import into a large repo, then it must not be to a
+    /// location that is mapped to a small repo (if it is, import to the small
+    /// repo instead) and we should mark commits as not synced using a mapping
+    /// which does not map to any small repo.  This argument is used to
+    /// specify the name of that mapping.
+    #[clap(long)]
+    pub mark_not_synced_mapping: Option<String>,
 }
 
 //recover-process
@@ -122,6 +129,7 @@ pub fn setup_import_args(import_args: ImportArgs) -> RecoveryFields {
         datetime: import_args
             .commit_date_rfc3339
             .unwrap_or_else(DateTime::now),
+        mark_not_synced_mapping: import_args.mark_not_synced_mapping,
         imported_cs_id: None,
         shifted_bcs_ids: None,
         gitimport_bcs_ids: None,

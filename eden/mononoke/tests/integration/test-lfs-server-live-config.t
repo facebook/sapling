@@ -24,7 +24,7 @@
   $ lfs_root="$(lfs_server --log "$lfs_log" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
 
 # Get the config
-  $ curl -fs "${lfs_root}/config" | jq -S .
+  $ curltest -fs "${lfs_root}/config" | jq -S .
   {
     "disable_compression": false,
     "disable_compression_identities": [],
@@ -53,7 +53,7 @@
   * Updated path live.json (glob)
 
 # Get the updated config
-  $ curl -fs "${lfs_root}/config" | jq -S .
+  $ curltest -fs "${lfs_root}/config" | jq -S .
   {
     "disable_compression": false,
     "disable_compression_identities": [],

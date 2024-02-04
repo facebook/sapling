@@ -15,6 +15,8 @@ import {
   simulateRepoConnected,
   TEST_COMMIT_HISTORY,
   COMMIT,
+  closeCommitInfoSidebar,
+  commitInfoIsOpen,
 } from '../testUtils';
 import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -43,6 +45,11 @@ describe('selection', () => {
     );
   };
 
+  const expectNoRealSelection = () =>
+    expect(CommitInfoTestUtils.withinCommitInfo().queryAllByTestId('selected-commit')).toHaveLength(
+      0,
+    );
+
   const expectOnlyOneCommitSelected = () =>
     expect(
       CommitInfoTestUtils.withinCommitInfo().queryByText(/\d Commits Selected/),
@@ -68,6 +75,10 @@ describe('selection', () => {
         (shift ? '{shift}' : '') + '{arrowdown}',
       ),
     );
+  };
+
+  const rightArrow = () => {
+    act(() => userEvent.type(screen.getByTestId('commit-tree-root'), '{arrowright}'));
   };
 
   it('allows selecting via click', () => {
@@ -270,12 +281,17 @@ describe('selection', () => {
   });
 
   describe('up/down arrows to select', () => {
-    it('noop if nothing selected', () => {
-      upArrow();
+    it('down arrow with no selection starts you at the top', () => {
+      expectNoRealSelection();
       downArrow();
-      upArrow(true);
-      downArrow(true);
       expectOnlyOneCommitSelected();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit Z')).toBeInTheDocument();
+    });
+
+    it('up arrow noop if nothing selected', () => {
+      upArrow();
+      upArrow(true);
+      expectNoRealSelection();
     });
 
     it('up arrow modifies selection', () => {
@@ -334,6 +350,16 @@ describe('selection', () => {
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
       expectNCommitsSelected(2);
+    });
+
+    it('right arrows opens sidebar', () => {
+      click('Commit A');
+      act(() => closeCommitInfoSidebar());
+
+      expect(commitInfoIsOpen()).toEqual(false);
+      rightArrow();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit A')).toBeInTheDocument();
+      expect(commitInfoIsOpen()).toEqual(true);
     });
   });
 });

@@ -19,8 +19,8 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
@@ -46,7 +46,6 @@ use sql_ext::facebook::MysqlOptions;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::dag::ops::DagAddHeads;
 use crate::dag::DagAlgorithm;
@@ -94,7 +93,7 @@ pub enum OperationMode {
 pub struct SegmentedChangelogTailer {
     repo_id: RepositoryId,
     changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
-    bulk_fetch: Arc<PublicChangesetBulkFetch>,
+    bulk_fetch: Arc<ChangesetBulkFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
     sc_version_store: SegmentedChangelogVersionStore,
@@ -110,7 +109,7 @@ impl SegmentedChangelogTailer {
         connections: SegmentedChangelogSqlConnections,
         replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
         changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
-        bulk_fetch: Arc<PublicChangesetBulkFetch>,
+        bulk_fetch: Arc<ChangesetBulkFetcher>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
@@ -151,7 +150,7 @@ impl SegmentedChangelogTailer {
         let repo_id = blobrepo.repo_identity().id();
 
         let db_address = match storage_config_metadata {
-            MetadataDatabaseConfig::Local(_) => None,
+            MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
             MetadataDatabaseConfig::Remote(remote_config) => {
                 Some(remote_config.primary.db_address.clone())
             }
@@ -192,7 +191,7 @@ impl SegmentedChangelogTailer {
             .await?,
         );
 
-        let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+        let bulk_fetcher = Arc::new(ChangesetBulkFetcher::new(
             blobrepo.changesets_arc(),
             blobrepo.phases_arc(),
         ));
@@ -372,17 +371,17 @@ impl SegmentedChangelogTailer {
                 // chunk of the repo
                 let missing = self
                     .bulk_fetch
-                    .fetch_bounded(ctx, Direction::NewestFirst, Some(repo_bounds))
+                    .fetch_public_bounded(ctx, Direction::NewestFirst, Some(repo_bounds))
                     .map(|res| {
                         counter += 1;
-                        let sampling_rate = tunables()
-                            .segmented_changelog_tailer_log_sampling_rate()
-                            .unwrap_or_default();
-                        let sampling_rate = if sampling_rate <= 0 {
-                            DEFAULT_LOG_SAMPLING_RATE
-                        } else {
-                            sampling_rate as usize
-                        };
+                        let mut sampling_rate = justknobs::get_as::<usize>(
+                            "scm/mononoke:segmented_changelog_tailer_log_sampling_rate",
+                            None,
+                        )
+                        .unwrap_or_default();
+                        if sampling_rate == 0 {
+                            sampling_rate = DEFAULT_LOG_SAMPLING_RATE;
+                        }
                         if counter % sampling_rate == 0 {
                             info!(
                                 ctx.logger(),

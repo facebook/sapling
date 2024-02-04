@@ -8,15 +8,15 @@
 use std::collections::BTreeSet;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use context::CoreContext;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
 
 use crate::chunking::Chunker;
 use crate::common::delete_files_in_chunks;
 use crate::common::ChangesetArgsFactory;
 use crate::working_copy::get_changed_content_working_copy_paths;
+use crate::Repo;
 
 /// A struct containing pre-merge delete information
 /// Pre-merge delete commits look like this:
@@ -50,12 +50,12 @@ pub struct HistoryFixupDeletes {
 /// See also <https://fb.quip.com/JfHhAyOZ2FBj> for strategy and discussion
 pub async fn create_history_fixup_deletes<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     fixup_bcs_id: ChangesetId,
-    chunker: Chunker<MPath>,
+    chunker: Chunker<NonRootMPath>,
     delete_commits_changeset_args_factory: impl ChangesetArgsFactory,
     correct_bcs_id: ChangesetId,
-    paths_to_fixup: Vec<MPath>,
+    paths_to_fixup: Vec<NonRootMPath>,
 ) -> Result<HistoryFixupDeletes, Error> {
     let delete_commits_fixup_branch = delete_files_in_chunks(
         ctx,
@@ -130,17 +130,17 @@ mod test {
             mark_public: false,
         };
 
-        let one = MPath::new("1").unwrap();
-        let two = MPath::new("2").unwrap();
-        let five = MPath::new("5").unwrap();
-        let six = MPath::new("6").unwrap();
+        let one = NonRootMPath::new("1").unwrap();
+        let two = NonRootMPath::new("2").unwrap();
+        let five = NonRootMPath::new("5").unwrap();
+        let six = NonRootMPath::new("6").unwrap();
 
         // Arrage everything into [[1], [...], [10]]
         let chunker = Box::new({
             cloned!(one);
             move |mpaths| {
-                let mut v1: Vec<MPath> = vec![];
-                let mut v2: Vec<MPath> = vec![];
+                let mut v1: Vec<NonRootMPath> = vec![];
+                let mut v2: Vec<NonRootMPath> = vec![];
 
                 for mpath in mpaths {
                     if mpath == one {
@@ -185,7 +185,7 @@ mod test {
 
         // We expect that the "fixup" branch which used to have files 1-5 to
         // have just files 3-5 (no more 1 and 2)
-        let fixup_working_copy: BTreeSet<MPath> =
+        let fixup_working_copy: BTreeSet<NonRootMPath> =
             get_working_copy_paths(&ctx, &repo, fixup_branch_after_deletions)
                 .await
                 .unwrap()
@@ -200,7 +200,7 @@ mod test {
         // We expect that the "correct" branch which used to have files 1-7 to
         // have just files 1-5 (because we want to merge in 1-2 and 3-5 are the same
         // so they don't matter, 6-7 are not present in the fixup branch).
-        let correct_working_copy: BTreeSet<MPath> =
+        let correct_working_copy: BTreeSet<NonRootMPath> =
             get_working_copy_paths(&ctx, &repo, correct_branch_after_deletions)
                 .await
                 .unwrap()

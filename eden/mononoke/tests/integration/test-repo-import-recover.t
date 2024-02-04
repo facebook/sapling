@@ -109,10 +109,9 @@
   >    "x_repo_check_disabled": false
   >  }
   > EOF
-  $ echo n | repo_import \
+  $ repo_import \
   >  recover-process \
   > "$TESTTMP/recovery_file.json"
-  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Fetching the recovery stage for importing (glob)
   * Fetched the recovery stage for importing. (glob)
@@ -162,21 +161,21 @@
 
 # Check if we derived all the types for imported commits. Checking last one after bookmark move, before setting it to the merge commit.
   $ MERGE_PARENT_GIT="11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9"
-  $ mononoke_admin derived-data exists changeset_info $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T changeset_info -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists blame $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T blame -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists deleted_manifest $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T deleted_manifest -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists fastlog $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T fastlog -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists filenodes $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T filenodes -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists fsnodes $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists hgchangesets $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T hgchangesets -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists unodes $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T unodes -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
 
 # Check the recovery file
@@ -204,6 +203,7 @@
     "hg_sync_check_disabled": true,
     "import_stage": "PushCommit",
     "imported_cs_id": "fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622",
+    "mark_not_synced_mapping": null,
     "merged_cs_id": * (glob)
     "move_bookmark_commits_done": 4,
     "phab_check_disabled": true,

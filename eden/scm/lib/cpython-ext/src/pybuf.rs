@@ -62,7 +62,7 @@ unsafe fn is_safe_type(obj: &PyObject) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
 
 impl<T: Copy> SimplePyBuf<T> {

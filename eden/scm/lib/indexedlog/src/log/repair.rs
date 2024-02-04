@@ -276,7 +276,7 @@ impl OpenOptions {
             // Replace the metadata to an empty state.
             let meta = LogMetadata::new_with_primary_len(PRIMARY_START_OFFSET);
             let meta_path = dir.join(META_FILE);
-            meta.write_file(&meta_path, self.fsync)?;
+            meta.write_file(meta_path, self.fsync)?;
 
             // Replace the primary log.
             let primary_path = dir.join(PRIMARY_FILE);

@@ -7,23 +7,25 @@
 
 import type {CommitInfo, Hash} from './types';
 
+import {atom, useSetAtom} from 'jotai';
+import {atomFamily} from 'jotai/utils';
 import {useEffect, useState} from 'react';
-import {atom, useSetRecoilState} from 'recoil';
 
-export const highlightedCommits = atom<Set<Hash>>({
-  key: 'highlightedCommits',
-  default: new Set(),
-});
+export const highlightedCommits = atom<Set<Hash>>(new Set<Hash>());
+
+export const isHighlightedCommit = atomFamily((hash: Hash) =>
+  atom(get => get(highlightedCommits).has(hash)),
+);
 
 export function HighlightCommitsWhileHovering({
   toHighlight,
   children,
   ...rest
 }: {
-  toHighlight: Array<CommitInfo>;
+  toHighlight: Array<CommitInfo | Hash>;
   children: React.ReactNode;
 } & React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
-  const setHighlighted = useSetRecoilState(highlightedCommits);
+  const setHighlighted = useSetAtom(highlightedCommits);
   const [isSourceOfHighlight, setIsSourceOfHighlight] = useState(false);
 
   useEffect(() => {
@@ -39,7 +41,13 @@ export function HighlightCommitsWhileHovering({
     <div
       {...rest}
       onMouseOver={() => {
-        setHighlighted(new Set(toHighlight.map(commit => commit.hash)));
+        setHighlighted(
+          new Set(
+            toHighlight.map(commitOrHash =>
+              typeof commitOrHash === 'string' ? commitOrHash : commitOrHash.hash,
+            ),
+          ),
+        );
         setIsSourceOfHighlight(true);
       }}
       onMouseOut={() => {

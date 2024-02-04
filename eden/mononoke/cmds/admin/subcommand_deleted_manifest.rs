@@ -18,6 +18,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -34,9 +36,10 @@ use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use manifest::PathOrPrefix;
 use mercurial_derivation::DeriveHgChangeset;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
@@ -102,15 +105,16 @@ pub async fn subcommand_deleted_manifest<'a>(
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     match sub_matches.subcommand() {
         (COMMAND_MANIFEST, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let path = match matches.value_of(ARG_PATH).unwrap() {
-                "" => None,
-                p => MPath::new(p).map(Some)?,
-            };
+            let path = MPath::new(matches.value_of(ARG_PATH).unwrap())?;
             let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_manifest(ctx, repo, cs_id, path).await?;
             Ok(())
@@ -147,7 +151,7 @@ async fn subcommand_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-    prefix: Option<MPath>,
+    prefix: MPath,
 ) -> Result<(), Error> {
     let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
     debug!(ctx.logger(), "ROOT Deleted Manifest V2 {:?}", root_manifest,);
@@ -161,7 +165,7 @@ async fn subcommand_manifest(
         .await?;
     entries.sort_by_key(|(path, _)| path.clone());
     for (path, mf_id) in entries {
-        println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
+        println!("{}/ {:?}", MPath::display_opt(&path), mf_id);
     }
     Ok(())
 }
@@ -185,7 +189,7 @@ async fn get_file_changes(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-) -> Result<(Vec<MPath>, Vec<MPath>), Error> {
+) -> Result<(Vec<NonRootMPath>, Vec<NonRootMPath>), Error> {
     let paths_added_fut = async {
         let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
         let paths = bonsai
@@ -233,7 +237,7 @@ async fn verify_single_commit(
         let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
         let entries: BTreeSet<_> = root_manifest
             .list_all_entries(&ctx, repo.repo_blobstore())
-            .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
+            .try_filter_map(|(path, ..)| async move { Ok(Option::<NonRootMPath>::from(path)) })
             .try_collect()
             .await?;
         Ok(entries)

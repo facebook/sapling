@@ -16,8 +16,7 @@ import random
 import sys
 import time
 
-from edenscm import pycompat, store
-from hghave import require
+from sapling import pycompat, store
 
 
 try:

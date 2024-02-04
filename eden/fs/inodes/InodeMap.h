@@ -36,6 +36,11 @@ class TreeInode;
 class ParentInodeInfo;
 class ReloadableConfig;
 
+class EdenStats;
+template <typename T>
+class RefPtr;
+using EdenStatsPtr = RefPtr<EdenStats>;
+
 class InodeMapLock;
 
 /**
@@ -98,7 +103,10 @@ class InodeMap {
  public:
   using PromiseVector = std::vector<folly::Promise<InodePtr>>;
 
-  explicit InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config);
+  explicit InodeMap(
+      EdenMount* mount,
+      std::shared_ptr<ReloadableConfig> config,
+      EdenStatsPtr stats);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = delete;
@@ -723,6 +731,7 @@ class InodeMap {
   EdenMount* const mount_{nullptr};
 
   std::shared_ptr<ReloadableConfig> config_;
+  EdenStatsPtr stats_;
 
   /**
    * The root inode.

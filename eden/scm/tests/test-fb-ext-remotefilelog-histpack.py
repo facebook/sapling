@@ -17,10 +17,9 @@ import unittest
 
 import silenttestrunner
 from bindings import revisionstore
-from edenscm import error, pycompat, ui as uimod, util
-from edenscm.ext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.node import nullid
-from hghave import require
+from sapling import error, pycompat
+from sapling.ext.remotefilelog.metadatastore import unionmetadatastore
+from sapling.node import nullid
 
 
 SMALLFANOUTCUTOFF = int(2**16 / 8)
@@ -291,10 +290,6 @@ class rusthistpacktests(histpacktestsbase, unittest.TestCase):
         )
         unittest.TestCase.__init__(self, *args, **kwargs)
 
-
-# TODO:
-# histpack store:
-# - repack two packs into one
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)

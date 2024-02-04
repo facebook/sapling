@@ -16,6 +16,9 @@ use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::FutureExt;
+use justknobs::test_helpers::with_just_knobs_async;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::RepoConfig;
@@ -24,8 +27,6 @@ use mononoke_types::PrefixTrie;
 use permission_checker::MononokeIdentitySet;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_permission_checker::RepoPermissionChecker;
-use tunables::with_tunables_async;
-use tunables::MononokeTunables;
 
 use crate::AuthorizationContext;
 use crate::RepoWriteOperation;
@@ -174,13 +175,11 @@ async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 async fn test_user_no_draft_enforceent_off(fb: FacebookInit) -> Result<()> {
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {
-        "log_draft_acl_failures".to_string() => true,
-        "enforce_draft_acl".to_string() => false,
-    });
-    with_tunables_async(
-        tunables,
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:mononoke_log_draft_acl_failures".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:mononoke_enforce_draft_acl".to_string() => KnobVal::Bool(false),
+        ]),
         async {
             let ctx = CoreContext::test_mock(fb);
             let checker = Arc::new(TestPermissionChecker {
@@ -227,13 +226,11 @@ async fn test_user_no_draft_enforceent_off(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {
-        "log_draft_acl_failures".to_string() => true,
-        "enforce_draft_acl".to_string() => true,
-    });
-    with_tunables_async(
-        tunables,
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:mononoke_log_draft_acl_failures".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:mononoke_enforce_draft_acl".to_string() => KnobVal::Bool(true),
+        ]),
         async {
             let ctx = CoreContext::test_mock(fb);
             let checker = Arc::new(TestPermissionChecker {
@@ -296,13 +293,11 @@ async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
 // ACLs.
 #[fbinit::test]
 async fn test_user_write_no_draft_access(fb: FacebookInit) -> Result<()> {
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {
-        "log_draft_acl_failures".to_string() => true,
-        "enforce_draft_acl".to_string() => true,
-    });
-    with_tunables_async(
-        tunables,
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:mononoke_log_draft_acl_failures".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:mononoke_enforce_draft_acl".to_string() => KnobVal::Bool(true),
+        ]),
         async {
             let ctx = CoreContext::test_mock(fb);
             let checker = Arc::new(TestPermissionChecker {

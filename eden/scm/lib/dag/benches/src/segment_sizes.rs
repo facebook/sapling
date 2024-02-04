@@ -52,7 +52,7 @@ pub fn main() {
     // with some different segment sizes.
     for segment_size in [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 32, 64, 128] {
         let dag_dir = tempdir().unwrap();
-        let mut dag = IdDag::open(&dag_dir.path()).unwrap();
+        let mut dag = IdDag::open(dag_dir.path()).unwrap();
         dag.set_new_segment_size(segment_size);
         let segment_len = dag
             .build_segments_from_prepared_flat_segments(&prepared_segments)
@@ -68,7 +68,7 @@ pub fn main() {
         bench(
             format!("ancestor calcuation segment_size={}", segment_size),
             || {
-                let dag = IdDag::open(&dag_dir.path()).unwrap();
+                let dag = IdDag::open(dag_dir.path()).unwrap();
                 elapsed(|| {
                     for i in (0..parents.len() as u64).step_by(10079) {
                         for j in (1..parents.len() as u64).step_by(2351) {

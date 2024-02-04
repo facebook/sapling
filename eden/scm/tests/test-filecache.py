@@ -1,14 +1,8 @@
 from __future__ import absolute_import, print_function
 
 import os
-import subprocess
-import sys
 
-from edenscm import extensions, hg, localrepo, ui as uimod, util, vfs as vfsmod
-from hghave import require
-
-
-require(["py2"])
+from sapling import localrepo, util, vfs as vfsmod
 
 
 try:
@@ -81,7 +75,7 @@ def basic(repo):
     # hopefully st_mtime doesn't change as well so this doesn't use the cache
     # because of inode change
     f = vfsmod.vfs(".")("x", "w", atomictemp=True)
-    f.write("b")
+    f.write(b"b")
     f.close()
 
     repo.invalidate()
@@ -105,7 +99,7 @@ def basic(repo):
     repo.cached
 
     f = vfsmod.vfs(".")("y", "w", atomictemp=True)
-    f.write("B")
+    f.write(b"B")
     f.close()
 
     repo.invalidate()
@@ -113,10 +107,10 @@ def basic(repo):
     repo.cached
 
     f = vfsmod.vfs(".")("x", "w", atomictemp=True)
-    f.write("c")
+    f.write(b"c")
     f.close()
     f = vfsmod.vfs(".")("y", "w", atomictemp=True)
-    f.write("C")
+    f.write(b"C")
     f.close()
 
     repo.invalidate()

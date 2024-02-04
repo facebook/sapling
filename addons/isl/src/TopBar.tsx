@@ -6,11 +6,13 @@
  */
 
 import {BugButton} from './BugButton';
+import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
+import {ShelvedChangesMenu} from './ShelvedChanges';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {tracker} from './analytics';
 import {DebugToolsButton} from './debug/DebugToolsButton';
@@ -24,6 +26,7 @@ import {
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {clearTrackedCache} from 'shared/LRU';
 
 import './TopBar.css';
 
@@ -39,6 +42,8 @@ export function TopBar() {
         {canPush && <PullButton />}
         <CwdSelector />
         <DownloadCommitsTooltipButton />
+        <ShelvedChangesMenu />
+        <BulkActionsMenu />
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
@@ -69,6 +74,7 @@ function RefreshButton() {
           tracker.track('ClickedRefresh');
           clearOptimisticState();
           serverAPI.postMessage({type: 'refresh'});
+          clearTrackedCache();
         }}
         data-testid="refresh-button">
         <Icon icon="refresh" />

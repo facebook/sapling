@@ -1,0 +1,48 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyworkingcopy",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                    "pyedenclient": {"optional": True},
+                },
+            },
+            "features": {
+                "default": [],
+                "eden": [
+                    "pyedenclient",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["eden"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:parking_lot",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/io/term/logger:termlogger",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/sparse:sparse",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/lib/workingcopy/repostate:repostate",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
+        "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
+        "//eden/scm/saplingnative/bindings/modules/pystatus:pystatus",
+        "//eden/scm/saplingnative/bindings/modules/pytreestate:pytreestate",
+    ],
+)

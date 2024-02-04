@@ -1,0 +1,539 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "checkout",
+    srcs = ["CheckoutTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/prjfs:prjfs",
+        "//eden/fs/service:pretty_printers",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/store:store",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:inode_unloader",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:utils",
+        "//folly:conv",
+        "//folly/chrono:conv",
+        "//folly/container:array",
+        "//folly/executors:manual_executor",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "dematerialize",
+    srcs = ["DematerializeTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:testutil",
+        "//eden/fs/service:pretty_printers",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly/executors:manual_executor",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "diff",
+    srcs = ["DiffTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model/git:gitignore",
+        "//eden/fs/store:store",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:stored_object",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//folly:exception_wrapper",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "eden_dispatcher",
+    srcs = ["EdenDispatcherTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:stored_object",
+        "//eden/fs/testharness:test_mount",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "eden_mount",
+    srcs = ["EdenMountTest.cpp"],
+    # TODO: This doesn't pass on macOS yet, remove once fixed.
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:windows",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/journal:journal",
+        "//eden/fs/model:testutil",
+        "//eden/fs/store:store",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:fake_fuse",
+        "//eden/fs/testharness:fake_privhelper",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//folly:file",
+        "//folly:range",
+        "//folly:scope_guard",
+        "//folly/chrono:conv",
+        "//folly/executors:manual_executor",
+        "//folly/futures:core",
+        "//folly/futures:future_splitter",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "file_inode",
+    srcs = ["FileInodeTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:store",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:utils",
+        "//folly:range",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "fuse",
+    srcs = ["FuseTest.cpp"],
+    # TODO: This doesn't pass on macOS yet, remove once fixed.
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:fake_fuse",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/utils:utils",
+        "//folly/executors:manual_executor",
+        "//folly/io/async:async_base",
+        "//folly/io/async:scoped_event_base_thread",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "glob_node",
+    srcs = ["GlobNodeTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:testutil",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/utils:glob",
+        "//folly:conv",
+        "//folly:exception",
+        "//folly:range",
+        "//folly/experimental:test_util",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "inode_base",
+    srcs = ["InodeBaseTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "virtual_inode_loader",
+    srcs = ["VirtualInodeLoaderTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//folly:exception",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "inode_map",
+    srcs = ["InodeMapTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:utils",
+        "//folly:string",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "inode_ptr",
+    srcs = ["InodePtrTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "inode_table",
+    srcs = ["InodeTableTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/telemetry:telemetry",
+        "//folly/chrono:conv",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "inode_timestamps",
+    srcs = ["InodeTimestampsTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inode_metadata",
+        "//folly:portability",
+        "//folly:utility",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "inode_metadata",
+    srcs = ["InodeMetadataTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inode_metadata",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "journal_update",
+    srcs = ["JournalUpdateTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/journal:journal",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_library(
+    name = "overlay_test_util",
+    srcs = ["OverlayTestUtil.cpp"],
+    headers = ["OverlayTestUtil.h"],
+    exported_deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/utils:path",
+    ],
+)
+
+cpp_unittest(
+    name = "overlay",
+    srcs = ["OverlayTest.cpp"],
+    env = {
+        "RESOURCE_OVERLAY_V2": "$(location //eden/test-data:overlay-v2)/overlay-v2.tgz",
+    },
+    supports_static_listing = False,
+    deps = [
+        ":overlay_test_util",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/model:testutil",
+        "//eden/fs/service:pretty_printers",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:process",
+        "//folly:exception",
+        "//folly:expected",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/executors:cpu_thread_pool_executor",
+        "//folly/experimental:test_util",
+        "//folly/logging/test:test_handler",
+        "//folly/portability:gtest",
+        "//folly/synchronization/test:barrier",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "overlay_file",
+    srcs = ["OverlayFileTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":overlay_test_util",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/testharness:test_util",
+        "//folly:exception",
+        "//folly:expected",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "remove",
+    srcs = ["RemoveTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "rename",
+    srcs = ["RenameTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:utils",
+        "//folly:string",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "symlink",
+    srcs = ["SymlinkTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:utils",
+        "//folly:string",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "traverse",
+    srcs = ["TraverseTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "tree_inode",
+    srcs = ["TreeInodeTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:model",
+        "//eden/fs/nfs:dirlist",
+        "//eden/fs/prjfs:prjfs",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:utils",
+        "//folly:exception",
+        "//folly:random",
+        "//folly/executors:manual_executor",
+        "//folly/portability:gflags",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "virtual_inode",
+    srcs = ["VirtualInodeTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/digest:blake3_hash",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:model",
+        "//eden/fs/prjfs:prjfs",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:inode_unloader",
+        "//eden/fs/testharness:test_checks",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:utils",
+        "//folly:exception",
+        "//folly:random",
+        "//folly/executors:manual_executor",
+        "//folly/portability:gflags",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "unload",
+    srcs = ["UnloadTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:inode_unloader",
+        "//eden/fs/testharness:test_mount",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_binary(
+    name = "make_gold_master_overlay",
+    srcs = ["make_gold_master_overlay.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:case_sensitivity",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_benchmark(
+    name = "overlay_benchmark",
+    srcs = ["OverlayBenchmark.cpp"],
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//folly:stop_watch",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_benchmark(
+    name = "overlay_dir_serializer_benchmark",
+    srcs = ["OverlayDirSerializerBenchmark.cpp"],
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//folly:stop_watch",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)

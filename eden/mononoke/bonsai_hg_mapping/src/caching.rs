@@ -35,7 +35,6 @@ use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use stats::prelude::*;
-use tunables::tunables;
 
 use super::BonsaiHgMapping;
 use super::BonsaiHgMappingEntry;
@@ -140,29 +139,26 @@ impl CachingBonsaiHgMapping {
     pub fn new(
         mapping: Arc<dyn BonsaiHgMapping>,
         cache_handler_factory: CacheHandlerFactory,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        Ok(Self {
             mapping,
             cachelib: cache_handler_factory.cachelib(),
             memcache: cache_handler_factory.memcache(),
-            keygen: CachingBonsaiHgMapping::create_key_gen(),
-        }
+            keygen: CachingBonsaiHgMapping::create_key_gen()?,
+        })
     }
 
     pub fn new_test(mapping: Arc<dyn BonsaiHgMapping>) -> Self {
-        Self::new(mapping, CacheHandlerFactory::Mocked)
+        Self::new(mapping, CacheHandlerFactory::Mocked).unwrap()
     }
 
-    fn create_key_gen() -> KeyGen {
+    fn create_key_gen() -> Result<KeyGen> {
         let key_prefix = "scm.mononoke.bonsai_hg_mapping";
 
-        let sitever = if tunables().bonsai_hg_mapping_sitever().unwrap_or_default() > 0 {
-            tunables().bonsai_hg_mapping_sitever().unwrap_or_default() as u32
-        } else {
-            thrift::MC_SITEVER as u32
-        };
+        let sitever =
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:bonsai_hg_mapping", None)?;
 
-        KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever)
+        Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }
 }
 

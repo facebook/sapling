@@ -26,13 +26,21 @@ constexpr PathComponentPiece kMountdSocketName{"mountd.socket"_pc};
 EdenStateDir::EdenStateDir(AbsolutePathPiece path)
     : path_(path), lockPath_(path + PathComponentPiece(kLockFileName)) {}
 
-EdenStateDir::~EdenStateDir() {}
+EdenStateDir::~EdenStateDir() = default;
 
 bool EdenStateDir::acquireLock() {
   auto lockFile =
       folly::File(lockPath_.value(), O_WRONLY | O_CREAT | O_CLOEXEC);
-  if (!lockFile.try_lock()) {
-    return false;
+  try {
+    if (!lockFile.try_lock()) {
+      return false;
+    }
+  } catch (const std::system_error& ex) {
+    throw std::runtime_error(fmt::format(
+        "Error acquiring lock: {}. Another EdenFS process may have raced with "
+        "this one. Try `eden start --wait` to check if EdenFS is starting and "
+        "watch it's progress.",
+        ex.what()));
   }
 
   takeoverLock(std::move(lockFile));

@@ -65,12 +65,11 @@ impl Overstrike {
 /// string.
 fn backspace(out: &mut String) {
     let mut cursor = GraphemeCursor::new(out.len(), out.len(), true);
-    if let Ok(Some(offset)) = cursor.prev_boundary(&out, 0) {
+    if let Ok(Some(offset)) = cursor.prev_boundary(out, 0) {
         if out[offset..]
             .chars()
             .next()
-            .map(char::is_control)
-            .unwrap_or(true)
+            .map_or(true, char::is_control)
         {
             out.push('\x08');
         } else {

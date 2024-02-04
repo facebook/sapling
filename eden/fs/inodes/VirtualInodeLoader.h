@@ -30,7 +30,7 @@ class VirtualInodeLoader {
   VirtualInodeLoader() = default;
 
   // Arrange to load the inode for the input path
-  folly::Future<VirtualInode> load(RelativePathPiece path) {
+  folly::SemiFuture<VirtualInode> load(RelativePathPiece path) {
     VirtualInodeLoader* parent = this;
 
     // Build out the tree if VirtualInodeLoaders to match the input path
@@ -46,14 +46,7 @@ class VirtualInodeLoader {
     // is the root.
 
     parent->promises_.emplace_back();
-    return parent->promises_.back().getFuture();
-  }
-
-  // Arrange to load the inode for the input path, given
-  // a stringy input.  If the path is not well formed then
-  // the error is recorded in the returned future.
-  folly::Future<VirtualInode> load(folly::StringPiece path) {
-    return folly::makeFutureWith([&] { return load(RelativePathPiece(path)); });
+    return parent->promises_.back().getSemiFuture();
   }
 
   // Called to signal that a load attempt has completed.
@@ -61,7 +54,7 @@ class VirtualInodeLoader {
   // this inode to be loaded.
   // In the failure case this will propagate the failure to
   // any children of this node, too.
-  void loaded(
+  ImmediateFuture<folly::Unit> loaded(
       folly::Try<VirtualInode> inodeTreeTry,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& store,
@@ -72,6 +65,8 @@ class VirtualInodeLoader {
 
     auto isTree = inodeTreeTry.hasValue() ? inodeTreeTry->isDirectory() : false;
 
+    std::vector<ImmediateFuture<folly::Unit>> futures;
+    futures.reserve(children_.size());
     for (auto& entry : children_) {
       auto& childName = entry.first;
       auto& childLoader = entry.second;
@@ -79,34 +74,39 @@ class VirtualInodeLoader {
 
       if (inodeTreeTry.hasException()) {
         // The attempt failed, so propagate the failure to our children
-        childLoader->loaded(inodeTreeTry, childPath, store, fetchContext);
+        futures.push_back(
+            childLoader->loaded(inodeTreeTry, childPath, store, fetchContext));
       } else if (!isTree) {
         // This inode is not a tree but we're trying to load
         // children; generate failures for these
-        childLoader->loaded(
+        futures.push_back(childLoader->loaded(
             folly::Try<VirtualInode>(
                 folly::make_exception_wrapper<std::system_error>(
                     ENOENT, std::generic_category())),
             childPath,
             store,
-            fetchContext);
-        continue;
+            fetchContext));
       } else {
-        makeImmediateFutureWith([&] {
-          return inodeTreeTry.value().getOrFindChild(
-              childName, childPath, store, fetchContext);
-        })
-            .thenTry([loader = std::move(childLoader),
+        futures.push_back(
+            makeImmediateFutureWith([&] {
+              return inodeTreeTry.value().getOrFindChild(
+                  childName, childPath, store, fetchContext);
+            })
+                .thenTry([loader = std::move(childLoader),
+                          childPath,
+                          store,
+                          fetchContext = fetchContext.copy()](
+                             folly::Try<VirtualInode>&& childInodeTreeTry) {
+                  return loader->loaded(
+                      std::move(childInodeTreeTry),
                       childPath,
                       store,
-                      fetchContext = fetchContext.copy()](
-                         folly::Try<VirtualInode>&& childInodeTreeTry) {
-              loader->loaded(childInodeTreeTry, childPath, store, fetchContext);
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+                      fetchContext);
+                }));
       }
     }
+
+    return collectAllSafe(std::move(futures)).unit();
   }
 
  private:
@@ -157,7 +157,7 @@ auto applyToVirtualInode(
     Func func,
     const std::shared_ptr<ObjectStore>& store,
     const ObjectFetchContextPtr& fetchContext) {
-  using FuncRet = folly::invoke_result_t<Func&, VirtualInode&>;
+  using FuncRet = folly::invoke_result_t<Func&, VirtualInode, RelativePath>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
   detail::VirtualInodeLoader loader;
@@ -168,17 +168,25 @@ auto applyToVirtualInode(
   std::vector<folly::SemiFuture<Result>> results;
   results.reserve(paths.size());
   for (const auto& path : paths) {
-    results.emplace_back(loader.load(path).thenValue(
-        [cb, path](VirtualInode&& inode) { return (*cb)(inode); }));
+    auto result = folly::makeSemiFutureWith([&] {
+      auto relPath = RelativePathPiece{path};
+      return loader.load(relPath).deferValue(
+          [cb, relPath = relPath.copy()](VirtualInode&& inode) mutable {
+            return (*cb)(std::move(inode), std::move(relPath));
+          });
+    });
+    results.push_back(std::move(result));
   }
 
-  loader.loaded(
-      folly::Try<VirtualInode>(VirtualInode{std::move(rootInode)}),
-      RelativePath(),
-      store,
-      fetchContext);
-
-  return results;
+  return loader
+      .loaded(
+          folly::Try<VirtualInode>(VirtualInode{std::move(rootInode)}),
+          RelativePath(),
+          store,
+          fetchContext)
+      .thenValue([results = std::move(results)](auto&&) mutable {
+        return folly::collectAll(std::move(results));
+      });
 }
 
 } // namespace facebook::eden

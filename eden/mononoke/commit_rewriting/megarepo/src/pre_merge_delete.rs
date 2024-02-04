@@ -6,9 +6,8 @@
  */
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use context::CoreContext;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
 
 use crate::chunking::Chunker;
@@ -16,6 +15,7 @@ use crate::common::delete_files_in_chunks;
 use crate::common::ChangesetArgsFactory;
 use crate::working_copy::get_changed_working_copy_paths;
 use crate::working_copy::get_working_copy_paths;
+use crate::Repo;
 
 /// A struct containing pre-merge delete information
 /// Pre-merge delete commits look like this:
@@ -44,9 +44,9 @@ pub struct PreMergeDelete {
 /// See also <https://fb.quip.com/jPbqA3kK3qCi> for strategy and discussion
 pub async fn create_pre_merge_delete<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
-    chunker: Chunker<MPath>,
+    chunker: Chunker<NonRootMPath>,
     delete_commits_changeset_args_factory: impl ChangesetArgsFactory,
     base_cs_id: Option<ChangesetId>,
 ) -> Result<PreMergeDelete, Error> {
@@ -100,17 +100,17 @@ mod test {
             mark_public: false,
         };
 
-        let one = MPath::new("1").unwrap();
-        let ten = MPath::new("10").unwrap();
-        let two = MPath::new("2").unwrap();
+        let one = NonRootMPath::new("1").unwrap();
+        let ten = NonRootMPath::new("10").unwrap();
+        let two = NonRootMPath::new("2").unwrap();
 
         // Arrage everything into [[1], [...], [10]]
         let chunker = Box::new({
             cloned!(one, ten);
             move |mpaths| {
-                let mut v1: Vec<MPath> = vec![];
-                let mut v2: Vec<MPath> = vec![];
-                let mut v3: Vec<MPath> = vec![];
+                let mut v1: Vec<NonRootMPath> = vec![];
+                let mut v2: Vec<NonRootMPath> = vec![];
+                let mut v3: Vec<NonRootMPath> = vec![];
 
                 for mpath in mpaths {
                     if mpath == one {
@@ -138,21 +138,23 @@ mod test {
         let delete_commit_0 = delete_commits[0];
         let delete_commit_1 = delete_commits[1];
 
-        let working_copy_0: HashSet<MPath> = get_working_copy_paths(&ctx, &repo, delete_commit_0)
-            .await
-            .unwrap()
-            .into_iter()
-            .collect();
+        let working_copy_0: HashSet<NonRootMPath> =
+            get_working_copy_paths(&ctx, &repo, delete_commit_0)
+                .await
+                .unwrap()
+                .into_iter()
+                .collect();
 
         assert!(!working_copy_0.contains(&one));
         assert!(working_copy_0.contains(&two));
         assert!(working_copy_0.contains(&ten));
 
-        let working_copy_1: HashSet<MPath> = get_working_copy_paths(&ctx, &repo, delete_commit_1)
-            .await
-            .unwrap()
-            .into_iter()
-            .collect();
+        let working_copy_1: HashSet<NonRootMPath> =
+            get_working_copy_paths(&ctx, &repo, delete_commit_1)
+                .await
+                .unwrap()
+                .into_iter()
+                .collect();
 
         assert!(!working_copy_1.contains(&one));
         assert!(!working_copy_1.contains(&two));
@@ -204,16 +206,16 @@ mod test {
             .commit()
             .await?;
 
-        let changed_path = MPath::new("changed")?;
-        let added_path = MPath::new("added")?;
-        let added2_path = MPath::new("added2")?;
+        let changed_path = NonRootMPath::new("changed")?;
+        let added_path = NonRootMPath::new("added")?;
+        let added2_path = NonRootMPath::new("added2")?;
 
         let chunker = Box::new({
             cloned!(changed_path, added_path);
             move |mpaths| {
-                let mut v1: Vec<MPath> = vec![];
-                let mut v2: Vec<MPath> = vec![];
-                let mut v3: Vec<MPath> = vec![];
+                let mut v1: Vec<NonRootMPath> = vec![];
+                let mut v2: Vec<NonRootMPath> = vec![];
+                let mut v3: Vec<NonRootMPath> = vec![];
 
                 for mpath in mpaths {
                     if mpath == changed_path {
@@ -246,21 +248,23 @@ mod test {
         let delete_commit_0 = delete_commits[0];
         let delete_commit_1 = delete_commits[1];
 
-        let working_copy_0: HashSet<MPath> = get_working_copy_paths(&ctx, &repo, delete_commit_0)
-            .await
-            .unwrap()
-            .into_iter()
-            .collect();
+        let working_copy_0: HashSet<NonRootMPath> =
+            get_working_copy_paths(&ctx, &repo, delete_commit_0)
+                .await
+                .unwrap()
+                .into_iter()
+                .collect();
 
         assert!(!working_copy_0.contains(&changed_path));
         assert!(working_copy_0.contains(&added_path));
         assert!(working_copy_0.contains(&added2_path));
 
-        let working_copy_1: HashSet<MPath> = get_working_copy_paths(&ctx, &repo, delete_commit_1)
-            .await
-            .unwrap()
-            .into_iter()
-            .collect();
+        let working_copy_1: HashSet<NonRootMPath> =
+            get_working_copy_paths(&ctx, &repo, delete_commit_1)
+                .await
+                .unwrap()
+                .into_iter()
+                .collect();
 
         assert!(!working_copy_1.contains(&changed_path));
         assert!(!working_copy_1.contains(&added_path));

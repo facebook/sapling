@@ -9,13 +9,11 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
-use std::path::PathBuf;
 
 #[cfg(unix)]
 use once_cell::sync::Lazy;
 
 use crate::errors::IOContext;
-use crate::errors::IOResult;
 
 #[cfg(unix)]
 static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
@@ -30,16 +28,16 @@ pub fn apply_umask(mode: u32) -> u32 {
     mode & !*UMASK
 }
 
-pub fn atomic_write(path: &Path, op: impl FnOnce(&mut File) -> io::Result<()>) -> IOResult<File> {
+pub fn atomic_write(path: &Path, op: impl FnOnce(&mut File) -> io::Result<()>) -> io::Result<File> {
     atomicfile::atomic_write(path, 0o644, false, op).path_context("error atomic writing file", path)
 }
 
 /// Open a path for atomic writing.
-pub fn atomic_open(path: &Path) -> IOResult<atomicfile::AtomicFile> {
+pub fn atomic_open(path: &Path) -> io::Result<atomicfile::AtomicFile> {
     atomicfile::AtomicFile::open(path, 0o644, false).path_context("error atomic opening file", path)
 }
 
-pub fn open(path: impl AsRef<Path>, mode: &str) -> IOResult<File> {
+pub fn open(path: impl AsRef<Path>, mode: &str) -> io::Result<File> {
     let path = path.as_ref();
 
     let mut opts = OpenOptions::new();
@@ -64,19 +62,11 @@ pub fn open(path: impl AsRef<Path>, mode: &str) -> IOResult<File> {
     opts.open(path).path_context("error opening file", path)
 }
 
-pub fn create(path: impl AsRef<Path>) -> IOResult<File> {
+pub fn create(path: impl AsRef<Path>) -> io::Result<File> {
     open(path, "wct")
 }
 
-pub fn read(path: impl AsRef<Path>) -> IOResult<Vec<u8>> {
-    std::fs::read(path.as_ref()).path_context("error reading file", path.as_ref())
-}
-
-pub fn read_to_string(path: impl AsRef<Path>) -> IOResult<String> {
-    std::fs::read_to_string(path.as_ref()).path_context("error reading file", path.as_ref())
-}
-
-pub fn exists(path: impl AsRef<Path>) -> IOResult<Option<std::fs::Metadata>> {
+pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
     match std::fs::metadata(path.as_ref()) {
         Ok(m) => Ok(Some(m)),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
@@ -84,8 +74,20 @@ pub fn exists(path: impl AsRef<Path>) -> IOResult<Option<std::fs::Metadata>> {
     }
 }
 
-pub fn read_link(path: impl AsRef<Path>) -> IOResult<PathBuf> {
-    std::fs::read_link(path.as_ref()).path_context("error reading link", path.as_ref())
+pub fn unlink_if_exists(path: impl AsRef<Path>) -> io::Result<()> {
+    match std::fs::remove_file(path.as_ref()) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(err).path_context("error deleting file", path.as_ref()),
+    }
+}
+
+pub fn read_to_string_if_exists(path: impl AsRef<Path>) -> io::Result<Option<String>> {
+    match std::fs::read_to_string(path.as_ref()) {
+        Ok(contents) => Ok(Some(contents)),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(err).path_context("error reading file", path.as_ref()),
+    }
 }
 
 #[cfg(test)]

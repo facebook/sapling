@@ -125,7 +125,8 @@ Test that multiple profiles do not clobber each others includes
 
   $ newclientrepo
   $ cat > s1.sparse << 'EOF'
-  > !glob:a*.sparse
+  > [exclude]
+  > glob:a*.sparse
   > [metadata]
   > version: 2
   > EOF
@@ -140,7 +141,8 @@ Test that multiple profiles do not clobber each others includes
   > version: 2
   > EOF
   $ cat > s4.sparse << 'EOF'
-  > !glob:*b.sparse
+  > [exclude]
+  > glob:*b.sparse
   > [metadata]
   > version: 2
   > EOF

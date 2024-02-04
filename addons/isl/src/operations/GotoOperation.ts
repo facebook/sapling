@@ -5,60 +5,41 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {Hash} from '../types';
+import type {Dag} from '../previews';
+import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {CommitPreview} from '../previews';
-import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class GotoOperation extends Operation {
-  constructor(private destination: Hash) {
+  constructor(private destination: SucceedableRevset | ExactRevset) {
     super('GotoOperation');
   }
 
   static opName = 'Goto';
 
   getArgs() {
-    const args = ['goto', '--rev', SucceedableRevset(this.destination)];
+    const args = ['goto', '--rev', this.destination];
     return args;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const headCommitHash = context.headCommit?.hash;
-    if (
-      headCommitHash === latestSuccessor(context, this.destination) ||
-      context.headCommit?.remoteBookmarks?.includes(this.destination)
-    ) {
-      // head is destination => the goto completed
-      return undefined;
+  optimisticDag(dag: Dag): Dag {
+    const headCommitHash = dag.resolve('.')?.hash;
+    if (headCommitHash == null) {
+      return dag;
     }
-
-    const func: ApplyPreviewsFuncType = (tree, _previewType) => {
-      if (
-        tree.info.hash === latestSuccessor(context, this.destination) ||
-        tree.info.remoteBookmarks?.includes(this.destination)
-      ) {
-        const modifiedInfo = {...tree.info, isHead: true};
-        // this is the commit we're moving to
-        return {
-          info: modifiedInfo,
-          children: tree.children,
-          previewType: CommitPreview.GOTO_DESTINATION,
-        };
-      } else if (tree.info.hash === headCommitHash) {
-        const modifiedInfo = {...tree.info, isHead: false};
-        // this is the previous head commit, where we used to be
-        return {
-          info: modifiedInfo,
-          children: tree.children,
-          previewType: CommitPreview.GOTO_PREVIOUS_LOCATION,
-        };
-      } else {
-        return {info: tree.info, children: tree.children};
-      }
-    };
-    return func;
+    const dest = dag.resolve(latestSuccessor(dag, this.destination));
+    const src = dag.get(headCommitHash);
+    if (dest == null || src == null || dest.hash === src.hash) {
+      return dag;
+    }
+    return dag.replaceWith([src.hash, dest.hash], (h, c) => {
+      const isDest = h === dest.hash;
+      const previewType = isDest
+        ? CommitPreview.GOTO_DESTINATION
+        : CommitPreview.GOTO_PREVIOUS_LOCATION;
+      return c?.merge({isHead: isDest, previewType});
+    });
   }
 }

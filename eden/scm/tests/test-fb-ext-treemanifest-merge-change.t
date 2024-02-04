@@ -17,7 +17,7 @@ ondisk structures.
   $ hginit repo
   $ cd repo
   $ enable pushrebase
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  $ setconfig extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   $ setconfig treemanifest.server=True treemanifest.treeonly=True remotefilelog.server=True
 
 Make some commits that include a merge.  In the merge commit, we modify a directory that is the same on both sides.

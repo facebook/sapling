@@ -32,14 +32,14 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
-#include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/async/ServerPublisherStream.h>
 #include <thrift/lib/cpp2/async/ServerStream.h>
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
+#include <csignal>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
@@ -81,7 +81,9 @@
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
+#include "eden/fs/utils/EdenTaskQueue.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/NfsSocket.h"
@@ -101,7 +103,6 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/notifications/CommandNotifier.h"
 #include "eden/fs/takeover/TakeoverClient.h"
-#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
 #endif
 
@@ -338,8 +339,8 @@ class EdenServer::ThriftServerEventHandler
    * Return a Future that will be fulfilled once the thrift server is bound to
    * its socket and is ready to accept conenctions.
    */
-  Future<Unit> getThriftRunningFuture() {
-    return runningPromise_.getFuture();
+  folly::SemiFuture<Unit> getThriftRunningFuture() {
+    return runningPromise_.getSemiFuture();
   }
 
  private:
@@ -386,8 +387,14 @@ EdenServer::EdenServer(
           std::move(edenStats),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
+          std::make_shared<folly::CPUThreadPoolExecutor>(
+              edenConfig->numFsChannelThreads.getValue(),
+              std::make_unique<EdenTaskQueue>(
+                  edenConfig->maxFsChannelInflightRequests.getValue()),
+              std::make_unique<folly::NamedThreadFactory>(
+                  "FsChannelThreadPool")),
           std::make_shared<UnixClock>(),
-          std::make_shared<ProcessNameCache>(),
+          std::make_shared<ProcessInfoCache>(),
           structuredLogger_,
           std::move(hiveLogger),
           config_,
@@ -395,7 +402,9 @@ EdenServer::EdenServer(
           mainEventBase_,
           getPlatformNotifier(config_, structuredLogger_, version),
           FLAGS_enable_fault_injection)},
-      blobCache_{BlobCache::create(serverState_->getReloadableConfig())},
+      blobCache_{BlobCache::create(
+          serverState_->getReloadableConfig(),
+          serverState_->getStats().copy())},
       treeCache_{TreeCache::create(serverState_->getReloadableConfig())},
       version_{std::move(version)},
       progressManager_{
@@ -758,7 +767,7 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       config.enableNfsCrawlDetection.getValue()) {
     auto interval = config.nfsCrawlInterval.getValue();
     XLOGF(
-        DBG2,
+        DBG4,
         "NFS crawl detection enabled. Using interval = {}ns",
         interval.count());
     detectNfsCrawlTask_.updateInterval(
@@ -860,7 +869,7 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
 
 #endif // !_WIN32
 
-Future<Unit> EdenServer::recover(TakeoverData&& data) {
+ImmediateFuture<Unit> EdenServer::recover(TakeoverData&& data) {
   return recoverImpl(std::move(data))
       .ensure(
           // Mark the server state as RUNNING once we finish setting up the
@@ -874,7 +883,7 @@ Future<Unit> EdenServer::recover(TakeoverData&& data) {
           });
 }
 
-Future<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
+ImmediateFuture<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   auto thriftRunningFuture = createThriftServer();
 
   const auto takeoverPath = edenDir_.getTakeoverSocketPath();
@@ -884,7 +893,7 @@ Future<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   server_->useExistingSocket(takeoverData.thriftSocket.release());
 
   // Remount our mounts from our prepared takeoverData
-  std::vector<Future<Unit>> mountFutures;
+  std::vector<ImmediateFuture<Unit>> mountFutures;
   mountFutures = prepareMountsTakeover(
       std::make_unique<ForegroundStartupLogger>(startupStatusChannel_),
       std::move(takeoverData.mountPoints));
@@ -892,7 +901,7 @@ Future<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   // Return a future that will complete only when all mount points have
   // started and the thrift server is also running.
   mountFutures.emplace_back(std::move(thriftRunningFuture));
-  return folly::collectAllUnsafe(mountFutures).unit();
+  return collectAll(std::move(mountFutures)).unit();
 }
 
 void EdenServer::serve() const {
@@ -1008,9 +1017,16 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
        takeoverData = std::move(takeoverData),
 #endif
        thriftRunningFuture = std::move(thriftRunningFuture)]() mutable {
-        openStorageEngine(*logger);
-
-        std::vector<Future<Unit>> mountFutures;
+        try {
+          // it's important that this be the first thing that happens in this
+          // future. The local store needs to be setup before mounts can be
+          // accessed but also errors here may cause eden to bail out early. We
+          // don't want eden to bail out with partially setup mounts.
+          openStorageEngine(*logger);
+        } catch (const std::exception& ex) {
+          throw LocalStoreOpenError(ex.what());
+        }
+        std::vector<ImmediateFuture<Unit>> mountFutures;
         if (doingTakeover) {
 #ifndef _WIN32
           mountFutures = prepareMountsTakeover(
@@ -1025,7 +1041,7 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
         // Return a future that will complete only when all mount points have
         // started and the thrift server is also running.
         mountFutures.emplace_back(std::move(thriftRunningFuture));
-        return folly::collectAllUnsafe(std::move(mountFutures)).unit();
+        return collectAll(std::move(mountFutures)).unit().semi();
       });
 }
 
@@ -1104,17 +1120,18 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
 void EdenServer::openStorageEngine(StartupLogger& logger) {
   logger.log("Opening local store...");
   folly::stop_watch<std::chrono::milliseconds> watch;
+  serverState_->getFaultInjector().check("open_local_store");
   localStore_->open();
   logger.log(
       "Opened local store in ", watch.elapsed().count() / 1000.0, " seconds.");
 }
 
-std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
+std::vector<ImmediateFuture<Unit>> EdenServer::prepareMountsTakeover(
     shared_ptr<StartupLogger> logger,
     std::vector<TakeoverData::MountInfo>&& takeoverMounts) {
   // Trigger remounting of existing mount points
   // If doingTakeover is true, use the mounts received in TakeoverData
-  std::vector<Future<Unit>> mountFutures;
+  std::vector<ImmediateFuture<Unit>> mountFutures;
 
   if (folly::kIsWindows) {
     NOT_IMPLEMENTED();
@@ -1123,7 +1140,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
   for (auto& info : takeoverMounts) {
     const auto stateDirectory = info.stateDirectory;
     auto mountFuture =
-        makeFutureWith([&] {
+        makeImmediateFutureWith([&] {
           auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{info.mountPath},
               AbsolutePathPiece{info.stateDirectory});
@@ -1131,30 +1148,33 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
           return mount(
               std::move(initialConfig), false, [](auto) {}, std::move(info));
         })
-            .thenTry([logger, mountPath = info.mountPath](
-                         folly::Try<std::shared_ptr<EdenMount>>&& result) {
-              if (result.hasValue()) {
-                logger->log("Successfully took over mount ", mountPath);
-                return makeFuture();
-              } else {
-                incrementStartupMountFailures();
-                logger->warn(
-                    "Failed to perform takeover for ",
-                    mountPath,
-                    ": ",
-                    result.exception().what());
-                return makeFuture<Unit>(std::move(result).exception());
-              }
-            });
+            .thenTry(
+                [logger, mountPath = info.mountPath](
+                    folly::Try<std::shared_ptr<EdenMount>>&& result)
+                    -> ImmediateFuture<folly::Unit> {
+                  if (result.hasValue()) {
+                    logger->log("Successfully took over mount ", mountPath);
+                    return folly::unit;
+                  } else {
+                    incrementStartupMountFailures();
+                    logger->warn(
+                        "Failed to perform takeover for ",
+                        mountPath,
+                        ": ",
+                        result.exception().what());
+                    return makeImmediateFuture<Unit>(
+                        std::move(result).exception());
+                  }
+                });
     mountFutures.push_back(std::move(mountFuture));
   }
 
   return mountFutures;
 }
 
-std::vector<Future<Unit>> EdenServer::prepareMounts(
+std::vector<ImmediateFuture<Unit>> EdenServer::prepareMounts(
     shared_ptr<StartupLogger> logger) {
-  std::vector<Future<Unit>> mountFutures;
+  std::vector<ImmediateFuture<Unit>> mountFutures;
   folly::dynamic dirs = folly::dynamic::object();
   try {
     dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
@@ -1176,7 +1196,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   logger->log("Remounting ", dirs.size(), " mount points...");
 
   for (const auto& client : dirs.items()) {
-    auto mountFuture = makeFutureWith([&] {
+    auto mountFuture = makeImmediateFutureWith([&] {
       auto mountPath = canonicalPath(client.first.stringPiece());
       auto edenClientPath =
           edenDir_.getCheckoutStateDir(client.second.stringPiece());
@@ -1198,7 +1218,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
               auto wl = progressManager_->wlock();
               wl->finishProgress(progressIndex);
               wl->printProgresses(logger);
-              return makeFuture();
+              return ImmediateFuture<folly::Unit>{std::in_place};
             } else {
               incrementStartupMountFailures();
               auto errorMessage = fmt::format(
@@ -1209,7 +1229,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
               auto wl = progressManager_->wlock();
               wl->markFailed(progressIndex);
               wl->printProgresses(logger, errorMessage);
-              return makeFuture<Unit>(std::move(result).exception());
+              return makeImmediateFuture<Unit>(std::move(result).exception());
             }
           });
     });
@@ -1291,7 +1311,9 @@ bool EdenServer::performCleanup() {
           << "edenfs encountered a takeover error, attempting to recover";
       // We do not wait here for the remounts to succeed, and instead will
       // let runServer() drive the mainEventBase loop to finish this call
-      (void)recover(std::move(shutdownValue).value());
+      folly::futures::detachOn(
+          getServerState()->getThreadPool().get(),
+          recover(std::move(shutdownValue).value()).semi());
       return false;
     }
   }
@@ -1524,40 +1546,24 @@ Future<Unit> EdenServer::completeTakeoverStart(
   }
 }
 
-BackingStoreType toBackingStoreType(const std::string& type) {
-  if (type == "git") {
-    return BackingStoreType::GIT;
-  } else if (type == "hg") {
-    return BackingStoreType::HG;
-  } else if (type == "recas") {
-    return BackingStoreType::RECAS;
-  } else if (type == "http") {
-    return BackingStoreType::HTTP;
-  } else if (type == "") {
-    return BackingStoreType::EMPTY;
-  } else {
-    throw std::domain_error(
-        folly::to<std::string>("unsupported backing store type: ", type));
-  }
-}
-
-folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
+ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
     bool readOnly,
     OverlayChecker::ProgressCallback&& progressCallback,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   folly::stop_watch<> mountStopWatch;
 
-  auto backingStore = getBackingStore(
-      toBackingStoreType(initialConfig->getRepoType()),
-      initialConfig->getRepoSource(),
-      *initialConfig);
+  auto bsType = toBackingStoreType(initialConfig->getRepoType());
+  XLOGF(
+      DBG4, "Creating backing store of type: {}", toBackingStoreString(bsType));
+  auto backingStore =
+      getBackingStore(bsType, initialConfig->getRepoSource(), *initialConfig);
 
   auto objectStore = ObjectStore::create(
       backingStore,
       treeCache_,
       getStats().copy(),
-      serverState_->getProcessNameCache(),
+      serverState_->getProcessInfoCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig()->getEdenConfig(),
       initialConfig->getEnableWindowsSymlinks(),
@@ -1591,7 +1597,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
         XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
                   << ew.what();
         mountFinished(edenMount.get(), std::nullopt);
-        return makeFuture<folly::Unit>(std::move(ew));
+        return makeImmediateFuture<folly::Unit>(std::move(ew));
       })
       .thenValue([this,
                   doTakeover,
@@ -1803,11 +1809,11 @@ EdenMountHandle EdenServer::getMount(AbsolutePathPiece mountPath) const {
   return {mount, mount->getRootInodeUnchecked()};
 }
 
-Future<CheckoutResult> EdenServer::checkOutRevision(
+ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
     AbsolutePathPiece mountPath,
     std::string& rootHash,
     std::optional<folly::StringPiece> rootHgManifest,
-    OptionalProcessId clientPid,
+    const ObjectFetchContextPtr& fetchContext,
     StringPiece callerName,
     CheckoutMode checkoutMode) {
   auto mountHandle = getMount(mountPath);
@@ -1823,7 +1829,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     auto rootManifest = hash20FromThrift(rootHgManifest.value());
     edenMount.getObjectStore()
         ->getBackingStore()
-        ->importManifestForRoot(rootId, rootManifest)
+        ->importManifestForRoot(rootId, rootManifest, fetchContext)
         .get();
   }
 
@@ -1836,7 +1842,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
       .checkout(
           mountHandle.getRootInode(),
           rootId,
-          clientPid,
+          fetchContext,
           callerName,
           checkoutMode)
       .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](
@@ -1898,7 +1904,6 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         }
         return std::move(result);
       })
-      .via(getServerState()->getThreadPool().get())
       .ensure([mountHandle] {});
 }
 
@@ -1936,16 +1941,17 @@ EdenServer::getHgQueuedBackingStores() {
   std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};
   {
     auto lockedStores = this->backingStores_.rlock();
-    for (auto entry : *lockedStores) {
+    for (const auto& entry : *lockedStores) {
       // TODO: remove these dynamic casts in favor of a QueryInterface method
-      if (auto store =
+      if (auto hgQueuedBackingStore =
               std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
-        hgBackingStores.emplace(std::move(store));
+        hgBackingStores.emplace(std::move(hgQueuedBackingStore));
       } else if (
-          auto store = std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
-              entry.second)) {
+          auto localStoreCachedBackingStore =
+              std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
+                  entry.second)) {
         auto inner_store = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-            store->getBackingStore());
+            localStoreCachedBackingStore->getBackingStore());
         if (inner_store) {
           // dynamic_pointer_cast returns a copy of the shared pointer, so it is
           // safe to be moved
@@ -1966,7 +1972,7 @@ std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(
   return counters;
 }
 
-Future<Unit> EdenServer::createThriftServer() {
+folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   auto edenConfig = config_->getEdenConfig();
   server_ = make_shared<ThriftServer>();
   server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
@@ -2374,19 +2380,12 @@ void EdenServer::detectNfsCrawl() {
              readDirThreshold]() {
               const auto& mount = mountPointHandle.getEdenMount();
 
-              struct ProcessHierarchyRecord {
-                pid_t pid;
-                pid_t ppid;
-                proc_util::ProcessSimpleName simpleName;
-                ProcessName processName;
-              };
-
               // Information about the processes we've observed accessing the
               // mount and their parents. This represents a subtree of the
               // processes running at the time of crawl detection with edges
               // indicated by the ppid field. The init process (PID 1) is the
               // implicit root of the tree.
-              std::unordered_map<pid_t, ProcessHierarchyRecord> processRecords;
+              std::unordered_map<pid_t, ProcessInfo> processRecords;
 
               // We'll keep track of PIDs known not to be leaves in our tree to
               // simplify traversal below.
@@ -2402,21 +2401,11 @@ void EdenServer::detectNfsCrawl() {
                 // recorded.
                 while (pid > 1 &&
                        processRecords.find(pid) == processRecords.end()) {
-                  auto processName =
-                      serverState->getProcessNameCache()->lookup(pid).get();
-                  auto ppid = proc_util::getParentProcessId(pid).value_or(0);
-                  nonLeafPids.insert(ppid);
-                  processRecords.insert(
-                      {pid,
-                       ProcessHierarchyRecord{
-                           .pid = pid,
-                           .ppid = ppid,
-                           .simpleName =
-                               proc_util::readProcessSimpleName(pid).value_or(
-                                   "<unknown>"),
-                           .processName = processName}});
-
-                  pid = ppid;
+                  auto processInfo =
+                      serverState->getProcessInfoCache()->lookup(pid).get();
+                  nonLeafPids.insert(processInfo.ppid);
+                  processRecords.insert({pid, processInfo});
+                  pid = processInfo.ppid;
                 }
               }
 
@@ -2432,30 +2421,30 @@ void EdenServer::detectNfsCrawl() {
 
                 // Gather hierarchy into a stack so we can log in the order of
                 // "parent -> child -> grandchild".
-                std::vector<ProcessHierarchyRecord> hierarchy;
+                std::vector<std::pair<pid_t, ProcessInfo>> hierarchy;
                 decltype(processRecords)::iterator itr;
                 while (pid > 1 &&
                        (itr = processRecords.find(pid)) !=
                            processRecords.end()) {
                   pid = itr->second.ppid;
-                  hierarchy.push_back(std::move(itr->second));
+                  hierarchy.emplace_back(pid, std::move(itr->second));
                 }
 
                 // Log process hierarchies
-                auto r = std::move(hierarchy.back());
+                auto [p, pi] = std::move(hierarchy.back());
                 hierarchy.pop_back();
-                std::string output = fmt::format(
-                    "[{}({}): {}]", r.simpleName, r.pid, r.processName);
+                std::string output =
+                    fmt::format("[{}({}): {}]", pi.simpleName, p, pi.name);
                 while (!hierarchy.empty()) {
                   fmt::format_to(std::back_inserter(output), " -> ");
-                  r = std::move(hierarchy.back());
+                  auto [child_p, child_pi] = std::move(hierarchy.back());
                   hierarchy.pop_back();
                   fmt::format_to(
                       std::back_inserter(output),
                       "[{}({}): {}]",
-                      r.simpleName,
-                      r.pid,
-                      r.processName);
+                      child_pi.simpleName,
+                      child_p,
+                      child_pi.name);
                 }
                 XLOGF(
                     DBG2,

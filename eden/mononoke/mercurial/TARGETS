@@ -1,0 +1,226 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "mercurial_revlog",
+    srcs = glob(["revlog/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "revlog"},
+    named_deps = {
+        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        ":mercurial_types-mocks",
+        "//common/rust/shed/failure_ext:failure_ext",
+    ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanatizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    test_srcs = glob([
+        "revlog/bundle2/fixtures/*",
+        "revlog/*/*.bin",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:futures-old",
+        "fbsource//third-party/rust:memmap2",
+        "fbsource//third-party/rust:nom-old",
+        "fbsource//third-party/rust:thiserror",
+        ":mercurial_types",
+        "//eden/scm/lib/lz4-pyframe:lz4-pyframe",
+    ],
+)
+
+rust_library(
+    name = "mercurial_types",
+    srcs = glob(["types/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "types"},
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
+    ],
+    test_srcs = glob([
+        "types/src/blobs/*/*.bin",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:percent-encoding",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_distr",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/shed/time_ext:time_ext",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mercurial/types/if:mercurial-thrift-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/types:types",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_library(
+    name = "mercurial_types-mocks",
+    srcs = glob(["types/mocks/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "types/mocks"},
+    deps = [
+        "fbsource//third-party/rust:byteorder",
+        ":mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+)
+
+rust_unittest(
+    name = "mercurial_types-tests",
+    srcs = glob(["types/tests/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "types/mocks"},
+    crate = "mercurial_types_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:quickcheck",
+        ":mercurial_types",
+        ":mercurial_types-mocks",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+)
+
+rust_library(
+    name = "mercurial_bundles",
+    srcs = glob(["bundles/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "bundles"},
+    named_deps = {
+        "bytes-old": "fbsource//third-party/rust:bytes-old",
+        "futures-old": "fbsource//third-party/rust:futures-old",
+        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
+    },
+    test_deps = [
+        "fbcode//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:partial-io",
+        "fbsource//third-party/rust:tokio",
+        ":mercurial_types-mocks",
+        "//common/rust/shed/failure_ext:failure_ext",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+    test_srcs = glob(["bundles/src/fixtures/*"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bufsize-old",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:percent-encoding",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-codec",
+        "fbsource//third-party/rust:tokio-io",
+        ":mercurial_mutation",
+        ":mercurial_types",
+        "//common/rust/shed/async_compression:async_compression",
+        "//common/rust/shed/bytes_ext:bytes_ext",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/limited_async_read:limited_async_read",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/revisionstore:revisionstore_types",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)
+
+rust_library(
+    name = "mercurial_mutation",
+    srcs = glob([
+        "mutation/src/**/*.rs",
+        "mutation/schemas/**/*.sql",
+    ]),
+    autocargo = {"cargo_toml_dir": "mutation"},
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:slog",
+        ":mercurial_types",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial/mutation/if:hg_mutation_entry_thrift-rust",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/types:types",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_unittest(
+    name = "mercurial_mutation_test",
+    srcs = glob(["mutation/test/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "mutation"},
+    crate = "mercurial_mutation_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:maplit",
+        ":mercurial_mutation",
+        ":mercurial_types",
+        ":mercurial_types-mocks",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/server/context:context",
+    ],
+)

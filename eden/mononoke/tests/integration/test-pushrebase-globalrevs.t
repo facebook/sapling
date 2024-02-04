@@ -66,20 +66,22 @@ Check that we cannot pushrebase on that bookmark
   remote:     This repository uses Globalrevs. Pushrebase is only allowed onto the bookmark 'master_bookmark', this push was for 'other_bookmark'
   remote: 
   remote:   Debug context:
-  remote:     PushrebaseInvalidGlobalrevsBookmark {
-  remote:         bookmark: BookmarkKey {
-  remote:             name: BookmarkName {
-  remote:                 bookmark: "other_bookmark",
+  remote:     PushrebaseHooksError(
+  remote:         PushrebaseInvalidGlobalrevsBookmark {
+  remote:             bookmark: BookmarkKey {
+  remote:                 name: BookmarkName {
+  remote:                     bookmark: "other_bookmark",
+  remote:                 },
+  remote:                 category: Branch,
   remote:             },
-  remote:             category: Branch,
-  remote:         },
-  remote:         globalrevs_publishing_bookmark: BookmarkKey {
-  remote:             name: BookmarkName {
-  remote:                 bookmark: "master_bookmark",
+  remote:             globalrevs_publishing_bookmark: BookmarkKey {
+  remote:                 name: BookmarkName {
+  remote:                     bookmark: "master_bookmark",
+  remote:                 },
+  remote:                 category: Branch,
   remote:             },
-  remote:             category: Branch,
   remote:         },
-  remote:     }
+  remote:     )
   abort: unexpected EOL, expected netstring digit
   [255]
 

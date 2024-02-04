@@ -143,7 +143,7 @@ optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
 GitIgnorePattern::GitIgnorePattern(uint32_t flags, GlobMatcher&& matcher)
     : flags_(flags), matcher_(std::move(matcher)) {}
 
-GitIgnorePattern::~GitIgnorePattern() {}
+GitIgnorePattern::~GitIgnorePattern() = default;
 
 GitIgnore::MatchResult GitIgnorePattern::match(
     RelativePathPiece path,

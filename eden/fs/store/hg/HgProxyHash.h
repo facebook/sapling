@@ -14,11 +14,6 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace folly {
-template <typename T>
-class Future;
-} // namespace folly
-
 namespace facebook::eden {
 
 class EdenStats;
@@ -95,12 +90,6 @@ class HgProxyHash {
    */
   Hash20 revHash() const noexcept;
 
-  /**
-   * Returns the SHA-1 of the canonical serialization of this ProxyHash, which
-   * is used as the object ID throughout EdenFS.
-   */
-  ObjectId sha1() const noexcept;
-
   bool operator==(const HgProxyHash&) const;
   bool operator<(const HgProxyHash&) const;
 
@@ -114,7 +103,7 @@ class HgProxyHash {
    * The caller is responsible for keeping the ObjectIdRange alive for the
    * duration of the future.
    */
-  static folly::Future<std::vector<HgProxyHash>>
+  static ImmediateFuture<std::vector<HgProxyHash>>
   getBatch(LocalStore* store, ObjectIdRange blobHashes, EdenStats& stats);
 
   /**

@@ -22,7 +22,7 @@ using folly::StringPiece;
 
 namespace facebook::eden {
 
-FakeFuse::FakeFuse() {}
+FakeFuse::FakeFuse() = default;
 
 folly::File FakeFuse::start() {
   std::array<int, 2> sockets;

@@ -10,6 +10,7 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use mononoke_types::ChangesetId;
 
@@ -28,11 +29,15 @@ pub struct EphemeralStoreInfoArgs {
     bubble_id: Option<BubbleId>,
 }
 
-pub async fn bubble_info(repo: &Repo, args: EphemeralStoreInfoArgs) -> Result<()> {
+pub async fn bubble_info(
+    ctx: &CoreContext,
+    repo: &Repo,
+    args: EphemeralStoreInfoArgs,
+) -> Result<()> {
     let bubble_id = match (&args.bubble_id, &args.changeset_id) {
         (None, Some(id)) => repo
             .repo_ephemeral_store
-            .bubble_from_changeset(&ChangesetId::from_str(id)?)
+            .bubble_from_changeset(ctx, &ChangesetId::from_str(id)?)
             .await?
             .ok_or_else(|| anyhow!("No bubble exists for changeset ID {}", id)),
         (Some(id), _) => Ok(*id),
@@ -43,12 +48,15 @@ pub async fn bubble_info(repo: &Repo, args: EphemeralStoreInfoArgs) -> Result<()
     let changeset_ids = match &args.changeset_id {
         None => {
             repo.repo_ephemeral_store
-                .changesets_from_bubble(&bubble_id)
+                .changesets_from_bubble(ctx, &bubble_id)
                 .await?
         }
         Some(id) => vec![ChangesetId::from_str(id)?],
     };
-    let bubble = repo.repo_ephemeral_store.open_bubble_raw(bubble_id).await?;
+    let bubble = repo
+        .repo_ephemeral_store
+        .open_bubble_raw(ctx, bubble_id)
+        .await?;
     println!(
         "BubbleID: {}\nChangesetIDs: {:?}\nRepoID: {}\nExpiryDate: {}\nStatus: {}\nBlobstorePrefix: {}",
         bubble_id,

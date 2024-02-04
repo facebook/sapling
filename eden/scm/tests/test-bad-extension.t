@@ -5,7 +5,7 @@
 ensure that failing ui.atexit handlers report sensibly
 
   $ cat > $TESTTMP/bailatexit.py <<EOF
-  > from edenscm import util
+  > from sapling import util
   > def bail():
   >     raise RuntimeError('ui.atexit handler exception')
   > 
@@ -46,7 +46,7 @@ another bad extension
 
   $ hg -q help help 2>&1 |grep extension
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'sapling.ext.badext2'
 
 show traceback
 
@@ -54,13 +54,13 @@ show traceback
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'sapling.ext.badext2'
   Traceback (most recent call last):
 
 names of extensions failed to load can be accessed via extensions.notloaded()
 
   $ cat <<EOF > showbadexts.py
-  > from edenscm import commands, extensions, registrar
+  > from sapling import commands, extensions, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('showbadexts', norepo=True)
@@ -79,14 +79,14 @@ show traceback for ImportError of ext.name if debug is set
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'sapling.ext.badext2'
   Traceback (most recent call last):
 
 confirm that there's no crash when an extension's documentation is bad
 
   $ hg help --keyword baddocext
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'sapling.ext.badext2'
   Topics:
   
    extensions Using Additional Features

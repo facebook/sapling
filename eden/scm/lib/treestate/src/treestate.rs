@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use types::HgId;
 use util::path::create_dir;
@@ -91,7 +92,7 @@ impl TreeState {
         tracing::trace!(target: "treestate::create", "creating directory {directory:?}");
         create_dir(directory)?;
         let name = format!("{:x}", uuid::Uuid::new_v4());
-        let path = directory.join(&name);
+        let path = directory.join(name);
         tracing::trace!(target: "treestate::create", "creating filestore {path:?}");
         let mut store = FileStore::create(&path)?;
         let _lock = store.lock()?;
@@ -111,6 +112,17 @@ impl TreeState {
 
         tracing::trace!(target: "treestate::create", "treestate created");
         Ok((treestate, root_id))
+    }
+
+    pub fn reset(&mut self) -> Result<BlockId> {
+        let directory = self
+            .store
+            .path()
+            .and_then(|p| p.parent())
+            .context("when getting the store directory for resetting treestate")?;
+        let (new_treestate, root_id) = Self::new(directory, self.case_sensitive)?;
+        *self = new_treestate;
+        Ok(root_id)
     }
 
     /// Provides the ability to populate a treestate from a legacy eden dirstate.
@@ -186,7 +198,8 @@ impl TreeState {
     /// Save as a new file.
     pub fn write_new<P: AsRef<Path>>(&mut self, directory: P) -> Result<BlockId> {
         let name = format!("{:x}", uuid::Uuid::new_v4());
-        let path = directory.as_ref().join(&name);
+        let path = directory.as_ref().join(name);
+        tracing::trace!(target: "treestate::write_new", ?path);
         let mut new_store = FileStore::create(path)?;
         let _lock = new_store.lock()?;
         let tree_block_id = self.tree.write_full(&mut new_store, &self.store)?;
@@ -253,6 +266,13 @@ impl TreeState {
     }
 
     pub fn get_keys_ignorecase<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Vec<Key>> {
+        self.get_keys_ignorecase_with_prefix(path).map(|r| r.0)
+    }
+
+    fn get_keys_ignorecase_with_prefix<K: AsRef<[u8]>>(
+        &mut self,
+        path: K,
+    ) -> Result<(Vec<Key>, Option<Key>)> {
         fn map_lowercase(k: KeyRef) -> Result<Key> {
             let s = std::str::from_utf8(k);
             Ok(if let Ok(s) = s {
@@ -261,7 +281,7 @@ impl TreeState {
                 k.to_vec().into_boxed_slice()
             })
         }
-        self.get_filtered_key(
+        self.get_filtered_key_with_prefix(
             &map_lowercase(path.as_ref())?,
             &mut map_lowercase,
             FILTER_LOWERCASE,
@@ -284,8 +304,10 @@ impl TreeState {
             }
         }
 
+        let (keys, prefix) = self.get_keys_ignorecase_with_prefix(path)?;
+
         let mut best = None;
-        for key in self.get_keys_ignorecase(path)? {
+        for key in keys {
             let state = match self.get(&key)? {
                 None => continue,
                 Some(state) => state.clone(),
@@ -299,7 +321,10 @@ impl TreeState {
 
         match best {
             Some((path, state)) => Ok((path, Some(state))),
-            None => Ok((Cow::Borrowed(path), None)),
+            None => match prefix {
+                None => Ok((Cow::Borrowed(path), None)),
+                Some(prefix) => Ok((Cow::Owned([&prefix, &path[prefix.len()..]].concat()), None)),
+            },
         }
     }
 
@@ -374,7 +399,7 @@ impl TreeState {
             values.push((format!("p{}", i + 1), Some(p.to_string())));
         }
         // Set p1 or p2 to None to remove it from the metadata if necessary.
-        if values.len() == 0 {
+        if values.is_empty() {
             values.push(("p1".to_string(), None));
         }
         if values.len() == 1 {
@@ -410,6 +435,20 @@ impl TreeState {
         filter: &mut F,
         filter_id: u64,
     ) -> Result<Vec<Key>>
+    where
+        F: FnMut(KeyRef) -> Result<Key>,
+    {
+        self.tree
+            .get_filtered_key(&self.store, name, filter, filter_id)
+            .map(|r| r.0)
+    }
+
+    fn get_filtered_key_with_prefix<F>(
+        &mut self,
+        name: KeyRef,
+        filter: &mut F,
+        filter_id: u64,
+    ) -> Result<(Vec<Key>, Option<Key>)>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
@@ -454,6 +493,7 @@ impl TreeState {
     // Note: In TreeState's case, NEED_CHECK might mean "perform a quick mtime check",
     // or "perform a content check" depending on the caller. Be careful when removing
     // "mtime = -1" statement.
+    #[tracing::instrument(skip_all)]
     pub fn invalidate_mtime(&mut self, now: i32) -> Result<()> {
         self.visit(
             &mut |path, state| {
@@ -512,12 +552,8 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
         let block_id = state.flush().expect("flush");
-        let state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let state = TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+            .expect("open");
         assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
@@ -527,12 +563,8 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
         let block_id = state.write_new(dir.path()).expect("write_as");
-        let state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let state = TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+            .expect("open");
         assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
@@ -546,11 +578,9 @@ mod tests {
         let block_id1 = state.flush().expect("flush");
         let block_id2 = state.write_new(dir.path()).expect("write_as");
         let new_name = state.file_name().unwrap();
-        let state =
-            TreeState::open(dir.path().join(orig_name), block_id1.into(), true).expect("open");
+        let state = TreeState::open(dir.path().join(orig_name), block_id1, true).expect("open");
         assert_eq!(state.metadata_bytes()[..], b"foobar"[..]);
-        let state =
-            TreeState::open(dir.path().join(new_name), block_id2.into(), true).expect("open");
+        let state = TreeState::open(dir.path().join(new_name), block_id2, true).expect("open");
         assert_eq!(state.metadata_bytes()[..], b"foobar"[..]);
     }
 
@@ -663,12 +693,9 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = new_treestate(dir.path());
         let block_id = state.flush().expect("flush");
-        let mut state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let mut state =
+            TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+                .expect("open");
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
@@ -682,12 +709,9 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let mut state = new_treestate(dir.path());
         let block_id = state.write_new(dir.path()).expect("write_as");
-        let mut state = TreeState::open(
-            dir.path().join(state.file_name().unwrap()),
-            block_id.into(),
-            true,
-        )
-        .expect("open");
+        let mut state =
+            TreeState::open(dir.path().join(state.file_name().unwrap()), block_id, true)
+                .expect("open");
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
             let file: FileStateV2 = rng.gen();
@@ -828,8 +852,7 @@ mod tests {
 
         let block_id = state.flush().expect("flush");
 
-        let state =
-            TreeState::open(dir.path().join(orig_name), block_id.into(), true).expect("open");
+        let state = TreeState::open(dir.path().join(orig_name), block_id, true).expect("open");
         assert_eq!(
             state.parents().collect::<Result<Vec<_>>>().unwrap(),
             [p1, p3].to_vec()
@@ -935,6 +958,26 @@ mod tests {
 
         ts.flush()?;
         assert_eq!(ts.pending_change_count(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_normalize_untracked_file() -> Result<()> {
+        let dir = tempdir()?;
+
+        let mut ts = TreeState::new(dir.path(), false)?.0;
+
+        let mut rng = ChaChaRng::from_seed([0; 32]);
+        ts.insert("a/b/c/d", &rng.gen())?;
+
+        assert_eq!(ts.normalize_path(b"A").unwrap().as_ref(), b"A");
+        assert_eq!(ts.normalize_path(b"A/a").unwrap().as_ref(), b"a/a");
+        assert_eq!(ts.normalize_path(b"a/B/c/e").unwrap().as_ref(), b"a/b/c/e");
+        assert_eq!(
+            ts.normalize_path(b"a/B/x/Y/z").unwrap().as_ref(),
+            b"a/b/x/Y/z"
+        );
 
         Ok(())
     }

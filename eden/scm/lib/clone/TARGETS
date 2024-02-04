@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "clone",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/checkout:checkout",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/io/term/logger:termlogger",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/vfs:vfs",
+    ],
+)

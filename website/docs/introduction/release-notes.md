@@ -51,6 +51,6 @@ This release focuses on correct issues around handling submodules as well as var
     * SCP-style URIs (such as git@github.com:git/git-reference) are now supported for remote names: https://github.com/facebook/sapling/commit/67fa8488e150513d21eedc66b37724d00f2034a9
     * `sl clone --git <URL> --updaterev <branch/commit>` can now be used to clone a specific branch or commit: https://github.com/facebook/sapling/commit/9804c66bb8190a5ab4566c576db391ebe34c2d6b
     * sl rebase -b was reworked for better selecting branching points by avoiding public commits (reverse rebase now works): https://github.com/facebook/sapling/commit/96b767efde6a59dbff31d2808736102b3929067a
-    * sl bookmark --remote can be used to list remote branches. Further, sl bookmark --remote-path myfork --remote tags will list tags from remote myfork:
+    * sl bookmark --remote can be used to list remote branches. Further, sl bookmark --remote-path my-fork --remote tags will list tags from remote myfork:
     * https://github.com/facebook/sapling/commit/e8f57d7902c800bec7ded3c567d9e370460df24e
 * Removed a dependency on gdbm in the Python code, that was causing crashes for some users: https://github.com/facebook/sapling/commit/cfbb6a256b94c6e755db02658ef1a4312303bee6

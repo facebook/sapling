@@ -26,12 +26,13 @@ pub use megarepo_configs::types::SourceRevision;
 pub use megarepo_configs::types::SyncConfigVersion;
 pub use megarepo_configs::types::SyncTargetConfig;
 pub use megarepo_configs::types::Target;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use serde::Deserialize;
@@ -159,7 +160,7 @@ impl CommitRemappingState {
         let path = MPath::new(REMAPPING_STATE_FILE)?;
         let maybe_entry = root_fsnode_id
             .fsnode_id()
-            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), Some(path))
+            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path)
             .await?;
 
         let entry = match maybe_entry {
@@ -190,7 +191,7 @@ impl CommitRemappingState {
         bcs: &mut BonsaiChangesetMut,
     ) -> Result<(), Error> {
         let (content_id, size) = self.save(ctx, repo).await?;
-        let path = MPath::new(REMAPPING_STATE_FILE)?;
+        let path = NonRootMPath::new(REMAPPING_STATE_FILE)?;
 
         let fc = FileChange::tracked(content_id, FileType::Regular, size, None);
         if bcs.file_changes.insert(path, fc).is_some() {

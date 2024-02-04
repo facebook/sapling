@@ -141,7 +141,7 @@ impl MetaLog {
             None
         };
         let root = if let Some(metalog_root) = metalog_root {
-            if let Ok(decoded_root) = hex::decode(&metalog_root) {
+            if let Ok(decoded_root) = hex::decode(metalog_root) {
                 Some(Id20::from_slice(&decoded_root)?)
             } else {
                 None
@@ -174,7 +174,7 @@ impl MetaLog {
     /// After compaction writes through outstanding metalog handles will fail.
     /// Reads through outstanding metalog handles are unaffected.
     pub fn compact(path: impl AsRef<Path>) -> Result<()> {
-        let _lock = ScopedDirLock::new(&path.as_ref());
+        let _lock = ScopedDirLock::new(path.as_ref());
         let metalog = Self::open(path, None)?;
         let curr_epoch = metalog.compaction_epoch.unwrap_or(0);
         // allow for a small (and arbitrary) number of failures to compact the metalog
@@ -188,8 +188,8 @@ impl MetaLog {
             // (this function took the needed lock).
             let mut compact_metalog = Self::open(metalog.path.join(next_epoch.to_string()), None)?;
             for key in metalog.keys() {
-                if let Some(value) = metalog.get(&key)? {
-                    compact_metalog.set(&key, &value)?;
+                if let Some(value) = metalog.get(key)? {
+                    compact_metalog.set(key, &value)?;
                 }
             }
             let opts = CommitOptions {
@@ -333,7 +333,7 @@ impl MetaLog {
         let bytes = mincode::serialize(&self.root)?;
         let orig_root_id = self.orig_root_id;
         let mut blobs = self.blobs.write();
-        let id = blobs.insert(&bytes, &vec![self.orig_root_id])?;
+        let id = blobs.insert(&bytes, &[self.orig_root_id])?;
         blobs.flush()?;
         if !options.detached {
             let mut log = self.log.write();
@@ -408,6 +408,31 @@ impl MetaLog {
         Error(format!("{:?}: {}", &self.path, message))
     }
 
+    /// Block until the on-disk metalog gets changed.
+    /// If `keys` is not empty, wait until the given `keys` are changed.
+    /// Return the updated new metalog for waiting again.
+    pub fn wait_for_change(&self, keys: &[&str]) -> Result<Self> {
+        // Drop dirty changes.
+        let old_metalog = self.checkout(self.root_id())?;
+        let mut log_wait = ilog::Wait::from_log(&old_metalog.log.read())?;
+        'wait_loop: loop {
+            let new_metalog = Self::open(old_metalog.path.as_path(), None)?;
+            if keys.is_empty() {
+                if new_metalog.root_id() != old_metalog.root_id() {
+                    break 'wait_loop Ok(new_metalog);
+                }
+            } else {
+                for key in keys {
+                    if new_metalog.get_hash(key) != old_metalog.get_hash(key) {
+                        break 'wait_loop Ok(new_metalog);
+                    }
+                }
+            }
+            // Block.
+            log_wait.wait_for_change()?;
+        }
+    }
+
     fn ilog_open_options() -> ilog::OpenOptions {
         ilog::OpenOptions::new()
             .index("reverse", |_| -> Vec<_> {
@@ -475,7 +500,7 @@ impl Repair<()> for MetaLog {
 
         // Write out good Root IDs.
         if good_root_ids.len() == root_ids.len() {
-            message += &format!("All Roots are verified.\n");
+            message += "All Roots are verified.\n";
         } else {
             message += &format!(
                 "Removing {} bad Root IDs.\n",
@@ -642,6 +667,8 @@ mod tests {
     use std::io::Seek;
     use std::io::SeekFrom;
     use std::io::Write;
+    use std::sync::mpsc::channel;
+    use std::time::Duration;
 
     use indexedlog::DefaultOpenOptions;
     use quickcheck::quickcheck;
@@ -985,9 +1012,9 @@ mod tests {
         }
 
         // verify that delete on commit works
-        fs::create_dir(&dir.path().join("roots")).unwrap();
-        fs::create_dir(&dir.path().join("1")).unwrap();
-        fs::create_dir(&dir.path().join("1").join("roots")).unwrap();
+        fs::create_dir(dir.path().join("roots")).unwrap();
+        fs::create_dir(dir.path().join("1")).unwrap();
+        fs::create_dir(dir.path().join("1").join("roots")).unwrap();
         metalog3.set("00", b"xyz").unwrap();
         metalog3.commit(commit_opt("compact commit 3", 4)).unwrap();
         for path in &deleted_paths {
@@ -995,6 +1022,66 @@ mod tests {
         }
         assert!(&dir.path().join("current").exists());
         assert!(&dir.path().join("2").exists());
+    }
+
+    #[test]
+    fn test_wait_for_changes() {
+        let dir = TempDir::new().unwrap();
+
+        let (tx, rx) = channel::<i32>();
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+
+        std::thread::spawn({
+            let mut metalog = metalog.checkout(metalog.orig_root_id).unwrap();
+            move || {
+                metalog = metalog.wait_for_change(&[]).unwrap();
+                tx.send(101).unwrap();
+                metalog = metalog.wait_for_change(&["key1"]).unwrap();
+                tx.send(102).unwrap();
+                metalog = metalog.wait_for_change(&["key1"]).unwrap();
+                tx.send(103).unwrap();
+                let _ = metalog;
+            }
+        });
+
+        // We should not receive 101 at this point.
+        std::thread::sleep(Duration::from_millis(110));
+        assert!(rx.try_recv().is_err());
+
+        // The other thread should detect and send 101.
+        metalog.set("a", b"1").unwrap();
+        metalog.commit(commit_opt("set a", 0)).unwrap();
+
+        assert_eq!(rx.recv().unwrap(), 101);
+
+        // The other thread should detect but ignore (key mismatch), should not send 102.
+        metalog.set("b", b"1").unwrap();
+        metalog.commit(commit_opt("set b", 0)).unwrap();
+
+        // We should not receive 102 at this point.
+        std::thread::sleep(Duration::from_millis(110));
+        assert!(rx.try_recv().is_err());
+
+        // The other thread should detect change and send 102.
+        metalog.set("key1", b"1").unwrap();
+        metalog.commit(commit_opt("change key1", 0)).unwrap();
+
+        assert_eq!(rx.recv().unwrap(), 102);
+
+        // The other thread should detect change and ignore (key1 not changed).
+        metalog.set("key1", b"1").unwrap();
+        metalog.set("b", b"2").unwrap();
+        metalog.commit(commit_opt("touch key1", 1)).unwrap();
+
+        // We should not receive 103 at this point.
+        std::thread::sleep(Duration::from_millis(110));
+        assert!(rx.try_recv().is_err());
+
+        // The other thread should detect change and send 103.
+        metalog.set("key1", b"2").unwrap();
+        metalog.commit(commit_opt("change key1", 1)).unwrap();
+
+        assert_eq!(rx.recv().unwrap(), 103);
     }
 
     quickcheck! {
@@ -1060,7 +1147,7 @@ mod tests {
                     .filter(|l| !l.contains("Reset log size to"))
                     .collect::<Vec<_>>()
                     .join("\n")
-                    .replace(&path, "<path>")
+                    .replace(path, "<path>")
                     // Normalize path difference on Windows.
                     .replace("\\\\", "/")
                     .trim_end()
@@ -1168,7 +1255,7 @@ Rebuilt Root log with 4 Root IDs."#
                 zlog.flush().unwrap();
             }
         }
-        reorder_blobs_log(&dir.path());
+        reorder_blobs_log(dir.path());
 
         // Now the last blob is the 4KB "noise" blob. Break it without breaking
         // other blobs.

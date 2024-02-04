@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "tracing-sampler",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-serde",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "//eden/scm/lib/sampling:sampling",
+    ],
+)

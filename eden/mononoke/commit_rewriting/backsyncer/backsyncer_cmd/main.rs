@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::bail;
@@ -29,6 +30,8 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Arg;
 use clap::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -54,8 +57,8 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
+use metadata::Metadata;
 use mononoke_types::ChangesetId;
-use once_cell::sync::OnceCell;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
@@ -386,7 +389,7 @@ where
 
     let (next_entry, remaining_entries) = try_join!(next_entry, remaining_entries)?;
     let delay_secs = next_entry
-        .get(0)
+        .first()
         .map_or(0, |entry| entry.timestamp.since_seconds());
 
     Ok(Delay {
@@ -421,8 +424,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .value_of(cmdlib::args::SHARDED_SCOPE_NAME)
                 .unwrap_or(DEFAULT_SHARDED_SCOPE_NAME);
             // The service name needs to be 'static to satisfy SM contract
-            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
-            static SM_SERVICE_SCOPE_NAME: OnceCell<String> = OnceCell::new();
+            static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
+            static SM_SERVICE_SCOPE_NAME: OnceLock<String> = OnceLock::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
             let mut executor = ShardedProcessExecutor::new(
@@ -487,7 +490,13 @@ async fn run(
     let source_repo = args::resolve_repo_by_name(config_store, &matches, &source_repo_name)?;
     let target_repo = args::resolve_repo_by_name(config_store, &matches, &target_repo_name)?;
     let repo_tag = format!("{}=>{}", &source_repo_name, &target_repo_name);
-    let session_container = SessionContainer::new_with_defaults(fb);
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::MegarepoBacksyncer,
+    ));
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
     let scribe = args::get_scribe(fb, &matches)?;
     let ctx = session_container
         .new_context_with_scribe(

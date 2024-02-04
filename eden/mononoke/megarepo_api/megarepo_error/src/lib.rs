@@ -6,7 +6,6 @@
  */
 
 #![feature(error_generic_member_access)]
-#![feature(provide_any)]
 
 use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
@@ -21,6 +20,9 @@ use thiserror::Error;
 pub mod macro_reexport {
     pub use anyhow::anyhow;
 }
+// The cargo build of anyhow disables its backtrace features when using RUSTC_BOOTSTRAP=1
+#[cfg(not(fbcode_build))]
+pub static DISABLED: std::backtrace::Backtrace = std::backtrace::Backtrace::disabled();
 
 #[macro_export]
 macro_rules! cloneable_error {
@@ -29,8 +31,14 @@ macro_rules! cloneable_error {
         pub struct $name(pub ::std::sync::Arc<anyhow::Error>);
 
         impl $name {
+            #[cfg(fbcode_build)]
             pub fn backtrace(&self) -> &::std::backtrace::Backtrace {
                 self.0.backtrace()
+            }
+
+            #[cfg(not(fbcode_build))]
+            pub fn backtrace(&self) -> &::std::backtrace::Backtrace {
+                &$crate::DISABLED
             }
         }
 
@@ -51,8 +59,9 @@ macro_rules! cloneable_error {
                 Some(&**self.0)
             }
 
-            fn provide<'a>(&'a self, demand: &mut ::std::any::Demand<'a>) {
-                demand.provide_ref::<::std::backtrace::Backtrace>(self.backtrace());
+            #[cfg(fbcode_build)]
+            fn provide<'a>(&'a self, request: &mut ::std::error::Request<'a>) {
+                request.provide_ref::<::std::backtrace::Backtrace>(self.backtrace());
             }
         }
     };

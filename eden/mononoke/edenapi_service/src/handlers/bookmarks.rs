@@ -16,7 +16,9 @@ use bytes::Bytes;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
 use edenapi_types::HgId;
+use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
+use edenapi_types::SetBookmarkResponse;
 use futures::stream;
 use futures::StreamExt;
 use mercurial_types::HgChangesetId;
@@ -76,7 +78,7 @@ pub struct SetBookmarkHandler;
 #[async_trait]
 impl EdenApiHandler for SetBookmarkHandler {
     type Request = SetBookmarkRequest;
-    type Response = ();
+    type Response = SetBookmarkResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: EdenApiMethod = EdenApiMethod::SetBookmark;
@@ -86,7 +88,7 @@ impl EdenApiHandler for SetBookmarkHandler {
         ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        Ok(stream::once(set_bookmark(
+        let res = set_bookmark_response(
             ectx.repo(),
             request.bookmark,
             request.to,
@@ -96,9 +98,24 @@ impl EdenApiHandler for SetBookmarkHandler {
                 .into_iter()
                 .map(|p| (p.key, p.value.into()))
                 .collect(),
-        ))
-        .boxed())
+        );
+
+        Ok(stream::once(res).boxed())
     }
+}
+
+async fn set_bookmark_response(
+    repo: HgRepoContext,
+    bookmark: String,
+    to: Option<HgId>,
+    from: Option<HgId>,
+    pushvars: HashMap<String, Bytes>,
+) -> anyhow::Result<SetBookmarkResponse> {
+    Ok(SetBookmarkResponse {
+        data: set_bookmark(repo, bookmark, to, from, pushvars)
+            .await
+            .map_err(|e| ServerError::generic(format!("{:?}", e))),
+    })
 }
 
 async fn set_bookmark(

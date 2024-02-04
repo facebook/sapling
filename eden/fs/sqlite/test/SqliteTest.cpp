@@ -18,7 +18,7 @@ namespace facebook::eden {
 
 class SqliteTest : public testing::Test {
  public:
-  SqliteTest() {}
+  SqliteTest() = default;
 
   SqliteDatabase db{SqliteDatabase::inMemory};
 };

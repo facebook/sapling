@@ -18,6 +18,7 @@ use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use clap::Args;
+use commit_id::IdentityScheme;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -25,7 +26,6 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 
 use super::Repo;
-use crate::commit_id::IdentityScheme;
 
 #[derive(Args)]
 pub struct BookmarksListArgs {

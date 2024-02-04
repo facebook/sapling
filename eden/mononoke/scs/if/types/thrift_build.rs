@@ -15,8 +15,8 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "fb303_core fb303_core
-megarepo_configs megarepo_configs
+        "fb303_core fb303_core //fb303/thrift:fb303_core-rust
+megarepo_configs megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
 source_control crate",
     ).expect("Failed to write cratemap");
 
@@ -46,8 +46,10 @@ source_control crate",
         conf.base_path(base_path);
 
         conf.types_crate("source_control__types");
+        conf.clients_crate("source_control__clients");
+        conf.services_crate("source_control__services");
 
-        let options = "serde";
+        let options = "deprecated_default_enum_min_i32,serde";
         if !options.is_empty() {
             conf.options(options);
         }

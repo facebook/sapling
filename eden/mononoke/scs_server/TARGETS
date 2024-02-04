@@ -1,0 +1,98 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/mononoke/facebook:lib.bzl", "tokio_dependency_test")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "scs_server",
+    srcs = glob(["src/**/*.rs"]),
+    cpp_deps = [
+        ":metadata",
+    ],
+    cxx_bridge = "src/metadata.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:futures-util",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "//common/rust/everstore:everstore_client",
+        "//common/rust/identity:identity",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_ext:futures_ext",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/panichandler:panichandler",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/shed/time_ext:time_ext",
+        "//common/rust/srserver:srserver",
+        "//configerator/structs/common/fbtype:fbtypes-rust",
+        "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/bookmarks:bookmarks_movement",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
+        "//eden/mononoke/common/connection_security_checker:connection_security_checker",
+        "//eden/mononoke/common/dedupmap:dedupmap",
+        "//eden/mononoke/common/scribe_ext:scribe_ext",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/git/git_types:git_types",
+        "//eden/mononoke/hooks:hooks",
+        "//eden/mononoke/megarepo_api:async_requests",
+        "//eden/mononoke/megarepo_api:megarepo_api",
+        "//eden/mononoke/megarepo_api:megarepo_config",
+        "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/pushrebase:pushrebase",
+        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_authorization:repo_authorization",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/server/metadata:metadata",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//fb303/thrift:fb303_core-rust",
+        "//login/if:login_objects_thrift-rust",
+    ],
+)
+
+cpp_library(
+    name = "metadata",
+    srcs = ["metadata.cpp"],
+    headers = ["metadata.h"],
+    deps = [
+        "//eden/mononoke/scs/if:source_control-cpp2",
+    ],
+    exported_deps = [
+        "//common/rust/srserver:metadata-header",
+    ],
+)
+
+tokio_dependency_test(
+    name = "tokio_check",
+    rule = ":scs_server",
+)

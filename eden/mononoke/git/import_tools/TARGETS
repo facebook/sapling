@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "import_tools",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:encoding_rs",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-actor",
+        "fbsource//third-party/rust:gix-date",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:gix-object",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-openssl",
+        "fbsource//third-party/rust:linked-hash-map",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

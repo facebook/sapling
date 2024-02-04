@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("replication_lag_config__types");
+        conf.clients_crate("replication_lag_config__clients");
+        conf.services_crate("replication_lag_config__services");
 
         let options = "serde";
         if !options.is_empty() {

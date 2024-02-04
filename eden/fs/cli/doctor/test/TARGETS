@@ -1,0 +1,44 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("scm_client_infra")
+
+python_unittest(
+    name = "test",
+    srcs = [
+        "corrupt_hg_test.py",
+        "disk_usage_test.py",
+        "doctor_test.py",
+        "os_test.py",
+        "util_test.py",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli/doctor/test/lib:lib",
+        "//eden/fs/cli/test/lib:lib",
+        "//eden/fs/service:thrift-py",
+        "//fb303/thrift:fb303_core-py",
+    ],
+)
+
+python_unittest(
+    name = "test_unix",
+    srcs = [
+        "corrupt_hg_unix_test.py",
+        "doctor_unix_test.py",
+        "hang_mount_test.py",
+        "multiple_edenfs_test.py",
+        "nfs_test.py",
+        "stale_mount_test.py",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:proc_utils",
+        "//eden/fs/cli/doctor/test/lib:lib",
+        "//eden/fs/cli/test/lib:lib",
+    ],
+)

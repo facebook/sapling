@@ -52,13 +52,13 @@ pub fn expand_aliases<S: ToString>(
         }
         replaced.push(command_name.clone());
 
-        args = if alias.starts_with("!") {
+        args = if let Some(suffix) = alias.strip_prefix('!') {
             // Alias starting with "!" is "shell alias". It is a string that should
             // be passed "as-is" to the shell (after $1/$2/$@ substitutions).
             // Round-trip through shlex::split and shlex::quote is not lossless.
             // Therefore use a different alias handling function that does not
             // use shlex::split.
-            expand_shell_alias_args(&args, &alias[1..])
+            expand_shell_alias_args(&args, suffix)
         } else {
             let alias_args: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
             expand_alias_args(&args, alias_args)
@@ -80,7 +80,6 @@ pub fn expand_aliases<S: ToString>(
 /// Suppose `foo-bar` is a defined command, then the following
 /// arguments can all be used to run the `foo-bar` command:
 /// - `["foo-bar"]`
-/// - `["foo", "--bar"]`
 /// - `["foo", "bar"]`  (only if `foo` does not match)
 ///
 /// Return the command name (For example, `"foo-bar"`), and the number of
@@ -96,10 +95,7 @@ pub fn find_command_name(
     let mut candidate = String::new();
 
     for (i, arg) in args.iter().enumerate().take(3) {
-        if arg.starts_with("--") {
-            // Turn ["foo", "--bar"] into "foo-bar".
-            candidate += &arg[1..];
-        } else if best_match.is_none() {
+        if best_match.is_none() {
             // Turn ["foo", "bar"] into "foo-bar", if "foo" does not already match.
             if i > 0 {
                 candidate += "-";
@@ -140,8 +136,8 @@ fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<St
     let mut args: Vec<String> = alias_args
         .into_iter()
         .map(|a| {
-            if a.starts_with("$") {
-                if let Ok(i) = a[1..].parse::<usize>() {
+            if let Some(suffix) = a.strip_prefix('$') {
+                if let Ok(i) = suffix.parse::<usize>() {
                     if let Some(existing_arg) = command_args.get(i) {
                         // Found a substitution. Use it.
                         // Also update the maximum number `n`.
@@ -189,7 +185,7 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
                 cmd += &command_args
                     .iter()
                     .skip(1)
-                    .map(|s| shlex::quote(s))
+                    .map(|s| shlex::try_quote(s).expect("null byte unexpected"))
                     .collect::<Vec<_>>()
                     .join(" ");
                 buf.clear();
@@ -213,7 +209,7 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
                 cmd.push('$');
                 buf.clear();
             }
-            ("$", i) if i.is_digit(10) => {
+            ("$", i) if i.is_ascii_digit() => {
                 let i: usize = i.to_string().parse().unwrap();
                 cmd += &command_args.get(i).cloned().unwrap_or_default();
                 buf.clear();
@@ -243,7 +239,7 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
 ///
 /// * `arg` - The command prefix to expand.
 ///
-/// If there is an exact match the argument is returned as-is.  
+/// If there is an exact match the argument is returned as-is.
 /// If there is no match the argument is returned as-is.
 ///
 /// Commands with negative isize are considered as "debug" commands and treated
@@ -297,15 +293,15 @@ pub fn expand_prefix(
                 }
 
                 // sort command aliases by length for consistency
-                for (_, vec) in &mut id_to_command_map {
+                for vec in id_to_command_map.values_mut() {
                     vec.sort_by_key(|s| s.len());
                 }
 
                 // join command aliases with ' or ' for better UX
                 // e.g. id or identify
                 let mut possibilities: Vec<String> = id_to_command_map
-                    .into_iter()
-                    .map(|(_, vec)| vec.join(" or "))
+                    .into_values()
+                    .map(|vec| vec.join(" or "))
                     .collect();
                 possibilities.sort_unstable();
 
@@ -314,8 +310,7 @@ pub fn expand_prefix(
                     possibilities,
                 });
             } else if command_matches.len() == 1 {
-                let alias = command_matches.into_iter().next().unwrap();
-                alias.to_string()
+                command_matches.into_iter().next().unwrap()
             } else {
                 arg
             }
@@ -333,7 +328,7 @@ mod tests {
     fn test_no_alias() {
         let cfg: BTreeMap<&'static str, &'static str> = BTreeMap::new();
         let (_expanded, replaced) = expand_aliases(|x| cfg.get(x), &["log"]).unwrap();
-        assert!(replaced.len() == 0);
+        assert!(replaced.is_empty());
     }
 
     #[test]
@@ -525,7 +520,7 @@ mod tests {
         };
 
         assert_eq!(expand("echo \"foo\"", vec!["bar"]), "echo \"foo\"");
-        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo \"a b\" c");
+        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo 'a b' c");
         assert_eq!(expand("echo $@", vec!["a b", "c"]), "echo a b c");
         assert_eq!(
             expand("$0 $1 $2", vec!["echo -n", "a b", "c d"]),

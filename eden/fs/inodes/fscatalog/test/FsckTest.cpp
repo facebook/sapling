@@ -51,7 +51,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
     return fcs_.getLocalDir();
   }
 
-  FileContentStore& fcs() {
+  FsFileContentStore& fcs() {
     return fcs_;
   }
 
@@ -77,10 +77,13 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   }
 
   void corruptInodeHeader(InodeNumber number, StringPiece headerData) {
-    XCHECK_EQ(headerData.size(), FileContentStore::kHeaderLength);
+    XCHECK_EQ(headerData.size(), FsFileContentStore::kHeaderLength);
     auto overlayFile = fcs_.openFileNoVerify(number);
     auto ret = folly::pwriteFull(
-        overlayFile.fd(), headerData.data(), headerData.size(), 0);
+        std::get<folly::File>(overlayFile).fd(),
+        headerData.data(),
+        headerData.size(),
+        0);
     folly::checkUnixError(ret, "failed to replace file inode header");
   }
 
@@ -89,7 +92,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
  private:
   folly::test::TemporaryDirectory tmpDir_;
   AbsolutePath tmpDirPath_;
-  FileContentStore fcs_;
+  FsFileContentStore fcs_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType type_;
   uint64_t nextInodeNumber_{0};
@@ -148,7 +151,8 @@ class TestDir {
     // The file should only be created in the overlay if it is materialized
     folly::File file;
     if (!hash.has_value()) {
-      file = overlay_->fcs().createOverlayFile(number, contents);
+      file = std::get<folly::File>(
+          overlay_->fcs().createOverlayFile(number, contents));
     }
     return TestFile(overlay_, number, std::move(file));
   }
@@ -367,7 +371,7 @@ TEST_P(FsckTest, testNoErrors) {
   testOverlay->closeCleanly();
 
   testOverlay->recreateSqliteInodeCatalog();
-  FileContentStore& fcs = testOverlay->fcs();
+  FsFileContentStore& fcs = testOverlay->fcs();
   InodeCatalog* catalog = testOverlay->inodeCatalog();
   std::optional<InodeNumber> nextInode;
   if (overlayType() == InodeCatalogType::Legacy) {
@@ -415,7 +419,7 @@ TEST_P(FsckTest, testMissingNextInodeNumber) {
   // Close the overlay without saving the next inode number
   testOverlay->inodeCatalog()->close(std::nullopt);
 
-  FileContentStore& fcs = testOverlay->fcs();
+  FsFileContentStore& fcs = testOverlay->fcs();
   InodeCatalog* catalog = testOverlay->inodeCatalog();
   auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
@@ -450,7 +454,7 @@ TEST_P(FsckTest, testBadNextInodeNumber) {
   ASSERT_LE(2, actualNextInodeNumber.get());
   testOverlay->inodeCatalog()->close(InodeNumber(2));
 
-  FileContentStore& fcs = testOverlay->fcs();
+  FsFileContentStore& fcs = testOverlay->fcs();
   InodeCatalog* catalog = testOverlay->inodeCatalog();
   auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
@@ -475,7 +479,7 @@ TEST_P(FsckTest, testBadFileData) {
   SimpleOverlayLayout layout(root);
 
   // Replace the data file for a file inode with a bogus header
-  std::string badHeader(FileContentStore::kHeaderLength, 0x55);
+  std::string badHeader(FsFileContentStore::kHeaderLength, 0x55);
   testOverlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
 
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
@@ -506,10 +510,11 @@ TEST_P(FsckTest, testBadFileData) {
 
   // Make sure the overlay now has a valid empty file at the same inode number
   auto replacementFile = testOverlay->fcs().openFile(
-      layout.src_foo_testTxt.number(), FileContentStore::kHeaderIdentifierFile);
+      layout.src_foo_testTxt.number(),
+      FsFileContentStore::kHeaderIdentifierFile);
   std::array<std::byte, 128> buf;
-  auto bytesRead =
-      folly::readFull(replacementFile.fd(), buf.data(), buf.size());
+  auto bytesRead = folly::readFull(
+      std::get<folly::File>(replacementFile).fd(), buf.data(), buf.size());
   EXPECT_EQ(0, bytesRead);
 
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
@@ -529,7 +534,8 @@ TEST_P(FsckTest, testTruncatedDirData) {
 
   // Truncate one of the directory inode files to 0 bytes
   auto srcDataFile = testOverlay->fcs().openFileNoVerify(layout.src.number());
-  folly::checkUnixError(ftruncate(srcDataFile.fd(), 0), "truncate failed");
+  folly::checkUnixError(
+      ftruncate(std::get<folly::File>(srcDataFile).fd(), 0), "truncate failed");
 
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
@@ -623,7 +629,7 @@ TEST_P(FsckTest, testMissingDirData) {
   // also corrupt the file for "src/foo/test.txt", which will need to be copied
   // out as part of the orphaned src/ children subdirectories.  This makes sure
   // the orphan repair logic also handles corrupt files in the orphan subtree.
-  std::string badHeader(FileContentStore::kHeaderLength, 0x55);
+  std::string badHeader(FsFileContentStore::kHeaderLength, 0x55);
   testOverlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
   // And remove the "src/foo/x" subdirectory that is also part of the orphaned
   // subtree.

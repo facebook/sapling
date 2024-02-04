@@ -31,11 +31,11 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     let changesets = create_from_dag(
         ctx,
         &repo,
-        r##"
+        r"
             A-B-C-D-E
                \
                 F-G
-        "##,
+        ",
     )
     .await?;
 

@@ -404,7 +404,9 @@ class TakeoverTest(TakeoverTestBase):
 
             # Run a graceful restart
             # This won't succeed until we unblock the shutdown.
-            old_process = self.eden.graceful_restart(should_wait=False)
+            old_process = self.eden.graceful_restart(
+                should_wait_for_old=False, should_wait_for_new=False
+            )
 
             # Wait for the state to be shutting down
             def state_shutting_down() -> Optional[bool]:

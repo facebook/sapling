@@ -8,6 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 #include <folly/chrono/Conv.h>
 #include <folly/experimental/TestUtil.h>
@@ -39,11 +40,11 @@ struct Int {
 
 TEST_F(InodeTableTest, persists_record) {
   {
-    auto inodeTable = InodeTable<Int>::open(tablePath);
+    auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
     inodeTable->set(10_ino, 15);
   }
 
-  auto inodeTable = InodeTable<Int>::open(tablePath);
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
   EXPECT_EQ(15, inodeTable->getOrThrow(10_ino));
 }
 
@@ -61,11 +62,14 @@ struct Large {
 
 TEST_F(InodeTableTest, fails_to_load_if_record_changes_size_without_migration) {
   {
-    auto inodeTable = InodeTable<Small>::open(tablePath);
+    auto inodeTable =
+        InodeTable<Small>::open(tablePath, makeRefPtr<EdenStats>());
     inodeTable->set(1_ino, {1});
   }
 
-  ASSERT_THROW({ InodeTable<Large>::open(tablePath); }, std::runtime_error);
+  ASSERT_THROW(
+      { InodeTable<Large>::open(tablePath, makeRefPtr<EdenStats>()); },
+      std::runtime_error);
 }
 
 namespace {
@@ -89,13 +93,15 @@ struct NewRecord {
 
 TEST_F(InodeTableTest, migrate_from_one_record_format_to_another) {
   {
-    auto inodeTable = InodeTable<OldRecord>::open(tablePath);
+    auto inodeTable =
+        InodeTable<OldRecord>::open(tablePath, makeRefPtr<EdenStats>());
     inodeTable->set(1_ino, {11, 22});
     inodeTable->set(2_ino, {100, 200});
   }
 
   {
-    auto inodeTable = InodeTable<NewRecord>::open<OldRecord>(tablePath);
+    auto inodeTable = InodeTable<NewRecord>::open<OldRecord>(
+        tablePath, makeRefPtr<EdenStats>());
     auto one = inodeTable->getOrThrow(1_ino);
     auto two = inodeTable->getOrThrow(2_ino);
 
@@ -130,13 +136,15 @@ TEST_F(
     InodeTableTest,
     migrate_from_one_record_format_to_another_even_if_same_size) {
   {
-    auto inodeTable = InodeTable<OldVersion>::open(tablePath);
+    auto inodeTable =
+        InodeTable<OldVersion>::open(tablePath, makeRefPtr<EdenStats>());
     inodeTable->set(1_ino, {7, 3});
     inodeTable->set(2_ino, {60, 40});
   }
 
   {
-    auto inodeTable = InodeTable<NewVersion>::open<OldVersion>(tablePath);
+    auto inodeTable = InodeTable<NewVersion>::open<OldVersion>(
+        tablePath, makeRefPtr<EdenStats>());
     auto one = inodeTable->getOrThrow(1_ino);
     auto two = inodeTable->getOrThrow(2_ino);
 
@@ -148,7 +156,7 @@ TEST_F(
 }
 
 TEST_F(InodeTableTest, populateIfNotSet) {
-  auto inodeTable = InodeTable<Int>::open(tablePath);
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
   inodeTable->set(1_ino, 15);
 
   inodeTable->populateIfNotSet(1_ino, [&] { return 100; });
@@ -159,7 +167,7 @@ TEST_F(InodeTableTest, populateIfNotSet) {
 }
 
 TEST_F(InodeTableTest, setDefault) {
-  auto inodeTable = InodeTable<Int>::open(tablePath);
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
   EXPECT_EQ(14, inodeTable->setDefault(1_ino, 14));
   EXPECT_EQ(14, inodeTable->setDefault(1_ino, 16));
 }

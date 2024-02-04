@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "movers",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = ["fbsource//third-party/rust:maplit"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)

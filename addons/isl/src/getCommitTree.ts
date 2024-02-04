@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitPreview} from './previews';
+import type {CommitPreview, Dag, WithPreviewType} from './previews';
 import type {CommitInfo} from './types';
 
 export type CommitTree = {
@@ -19,7 +19,22 @@ export type CommitTreeWithPreviews = {
   previewType?: CommitPreview;
 };
 
-const byTimeDecreasing = (a: CommitInfo, b: CommitInfo) => b.date.getTime() - a.date.getTime();
+const byTimeDecreasing = (a: CommitInfo & WithPreviewType, b: CommitInfo & WithPreviewType) => {
+  // Consider seqNumber (insertion order during preview calculation).
+  if (a.seqNumber != null && b.seqNumber != null) {
+    const seqDelta = a.seqNumber - b.seqNumber;
+    if (seqDelta !== 0) {
+      return seqDelta;
+    }
+  }
+  // Sort by date.
+  const timeDelta = b.date.getTime() - a.date.getTime();
+  if (timeDelta !== 0) {
+    return timeDelta;
+  }
+  // Always break ties even if timestamp is the same.
+  return a.hash < b.hash ? 1 : -1;
+};
 
 /**
  * Given a list of commits from disk, produce a tree capturing the
@@ -33,7 +48,9 @@ const byTimeDecreasing = (a: CommitInfo, b: CommitInfo) => b.date.getTime() - a.
  *     - ...unless it has a bookmark
  *  - If a commit has multiple children, they are sorted by date
  */
-export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
+export function getCommitTree(
+  commits: Array<CommitInfo & WithPreviewType>,
+): Array<CommitTreeWithPreviews> {
   const childNodesByParent = new Map<string, Set<CommitInfo>>();
   commits.forEach(commit => {
     const [parent] = commit.parents;
@@ -48,8 +65,8 @@ export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
     set.add(commit);
   });
 
-  const makeTree = (revision: CommitInfo): CommitTree => {
-    const {hash} = revision;
+  const makeTree = (revision: CommitInfo & WithPreviewType): CommitTreeWithPreviews => {
+    const {hash, previewType} = revision;
     const childrenSet = childNodesByParent.get(hash) ?? [];
 
     const childrenInfos = [...childrenSet].sort(byTimeDecreasing);
@@ -63,6 +80,7 @@ export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
     return {
       info: revision,
       children,
+      previewType,
     };
   };
 
@@ -74,7 +92,9 @@ export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
   return initialCommits.sort(byTimeDecreasing).map(makeTree);
 }
 
-export function* walkTreePostorder(commitTree: Array<CommitTree>): IterableIterator<CommitTree> {
+export function* walkTreePostorder(
+  commitTree: Array<CommitTreeWithPreviews>,
+): IterableIterator<CommitTreeWithPreviews> {
   for (const node of commitTree) {
     if (node.children.length > 0) {
       yield* walkTreePostorder(node.children);
@@ -98,4 +118,15 @@ export function isTreeLinear(tree: CommitTreeWithPreviews): boolean {
     return false;
   }
   return tree.children.every(t => isTreeLinear(t));
+}
+
+export function findCurrentPublicBase(dag?: Dag): CommitInfo | undefined {
+  let commit = dag?.resolve('.');
+  while (commit) {
+    if (commit.phase === 'public') {
+      return commit;
+    }
+    commit = dag?.get(commit.parents.at(0));
+  }
+  return undefined;
 }

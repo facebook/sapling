@@ -62,7 +62,7 @@ impl DefaultOpenOptions<ilog::OpenOptions> for Zstore {
                 // Drop duplicated entries.
                 let id = &data[0..Id20::len()];
                 if let Ok(mut iter) = context.log.lookup(Self::ID20_INDEX, id) {
-                    if iter.nth(0).is_some() {
+                    if iter.next().is_some() {
                         return Ok(ilog::FlushFilterOutput::Drop);
                     }
                 }
@@ -548,9 +548,6 @@ pub struct DeltaOptions {
     /// Do not use delta, if the total compressed bytes in the delta chain
     /// exceeds `uncompressed_source_data.len() << max_chain_factor_log`.
     pub max_chain_factor_log: u8,
-
-    /// Prevent constructing this struct.
-    _private: (),
 }
 
 impl Default for DeltaOptions {
@@ -563,7 +560,6 @@ impl Default for DeltaOptions {
             // 2x uncompressed full text size. This matches
             // mercurial revlog behavior.
             max_chain_factor_log: 1,
-            _private: (),
         }
     }
 }

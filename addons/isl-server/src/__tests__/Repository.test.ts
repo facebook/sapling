@@ -6,14 +6,23 @@
  */
 
 import type {ResolveCommandConflictOutput} from '../Repository';
+import type {ServerPlatform} from '../serverPlatform';
 import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
 
-import {absolutePathForFileInRepo, extractRepoInfoFromUrl, Repository} from '../Repository';
+import {
+  absolutePathForFileInRepo,
+  extractRepoInfoFromUrl,
+  setConfigOverrideForTests,
+  Repository,
+} from '../Repository';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import * as execa from 'execa';
 import os from 'os';
 import path from 'path';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
+
+/* eslint-disable require-await */
 
 jest.mock('execa', () => {
   return jest.fn();
@@ -25,6 +34,13 @@ jest.mock('../WatchForChanges', () => {
   }
   return {WatchForChanges: MockWatchForChanges};
 });
+
+const mockTracker = makeServerSideTracker(
+  mockLogger,
+  {platformName: 'test'} as ServerPlatform,
+  '0.1',
+  jest.fn(),
+);
 
 function mockExeca(
   cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
@@ -62,6 +78,10 @@ function processExitError(code: number, message: string): execa.ExecaError {
   return err;
 }
 
+function setPathsDefault(path: string) {
+  setConfigOverrideForTests([['paths.default', path]], false);
+}
+
 describe('Repository', () => {
   it('setting command name', async () => {
     const execaSpy = mockExeca([]);
@@ -74,11 +94,9 @@ describe('Repository', () => {
   });
 
   describe('extracting github repo info', () => {
-    let currentMockPathsDefault: string;
     beforeEach(() => {
+      setConfigOverrideForTests([['github.pull_request_domain', 'github.com']]);
       mockExeca([
-        [/^sl config paths.default/, () => ({stdout: currentMockPathsDefault})],
-        [/^sl config github.pull_request_domain/, {stdout: 'github.com'}],
         [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
         [/^sl root/, {stdout: '/path/to/myRepo'}],
         [
@@ -90,13 +108,13 @@ describe('Repository', () => {
     });
 
     it('extracting github repo info', async () => {
-      currentMockPathsDefault = 'https://github.com/myUsername/myRepo.git';
+      setPathsDefault('https://github.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(
         'sl',
         mockLogger,
         '/path/to/cwd',
       )) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger);
+      const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -113,13 +131,13 @@ describe('Repository', () => {
     });
 
     it('extracting github enterprise repo info', async () => {
-      currentMockPathsDefault = 'https://ghe.myCompany.com/myUsername/myRepo.git';
+      setPathsDefault('https://ghe.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(
         'sl',
         mockLogger,
         '/path/to/cwd',
       )) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger);
+      const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -136,13 +154,13 @@ describe('Repository', () => {
     });
 
     it('handles non-github-enterprise unknown code review providers', async () => {
-      currentMockPathsDefault = 'https://gitlab.myCompany.com/myUsername/myRepo.git';
+      setPathsDefault('https://gitlab.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(
         'sl',
         mockLogger,
         '/path/to/cwd',
       )) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger);
+      const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -157,10 +175,22 @@ describe('Repository', () => {
     });
   });
 
+  it('applies isl.hold-off-refresh-ms config', async () => {
+    setConfigOverrideForTests([['isl.hold-off-refresh-ms', '12345']], false);
+    const info = (await Repository.getRepoInfo(
+      'sl',
+      mockLogger,
+      '/path/to/cwd',
+    )) as ValidatedRepoInfo;
+    const repo = new Repository(info, mockLogger, mockTracker);
+    await new Promise(process.nextTick);
+    expect(repo.configHoldOffRefreshMs).toBe(12345);
+  });
+
   it('extracting repo info', async () => {
+    setConfigOverrideForTests([]);
+    setPathsDefault('mononoke://0.0.0.0/fbsource');
     mockExeca([
-      [/^sl config paths.default/, {stdout: 'mononoke://0.0.0.0/fbsource'}],
-      [/^sl config github.pull_request_domain/, new Error('')],
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
@@ -169,7 +199,7 @@ describe('Repository', () => {
       mockLogger,
       '/path/to/cwd',
     )) as ValidatedRepoInfo;
-    const repo = new Repository(info, mockLogger);
+    const repo = new Repository(info, mockLogger, mockTracker);
     expect(repo.info).toEqual({
       type: 'success',
       command: 'sl',
@@ -177,6 +207,21 @@ describe('Repository', () => {
       dotdir: '/path/to/myRepo/.sl',
       codeReviewSystem: expect.anything(),
       pullRequestDomain: undefined,
+    });
+  });
+
+  it('handles cwd not exists', async () => {
+    const err = new Error('cwd does not exist') as Error & {code: string};
+    err.code = 'ENOENT';
+    mockExeca([[/^sl root/, err]]);
+    const info = (await Repository.getRepoInfo(
+      'sl',
+      mockLogger,
+      '/path/to/cwd',
+    )) as ValidatedRepoInfo;
+    expect(info).toEqual({
+      type: 'cwdDoesNotExist',
+      cwd: '/path/to/cwd',
     });
   });
 
@@ -191,6 +236,7 @@ describe('Repository', () => {
         ),
       ],
     ]);
+    jest.spyOn(fsUtils, 'exists').mockImplementation(async () => true);
     const info = (await Repository.getRepoInfo(
       'sl',
       mockLogger,
@@ -199,6 +245,7 @@ describe('Repository', () => {
     expect(info).toEqual({
       type: 'invalidCommand',
       command: 'sl',
+      path: expect.anything(),
     });
     osSpy.mockRestore();
   });
@@ -313,7 +360,7 @@ ${MARK_OUT}
     });
 
     it('checks for merge conflicts', async () => {
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
@@ -341,7 +388,7 @@ ${MARK_OUT}
     });
 
     it('disposes conflict change subscriptions', async () => {
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
       const onChange = jest.fn();
       const subscription = repo.onChangeConflictState(onChange);
@@ -355,7 +402,7 @@ ${MARK_OUT}
     it('sends conflicts right away on subscription if already in conflicts', async () => {
       enterMergeConflict(MOCK_CONFLICT);
 
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
@@ -377,7 +424,7 @@ ${MARK_OUT}
     });
 
     it('preserves previous conflicts as resolved', async () => {
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
 
@@ -418,7 +465,7 @@ ${MARK_OUT}
         [/^sl resolve --tool internal:dumpjson --all/, new Error('failed to do the thing')],
       ]);
 
-      const repo = new Repository(repoInfo, mockLogger);
+      const repo = new Repository(repoInfo, mockLogger, mockTracker);
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
 
@@ -551,7 +598,7 @@ describe('absolutePathForFileInRepo', () => {
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
     };
-    const repo = new Repository(repoInfo, mockLogger);
+    const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
     expect(absolutePathForFileInRepo('foo/bar/file.txt', repo)).toEqual(
       '/path/to/repo/foo/bar/file.txt',
@@ -577,7 +624,7 @@ describe('absolutePathForFileInRepo', () => {
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
     };
-    const repo = new Repository(repoInfo, mockLogger);
+    const repo = new Repository(repoInfo, mockLogger, mockTracker);
 
     expect(absolutePathForFileInRepo('foo\\bar\\file.txt', repo, path.win32)).toEqual(
       'C:\\path\\to\\repo\\foo\\bar\\file.txt',

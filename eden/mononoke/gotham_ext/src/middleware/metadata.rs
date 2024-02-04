@@ -9,6 +9,9 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 
 use cats::try_get_cats_idents;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
 use gotham::state::client_addr;
 use gotham::state::FromState;
@@ -18,6 +21,7 @@ use hyper::header::HeaderMap;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
+use hyper::Uri;
 use metaconfig_types::Identity;
 use metadata::Metadata;
 use percent_encoding::percent_decode;
@@ -32,6 +36,7 @@ use crate::state_ext::StateExt;
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
+const CLIENT_PORT: &str = "tfb-orig-client-port";
 
 #[derive(StateData, Default)]
 pub struct MetadataState(Metadata);
@@ -46,14 +51,21 @@ pub struct MetadataMiddleware {
     fb: FacebookInit,
     logger: Logger,
     internal_identity: Identity,
+    entry_point: ClientEntryPoint,
 }
 
 impl MetadataMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger, internal_identity: Identity) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        logger: Logger,
+        internal_identity: Identity,
+        entry_point: ClientEntryPoint,
+    ) -> Self {
         Self {
             fb,
             logger,
             internal_identity,
+            entry_point,
         }
     }
 
@@ -81,6 +93,13 @@ fn request_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
     Some(ip)
 }
 
+fn request_port_from_headers(headers: &HeaderMap) -> Option<u16> {
+    let header = headers.get(CLIENT_PORT)?;
+    let header = header.to_str().ok()?;
+    let ip = header.parse().ok()?;
+    Some(ip)
+}
+
 fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
     let encoded_identities = headers.get(ENCODED_CLIENT_IDENTITY)?;
     let json_identities = percent_decode(encoded_identities.as_bytes())
@@ -96,7 +115,9 @@ impl Middleware for MetadataMiddleware {
         let mut metadata = Metadata::default();
 
         if let Some(headers) = HeaderMap::try_borrow_from(state) {
-            metadata = metadata.set_client_ip(request_ip_from_headers(headers));
+            metadata = metadata
+                .set_client_ip(request_ip_from_headers(headers))
+                .set_client_port(request_port_from_headers(headers));
 
             let maybe_identities = {
                 let maybe_cat_idents =
@@ -136,7 +157,29 @@ impl Middleware for MetadataMiddleware {
             if let Some(identities) = maybe_identities {
                 metadata = metadata.set_identities(identities)
             }
+            let client_info: Option<ClientInfo> = headers
+                .get(CLIENT_INFO_HEADER)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|ci| serde_json::from_str(ci).ok());
 
+            if client_info.is_none()
+                && matches!(Uri::try_borrow_from(state), Some(uri) if !uri.path().ends_with("/health_check"))
+            {
+                let msg = format!(
+                    "Error: {} header not provided or wrong format (expected json).",
+                    CLIENT_INFO_HEADER
+                );
+                error!(self.logger, "{}", &msg,);
+                let response = Response::builder()
+                    .status(StatusCode::UNAUTHORIZED)
+                    .body(format!("{{\"message:\"{}\"}}", msg,).into())
+                    .expect("Couldn't build http response");
+                return Some(response);
+            }
+
+            let client_info = client_info
+                .unwrap_or_else(|| ClientInfo::default_with_entry_point(self.entry_point.clone()));
+            metadata.add_client_info(client_info);
             metadata.update_client_untrusted(
                 metadata::security::is_client_untrusted(|h| {
                     Ok(headers
@@ -150,7 +193,11 @@ impl Middleware for MetadataMiddleware {
 
         // For the IP, we can fallback to the peer IP
         if metadata.client_ip().is_none() {
-            metadata = metadata.set_client_ip(client_addr(state).as_ref().map(SocketAddr::ip));
+            let client_addr = client_addr(state);
+
+            metadata = metadata
+                .set_client_ip(client_addr.as_ref().map(SocketAddr::ip))
+                .set_client_port(client_addr.as_ref().map(SocketAddr::port));
         }
 
         state.put(MetadataState(metadata));

@@ -494,7 +494,6 @@ running into merge conflict and invoking rebase --continue.
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
   $ cd ..
 
 Collapsed commits have internal conflict:

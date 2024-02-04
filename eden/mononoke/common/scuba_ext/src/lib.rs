@@ -12,6 +12,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use anyhow::Result;
+use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use futures_stats::FutureStats;
 use futures_stats::StreamStats;
@@ -28,9 +29,9 @@ use scuba::ScubaSample;
 use scuba::ScubaSampleBuilder;
 pub use scuba::ScubaValue;
 use time_ext::DurationExt;
-use tunables::tunables;
 
 const FILE_PREFIX: &str = "file://";
+const MAX_SCUBA_MSG_LEN: usize = 512000;
 
 /// An extensible wrapper struct around `ScubaSampleBuilder`
 #[derive(Clone)]
@@ -129,6 +130,16 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
+    pub fn add_client_request_info(&mut self, client_info: &ClientRequestInfo) -> &mut Self {
+        self.inner
+            .add_opt("client_main_id", client_info.main_id.as_deref());
+        self.inner
+            .add("client_entry_point", client_info.entry_point.to_string());
+        self.inner
+            .add("client_correlator", client_info.correlator.as_str());
+        self
+    }
+
     pub fn add_metadata(&mut self, metadata: &Metadata) -> &mut Self {
         self.inner
             .add("session_uuid", metadata.session_id().to_string());
@@ -154,14 +165,21 @@ impl MononokeScubaSampleBuilder {
             self.inner.add("unix_username", unix_name);
         }
 
+        if let Some(client_info) = metadata.client_request_info() {
+            self.inner
+                .add_opt("client_main_id", client_info.main_id.as_deref());
+            self.inner
+                .add("client_entry_point", client_info.entry_point.to_string());
+            self.inner
+                .add("client_correlator", client_info.correlator.as_str());
+        }
+
         self.inner
             .add_opt("sandcastle_alias", metadata.sandcastle_alias());
         self.inner
             .add_opt("revproxy_region", metadata.revproxy_region().as_deref());
         self.inner
             .add_opt("sandcastle_nonce", metadata.sandcastle_nonce());
-        self.inner
-            .add_opt("clientinfo_tag", metadata.clientinfo_u64tag());
         self.inner
             .add_opt("client_tw_job", metadata.clientinfo_tw_job());
         self.inner
@@ -191,17 +209,10 @@ impl MononokeScubaSampleBuilder {
 
         self.inner.add("log_tag", log_tag);
         if let Some(mut msg) = msg.into() {
-            match tunables()
-                .max_scuba_msg_length()
-                .unwrap_or_default()
-                .try_into()
-            {
-                Ok(size) if size > 0 && msg.len() > size => {
-                    msg.truncate(size);
-                    msg.push_str(" (...)");
-                }
-                _ => {}
-            };
+            if MAX_SCUBA_MSG_LEN > 0 && msg.len() > MAX_SCUBA_MSG_LEN {
+                msg.truncate(MAX_SCUBA_MSG_LEN);
+                msg.push_str(" (...)");
+            }
 
             self.inner.add("msg", msg);
         }

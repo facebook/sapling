@@ -28,6 +28,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySetExt;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 use repo_authorization::AuthorizationContext;
@@ -184,8 +185,7 @@ fn assert_internal_identity(
         return Err(errors::internal_error(
             anyhow!(
                 "Insufficient permissions, internal options only. Identities: {}",
-                original_identities
-                    .map_or_else(|| "<none>".to_string(), permission_checker::pretty_print)
+                original_identities.map_or_else(|| "<none>".to_string(), |x| x.to_string())
             )
             .as_ref(),
         )

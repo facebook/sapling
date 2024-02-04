@@ -11,14 +11,14 @@ use std::fmt::Debug;
 use std::fs::create_dir_all;
 use std::future::ready;
 use std::num::NonZeroU64;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::format_err;
 use async_trait::async_trait;
 use bytes::Bytes as RawBytes;
+use clientinfo::ClientInfo;
+use clientinfo_async::get_client_request_info_task_local;
 use edenapi_types::make_hash_lookup_request;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -73,6 +73,7 @@ use edenapi_types::LookupResult;
 use edenapi_types::PushVar;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
+use edenapi_types::SetBookmarkResponse;
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
 use edenapi_types::TreeAttributes;
@@ -230,16 +231,6 @@ impl Client {
             req.set_header(k, v);
         }
 
-        if let Some(ref correlator) = config.correlator {
-            // Also send correlator to telemetry. Usually it's just the edenapi
-            // DEFAULT_CORRELATOR so we just send it once.
-            static LOGGED: AtomicBool = AtomicBool::new(false);
-            if !LOGGED.fetch_or(true, Ordering::AcqRel) {
-                tracing::debug!(target: "clienttelemetry", client_correlator=config.correlator);
-            }
-            req.set_header("X-Client-Correlator", correlator);
-        }
-
         if let Some(timeout) = config.timeout {
             req.set_timeout(timeout);
         }
@@ -254,6 +245,12 @@ impl Client {
 
         if let Some(mts) = &config.min_transfer_speed {
             req.set_min_transfer_speed(*mts);
+        }
+
+        if let Some(client_info) = get_client_request_info_task_local() {
+            let client_info_json: String =
+                ClientInfo::new_with_client_request_info(client_info)?.to_json()?;
+            req.set_client_info(&Some(client_info_json));
         }
 
         Ok(req)
@@ -432,7 +429,7 @@ impl Client {
         };
         let timestamp = chrono::Local::now().format("%y%m%d_%H%M%S_%f");
         let name = format!("{}_{}.log", &timestamp, label);
-        let path = log_dir.join(&name);
+        let path = log_dir.join(name);
 
         let _ = async_runtime::spawn_blocking(move || {
             if let Err(e) = || -> std::io::Result<()> {
@@ -473,7 +470,7 @@ impl Client {
             req
         })?;
 
-        Ok(self.fetch_guard::<FileResponse>(requests, guards)?)
+        self.fetch_guard::<FileResponse>(requests, guards)
     }
 
     pub(crate) async fn fetch_trees(
@@ -481,7 +478,7 @@ impl Client {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        tracing::info!("Requesting {} tree(s)", keys.len());
+        tracing::info!("Requesting fetching of {} tree(s)", keys.len());
 
         if keys.is_empty() {
             return Ok(Response::empty());
@@ -506,14 +503,17 @@ impl Client {
             req
         })?;
 
-        Ok(self.fetch::<Result<TreeEntry, EdenApiServerError>>(requests)?)
+        self.fetch::<Result<TreeEntry, EdenApiServerError>>(requests)
     }
 
     pub(crate) async fn fetch_files_attrs(
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, EdenApiError> {
-        tracing::info!("Requesting attributes for {} file(s)", reqs.len());
+        tracing::info!(
+            "Requesting fetching of content and attributes for {} file(s)",
+            reqs.len()
+        );
 
         if reqs.is_empty() {
             return Ok(Response::empty());
@@ -536,7 +536,7 @@ impl Client {
             req
         })?;
 
-        Ok(self.fetch_guard::<FileResponse>(requests, guards)?)
+        self.fetch_guard::<FileResponse>(requests, guards)
     }
 
     /// Upload a single file
@@ -574,10 +574,10 @@ impl Client {
         let msg = format!("Requesting upload for {}", url);
         tracing::info!("{}", &msg);
 
-        Ok(self.fetch::<UploadToken>(vec![{
+        self.fetch::<UploadToken>(vec![{
             self.configure_request(self.inner.client.put(url.clone()))?
                 .body(raw_content.to_vec())
-        }])?)
+        }])
     }
 
     async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, EdenApiError> {
@@ -676,7 +676,10 @@ impl EdenApi for Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, EdenApiError> {
-        tracing::info!("Requesting attributes for {} file(s)", reqs.len());
+        tracing::info!(
+            "Requesting content and attributes for {} file(s)",
+            reqs.len()
+        );
 
         let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);
 
@@ -776,7 +779,7 @@ impl EdenApi for Client {
         let url = self.build_url(paths::COMMIT_HASH_LOOKUP)?;
         let prefixes: Vec<CommitHashLookupRequest> = prefixes
             .into_iter()
-            .map(|prefix| make_hash_lookup_request(prefix))
+            .map(make_hash_lookup_request)
             .collect::<Result<Vec<CommitHashLookupRequest>, _>>()?;
         let requests = self.prepare_requests(
             &url,
@@ -789,7 +792,7 @@ impl EdenApi for Client {
     }
 
     async fn bookmarks(&self, bookmarks: Vec<String>) -> Result<Vec<BookmarkEntry>, EdenApiError> {
-        tracing::info!("Requesting '{}' bookmarks", bookmarks.len());
+        tracing::info!("Requesting {} bookmarks", bookmarks.len());
         let url = self.build_url(paths::BOOKMARKS)?;
         let bookmark_req = BookmarkRequest { bookmarks };
         self.log_request(&bookmark_req, "bookmarks");
@@ -807,7 +810,7 @@ impl EdenApi for Client {
         to: Option<HgId>,
         from: Option<HgId>,
         pushvars: HashMap<String, String>,
-    ) -> Result<(), EdenApiError> {
+    ) -> Result<SetBookmarkResponse, EdenApiError> {
         tracing::info!("Set bookmark '{}' from {:?} to {:?}", &bookmark, from, to);
         let url = self.build_url(paths::SET_BOOKMARK)?;
         let set_bookmark_req = SetBookmarkRequest {
@@ -825,7 +828,7 @@ impl EdenApi for Client {
             .cbor(&set_bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch_single::<()>(req).await
+        self.fetch_single::<SetBookmarkResponse>(req).await
     }
 
     /// Land a stack of commits, rebasing them onto the specified bookmark
@@ -976,11 +979,7 @@ impl EdenApi for Client {
         &self,
         hgids: Vec<HgId>,
     ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
-        let anyids: Vec<_> = hgids
-            .iter()
-            .cloned()
-            .map(|hgid| AnyId::HgChangesetId(hgid))
-            .collect();
+        let anyids: Vec<_> = hgids.iter().cloned().map(AnyId::HgChangesetId).collect();
         let entries = self.lookup_batch(anyids.clone(), None, None).await?;
 
         let into_hgid = |id: IndexableId| match id.id {
@@ -1040,7 +1039,7 @@ impl EdenApi for Client {
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        let prog = ProgressBar::register_new("commit graph", 0, "commits fetched");
+        let prog = ProgressBar::new_detached("commit graph", 0, "commits fetched");
         self.fetch_vec_with_retry_and_prog::<CommitGraphEntry>(vec![req], prog)
             .await
     }
@@ -1173,7 +1172,7 @@ impl EdenApi for Client {
         // Merge all the tokens together
         let all_tokens = new_tokens
             .into_iter()
-            .chain(uploaded_tokens.into_iter().map(|token| Ok(token)))
+            .chain(uploaded_tokens.into_iter().map(Ok))
             .collect::<Vec<Result<_, _>>>();
 
         Ok(Response {

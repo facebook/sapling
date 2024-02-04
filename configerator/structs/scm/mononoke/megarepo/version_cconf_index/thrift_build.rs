@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "megarepo_configs megarepo_configs
+        "megarepo_configs megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
 version_cconf_index crate",
     ).expect("Failed to write cratemap");
 
@@ -45,6 +45,8 @@ version_cconf_index crate",
         conf.base_path(base_path);
 
         conf.types_crate("version_cconf_index__types");
+        conf.clients_crate("version_cconf_index__clients");
+        conf.services_crate("version_cconf_index__services");
 
         let options = "serde";
         if !options.is_empty() {

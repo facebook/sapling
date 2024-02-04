@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "import",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/lfs_import_lib:lfs_import_lib",
+        "//eden/mononoke/mercurial:mercurial_types",
+    ],
+)

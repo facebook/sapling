@@ -331,8 +331,8 @@ mod linux {
         let path = format!("/run/udev/data/b{}", major_minor);
         let mut result = HashMap::new();
         for line in std::fs::read_to_string(path).unwrap_or_default().lines() {
-            if line.contains("=") {
-                let words: Vec<_> = line.splitn(2, "=").collect();
+            if line.contains('=') {
+                let words: Vec<_> = line.splitn(2, '=').collect();
                 result.insert(words[0].into(), words[1].into());
             }
         }

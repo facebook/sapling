@@ -140,7 +140,7 @@ class DirstateChecker(HgFileChecker):
     def _get_old_snapshot(self, errors: List[str]) -> None:
         # Get the commit ID from the snapshot file
         try:
-            working_copy_parent_hex, snapshot_hex = self.checkout.get_snapshot()
+            working_copy_parent_hex, snapshot_hex = self.checkout.get_snapshot()[0:2]
             self._old_snapshot = binascii.unhexlify(working_copy_parent_hex)
         except InProgressCheckoutError:
             self._in_progress_checkout = True

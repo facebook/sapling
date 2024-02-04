@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "commit_graph_testlib",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/cloned:cloned",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
+        "//eden/mononoke/repo_attributes/commit_graph/in_memory_commit_graph_storage:in_memory_commit_graph_storage",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/drawdag:drawdag",
+    ],
+)

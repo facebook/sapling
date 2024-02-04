@@ -17,10 +17,12 @@ use anyhow::bail;
 use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use bulkops::MAX_FETCH_STEP;
 use changesets::ChangesetsArc;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
@@ -83,9 +85,6 @@ fn roots_for_chunk(
                 NodeType::DeletedManifestV2Mapping => Node::DeletedManifestV2Mapping(id),
                 NodeType::FsnodeMapping => Node::FsnodeMapping(id),
                 NodeType::SkeletonManifestMapping => Node::SkeletonManifestMapping(id),
-                NodeType::BasenameSuffixSkeletonManifestMapping => {
-                    Node::BasenameSuffixSkeletonManifestMapping(id)
-                }
                 NodeType::UnodeMapping => Node::UnodeMapping(id),
                 _ => bail!("Unsupported root type for chunking {:?}", r),
             };
@@ -235,7 +234,11 @@ where
         cloned!(job_params, tail_params, type_params, make_run);
         let tail_secs = tail_params.tail_secs;
         // Each loop get new ctx and thus session id so we can distinguish runs
-        let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
+        let ctx = CoreContext::new_with_logger_and_client_info(
+            fb,
+            repo_params.logger.clone(),
+            ClientInfo::default_with_entry_point(ClientEntryPoint::Walker),
+        );
         let session_text = ctx.session().metadata().session_id().to_string();
         if !job_params.quiet {
             info!(
@@ -263,7 +266,7 @@ where
             .chunking
             .as_ref()
             .map(|chunking| {
-                let heads_fetcher = PublicChangesetBulkFetch::new(
+                let heads_fetcher = ChangesetBulkFetcher::new(
                     repo_params.repo.changesets_arc(),
                     repo_params.repo.phases_arc(),
                 )
@@ -350,7 +353,11 @@ where
 
             let load_ids = |(lower, upper)| {
                 heads_fetcher
-                    .fetch_ids(&ctx, chunking.direction, Some((lower, upper)))
+                    .fetch_ids_for_both_public_and_draft_commits(
+                        &ctx,
+                        chunking.direction,
+                        Some((lower, upper)),
+                    )
                     .chunks(chunking.chunk_size)
                     .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
             };

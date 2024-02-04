@@ -9,12 +9,13 @@
   display: flex;
   align-items: center;
   gap: var(--halfpad);
-  width: 100%;
   font-size: 90%;
   margin: var(--halfpad) var(--halfpad);
   padding: var(--halfpad) var(--pad);
-  background-color: var(--tooltip-background);
   border-radius: var(--pad);
+
+  color: var(--banner-fg);
+  background-color: var(--banner-default-bg);
 }
 
 .banner-content {
@@ -30,4 +31,14 @@
 }
 .banner:hover > .banner-buttons {
   opacity: 100%;
+}
+
+.banner-warning {
+  background-color: var(--banner-warning-bg);
+}
+.banner-green {
+  background-color: var(--banner-green-bg);
+}
+.banner-error {
+  background-color: var(--banner-error-bg);
 }

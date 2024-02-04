@@ -222,7 +222,7 @@ impl GitignoreMatcher {
         let mut explain = Explain::new();
         let path = path.as_ref().to_path_buf();
         explain.start_explain(path.clone(), is_dir, self);
-        explain.human_text(path.clone(), self)
+        explain.human_text(path, self)
     }
 }
 
@@ -293,7 +293,7 @@ impl Explain {
                     let path = path.strip_prefix(root.ignore.path()).unwrap_or(path);
                     format!("from {}", path.to_string_lossy())
                 }
-                None => format!(""),
+                None => String::new(),
             };
 
             if path != &current_path {
@@ -340,10 +340,10 @@ impl Matcher for GitignoreMatcher {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::create_dir_all;
-    use std::fs::File;
     use std::io::Write;
 
+    use fs_err::create_dir_all;
+    use fs_err::File;
     use tempfile::tempdir;
 
     use super::*;
@@ -533,7 +533,7 @@ c/f/g: ignored by rule g/ from c/f/.gitignore (overrides previous rules)
         assert_eq!(m.explain("c/h/1", true), "c/h/1: not ignored\n");
     }
 
-    fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) {
+    fn write<P: Into<PathBuf>, C: AsRef<[u8]>>(path: P, contents: C) {
         File::create(path)
             .expect("create")
             .write_all(contents.as_ref())
@@ -548,13 +548,13 @@ c/f/g: ignored by rule g/ from c/f/.gitignore (overrides previous rules)
         let case_sensitive = [true, false];
         for sensitive in case_sensitive {
             let m = GitignoreMatcher::new(dir.path(), Vec::new(), sensitive);
-            assert_eq!(true, m.match_relative("x/FILE", false));
+            assert!(m.match_relative("x/FILE", false));
             assert_eq!(!sensitive, m.match_relative("x/file", false));
-            assert_eq!(true, m.match_relative("x/FILE", true));
+            assert!(m.match_relative("x/FILE", true));
             assert_eq!(!sensitive, m.match_relative("x/file", true));
-            assert_eq!(false, m.match_relative("x/DIR", false));
-            assert_eq!(false, m.match_relative("x/dir", false));
-            assert_eq!(true, m.match_relative("x/DIR", true));
+            assert!(!m.match_relative("x/DIR", false));
+            assert!(!m.match_relative("x/dir", false));
+            assert!(m.match_relative("x/DIR", true));
             assert_eq!(!sensitive, m.match_relative("x/dir", true));
         }
     }

@@ -256,7 +256,7 @@ impl From<Id> for Span {
 
 impl<T: Into<Span>> From<T> for SpanSet {
     fn from(span: T) -> SpanSet {
-        SpanSet::from_sorted_spans(std::iter::once(span.into()))
+        SpanSet::from_single_span(span.into())
     }
 }
 
@@ -288,6 +288,12 @@ impl SpanSet {
         #[cfg(debug_assertions)]
         result.validate();
         result
+    }
+
+    /// Construct a [`SpanSet`] that contains a single span.
+    pub fn from_single_span(span: Span) -> Self {
+        let spans: VecDeque<_> = std::iter::once(span).collect();
+        Self { spans }
     }
 
     /// Construct a [`SpanSet`] containing given spans.
@@ -552,7 +558,7 @@ impl SpanSet {
 
     /// Get the maximum id in this set.
     pub fn max(&self) -> Option<Id> {
-        self.spans.get(0).map(|span| span.high)
+        self.spans.front().map(|span| span.high)
     }
 
     /// Get the minimal id in this set.
@@ -1250,7 +1256,7 @@ mod tests {
     fn test_iter() {
         let set = SpanSet::empty();
         assert!(set.iter_desc().next().is_none());
-        assert!(set.iter_desc().rev().next().is_none());
+        assert!(set.iter_desc().next_back().is_none());
         assert_eq!(set.iter_desc().size_hint(), (0, Some(0)));
 
         let set = SpanSet::from(0..=1);

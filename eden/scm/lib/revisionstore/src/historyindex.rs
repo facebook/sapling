@@ -8,7 +8,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
@@ -18,6 +17,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use fs_err::File;
 use memmap2::Mmap;
 use memmap2::MmapOptions;
 #[cfg(test)]
@@ -215,7 +215,7 @@ impl HistoryIndex {
 
         let mut file_sections: Vec<(&RepoPath, HgId, FileSectionLocation)> = file_sections
             .iter()
-            .map(|e| Ok((e.0, sha1(&e.0.as_byte_slice()), e.1.clone())))
+            .map(|e| Ok((e.0, sha1(e.0.as_byte_slice()), e.1.clone())))
             .collect::<Result<Vec<(&RepoPath, HgId, FileSectionLocation)>>>()?;
         // They must be written in sorted order so they can be bisected.
         file_sections.sort_by_key(|x| x.1);
@@ -267,7 +267,7 @@ impl HistoryIndex {
                 ))
                 .into());
             }
-            seen_files.insert(&file_name);
+            seen_files.insert(file_name);
 
             let file_nodes: &HashMap<Key, NodeLocation> =
                 nodes.get(file_name).ok_or_else(|| {
@@ -339,7 +339,7 @@ impl HistoryIndex {
     }
 
     pub fn get_hgid_entry(&self, key: &Key) -> Result<Option<NodeIndexEntry>> {
-        let file_entry = match self.get_file_entry(&key)? {
+        let file_entry = match self.get_file_entry(key)? {
             None => return Ok(None),
             Some(entry) => entry,
         };
@@ -348,7 +348,7 @@ impl HistoryIndex {
         let end = start + file_entry.hgid_index_size as usize;
 
         let buf = self.mmap.get_err(start..end)?;
-        let entry_offset = match self.binary_search_nodes(&key.hgid, &buf) {
+        let entry_offset = match self.binary_search_nodes(&key.hgid, buf) {
             None => return Ok(None),
             Some(offset) => offset,
         };
@@ -367,7 +367,7 @@ impl HistoryIndex {
 
     fn read_data(&self, offset: usize, size: usize) -> Result<&[u8]> {
         let offset = offset + self.index_start;
-        Ok(self.mmap.get_err(offset..offset + size)?)
+        self.mmap.get_err(offset..offset + size)
     }
 
     // These two binary_search_* functions are very similar, but I couldn't find a way to unify

@@ -71,6 +71,10 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def main_2() -> None:
     rc: int = main()
     sys.exit(rc)
+
+
+if __name__ == "__main__":
+    main_2()

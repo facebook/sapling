@@ -17,6 +17,9 @@ use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use context::CoreContext;
 use futures::future;
 use futures::stream::Stream;
@@ -372,6 +375,14 @@ impl RepositoryRequestContext {
             header::USER_AGENT,
             header::HeaderValue::from_static(CLIENT_USER_AGENT),
         );
+
+        request.headers_mut().insert(
+            CLIENT_INFO_HEADER,
+            header::HeaderValue::from_str(
+                &ClientInfo::default_with_entry_point(ClientEntryPoint::LfsServer).to_json()?,
+            )?,
+        );
+
         let res = client.request(request);
 
         // NOTE: We spawn the request on an executor because we'd like to read the response even if

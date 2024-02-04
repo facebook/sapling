@@ -11,6 +11,7 @@ pub mod facebook;
 mod settings;
 
 use environment::Caching;
+#[cfg(fbcode_build)]
 use environment::LocalCacheConfig;
 use fbinit::FacebookInit;
 

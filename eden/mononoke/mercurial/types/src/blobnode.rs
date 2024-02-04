@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use bytes::Bytes;
-use futures_old::Future;
-use futures_old::Stream;
+use futures::pin_mut;
+use futures::Stream;
+use futures::TryStreamExt;
 use mononoke_types::sha1_hash;
 use mononoke_types::sha1_hash::Context;
 use quickcheck::Arbitrary;
@@ -170,28 +172,22 @@ pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
 }
 
 /// Compute a Hg Node ID from parents and a stream of data.
-pub fn calculate_hg_node_id_stream<S, E>(
-    stream: S,
+pub async fn calculate_hg_node_id_stream(
+    stream: impl Stream<Item = Result<Bytes>>,
     parents: &HgParents,
-) -> impl Future<Item = HgNodeHash, Error = E>
-where
-    S: Stream<Item = Bytes, Error = E>,
-{
-    let ctxt = hg_node_id_hash_context(parents);
-    stream
-        .fold(ctxt, |mut ctxt, bytes| {
-            ctxt.update(bytes);
-            Ok(ctxt)
-        })
-        .map(|ctxt| ctxt.finish())
-        .map(HgNodeHash)
+) -> Result<HgNodeHash> {
+    let mut ctxt = hg_node_id_hash_context(parents);
+    pin_mut!(stream);
+    while let Some(bytes) = stream.try_next().await? {
+        ctxt.update(bytes);
+    }
+    Ok(HgNodeHash(ctxt.finish()))
 }
 
 #[cfg(test)]
 mod test {
     use bytes::BytesMut;
-    use futures::compat::Future01CompatExt;
-    use futures_old::stream;
+    use futures::stream;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
 
@@ -210,19 +206,19 @@ mod test {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let p = &HgBlobNode::new(blob.clone(), None, None);
         {
-            let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), pid, None);
-            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
+            let pid: HgNodeHash = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), Some(pid), None);
+            assert_eq!(n.parents, HgParents::One(pid));
         }
         {
-            let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), None, pid);
-            assert_eq!(n.parents, HgParents::One(pid.unwrap()));
+            let pid: HgNodeHash = p.nodeid();
+            let n = HgBlobNode::new(blob.clone(), None, Some(pid));
+            assert_eq!(n.parents, HgParents::One(pid));
         }
         {
-            let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob, pid, pid);
-            assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
+            let pid: HgNodeHash = p.nodeid();
+            let n = HgBlobNode::new(blob, Some(pid), Some(pid));
+            assert_eq!(n.parents, HgParents::Two(pid, pid));
         }
     }
 
@@ -236,17 +232,25 @@ mod test {
             mem::swap(&mut p1, &mut p2);
         }
 
-        let pid1: Option<HgNodeHash> = Some(p1.nodeid());
-        let pid2: Option<HgNodeHash> = Some(p2.nodeid());
+        let pid1: HgNodeHash = p1.nodeid();
+        let pid2: HgNodeHash = p2.nodeid();
 
         let node1 = {
-            let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid1, pid2);
-            assert_eq!(n.parents, HgParents::Two(pid1.unwrap(), pid2.unwrap()));
+            let n = HgBlobNode::new(
+                HgBlob::from(Bytes::from(&b"bar"[..])),
+                Some(pid1),
+                Some(pid2),
+            );
+            assert_eq!(n.parents, HgParents::Two(pid1, pid2));
             n.nodeid()
         };
         let node2 = {
-            let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid2, pid1);
-            assert_eq!(n.parents, HgParents::Two(pid2.unwrap(), pid1.unwrap()));
+            let n = HgBlobNode::new(
+                HgBlob::from(Bytes::from(&b"bar"[..])),
+                Some(pid2),
+                Some(pid1),
+            );
+            assert_eq!(n.parents, HgParents::Two(pid2, pid1));
             n.nodeid()
         };
         assert_eq!(node1, node2);
@@ -259,7 +263,7 @@ mod test {
             let rt = Runtime::new().unwrap();
             let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
 
-            let stream = stream::iter_ok::<_, ()>(input.clone());
+            let stream = stream::iter(input.clone().into_iter().map(Ok));
 
             let bytes = input.iter().fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(chunk);
@@ -267,7 +271,7 @@ mod test {
             }).freeze();
 
             let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
-            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents).compat()).unwrap();
+            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents)).unwrap();
 
             out_inplace == out_stream
         }

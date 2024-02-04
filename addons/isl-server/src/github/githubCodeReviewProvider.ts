@@ -23,7 +23,7 @@ export type GitHubDiffSummary = {
   type: 'github';
   title: string;
   commitMessage: string;
-  state: PullRequestState | 'DRAFT';
+  state: PullRequestState | 'DRAFT' | 'MERGE_QUEUED';
   number: DiffId;
   url: string;
   commentCount: number;
@@ -64,7 +64,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
           // This is not very easy with github's graphql API, which doesn't allow more than 5 "OR"s in a search query.
           // But if we used one-query-per-diff we would reach rate limiting too quickly.
           searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr author:@me`,
-          numToFetch: 100,
+          numToFetch: 50,
         });
         if (allSummaries?.search.nodes == null) {
           this.diffSummaries.emit('data', new Map());
@@ -85,6 +85,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               state:
                 summary.isDraft && summary.state === PullRequestState.Open
                   ? 'DRAFT'
+                  : summary.mergeQueueEntry != null
+                  ? 'MERGE_QUEUED'
                   : summary.state,
               number: id,
               url: summary.url,
@@ -115,6 +117,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
 
   public dispose() {
     this.diffSummaries.removeAllListeners();
+    this.triggerDiffSummariesFetch.dispose();
   }
 
   public getSummaryName(): string {

@@ -20,7 +20,6 @@
 #include "eden/fs/store/ObjectStore.h"
 
 using folly::exception_wrapper;
-using folly::Future;
 
 namespace facebook::eden {
 
@@ -44,7 +43,7 @@ CheckoutAction::CheckoutAction(
     CheckoutContext* ctx,
     const Tree::value_type* oldScmEntry,
     const Tree::value_type* newScmEntry,
-    folly::Future<InodePtr> inodeFuture)
+    ImmediateFuture<InodePtr> inodeFuture)
     : ctx_(ctx), inodeFuture_(std::move(inodeFuture)) {
   XDCHECK(oldScmEntry || newScmEntry);
   if (oldScmEntry) {
@@ -55,7 +54,7 @@ CheckoutAction::CheckoutAction(
   }
 }
 
-CheckoutAction::~CheckoutAction() {}
+CheckoutAction::~CheckoutAction() = default;
 
 PathComponentPiece CheckoutAction::getEntryName() const {
   XDCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());
@@ -63,83 +62,34 @@ PathComponentPiece CheckoutAction::getEntryName() const {
                                   : newScmEntry_.value().first;
 }
 
-class CheckoutAction::LoadingRefcount {
- public:
-  explicit LoadingRefcount(CheckoutAction* action) : action_(action) {
-    action_->numLoadsPending_.fetch_add(1);
-  }
-  LoadingRefcount(LoadingRefcount&& other) noexcept : action_(other.action_) {
-    other.action_ = nullptr;
-  }
-  LoadingRefcount& operator=(LoadingRefcount&& other) noexcept {
-    decref();
-    action_ = other.action_;
-    other.action_ = nullptr;
-    return *this;
-  }
-  ~LoadingRefcount() {
-    decref();
-  }
-
-  /**
-   * Implement the arrow operator, so that LoadingRefcount can be used like a
-   * pointer.  This allows users to easily call through it into the underlying
-   * CheckoutAction methods.
-   */
-  CheckoutAction* operator->() const {
-    return action_;
-  }
-
- private:
-  void decref() {
-    if (action_) {
-      auto oldCount = action_->numLoadsPending_.fetch_sub(1);
-      if (oldCount == 1) {
-        // We were the last load to complete.  We can perform the action now.
-        action_->allLoadsComplete();
-      }
-    }
-  }
-
-  CheckoutAction* action_;
-};
-
-Future<InvalidationRequired> CheckoutAction::run(
+ImmediateFuture<InvalidationRequired> CheckoutAction::run(
     CheckoutContext* ctx,
     ObjectStore* store) {
-  // Immediately create one LoadingRefcount, to ensure that our
-  // numLoadsPending_ refcount does not drop to 0 until after we have started
-  // all required load operations.
-  //
-  // Even if all loads complete immediately, allLoadsComplete() won't be called
-  // until this LoadingRefcount is destroyed.
-  LoadingRefcount refcount{this};
-
+  std::vector<ImmediateFuture<folly::Unit>> loadFutures;
   try {
     // Load the Blob or Tree for the old TreeEntry.
     if (oldScmEntry_.has_value()) {
       const auto& oldEntry = oldScmEntry_.value();
       if (oldEntry.second.isTree()) {
-        store->getTree(oldEntry.second.getHash(), ctx->getFetchContext())
-            .thenValue([rc = LoadingRefcount(this)](
-                           std::shared_ptr<const Tree> oldTree) {
-              rc->setOldTree(std::move(oldTree));
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance())
-            .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
-              rc->error("error getting old tree", std::move(ew));
-            });
+        loadFutures.emplace_back(
+            store->getTree(oldEntry.second.getHash(), ctx->getFetchContext())
+                .thenValue([self = shared_from_this()](
+                               std::shared_ptr<const Tree> oldTree) {
+                  self->setOldTree(std::move(oldTree));
+                })
+                .thenError([self = shared_from_this()](exception_wrapper&& ew) {
+                  self->error("error getting old tree", std::move(ew));
+                }));
       } else {
-        store->getBlobSha1(oldEntry.second.getHash(), ctx->getFetchContext())
-            .thenValue([rc = LoadingRefcount(this)](Hash20 oldBlobSha1) {
-              rc->setOldBlob(std::move(oldBlobSha1));
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance())
-            .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
-              rc->error("error getting old blob Sha1", std::move(ew));
-            });
+        loadFutures.emplace_back(
+            store
+                ->getBlobSha1(oldEntry.second.getHash(), ctx->getFetchContext())
+                .thenValue([self = shared_from_this()](Hash20 oldBlobSha1) {
+                  self->setOldBlob(std::move(oldBlobSha1));
+                })
+                .thenError([self = shared_from_this()](exception_wrapper&& ew) {
+                  self->error("error getting old blob Sha1", std::move(ew));
+                }));
       }
     }
 
@@ -147,41 +97,60 @@ Future<InvalidationRequired> CheckoutAction::run(
     if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.second.isTree()) {
-        store->getTree(newEntry.second.getHash(), ctx->getFetchContext())
-            .thenValue([rc = LoadingRefcount(this)](
-                           std::shared_ptr<const Tree> newTree) {
-              rc->setNewTree(std::move(newTree));
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance())
-            .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
-              rc->error("error getting new tree", std::move(ew));
-            });
+        loadFutures.emplace_back(
+            store->getTree(newEntry.second.getHash(), ctx->getFetchContext())
+                .thenValue([self = shared_from_this()](
+                               std::shared_ptr<const Tree> newTree) {
+                  self->setNewTree(std::move(newTree));
+                })
+                .thenError([self = shared_from_this()](exception_wrapper&& ew) {
+                  self->error("error getting new tree", std::move(ew));
+                }));
       } else {
         // We don't actually compare the new blob to anything, so we don't need
         // to fetch it. This just marks that the new inode will be a file.
-        LoadingRefcount(this)->setNewBlob();
+        setNewBlob();
       }
     }
 
     // If we were constructed with a Future<InodePtr>, wait for it.
     if (!inode_) {
       XCHECK(inodeFuture_.valid());
-      std::move(inodeFuture_)
-          .thenValue([rc = LoadingRefcount(this)](InodePtr inode) {
-            rc->setInode(std::move(inode));
-          })
-          .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
-            rc->error("error getting inode", std::move(ew));
-          });
+      loadFutures.emplace_back(
+          std::move(inodeFuture_)
+              .thenValue([self = shared_from_this()](InodePtr inode) {
+                self->setInode(std::move(inode));
+              })
+              .thenError([self = shared_from_this()](exception_wrapper&& ew) {
+                self->error("error getting inode", std::move(ew));
+              }));
     }
   } catch (...) {
     auto ew = exception_wrapper{std::current_exception()};
-    refcount->error(
-        "error preparing to load data for checkout action", std::move(ew));
+    error("error preparing to load data for checkout action", std::move(ew));
   }
 
-  return promise_.getFuture();
+  return collectAll(std::move(loadFutures))
+      .thenValue(
+          [self = shared_from_this()](
+              auto&&) -> ImmediateFuture<InvalidationRequired> {
+            if (!self->errors_.empty()) {
+              // If multiple errors occurred, we log them all, but only
+              // propagate up the first one.  If necessary we could change this
+              // to create a single exception that contains all of the messages
+              // concatenated together.
+              XLOG(ERR) << "multiple errors while attempting to load data for "
+                           "checkout action:";
+              for (const auto& ew : self->errors_) {
+                XLOG(ERR) << "CheckoutAction error: "
+                          << folly::exceptionStr(ew);
+              }
+              return makeImmediateFuture<InvalidationRequired>(
+                  self->errors_[0]);
+            }
+
+            return self->doAction();
+          });
 }
 
 void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {
@@ -220,71 +189,17 @@ void CheckoutAction::error(
   errors_.push_back(std::move(ew));
 }
 
-void CheckoutAction::allLoadsComplete() noexcept {
-  if (!ensureDataReady()) {
-    // ensureDataReady() will fulfilled promise_ with an exception
-    return;
-  }
-
-  try {
-    doAction().thenTry([this](folly::Try<InvalidationRequired>&& t) {
-      this->promise_.setTry(std::move(t));
-    });
-  } catch (...) {
-    auto ew = exception_wrapper{std::current_exception()};
-    promise_.setException(std::move(ew));
-  }
-}
-
-bool CheckoutAction::ensureDataReady() noexcept {
-  if (!errors_.empty()) {
-    // If multiple errors occurred, we log them all, but only propagate
-    // up the first one.  If necessary we could change this to create
-    // a single exception that contains all of the messages concatenated
-    // together.
-    if (errors_.size() > 1) {
-      XLOG(ERR) << "multiple errors while attempting to load data for "
-                   "checkout action:";
-      for (const auto& ew : errors_) {
-        XLOG(ERR) << "CheckoutAction error: " << folly::exceptionStr(ew);
-      }
-    }
-    promise_.setException(errors_[0]);
-    return false;
-  }
-
-  // Make sure we actually have all the data we need.
-  // (Just in case something went wrong when wiring up the callbacks in such a
-  // way that we also failed to call error().)
-  if (oldScmEntry_.has_value() && (!oldTree_ && !oldBlobSha1_)) {
-    promise_.setException(
-        std::runtime_error("failed to load data for old TreeEntry"));
-    return false;
-  }
-  if (newScmEntry_.has_value() && (!newTree_ && !newBlobMarker_)) {
-    promise_.setException(
-        std::runtime_error("failed to load data for new TreeEntry"));
-    return false;
-  }
-  if (!inode_) {
-    promise_.setException(std::runtime_error("failed to load affected inode"));
-    return false;
-  }
-
-  return true;
-}
-
-Future<InvalidationRequired> CheckoutAction::doAction() {
+ImmediateFuture<InvalidationRequired> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
 
   // Check for conflicts first.
   return hasConflict().thenValue(
-      [this](
-          bool conflictWasAddedToCtx) -> folly::Future<InvalidationRequired> {
+      [self = shared_from_this()](
+          bool conflictWasAddedToCtx) -> ImmediateFuture<InvalidationRequired> {
         // Note that even if we know we are not going to apply the changes, we
         // must still run hasConflict() first because we rely on its
         // side-effects.
-        if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
+        if (conflictWasAddedToCtx && !self->ctx_->forceUpdate()) {
           // We only report conflicts for files, not directories. The only
           // possible conflict that can occur here if this inode is a TreeInode
           // is that the old source control state was for a file. There aren't
@@ -302,18 +217,18 @@ Future<InvalidationRequired> CheckoutAction::doAction() {
         // into a PathComponent owned either by oldScmEntry_ or newScmEntry_.
         // Therefore don't move these scm entries, to make sure we don't
         // invalidate the PathComponentPiece data.
-        auto parent = inode_->getParent(ctx_->renameLock());
+        auto parent = self->inode_->getParent(self->ctx_->renameLock());
         return parent->checkoutUpdateEntry(
-            ctx_,
-            getEntryName(),
-            std::move(inode_),
-            std::move(oldTree_),
-            std::move(newTree_),
-            newScmEntry_);
+            self->ctx_,
+            self->getEntryName(),
+            std::move(self->inode_),
+            std::move(self->oldTree_),
+            std::move(self->newTree_),
+            self->newScmEntry_);
       });
 }
 
-Future<bool> CheckoutAction::hasConflict() {
+ImmediateFuture<bool> CheckoutAction::hasConflict() {
   if (oldTree_) {
     auto treeInode = inode_.asTreePtrOrNull();
     if (!treeInode) {
@@ -346,7 +261,7 @@ Future<bool> CheckoutAction::hasConflict() {
                 oldScmEntry_.value().second.getType(),
                 ctx_->getWindowsSymlinksEnabled()),
             ctx_->getFetchContext())
-        .thenValue([this](bool isSame) {
+        .thenValue([self = shared_from_this()](bool isSame) {
           if (isSame) {
             // no conflict
             return false;
@@ -358,13 +273,12 @@ Future<bool> CheckoutAction::hasConflict() {
           //   conflict.
           // - If the file does not exist in the new tree, then this is a
           //   MODIFIED_REMOVED conflict.
-          auto conflictType = newScmEntry_ ? ConflictType::MODIFIED_MODIFIED
-                                           : ConflictType::MODIFIED_REMOVED;
-          ctx_->addConflict(conflictType, inode_.get());
+          auto conflictType = self->newScmEntry_
+              ? ConflictType::MODIFIED_MODIFIED
+              : ConflictType::MODIFIED_REMOVED;
+          self->ctx_->addConflict(conflictType, self->inode_.get());
           return true;
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        });
   }
 
   XDCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "

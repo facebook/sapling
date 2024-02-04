@@ -9,6 +9,7 @@
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectCache.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
 
@@ -33,17 +34,26 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
 
  public:
   static std::shared_ptr<BlobCache> create(
-      std::shared_ptr<ReloadableConfig> config) {
-    return std::make_shared<BlobCache>(PrivateTag{}, std::move(config));
+      std::shared_ptr<ReloadableConfig> config,
+      EdenStatsPtr stats) {
+    return std::make_shared<BlobCache>(
+        PrivateTag{}, std::move(config), std::move(stats));
   }
-  static std::shared_ptr<BlobCache> create(
-      size_t maximumSize,
-      size_t minimumCount) {
-    return std::make_shared<BlobCache>(PrivateTag{}, maximumSize, minimumCount);
+  static std::shared_ptr<BlobCache>
+  create(size_t maximumSize, size_t minimumCount, EdenStatsPtr stats) {
+    return std::make_shared<BlobCache>(
+        PrivateTag{}, maximumSize, minimumCount, std::move(stats));
   }
 
-  explicit BlobCache(PrivateTag, std::shared_ptr<ReloadableConfig> config);
-  explicit BlobCache(PrivateTag, size_t maximumSize, size_t minimumCount);
+  explicit BlobCache(
+      PrivateTag,
+      std::shared_ptr<ReloadableConfig> config,
+      EdenStatsPtr stats);
+  explicit BlobCache(
+      PrivateTag,
+      size_t maximumSize,
+      size_t minimumCount,
+      EdenStatsPtr stats);
   ~BlobCache() = default;
 
   /**
@@ -61,7 +71,11 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
   GetResult get(
       const ObjectId& hash,
       Interest interest = Interest::LikelyNeededAgain) {
-    return getInterestHandle(hash, interest);
+    auto handle = getInterestHandle(hash, interest);
+    if (handle.object) {
+      stats_->increment(&ObjectStoreStats::getBlobFromMemory);
+    }
+    return handle;
   }
 
   /**
@@ -78,6 +92,9 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
       Interest interest = Interest::LikelyNeededAgain) {
     return insertInterestHandle(std::move(id), std::move(blob), interest);
   }
+
+ private:
+  EdenStatsPtr stats_;
 };
 
 } // namespace facebook::eden

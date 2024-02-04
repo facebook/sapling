@@ -15,6 +15,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use changesets::ChangesetsRef;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -29,7 +30,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use unodes::RootUnodeManifestId;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct CopyImmutableArgs {
@@ -86,7 +86,7 @@ pub async fn copy_immutable_impl(
                     .find_entry(
                         ctx.clone(),
                         repo.repo_blobstore_arc(),
-                        Some(src_path.clone()),
+                        src_path.clone().into(),
                     )
                     .await?
                     .with_context(|| {
@@ -102,9 +102,9 @@ pub async fn copy_immutable_impl(
                 );
                 MutableRenameEntry::new(
                     dst_cs_id,
-                    Some(dst_path),
+                    dst_path.into(),
                     src_cs_id,
-                    Some(src_path),
+                    src_path.into(),
                     src_entry,
                 )
             } else {

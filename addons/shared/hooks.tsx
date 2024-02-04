@@ -27,7 +27,10 @@ export function useThrottledEffect<A extends Array<unknown>>(
   deps?: Array<unknown>,
 ): void {
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const throttled = useCallback(debounce(cb, throttleTimeMs, undefined, true), [throttleTimeMs]);
+  const throttled = useCallback(debounce(cb, throttleTimeMs, undefined, true), [
+    throttleTimeMs,
+    ...(deps ?? []),
+  ]);
   return useEffect((...args: A) => {
     return throttled(...args);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -46,4 +49,17 @@ export function useDeepMemo<T>(construct: () => T, dependencies: React.Dependenc
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(construct, deepDeps);
+}
+
+/**
+ * Returns a react ref that you can pass to an element to autofocus it on mount.
+ */
+export function useAutofocusRef(): React.MutableRefObject<HTMLElement | null> {
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (ref.current != null) {
+      ref.current.focus();
+    }
+  }, [ref]);
+  return ref;
 }

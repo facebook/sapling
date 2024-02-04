@@ -28,7 +28,7 @@ use futures_old::stream::Stream;
 use futures_old::stream::Stream as OldStream;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use partial_io::GenWouldBlock;
@@ -597,8 +597,8 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert!(stream.app_errors().is_empty());
 }
 
-fn path(bytes: &[u8]) -> MPath {
-    MPath::new(bytes).unwrap()
+fn path(bytes: &[u8]) -> NonRootMPath {
+    NonRootMPath::new(bytes).unwrap()
 }
 
 fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(

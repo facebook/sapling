@@ -96,10 +96,7 @@ class TempFileManager:
     """
 
     _temp_dir: Optional[Path] = None
-    _prefix: Optional[str]
-
-    def __init__(self, prefix: Optional[str] = "eden_test.") -> None:
-        self._prefix = prefix
+    _prefix: str = "eden_test."
 
     def __enter__(self) -> "TempFileManager":
         return self

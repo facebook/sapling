@@ -1,0 +1,63 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.confirm-unsaved-edits-pre-split {
+  max-width: 500px;
+  padding: var(--pad);
+  padding-bottom: 0;
+}
+
+.confirm-unsaved-edits-pre-split vscode-divider {
+  margin-top: calc(2 * var(--pad));
+}
+
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes {
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}
+
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .commit-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+}
+
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .commit {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+  pointer-events: none;
+}
+
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .unsaved-message-indicator,
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .selected-commit-background,
+.confirm-unsaved-edits-pre-split
+  .commits-with-unsaved-changes
+  .selected-commit
+  .commit-details:before {
+  display: none;
+}
+
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .field-name {
+  padding-inline: var(--halfpad);
+  display: inline-flex;
+  gap: var(--halfpad);
+  align-items: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 90%;
+  opacity: 0.9;
+}
+
+.confirm-unsaved-edits-pre-split .commits-with-unsaved-changes .byline {
+  padding-inline: calc(2 * var(--pad));
+  display: flex;
+  gap: var(--halfpad);
+  align-items: center;
+}

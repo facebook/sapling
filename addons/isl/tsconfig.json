@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": ["ES2021.WeakRef", "dom", "dom.iterable", "esnext"],
+    "types": ["vite/client"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -9,7 +10,6 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "importsNotUsedAsValues": "error",
     "downlevelIteration": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
@@ -19,5 +19,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "integrationTests"]
+  "include": ["src", "integrationTests", "vite-env.d.ts", "vite.config.ts", "jest.config.cjs"]
 }

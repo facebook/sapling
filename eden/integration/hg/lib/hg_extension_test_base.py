@@ -14,11 +14,14 @@ import re
 import sys
 import textwrap
 import typing
+from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
 import eden.config
 from eden.integration.lib import hgrepo, testcase
+
+from eden.integration.lib.find_executables import FindExe
 
 
 def get_default_hgrc() -> configparser.ConfigParser:
@@ -29,12 +32,6 @@ def get_default_hgrc() -> configparser.ConfigParser:
     cases and test case variants.
     """
     hgrc = configparser.ConfigParser()
-    # TODO(mbolin): This is supposed to replace experimental.updatecheck,
-    # but it does not appear to be taking effect today. The
-    # experimental.updatecheck setting on this hgrc should be removed once
-    # it has been deprecated and update.check does what it is supposed to
-    # do.
-    hgrc["commands"] = {"update.check": "noconflict"}
     hgrc["ui"] = {
         "origbackuppath": ".hg/origbackups",
         "username": "Kevin Flynn <lightcyclist@example.com>",
@@ -42,7 +39,6 @@ def get_default_hgrc() -> configparser.ConfigParser:
     hgrc["experimental"] = {
         "evolution": "createmarkers",
         "evolutioncommands": "prev next split fold obsolete metaedit",
-        "updatecheck": "noconflict",
     }
     hgrc["extensions"] = {
         "absorb": "",
@@ -85,6 +81,8 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     backing_repo: hgrepo.HgRepository
     enable_windows_symlinks: bool = False
     inode_catalog_type: Optional[str] = None
+    backing_store_type: Optional[str] = None
+    adtl_repos: List[Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]] = []
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -99,10 +97,15 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             self.mount,
             allow_empty=True,
             enable_windows_symlinks=self.enable_windows_symlinks,
+            backing_store=self.backing_store_type,
         )
 
         # Now create the repository object that refers to the eden client
-        self.repo = hgrepo.HgRepository(self.mount, system_hgrc=self.system_hgrc)
+        self.repo = hgrepo.HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         configs = super().edenfs_extra_config()
@@ -170,6 +173,59 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             hgeditor=hgeditor,
             check=check,
         )
+
+    def hg_clone_additional_repo(
+        self,
+        *clone_args: str,
+        client_name: str = "repository",
+    ) -> Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]:
+        """Creates another Hg Repository using `hg clone`. This excercises a
+        different code path than setup_eden_test(). This function returns two
+        HgRepository objects. The first corresponds to the new Eden mount. The
+        second corresponds to the backing repo (backed by a new eager repo)."""
+        num_repos = len(self.adtl_repos)
+        eager = str(Path(self.repos_dir) / f"eager_{num_repos}")
+        mount = str(Path(self.mounts_dir) / f"{client_name}")
+        backing = str(Path(self.repos_dir) / f"{client_name}_{num_repos}")
+
+        # TODO: We rely on `hg clone` to create the eager and backing repos for
+        # us. We could theoretically provide our own to test more cases.
+        cmd, env = FindExe.get_edenfsctl_env()
+        self.repo.hg(
+            "clone",
+            f"eager:{eager}",
+            f"{mount}",
+            "--eden",
+            "--config",
+            "clone.use-rust=true",
+            "--eden-backing-repo",
+            f"{backing}",
+            "--config",
+            f"edenfs.command={cmd}",
+            "--config",
+            f"edenfs.basepath={self.eden._base_dir}",
+            *clone_args,
+            cwd=self.mounts_dir,
+            env=env,
+        )
+
+        # The use-eden-sparse config means that a FilteredFS repo was cloned
+        is_filtered = clone_args.count("clone.use-eden-sparse=true") > 0
+
+        # Create the HgRepository objects for the new mount and backing repo
+        mount = hgrepo.HgRepository(
+            str(mount),
+            system_hgrc=self.system_hgrc,
+            filtered=is_filtered,
+        )
+        backing = hgrepo.HgRepository(
+            backing,
+            system_hgrc=self.system_hgrc,
+            temp_mgr=self.temp_mgr,
+            filtered=is_filtered,
+        )
+        self.adtl_repos.append((mount, backing))
+        return mount, backing
 
     def create_editor_that_writes_commit_messages(self, messages: List[str]) -> str:
         """
@@ -403,6 +459,14 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         self.assertEqual([], self.repo.journal())
 
 
+# Intended for use with any test that doesn't make sense to run on an
+# unfiltered Hg repo. Examples are any test that applies filters to the repo.
+class FilteredHgTestCase(EdenHgTestCase, metaclass=abc.ABCMeta):
+    def setup_eden_test(self) -> None:
+        self.backing_store_type = "filteredhg"
+        super().setup_eden_test()
+
+
 class JournalEntry:
     """
     JournalEntry describes an expected journal entry.
@@ -488,24 +552,57 @@ def _replicate_hg_test(
     if eden.config.HAVE_NFS:
         tree_variants.append(("TreeOnlyNFS", [testcase.NFSTestMixin]))
 
+    # Mix in FilteredHg tests if the build supports it.
+    scm_variants: MixinList = [("", [])]
+    # Temporarily disable FilteredHg mixins to test whether they are causing
+    # other tests to hang
+    if eden.config.HAVE_FILTEREDHG and False:
+        scm_variants.append(("FilteredHg", [FilteredTestMixin]))
+
     overlay_variants: MixinList = [("", [])]
     if sys.platform == "win32":
         overlay_variants.append(("InMemory", [InMemoryOverlayTestMixin]))
 
     for tree_label, tree_mixins in tree_variants:
         for overlay_label, overlay_mixins in overlay_variants:
+            for scm_label, scm_mixins in scm_variants:
 
-            class VariantHgRepoTest(*tree_mixins, *overlay_mixins, test_class):
-                pass
+                class VariantHgRepoTest(
+                    *tree_mixins, *overlay_mixins, *scm_mixins, test_class
+                ):
+                    pass
 
-            yield (
-                f"{tree_label}{overlay_label}",
-                typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
-            )
+                yield (
+                    f"{tree_label}{overlay_label}{scm_label}",
+                    typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
+                )
+
+
+def _replicate_filteredhg_test(
+    test_class: Type[FilteredHgTestCase],
+) -> Iterable[Tuple[str, Type[FilteredHgTestCase]]]:
+    tree_variants: MixinList = [("TreeOnly", [])]
+    if eden.config.HAVE_NFS:
+        tree_variants.append(("TreeOnlyNFS", [testcase.NFSTestMixin]))
+
+    for tree_label, tree_mixins in tree_variants:
+
+        class VariantHgRepoTest(*tree_mixins, test_class):
+            pass
+
+        yield (
+            f"{tree_label}",
+            typing.cast(Type[FilteredHgTestCase], VariantHgRepoTest),
+        )
 
 
 class InMemoryOverlayTestMixin:
     inode_catalog_type = "inmemory"
 
 
+class FilteredTestMixin:
+    backing_store_type = "filteredhg"
+
+
 hg_test = testcase.test_replicator(_replicate_hg_test)
+filteredhg_test = testcase.test_replicator(_replicate_filteredhg_test)

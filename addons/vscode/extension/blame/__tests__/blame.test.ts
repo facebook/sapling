@@ -9,7 +9,7 @@ import type {Repository} from 'isl-server/src/Repository';
 import type {CommitInfo} from 'isl/src/types';
 
 import {getDiffBlameHoverMarkup} from '../blameHover';
-import {getRealignedBlameInfo} from '../blameUtils';
+import {getRealignedBlameInfo, shortenAuthorName} from '../blameUtils';
 import {GitHubCodeReviewProvider} from 'isl-server/src/github/githubCodeReviewProvider';
 import {mockLogger} from 'shared/testUtils';
 
@@ -121,6 +121,19 @@ added some stuff in #1234`,
 
 added some stuff`,
       );
+    });
+  });
+});
+
+describe('blame utils', () => {
+  describe('shortenAuthorName', () => {
+    it('removes email for inline display', () => {
+      expect(shortenAuthorName('John Smith john@example.com')).toEqual('John Smith');
+      expect(shortenAuthorName('John Smith <john@example.com>')).toEqual('John Smith');
+    });
+
+    it('shows email if no name is given', () => {
+      expect(shortenAuthorName('john@example.com')).toEqual('john@example.com');
     });
   });
 });

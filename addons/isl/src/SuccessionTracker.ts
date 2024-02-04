@@ -5,10 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {SmartlogCommits} from './types';
+import type {Dag} from './dag/dag';
+import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
 
-import {atom, DefaultValue} from 'recoil';
-import {unwrap} from 'shared/utils';
+import {MutationDag} from './dag/mutation_dag';
+import {writeAtom} from './jotaiUtils';
+import {entangledAtoms} from './recoilUtils';
+import {exactRevset, succeedableRevset} from './types';
+import {DefaultValue} from 'recoil';
 
 type Successions = Array<[oldHash: string, newHash: string]>;
 type SuccessionCallback = (successions: Successions) => unknown;
@@ -92,22 +96,16 @@ export class SuccessionTracker {
 
 export const successionTracker = new SuccessionTracker();
 
-export const latestSuccessorsMap = atom<Map<string, string>>({
+export const [latestSuccessorsMapAtom, latestSuccessorsMap] = entangledAtoms<MutationDag>({
   key: 'latestSuccessorsMap',
-  default: new Map(),
-  effects: [
-    ({setSelf}) => {
-      return successionTracker.onSuccessions(successions => {
-        setSelf(existing => {
-          const map = existing instanceof DefaultValue ? new Map() : new Map(existing);
-          for (const [oldHash, newHash] of successions) {
-            map.set(oldHash, newHash);
-          }
-          return map;
-        });
-      });
-    },
-  ],
+  default: new MutationDag(),
+});
+
+successionTracker.onSuccessions(successions => {
+  writeAtom(latestSuccessorsMapAtom, existing => {
+    const dag = existing instanceof DefaultValue ? new MutationDag() : existing;
+    return dag.addMutations(successions);
+  });
 });
 
 /**
@@ -117,11 +115,28 @@ export const latestSuccessorsMap = atom<Map<string, string>>({
  *
  * Useful for previews to ensure they're working with the latest version of a commit,
  * given that they may have been queued up while another operation ran and eventually caused succession.
+ *
+ * Note: if an ExactRevset is passed, don't look up the successor.
  */
-export function latestSuccessor(ctx: {successorMap: Map<string, string>}, oldHash: string): string {
-  let hash = oldHash;
-  while (ctx.successorMap.has(hash)) {
-    hash = unwrap(ctx.successorMap.get(hash));
+export function latestSuccessor(ctx: Dag, oldRevset: SucceedableRevset | ExactRevset): string {
+  let hash = oldRevset.revset;
+  if (oldRevset.type === 'exact-revset') {
+    return hash;
   }
+  hash = ctx.followSuccessors(hash).toHashes().first() ?? hash;
   return hash;
+}
+
+/**
+ * Typically we want to use succeedable revsets everywhere, to maximize support for queued commands.
+ * But if you see and act on a visibly obsolete commit in the UI, we should use its exact hash,
+ * so that you don't suddenly act on a seemingly unrelated commit.
+ */
+export function latestSuccessorUnlessExplicitlyObsolete(
+  commit: Readonly<CommitInfo>,
+): SucceedableRevset | ExactRevset {
+  if (commit.successorInfo?.type != null) {
+    return exactRevset(commit.hash);
+  }
+  return succeedableRevset(commit.hash);
 }

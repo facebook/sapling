@@ -1,0 +1,200 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "blobrepo",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bonsai_svnrev_mapping:bonsai_svnrev_mapping",
+        "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
+        "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
+        "//eden/mononoke/mercurial:mercurial_mutation",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mutable_counters:mutable_counters",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_attributes/repo_lock:repo_lock",
+        "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "blobsync",
+    srcs = glob(["blobsync/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "blobsync"},
+    test_deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/blobstore:redactedblobstore",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":repo_blobstore",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "changeset_fetcher",
+    srcs = glob(["changeset_fetcher/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "changeset_fetcher"},
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/changesets:changesets_impl",
+        "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "repo_blobstore",
+    srcs = glob(["repo_blobstore/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "repo_blobstore"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:prefixblob",
+        "//eden/mononoke/blobstore:redactedblobstore",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "blobrepo_errors",
+    srcs = glob(["errors/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "errors"},
+    deps = [
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:bincode",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)
+
+rust_library(
+    name = "blobrepo_hg",
+    srcs = glob(["blobrepo_hg/src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_dir": "blobrepo_hg",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:uuid",
+        ":blobrepo",
+        ":blobrepo_common",
+        ":blobrepo_errors",
+        ":repo_blobstore",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/futures_ext:futures_ext",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/wireproto_handler:wireproto_handler",
+    ],
+)
+
+rust_library(
+    name = "blobrepo_override",
+    srcs = glob(["override/src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_dir": "override",
+    },
+    deps = [
+        ":blobrepo",
+        ":changeset_fetcher",
+        ":repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/filenodes:filenodes",
+    ],
+)
+
+rust_library(
+    name = "blobrepo_common",
+    srcs = glob(["common/src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_dir": "common",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        ":blobrepo",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+    ],
+)

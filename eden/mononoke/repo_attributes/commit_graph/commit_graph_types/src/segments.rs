@@ -84,3 +84,11 @@ impl Display for ChangesetSegmentLocation {
 pub struct ChangesetSegmentFrontier {
     pub segments: BTreeMap<Generation, HashMap<ChangesetId, HashSet<ChangesetId>>>,
 }
+
+/// A location of a changeset represented as the `distance`th ancestor
+/// of `cs_id` (i.e. `cs_id~distance`)
+#[derive(Debug)]
+pub struct Location {
+    pub cs_id: ChangesetId,
+    pub distance: u64,
+}

@@ -14,32 +14,52 @@ import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
+import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
-import {latestCommitsData, latestUncommittedChangesData, mergeConflicts} from '../serverAPIState';
+import {
+  latestCommitsData,
+  latestUncommittedChangesData,
+  mergeConflicts,
+  repositoryInfo,
+} from '../serverAPIState';
+import {ComponentExplorerButton} from './ComponentExplorer';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import {useState} from 'react';
+import {useState, useCallback, useEffect} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
 import './DebugToolsMenu.css';
 
-export default function DebugToolsMenu() {
+export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
   return (
     <DropdownFields
       title={<T>Internal Debugging Tools</T>}
       icon="pulse"
       data-testid="internal-debug-tools-dropdown"
       className="internal-debug-tools-dropdown">
+      <Subtle>
+        <T>
+          This data is only intended for debugging Interactive Smartlog and may not capture all
+          issues.
+        </T>
+      </Subtle>
       <DropdownField title={<T>Performance</T>}>
         <DebugPerfInfo />
+      </DropdownField>
+      <DropdownField title={<T>Commit graph</T>}>
+        <DebugDagInfo />
       </DropdownField>
       <DropdownField title={<T>Internal Recoil State</T>}>
         <InternalState />
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
         <ServerClientMessageLogging />
+      </DropdownField>
+      <DropdownField title={<T>Component Explorer</T>}>
+        <ComponentExplorerButton dismiss={dismiss} />
       </DropdownField>
     </DropdownFields>
   );
@@ -100,6 +120,11 @@ function DebugPerfInfo() {
   const latestLog = useRecoilValue(latestCommitsData);
   const latestConflicts = useRecoilValue(mergeConflicts);
   const heartbeat = useHeartbeat();
+  const repoInfo = useRecoilValue(repositoryInfo);
+  let commandName = 'sl';
+  if (repoInfo?.type === 'success') {
+    commandName = repoInfo.command;
+  }
   return (
     <div>
       {heartbeat.type === 'timeout' ? (
@@ -108,17 +133,17 @@ function DebugPerfInfo() {
         </InlineErrorBadge>
       ) : (
         <FetchDurationInfo
-          name={<T>Ping</T>}
+          name={<T>ISL Server Ping</T>}
           duration={(heartbeat as Heartbeat & {type: 'success'})?.rtt}
         />
       )}
       <FetchDurationInfo
-        name={<T>Status</T>}
+        name={<T replace={{$cmd: commandName}}>$cmd status</T>}
         start={latestStatus.fetchStartTimestamp}
         end={latestStatus.fetchCompletedTimestamp}
       />
       <FetchDurationInfo
-        name={<T>Log</T>}
+        name={<T replace={{$cmd: commandName}}>$cmd log</T>}
         start={latestLog.fetchStartTimestamp}
         end={latestLog.fetchCompletedTimestamp}
       />
@@ -149,6 +174,56 @@ function FetchDurationInfo(
           </Tooltip>
         </Subtle>
       )}
+    </div>
+  );
+}
+
+function useMeasureDuration(slowOperation: () => void): number | null {
+  const [measured, setMeasured] = useState<null | number>(null);
+  useEffect(() => {
+    requestIdleCallback(() => {
+      const startTime = performance.now();
+      slowOperation();
+      const endTime = performance.now();
+      setMeasured(endTime - startTime);
+    });
+    return () => setMeasured(null);
+  }, [slowOperation]);
+  return measured;
+}
+
+function DebugDagInfo() {
+  const dag = useRecoilValue(dagWithPreviews);
+  const dagRenderBenchmark = useCallback(() => {
+    // Slightly change the dag to invalidate its caches.
+    const noise = performance.now();
+    const newDag = dag.add([DagCommitInfo.fromCommitInfo({hash: `dummy-${noise}`, parents: []})]);
+    newDag.renderToRows(newDag.collapseObsolete());
+  }, [dag]);
+
+  const dagSize = dag.all().size;
+  const dagDisplayedSize = dag.collapseObsolete().size;
+  const dagSortMs = useMeasureDuration(dagRenderBenchmark);
+
+  return (
+    <div>
+      <T>Size: </T>
+      {dagSize}
+      <br />
+      <T>Displayed: </T>
+      {dagDisplayedSize}
+      <br />
+      <>
+        <T>Render calculation: </T>
+        {dagSortMs == null ? (
+          <T>(Measuring)</T>
+        ) : (
+          <>
+            {dagSortMs.toFixed(1)} <T>ms</T>
+          </>
+        )}
+        <br />
+      </>
     </div>
   );
 }

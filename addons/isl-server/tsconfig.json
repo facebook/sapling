@@ -1,14 +1,13 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "lib": ["dom", "dom.iterable"],
+    "lib": ["ES2021.WeakRef", "dom", "dom.iterable"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "importsNotUsedAsValues": "error",
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "module": "esnext",
@@ -27,5 +26,5 @@
       "module": "commonjs"
     }
   },
-  "include": ["src", "webpack.config.ts", "jest.config.js", "proxy"]
+  "include": ["src", "jest.config.js", "rollup.config.mjs", "proxy"]
 }

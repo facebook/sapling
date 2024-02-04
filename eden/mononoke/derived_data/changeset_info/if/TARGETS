@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "derived_data-thrift",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:smallvec",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+    ],
+    thrift_srcs = {
+        "changeset_info_thrift.thrift": [],
+    },
+    # The Thrift definitions are private and only used for serialization -- do
+    # not allow other code to use them, except for other private Thrift code.
+    visibility = [
+        "//eden/mononoke/derived_data:",
+        "//eden/mononoke/derived_data/remote/if:",
+    ],
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

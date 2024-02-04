@@ -17,6 +17,19 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "repo": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
   $ setconfig ui.ignorerevnum=false
   $ setconfig pull.httpcommitgraph2=true
   $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
@@ -28,6 +41,7 @@ setup custom smartlog
 
 setup configuration
   $ export READ_ONLY_REPO=1
+  $ export ACL_NAME=repo
   $ export LOG=pull
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   setup_common_config
@@ -39,17 +53,6 @@ setup configuration
   > ]
   > CONFIG
   $ cd $TESTTMP
-
-setup tunables
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
 
 setup common configuration for these tests
   $ cat >> $HGRCPATH <<EOF
@@ -135,9 +138,6 @@ Make commits in the first client, and sync it
   edenapi: uploaded 3 files
   edenapi: queue 3 trees for upload
   edenapi: uploaded 3 trees
-  edenapi: uploading commit '929f2b9071cf032d9422b3cce9773cbe1c574822'...
-  edenapi: uploading commit 'e3133a4a05d58526656505f837b4ec6a66fb2709'...
-  edenapi: uploading commit 'c4f3cf0b6f491ac3a792a95a73a4f186836f08af'...
   edenapi: uploaded 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
@@ -187,9 +187,6 @@ Make commits from the second client and sync it
   edenapi: uploaded 3 files
   edenapi: queue 3 trees for upload
   edenapi: uploaded 3 trees
-  edenapi: uploading commit '4594cad5305da610864d2fac2e1f289af29f2c80'...
-  edenapi: uploading commit '5267c897028ead469dbc2ac682c64dd20e1e1453'...
-  edenapi: uploading commit 'c981069f3f0504264ce2fc76e96d49d74d8b18ba'...
   edenapi: uploaded 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
@@ -237,9 +234,6 @@ On the first client rebase the stack
   edenapi: queue 0 files for upload
   edenapi: queue 3 trees for upload
   edenapi: uploaded 3 trees
-  edenapi: uploading commit 'd79a28423f1418c8d38f273372df978e45738f4a'...
-  edenapi: uploading commit '8da26d088b8f7fb4b56dc4db5d0d356a643bfc25'...
-  edenapi: uploading commit 'f5aa28a22f7bb48c14c733d0c731e6ca65882d4b'...
   edenapi: uploaded 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
@@ -379,8 +373,6 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
-  edenapi: uploading commit '2c6d1f3b1bd6973bd6d4478ed139525d0800ce42'...
-  edenapi: uploading commit 'f141e512974a53a739b7d7ab33aca9f18c8feef0'...
   edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)

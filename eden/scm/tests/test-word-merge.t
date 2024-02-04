@@ -2,7 +2,9 @@
 
   $ configure modern
   $ enable rebase
-  $ setconfig merge.word-merge=1
+  $ setconfig automerge.mode=accept
+  $ setconfig automerge.merge-algos=word-merge
+  $ setconfig automerge.disable-for-noninteractive=False
 
 Successful word merge:
 
@@ -12,7 +14,10 @@ Successful word merge:
   > |/  # B/A=This IS a sentence.\n
   > A   # A/A=This is a sentence.\n
   > EOS
-  $ hg rebase -r $C -d $B -q
+  $ hg rebase -r $C -d $B
+  rebasing 401b52e8a3cc "C"
+  merging A
+   line 1 has been resolved by automerge algorithms
   $ hg cat -r tip A
   That IS a word.
 
@@ -43,7 +48,10 @@ Partially successful at the second conflict region.
   > |/  # B/A=Foo.\n\nThat is the second line.\n
   > A   # A/A=First line.\n\nThis is the second line.\n
   > EOS
-  $ hg rebase -r $C -d $B -q
+  $ hg rebase -r $C -d $B
+  rebasing 141643ae4b3c "C"
+  merging A
+   line 7 has been resolved by automerge algorithms
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

@@ -34,6 +34,7 @@ import type {LineIdx, Rev} from '../linelog';
 import {LineLog, executeCache} from '../linelog';
 import {describe, it, expect} from '@jest/globals';
 import * as Immutable from 'immutable';
+import {splitLines} from 'shared/diff';
 
 describe('LineLog', () => {
   it('can be empty', () => {
@@ -165,6 +166,92 @@ describe('LineLog', () => {
     expect(Immutable.is(log1, log3)).toBeTruthy();
   });
 
+  it('provides human readable instructions', () => {
+    const log = logFromTextList(['a\n', 'b\n']);
+    // The instructions are internal details. For example, an
+    // optimization pass might remove unconditional jumps.
+    // Shall the output change, just update the test here.
+    expect(log.code.describeHumanReadableInstructions()).toEqual([
+      '0: J 1',
+      '1: JL 1 3',
+      '2: J 4',
+      '3: END',
+      '4: JL 2 6',
+      '5: LINE 2 "b"',
+      '6: JGE 2 3',
+      '7: LINE 1 "a"',
+      '8: J 3',
+    ]);
+  });
+
+  describe('provides human readable insertion and deletion stacks', () => {
+    const show = (texts: string[]) =>
+      logFromTextList(texts).code.describeHumanReadableInsDelStacks();
+
+    it('interleaved insertion and deletion trees', () => {
+      // First 3 revs are from https://sapling-scm.com/docs/internals/linelog
+      expect(show(['a\nb\nc\n', 'a\nb\n1\n2\nc\n', 'a\n2\nc\n', 'c\n', ''])).toEqual([
+        '+----Insert (rev 1)         ',
+        '|    Delete (rev 4)    ----+',
+        '|    Line:  a              |',
+        '|    Delete (rev 3)    ---+|',
+        '|    Line:  b             ||',
+        '|+---Insert (rev 2)       ||',
+        '||   Line:  1             ||',
+        '||                     ---+|',
+        '||   Line:  2              |',
+        '|+---                      |',
+        '|                      ----+',
+        '|    Delete (rev 5)    ----+',
+        '|    Line:  c              |',
+        '|                      ----+',
+        '+----                       ',
+      ]);
+    });
+
+    it('insertions at the beginning and end are not nested', () => {
+      expect(show(['b\n', 'a\nb\n', 'a\nb\nc\n'])).toEqual([
+        '+---Insert (rev 2)       ',
+        '|   Line:  a             ',
+        '+---                     ',
+        '+---Insert (rev 1)       ',
+        '|   Line:  b             ',
+        '+---                     ',
+        '+---Insert (rev 3)       ',
+        '|   Line:  c             ',
+        '+---                     ',
+      ]);
+    });
+
+    it('insertion between old new revs is not nested', () => {
+      expect(show(['a\n', 'a\nc\n', 'a\nb\nc\n'])).toEqual([
+        '+---Insert (rev 1)       ',
+        '|   Line:  a             ',
+        '+---                     ',
+        '+---Insert (rev 3)       ',
+        '|   Line:  b             ',
+        '+---                     ',
+        '+---Insert (rev 2)       ',
+        '|   Line:  c             ',
+        '+---                     ',
+      ]);
+    });
+
+    it('insertion between new old revs is not nested', () => {
+      expect(show(['c\n', 'a\nc\n', 'a\nb\nc\n'])).toEqual([
+        '+---Insert (rev 2)       ',
+        '|   Line:  a             ',
+        '+---                     ',
+        '+---Insert (rev 3)       ',
+        '|   Line:  b             ',
+        '+---                     ',
+        '+---Insert (rev 1)       ',
+        '|   Line:  c             ',
+        '+---                     ',
+      ]);
+    });
+  });
+
   describe('supports editing previous revisions', () => {
     it('edits stack bottom', () => {
       const textList = ['a\n', 'a\nb\n', 'z\na\nb\n'];
@@ -208,9 +295,7 @@ describe('LineLog', () => {
           .map(c => `${c}\n`)
           .join('');
       const log = logFromTextList(textList.map(insertEOL));
-      const flatten = (depMap: Map<Rev, Set<Rev>>) =>
-        [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]).sort();
-      return flatten(log.calculateDepMap());
+      return flattenDepMap(log.calculateDepMap());
     };
 
     expect(deps([])).toEqual([]);
@@ -318,6 +403,10 @@ describe('LineLog', () => {
       return Math.floor(Math.random() * (max - min + 1) + min);
     }
 
+    function randBool(): boolean {
+      return Math.random() < 0.5;
+    }
+
     function* generateCases(
       endRev = 1000,
     ): Generator<[Immutable.List<string>, Rev, LineIdx, LineIdx, LineIdx, LineIdx, string[]]> {
@@ -331,7 +420,8 @@ describe('LineLog', () => {
         const b2 = randInt(b1, b1 + maxDeltaB);
         const bLines: string[] = [];
         for (let bIdx = b1; bIdx < b2; bIdx++) {
-          bLines.push(`${rev}:${bIdx}\n`);
+          const line = randBool() ? '\n' : `${rev}:${bIdx}\n`;
+          bLines.push(line);
         }
         lines = lines.splice(a1, a2 - a1, ...bLines);
         yield [lines, rev, a1, a2, b1, b2, bLines];
@@ -379,22 +469,102 @@ describe('LineLog', () => {
       expect(log.checkOut(2)).not.toBe('b\nc\n');
     });
 
-    it('can reorder changes', () => {
-      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']).remapRevs(
-        new Map([
-          [2, 3],
-          [3, 2],
-        ]),
-      );
-      expect(log.checkOut(1)).toBe('b\n');
-      expect(log.checkOut(2)).toBe('a\nb\n');
-      expect(log.checkOut(3)).toBe('a\nb\nc\n');
-      expect(log.checkOutLines(3)).toMatchObject([
-        {data: 'a\n', rev: 2},
-        {data: 'b\n', rev: 1},
-        {data: 'c\n', rev: 3},
-        {data: '', rev: 0},
-      ]);
+    describe('can reorder changes', () => {
+      const defaultSwap: [Rev, Rev] = [2, 3];
+
+      /** Follow the swap. For example, mapSwap(2, [2, 3]) is 3. */
+      const mapSwap = (rev: Rev, swap: [Rev, Rev] = defaultSwap) =>
+        rev === swap[0] ? swap[1] : rev === swap[1] ? swap[0] : rev;
+
+      /**
+       * Swap revs from revs to newRevs. All "line"s are added, by different revs.
+       * For example, when lines = ['a\n', 'b\n', 'c\n'], lineAddedOrder = [1, 3, 2],
+       * it means 'a' was added by rev 1, 'b' by rev 3, 'c' by rev 2, so the 3 revs
+       * are ['a\n', 'a\nc\n', 'a\nb\n'].
+       *
+       * By default, this test takes 3 revs and swap rev 2 and 3.
+       */
+      function testReorderInsertions(
+        lines: string[],
+        lineAddedOrder: Rev[],
+        opts?: {
+          swap?: [Rev, Rev] /* 2 revs to swap, default: [2, 3] */;
+          join?: string /* join character, default: '' */;
+          expectedDepMapOverride?: [Rev, Rev[]][] /* override the expected depMap */;
+          expectedTextOverride?: string[] /* override the expected texts after swapping */;
+        },
+      ) {
+        expect(lines.length).toBe(lineAddedOrder.length);
+        const revs = Array.from({length: lines.length}, (_, i) => i + 1); /* ex. [1, 2, 3] */
+        const swap = opts?.swap ?? defaultSwap;
+        const optJoin = opts?.join ?? '';
+        const getTexts = (revOrder: Rev[], join = optJoin): string[] => {
+          const revSet = new Set<Rev>();
+          return revOrder.map(rev => {
+            revSet.add(rev);
+            return lines.filter((_l, i) => revSet.has(lineAddedOrder[i])).join(join);
+          });
+        };
+        const texts = getTexts(revs);
+        const log = logFromTextList(texts);
+
+        // Nothing depends on each other.
+        expect(flattenDepMap(log.calculateDepMap())).toEqual(
+          opts?.expectedDepMapOverride ?? revs.map(r => [r, [0]]),
+        );
+
+        // Reorder.
+        const reorderedLog = log.remapRevs(new Map([swap, [swap[1], swap[0]]]));
+
+        // Check reorder result.
+        // Remove "join" for easier comparison.
+        const removeJoin = (text: string) =>
+          splitLines(text)
+            .filter(t => t !== optJoin)
+            .join('');
+        const reorderedRevs = revs.map(r => mapSwap(r, swap));
+        const expectedReorderedText = opts?.expectedTextOverride ?? getTexts(reorderedRevs, '');
+        revs.forEach((rev, i) => {
+          expect(removeJoin(reorderedLog.checkOut(rev))).toBe(expectedReorderedText[i]);
+        });
+
+        return reorderedLog;
+      }
+
+      const threeRevPermutations = [
+        [1, 2, 3],
+        [1, 3, 2],
+        [2, 1, 3],
+        [2, 3, 1],
+        [3, 1, 2],
+        [3, 2, 1],
+      ];
+
+      /** Make the test a bit more interesting with multi-line input. */
+      const charToFunction = (c: string): string => `function ${c} () {\n  return '${c}';\n}\n`;
+
+      const abcTexts = ['a\n', 'b\n', 'c\n'];
+      const functionTexts = ['a', 'b', 'c'].map(charToFunction);
+
+      threeRevPermutations.forEach(revOrder => {
+        it(`insert 'a','b','c' in ${revOrder} order`, () => {
+          const log = testReorderInsertions(abcTexts, revOrder);
+          expect(log.checkOutLines(3)).toMatchObject([
+            {data: 'a\n', rev: mapSwap(revOrder[0])},
+            {data: 'b\n', rev: mapSwap(revOrder[1])},
+            {data: 'c\n', rev: mapSwap(revOrder[2])},
+            {data: '', rev: 0},
+          ]);
+        });
+
+        it(`insert 3 functions in ${revOrder} order`, () => {
+          testReorderInsertions(functionTexts, revOrder);
+        });
+
+        it(`insert 3 functions with new line join, in ${revOrder} order`, () => {
+          testReorderInsertions(abcTexts, revOrder, {join: '\n'});
+        });
+      });
     });
 
     it('can merge changes', () => {
@@ -430,4 +600,8 @@ function logFromTextList(textList: string[]): LineLog {
   let log = new LineLog();
   textList.forEach(text => (log = log.recordText(text)));
   return log;
+}
+
+function flattenDepMap(depMap: Map<Rev, Set<Rev>>): [Rev, Rev[]][] {
+  return [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()] as [Rev, Rev[]]).sort();
 }

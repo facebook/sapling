@@ -6,7 +6,7 @@
  */
 
 import type {FieldConfig} from './types';
-import type {ForwardedRef, MutableRefObject, ReactNode} from 'react';
+import type {MutableRefObject, ReactNode} from 'react';
 
 import {
   useUploadFilesCallback,
@@ -16,61 +16,11 @@ import {
 } from '../ImageUpload';
 import {Internal} from '../Internal';
 import {insertAtCursor} from '../textareaUtils';
-import {assert} from '../utils';
-import {GenerateAICommitMesageButton} from './GenerateWithAI';
+import {GenerateAICommitMessageButton} from './GenerateWithAI';
+import {MinHeightTextField} from './MinHeightTextField';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
-import {forwardRef, useRef, useEffect} from 'react';
-
-/**
- * Wrap `VSCodeTextArea` to auto-resize to minimum height and disallow newlines.
- * Like a `VSCodeTextField` that has text wrap inside.
- */
-const MinHeightTextField = forwardRef(
-  (
-    props: React.ComponentProps<typeof VSCodeTextArea> & {
-      onInput: (event: {target: {value: string}}) => unknown;
-    },
-    ref: ForwardedRef<typeof VSCodeTextArea>,
-  ) => {
-    const {onInput, ...rest} = props;
-
-    // ref could also be a callback ref; don't bother supporting that right now.
-    assert(typeof ref === 'object', 'MinHeightTextArea requires ref object');
-
-    // whenever the value is changed, recompute & apply the minimum height
-    useEffect(() => {
-      const r = ref as MutableRefObject<typeof VSCodeTextArea>;
-      const current = r?.current as unknown as HTMLInputElement;
-      // height must be applied to textarea INSIDE shadowRoot of the VSCodeTextArea
-      const innerTextArea = current?.shadowRoot?.querySelector('textarea');
-      if (innerTextArea) {
-        const resize = () => {
-          innerTextArea.style.height = '';
-          innerTextArea.style.height = `${innerTextArea.scrollHeight}px`;
-        };
-        resize();
-        const obs = new ResizeObserver(resize);
-        obs.observe(innerTextArea);
-        return () => obs.unobserve(innerTextArea);
-      }
-    }, [props.value, ref]);
-
-    return (
-      <VSCodeTextArea
-        ref={ref}
-        {...rest}
-        className={`min-height-text-area${rest.className ? ' ' + rest.className : ''}`}
-        onInput={e => {
-          const newValue = (e.target as HTMLInputElement)?.value
-            // remove newlines so this acts like a textField rather than a textArea
-            .replace(/(\r|\n)/g, '');
-          onInput({target: {value: newValue}});
-        }}
-      />
-    );
-  },
-);
+import {useRef, useEffect} from 'react';
 
 export function CommitInfoTextArea({
   kind,
@@ -185,7 +135,7 @@ export function EditorToolbar({
   }
   if (supportsGeneratingAIMessage != null) {
     parts.push(
-      <GenerateAICommitMesageButton
+      <GenerateAICommitMessageButton
         textAreaRef={textAreaRef}
         appendToTextArea={appendToTextArea}
         key="gen-ai-message"

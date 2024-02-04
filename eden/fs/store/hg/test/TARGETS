@@ -1,0 +1,74 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(
+        ["*Test.cpp"],
+    ),
+    args = [
+        # Require all tests to set hgPath and not default to system hg.
+        "--hgPath",
+        "false",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = {
+        "EDEN_HG_BINARY": "$(location //scm/telemetry/hg:hg)",
+        "HGEXECUTABLEPATH": "$(location //eden/scm:hg)",
+        "HG_REAL_BIN": "$(location //eden/scm:hg)",
+    },
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/model:testutil",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/store/hg:hg_backing_store",
+        "//eden/fs/store/hg:hg_datapack_store",
+        "//eden/fs/store/hg:hg_import_request",
+        "//eden/fs/store/hg:hg_import_request_queue",
+        "//eden/fs/store/hg:hg_proxy_hash",
+        "//eden/fs/store/hg:hg_queued_backing_store",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/testharness:hg_repo",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/testharness:test_config_source",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:range",
+        "//folly:try",
+        "//folly/executors:cpu_thread_pool_executor",
+        "//folly/experimental:test_util",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_benchmark(
+    name = "bench",
+    srcs = glob(["*Benchmark.cpp"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/config:config",
+        "//eden/fs/store:context",
+        "//eden/fs/store/hg:hg_import_request",
+        "//eden/fs/store/hg:hg_import_request_queue",
+        "//eden/fs/utils:utils",
+    ],
+)

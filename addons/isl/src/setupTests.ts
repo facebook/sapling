@@ -10,3 +10,27 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+
+// Use __mocks__/logger so calls to logger don't output to console, but
+// console.log still works for debugging tests.
+jest.mock('./logger');
+
+// jest doesn't have the stylex compilation step, let's just mock it
+jest.mock('@stylexjs/stylex');
+
+import {configure} from '@testing-library/react';
+
+if (process.env.HIDE_RTL_DOM_ERRORS) {
+  configure({
+    getElementError: (message: string | null) => {
+      const error = new Error(message ?? '');
+      error.name = 'TestingLibraryElementError';
+      error.stack = undefined;
+      return error;
+    },
+  });
+}
+
+global.ResizeObserver = require('resize-observer-polyfill');
+
+global.fetch = jest.fn().mockImplementation(() => Promise.resolve());

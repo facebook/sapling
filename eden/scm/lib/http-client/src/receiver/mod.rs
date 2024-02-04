@@ -18,7 +18,8 @@ pub use channel::ChannelReceiver;
 pub use channel::ResponseStreams;
 
 /// Interface for streaming HTTP response handlers.
-pub trait Receiver: Sized {
+#[auto_impl::auto_impl(Box)]
+pub trait Receiver: Send + 'static {
     /// Handle received chunk of the response body.
     fn chunk(&mut self, chunk: Vec<u8>) -> Result<()>;
 
@@ -36,7 +37,7 @@ pub trait Receiver: Sized {
     /// will be passed to this method so that the `Receiver` can decide how
     /// to proceed. If the `Receiver` returns an `Abort`, all other ongoing
     /// transfers will be aborted and the operation will return early.
-    fn done(self, _res: Result<(), HttpClientError>) -> Result<(), Abort> {
+    fn done(&mut self, _res: Result<(), HttpClientError>) -> Result<(), Abort> {
         Ok(())
     }
 }
@@ -45,8 +46,8 @@ pub trait Receiver: Sized {
 pub(crate) mod testutil {
     #![allow(dead_code)]
 
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use std::sync::Arc;
+    use std::sync::Mutex;
 
     use http::header::HeaderName;
     use http::header::HeaderValue;
@@ -57,30 +58,30 @@ pub(crate) mod testutil {
     /// Simple receiver for use in tests.
     #[derive(Clone, Debug)]
     pub struct TestReceiver {
-        inner: Rc<RefCell<TestReceiverInner>>,
+        inner: Arc<Mutex<TestReceiverInner>>,
     }
 
     impl TestReceiver {
         pub fn new() -> Self {
             Self {
-                inner: Rc::new(RefCell::new(Default::default())),
+                inner: Arc::new(Mutex::new(Default::default())),
             }
         }
 
         pub fn status(&self) -> Option<StatusCode> {
-            self.inner.borrow().status
+            self.inner.lock().unwrap().status
         }
 
         pub fn headers(&self) -> Vec<(HeaderName, HeaderValue)> {
-            self.inner.borrow().headers.clone()
+            self.inner.lock().unwrap().headers.clone()
         }
 
         pub fn chunks(&self) -> Vec<Vec<u8>> {
-            self.inner.borrow().chunks.clone()
+            self.inner.lock().unwrap().chunks.clone()
         }
 
         pub fn progress(&self) -> Option<Progress> {
-            self.inner.borrow().progress
+            self.inner.lock().unwrap().progress
         }
     }
 
@@ -94,17 +95,17 @@ pub(crate) mod testutil {
 
     impl Receiver for TestReceiver {
         fn chunk(&mut self, chunk: Vec<u8>) -> Result<()> {
-            self.inner.borrow_mut().chunks.push(chunk);
+            self.inner.lock().unwrap().chunks.push(chunk);
             Ok(())
         }
 
         fn header(&mut self, header: Header) -> Result<()> {
             match header {
                 Header::Status(_, status) => {
-                    self.inner.borrow_mut().status = Some(status);
+                    self.inner.lock().unwrap().status = Some(status);
                 }
                 Header::Header(name, value) => {
-                    self.inner.borrow_mut().headers.push((name, value));
+                    self.inner.lock().unwrap().headers.push((name, value));
                 }
                 Header::EndOfHeaders => {}
             };
@@ -112,7 +113,7 @@ pub(crate) mod testutil {
         }
 
         fn progress(&mut self, progress: Progress) {
-            self.inner.borrow_mut().progress = Some(progress);
+            self.inner.lock().unwrap().progress = Some(progress);
         }
     }
 

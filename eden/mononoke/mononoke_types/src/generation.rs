@@ -8,6 +8,7 @@
 use std::u64;
 
 use abomonation_derive::Abomonation;
+use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 /// Generation number
@@ -24,7 +25,8 @@ use serde_derive::Serialize;
     Ord,
     PartialOrd,
     Hash,
-    Serialize
+    Serialize,
+    Deserialize
 )]
 pub struct Generation(u64);
 

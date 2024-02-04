@@ -7,6 +7,7 @@
 
 use std::fmt;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -14,6 +15,7 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use mononoke_types::ChangesetId;
@@ -22,7 +24,7 @@ use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
-use crate::commit_sync_data_provider::CommitSyncDataProvider;
+use crate::get_small_repos_for_version;
 use crate::types::Source;
 use crate::types::Target;
 use crate::Repo;
@@ -187,7 +189,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
     direction: CommitSyncDirection,
-    commit_sync_data_provider: &CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Option<PluralCommitSyncOutcome>, Error> {
     let remapped = mapping
         .get(ctx, source_repo_id.0, source_cs_id.0, target_repo_id.0)
@@ -223,9 +225,12 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
                     .await?;
 
                 if let Some(version) = maybe_version {
-                    let small_repos = commit_sync_data_provider
-                        .get_small_repos_for_version(source_repo_id.0, &version)
-                        .await?;
+                    let small_repos = get_small_repos_for_version(
+                        live_commit_sync_config,
+                        source_repo_id.0,
+                        &version,
+                    )
+                    .await?;
                     if !small_repos.contains(&target_repo_id.0) {
                         return Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate(version)));
                     }
@@ -256,7 +261,7 @@ pub async fn commit_sync_outcome_exists<'a, M: SyncedCommitMapping>(
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
     direction: CommitSyncDirection,
-    commit_sync_data_provider: &CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<bool, Error> {
     Ok(get_plural_commit_sync_outcome(
         ctx,
@@ -265,7 +270,7 @@ pub async fn commit_sync_outcome_exists<'a, M: SyncedCommitMapping>(
         source_cs_id,
         mapping,
         direction,
-        commit_sync_data_provider,
+        live_commit_sync_config,
     )
     .await?
     .is_some())
@@ -281,7 +286,7 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
     direction: CommitSyncDirection,
-    commit_sync_data_provider: &CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Option<CommitSyncOutcome>, Error> {
     get_commit_sync_outcome_with_hint(
         ctx,
@@ -291,7 +296,7 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         mapping,
         CandidateSelectionHint::<!>::Only,
         direction,
-        commit_sync_data_provider,
+        live_commit_sync_config,
     )
     .await
 }
@@ -316,7 +321,7 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping, R: Re
     mapping: &'a M,
     hint: CandidateSelectionHint<R>,
     direction: CommitSyncDirection,
-    commit_sync_data_provider: &CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Option<CommitSyncOutcome>, Error> {
     let maybe_plural_commit_sync_outcome = get_plural_commit_sync_outcome(
         ctx,
@@ -325,7 +330,7 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping, R: Re
         source_cs_id,
         mapping,
         direction,
-        commit_sync_data_provider,
+        live_commit_sync_config,
     )
     .await?;
     debug!(
@@ -697,7 +702,6 @@ mod tests {
             .collect();
         let mapping = get_new_mapping(ctx, entries, SMALL_REPO_ID, LARGE_REPO_ID).await?;
         let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
 
         get_commit_sync_outcome_with_hint(
             ctx,
@@ -707,7 +711,7 @@ mod tests {
             &mapping,
             hint,
             CommitSyncDirection::SmallToLarge,
-            &commit_sync_data_provider,
+            live_commit_sync_config,
         )
         .await
     }
@@ -753,11 +757,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B-C-D-E
                    \
                     F-G
-            "##,
+            ",
         )
         .await?;
 
@@ -834,11 +838,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B----C--D-E
                    \    \
                     F-G  J
-            "##,
+            ",
         )
         .await?;
 
@@ -965,11 +969,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B-C-D-E
                    \
                     F-G
-            "##,
+            ",
         )
         .await?;
 
@@ -1024,11 +1028,11 @@ mod tests {
         let dag = create_from_dag(
             &ctx,
             &blob_repo,
-            r##"
+            r"
                 A-B-C-D-E
                    \
                     F-G
-            "##,
+            ",
         )
         .await?;
 

@@ -136,8 +136,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
     if stream.0.is_null() {
         return Err(LZ4Error::Generic {
             message: "Unable to construct lz4 stream decoder".to_string(),
-        }
-        .into());
+        });
     }
     if !dest.is_empty() {
         let data = &data[HEADER_LEN..];
@@ -146,7 +145,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
             LZ4_decompress_safe_continue(
                 stream.0,
                 source,
-                dest.as_mut_ptr() as *mut u8,
+                dest.as_mut_ptr(),
                 data.len() as i32,
                 dest.len() as i32,
             )
@@ -167,8 +166,7 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
     if max_decompressed_size == 0 {
         return Ok(Vec::new());
     }
-    let mut dest = Vec::<u8>::with_capacity(max_decompressed_size);
-    unsafe { dest.set_len(max_decompressed_size) };
+    let mut dest = vec![0; max_decompressed_size];
     decompress_into(data, &mut dest)?;
     Ok(dest)
 }
@@ -181,8 +179,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     if stream.0.is_null() {
         return Err(LZ4Error::Generic {
             message: "unable to construct LZ4 stream encoder".to_string(),
-        }
-        .into());
+        });
     }
 
     let source = data.as_ptr();
@@ -214,8 +211,7 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
     if stream.0.is_null() {
         return Err(LZ4Error::Generic {
             message: "unable to construct LZ4 stream encoder".to_string(),
-        }
-        .into());
+        });
     }
 
     let source = data.as_ptr();
@@ -244,8 +240,7 @@ fn check_error(result: i32) -> Result<i32> {
     if result < 0 {
         return Err(LZ4Error::Generic {
             message: format!("lz4 failed with error '{:?}'", result),
-        }
-        .into());
+        });
     }
 
     Ok(result)
@@ -272,7 +267,7 @@ mod tests {
     #[test]
     fn test_roundtrip() {
         let data = &b"\x00\x01\x02hello world long string easy easy easy easy compress\xF0\xFA"[..];
-        let (compressed, roundtrips) = check_roundtrip(&data);
+        let (compressed, roundtrips) = check_roundtrip(data);
         assert!(compressed.len() < data.len());
         assert!(roundtrips);
     }
@@ -280,7 +275,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let data = &b"";
-        let (compressed, roundtrips) = check_roundtrip(&data);
+        let (compressed, roundtrips) = check_roundtrip(data);
         assert_eq!(compressed, &[0u8, 0, 0, 0][..]);
         assert!(roundtrips);
     }
@@ -300,7 +295,7 @@ mod tests {
 
     quickcheck! {
         fn test_quickcheck_roundtrip(data: Vec<u8>) -> bool {
-            check_roundtrip(&data).1
+            check_roundtrip(data).1
         }
     }
 }

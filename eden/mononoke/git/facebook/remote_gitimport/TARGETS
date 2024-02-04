@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "remote_gitimport",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-openssl",
+        "fbsource//third-party/rust:openssl",
+        "fbsource//third-party/rust:rand",
+        "//common/rust/monitoring:obc_lib",
+        "//common/rust/scuba:scuba",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//common/rust/thrift/srclient:srclient",
+        "//eden/mononoke/git/facebook/scs_connection:scs_connection",
+        "//eden/mononoke/git/import_tools:import_tools",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/repo_name:repo_name",
+    ],
+)

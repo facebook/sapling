@@ -22,7 +22,6 @@ rpmbuild --target i386 \
     --define "python_sitepackage /opt/sapling-beta/lib/python$PYTHON_VERSION/site-packages" \
     --define "python_sitelib /opt/sapling-beta/lib/python$PYTHON_VERSION/site-packages" \
     --define "python_sitearch /opt/sapling-beta/lib/python$PYTHON_VERSION/site-packages" \
-    --define "__python /opt/homebrew/opt/python$PYTHON_VERSION_SHORT/bin/python$PYTHON_VERSION" \
     --define "_tmppath /var/tmp" \
     --define "version $VERSION" \
     --define "sapling_root $ROOT" \

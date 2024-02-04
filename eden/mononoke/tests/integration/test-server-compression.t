@@ -24,11 +24,11 @@ setup master bookmarks
   $ rm -rf repo-hg
 
 Setup the right configuration
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "ints": {
-  >     "zstd_compression_level": 3
-  >   }
+  >    "ints": {
+  >      "scm/mononoke:zstd_compression_level": 3
+  >    }
   > }
   > EOF
 

@@ -102,7 +102,7 @@ pub(crate) async fn beautify(
 
     let mut parents_vec = Vec::with_capacity(usize_to_vertex.len());
     for (i, vertex) in usize_to_vertex.iter().enumerate() {
-        if main_branch.contains(&vertex).await? {
+        if main_branch.contains(vertex).await? {
             priorities.push(i);
         }
         let parent_vertexes = this.parent_names(vertex.clone()).await?;
@@ -144,7 +144,7 @@ pub(crate) async fn subdag(
     let heads: Vec<VertexName> = heads.iter_rev().await?.try_collect().await?;
     // MASTER group enables the ONLY_HEAD segment flag. It improves graph query performance.
     let heads = VertexListWithOptions::from(heads).with_highest_group(Group::MASTER);
-    dag.add_heads(&parents, &heads.into()).await?;
+    dag.add_heads(&parents, &heads).await?;
     Ok(dag)
 }
 

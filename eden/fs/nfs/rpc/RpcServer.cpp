@@ -11,7 +11,6 @@
 
 #include <folly/Exception.h>
 #include <folly/String.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
@@ -385,67 +384,75 @@ void RpcConnectionHandler::replyServerError(
 void RpcConnectionHandler::dispatchAndReply(
     std::unique_ptr<folly::IOBuf> input,
     DestructorGuard guard) {
-  folly::makeFutureWith([this, input = std::move(input)]() mutable {
-    folly::io::Cursor deser(input.get());
-    rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
+  makeImmediateFutureWith(
+      [&]() mutable -> ImmediateFuture<std::unique_ptr<folly::IOBuf>> {
+        folly::io::Cursor deser(input.get());
+        rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
 
-    auto iobufQueue = std::make_unique<folly::IOBufQueue>(
-        folly::IOBufQueue::cacheChainLength());
-    folly::io::QueueAppender ser(iobufQueue.get(), 1024);
-    XdrTrait<uint32_t>::serialize(ser, 0); // reserve space for fragment header
+        auto iobufQueue = std::make_unique<folly::IOBufQueue>(
+            folly::IOBufQueue::cacheChainLength());
+        folly::io::QueueAppender ser(iobufQueue.get(), 1024);
+        XdrTrait<uint32_t>::serialize(
+            ser, 0); // reserve space for fragment header
 
-    if (call.cbody.rpcvers != kRPCVersion) {
-      serializeRpcMismatch(ser, call.xid);
-      return folly::makeFuture(finalizeFragment(std::move(iobufQueue)));
-    }
-
-    if (auto auth = proc_->checkAuthentication(call.cbody);
-        auth != auth_stat::AUTH_OK) {
-      serializeAuthError(ser, auth, call.xid);
-      return folly::makeFuture(finalizeFragment(std::move(iobufQueue)));
-    }
-
-    XLOG(DBG7) << "dispatching a request";
-    auto fut = makeImmediateFutureWith([this,
-                                        deser = std::move(deser),
-                                        ser = std::move(ser),
-                                        xid = call.xid,
-                                        prog = call.cbody.prog,
-                                        vers = call.cbody.vers,
-                                        proc = call.cbody.proc]() mutable {
-      return proc_->dispatchRpc(
-          std::move(deser), std::move(ser), xid, prog, vers, proc);
-    });
-
-    return std::move(fut)
-        .thenTry([this,
-                  input = std::move(input),
-                  iobufQueue = std::move(iobufQueue),
-                  call =
-                      std::move(call)](folly::Try<folly::Unit> result) mutable {
-          XLOG(DBG7) << "Request done, sending response.";
-          if (result.hasException()) {
-            if (auto* err =
-                    result.exception().get_exception<RpcParsingError>()) {
-              recordParsingError(*err, std::move(input));
-              replyServerError(accept_stat::GARBAGE_ARGS, call.xid, iobufQueue);
-            } else {
-              XLOGF(
-                  WARN,
-                  "Server failed to dispatch proc {} to {}:{}: {}",
-                  call.cbody.proc,
-                  call.cbody.prog,
-                  call.cbody.vers,
-                  folly::exceptionStr(*result.exception().get_exception()));
-
-              replyServerError(accept_stat::SYSTEM_ERR, call.xid, iobufQueue);
-            }
-          }
+        if (call.cbody.rpcvers != kRPCVersion) {
+          serializeRpcMismatch(ser, call.xid);
           return finalizeFragment(std::move(iobufQueue));
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
-  })
+        }
+
+        if (auto auth = proc_->checkAuthentication(call.cbody);
+            auth != auth_stat::AUTH_OK) {
+          serializeAuthError(ser, auth, call.xid);
+          return finalizeFragment(std::move(iobufQueue));
+        }
+
+        XLOG(DBG7) << "dispatching a request";
+        auto fut = makeImmediateFutureWith([&]() mutable {
+          return proc_->dispatchRpc(
+              std::move(deser),
+              std::move(ser),
+              call.xid,
+              call.cbody.prog,
+              call.cbody.vers,
+              call.cbody.proc);
+        });
+
+        return std::move(fut).thenTry(
+            [this,
+             input = std::move(input),
+             iobufQueue = std::move(iobufQueue),
+             call = std::move(call)](folly::Try<folly::Unit> result) mutable {
+              XLOG(DBG7) << "Request done, sending response.";
+              if (result.hasException()) {
+                if (auto* err =
+                        result.exception().get_exception<RpcParsingError>()) {
+                  recordParsingError(*err, std::move(input));
+                  replyServerError(
+                      accept_stat::GARBAGE_ARGS, call.xid, iobufQueue);
+                } else {
+                  XLOGF(
+                      WARN,
+                      "Server failed to dispatch proc {} to {}:{}: {}",
+                      call.cbody.proc,
+                      call.cbody.prog,
+                      call.cbody.vers,
+                      folly::exceptionStr(*result.exception().get_exception()));
+
+                  replyServerError(
+                      accept_stat::SYSTEM_ERR, call.xid, iobufQueue);
+                }
+              }
+              return finalizeFragment(std::move(iobufQueue));
+            });
+      })
+      .semi()
+      // Make sure that all the computation occurs on the threadPool.
+      // TODO(xavierd): In the case where the ImmediateFuture is ready adding
+      // it to the thread pool is inefficient. In the case where this shows up
+      // in profiling, this can be slightly optimized by simply pushing the
+      // value to the EventBase directly.
+      .via(threadPool_.get())
+      // Then move it back to the EventBase to write the result to the socket.
       .via(this->sock_->getEventBase())
       .then([this](folly::Try<std::unique_ptr<folly::IOBuf>> result) {
         // This code runs in the EventBase and thus must be as fast as

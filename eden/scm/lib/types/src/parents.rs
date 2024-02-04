@@ -36,7 +36,9 @@ use crate::hgid::NULL_ID;
     derive(quickcheck_arbitrary_derive::Arbitrary)
 )]
 #[serde(untagged)]
+#[derive(Default)]
 pub enum Parents {
+    #[default]
     None,
     One(HgId),
     Two(HgId, HgId),
@@ -78,12 +80,6 @@ impl Parents {
             Parents::None | Parents::One(_) => None,
             Parents::Two(_, ref p2) => Some(p2),
         }
-    }
-}
-
-impl Default for Parents {
-    fn default() -> Self {
-        Parents::None
     }
 }
 
@@ -183,18 +179,18 @@ mod tests {
     #[test]
     fn untagged_serialization() {
         let parents = Parents::None;
-        let none = serde_json::to_value(&parents).unwrap();
+        let none = serde_json::to_value(parents).unwrap();
         assert_eq!(none, json!(null));
 
         let p1 = HgId::from_byte_array([0x1; 20]);
         let parents = Parents::One(p1);
-        let one = serde_json::to_value(&parents).unwrap();
+        let one = serde_json::to_value(parents).unwrap();
         let expected = json!([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
         assert_eq!(one, expected);
 
         let p2 = HgId::from_byte_array([0x2; 20]);
         let parents = Parents::Two(p1, p2);
-        let two = serde_json::to_value(&parents).unwrap();
+        let two = serde_json::to_value(parents).unwrap();
         let p1_json = json!([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
         let p2_json = json!([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]);
         assert_eq!(two, json!([p1_json, p2_json]));

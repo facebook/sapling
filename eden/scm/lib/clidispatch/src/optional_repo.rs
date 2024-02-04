@@ -6,19 +6,21 @@
  */
 
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::Result;
-use configloader::config::ConfigSet;
+use configmodel::Config;
 use repo::errors;
 use repo::repo::Repo;
 
 use crate::global_flags::HgGlobalOpts;
+use crate::util::pinned_configs;
 
-/// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
+/// Either an optional [`Repo`] which owns a [`Arc<dyn Config>`], or a [`Arc<dyn Config>`]
 /// without a repo.
 pub enum OptionalRepo {
     Some(Repo),
-    None(ConfigSet),
+    None(Arc<dyn Config>),
 }
 
 impl OptionalRepo {
@@ -28,14 +30,13 @@ impl OptionalRepo {
     /// parent directories.
     fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
         if let Some((path, _)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
-            let repo = Repo::load(path, &opts.config, &opts.configfile)?;
+            let repo = Repo::load(path, &pinned_configs(opts))?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(configloader::hg::load(
+            Ok(OptionalRepo::None(Arc::new(configloader::hg::load(
                 None,
-                &opts.config,
-                &opts.configfile,
-            )?))
+                &pinned_configs(opts),
+            )?)))
         }
     }
 
@@ -56,9 +57,9 @@ impl OptionalRepo {
             } else {
                 cwd.join(repository_path)
             };
-        if let Ok(path) = util::path::absolute(&full_repository_path) {
+        if let Ok(path) = util::path::absolute(full_repository_path) {
             if identity::sniff_dir(&path)?.is_some() {
-                let repo = Repo::load(path, &opts.config, &opts.configfile)?;
+                let repo = Repo::load(path, &pinned_configs(opts))?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
                 // 'path' is a bundle path
@@ -68,14 +69,7 @@ impl OptionalRepo {
         Err(errors::RepoNotFound(repository_path.display().to_string()).into())
     }
 
-    pub fn config_mut(&mut self) -> &mut ConfigSet {
-        match self {
-            OptionalRepo::Some(ref mut repo) => repo.config_mut(),
-            OptionalRepo::None(ref mut config) => config,
-        }
-    }
-
-    pub fn config(&self) -> &ConfigSet {
+    pub fn config(&self) -> &Arc<dyn Config> {
         match self {
             OptionalRepo::Some(ref repo) => repo.config(),
             OptionalRepo::None(ref config) => config,

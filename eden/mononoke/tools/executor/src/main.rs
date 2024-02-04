@@ -8,6 +8,7 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::bail;
 use anyhow::Result;
@@ -19,7 +20,6 @@ use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use once_cell::sync::OnceCell;
 use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
@@ -233,7 +233,7 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
     /// mononoke.shardmanager.test currently works with 28 repos and 7 task
     /// replicas.
     // The service name needs to be 'static to satisfy SM contract
-    static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+    static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
     // For sharded execution, we need to first create the executor.
     let mut executor = ShardedProcessExecutor::new(
         process.app.fb,

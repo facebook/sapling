@@ -1,0 +1,52 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+thrift_library(
+    name = "serialization",
+    languages = [
+        "cpp2",
+    ],
+    no_plugin_deps = [
+        "//thrift/annotation:cpp",
+        "//thrift/annotation:hack",
+        "//thrift/annotation:java",
+        "//thrift/annotation:python",
+    ],
+    py_base_module = "facebook.eden",
+    thrift_srcs = {
+        "takeover.thrift": [],
+    },
+)
+
+cpp_library(
+    name = "takeover",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/utils:event_base_state",
+        "//eden/fs/utils:throw",
+        "//folly:file_util",
+        "//folly:likely",
+        "//folly:network_address",
+        "//folly:range",
+        "//folly/io/async:async_base",
+        "//folly/logging:logging",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        ":serialization-cpp2-types",
+        "//eden/fs/config:config",
+        "//eden/fs/utils:fs_channel_types",
+        "//eden/fs/utils:io",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:file",
+        "//folly/futures:core",
+        "//folly/io:iobuf",
+        "//folly/io/async:server_socket",
+    ],
+)

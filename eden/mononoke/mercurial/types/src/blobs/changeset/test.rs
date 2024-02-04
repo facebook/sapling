@@ -22,7 +22,7 @@ use crate::HgBlob;
 use crate::HgBlobNode;
 use crate::HgManifestId;
 use crate::HgNodeHash;
-use crate::MPath;
+use crate::NonRootMPath;
 
 const CHANGESET: &[u8] = include_bytes!("cset.bin");
 const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");
@@ -52,12 +52,12 @@ fn test_parse() {
                     .into_iter()
                     .collect()
             ),
-            files: vec![MPath::new(b"mercurial/util.py").unwrap()],
-            message: r#"util: warn when adding paths ending with \
+            files: vec![NonRootMPath::new(b"mercurial/util.py").unwrap()],
+            message: r"util: warn when adding paths ending with \
 
 Paths ending with \ will fail the verification introduced in 684a977c2ae0 when
 checking out on Windows ... and if it didn't fail it would probably not do what
-the user expected."#
+the user expected."
                 .into(),
         }
     );
@@ -81,7 +81,7 @@ the user expected."#
             user: "jake@edge2.net".into(),
             time: DateTime::from_timestamp(1116031690, 25200).expect("valid timestamp"),
             extra: Extra(vec![].into_iter().collect()),
-            files: vec![MPath::new(b"hgweb.py").unwrap()],
+            files: vec![NonRootMPath::new(b"hgweb.py").unwrap()],
             message: r#"reorganize code into classes
 clean up html code for w3c validation
 "#

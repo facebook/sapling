@@ -66,10 +66,11 @@ impl CommitGraph {
             if !parents_to_fetch.is_empty() {
                 edges_map.extend(
                     self.storage
-                        .fetch_many_edges(ctx, &parents_to_fetch, Prefetch::None)
+                        .maybe_fetch_many_edges(ctx, &parents_to_fetch, Prefetch::None)
                         .await
                         .with_context(|| "during commit_graph::add_recursive (fetch_many_edges)")?
-                        .into_iter(),
+                        .into_iter()
+                        .map(|(k, v)| (k, v.into())),
                 );
             }
 
@@ -111,11 +112,11 @@ impl ChangesetFetcher for CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation> {
-        self.changeset_generation_required(ctx, cs_id).await
+        self.changeset_generation(ctx, cs_id).await
     }
 
     async fn get_parents(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
-        self.changeset_parents_required(ctx, cs_id)
+        self.changeset_parents(ctx, cs_id)
             .await
             .map(SmallVec::into_vec)
     }

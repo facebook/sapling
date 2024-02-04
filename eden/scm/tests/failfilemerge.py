@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import error, extensions, filemerge
+from sapling import error, extensions, filemerge
 
 
 def failfilemerge(

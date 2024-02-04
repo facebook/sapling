@@ -28,6 +28,13 @@
 
   $ cd ..
 
+  $ function save_off_rebasestate() {
+  >   mv $(hg root)/.hg/rebasestate $(hg root)/.hg/rebasestate.bak
+  > }
+
+  $ function restore_rebasestate() {
+  >   mv $(hg root)/.hg/rebasestate.bak $(hg root)/.hg/rebasestate
+  > }
 
 Changes during an interruption - continue:
 
@@ -57,11 +64,15 @@ Rebasing B onto E:
 
 Force a commit on C during the interruption:
 
-  $ hg up -q -C 'desc(C)' --config 'extensions.rebase=!'
+  $ save_off_rebasestate
+  $ hg up -q -C 'desc(C)'
+  $ restore_rebasestate
 
   $ echo 'Extra' > Extra
   $ hg add Extra
-  $ hg ci -m 'Extra' --config 'extensions.rebase=!'
+  $ save_off_rebasestate
+  $ hg ci -m 'Extra'
+  $ restore_rebasestate
 
   $ tglogp
   @  deb5d2f93d8b draft 'Extra'
@@ -148,11 +159,15 @@ Rebasing B onto E:
 
 Force a commit on B' during the interruption:
 
-  $ hg up -q -C 'max(desc(B))' --config 'extensions.rebase=!'
+  $ save_off_rebasestate
+  $ hg up -q -C 'max(desc(B))'
+  $ restore_rebasestate
 
   $ echo 'Extra' > Extra
   $ hg add Extra
-  $ hg ci -m 'Extra' --config 'extensions.rebase=!'
+  $ save_off_rebasestate
+  $ hg ci -m 'Extra'
+  $ restore_rebasestate
 
   $ tglog
   @  402ee3642b59 'Extra'
@@ -220,7 +235,9 @@ Rebasing B onto E:
 
 Change phase on B and B'
 
-  $ hg up -q -C 'max(desc(B))' --config 'extensions.rebase=!'
+  $ save_off_rebasestate
+  $ hg up -q -C 'max(desc(B))'
+  $ restore_rebasestate
   $ hg debugmakepublic 'desc(B)'
 
   $ tglogp

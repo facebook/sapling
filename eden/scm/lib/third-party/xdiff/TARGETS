@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("mercurial_release")
+
+cpp_library(
+    name = "xdiff",
+    srcs = [
+        "xdiffi.c",
+        "xprepare.c",
+        "xutils.c",
+    ],
+    headers = [
+        "xdiff.h",
+        "xdiffi.h",
+        "xinclude.h",
+        "xmacros.h",
+        "xtypes.h",
+        "xutils.h",
+    ],
+)

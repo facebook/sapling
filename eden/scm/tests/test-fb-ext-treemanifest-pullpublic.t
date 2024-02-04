@@ -8,7 +8,7 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   > [remotefilelog]
   > server=True
   > [treemanifest]
@@ -32,7 +32,8 @@ Clone it
                                                                   keys : 4}}},
                                       fetch : { indexedlog : { cache : { hits : 10,
                                                                          keys : 10,
-                                                                         requests : 7}}}}},
+                                                                         requests : 7,
+                                                                         time : *}}}}}, (glob)
                 ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
                         gettreepack : { basemfnodes : 0,
@@ -60,7 +61,7 @@ Add a few more public server comits
 
 Create an extension the prints out whenever we compare manifests on the server
   $ cat > "$TESTTMP/diffdebug.py" << EOF
-  > from edenscm import manifest
+  > from sapling import manifest
   > class manifestdict(manifest.manifestdict):
   >     ui = None
   >     def diff(self, *args, **kwargs):

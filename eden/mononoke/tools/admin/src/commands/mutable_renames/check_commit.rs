@@ -7,11 +7,11 @@
 
 use anyhow::Result;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use mutable_renames::MutableRenamesRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct CheckCommitArgs {

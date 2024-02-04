@@ -68,15 +68,12 @@ Test update when two commits have symlinks that point to different folders
   $ ln -s folder1 folder
   $ hg ci -Am "symlink to folder1"
   adding folder
-# TODO(sggutier): remove this once directory symlinks work on Windows
-#if no-windows
   $ rm folder
   $ ln -s folder2 folder
   $ hg ci -Am "symlink to folder2"
   $ hg up baf33104e0bc1162a796504d4eecd1159f3a6e93
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
-#endif
 
 #endif
 

@@ -16,11 +16,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 class CommitTest(EdenHgTestCase):
     commit1: str
 
-    def setUp(self):
-        # TODO: Remove this once there are no weird batch hacks around Buck the buck-built hg
-        self.disableBuckHgForTests(["test_commit_interactive_with_new_file"])
-        super().setUp()
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.write_file("foo/bar.txt", "test\n")

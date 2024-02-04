@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "new_streaming_clone",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:blake2",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/mercurial:mercurial_revlog",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_client:streaming_clone",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)

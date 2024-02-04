@@ -27,7 +27,7 @@
   $ sqlite3 "$TESTTMP/blobstore_git_test/blobs/shard_1.sqlite" "SELECT id, chunk_count FROM data ORDER BY id;"
 
 # Uploading without a cert should fail, hard
-  $ curl -s --upload-file git-repo/git_blob.txt ${lfs_uri}
+  $ curltest -s --upload-file git-repo/git_blob.txt ${lfs_uri}
   [60]
 
 # Confirm blobstore is empty

@@ -11,12 +11,16 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
+use serde::ser::Serialize;
+use serde::ser::SerializeMap;
+use serde::Serializer;
+use serde_json::Serializer as JsonSerializer;
 
-pub static CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
+pub static CONFIG: OnceLock<Option<Arc<SamplingConfig>>> = OnceLock::new();
 
 pub fn init(config: &dyn configmodel::Config) {
     CONFIG.get_or_init(|| SamplingConfig::new(config).map(Arc::new));
@@ -25,6 +29,28 @@ pub fn init(config: &dyn configmodel::Config) {
 pub fn flush() {
     if let Some(Some(sc)) = CONFIG.get() {
         let _ = sc.file().flush();
+    }
+}
+
+/// Log a single key->value pair.
+pub fn append_sample<V: ?Sized>(key: &str, name: &str, value: &V)
+where
+    V: Serialize,
+{
+    append_sample_map(key, &HashMap::from([(name, value)]));
+}
+
+/// Log a key->value map of some kind. `value` should serialize to a JSON object.
+pub fn append_sample_map<V: ?Sized>(key: &str, value: &V)
+where
+    V: Serialize,
+{
+    if let Some(Some(sc)) = CONFIG.get() {
+        let category = match sc.category(key) {
+            Some(v) => v,
+            None => return,
+        };
+        let _ = sc.append(category, value);
     }
 }
 
@@ -85,6 +111,23 @@ impl SamplingConfig {
 
     pub fn file(&self) -> MutexGuard<File> {
         self.file.lock()
+    }
+
+    pub fn append<V: ?Sized>(&self, category: &str, value: &V) -> std::io::Result<()>
+    where
+        V: Serialize,
+    {
+        let mut file = self.file();
+        let mut serializer = JsonSerializer::new(&*file);
+
+        let mut serializer = serializer.serialize_map(None)?;
+        serializer.serialize_entry("category", category)?;
+        serializer.serialize_entry("data", value)?;
+        serializer.end()?;
+
+        file.write_all(b"\0")?;
+
+        Ok(())
     }
 }
 

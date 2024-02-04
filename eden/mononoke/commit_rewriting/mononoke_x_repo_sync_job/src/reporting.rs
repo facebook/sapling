@@ -45,7 +45,7 @@ pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>
 }
 
 /// Log the fact of successful syncing of the single changeset to Scuba
-fn log_success_to_scuba(
+pub fn log_success_to_scuba(
     mut scuba_sample: MononokeScubaSampleBuilder,
     source_cs_id: ChangesetId,
     maybe_synced_cs_id: Option<ChangesetId>,

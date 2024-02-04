@@ -1,0 +1,45 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "minibytes",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [
+                    "frombytes",
+                    "frommmap",
+                    "non-zerocopy-into",
+                ],
+                "frombytes": ["bytes"],
+                "frommmap": ["memmap2"],
+                "non-zerocopy-into": [],
+            },
+            "package": {
+                "license": "MIT",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = [
+        "frombytes",
+        "frommmap",
+        "non-zerocopy-into",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+    ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanatizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:memmap2",
+        "fbsource//third-party/rust:serde",
+    ],
+)

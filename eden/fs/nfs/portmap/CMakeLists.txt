@@ -14,6 +14,7 @@ target_link_libraries(
   PUBLIC
     eden_nfs_rpc
     Folly::folly
+    edencommon::edencommon_utils
 )
 
 add_library(

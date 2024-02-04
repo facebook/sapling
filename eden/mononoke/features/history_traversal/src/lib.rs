@@ -26,7 +26,7 @@ use commit_graph::CommitGraphRef;
 pub use log::list_file_history;
 pub use log::CsAndPath;
 pub use log::FastlogError;
-pub use log::FollowMutableFileHistory;
+pub use log::FollowMutableRenames;
 pub use log::HistoryAcrossDeletions;
 pub use log::NextChangeset;
 pub use log::TraversalOrder;

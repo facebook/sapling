@@ -12,8 +12,8 @@
   > [extensions]
   > tweakdefaults=
   > rebase=
-  > [experimental]
-  > updatecheck=noconflict
+  > [commands]
+  > update.check=noconflict
   > EOF
   $ setconfig 'ui.suggesthgprev=True'
 

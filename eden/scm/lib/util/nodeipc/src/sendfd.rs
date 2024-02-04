@@ -194,6 +194,9 @@ impl NodeIpc {
             while !cmsg.is_null() {
                 if (*cmsg).cmsg_level == libc::SOL_SOCKET && (*cmsg).cmsg_type == libc::SCM_RIGHTS {
                     let data = libc::CMSG_DATA(cmsg);
+                    // This cast is in-fact necessary depending on the platform (for instance, on
+                    // Mac, cmesg_len is a u32).
+                    #[allow(clippy::unnecessary_cast)]
                     let data_size = (*cmsg).cmsg_len as usize - libc::CMSG_LEN(0) as usize;
                     let mut fds = vec![
                         -1 as RawFileDescriptor;

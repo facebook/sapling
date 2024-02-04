@@ -40,7 +40,7 @@
      discovered dir src: 'a/' -> dst: 'b/'
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: *, local: *+, remote: * (glob)
    a/a: other deleted -> r
   removing a/a
@@ -86,7 +86,7 @@
      discovered dir src: 'a/' -> dst: 'b/'
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
-   branchmerge: True, force: False, partial: False
+   branchmerge: True, force: False
    ancestor: *, local: *+, remote: * (glob)
    b/c: local directory rename - get from a/c -> dg
   getting a/c to b/c

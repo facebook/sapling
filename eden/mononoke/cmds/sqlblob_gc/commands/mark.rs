@@ -75,6 +75,10 @@ async fn handle_initial_generation(store: &Sqlblob, shard: usize, logger: &Logge
             RETRIES
         )
     })?;
+    info!(
+        logger,
+        "Completed initial generation handling on shard {}", shard
+    );
     Ok(())
 }
 

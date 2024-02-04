@@ -1,0 +1,10 @@
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+fbpkg.builder(
+    name = "mononoke.aliasverify",
+    path_actions = {
+        "aliasverify": "//eden/mononoke:aliasverify",
+    },
+)

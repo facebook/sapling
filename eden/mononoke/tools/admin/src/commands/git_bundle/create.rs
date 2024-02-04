@@ -8,21 +8,37 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
+use borrowed::borrowed;
 use bytes::Bytes;
 use clap::Args;
 use context::CoreContext;
 use flate2::write::ZlibDecoder;
 use futures::stream;
-use futures::Future;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
+use mononoke_api::ChangesetId;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeApp;
 use packfile::bundle::BundleWriter;
+use packfile::pack::DeltaForm;
+use packfile::types::PackfileItem;
+use protocol::generator::generate_pack_item_stream;
+use protocol::types::DeltaInclusion;
+use protocol::types::PackItemStreamRequest;
+use protocol::types::PackfileItemInclusion;
+use protocol::types::RequestedRefs;
+use protocol::types::RequestedSymrefs;
+use protocol::types::SymrefFormat;
+use protocol::types::TagInclusion;
 use walkdir::WalkDir;
+
+use super::Repo;
 
 const HEAD_REF_PREFIX: &str = "ref: ";
 const NON_OBJECTS_DIR: [&str; 2] = ["info", "pack"];
@@ -30,19 +46,71 @@ const OBJECTS_DIR: &str = "objects";
 const REFS_DIR: &str = "refs";
 const HEAD_REF: &str = "HEAD";
 
+/// Parse a single key-value pair
+fn parse_key_val(s: &str) -> Result<(String, ChangesetId)> {
+    let pos = s
+        .find('=')
+        .ok_or_else(|| anyhow::anyhow!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].to_string(), ChangesetId::from_str(&s[pos + 1..])?))
+}
+
+/// Args for creating a Git bundle from a Mononoke repo
 #[derive(Args)]
-/// Arguments for creating a Git bundle
-pub struct CreateBundleArgs {
+pub struct FromRepoArgs {
+    /// The Mononoke repo for which the Git bundle should be created
+    #[clap(flatten)]
+    repo: RepoArgs,
+    /// The set of references that should be included in the bundle. The value of these refs
+    /// (i.e. the commits that the ref point to) would be as seen by the server. If empty,
+    /// (along with included_refs_with_value) all the references will be included in the bundle
+    /// with the value as seen by the server
+    #[clap(
+        long,
+        value_delimiter = ',',
+        conflicts_with = "included_refs_with_value"
+    )]
+    included_refs: Vec<String>,
+    /// The set of references that should be included in the bundle along with the provided values
+    /// If empty, (along with included_refs) all the references will be included in the bundle with
+    /// the value as seen by the server
+    #[clap(long, value_delimiter = ',', value_parser = parse_key_val, conflicts_with = "included_refs")]
+    included_refs_with_value: Vec<(String, ChangesetId)>,
+    /// The set of commits/changesets that are already present and can be used as
+    /// prerequisites for the bundle. If empty, then the bundle will record the entire
+    /// history of the repo for the included_refs
+    #[clap(long, value_delimiter = ',')]
+    have_heads: Vec<ChangesetId>,
     /// The location, i.e. file_name + path, where the generated bundle will be stored
     #[clap(long, short = 'o', value_name = "FILE")]
     output_location: PathBuf,
+    /// Flag controlling whether the generated bundle can contains deltas or just full object
+    #[clap(long, conflicts_with = "exclude_ref_deltas")]
+    exclude_deltas: bool,
+    /// Flag controlling whether the generated bundle can contains ref deltas or just offset deltas
+    /// (for the delta objects)
+    #[clap(long, conflicts_with = "exclude_deltas")]
+    exclude_ref_deltas: bool,
+    /// The concurrency with which the stream objects will be prefetched while writing to the bundle
+    #[clap(long, default_value_t = 1000)]
+    concurrency: usize,
+    /// Should the packfile items for base objects be generated on demand or fetched from store
+    #[clap(long, default_value_t, value_enum)]
+    packfile_item_inclusion: PackfileItemInclusion,
+}
+
+/// Args for creating a Git bundle from an on-disk Git repo
+#[derive(Args)]
+pub struct FromPathArgs {
     /// The path to the Git repo where the required objects to be bundled are present
     /// e.g. /repo/path/.git
     #[clap(long, value_name = "FILE")]
     git_repo_path: PathBuf,
+    /// The location, i.e. file_name + path, where the generated bundle will be stored
+    #[clap(long, short = 'o', value_name = "FILE")]
+    output_location: PathBuf,
 }
 
-pub async fn create(_ctx: &CoreContext, create_args: CreateBundleArgs) -> Result<()> {
+pub async fn create_from_path(create_args: FromPathArgs) -> Result<()> {
     // Open the output file for writing
     let output_file = tokio::fs::File::create(create_args.output_location.as_path())
         .await
@@ -52,14 +120,108 @@ pub async fn create(_ctx: &CoreContext, create_args: CreateBundleArgs) -> Result
                 create_args.output_location.display()
             )
         })?;
-    // Create a handle for reading the Git directory
-    let git_directory =
-        std::fs::read_dir(create_args.git_repo_path.as_path()).with_context(|| {
+    create_from_on_disk_repo(create_args.git_repo_path, output_file).await
+}
+
+pub async fn create_from_mononoke_repo(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    create_args: FromRepoArgs,
+) -> Result<()> {
+    // Open the output file for writing
+    let output_file = tokio::fs::File::create(create_args.output_location.as_path())
+        .await
+        .with_context(|| {
             format!(
-                "Error in opening git directory {}",
-                create_args.git_repo_path.display()
+                "Error in opening/creating output file {}",
+                create_args.output_location.display()
             )
         })?;
+    let repo: Repo = app
+        .open_repo(&create_args.repo)
+        .await
+        .context("Failed to open repo")?;
+    let delta_inclusion = if create_args.exclude_deltas {
+        DeltaInclusion::Exclude
+    } else {
+        let form = if create_args.exclude_ref_deltas {
+            DeltaForm::OnlyOffset
+        } else {
+            DeltaForm::RefAndOffset
+        };
+        DeltaInclusion::Include {
+            form,
+            inclusion_threshold: 0.90,
+        }
+    };
+    // If references are specified without values, just take the ref names
+    let requested_refs = if !create_args.included_refs.is_empty() {
+        RequestedRefs::Included(create_args.included_refs.into_iter().collect())
+    } else if !create_args.included_refs_with_value.is_empty() {
+        // Otherwise if refs are provided with values, take the ref name and its value
+        RequestedRefs::IncludedWithValue(create_args.included_refs_with_value.into_iter().collect())
+    } else {
+        // Otherwise include all the refs known by the server
+        RequestedRefs::all()
+    };
+    let request = PackItemStreamRequest::new(
+        RequestedSymrefs::IncludeHead(SymrefFormat::NameOnly),
+        requested_refs,
+        create_args.have_heads.clone(),
+        delta_inclusion,
+        TagInclusion::AsIs,
+        create_args.packfile_item_inclusion,
+    );
+    let response = generate_pack_item_stream(ctx, &repo, request)
+        .await
+        .context("Error in generating pack item stream")?;
+    let prereqs = stream::iter(create_args.have_heads.into_iter())
+        .map(|bonsai| {
+            borrowed!(ctx, repo);
+            async move {
+                let git_sha1 = repo
+                    .bonsai_git_mapping
+                    .get_git_sha1_from_bonsai(ctx, bonsai)
+                    .await
+                    .with_context(|| format!("Error in getting git sha1 for changeset {}", bonsai))?
+                    .ok_or_else(|| anyhow::anyhow!("No git sha1 found for changeset {}", bonsai))?;
+                git_sha1.to_object_id()
+            }
+        })
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+    // Create the bundle writer with the header pre-written
+    let mut writer = BundleWriter::new_with_header(
+        output_file,
+        response
+            .included_refs
+            .into_iter()
+            .map(|(ref_name, ref_target)| (ref_name, ref_target.into_object_id()))
+            .collect(),
+        prereqs,
+        response.num_items as u32,
+        create_args.concurrency,
+        DeltaForm::RefAndOffset, // Ref deltas are supported by Git when cloning from a bundle
+    )
+    .await?;
+
+    writer
+        .write(response.items)
+        .await
+        .context("Error in writing packfile items to bundle")?;
+    // Finish writing the bundle
+    writer
+        .finish()
+        .await
+        .context("Error in finishing write to bundle")?;
+    Ok(())
+}
+
+async fn create_from_on_disk_repo(path: PathBuf, output_file: tokio::fs::File) -> Result<()> {
+    // Create a handle for reading the Git directory
+    let git_directory = std::fs::read_dir(path.as_path())
+        .with_context(|| format!("Error in opening git directory {}", path.display()))?;
     let mut object_count = 0;
     let mut object_stream = None;
     let mut refs_to_include = HashMap::new();
@@ -117,11 +279,12 @@ pub async fn create(_ctx: &CoreContext, create_args: CreateBundleArgs) -> Result
     let mut writer = BundleWriter::new_with_header(
         output_file,
         refs_to_include.into_iter().collect(),
-        None,
+        Vec::new(),
         object_count as u32,
+        1000,
+        DeltaForm::RefAndOffset,
     )
     .await?;
-    // let mut writer = PackfileWriter::new(output_file, object_count as u32);
     let object_stream =
         object_stream.ok_or_else(|| anyhow::anyhow!("No objects found to write to bundle"))?;
     // Write the encoded Git object content to the Git bundle
@@ -203,8 +366,8 @@ async fn get_refs(refs_path: PathBuf) -> Result<HashMap<String, ObjectId>> {
 /// their content as a stream
 async fn get_objects_stream(
     object_paths: Vec<PathBuf>,
-) -> impl Stream<Item = impl Future<Output = Result<Bytes>>> {
-    stream::iter(object_paths.into_iter().map(|path| {
+) -> impl Stream<Item = Result<PackfileItem>> {
+    stream::iter(object_paths.into_iter().map(anyhow::Ok)).and_then(move |path| {
         async move {
             // Fetch the Zlib encoded content of the Git object
             let encoded_data = tokio::fs::read(path.as_path())
@@ -215,9 +378,9 @@ async fn get_objects_stream(
             let mut decoder = ZlibDecoder::new(decoded_data);
             decoder.write_all(encoded_data.as_ref())?;
             decoded_data = decoder.finish()?;
-            anyhow::Ok(Bytes::from(decoded_data))
+            PackfileItem::new_base(Bytes::from(decoded_data))
         }
-    }))
+    })
 }
 
 fn get_files_in_dir_recursive<P>(path: PathBuf, predicate: P) -> Result<Vec<PathBuf>>

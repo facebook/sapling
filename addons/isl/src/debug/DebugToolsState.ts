@@ -5,9 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {atom} from 'recoil';
+import {atom} from 'jotai';
 
-export const debugToolsEnabledState = atom<boolean>({
-  key: 'debugToolsEnabledState',
-  default: process.env.NODE_ENV === 'development',
-});
+export const debugToolsEnabledState = atom<boolean>(process.env.NODE_ENV === 'development');

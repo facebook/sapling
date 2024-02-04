@@ -9,27 +9,23 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
-import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from './serverAPIState';
+import foundPlatform from './platform';
+import {dagWithPreviews} from './previews';
+import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 export function UncommitButton() {
-  // TODO: use treeWithPreviews instead,
-  // otherwise there's bugs with disabling this button during previews
-  const headCommit = useRecoilValue(latestHeadCommit);
-  const treeMap = useRecoilValue(latestCommitTreeMap);
+  const dag = useRecoilValue(dagWithPreviews);
+  const headCommit = dag.resolve('.');
 
   const provider = useRecoilValue(codeReviewProvider);
   const diff = useRecoilValue(diffSummary(headCommit?.diffId));
   const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
 
   const runOperation = useRunOperation();
-  if (!headCommit) {
-    return null;
-  }
-
-  const headTree = treeMap.get(headCommit.hash);
-  if (!headTree || headTree.children.length) {
+  if (!headCommit || dag.children(headCommit?.hash).size > 0) {
     // if the head commit has children, we can't uncommit
     return null;
   }
@@ -44,8 +40,20 @@ export function UncommitButton() {
         'Remove this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
       )}>
       <VSCodeButton
-        onClick={() => runOperation(new UncommitOperation(headCommit))}
-        appearance="secondary">
+        onClick={async () => {
+          const confirmed = await foundPlatform.confirm(
+            t('Are you sure you want to Uncommit?'),
+            t(
+              'Uncommitting will remove this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
+            ),
+          );
+          if (!confirmed) {
+            return;
+          }
+          runOperation(new UncommitOperation(headCommit));
+        }}
+        appearance="icon">
+        <Icon icon="debug-step-out" slot="start" />
         <T>Uncommit</T>
       </VSCodeButton>
     </Tooltip>

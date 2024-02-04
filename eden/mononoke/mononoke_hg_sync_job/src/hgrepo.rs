@@ -122,6 +122,10 @@ where
     .chain(args.into_iter().map(|item| item.as_ref().to_os_string()));
     let mut child = Command::new("hg");
     child.args(full_args);
+    child.env(
+        clientinfo::ENV_SAPLING_CLIENT_ENTRY_POINT,
+        format!("{}", clientinfo::ClientEntryPoint::MononokeHgSync),
+    );
     child
 }
 

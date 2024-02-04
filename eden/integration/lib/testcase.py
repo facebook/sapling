@@ -210,7 +210,9 @@ class EdenTestCase(EdenTestCaseBase):
     def get_backing_dir(self, reponame: str, repo_type: str) -> Path:
         backing_dir_location = Path(self.repos_dir) / reponame
         return (
-            backing_dir_location if repo_type == "hg" else backing_dir_location / ".git"
+            backing_dir_location
+            if repo_type in ["hg", "filteredhg"]
+            else backing_dir_location / ".git"
         )
 
     def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
@@ -241,15 +243,19 @@ class EdenTestCase(EdenTestCaseBase):
         The format is the following:
         {"namespace": ["key1=value1", "key2=value2"}
         """
-        configs = {"experimental": ["enable-nfs-server = true"]}
+        configs = {
+            "experimental": ["enable-nfs-server = true\nwindows-symlinks = false"]
+        }
         if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
         # The number of concurrent APFS volumes we can create on macOS
-        # Sandcastle hosts is extremely limited. Therefore, let's use disk
-        # image redirections instead of APFS volume redirections.
+        # Sandcastle hosts is extremely limited. Furthermore, cleaning
+        # up disk image redirections on Sandcastle is non-trivial. Let's
+        # use symlink. redirections to avoid these issues.
         if sys.platform == "darwin":
-            configs["redirections"] = ['darwin-redirection-type = "dmg"']
             configs["nfs"] = ["allow-apple-double = false"]
+            if "SANDCASTLE" in os.environ:
+                configs["redirections"] = ['darwin-redirection-type = "symlink"']
         return configs
 
     def create_hg_repo(
@@ -257,6 +263,7 @@ class EdenTestCase(EdenTestCaseBase):
         name: str,
         hgrc: Optional[configparser.ConfigParser] = None,
         init_configs: Optional[List[str]] = None,
+        filtered: bool = False,
     ) -> hgrepo.HgRepository:
         """Create an hg repo.
 
@@ -282,7 +289,10 @@ class EdenTestCase(EdenTestCaseBase):
             self.system_hgrc = system_hgrc_path
 
         repo = hgrepo.HgRepository(
-            repo_path, system_hgrc=self.system_hgrc, temp_mgr=self.temp_mgr
+            repo_path,
+            system_hgrc=self.system_hgrc,
+            temp_mgr=self.temp_mgr,
+            filtered=filtered,
         )
         repo.init(hgrc=hgrc, init_configs=init_configs)
 
@@ -426,6 +436,8 @@ class EdenRepoTest(EdenTestCase):
 
     enable_windows_symlinks: bool = False
 
+    backing_store_type: Optional[str] = None
+
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
 
@@ -440,6 +452,7 @@ class EdenRepoTest(EdenTestCase):
             self.mount,
             case_sensitive=self.is_case_sensitive,
             enable_windows_symlinks=self.enable_windows_symlinks,
+            backing_store=self.backing_store_type,
         )
         self.report_time("eden clone done")
         actual_case_sensitive = self.eden.is_case_sensitive(self.mount)
@@ -481,7 +494,7 @@ class EdenRepoTest(EdenTestCase):
         """
         checkout_root = pathlib.Path(path if path is not None else self.mount)
         real_scm_type = scm_type if scm_type is not None else self.repo.get_type()
-        if real_scm_type == "hg":
+        if real_scm_type in ["hg", "filteredhg"]:
             expected_entries = expected_entries | {".hg"}
         actual_entries = set(os.listdir(checkout_root))
         self.assertEqual(
@@ -612,9 +625,11 @@ def _replicate_eden_repo_test(
         nfs_variants.append(("NFS", [NFSTestMixin]))
 
     scm_variants: MixinList = [("Hg", [HgRepoTestMixin])]
-    # Only run the git tests if EdenFS was built with git support.
+    # Gate some tests on whether EdenFS was built to support them.
     if eden.config.HAVE_GIT:
         scm_variants.append(("Git", [GitRepoTestMixin]))
+    if eden.config.HAVE_FILTEREDHG:
+        scm_variants.append(("FilteredHg", [FilteredHgTestMixin]))
 
     case_variants: MixinList = [("", [])]
     if case_sensitivity_dependent:
@@ -655,7 +670,7 @@ eden_repo_test = test_replicator(_replicate_eden_repo_test)
 class HgRepoTestMixin:
     repo_type: str = "hg"
 
-    def create_repo(self, name: str) -> repobase.Repository:
+    def create_repo(self, name: str, filtered: bool = False) -> repobase.Repository:
         # HgRepoTestMixin is always used in classes that derive from EdenRepoTest,
         # but it is difficult to make the type checkers aware of that.  We can't
         # add an abstract create_hg_repo() method to this class since the MRO would find
@@ -663,8 +678,15 @@ class HgRepoTestMixin:
         # breaking resolution of create_repo().
         # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `create_hg_repo`.
         return self.create_hg_repo(
-            name, init_configs=["experimental.windows-symlinks=True"]
+            name, init_configs=["experimental.windows-symlinks=True"], filtered=filtered
         )
+
+
+class FilteredHgTestMixin(HgRepoTestMixin):
+    backing_store_type: Optional[str] = "filteredhg"
+
+    def create_repo(self, name: str, filtered: bool = True) -> repobase.Repository:
+        return super().create_repo(name, filtered=filtered)
 
 
 class GitRepoTestMixin:

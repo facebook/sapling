@@ -18,9 +18,9 @@ using folly::SemiFuture;
 
 namespace facebook::eden {
 
-EmptyBackingStore::EmptyBackingStore() {}
+EmptyBackingStore::EmptyBackingStore() = default;
 
-EmptyBackingStore::~EmptyBackingStore() {}
+EmptyBackingStore::~EmptyBackingStore() = default;
 
 RootId EmptyBackingStore::parseRootId(folly::StringPiece /*rootId*/) {
   throw std::domain_error("empty backing store");

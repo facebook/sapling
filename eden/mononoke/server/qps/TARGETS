@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("mononoke")
+
+rust_library(
+    name = "qps",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/fbwhoami:fbwhoami"),  # T172908111
+                ],
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/fbwhoami:fbwhoami",
+        "//common/rust/ratelim:ratelim",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//configerator/structs/common/server:region-rust",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:serde",
+        "//configerator/structs/scm/mononoke/qps:qps_config-rust",
+        "//thrift/lib/rust:fbthrift",
+    ]),
+)

@@ -30,12 +30,12 @@ fn read_io() -> Result<IOSnapshot, String> {
     const RCHAR_PREFIX: &str = "rchar: ";
     const WCHAR_PREFIX: &str = "wchar: ";
     for line in io_str.lines() {
-        if line.starts_with(RCHAR_PREFIX) {
-            rchar += line[RCHAR_PREFIX.len()..]
+        if let Some(suffix) = line.strip_prefix(RCHAR_PREFIX) {
+            rchar += suffix
                 .parse::<u64>()
                 .map_err(|_| "unexpected rchar".to_string())?;
-        } else if line.starts_with(WCHAR_PREFIX) {
-            wchar += line[WCHAR_PREFIX.len()..]
+        } else if let Some(suffix) = line.strip_prefix(WCHAR_PREFIX) {
+            wchar += suffix
                 .parse::<u64>()
                 .map_err(|_| "unexpected wchar".to_string())?;
         }

@@ -2,6 +2,8 @@
 
 test sparse
 
+  $ export LOG=sparse=warn
+
   $ configure modernclient
   $ enable sparse rebase
   $ newclientrepo
@@ -102,7 +104,7 @@ Verify error checking includes filename and line numbers
   $ hg add broken.sparse
   $ hg ci -m 'Adding a broken file'
   $ hg sparse enableprofile broken.sparse
-  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
+   WARN sparse: ignoring sparse rule starting with / line=/absolute/paths/are/ignored source=broken.sparse line_num=4
   $ hg -q debugstrip . --no-backup 2>/dev/null
 
 Verify that a profile is updated across multiple commits
@@ -300,7 +302,6 @@ warning message can be suppressed by setting missingwarning = false in
   $ hg sparse enableprofile backend.sparse
   the profile 'backend.sparse' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
   (if the path is a typo, use 'hg sparse disableprofile' to remove it)
-  warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
 
 Test file permissions changing across a sparse profile change
   $ newclientrepo
@@ -676,6 +677,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
+    "raw": "%include profiles/bar/eggs\n[metadata]\ntitle: An extended profile including some interesting files\n[include]\ninteresting\n",
     "stats": {"filecount": 11, "filecountpercentage": 91.66666666666666}
    }
   ]
@@ -687,6 +689,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
+    "raw": "%include profiles/bar/eggs\n[metadata]\ntitle: An extended profile including some interesting files\n[include]\ninteresting\n",
     "stats": {"filecount": 11, "filecountpercentage": 91.66666666666666, "totalsize": 4145875}
    }
   ]
@@ -813,13 +816,17 @@ current working copy:
   
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
      profiles/bar/ham  An extended profile including some interesting files
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
   $ hg sparse list --contains-file interesting/later_revision -r .
   Available Profiles:
   
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
      profiles/bar/ham  An extended profile including some interesting files
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
   $ hg up -q ".^"
 
 We can list the files in a profile with the hg sparse files command:

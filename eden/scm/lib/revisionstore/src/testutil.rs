@@ -115,7 +115,7 @@ impl RemoteDataStore for FakeRemoteDataStore {
         for k in keys {
             match k {
                 StoreKey::HgId(k) => {
-                    let (data, flags) = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
+                    let (data, flags) = self.map.get(k).ok_or_else(|| Error::msg("Not found"))?;
                     let delta = Delta {
                         data: data.clone(),
                         base: None,
@@ -178,7 +178,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
             match k {
                 StoreKey::HgId(k) => self
                     .store
-                    .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?,
+                    .add(k, self.map.get(k).ok_or_else(|| Error::msg("Not found"))?)?,
                 StoreKey::Content(_, _) => continue,
             }
         }
@@ -271,7 +271,7 @@ impl FakeEdenApi {
                     // TODO(meyer): Compute aux data directly.
                     let mut file = LazyFile::EdenApi(entry.clone().with_content(content.clone()));
                     let aux = file.aux_data().ok()?;
-                    entry = entry.with_aux_data(aux.into());
+                    entry = entry.with_aux_data(aux);
                 }
 
                 if spec.attrs.content {
@@ -373,10 +373,6 @@ pub fn make_config(dir: impl AsRef<Path>) -> BTreeMap<String, String> {
             "remotefilelog.cachepath",
             dir.as_ref().display().to_string(),
         ),
-        (
-            "remotefilelog.cachekey",
-            "cca::hg:rust_unittest".to_string(),
-        ),
     ]
     .iter()
     .map(|(k, v)| (k.to_string(), v.clone()))
@@ -386,6 +382,16 @@ pub fn make_config(dir: impl AsRef<Path>) -> BTreeMap<String, String> {
 #[cfg(test)]
 pub(crate) fn empty_config() -> BTreeMap<String, String> {
     BTreeMap::new()
+}
+
+#[cfg(test)]
+pub(crate) fn setconfig(
+    config: &mut BTreeMap<String, String>,
+    section: &str,
+    name: &str,
+    value: &str,
+) {
+    config.insert(format!("{}.{}", section, name), value.to_string());
 }
 
 #[cfg(test)]
@@ -566,14 +572,4 @@ mod lfs_mocks {
 
         config
     }
-}
-
-#[cfg(test)]
-pub(crate) fn setconfig(
-    config: &mut BTreeMap<String, String>,
-    section: &str,
-    name: &str,
-    value: &str,
-) {
-    config.insert(format!("{}.{}", section, name), value.to_string());
 }

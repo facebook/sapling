@@ -19,7 +19,6 @@ use mononoke_app::MononokeApp;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use preloaded_commit_graph_storage::ExtendablePreloadedEdges;
-use rendezvous::RendezVousOptions;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sql_commit_graph_storage::SqlCommitGraphStorage;
@@ -101,9 +100,7 @@ pub(super) async fn update_preloaded(
         .open::<SqlCommitGraphStorageBuilder>()
         .await?
         .build(
-            RendezVousOptions {
-                free_connections: 5,
-            },
+            app.environment().rendezvous_options,
             repo.repo_identity().id(),
         );
 

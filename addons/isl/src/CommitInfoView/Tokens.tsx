@@ -11,16 +11,30 @@ import {Icon} from 'shared/Icon';
 export function TokensList({
   tokens,
   onClickX,
+  onClickToken,
 }: {
   tokens: Array<string>;
   onClickX?: (token: string) => unknown;
+  onClickToken?: (token: string) => unknown;
 }) {
+  const hasOnClick = onClickToken != null;
   return (
     <>
       {tokens
         .filter(token => token != '')
         .map((token, i) => (
-          <span key={i} className="token">
+          <span
+            key={i}
+            className={'token' + (hasOnClick ? ' clickable' : '')}
+            onClick={
+              hasOnClick
+                ? e => {
+                    onClickToken(token);
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                : undefined
+            }>
             {token}
             {onClickX == null ? null : (
               <VSCodeButton appearance="icon" onClick={() => onClickX?.(token)}>
@@ -33,11 +47,15 @@ export function TokensList({
   );
 }
 
+function deduplicate<T>(values: Array<T>) {
+  return [...new Set(values)];
+}
+
 /** Extract comma-separated tokens into an array, plus any remaining non-tokenized text */
 export function extractTokens(raw: string): [Array<string>, string] {
   const tokens = raw.split(',');
   const remaining = tokens.length === 0 ? raw : tokens.pop();
-  return [tokens.map(token => token.trim()), remaining ?? ''];
+  return [deduplicate(tokens.map(token => token.trim())), remaining ?? ''];
 }
 
 /** Combine tokens back into a string to be stored in the commit message */

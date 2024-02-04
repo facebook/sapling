@@ -16,7 +16,7 @@ Without auto username:
 With auto username:
 
   $ cat > $TESTTMP/a.py << 'EOF'
-  > from edenscm import extensions, ui as uimod
+  > from sapling import extensions, ui as uimod
   > def auto_username(orig, ui):
   >     return "A B <c@d.com>"
   > def uisetup(ui):

@@ -27,7 +27,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -211,7 +210,7 @@ impl Action {
                 ("modify", [name, path, rest @ .., content]) if rest.len() < 2 => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    let file_type = match rest.get(0) {
+                    let file_type = match rest.first() {
                         Some(file_type) => file_type.to_string()?.parse()?,
                         None => FileType::Regular,
                     };
@@ -255,7 +254,7 @@ impl Action {
                 {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    let file_type = match rest.get(0) {
+                    let file_type = match rest.first() {
                         Some(file_type) => file_type.to_string()?.parse()?,
                         None => FileType::Regular,
                     };
@@ -558,14 +557,16 @@ fn apply_changes<'a>(
                 content,
                 parent,
                 parent_path,
+                file_type,
                 ..
             } => {
                 let parent: CommitIdentifier =
                     committed.get(&parent).map_or(parent.into(), |&c| c.into());
-                c = c.add_file_with_copy_info(
+                c = c.add_file_with_copy_info_and_type(
                     path.as_slice(),
                     content,
                     (parent, parent_path.as_slice()),
+                    file_type,
                 )
             }
         }
@@ -611,7 +612,6 @@ async fn derive_all(ctx: &CoreContext, repo: &BlobRepo, csids: &[ChangesetId]) -
         derive::<RootFsnodeId>(ctx, repo, csids),
         derive::<RootSkeletonManifestId>(ctx, repo, csids),
         derive::<ChangesetInfo>(ctx, repo, csids),
-        derive::<RootBasenameSuffixSkeletonManifest>(ctx, repo, csids),
     )?;
     Ok(())
 }

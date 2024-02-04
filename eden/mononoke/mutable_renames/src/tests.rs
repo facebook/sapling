@@ -45,8 +45,8 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
     let changesets = setup_changesets(&ctx).await?;
 
-    let dst_path = Some(MPath::new("dstpath")?);
-    let src_path = Some(MPath::new("srcpath")?);
+    let dst_path = MPath::new("dstpath")?;
+    let src_path = MPath::new("srcpath")?;
     let entry = MutableRenameEntry::new(
         TWOS_CSID,
         dst_path.clone(),
@@ -73,8 +73,8 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
     let changesets = setup_changesets(&ctx).await?;
 
-    let first_dst_path = Some(MPath::new("first_dstpath")?);
-    let first_src_path = Some(MPath::new("second_srcpath")?);
+    let first_dst_path = MPath::new("first_dstpath")?;
+    let first_src_path = MPath::new("second_srcpath")?;
     let first_entry = MutableRenameEntry::new(
         TWOS_CSID,
         first_dst_path.clone(),
@@ -83,8 +83,8 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
         Entry::Leaf(FileUnodeId::new(ONES)),
     )?;
 
-    let second_dst_path = Some(MPath::new("second_dstpath")?);
-    let second_src_path = Some(MPath::new("second_srcpath")?);
+    let second_dst_path = MPath::new("second_dstpath")?;
+    let second_src_path = MPath::new("second_srcpath")?;
     let second_entry = MutableRenameEntry::new(
         TWOS_CSID,
         second_dst_path.clone(),
@@ -121,8 +121,8 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
     let changesets = setup_changesets(&ctx).await?;
 
-    let dst_path = Some(MPath::new("first_dstpath")?);
-    let first_src_path = Some(MPath::new("first_srcpath")?);
+    let dst_path = MPath::new("first_dstpath")?;
+    let first_src_path = MPath::new("first_srcpath")?;
     let first_entry = MutableRenameEntry::new(
         TWOS_CSID,
         dst_path.clone(),
@@ -135,7 +135,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
         .add_or_overwrite_renames(&ctx, &changesets, vec![first_entry.clone()])
         .await?;
 
-    let second_src_path = Some(MPath::new("second_srcpath")?);
+    let second_src_path = MPath::new("second_srcpath")?;
     let second_entry = MutableRenameEntry::new(
         TWOS_CSID,
         dst_path.clone(),

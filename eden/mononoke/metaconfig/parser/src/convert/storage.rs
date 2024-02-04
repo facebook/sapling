@@ -8,6 +8,7 @@
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -24,6 +25,8 @@ use metaconfig_types::LocalDatabaseConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::MultiplexId;
 use metaconfig_types::MultiplexedStoreType;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::PackConfig;
 use metaconfig_types::PackFormat;
 use metaconfig_types::RemoteDatabaseConfig;
@@ -49,6 +52,7 @@ use repos::RawMetadataConfig;
 use repos::RawMultiplexedStoreNormal;
 use repos::RawMultiplexedStoreType;
 use repos::RawMultiplexedStoreWriteOnly;
+use repos::RawOssDbRemote;
 use repos::RawShardedDbConfig;
 use repos::RawStorageConfig;
 
@@ -192,6 +196,16 @@ impl Convert for RawBlobstoreConfig {
                     .transpose()?,
                 secret_name: raw.secret_name,
             },
+            RawBlobstoreConfig::aws_s3(raw) => BlobConfig::AwsS3 {
+                aws_account_id: raw.aws_account_id,
+                aws_role: raw.aws_role,
+                bucket: raw.bucket,
+                region: rusoto_core::Region::from_str(&raw.region)?,
+                num_concurrent_operations: raw
+                    .num_concurrent_operations
+                    .map(|x| x.try_into())
+                    .transpose()?,
+            },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));
             }
@@ -252,6 +266,21 @@ impl Convert for RawDbRemote {
     fn convert(self) -> Result<Self::Output> {
         Ok(RemoteDatabaseConfig {
             db_address: self.db_address,
+        })
+    }
+}
+
+impl Convert for RawOssDbRemote {
+    type Output = OssRemoteDatabaseConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(OssRemoteDatabaseConfig {
+            host: self.host,
+            port: self.port,
+            database: self.database,
+            secret_group: self.secret_group,
+            user_secret: self.user_secret,
+            password_secret: self.password_secret,
         })
     }
 }
@@ -327,6 +356,16 @@ impl Convert for RawMetadataConfig {
             RawMetadataConfig::local(raw) => Ok(MetadataDatabaseConfig::Local(raw.convert()?)),
             RawMetadataConfig::remote(raw) => Ok(MetadataDatabaseConfig::Remote(
                 RemoteMetadataDatabaseConfig {
+                    primary: raw.primary.convert()?,
+                    filenodes: raw.filenodes.convert()?,
+                    mutation: raw.mutation.convert()?,
+                    sparse_profiles: raw.sparse_profiles.convert()?,
+                    bonsai_blob_mapping: raw.bonsai_blob_mapping.convert()?,
+                    deletion_log: raw.deletion_log.convert()?,
+                },
+            )),
+            RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(
+                OssRemoteMetadataDatabaseConfig {
                     primary: raw.primary.convert()?,
                     filenodes: raw.filenodes.convert()?,
                     mutation: raw.mutation.convert()?,

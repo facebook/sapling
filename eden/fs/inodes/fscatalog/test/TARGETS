@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/inodes/memcatalog:meminodecatalog",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
+        "//eden/fs/model:model",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:file_utils",
+        "//folly:conv",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)

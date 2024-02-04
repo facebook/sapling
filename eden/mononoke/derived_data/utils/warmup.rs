@@ -30,6 +30,7 @@ use futures::TryFutureExt;
 use manifest::find_intersection_of_diffs;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -257,7 +258,7 @@ async fn prefetch_content(
         root_manifest,
         parents_manifests,
     )
-    .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
+    .map_ok(|(path, entry)| Some((Option::<NonRootMPath>::from(path)?, entry.into_leaf()?)))
     .try_filter_map(|maybe_entry| async move { Result::<_, Error>::Ok(maybe_entry) })
     .map(|result| {
         cloned!(prefetch_content_repo);

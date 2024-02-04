@@ -30,7 +30,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 
-use crate::upload_git_object;
+use crate::upload_non_blob_git_object;
 use crate::MappedGitCommitId;
 use crate::TreeHandle;
 
@@ -132,7 +132,7 @@ impl BonsaiDerivable for MappedGitCommitId {
             )
         })?;
         // Store the converted Git commit
-        upload_git_object(ctx, &derivation_ctx.blobstore(), oid, raw_commit_bytes).await?;
+        upload_non_blob_git_object(ctx, &derivation_ctx.blobstore(), oid, raw_commit_bytes).await?;
         Ok(Self::new(git_hash.into()))
     }
 
@@ -207,7 +207,7 @@ mod test {
     use repo_derived_data::RepoDerivedDataRef;
 
     use super::*;
-    use crate::fetch_git_object;
+    use crate::fetch_non_blob_git_object;
 
     async fn compare_commits(
         repo: &(impl RepoBlobstoreArc + BonsaiGitMappingRef),
@@ -224,7 +224,7 @@ mod test {
                 )
             })?;
         let bonsai_commit = bonsai_commit_id.load(ctx, blobstore).await?;
-        let git_commit = fetch_git_object(ctx, blobstore, git_hash)
+        let git_commit = fetch_non_blob_git_object(ctx, blobstore, git_hash)
             .await?
             .into_commit();
         // Validate that the parents match

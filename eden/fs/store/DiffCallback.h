@@ -27,8 +27,8 @@ class TreeEntry;
  */
 class DiffCallback {
  public:
-  DiffCallback() {}
-  virtual ~DiffCallback() {}
+  DiffCallback() = default;
+  virtual ~DiffCallback() = default;
 
   virtual void ignoredPath(RelativePathPiece path, dtype_t type) = 0;
   virtual void addedPath(RelativePathPiece path, dtype_t type) = 0;

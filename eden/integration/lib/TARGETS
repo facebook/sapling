@@ -1,0 +1,44 @@
+load("@fbcode_macros//build_defs:cpp_python_extension.bzl", "cpp_python_extension")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "lib",
+    srcs = glob(["*.py"]),
+    os_deps = [
+        (
+            "windows",
+            [
+                ":ntapi",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/pypi/pexpect:pexpect",
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:proc_utils",
+        "//eden/fs/py/eden:config",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/facebook/lib:lib",
+        "//eden/test_support:py",
+    ],
+)
+
+cpp_python_extension(
+    name = "ntapi",
+    srcs = ["ntapi.cpp"],
+    base_module = "eden.integration.lib",
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    compiler_flags = [
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+    ],
+    types = [
+        "ntapi.pyi",
+    ],
+)

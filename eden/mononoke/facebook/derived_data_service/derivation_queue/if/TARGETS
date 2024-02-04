@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "derivation_queue_thrift",
+    languages = [
+        "rust",
+    ],
+    thrift_srcs = {
+        "derivation_queue.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

@@ -7,7 +7,7 @@
 
 use thiserror::Error;
 
-use crate::path::MPath;
+use crate::path::NonRootMPath;
 
 #[derive(Debug, Error)]
 pub enum MononokeTypeError {
@@ -22,7 +22,7 @@ pub enum MononokeTypeError {
     #[error("invalid path '{0}': {1}")]
     InvalidPath(String, String),
     #[error("invalid Mononoke path '{0}': {1}")]
-    InvalidMPath(MPath, String),
+    InvalidMPath(NonRootMPath, String),
     #[error("error while deserializing blob for '{0}'")]
     BlobDeserializeError(String),
     #[error("error for key '{0}'")]
@@ -32,7 +32,7 @@ pub enum MononokeTypeError {
     #[error("invalid changeset date: {0}")]
     InvalidDateTime(String),
     #[error("not path-conflict-free: changed path '{0}' is a prefix of '{1}'")]
-    NotPathConflictFree(MPath, MPath),
+    NotPathConflictFree(NonRootMPath, NonRootMPath),
     #[error("invalid bonsai changeset: {0}")]
     InvalidBonsaiChangeset(String),
     #[error("Failed to parse RepositoryId from '{0}'")]

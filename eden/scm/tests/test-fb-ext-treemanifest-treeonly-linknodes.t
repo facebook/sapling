@@ -11,7 +11,7 @@ Set up the server
   > [extensions]
   > pushrebase=
   > remotenames=
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   > [treemanifest]
   > server=true
   > treeonly=true

@@ -7,7 +7,7 @@ Create an extension to test bundle2 with multiple changegroups
   $ cat > bundle2.py <<EOF
   > """
   > """
-  > from edenscm import changegroup, discovery, exchange
+  > from sapling import changegroup, discovery, exchange
   > 
   > def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
   >                               b2caps=None, heads=None, common=None,

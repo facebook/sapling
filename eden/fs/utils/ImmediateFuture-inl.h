@@ -188,6 +188,9 @@ ImmediateFuture<T> ImmediateFuture<T>::thenError(Func&& func) && {
 template <typename T>
 template <typename Func>
 ImmediateFuture<T> ImmediateFuture<T>::ensure(Func&& func) && {
+  static_assert(
+      std::is_same_v<std::invoke_result_t<Func>, void>,
+      "ImmediateFuture::ensure should be called with a function/lambda returning void");
   return std::move(*this).thenTry(
       [func = std::forward<Func>(func)](
           folly::Try<T> try_) mutable -> folly::Try<T> {
@@ -237,7 +240,7 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
       return std::move(semiFut).deferValue(
           [](auto&& immFut) { return std::move(immFut).semi(); });
     } else {
-      return std::move(semiFut);
+      return semiFut;
     }
   }
 }
@@ -353,7 +356,7 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
   if (semis.empty()) {
     // All the ImmediateFuture were immediate, let's return an ImmediateFuture
     // that holds an immediate vector too.
-    return std::move(res);
+    return res;
   }
 
   return folly::collectAll(std::move(semis))

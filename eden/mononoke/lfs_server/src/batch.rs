@@ -327,10 +327,15 @@ async fn internal_objects(
         .filter_map(|(maybe_obj, consistent_routing)| match maybe_obj {
             // Map the objects we have locally into an action routing to a Mononoke LFS server.
             Some(obj) => {
-                let uri = if let Some(consistent_routing) = consistent_routing && ctx.config.enable_consistent_routing() {
+                let uri = if let Some(consistent_routing) = consistent_routing
+                    && ctx.config.enable_consistent_routing()
+                {
                     let routing_key = generate_routing_key(consistent_routing, obj.oid);
-                    ctx.uri_builder
-                        .consistent_download_uri(&obj.id, routing_key, consistent_routing)
+                    ctx.uri_builder.consistent_download_uri(
+                        &obj.id,
+                        routing_key,
+                        consistent_routing,
+                    )
                 } else {
                     ctx.uri_builder.download_uri(&obj.id)
                 };

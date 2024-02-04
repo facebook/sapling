@@ -39,8 +39,8 @@ use mercurial_types::simple_fsencode;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
 use mercurial_types::MPathElement;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 
 use crate::errors::ErrorKind;
@@ -241,7 +241,7 @@ impl RevlogRepo {
     pub fn get_heads(&self) -> BoxStream<HgNodeHash, Error> {
         match self.changelog.get_heads() {
             Err(e) => stream::once(Err(e)).boxify(),
-            Ok(set) => stream::iter_ok(set.into_iter()).boxify(),
+            Ok(set) => stream::iter_ok(set).boxify(),
         }
     }
 
@@ -323,13 +323,15 @@ impl RevlogRepo {
             Entry::Vacant(missing) => {
                 let revlog_path = match *path {
                     // .hg/store/00manifesttree
-                    RootPath => MPath::new("00manifesttree")?,
+                    RootPath => NonRootMPath::new("00manifesttree")?,
                     // .hg/store/meta/<path>/00manifest
-                    DirectoryPath(_) => MPath::new("meta")?
-                        .join(MPath::iter_opt(path.mpath()))
-                        .join(&MPath::new("00manifest")?),
+                    DirectoryPath(_) => NonRootMPath::new("meta")?
+                        .join(NonRootMPath::iter_opt(path.mpath()))
+                        .join(&NonRootMPath::new("00manifest")?),
                     // .hg/store/data/<path>
-                    FilePath(_) => MPath::new("data")?.join(MPath::iter_opt(path.mpath())),
+                    FilePath(_) => {
+                        NonRootMPath::new("data")?.join(NonRootMPath::iter_opt(path.mpath()))
+                    }
                 };
                 Ok(missing
                     .insert(self.init_revlog_from_path(revlog_path)?)
@@ -344,7 +346,7 @@ impl RevlogRepo {
     }
 
     /// path is the path to the revlog files, but without the .i or .d extensions
-    fn init_revlog_from_path(&self, path: MPath) -> Result<Revlog> {
+    fn init_revlog_from_path(&self, path: NonRootMPath) -> Result<Revlog> {
         let mut elements: Vec<MPathElement> = path.into_iter().collect();
         let basename = elements.pop().ok_or_else(|| {
             format_err!("empty path provided to RevlogRepo::init_revlog_from_path")

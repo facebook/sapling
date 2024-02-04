@@ -21,8 +21,8 @@ Check help text for new options and removal of unsupported options.
       ease.
   
       - Use the "--newest" flag to always pick the newest of multiple parents
-        commits. You can set "amend.alwaysnewest" to true in your global
-        Mercurial config file to make this the default.
+        commits. You can set "amend.alwaysnewest" to true in your global Sapling
+        config file to make this the default.
       - Use the "--merge" flag to bring along uncommitted changes to the
         destination commit.
       - Use the "--bookmark" flag to move to the first ancestor commit with a

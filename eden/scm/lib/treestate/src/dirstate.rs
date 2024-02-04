@@ -16,7 +16,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use repolock::LockError;
-use repolock::RepoLockHandle;
+use repolock::LockedPath;
 use repolock::RepoLocker;
 use types::hgid::NULL_ID;
 use types::HgId;
@@ -58,7 +58,7 @@ pub fn flush(
 
         let _lock = wait_for_wc_lock(dot_dir, locker, lock_timeout_secs)?;
 
-        let dirstate_input = util::file::read(&dirstate_path)?;
+        let dirstate_input = fs_err::read(&dirstate_path)?;
         let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
 
         // If the dirstate has changed since we last loaded it, don't flush since we might
@@ -128,7 +128,7 @@ pub fn wait_for_wc_lock(
     wc_dot_hg: PathBuf,
     locker: &RepoLocker,
     timeout_secs: Option<u32>,
-) -> anyhow::Result<RepoLockHandle> {
+) -> anyhow::Result<LockedPath> {
     let mut timeout = match timeout_secs {
         None => return Ok(locker.lock_working_copy(wc_dot_hg)?),
         Some(timeout) => timeout,
@@ -186,7 +186,7 @@ mod test {
         }
 
         {
-            (&mut ds.tree_state).as_mut().unwrap().repack_threshold = Some(123);
+            ds.tree_state.as_mut().unwrap().repack_threshold = Some(123);
 
             let mut buf: Vec<u8> = Vec::new();
             ds.serialize(&mut buf).unwrap();

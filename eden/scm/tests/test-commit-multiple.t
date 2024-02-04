@@ -74,7 +74,7 @@ transplant bug fixes onto release branch
 
 now test that we fixed the bug for all scripts/extensions
   $ cat > $TESTTMP/committwice.py <<__EOF__
-  > from edenscm import ui, hg, match, node
+  > from sapling import ui, hg, match, node
   > from time import sleep
   > 
   > def replacebyte(fn, b):

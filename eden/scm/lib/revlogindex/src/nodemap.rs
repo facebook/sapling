@@ -26,7 +26,6 @@ use crate::RevlogEntry;
 /// implemented at a higher level.
 ///
 /// ```text
-///
 ///     changelogi
 ///   +------------+
 ///   | ... | node | < rev 0  \
@@ -260,5 +259,5 @@ fn hex_to_bin_base16<T: AsRef<[u8]>>(base16: T) -> Option<Vec<u8>> {
 
 /// Return an empty index that can be used as "main_index" when passed to `new`.
 pub fn empty_index_buffer() -> Vec<u8> {
-    return vec![0u8; 4 * (RADIX_HEADER_LEN + RADIX_NCHILDREN)];
+    vec![0u8; 4 * (RADIX_HEADER_LEN + RADIX_NCHILDREN)]
 }

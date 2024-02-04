@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "rate_limiting",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/fbwhoami:fbwhoami"),  # T172908111
+                ],
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/fbwhoami:fbwhoami",
+        "//common/rust/ratelim:ratelim",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/stats:stats",
+        "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
+        "//eden/mononoke/permission_checker:permission_checker",
+    ],
+)

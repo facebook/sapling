@@ -63,11 +63,12 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::Generation;
@@ -83,7 +84,6 @@ use sha1::Sha1;
 use slog::debug;
 use slog::info;
 use slog::o;
-use tunables::tunables;
 
 use crate::errors::ErrorKind;
 
@@ -136,8 +136,7 @@ pub async fn create_getbundle_response(
             create_hg_changeset_part(ctx, blobrepo, commits_to_send.clone(), lfs_params).await?;
         parts.push(cg_part);
 
-        if !draft_commits.is_empty() && tunables().mutation_generate_for_draft().unwrap_or_default()
-        {
+        if !draft_commits.is_empty() {
             let mutations_fut = {
                 cloned!(ctx);
                 let hg_mutation_store = blobrepo.hg_mutation_store_arc();
@@ -508,7 +507,6 @@ pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
 ///
 /// If `heads = [D, E, F]` and `common = [C]` then `new_draft_commits = [D, E]`,
 /// and new_public_heads = `[A, B]`.
-///
 async fn find_new_draft_commits_and_public_roots(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -573,7 +571,6 @@ async fn find_new_draft_commits_and_public_roots(
 ///
 /// If `heads = [D, E, F]` then this will return
 /// `[(F, public), (E, draft), (D, draft), (B, public)]`
-///
 async fn find_phase_heads(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -777,10 +774,10 @@ fn calculate_content_weight_hint(content_size: u64, content: &FilenodeEntryConte
 fn prepare_filenode_entries_stream<'a>(
     ctx: &'a CoreContext,
     blobstore: &'a RepoBlobstore,
-    filenodes: Vec<(MPath, HgFileNodeId, HgChangesetId)>,
+    filenodes: Vec<(NonRootMPath, HgFileNodeId, HgChangesetId)>,
     lfs_session: &'a SessionLfsParams,
-) -> impl Stream<Item = Result<(MPath, Vec<PreparedFilenodeEntry>), Error>> + 'a {
-    stream::iter(filenodes.into_iter())
+) -> impl Stream<Item = Result<(NonRootMPath, Vec<PreparedFilenodeEntry>), Error>> + 'a {
+    stream::iter(filenodes)
         .map({
             move |(path, filenode, linknode)| async move {
                 let envelope = filenode.load(ctx, blobstore).await?;
@@ -866,11 +863,11 @@ fn generate_lfs_file(
 pub fn create_manifest_entries_stream(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
-    manifests: Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
+    manifests: Vec<(MPath, HgManifestId, HgChangesetId)>,
 ) -> OldBoxStream<OldBoxFuture<parts::TreepackPartInput, Error>, Error> {
-    old_stream::iter_ok(manifests.into_iter())
+    old_stream::iter_ok(manifests)
         .filter(|(fullpath, mf_id, _linknode)| {
-            !(fullpath.is_none() && mf_id.clone().into_nodehash() == NULL_HASH)
+            !(fullpath.is_root() && mf_id.clone().into_nodehash() == NULL_HASH)
         })
         .map({
             move |(fullpath, mf_id, linknode)| {
@@ -906,8 +903,8 @@ async fn diff_with_parents(
     hg_cs_id: HgChangesetId,
 ) -> Result<
     (
-        Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
-        Vec<(MPath, HgFileNodeId, HgChangesetId)>,
+        Vec<(MPath, HgManifestId, HgChangesetId)>,
+        Vec<(NonRootMPath, HgFileNodeId, HgChangesetId)>,
     ),
     Error,
 > {
@@ -926,7 +923,7 @@ async fn diff_with_parents(
     )?;
 
     let blobstore = Arc::new(repo.repo_blobstore().clone());
-    let new_entries: Vec<(Option<MPath>, Entry<_, _>, _)> =
+    let new_entries: Vec<(MPath, Entry<_, _>, _)> =
         find_intersection_of_diffs_and_parents(ctx.clone(), blobstore, mf_id, parent_mf_ids)
             .try_collect()
             .await?;
@@ -951,7 +948,7 @@ async fn diff_with_parents(
                 if found_same_in_parents {
                     continue;
                 }
-                let path = path.expect("empty file paths?");
+                let path = Option::<NonRootMPath>::from(path).expect("empty file paths?");
                 files.push((path, file, hg_cs_id.clone()));
             }
         }
@@ -963,10 +960,10 @@ async fn diff_with_parents(
 fn create_filenodes_weighted(
     ctx: CoreContext,
     repo: impl RepoBlobstoreRef + Clone + Sync + Send + 'static,
-    entries: HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+    entries: HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
 ) -> impl OldStream<
     Item = (
-        impl OldFuture<Item = (MPath, Vec<FilenodeEntry>), Error = Error>,
+        impl OldFuture<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error>,
         u64,
     ),
     Error = Error,
@@ -1003,8 +1000,8 @@ fn create_filenodes_weighted(
 pub fn create_filenodes(
     ctx: CoreContext,
     repo: impl RepoBlobstoreRef + Clone + Sync + Send + 'static,
-    entries: HashMap<MPath, Vec<PreparedFilenodeEntry>>,
-) -> impl OldStream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> {
+    entries: HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
+) -> impl OldStream<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error> {
     let params = BufferedParams {
         weight_limit: MAX_FILENODE_BYTES_IN_MEMORY,
         buffer_size: 100,
@@ -1023,8 +1020,8 @@ pub async fn get_manifests_and_filenodes(
     lfs_params: &SessionLfsParams,
 ) -> Result<
     (
-        Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
-        HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+        Vec<(MPath, HgManifestId, HgChangesetId)>,
+        HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
     ),
     Error,
 > {
@@ -1033,7 +1030,7 @@ pub async fn get_manifests_and_filenodes(
             |hg_cs_id| async move {
                 let (manifests, filenodes) = diff_with_parents(ctx, repo, hg_cs_id).await?;
 
-                let filenodes: Vec<(MPath, Vec<PreparedFilenodeEntry>)> =
+                let filenodes: Vec<(NonRootMPath, Vec<PreparedFilenodeEntry>)> =
                     prepare_filenode_entries_stream(
                         ctx,
                         repo.repo_blobstore(),
@@ -1055,7 +1052,7 @@ pub async fn get_manifests_and_filenodes(
     let mut used_mfs = HashSet::new();
 
     let mut ordered_filenode_entries: HashMap<_, Vec<_>> = HashMap::new();
-    let mut used_filenodes: HashMap<MPath, HashSet<HgFileNodeId>> = HashMap::new();
+    let mut used_filenodes: HashMap<NonRootMPath, HashSet<HgFileNodeId>> = HashMap::new();
     for (mf_entries, file_entries) in entries {
         for (path, mf_id, linknode) in mf_entries {
             if used_mfs.insert((path.clone(), mf_id)) {

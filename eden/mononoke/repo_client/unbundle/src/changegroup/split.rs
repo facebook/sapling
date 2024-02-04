@@ -187,7 +187,7 @@ mod tests {
     use itertools::assert_equal;
     use itertools::equal;
     use mercurial_bundles::changegroup::CgDeltaChunk;
-    use mercurial_types::MPath;
+    use mercurial_types::NonRootMPath;
 
     use super::*;
 
@@ -232,7 +232,7 @@ mod tests {
     }
 
     #[quickcheck_async::tokio]
-    async fn splitting_minimal(c: CgDeltaChunk, f: CgDeltaChunk, f_p: MPath) -> bool {
+    async fn splitting_minimal(c: CgDeltaChunk, f: CgDeltaChunk, f_p: NonRootMPath) -> bool {
         check_splitting(
             iter(
                 vec![
@@ -295,10 +295,10 @@ mod tests {
         c2: CgDeltaChunk,
         f1: CgDeltaChunk,
         f1_bis: CgDeltaChunk,
-        f1_p: MPath,
+        f1_p: NonRootMPath,
         f2: CgDeltaChunk,
         f2_bis: CgDeltaChunk,
-        f2_p: MPath,
+        f2_p: NonRootMPath,
     ) -> bool {
         check_splitting(
             iter(
@@ -345,7 +345,11 @@ mod tests {
     }
 
     #[quickcheck_async::tokio]
-    async fn splitting_error_filelog_end(f: CgDeltaChunk, f1_p: MPath, f2_p: MPath) -> bool {
+    async fn splitting_error_filelog_end(
+        f: CgDeltaChunk,
+        f1_p: NonRootMPath,
+        f2_p: NonRootMPath,
+    ) -> bool {
         {
             let (cs, fs) = split_changegroup(
                 iter(
@@ -412,7 +416,7 @@ mod tests {
         c: CgDeltaChunk,
         m: CgDeltaChunk,
         f: CgDeltaChunk,
-        f_p: MPath,
+        f_p: NonRootMPath,
     ) -> bool {
         let (cs, fs) = split_changegroup(
             iter(

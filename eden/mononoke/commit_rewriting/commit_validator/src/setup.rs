@@ -54,7 +54,8 @@ pub async fn get_validation_helpers<'a>(
         &repo_config.storage_config.metadata,
         &mysql_options,
         readonly_storage.0,
-    )?;
+    )
+    .await?;
 
     let large_repo_master_bookmark =
         BookmarkKey::new(app.args::<MononokeCommitValidatorArgs>()?.master_bookmark)?;

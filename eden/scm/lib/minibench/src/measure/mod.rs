@@ -104,7 +104,7 @@ impl Measure for Bytes {
         } else if value < 1_000_000 {
             format!("{:7.3} KB", (value as f64) / 1000.0)
         } else {
-            format!("{:7.3} MB", (value as f64) / 1000_000.0)
+            format!("{:7.3} MB", (value as f64) / 1_000_000.0)
         }
     }
 }
@@ -134,7 +134,7 @@ impl<D: Default, A: Measure<FuncOutput = ()>, B: Measure<FuncOutput = D>> Measur
         } else if !a_run {
             // A failed without running the function.
             // B's result is meaningless. Re-run B.
-            b = B::measure(|| func());
+            b = B::measure(func);
         }
 
         Ok(Self(a.unwrap(), b))
@@ -178,9 +178,9 @@ impl<D: Default, A: Measure<FuncOutput = ()>, B: Measure<FuncOutput = D>> Measur
     }
 }
 
-impl<A, B> Into<(Result<A, String>, Result<B, String>)> for Both<A, B> {
-    fn into(self) -> (Result<A, String>, Result<B, String>) {
-        (self.0, self.1)
+impl<A, B> From<Both<A, B>> for (Result<A, String>, Result<B, String>) {
+    fn from(val: Both<A, B>) -> Self {
+        (val.0, val.1)
     }
 }
 

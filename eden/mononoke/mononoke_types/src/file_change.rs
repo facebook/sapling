@@ -20,7 +20,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 use crate::errors::MononokeTypeError;
-use crate::path::MPath;
+use crate::path::NonRootMPath;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ContentId;
@@ -28,7 +28,7 @@ use crate::typed_hash::ContentId;
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct TrackedFileChange {
     inner: BasicFileChange,
-    copy_from: Option<(MPath, ChangesetId)>,
+    copy_from: Option<(NonRootMPath, ChangesetId)>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -52,7 +52,7 @@ impl TrackedFileChange {
         content_id: ContentId,
         file_type: FileType,
         size: u64,
-        copy_from: Option<(MPath, ChangesetId)>,
+        copy_from: Option<(NonRootMPath, ChangesetId)>,
     ) -> Self {
         Self {
             inner: BasicFileChange {
@@ -64,7 +64,7 @@ impl TrackedFileChange {
         }
     }
 
-    pub fn with_new_copy_from(&self, copy_from: Option<(MPath, ChangesetId)>) -> Self {
+    pub fn with_new_copy_from(&self, copy_from: Option<(NonRootMPath, ChangesetId)>) -> Self {
         Self::new(
             self.inner.content_id,
             self.inner.file_type,
@@ -97,15 +97,15 @@ impl TrackedFileChange {
         self.inner.size
     }
 
-    pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
+    pub fn copy_from(&self) -> Option<&(NonRootMPath, ChangesetId)> {
         self.copy_from.as_ref()
     }
 
-    pub fn copy_from_mut(&mut self) -> Option<&mut (MPath, ChangesetId)> {
+    pub fn copy_from_mut(&mut self) -> Option<&mut (NonRootMPath, ChangesetId)> {
         self.copy_from.as_mut()
     }
 
-    pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &MPath) -> Result<Self> {
+    pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &NonRootMPath) -> Result<Self> {
         let catch_block = || -> Result<_> {
             Ok(Self {
                 inner: BasicFileChange {
@@ -115,7 +115,7 @@ impl TrackedFileChange {
                 },
                 copy_from: match fc.copy_from {
                     Some(copy_info) => Some((
-                        MPath::from_thrift(copy_info.file)?,
+                        NonRootMPath::from_thrift(copy_info.file)?,
                         ChangesetId::from_thrift(copy_info.cs_id)?,
                     )),
                     None => None,
@@ -175,7 +175,7 @@ impl FileChange {
         content_id: ContentId,
         file_type: FileType,
         size: u64,
-        copy_from: Option<(MPath, ChangesetId)>,
+        copy_from: Option<(NonRootMPath, ChangesetId)>,
     ) -> Self {
         Self::Change(TrackedFileChange::new(
             content_id, file_type, size, copy_from,
@@ -200,7 +200,7 @@ impl FileChange {
         }
     }
 
-    pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
+    pub fn copy_from(&self) -> Option<&(NonRootMPath, ChangesetId)> {
         match self {
             Self::Change(tc) => tc.copy_from(),
             Self::Deletion | Self::UntrackedDeletion | Self::UntrackedChange(_) => None,
@@ -229,7 +229,7 @@ impl FileChange {
         }
     }
 
-    pub(crate) fn from_thrift(fc_opt: thrift::FileChangeOpt, mpath: &MPath) -> Result<Self> {
+    pub(crate) fn from_thrift(fc_opt: thrift::FileChangeOpt, mpath: &NonRootMPath) -> Result<Self> {
         match (
             fc_opt.change,
             fc_opt.untracked_change,
@@ -272,7 +272,7 @@ impl FileChange {
     pub(crate) fn arbitrary_from_parents(g: &mut Gen, parents: &[ChangesetId]) -> Self {
         let copy_from = if *g.choose(&[0, 1, 2, 3, 4]).unwrap() < 1 {
             g.choose(parents)
-                .map(|parent| (MPath::arbitrary(g), *parent))
+                .map(|parent| (NonRootMPath::arbitrary(g), *parent))
         } else {
             None
         };
@@ -288,7 +288,7 @@ impl FileChange {
 impl Arbitrary for FileChange {
     fn arbitrary(g: &mut Gen) -> Self {
         let copy_from = if *g.choose(&[0, 1, 2, 3, 4]).unwrap() < 1 {
-            Some((MPath::arbitrary(g), ChangesetId::arbitrary(g)))
+            Some((NonRootMPath::arbitrary(g), ChangesetId::arbitrary(g)))
         } else {
             None
         };
@@ -478,7 +478,7 @@ mod test {
 
         fn filechange_thrift_roundtrip(fc: FileChange) -> bool {
             let thrift_fc = fc.clone().into_thrift();
-            let fc2 = FileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
+            let fc2 = FileChange::from_thrift(thrift_fc, &NonRootMPath::new("foo").unwrap())
                 .expect("thrift roundtrip should always be valid");
             fc == fc2
         }
@@ -500,7 +500,7 @@ mod test {
             size: 0,
             copy_from: None,
         };
-        TrackedFileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
+        TrackedFileChange::from_thrift(thrift_fc, &NonRootMPath::new("foo").unwrap())
             .expect_err("unexpected OK - bad content ID");
     }
 }

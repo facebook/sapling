@@ -7,6 +7,7 @@
 
 use std::collections::BTreeSet;
 
+use itertools::Itertools;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use source_control as thrift;
@@ -15,6 +16,11 @@ use crate::commit_id::CommitIdExt;
 use crate::scuba_common::hex;
 use crate::scuba_common::report_megarepo_target;
 use crate::scuba_common::Reported;
+
+/// To avoid logging very large numbers of commit ids to scuba, we limit
+/// requests that potentially involve unbounded numbers of commits to logging
+/// just the first few.
+const COMMIT_LIMIT: usize = 10;
 
 /// A trait for logging a thrift `Params` struct to scuba.
 ///
@@ -196,9 +202,39 @@ impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {
     }
 }
 
-impl AddScubaParams for thrift::RepoStackInfoParams {}
+impl AddScubaParams for thrift::RepoStackInfoParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add(
+            "param_first_n_commits",
+            self.heads
+                .iter()
+                .take(COMMIT_LIMIT)
+                .map(CommitIdExt::to_string)
+                .collect::<ScubaValue>(),
+        );
+        scuba.add("param_commit_count", self.heads.len());
+        scuba.add("param_limit", self.limit);
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
 
-impl AddScubaParams for thrift::RepoPrepareCommitsParams {}
+impl AddScubaParams for thrift::RepoPrepareCommitsParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add(
+            "param_first_n_commits",
+            self.commits
+                .iter()
+                .take(COMMIT_LIMIT)
+                .map(CommitIdExt::to_string)
+                .collect::<ScubaValue>(),
+        );
+        scuba.add("param_commit_count", self.commits.len());
+        scuba.add(
+            "param_derived_data_type",
+            self.derived_data_type.to_string(),
+        );
+    }
+}
 
 impl AddScubaParams for thrift::RepoUploadFileContentParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
@@ -332,6 +368,13 @@ impl AddScubaParams for thrift::CommitLookupXRepoParams {
 impl AddScubaParams for thrift::CommitPathBlameParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());
+        if let Some(param_blame_format_option) = &self.format_options {
+            let repr = param_blame_format_option
+                .iter()
+                .map(|x| format!("{}", x))
+                .join("|");
+            scuba.add("param_format_options", repr);
+        }
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
@@ -549,7 +592,7 @@ impl AddScubaParams for thrift::MegarepoReadConfigParams {
     }
 }
 
-impl AddScubaParams for thrift::UploadGitObjectParams {
+impl AddScubaParams for thrift::RepoUploadNonBlobGitObjectParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_git_object_id", hex(&self.git_hash));
     }
@@ -564,5 +607,18 @@ impl AddScubaParams for thrift::CreateGitTreeParams {
 impl AddScubaParams for thrift::CreateGitTagParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("tagged_changeset_id", hex(&self.target_changeset));
+    }
+}
+
+impl AddScubaParams for thrift::RepoStackGitBundleStoreParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("head", self.head.to_string());
+        scuba.add("base", self.base.to_string());
+    }
+}
+
+impl AddScubaParams for thrift::RepoUploadPackfileBaseItemParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_git_object_id", hex(&self.git_hash));
     }
 }

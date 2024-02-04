@@ -97,6 +97,28 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       const ObjectFetchContextPtr& context,
       const int remainingRecursionDepth = kMaxSymlinkChainDepth);
 
+  std::variant<AbsolutePath, RelativePath> determineTargetType(
+      RelativePath symlink,
+      string_view targetStringView);
+
+  // Method that can be used for normalizing all the parts of a path containing
+  // symlinks. For instance, if the directory structure looks somewhat like
+  // this:
+  // ```
+  // ├── a -> b/y
+  // ├── b -> x
+  // └── x
+  //     └── y
+  //         └── z
+  // ```
+  // Then calling `resolveSymlinkPath("a", mycontext)` will return `x/y`.
+  // This is particularly useful when trying to determine whether a target is a
+  // file or a directory, thus creating the proper symlink type.
+  ImmediateFuture<std::variant<AbsolutePath, RelativePath>> resolveSymlinkPath(
+      RelativePath path,
+      const ObjectFetchContextPtr& context,
+      const size_t remainingRecursionDepth = kMaxSymlinkChainDepth);
+
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
@@ -105,6 +127,14 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
   const std::string dotEdenConfig_;
 
   bool symlinksEnabled_;
+
+  ImmediateFuture<std::variant<AbsolutePath, RelativePath>>
+  resolveSymlinkPathImpl(
+      RelativePath path,
+      const ObjectFetchContextPtr& context,
+      std::vector<RelativePath> pathParts,
+      const size_t solvedLen,
+      const size_t remainingRecursionDepth);
 };
 
 } // namespace facebook::eden

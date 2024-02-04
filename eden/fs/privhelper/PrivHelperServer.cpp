@@ -28,15 +28,14 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 #include <folly/system/ThreadName.h>
-#include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <chrono>
+#include <csignal>
 #include <set>
 #include "eden/fs/privhelper/NfsMountRpc.h"
-#include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SysctlUtil.h"
 #include "eden/fs/utils/Throw.h"
@@ -63,9 +62,9 @@ using std::string;
 
 namespace facebook::eden {
 
-PrivHelperServer::PrivHelperServer() {}
+PrivHelperServer::PrivHelperServer() = default;
 
-PrivHelperServer::~PrivHelperServer() {}
+PrivHelperServer::~PrivHelperServer() = default;
 
 void PrivHelperServer::init(folly::File socket, uid_t uid, gid_t gid) {
   initPartial(std::move(socket), uid, gid);
@@ -583,10 +582,12 @@ void PrivHelperServer::nfsMount(
     readdirplus_flag = NFS_MFLAG_RDIRPLUS;
   }
 
-  // Make the client use any source port, enable/disable rdirplus, soft but make
-  // the mount interruptible. While in theory we would want the mount to be
-  // soft, macOS force a maximum timeout of 60s, which in some case is too short
-  // for files to be fetched, thus disable it.
+  // Make the client use any source port, enable/disable rdirplus, and set the
+  // mount type to hard (but make it interruptible). While in theory we would
+  // want the mount to be soft, macOS force a maximum timeout of 60s, which in
+  // some case is too short for files to be fetched, thus disable it.
+  //
+  // See `man mount_nfs` for more options.
   mattrFlags |= NFS_MATTR_FLAGS;
   nfs_mattr_flags flags{
       NFS_MATTR_BITMAP_LEN,

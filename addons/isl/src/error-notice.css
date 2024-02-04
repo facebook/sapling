@@ -18,6 +18,7 @@
   gap: var(--pad);
   cursor: pointer;
   flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .error-notice-arrow {
@@ -46,6 +47,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.error-notice-details {
+  padding: var(--pad);
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+}
 
 .error-notice-left {
   display: flex;
@@ -55,7 +62,7 @@
   gap: var(--pad);
 }
 
-.inline-error-badge .tooltip-creator {
+.inline-error-badge > * {
   display: flex;
   flex-direction: row;
   gap: var(--pad);

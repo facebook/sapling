@@ -27,7 +27,6 @@ use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
-use derived_data_manager::DerivationError;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::BranchEven;
@@ -42,25 +41,19 @@ use fixtures::TestRepoFixture;
 use fixtures::UnsharedMergeEven;
 use fixtures::UnsharedMergeUneven;
 use futures::future::BoxFuture;
-use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
 use generation_derivation::make_test_repo_factory;
 use generation_derivation::DerivedGeneration;
 use lock_ext::LockExt;
-use maplit::hashmap;
-use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use tests_utils::CreateCommitContext;
-use tunables::override_tunables;
-use tunables::MononokeTunables;
 
 #[facet::container]
 #[derive(Clone)]
@@ -368,7 +361,7 @@ async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
     let mut parents = vec![];
     for i in 0..8 {
         let p = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file(MPath::new(format!("file_{}", i))?, format!("{}", i))
+            .add_file(NonRootMPath::new(format!("file_{}", i))?, format!("{}", i))
             .add_extra("test-derive-delay", "2")
             .commit()
             .await?;
@@ -388,85 +381,6 @@ async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
 
     assert!(stats.completion_time > Duration::from_secs(2));
     assert!(stats.completion_time < Duration::from_secs(10));
-
-    Ok(())
-}
-
-async fn ensure_tunables_disable_derivation(
-    ctx: &CoreContext,
-    repo: &impl RepoDerivedDataArc,
-    csid: ChangesetId,
-    tunables: MononokeTunables,
-) -> Result<(), Error> {
-    let spawned_derivation = tokio::spawn({
-        let ctx = ctx.clone();
-        let repo_derived_data = repo.repo_derived_data_arc();
-        async move {
-            repo_derived_data
-                .derive::<DerivedGeneration>(&ctx, csid)
-                .timed()
-                .await
-        }
-    });
-    tokio::time::sleep(Duration::from_millis(1000)).await;
-
-    override_tunables(Some(Arc::new(tunables)));
-
-    let (stats, res) = spawned_derivation.await?;
-
-    assert!(matches!(res, Err(DerivationError::Disabled(..))));
-
-    eprintln!("derivation cancelled after {:?}", stats.completion_time);
-    assert!(stats.completion_time < Duration::from_secs(15));
-
-    Ok(())
-}
-
-#[fbinit::test]
-/// Test that very slow derivation can be cancelled mid-flight by setting
-/// the appropriate values in tunables.
-async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = make_test_repo_factory(fb).build().await?;
-
-    let create_tunables = || {
-        let tunables = MononokeTunables::default();
-        // Make delay smaller so that the test runs faster
-        tunables.update_ints(&hashmap! {
-            "derived_data_disabled_watcher_delay_secs".to_string() => 1,
-        });
-        tunables
-    };
-
-    let commit = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file(MPath::new("file")?, "content")
-        .add_extra("test-derive-delay", "20")
-        .commit()
-        .await?;
-
-    // Reset tunables.
-    override_tunables(Some(Arc::new(create_tunables())));
-
-    // Disable derived data for all types
-    let tunables_to_disable_all = create_tunables();
-    tunables_to_disable_all.update_by_repo_bools(&hashmap! {
-        repo.repo_identity().name().to_string() => hashmap! {
-            "all_derived_data_disabled".to_string() => true,
-        },
-    });
-    ensure_tunables_disable_derivation(&ctx, &repo, commit, tunables_to_disable_all).await?;
-
-    // Reset tunables.
-    override_tunables(Some(Arc::new(create_tunables())));
-
-    // Disable derived data for a single type
-    let tunables_to_disable_by_type = create_tunables();
-    tunables_to_disable_by_type.update_by_repo_vec_of_strings(&hashmap! {
-        repo.repo_identity().name().to_string() => hashmap! {
-            "derived_data_types_disabled".to_string() => vec![DerivedGeneration::NAME.to_string()],
-        },
-    });
-    ensure_tunables_disable_derivation(&ctx, &repo, commit, tunables_to_disable_by_type).await?;
 
     Ok(())
 }

@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("mononoke")
+
+python_binary(
+    name = "generate_new_fixtures",
+    srcs = ["main.py"],
+    main_function = "eden.mononoke.tests.fixtures.facebook.generate_new_fixtures.main.main",
+    deps = [
+        "//scm/lib:repo",
+    ],
+    external_deps = [
+    ],
+)

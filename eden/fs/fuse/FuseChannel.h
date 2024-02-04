@@ -239,10 +239,11 @@ class FuseChannel final : public FsChannel {
       PrivHelper* privHelper,
       folly::File fuseDevice,
       AbsolutePathPiece mountPath,
+      std::shared_ptr<folly::Executor> threadPool,
       size_t numThreads,
       std::unique_ptr<FuseDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
@@ -779,6 +780,7 @@ class FuseChannel final : public FsChannel {
    * Constant state that does not change for the lifetime of the FuseChannel
    */
   const size_t bufferSize_{0};
+  std::shared_ptr<folly::Executor> threadPool_;
   const size_t numThreads_;
   std::unique_ptr<FuseDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_;
@@ -805,7 +807,7 @@ class FuseChannel final : public FsChannel {
    * around this event:
    * - If the stop can occur as the last FUSE worker thread shuts down.
    *   No other FUSE worker threads can access fuseDevice_ after this point,
-   *   and the FuseChannel destructor will join the threads before destryoing
+   *   and the FuseChannel destructor will join the threads before destroying
    *   fuseDevice_.
    * - If the stop can occur as when the last outstanding FUSE request
    *   completes, after all FUSE worker threads have stopped.  In this case no

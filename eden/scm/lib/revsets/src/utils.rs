@@ -111,7 +111,7 @@ fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>> {
 
     let hgid = match change_id.len() {
         l if l > 40 => return Ok(None),
-        l if l == 40 => HgId::from_hex(change_id.as_bytes())?,
+        40 => HgId::from_hex(change_id.as_bytes())?,
         _ => {
             if let Some(id) = local_hash_prefix_lookup(args)? {
                 // We found it locally - no need to do any more work.

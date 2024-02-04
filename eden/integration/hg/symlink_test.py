@@ -288,6 +288,79 @@ new mode 120000
         self.assertTrue(os.path.isfile(self.get_path("symlink")))
         self.assertEqual("hola", self.read_file("symlink"))
 
+    def test_abspath_posixstyle_symlink(self) -> None:
+        self.repo.symlink("slink", os.sep.join(["", "foo", "bar"]))
+        slinkcommit = self.repo.commit("Symlink with unixpaths")
+        self.assertEqual(
+            self.repo.hg("log", "-r", ".", "--template", "{node}", "--patch"),
+            r"""31ca60316fb55b7165c8c9257374ef4d4a09c13bdiff --git a/slink b/slink
+new file mode 120000
+--- /dev/null
++++ b/slink
+@@ -0,0 +1,1 @@
++/foo/bar
+\ No newline at end of file
+
+""",
+        )
+        self.repo.update(self.simple_commit)
+        self.repo.update(slinkcommit)
+        self.assertEqual(
+            os.readlink(self.get_path("slink")), os.sep.join(["", "foo", "bar"])
+        )
+
+    def test_non_existing_symlink_targets(self) -> None:
+        self.repo.symlink("slink2", os.sep.join(["asdf", "aoeu"]))
+        self.repo.symlink("slink3", os.sep.join(["..", "snth"]))
+        slinkcommit = self.repo.commit("non-existing targets")
+        self.repo.update(self.simple_commit)
+        self.repo.update(slinkcommit)
+        self.assertEqual(
+            os.readlink(self.get_path("slink2")), os.sep.join(["asdf", "aoeu"])
+        )
+        self.assertEqual(
+            os.readlink(self.get_path("slink3")), os.sep.join(["..", "snth"])
+        )
+
+    def test_path_with_symlinks(self) -> None:
+        # Tests that symlinks with paths are properly classified
+        # Replacement at beginning of path
+        self.repo.write_file("foo/bar/baz/f", "aoeu")
+        self.repo.symlink("y", "foo", target_is_directory=True)
+        self.repo.symlink(
+            "x", os.path.join("y", "bar", "baz"), target_is_directory=True
+        )
+        # Replacement at end of path
+        self.repo.write_file("p/q/r/f", "snth")
+        self.repo.symlink("p/y", "q", target_is_directory=True)
+        self.repo.symlink("p/x", os.path.join("y", "r"), target_is_directory=True)
+        # Replacement in the middle of path
+        self.repo.write_file("uno/dos/tres/f", "wut")
+        self.repo.symlink("uno/dos/z", "tres", target_is_directory=True)
+        self.repo.symlink("uno/y", "dos", target_is_directory=True)
+        self.repo.symlink("uno/x", os.path.join("y", "z"), target_is_directory=True)
+        # Replacement in the middle of path (absolute)
+        self.repo.write_file("one/two/three/f", "ftw")
+        self.repo.symlink("one/two/z", "three", target_is_directory=True)
+        self.repo.symlink("one/y", self.get_path("one/two"), target_is_directory=True)
+        self.repo.symlink("one/x", os.path.join("y", "z"), target_is_directory=True)
+        ## Now revert everything and check that symlinks and are correct
+        slinkcommit = self.repo.commit("path stuff")
+        self.repo.update(self.simple_commit, clean=True)
+        self.repo.update(slinkcommit, clean=True)
+        for tdir, cntt in [
+            ("x", "aoeu"),
+            ("p/x", "snth"),
+            ("uno/x", "wut"),
+            ("one/x", "ftw"),
+        ]:
+            self.assertEqual(
+                ["f"],
+                [e.name for e in os.scandir(os.path.join(self.mount, tdir))],
+            )
+            self.assertTrue(os.path.isdir(self.get_path(tdir)))
+            self.assertEqual(cntt, self.read_file(tdir + "/f"))
+
 
 @hg_test
 # pyre-ignore[13]: T62487924
@@ -303,6 +376,7 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         repo.write_file("contents1", "c1\n")
         repo.write_file("contents2", "c2\n")
         repo.symlink("symlink", "contents1")
+        repo.symlink("symlink3", os.path.join("foo", "bar"))
         self.initial_commit = repo.commit("Initial commit.")
         # We only want the backing repo to be symlink-enabled
         self.enable_windows_symlinks = False
@@ -326,8 +400,7 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         self.assertEqual("contents2", self.read_file("symlink2"))
         os.remove(self.get_path("symlink2"))
         symlink_commit = self.repo.symlink("symlink2", "contents2")
-        # This used to fail when we weren't properly calculating the SHA1 of symlinks on Windows
-        self.assert_status_empty()
+        self.assert_status({"symlink2": "M"})
 
     def test_status_empty_after_fresh_clone(self) -> None:
         self.assert_status_empty()
@@ -338,10 +411,12 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
     def test_disabled_symlinks_update(self) -> None:
         self.repo.symlink("symlink2", "contents2")
         self.repo.commit("Another commit with a symlink")
-        # There shouldn't be issues when updating now that the SHA1 is being properly calculated and everything symlink related is gated
-        self.repo.update(self.initial_commit)
-        self.assert_status_empty()
-        self.assertEqual("contents1", self.read_file("symlink"))
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.repo.update(self.initial_commit)
+        self.assertIn(
+            b"abort: 1 conflicting file changes:\n symlink2",
+            context.exception.stderr,
+        )
 
     def test_modified_fake_symlink_target(self) -> None:
         self.assert_status_empty()
@@ -360,3 +435,21 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
 \\ No newline at end of file
 """,
         )
+
+    def test_status_empty_after_restart(self) -> None:
+        # Run scandir for triggering the bug
+        self.assertEqual(
+            {"contents1", "contents2", "symlink", "symlink3", ".hg", ".eden"},
+            {entry.name for entry in os.scandir(self.mount)},
+        )
+        self.assert_status_empty()
+        self.eden.shutdown()
+        self.eden.start()
+        # Makes sure the symlink does not appear after restarting
+        self.assert_status_empty()
+
+    def test_fake_symlink_modified_shows_in_status(self) -> None:
+        self.assertEqual("foo/bar", self.read_file("symlink3"))
+        os.remove(self.get_path("symlink3"))
+        self.repo.symlink("symlink3", os.path.join("foo", "bar"))
+        self.assert_status({"symlink3": "M"})

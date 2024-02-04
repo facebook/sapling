@@ -1,0 +1,39 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.render-dag,
+.render-dag-row-left-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.render-dag-row-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.render-dag-row,
+.render-dag-row-left-side-line {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
+}
+
+.render-dag-row-left-side-line.grow {
+  flex-grow: 1;
+}
+
+.render-dag-row-right-side {
+  flex-grow: 1;
+}
+
+.render-dag-svg-patterns {
+  /* Cannot use 'display: none' - it ignores the svg pattern definitions */
+  opacity: 0;
+  height: 0;
+  width: 0;
+}

@@ -27,6 +27,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use synced_commit_mapping::SyncedCommitMapping;
 
 #[facet::container]
 #[derive(Clone)]
@@ -50,6 +51,9 @@ pub struct Repo {
         CommitGraph,
     )]
     blob_repo: BlobRepo,
+
+    #[facet]
+    synced_commit_mapping: dyn SyncedCommitMapping,
 
     #[facet]
     repo_cross_repo: RepoCrossRepo,

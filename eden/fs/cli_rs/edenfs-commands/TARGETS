@@ -1,0 +1,58 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-commands",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "hg_util": "//eden/scm/lib/util:util",
+    },
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:shlex",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:shlex",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:dialoguer",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:clap-3",
+        "fbsource//third-party/rust:colored",
+        "fbsource//third-party/rust:comfy-table",
+        "fbsource//third-party/rust:crossterm",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:subprocess",
+        "fbsource//third-party/rust:sysinfo",
+        "fbsource//third-party/rust:tabular",
+        "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:tracing",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
+        "//eden/fs/cli_rs/edenfs-error:edenfs-error",
+        "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
+        "//eden/fs/cli_rs/facebook/edenfs-telemetry:edenfs-telemetry",
+        "//eden/scm/lib/thrift-types:thrift-types",
+    ],
+)

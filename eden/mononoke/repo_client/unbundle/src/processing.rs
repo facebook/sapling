@@ -39,7 +39,6 @@ use repo_update_logger::CommitInfo;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::hook_running::map_hook_rejections;
 use crate::hook_running::HookRejectionRemapper;
@@ -143,15 +142,10 @@ async fn run_push(
         hook_rejection_remapper,
     } = action;
 
-    if tunables()
-        .mutation_accept_for_infinitepush()
-        .unwrap_or_default()
-    {
-        repo.hg_mutation_store()
-            .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
-            .await
-            .context("Failed to store mutation data")?;
-    }
+    repo.hg_mutation_store()
+        .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
+        .await
+        .context("Failed to store mutation data")?;
 
     if bookmark_pushes.len() > 1 {
         return Err(anyhow!(
@@ -224,15 +218,10 @@ async fn run_infinitepush(
         uploaded_hg_changeset_ids,
     } = action;
 
-    if tunables()
-        .mutation_accept_for_infinitepush()
-        .unwrap_or_default()
-    {
-        repo.hg_mutation_store()
-            .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
-            .await
-            .context("Failed to store mutation data")?;
-    }
+    repo.hg_mutation_store()
+        .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
+        .await
+        .context("Failed to store mutation data")?;
 
     let bookmark = match maybe_bookmark_push {
         Some(bookmark_push) => {
@@ -440,13 +429,13 @@ pub async fn maybe_client_from_address<'a>(
     remote_mode: &'a PushrebaseRemoteMode,
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-) -> Option<Box<dyn PushrebaseClient + 'a>> {
+) -> Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     match remote_mode {
         PushrebaseRemoteMode::RemoteLandService(address)
         | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
-            address_from_land_service(address, ctx, repo).await
+            Ok(address_from_land_service(address, ctx, repo).await?)
         }
-        PushrebaseRemoteMode::Local => None,
+        PushrebaseRemoteMode::Local => Ok(None),
     }
 }
 
@@ -454,20 +443,16 @@ async fn address_from_land_service<'a>(
     address: &'a Address,
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-) -> Option<Box<dyn PushrebaseClient + 'a>> {
+) -> Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     #[cfg(fbcode_build)]
     {
         match address {
-            metaconfig_types::Address::Tier(tier) => Some(Box::new(
-                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo)
-                    .await
-                    .ok()?,
-            )),
-            metaconfig_types::Address::HostPort(host_port) => Some(Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo)
-                    .await
-                    .ok()?,
-            )),
+            metaconfig_types::Address::Tier(tier) => Ok(Some(Box::new(
+                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).await?,
+            ))),
+            metaconfig_types::Address::HostPort(host_port) => Ok(Some(Box::new(
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).await?,
+            ))),
         }
     }
     #[cfg(not(fbcode_build))]
@@ -488,14 +473,18 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
-    let remote_mode = if tunables().force_local_pushrebase().unwrap_or_default() {
+    let remote_mode = if let Ok(true) = justknobs::eval(
+        "scm/mononoke:mononoke_force_local_pushrebase",
+        None,
+        Some(repo.repo_identity().name()),
+    ) {
         PushrebaseRemoteMode::Local
     } else {
         repo.repo_config().pushrebase.remote_mode.clone()
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&remote_mode, ctx, repo).await;
+            maybe_client_from_address(&remote_mode, ctx, repo).await?;
 
         if let Some(client) = maybe_client {
             let result = client
@@ -616,13 +605,13 @@ async fn plain_push_bookmark(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(), BundleResolverError> {
     let authz = AuthorizationContext::new(ctx);
-    // Override the tunable if we know for sure writes are not allowed
-    let only_log_acl_checks = !matches!(
-        authz,
-        AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
-    ) && tunables()
-        .log_only_wireproto_write_acl()
-        .unwrap_or_default();
+    // Override the justknob if we know for sure writes are not allowed
+    let only_log_acl_checks =
+        !matches!(
+            authz,
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
+        ) && justknobs::eval("scm/mononoke:wireproto_log_only_write_acl", None, None)
+            .unwrap_or_default();
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
             let res =
@@ -719,13 +708,13 @@ async fn infinitepush_scratch_bookmark(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<()> {
     let authz = AuthorizationContext::new(ctx);
-    // Override the tunable if we know for sure writes are not allowed
-    let only_log_acl_checks = !matches!(
-        authz,
-        AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
-    ) && tunables()
-        .log_only_wireproto_write_acl()
-        .unwrap_or_default();
+    // Override the justknob if we know for sure writes are not allowed
+    let only_log_acl_checks =
+        !matches!(
+            authz,
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
+        ) && justknobs::eval("scm/mononoke:wireproto_log_only_write_acl", None, None)
+            .unwrap_or_default();
     if bookmark_push.old.is_none() && bookmark_push.create {
         bookmarks_movement::CreateBookmarkOp::new(
             &bookmark_push.name,

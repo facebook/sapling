@@ -5,27 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {bugButtonNux} from '../BugButton';
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
-import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
+import {localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
+import {useModal} from '../useModal';
+import {useAtom} from 'jotai';
 import {Suspense, useEffect, useState} from 'react';
-import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 
-export const hasShownGettingStarted = atom<boolean | null>({
-  key: 'hasShownGettingStarted',
-  default: null,
-  effects: [persistAtomToConfigEffect<boolean | null>('isl.hasShownGettingStarted', false)],
-});
+export const hasShownGettingStarted = localStorageBackedAtom<boolean | null>(
+  'isl.has-shown-getting-started',
+  null,
+);
 
 export function GettingStartedModal() {
-  const [hasShownAlready, setHasShown] = useRecoilState(hasShownGettingStarted);
+  const [hasShownAlready, setHasShown] = useAtom(hasShownGettingStarted);
   const [isShowingStable, setIsShowingStable] = useState(false);
 
   useEffect(() => {
-    if (hasShownAlready === false) {
+    if (hasShownAlready !== true) {
       setIsShowingStable(true);
       setHasShown(true);
     }
@@ -33,21 +32,31 @@ export function GettingStartedModal() {
   if (!isShowingStable) {
     return null;
   }
-  return <DismissableModal />;
+  return <DismissableGettingStartedModal />;
 }
 
-function DismissableModal() {
+function DismissableGettingStartedModal() {
   const [visible, setVisible] = useState(true);
   useCommand('Escape', () => {
     setVisible(false);
   });
-  const setBugButtonNux = useSetRecoilState(bugButtonNux);
+
+  const showModal = useModal();
 
   useEffect(() => {
-    if (!visible && platform.GettingStartedBugNuxContent) {
-      setBugButtonNux(platform.GettingStartedBugNuxContent);
+    const GettingStartedBugNuxContent = platform.GettingStartedBugNuxContent;
+    if (!visible && GettingStartedBugNuxContent) {
+      showModal({
+        type: 'custom',
+        title: '',
+        component: ({returnResultAndDismiss}) => (
+          <Suspense>
+            <GettingStartedBugNuxContent dismiss={() => returnResultAndDismiss(true)} />
+          </Suspense>
+        ),
+      });
     }
-  }, [visible, setBugButtonNux]);
+  }, [visible, showModal]);
 
   if (!visible) {
     return null;
@@ -59,7 +68,7 @@ function DismissableModal() {
   }
 
   return (
-    <Modal className="getting-started-modal">
+    <Modal className="getting-started-modal" maxHeight={'90vh'}>
       <Suspense fallback={<Icon icon="loading" />}>
         <ContentComponent dismiss={() => setVisible(false)} />
       </Suspense>

@@ -39,6 +39,8 @@ impl CloudSyncTrigger {
             let child = Command::new("hg")
                 .current_dir(&path)
                 .env(identity::default().env_name("PLAIN").as_ref(), "hint")
+                .env("EDENSCM_LOG", "clienttelemetry=info")
+                .env("SAPLING_CLIENT_ENTRY_POINT", "scm_daemon")
                 .args(vec!["cloud", "sync"])
                 .arg("--check-autosync-enabled")
                 .arg("--use-bgssh")

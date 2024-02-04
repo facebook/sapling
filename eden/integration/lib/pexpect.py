@@ -76,7 +76,9 @@ def pexpect_process_shell_command(process: PexpectSpawnType) -> str:
         else:
             return s.decode("utf-8")
 
+    # pyre-fixme[16]: `spawn` has no attribute `command`.
     command = process.command
+    # pyre-fixme[16]: `spawn` has no attribute `args`.
     args = process.args
     if command is None:
         return "<no pexpect command set>"

@@ -114,7 +114,7 @@ impl Iter {
         loop {
             let result = self.iter.as_mut().next().await;
             if let Some(Ok(ref name)) = result {
-                match self.rhs.contains(&name).await {
+                match self.rhs.contains(name).await {
                     Err(err) => break Some(Err(err)),
                     Ok(true) => continue,
                     _ => {}

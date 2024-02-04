@@ -29,6 +29,10 @@ pub enum GitError {
     #[error("Input hash {0} is not a valid SHA1 git hash")]
     InvalidHash(String),
 
+    /// The packfile item stored for the input Git hash is invalid.
+    #[error("Invalid packfile item stored for git object ID {0}")]
+    InvalidPackfileItem(String),
+
     /// The raw object content provided do not correspond to a valid git object.
     #[error("Invalid git object content provided for object ID {0}. Cause: {1}")]
     InvalidContent(String, GitInternalError),
@@ -40,11 +44,15 @@ pub enum GitError {
     DisallowedBlobObject(String),
 
     /// Failed to get or store the git object in Mononoke store.
-    #[error("Failed to get or store the git object (ID: {0}) in blobstore. Cause: {1}")]
+    #[error(
+        "Failed to get or store the git object (ID: {0}) or its packfile item in blobstore. Cause: {1}"
+    )]
     StorageFailure(String, GitInternalError),
 
     /// The git object doesn't exist in the Mononoke store.
-    #[error("The object corresponding to object ID {0} does not exist in the data store")]
+    #[error(
+        "The object corresponding to object ID {0} or its packfile item does not exist in the data store"
+    )]
     NonExistentObject(String),
 
     /// The provided git object could not be converted to a valid bonsai changeset.
@@ -52,6 +60,11 @@ pub enum GitError {
         "Validation failure while persisting git object (ID: {0}) as a bonsai changeset. Cause: {1}"
     )]
     InvalidBonsai(String, GitInternalError),
+
+    /// Error during the packfile stream generation or while writing it to bundle or while storing
+    /// to everstore
+    #[error("{0}")]
+    PackfileError(String),
 }
 
 cloneable_error!(GitInternalError);

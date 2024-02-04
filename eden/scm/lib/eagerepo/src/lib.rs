@@ -24,6 +24,7 @@
 mod api;
 mod eager_repo;
 mod errors;
+mod factory_impls;
 mod trait_impls;
 
 pub use api::edenapi_from_config;
@@ -32,3 +33,8 @@ pub use eager_repo::EagerRepo;
 pub use eager_repo::EagerRepoStore;
 pub use errors::Error;
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// Initialization. Register abstraction implementations.
+pub fn init() {
+    crate::factory_impls::setup_eagerepo_store_constructor();
+}

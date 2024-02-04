@@ -1,0 +1,8 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "type_map",
+    srcs = ["src/lib.rs"],
+)

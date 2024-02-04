@@ -11,8 +11,7 @@ import shutil
 import tempfile
 import unittest
 
-from edenscm import util
-from hghave import require
+from sapling import util
 
 
 atomictempfile = util.atomictempfile

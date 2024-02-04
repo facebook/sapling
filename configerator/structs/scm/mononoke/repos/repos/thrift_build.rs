@@ -44,8 +44,10 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("repos__types");
+        conf.clients_crate("repos__clients");
+        conf.services_crate("repos__services");
 
-        let options = "serde";
+        let options = "deprecated_default_enum_min_i32,serde";
         if !options.is_empty() {
             conf.options(options);
         }

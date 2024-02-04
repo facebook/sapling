@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::path::PathBuf;
 
 use thiserror::Error;
-use util::errors::IOError;
 
 #[derive(Debug, Error)]
 #[error("repository {0} not found!")]
@@ -35,7 +35,7 @@ pub struct UnsupportedRequirements(pub String);
 #[derive(Debug, Error)]
 pub enum RequirementsOpenError {
     #[error(transparent)]
-    IOError(#[from] IOError),
+    IOError(#[from] io::Error),
 
     #[error(transparent)]
     UnsupportedRequirements(#[from] UnsupportedRequirements),

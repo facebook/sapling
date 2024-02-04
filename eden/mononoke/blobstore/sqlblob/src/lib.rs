@@ -495,7 +495,8 @@ impl Sqlblob {
             }
             Ok(())
         } else {
-            bail!("key does not exist");
+            println!("Key {} has no associated data chunk", key); //TODO delete the key without content
+            Ok(())
         }
     }
 

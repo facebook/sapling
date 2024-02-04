@@ -110,7 +110,7 @@ impl Persist for NameDagState {
     }
 
     fn persist(&mut self, lock: &Self::Lock) -> Result<()> {
-        self.mlog.as_mut().unwrap().write_meta(&lock)?;
+        self.mlog.as_mut().unwrap().write_meta(lock)?;
         Ok(())
     }
 }

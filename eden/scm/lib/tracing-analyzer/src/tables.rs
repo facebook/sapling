@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-//! Analyze tracing data for edenscm
+//! Analyze tracing data for sapling
 //!
-//! This is edenscm application specific. It's not a general purposed library.
+//! This is sapling application specific. It's not a general purposed library.
 
 // use std::borrow::Cow;
 use std::collections::BTreeMap as Map;
@@ -36,14 +36,14 @@ pub fn extract_tables(tid_spans: &TidSpans) -> Tables {
     tables
 }
 
-fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
+fn extract_dev_command_timers(tables: &mut Tables, tid_spans: &TidSpans) {
     let mut row = Row::new();
     let toint = |value: &str| -> Value { value.parse::<i64>().unwrap_or_default().into() };
 
     for spans in tid_spans.values() {
         for span in spans.walk() {
             match span.meta.get("name").cloned().unwrap_or("") {
-                // By hgcommands, run.rs
+                // By commands, run.rs
                 "Run Command" => {
                     let duration = span.duration_millis().unwrap_or(0);
                     row.insert("command_duration".into(), duration.into());
@@ -66,7 +66,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                             }
                             "parent_names" => {
                                 if let Ok(names) = serde_json::from_str::<Vec<String>>(value) {
-                                    let name = names.get(0).cloned().unwrap_or_default();
+                                    let name = names.first().cloned().unwrap_or_default();
                                     row.insert("parent".into(), name.into());
                                 }
                             }
@@ -80,7 +80,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                                             full += " (truncated)";
                                             break;
                                         }
-                                        full += &" ";
+                                        full += " ";
                                         // TODO: Use shell_escape once in tp2.
                                         // full += &shell_escape::unix::escape(Cow::Owned(arg));
                                         full += &arg;
@@ -96,7 +96,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                 // The "log:command-row" event is used by code that wants to
                 // log to columns of the main command row easily.
                 "log:command-row" if span.is_event => {
-                    extract_span(&span, &mut row);
+                    extract_span(span, &mut row);
                 }
 
                 _ => {}
@@ -107,7 +107,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
     tables.insert("dev_command_timers".into(), vec![row]);
 }
 
-fn extract_other_tables<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
+fn extract_other_tables(tables: &mut Tables, tid_spans: &TidSpans) {
     for spans in tid_spans.values() {
         for span in spans.walk() {
             match span.meta.get("name").cloned().unwrap_or("") {

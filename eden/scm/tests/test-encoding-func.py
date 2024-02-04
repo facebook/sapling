@@ -7,8 +7,7 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm import encoding
-from hghave import require
+from sapling import encoding
 
 
 class IsasciistrTest(unittest.TestCase):

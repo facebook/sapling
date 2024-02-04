@@ -15,10 +15,15 @@
 
 .copyable .codicon {
   opacity: 0;
-  transition: opacity 0.1s;
+  transition: opacity transform 0.1s;
 }
+.copyable.icon-only .codicon {
+  opacity: 1;
+}
+
 .copyable:hover .codicon {
   opacity: 1;
+  transform: scale(1.1);
 }
 
 @keyframes beat {

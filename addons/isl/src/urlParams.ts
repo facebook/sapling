@@ -27,7 +27,7 @@ function computeInitialParams() {
       try {
         localStorage.setItem(
           INITIAL_PARAMS_LOCAL_STORAGE_KEY,
-          JSON.stringify([...initialParams.entries()]),
+          JSON.stringify([...initialParams.entries()].filter(([k]) => k !== 'sessionId')),
         );
       } catch (error) {
         logger.log('Failed to save initial params to local storage', error);

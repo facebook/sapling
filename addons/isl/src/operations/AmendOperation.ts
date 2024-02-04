@@ -5,17 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AmendRestackBehavior} from '../RestackBehavior';
 import type {PartialSelection} from '../partialSelection';
 import type {
-  ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
-  PreviewContext,
+  Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 import type {ImportAmendCommit, ImportStack} from 'shared/types/stack';
 
+import {restackBehaviorAtom} from '../RestackBehavior';
 import {t} from '../i18n';
+import {readAtom} from '../jotaiUtils';
 import {Operation} from './Operation';
 
 export class AmendOperation extends Operation {
@@ -24,13 +26,21 @@ export class AmendOperation extends Operation {
    * @param message if provided, update commit description to use this title & description
    */
   constructor(private filePathsToAmend?: Array<RepoRelativePath>, private message?: string) {
-    super('AmendOperation');
+    super(filePathsToAmend ? 'AmendFileSubsetOperation' : 'AmendOperation');
+
+    this.restackBehavior = readAtom(restackBehaviorAtom);
   }
+
+  restackBehavior: AmendRestackBehavior;
 
   static opName = 'Amend';
 
   getArgs() {
-    const args: Array<CommandArg> = ['amend', '--addremove'];
+    const args: Array<CommandArg> = [
+      {type: 'config', key: 'amend.autorestack', value: this.restackBehavior},
+      'amend',
+      '--addremove',
+    ];
     if (this.filePathsToAmend) {
       args.push(
         ...this.filePathsToAmend.map(file =>
@@ -70,39 +80,24 @@ export class AmendOperation extends Operation {
     return func;
   }
 
-  // optimistic state is only minorly useful for amend:
-  // we just need it to update the head commit's title/description
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const head = context.headCommit;
-    if (this.message == null) {
-      return undefined;
+  // Bump the timestamp and update the commit message.
+  optimisticDag(dag: Dag): Dag {
+    const head = dag.resolve('.');
+    if (head?.hash == null) {
+      return dag;
     }
-    const [title] = this.message.split(/\n+/, 1);
-    const description = this.message.slice(title.length);
-    if (head?.title === title && head?.description === description) {
-      // amend succeeded when the message is what we asked for
-      return undefined;
-    }
-
-    const func: ApplyPreviewsFuncType = (tree, _previewType) => {
-      if (tree.info.isHead) {
-        // use fake title/description on the head commit
-        return {
-          // TODO: we should also update `filesSample` after amending.
-          // These files are visible in the commit info view during optimistic state.
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          info: {
-            ...tree.info,
-            title,
-            description: description ?? '',
-          },
-          children: tree.children,
-        };
-      } else {
-        return {info: tree.info, children: tree.children};
+    // XXX: amend's auto restack does not bump timestamp yet. We should fix that
+    // and remove includeDescendants here.
+    return dag.touch(head.hash, false /* includeDescendants */).replaceWith(head.hash, (_h, c) => {
+      if (this.message == null) {
+        return c;
       }
-    };
-    return func;
+      const [title] = this.message.split(/\n+/, 1);
+      const description = this.message.slice(title.length);
+      // TODO: we should also update `filesSample` after amending.
+      // These files are visible in the commit info view during optimistic state.
+      return c?.merge({title, description});
+    });
   }
 }
 

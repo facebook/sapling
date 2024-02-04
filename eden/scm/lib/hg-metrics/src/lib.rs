@@ -17,7 +17,7 @@ pub fn increment_counter(key: impl Key, value: usize) {
     METRICS.increment_counter(key, value)
 }
 
-pub fn summarize() -> Vec<(String, usize)> {
+pub fn summarize() -> HashMap<String, usize> {
     METRICS.summarize()
 }
 
@@ -56,14 +56,12 @@ impl Metrics {
             .or_insert_with(|| AtomicUsize::new(value));
     }
 
-    fn summarize(&self) -> Vec<(String, usize)> {
+    fn summarize(&self) -> HashMap<String, usize> {
         let counters = self.counters.read();
-        let mut summary: Vec<(String, usize)> = counters
+        counters
             .iter()
             .map(|(k, v)| (k.into(), v.load(Ordering::Acquire)))
-            .collect();
-        summary.sort();
-        summary
+            .collect()
     }
 }
 
@@ -81,7 +79,7 @@ mod tests {
         metrics.increment_counter(String::from("hello"), 4);
         assert_eq!(
             metrics.summarize(),
-            vec![(String::from("hello"), 6), (String::from("world"), 3)]
+            HashMap::from([(String::from("hello"), 6), (String::from("world"), 3)]),
         );
     }
 
@@ -93,7 +91,7 @@ mod tests {
         metrics.increment_counter("hello", 4);
         assert_eq!(
             metrics.summarize(),
-            vec![(String::from("hello"), 6), (String::from("world"), 3)]
+            HashMap::from([(String::from("hello"), 6), (String::from("world"), 3)])
         );
     }
 
@@ -109,6 +107,9 @@ mod tests {
             MY_METRICS.increment_counter("key", 3);
         }
         handle.join().expect("waiting for spawned thread");
-        assert_eq!(MY_METRICS.summarize(), vec![(String::from("key"), 50000)]);
+        assert_eq!(
+            MY_METRICS.summarize(),
+            HashMap::from([(String::from("key"), 50000)])
+        );
     }
 }

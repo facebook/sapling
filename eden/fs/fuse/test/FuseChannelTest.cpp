@@ -8,11 +8,12 @@
 #include "eden/fs/fuse/FuseChannel.h"
 
 #include <folly/Random.h>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <unordered_map>
-#include "eden/common/utils/ProcessNameCache.h"
+
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFuse.h"
@@ -73,10 +74,11 @@ class FuseChannelTest : public ::testing::Test {
         nullptr,
         fuse_.start(),
         mountPath_,
+        folly::getUnsafeMutableGlobalCPUExecutor(),
         numThreads,
         std::move(testDispatcher),
         &straceLogger,
-        std::make_shared<ProcessNameCache>(),
+        std::make_shared<ProcessInfoCache>(),
         /*fsEventLogger=*/nullptr,
         std::chrono::seconds(60),
         /*notifications=*/nullptr,

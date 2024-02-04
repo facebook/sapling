@@ -42,7 +42,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::HgBlobNode;
 use mercurial_types::HgChangesetId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_types::datetime::Timestamp;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
@@ -187,12 +187,14 @@ impl FilenodeVerifier {
     async fn verify_entries<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        filenode_entries: &'a HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+        filenode_entries: &'a HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
     ) -> Result<()> {
         let lfs_blobs: Vec<(Sha256, u64)> = filenode_entries
             .values()
             .flat_map(|entries| entries.iter())
             .filter_map(|entry| {
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
                 entry
                     .maybe_get_lfs_pointer()
                     .map(|(sha256, size)| (sha256, size))
@@ -314,7 +316,14 @@ async fn create_bundle_impl(
         )?);
 
         bundle2_parts.push(parts::treepack_part(
-            create_manifest_entries_stream(ctx.clone(), repo.repo_blobstore().clone(), manifests),
+            create_manifest_entries_stream(
+                ctx.clone(),
+                repo.repo_blobstore().clone(),
+                manifests
+                    .into_iter()
+                    .map(|(path, m_id, cs_id)| (path, m_id, cs_id))
+                    .collect(),
+            ),
             parts::StoreInHgCache::Yes,
         )?);
     }

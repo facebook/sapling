@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "formatter",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/io/term/style:termstyle",
+    ],
+)

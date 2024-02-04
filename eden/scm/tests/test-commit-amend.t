@@ -5,7 +5,7 @@
 Avoid "\r" in messages:
 
   $ cat > crlf.py << 'EOF'
-  > from edenscm import extensions, util
+  > from sapling import extensions, util
   > def uisetup(ui):
   >     extensions.wrapfunction(util, 'tonativeeol', lambda _orig, x: x)
   > EOF
@@ -295,7 +295,9 @@ Refuse to amend if there is a merge conflict (issue5805):
   U X
 
   $ hg ci --amend
-  abort: unresolved merge conflicts (see 'hg help resolve')
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
 
 Follow copies/renames (including issue4405):

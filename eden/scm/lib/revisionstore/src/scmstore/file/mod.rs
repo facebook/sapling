@@ -9,17 +9,18 @@ mod fetch;
 mod metrics;
 mod types;
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::types::HgId;
 use ::types::Key;
-use ::types::RepoPathBuf;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -47,7 +48,6 @@ use crate::lfs::lfs_from_hg_file_blob;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
-use crate::memcache::MEMCACHE_DELAY;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchMode;
@@ -60,7 +60,6 @@ use crate::EdenApiFileStore;
 use crate::ExtStoredPolicy;
 use crate::LegacyStore;
 use crate::LocalStore;
-use crate::MemcacheStore;
 use crate::Metadata;
 use crate::MultiplexDeltaStore;
 use crate::RepackLocation;
@@ -73,7 +72,6 @@ pub struct FileStore {
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
     pub(crate) extstored_policy: ExtStoredPolicy,
     pub(crate) lfs_threshold_bytes: Option<u64>,
-    pub(crate) cache_to_memcache: bool,
     pub(crate) edenapi_retries: i32,
     /// Allow explicitly writing serialized LFS pointers outside of tests
     pub(crate) allow_write_lfs_ptrs: bool,
@@ -92,9 +90,6 @@ pub struct FileStore {
     // Local LFS cache aka shared store
     pub(crate) lfs_cache: Option<Arc<LfsStore>>,
 
-    // Memcache
-    pub(crate) memcache: Option<Arc<MemcacheStore>>,
-
     // Remote stores
     pub(crate) lfs_remote: Option<Arc<LfsRemote>>,
     pub(crate) edenapi: Option<Arc<EdenApiFileStore>>,
@@ -110,9 +105,6 @@ pub struct FileStore {
     pub(crate) activity_logger: Option<Arc<Mutex<ActivityLogger>>>,
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
 
-    // Records the store creation time, so we can only use memcache for long running commands.
-    pub(crate) creation_time: Instant,
-
     pub(crate) lfs_progress: Arc<AggregatingProgressBar>,
 
     // Don't flush on drop when we're using FileStore in a "disposable" context, like backingstore
@@ -127,7 +119,26 @@ impl Drop for FileStore {
     }
 }
 
+macro_rules! try_local_content {
+    ($id:ident, $e:expr) => {
+        if let Some(store) = $e.as_ref() {
+            if let Some(data) = store.get_local_content_direct($id)? {
+                return Ok(Some(data));
+            }
+        }
+    };
+}
+
 impl FileStore {
+    /// Get the "local content" without going through the heavyweight "fetch" API.
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+        try_local_content!(id, self.indexedlog_cache);
+        try_local_content!(id, self.indexedlog_local);
+        try_local_content!(id, self.lfs_cache);
+        try_local_content!(id, self.lfs_local);
+        Ok(None)
+    }
+
     pub fn fetch(
         &self,
         keys: impl Iterator<Item = Key>,
@@ -141,6 +152,7 @@ impl FileStore {
             self,
             found_tx,
             self.lfs_threshold_bytes.is_some(),
+            fetch_mode,
         );
 
         let keys_len = state.pending_len();
@@ -151,13 +163,10 @@ impl FileStore {
         let indexedlog_local = self.indexedlog_local.clone();
         let lfs_cache = self.lfs_cache.clone();
         let lfs_local = self.lfs_local.clone();
-        let memcache = self.memcache.clone();
         let edenapi = self.edenapi.clone();
         let lfs_remote = self.lfs_remote.clone();
         let contentstore = self.contentstore.clone();
-        let creation_time = self.creation_time;
         let prefer_computing_aux_data = self.prefer_computing_aux_data;
-        let cache_to_memcache = self.cache_to_memcache;
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
@@ -204,17 +213,6 @@ impl FileStore {
                 state.fetch_lfs(lfs_local, StoreType::Local);
             }
 
-            if let FetchMode::AllowRemote = fetch_mode {
-                if use_memcache(creation_time) {
-                    if let Some(ref memcache) = memcache {
-                        state.fetch_memcache(
-                            memcache,
-                            indexedlog_cache.as_ref().map(|s| s.as_ref()),
-                        );
-                    }
-                }
-            }
-
             if prefer_computing_aux_data {
                 state.derive_computable(
                     aux_cache.as_ref().map(|s| s.as_ref()),
@@ -229,11 +227,6 @@ impl FileStore {
                         indexedlog_cache.clone(),
                         lfs_cache.clone(),
                         aux_cache.clone(),
-                        if cache_to_memcache && use_memcache(creation_time) {
-                            memcache.clone()
-                        } else {
-                            None
-                        },
                     );
                 }
             }
@@ -260,6 +253,9 @@ impl FileStore {
             );
 
             metrics.write().fetch += state.metrics().clone();
+            if let Err(err) = state.metrics().update_ods() {
+                tracing::error!("Error updating ods fetch metrics: {}", err);
+            }
             state.finish();
 
             if let Some(activity_logger) = activity_logger {
@@ -275,7 +271,13 @@ impl FileStore {
 
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
-            std::thread::spawn(process_func);
+            let cri = get_client_request_info_thread_local();
+            std::thread::spawn(move || {
+                if let Some(cri) = cri {
+                    set_client_request_info_thread_local(cri);
+                }
+                process_func();
+            });
         } else {
             process_func();
         }
@@ -419,9 +421,6 @@ impl FileStore {
             indexedlog_cache: None,
             lfs_cache: None,
 
-            memcache: None,
-            cache_to_memcache: true,
-
             edenapi: None,
             lfs_remote: None,
 
@@ -433,7 +432,6 @@ impl FileStore {
             aux_local: None,
             aux_cache: None,
 
-            creation_time: Instant::now(),
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         }
@@ -454,10 +452,22 @@ impl FileStore {
     }
 }
 
-fn use_memcache(creation_time: Instant) -> bool {
-    // Only use memcache if the process has been around a while. It takes 2s to setup, which
-    // hurts responiveness for short commands.
-    creation_time.elapsed() > MEMCACHE_DELAY
+impl FileStore {
+    pub(crate) fn get_file_content_impl(
+        &self,
+        key: &Key,
+        fetch_mode: FetchMode,
+    ) -> Result<Option<Bytes>> {
+        self.metrics.write().api.hg_getfilecontent.call(0);
+        self.fetch(
+            std::iter::once(key.clone()),
+            FileAttributes::CONTENT,
+            fetch_mode,
+        )
+        .single()?
+        .map(|entry| entry.content.unwrap().file_content())
+        .transpose()
+    }
 }
 
 impl LegacyStore for FileStore {
@@ -482,9 +492,6 @@ impl LegacyStore for FileStore {
             indexedlog_cache: None,
             lfs_cache: None,
 
-            memcache: None,
-            cache_to_memcache: false,
-
             edenapi: None,
             lfs_remote: None,
 
@@ -496,7 +503,6 @@ impl LegacyStore for FileStore {
             aux_local: None,
             aux_cache: None,
 
-            creation_time: Instant::now(),
             lfs_progress: self.lfs_progress.clone(),
 
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
@@ -504,28 +510,8 @@ impl LegacyStore for FileStore {
         })
     }
 
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        let mut seen = self
-            .fetch_logger
-            .as_ref()
-            .map(|fl| fl.take_seen())
-            .unwrap_or_default();
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            seen.extend(contentstore.get_logged_fetches());
-        }
-        seen
-    }
-
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
-        self.metrics.write().api.hg_getfilecontent.call(0);
-        self.fetch(
-            std::iter::once(key.clone()),
-            FileAttributes::CONTENT,
-            FetchMode::AllowRemote,
-        )
-        .single()?
-        .map(|entry| entry.content.unwrap().file_content())
-        .transpose()
+        self.get_file_content_impl(key, FetchMode::AllowRemote)
     }
 
     // If ContentStore is available, these call into ContentStore. Otherwise, implement these
@@ -624,15 +610,10 @@ impl RemoteDataStore for FileStore {
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.metrics.write().api.hg_upload.call(keys.len());
-        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need memcache + multiplex, etc)
+        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need multiplex, etc)
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
             multiplex.add_store(self.get_shared_mutable());
-            if use_memcache(self.creation_time) {
-                if let Some(ref memcache) = self.memcache {
-                    multiplex.add_store(memcache.clone());
-                }
-            }
             lfs_remote
                 .clone()
                 .datastore(Arc::new(multiplex))

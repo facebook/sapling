@@ -1,0 +1,79 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "prjfs",
+    srcs = [
+        "Enumerator.cpp",
+        "PrjfsChannel.cpp",
+        "PrjfsDispatcher.cpp",
+    ],
+    headers = [
+        "Enumerator.h",
+        "PrjfsChannel.h",
+        "PrjfsDispatcher.h",
+        "PrjfsRequestContext.h",
+    ],
+    os_deps = [(
+        "windows",
+        ["fbsource//third-party/toolchains/win:ProjectedFSLib.lib"],
+    )],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:stringconv",
+        "//eden/common/utils:win_error",
+        "//eden/fs/config:config",
+        "//eden/fs/notifications:notifier",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:static_assert",
+        "//folly/executors:global_executor",
+        "//folly/executors:serial_executor",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes:fs_channel",
+        "//eden/fs/inodes:inode_metadata",
+        "//eden/fs/inodes:request_context",
+        "//eden/fs/model:model",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process_access_log",
+        "//eden/fs/utils:ref_ptr",
+        "//eden/fs/utils:utils",
+        "//folly/executors:sequenced_executor",
+        "//folly/experimental:atomic_read_mostly_main_ptr",
+        "//folly/futures:future_splitter",
+        "//folly/portability:windows",
+        "//thrift/lib/cpp/util:enum_utils",
+    ],
+)
+
+cpp_library(
+    name = "disk_state",
+    srcs = [
+        "PrjfsDiskState.cpp",
+    ],
+    headers = [
+        "PrjfsDiskState.h",
+    ],
+    deps = [
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:win_error",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:projfs_util",
+        "//folly/executors:serial_executor",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly/portability:windows",
+    ],
+)

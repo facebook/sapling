@@ -257,10 +257,7 @@ impl<K: KindType> RuntimeCallsite<K> {
             .static_ref()
             .fields
             .iter()
-            .zip(values.iter().map(|o| match o {
-                Some(v) => Some(v.as_ref()),
-                None => None,
-            }))
+            .zip(values.iter().map(|o| o.as_ref().map(|v| v.as_ref())))
             .collect();
         field_values
     }
@@ -271,7 +268,7 @@ impl RuntimeCallsite<SpanKindType> {
     /// This mimics the macro version to for fast paths.
     pub fn create_span<'v>(&'static self, values: &'v [Option<Box<dyn Value + 'v>>]) -> Span {
         if self.is_enabled() {
-            let field_values = self.field_with_values(&values);
+            let field_values = self.field_with_values(values);
             let field_values: Array<_> = field_values.into();
             Span::new(&self.meta, &{
                 let fieldset = self.meta.fields();
@@ -287,7 +284,7 @@ impl RuntimeCallsite<EventKindType> {
     /// Create a [`Event`] with fields set to the given values.
     pub fn create_event<'v>(&'static self, values: &'v [Option<Box<dyn Value + 'v>>]) {
         if self.is_enabled() {
-            let field_values = self.field_with_values(&values);
+            let field_values = self.field_with_values(values);
             let field_values: Array<_> = field_values.into();
             Event::dispatch(&self.meta, &{
                 let fieldset = self.meta.fields();

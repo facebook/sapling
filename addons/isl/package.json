@@ -2,7 +2,9 @@
   "name": "isl",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
+    "@stylexjs/stylex": "^0.4.1",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^13.0.0",
     "@testing-library/user-event": "^13.2.1",
@@ -10,48 +12,32 @@
     "@types/node": "^16.7.13",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
     "@vscode/webview-ui-toolkit": "1.2.2",
     "diff-sequences": "^29.4.3",
     "immutable": "^4.3.0",
     "isl-server": "0.0.0",
+    "jotai": "^2.6.2",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
-    "react-scripts": "5.0.1",
     "recoil": "^0.7.5",
     "shared": "0.1.0",
-    "typescript": "^4.4.2"
+    "typescript": "^4.4.2",
+    "vite": "^5.1.0-beta.2",
+    "vite-tsconfig-paths": "^4.3.1"
   },
   "devDependencies": {
     "resize-observer-polyfill": "^1.5.1",
     "rewire": "^6.0.0",
-    "ts-loader": "^9.3.1"
+    "ts-loader": "^9.3.1",
+    "vite-plugin-stylex": "^0.4.1"
   },
   "scripts": {
-    "start": "node ./start.js",
-    "build": "node ./build.js",
+    "start": "vite",
+    "build": "vite build",
     "textmate": "node ./textmate.js",
-    "test": "react-scripts test",
+    "test": "jest",
     "integration": "jest --config=./integrationTests/integration.jest.config.ts",
-    "eject": "react-scripts eject",
     "eslint": "eslint ./src --ext .ts --ext .tsx"
-  },
-  "options": {
-    "allowedHosts": [
-      "localhost",
-      ".localhost"
-    ],
-    "proxy": "https://localhost:3001"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
   }
 }

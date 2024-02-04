@@ -39,10 +39,10 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <signal.h>
 #include <sysexits.h>
 #include <cerrno>
 #include <chrono>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <optional>

@@ -7,26 +7,20 @@
 
 #include "eden/fs/nfs/NfsServer.h"
 
-#include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/nfs/portmap/Rpcbindd.h"
-#include "eden/fs/utils/EdenTaskQueue.h"
 
 namespace facebook::eden {
 
 NfsServer::NfsServer(
     PrivHelper* privHelper,
     folly::EventBase* evb,
-    uint64_t numServicingThreads,
-    uint64_t maxInflightRequests,
+    std::shared_ptr<folly::Executor> threadPool,
     bool shouldRunOurOwnRpcbindServer,
     const std::shared_ptr<StructuredLogger>& structuredLogger)
     : privHelper_{privHelper},
       evb_(evb),
-      threadPool_(std::make_shared<folly::CPUThreadPoolExecutor>(
-          numServicingThreads,
-          std::make_unique<EdenTaskQueue>(maxInflightRequests),
-          std::make_unique<folly::NamedThreadFactory>("NfsThreadPool"))),
+      threadPool_{std::move(threadPool)},
       rpcbindd_(
           shouldRunOurOwnRpcbindServer
               ? std::make_shared<Rpcbindd>(evb_, threadPool_, structuredLogger)
@@ -67,7 +61,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     InodeNumber rootIno,
     std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     const std::shared_ptr<StructuredLogger>& structuredLogger,
     folly::Duration requestTimeout,
@@ -82,7 +76,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       threadPool_,
       std::move(dispatcher),
       straceLogger,
-      std::move(processNameCache),
+      std::move(processInfoCache),
       std::move(fsEventLogger),
       structuredLogger,
       requestTimeout,

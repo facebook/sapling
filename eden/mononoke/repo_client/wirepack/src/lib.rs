@@ -182,7 +182,7 @@ mod test {
     use mercurial_revlog::manifest::Details;
     use mercurial_types::manifest::Type;
     use mercurial_types::FileType;
-    use mercurial_types::MPath;
+    use mercurial_types::NonRootMPath;
     use mercurial_types_mocks::nodehash::*;
 
     use super::*;
@@ -274,12 +274,12 @@ mod test {
     fn get_revlog_manifest_content() -> ManifestContent {
         ManifestContent {
             files: btreemap! {
-                MPath::new("test_dir/test_file").unwrap() =>
+                NonRootMPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
                     ONES_HASH,
                     Type::File(FileType::Regular),
                 ),
-                MPath::new("test_dir2/test_manifest").unwrap() =>
+                NonRootMPath::new("test_dir2/test_manifest").unwrap() =>
                 Details::new(
                     TWOS_HASH,
                     Type::Tree,

@@ -20,6 +20,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::Error;
+use clientinfo::ClientEntryPoint;
 use fbinit::FacebookInit;
 use gotham::router::Router;
 use gotham_ext::handler::MononokeHttpHandler;
@@ -79,6 +80,7 @@ pub fn build(
             fb,
             logger.clone(),
             common_config.internal_identity.clone(),
+            ClientEntryPoint::EdenApi,
         ))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",

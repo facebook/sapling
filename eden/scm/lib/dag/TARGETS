@@ -1,0 +1,120 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "dag",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "dag-types": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                    "minibytes": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:fs2",
+                    "fbsource//third-party/rust:tokio",
+                    "//eden/scm/lib/dag/dag-types:dag-types",
+                    "//eden/scm/lib/indexedlog:indexedlog",
+                ],
+            },
+            "features": {
+                "default": [
+                    "indexedlog-backend",
+                    "render",
+                ],
+                "indexedlog-backend": [
+                    "fs2",
+                    "indexedlog",
+                    "tempfile",
+                ],
+                "render": [
+                    "renderdag",
+                ],
+            },
+            "package": {
+                "license": "MIT",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = [
+        "indexedlog-backend",
+        "render",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tokio",
+        "//eden/scm/lib/dev-logger:dev-logger",
+        "//eden/scm/lib/renderdag:renderdag",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:fs2",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/dag/dag-types:dag-types",
+        "//eden/scm/lib/drawdag:drawdag",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/mincode:mincode",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/renderdag:renderdag",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)
+
+# The "-lite" variant does not dependent on indexedlog. It is suitable to be
+# used on the server side which does not have any local-disk accesses.
+# Note: unittests is disabled since it requires indexedlog.
+rust_library(
+    name = "dag-lite",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"ignore_rule": True},
+    crate = "dag",
+    crate_root = "src/lib.rs",
+    features = [
+        "render",
+    ],
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/dag/dag-types:dag-types",
+        "//eden/scm/lib/drawdag:drawdag",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/renderdag:renderdag",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)

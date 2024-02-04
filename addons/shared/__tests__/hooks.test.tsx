@@ -29,7 +29,7 @@ describe('useThrottledEffect', () => {
           myFunc(count);
         },
         1000,
-        [count],
+        [],
       );
       return <button data-testid="button" onClick={() => setCount(count + 1)} />;
     }
@@ -47,6 +47,42 @@ describe('useThrottledEffect', () => {
 
     expect(myFunc).toHaveBeenCalledTimes(1);
     expect(myFunc).toHaveBeenCalledWith(0);
+
+    expect(onRender).toHaveBeenCalledTimes(3);
+  });
+
+  it('resets via dependencies', () => {
+    jest.useFakeTimers();
+    const myFunc = jest.fn();
+    const onRender = jest.fn();
+    function MyComponent() {
+      const [count, setCount] = useState(0);
+      onRender();
+      useThrottledEffect(
+        () => {
+          myFunc(count);
+        },
+        1000,
+        [count],
+      );
+      return <button data-testid="button" onClick={() => setCount(count + 1)} />;
+    }
+
+    render(<MyComponent />);
+    jest.advanceTimersByTime(100);
+    act(() => {
+      fireEvent.click(screen.getByTestId('button'));
+    });
+    jest.advanceTimersByTime(100);
+    act(() => {
+      fireEvent.click(screen.getByTestId('button'));
+    });
+    jest.advanceTimersByTime(2000);
+
+    expect(myFunc).toHaveBeenCalledTimes(3);
+    expect(myFunc).toHaveBeenCalledWith(0);
+    expect(myFunc).toHaveBeenCalledWith(1);
+    expect(myFunc).toHaveBeenCalledWith(2);
 
     expect(onRender).toHaveBeenCalledTimes(3);
   });

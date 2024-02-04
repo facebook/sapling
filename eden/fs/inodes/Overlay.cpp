@@ -21,7 +21,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
-#include "eden/fs/inodes/IFileContentStore.h"
+#include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
@@ -34,6 +34,12 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+#ifndef _WIN32
+#include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual
+#include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h" // @manual
+#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
+#endif
+
 namespace facebook::eden {
 
 namespace {
@@ -45,7 +51,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions,
     const EdenConfig& config,
-    IFileContentStore* fileContentStore,
+    FileContentStore* fileContentStore,
     const std::shared_ptr<StructuredLogger>& logger) {
   if (inodeCatalogType == InodeCatalogType::Sqlite) {
     // Controlled via EdenConfig::unsafeInMemoryOverlay
@@ -94,23 +100,43 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
   if (inodeCatalogType == InodeCatalogType::Legacy) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
+  } else if (inodeCatalogType == InodeCatalogType::LMDB) {
+    throw std::runtime_error(
+        "LMDB overlay type is not supported. Please reclone.");
   }
   XLOG(DBG4) << "Sqlite overlay being used.";
   return std::make_unique<SqliteInodeCatalog>(localDir, logger);
 #else
+  if (inodeCatalogType == InodeCatalogType::LMDB) {
+    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
+      XLOG(DBG4) << "Buffered LMDB overlay being used";
+      return std::make_unique<BufferedLMDBInodeCatalog>(
+          static_cast<LMDBFileContentStore*>(fileContentStore), config);
+    }
+    XLOG(DBG4) << "LMDB overlay being used";
+    return std::make_unique<LMDBInodeCatalog>(
+        static_cast<LMDBFileContentStore*>(fileContentStore));
+  }
   XLOG(DBG4) << "Legacy overlay being used.";
   return std::make_unique<FsInodeCatalog>(
-      static_cast<FileContentStore*>(fileContentStore));
+      static_cast<FsFileContentStore*>(fileContentStore));
 #endif
 }
 
-std::unique_ptr<IFileContentStore> makeFileContentStore(
-    AbsolutePathPiece localDir) {
+std::unique_ptr<FileContentStore> makeFileContentStore(
+    AbsolutePathPiece localDir,
+    const std::shared_ptr<StructuredLogger>& logger,
+    InodeCatalogType inodeCatalogType) {
 #ifdef _WIN32
   (void)localDir;
+  (void)logger;
   return nullptr;
 #else
-  return std::make_unique<FileContentStore>(localDir);
+  if (inodeCatalogType == InodeCatalogType::Legacy) {
+    return std::make_unique<FsFileContentStore>(localDir);
+  } else {
+    return std::make_unique<LMDBFileContentStore>(localDir, logger);
+  }
 #endif
 }
 } // namespace
@@ -168,7 +194,10 @@ Overlay::Overlay(
     EdenStatsPtr stats,
     bool windowsSymlinksEnabled,
     const EdenConfig& config)
-    : fileContentStore_{makeFileContentStore(localDir)},
+    : fileContentStore_{makeFileContentStore(
+          localDir,
+          logger,
+          inodeCatalogType)},
       inodeCatalog_{makeInodeCatalog(
           localDir,
           inodeCatalogType,
@@ -289,11 +318,30 @@ void Overlay::initOverlay(
   IORequest req{this};
   auto optNextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
-  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy) {
+  if (fileContentStore_ && inodeCatalogType_ == InodeCatalogType::Sqlite) {
+    // Initialize the file content store after the inode catalog has been.
+    // The fileContentStore will only exist on non-Windows platforms.
+    //
+    // We only need to do this for Sqlite overlays because they use a Legacy
+    // FileContentStore on non-Windows platforms. Other InodeCatalogTypes use
+    // their corresponding FileContentStore, meaning calling `initialize` here
+    // would double-initialize the FileContentStore the objects.
+    //
+    // If we had a SQLiteFileContentStore, this code block would be unnecessary.
     fileContentStore_->initialize(/*createIfNonExisting=*/true);
   }
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32
+    // FSCK is not currently supported for LMDB overlays. If we cannot load the
+    // next inode number, then we cannot continue. LMDB should always be able to
+    // load the inode number, if this case is hit, then the assumption about
+    // LMDB being resilient is incorrect (unless the user manually corrupted
+    // their overlay directory).
+    if (inodeCatalogType_ != InodeCatalogType::Legacy) {
+      throw std::runtime_error(
+          "Corrupted LMDB overlay " + localDir_.asString() +
+          ": could not load next inode number");
+    }
     // If the next-inode-number data is missing it means that this overlay was
     // not shut down cleanly the last time it was used.  If this was caused by a
     // hard system reboot this can sometimes cause corruption and/or missing
@@ -312,7 +360,7 @@ void Overlay::initOverlay(
     // call.
     OverlayChecker checker(
         inodeCatalog_.get(),
-        static_cast<FileContentStore*>(fileContentStore_.get()),
+        static_cast<FsFileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback);
     folly::stop_watch<> fsckRuntime;
@@ -363,8 +411,9 @@ void Overlay::initOverlay(
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
-      (localDir_ + PathComponentPiece{FileContentStore::kMetadataFile})
-          .c_str());
+      (localDir_ + PathComponentPiece{FsFileContentStore::kMetadataFile})
+          .c_str(),
+      stats_.copy());
 #endif // !_WIN32
 }
 
@@ -393,9 +442,11 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
   auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
+    stats_->increment(&OverlayStats::loadOverlayDirMiss);
     return result;
   }
   const auto& dir = dirData.value();
+  stats_->increment(&OverlayStats::loadOverlayDirHit);
 
   bool shouldRewriteOverlay = false;
 
@@ -666,7 +717,6 @@ void Overlay::gcThread() noexcept {
           return;
         }
         gcCondVar_.wait(lock.as_lock());
-        continue;
       }
 
       requests = std::move(lock->queue);

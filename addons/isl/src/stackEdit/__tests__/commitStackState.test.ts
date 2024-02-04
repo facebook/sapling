@@ -8,7 +8,10 @@
 import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
-import {ABSENT_FILE, CommitStackState} from '../commitStackState';
+import {ABSENT_FILE, CommitIdx, CommitStackState, CommitState} from '../commitStackState';
+import {FileStackState} from '../fileStackState';
+import {List, Set as ImSet, Map as ImMap} from 'immutable';
+import {unwrap} from 'shared/utils';
 
 const exportCommitDefault: ExportCommit = {
   requested: true,
@@ -138,27 +141,79 @@ describe('CommitStackState', () => {
     expect([...stack.log(3)]).toStrictEqual([3, 2, 1, 0]);
   });
 
-  it('logs file history', () => {
-    const stack = new CommitStackState(exportStack1);
-    expect([...stack.logFile(3, 'x.txt')]).toStrictEqual([
-      [2, 'x.txt'],
-      [1, 'x.txt'],
-    ]);
-    expect([...stack.logFile(3, 'y.txt')]).toStrictEqual([[2, 'y.txt']]);
-    expect([...stack.logFile(3, 'z.txt')]).toStrictEqual([
-      [3, 'z.txt'],
-      [1, 'z.txt'],
-    ]);
-    // Changes in not requested commits (rev 0) are ignored.
-    expect([...stack.logFile(3, 'k.txt')]).toStrictEqual([]);
-  });
+  describe('log file history', () => {
+    // [rev, path] => [rev, path, file]
+    const extend = (stack: CommitStackState, revPathPairs: Array<[Rev, string]>) => {
+      return revPathPairs.map(([rev, path]) => {
+        const file = rev >= 0 ? stack.get(rev)?.files.get(path) : stack.bottomFiles.get(path);
+        expect(file).toBe(stack.getFile(rev, path));
+        return [rev, path, file];
+      });
+    };
 
-  it('logs file history following renames', () => {
-    const stack = new CommitStackState(exportStack1);
-    expect([...stack.logFile(3, 'y.txt', true)]).toStrictEqual([
-      [2, 'y.txt'],
-      [1, 'x.txt'],
-    ]);
+    it('logs file history', () => {
+      const stack = new CommitStackState(exportStack1);
+      expect([...stack.logFile(3, 'x.txt')]).toStrictEqual(
+        extend(stack, [
+          [2, 'x.txt'],
+          [1, 'x.txt'],
+        ]),
+      );
+      expect([...stack.logFile(3, 'y.txt')]).toStrictEqual(extend(stack, [[2, 'y.txt']]));
+      expect([...stack.logFile(3, 'z.txt')]).toStrictEqual(
+        extend(stack, [
+          [3, 'z.txt'],
+          [1, 'z.txt'],
+        ]),
+      );
+      // Changes in not requested commits (rev 0) are ignored.
+      expect([...stack.logFile(3, 'k.txt')]).toStrictEqual([]);
+    });
+
+    it('logs file history following renames', () => {
+      const stack = new CommitStackState(exportStack1);
+      expect([...stack.logFile(3, 'y.txt', true)]).toStrictEqual(
+        extend(stack, [
+          [2, 'y.txt'],
+          [1, 'x.txt'],
+        ]),
+      );
+    });
+
+    it('logs file history including the bottom', () => {
+      const stack = new CommitStackState(exportStack1);
+      ['x.txt', 'z.txt'].forEach(path => {
+        expect([...stack.logFile(1, path, true, true)]).toStrictEqual(
+          extend(stack, [
+            [1, path],
+            // rev 0 does not change x.txt or z.txt
+            [-1, path],
+          ]),
+        );
+      });
+    });
+
+    it('parentFile follows rename to bottomFile', () => {
+      const stack = new CommitStackState([
+        {
+          ...exportCommitDefault,
+          relevantFiles: {
+            'x.txt': {data: '11'},
+            'z.txt': {data: '22'},
+          },
+          files: {
+            'z.txt': {data: '33', copyFrom: 'x.txt'},
+          },
+          text: 'Commit Foo',
+        },
+      ]);
+      const file = stack.getFile(0, 'z.txt');
+      expect(stack.getUtf8Data(file)).toBe('33');
+      const [, , parentFileWithRename] = stack.parentFile(0, 'z.txt', true);
+      expect(stack.getUtf8Data(parentFileWithRename)).toBe('11');
+      const [, , parentFile] = stack.parentFile(0, 'z.txt', false);
+      expect(stack.getUtf8Data(parentFile)).toBe('22');
+    });
   });
 
   it('provides file contents at given revs', () => {
@@ -219,7 +274,7 @@ describe('CommitStackState', () => {
         // y.txt connects to x.txt's history.
         '0:./x.txt 1:A/x.txt(xx) 2:B/y.txt(yy)',
         // z.txt does not connect to x.txt's history (but still have one parent for diff).
-        '0:./z.txt 1:B/z.txt(zz)',
+        '0:./y.txt 1:B/z.txt(zz)',
       ]);
     });
 
@@ -254,6 +309,16 @@ describe('CommitStackState', () => {
         '0:./x.txt 1:A/x.txt(33) 2:B/y.txt(33)',
         // z.txt: modified by A, deleted by C.
         '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+      ]);
+    });
+
+    it('with rename tracking disabled', () => {
+      const stack = new CommitStackState(exportStack1).buildFileStacks({followRenames: false});
+      // no x.txt -> y.txt rename
+      expect(stack.describeFileStacks()).toStrictEqual([
+        '0:./x.txt 1:A/x.txt(33) 2:B/x.txt',
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+        '0:./y.txt 1:B/y.txt(33)',
       ]);
     });
   });
@@ -373,7 +438,7 @@ describe('CommitStackState', () => {
           'y.txt': {data: 'yy'},
         },
         originalNodes: new Set(['A', 'B']),
-        text: 'Commit A\n\nCommit B',
+        text: 'Commit A, Commit B',
         parents: [],
       });
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
@@ -729,6 +794,217 @@ describe('CommitStackState', () => {
         ['commit', {date: [40, 0], text: 'C'}],
         ['commit', {date: [40, 0], text: 'B'}],
       ]);
+    });
+  });
+
+  describe('denseSubStack', () => {
+    it('provides bottomFiles', () => {
+      const stack = new CommitStackState(exportStack1);
+      let subStack = stack.denseSubStack(List([3])); // C
+      // The bottom files contains z (deleted) and its content is before deletion.
+      expect([...subStack.bottomFiles.keys()].sort()).toEqual(['z.txt']);
+      expect(subStack.bottomFiles.get('z.txt')?.data).toBe('22');
+
+      subStack = stack.denseSubStack(List([2, 3])); // B, C
+      // The bottom files contains x (deleted), y (modified) and z (deleted).
+      expect([...subStack.bottomFiles.keys()].sort()).toEqual(['x.txt', 'y.txt', 'z.txt']);
+    });
+
+    it('marks all files at every commit as changed', () => {
+      const stack = new CommitStackState(exportStack1);
+      const subStack = stack.denseSubStack(List([2, 3])); // B, C
+      // All commits (B, C) should have 3 files (x.txt, y.txt, z.txt) marked as "changed".
+      expect(subStack.stack.map(c => c.files.size).toJS()).toEqual([3, 3]);
+      // All file stacks (x.txt, y.txt, z.txt) should have 3 revs (bottomFile, B, C).
+      expect(subStack.fileStacks.map(f => f.revLength).toJS()).toEqual([3, 3, 3]);
+    });
+  });
+
+  describe('insertEmpty', () => {
+    const stack = new CommitStackState(exportStack1);
+    const getRevs = (stack: CommitStackState) =>
+      stack.stack.map(c => [c.rev, c.parents.toArray()]).toArray();
+
+    it('updates revs of commits', () => {
+      expect(getRevs(stack)).toEqual([
+        [0, []],
+        [1, [0]],
+        [2, [1]],
+        [3, [2]],
+      ]);
+      expect(getRevs(stack.insertEmpty(2, 'foo'))).toEqual([
+        [0, []],
+        [1, [0]],
+        [2, [1]],
+        [3, [2]],
+        [4, [3]],
+      ]);
+    });
+
+    it('inserts at stack top', () => {
+      expect(getRevs(stack.insertEmpty(4, 'foo'))).toEqual([
+        [0, []],
+        [1, [0]],
+        [2, [1]],
+        [3, [2]],
+        [4, [3]],
+      ]);
+    });
+
+    it('uses the provided commit message', () => {
+      const msg = 'provided message\nfoobar';
+      [0, 2, 4].forEach(i => {
+        expect(stack.insertEmpty(i, msg).stack.get(i)?.text).toBe(msg);
+      });
+    });
+
+    it('provides unique keys for inserted commits', () => {
+      const newStack = stack.insertEmpty(1, '').insertEmpty(1, '').insertEmpty(1, '');
+      const keys = newStack.stack.map(c => c.key);
+      expect(keys.size).toBe(ImSet(keys).size);
+    });
+
+    // The "originalNodes" are useful for split to set predecessors correctly.
+    it('preserves the originalNodes with splitFromRev', () => {
+      [1, 4].forEach(i => {
+        const newStack = stack.insertEmpty(i, '', 2);
+        expect(newStack.get(i)?.originalNodes).toBe(stack.get(2)?.originalNodes);
+        expect(newStack.get(i)?.originalNodes?.isEmpty()).toBeFalsy();
+        const anotherStack = stack.insertEmpty(i, '');
+        expect(anotherStack.get(i)?.originalNodes?.isEmpty()).toBeTruthy();
+      });
+    });
+  });
+
+  describe('applySubStack', () => {
+    const stack = new CommitStackState(exportStack1);
+    const subStack = stack.denseSubStack(List([2, 3]));
+    const emptyStack = subStack.set('stack', List());
+
+    const getChangedFiles = (state: CommitStackState, rev: Rev): Array<string> => {
+      return [...unwrap(state.stack.get(rev)).files.keys()].sort();
+    };
+
+    it('optimizes file changes by removing unmodified changes', () => {
+      const newStack = stack.applySubStack(2, 4, subStack);
+      expect(newStack.stack.size).toBe(stack.stack.size);
+      // The original `stack` does not have unmodified changes.
+      // To verify that `newStack` does not have unmodified changes, check it
+      // against the original `stack`.
+      stack.revs().forEach(i => {
+        expect(getChangedFiles(newStack, i)).toEqual(getChangedFiles(stack, i));
+      });
+    });
+
+    it('drops empty commits at the end of subStack', () => {
+      // Change the 2nd commit in subStack to empty.
+      const newSubStack = subStack.set(
+        'stack',
+        subStack.stack.setIn([1, 'files'], unwrap(subStack.stack.get(0)).files),
+      );
+      // `applySubStack` should drop the 2nd commit in `newSubStack`.
+      const newStack = stack.applySubStack(2, 4, newSubStack);
+      newStack.assertRevOrder();
+      expect(newStack.stack.size).toBe(stack.stack.size - 1);
+    });
+
+    it('rewrites revs for the remaining of the stack', () => {
+      const newStack = stack.applySubStack(1, 2, emptyStack);
+      newStack.assertRevOrder();
+      [1, 2].forEach(i => {
+        expect(newStack.stack.get(i)?.toJS()).toMatchObject({rev: i, parents: [i - 1]});
+      });
+    });
+
+    it('rewrites revs for the inserted stack', () => {
+      const newStack = stack.applySubStack(2, 3, subStack);
+      newStack.assertRevOrder();
+      [2, 3, 4].forEach(i => {
+        expect(newStack.stack.get(i)?.toJS()).toMatchObject({rev: i, parents: [i - 1]});
+      });
+    });
+
+    it('preserves file contents of the old stack', () => {
+      // Add a file 'x.txt' deleted by the original stack.
+      const newSubStack = subStack.set(
+        'stack',
+        List([
+          CommitState({
+            key: 'foo',
+            files: ImMap([['x.txt', stack.getFile(1, 'x.txt')]]),
+          }),
+        ]),
+      );
+      const newStack = stack.applySubStack(1, 3, newSubStack);
+
+      // 'y.txt' was added by the old stack, not the new stack. So it is re-added
+      // to preserve its old content.
+      // 'x.txt' was added by the new stack, deleted by the old stack. So it is
+      // re-deleted.
+      expect(getChangedFiles(newStack, 2)).toEqual(['x.txt', 'y.txt', 'z.txt']);
+      expect(newStack.getFile(2, 'y.txt').data).toBe('33');
+      expect(newStack.getFile(2, 'x.txt')).toBe(ABSENT_FILE);
+    });
+
+    it('update keys to avoid conflict', () => {
+      const oldKey = unwrap(stack.stack.get(1)).key;
+      const newSubStack = subStack.set('stack', subStack.stack.setIn([0, 'key'], oldKey));
+      const newStack = stack.applySubStack(2, 3, newSubStack);
+
+      // Keys are still unique.
+      const keys = newStack.stack.map(c => c.key);
+      const keysSet = ImSet(keys);
+      expect(keys.size).toBe(keysSet.size);
+    });
+
+    it('drops ABSENT flag if content is not empty', () => {
+      // x.txt was deleted by subStack rev 0 (B). We are moving it to be deleted by rev 1 (C).
+      expect(subStack.getFile(0, 'x.txt').flags).toBe(ABSENT_FILE.flags);
+      // To break the deletion into done by 2 commits, we edit the file stack of 'x.txt'.
+      const fileIdx = unwrap(subStack.commitToFile.get(CommitIdx({rev: 0, path: 'x.txt'}))).fileIdx;
+      const fileStack = unwrap(subStack.fileStacks.get(fileIdx));
+      // The file stack has 3 revs: (base, before deletion), (deleted at rev 0), (deleted at rev 1).
+      expect(fileStack.convertToPlainText().toArray()).toEqual(['33', '', '']);
+      const newFileStack = new FileStackState(['33', '3', '']);
+      const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
+      expect(newSubStack.getUtf8Data(newSubStack.getFile(0, 'x.txt'))).toBe('3');
+      // Apply the file stack back to the main stack.
+      const newStack = stack.applySubStack(2, 4, newSubStack);
+      expect(newStack.stack.size).toBe(4);
+      // Check that x.txt in rev 2 (B) is '3', not absent.
+      const file = newStack.getFile(2, 'x.txt');
+      expect(file.data).toBe('3');
+      expect(file.flags ?? '').not.toContain(ABSENT_FILE.flags);
+
+      // Compare the old and new file stacks.
+      // - x.txt deletion is now by commit 'C', not 'B'.
+      // - x.txt -> y.txt rename is preserved.
+      expect(stack.describeFileStacks(true)).toEqual([
+        '0:./x.txt 1:A/x.txt(33) 2:B/y.txt(33)',
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+      ]);
+      expect(newStack.describeFileStacks(true)).toEqual([
+        '0:./x.txt 1:A/x.txt(33) 2:B/x.txt(3) 3:C/x.txt',
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+        '0:A/x.txt(33) 1:B/y.txt(33)',
+      ]);
+    });
+
+    it('does not add ABSENT flag if content becomes empty', () => {
+      // This was a herustics when `flags` are not handled properly. Now it is no longer needed.
+      // y.txt was added by subStack rev 0 (B). We are moving it to be added by rev 1 (C).
+      const fileIdx = unwrap(subStack.commitToFile.get(CommitIdx({rev: 0, path: 'y.txt'}))).fileIdx;
+      const fileStack = unwrap(subStack.fileStacks.get(fileIdx));
+      // The file stack has 3 revs: (base, before add), (add by rev 0), (unchanged by rev 1).
+      expect(fileStack.convertToPlainText().toArray()).toEqual(['', '33', '33']);
+      const newFileStack = new FileStackState(['', '', '33']);
+      const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
+      // Apply the file stack back to the main stack.
+      const newStack = stack.applySubStack(2, 4, newSubStack);
+      // Check that y.txt in rev 2 (B) is absent, not just empty.
+      const file = newStack.getFile(2, 'y.txt');
+      expect(file.data).toBe('');
+      expect(file.flags).toBe('');
     });
   });
 });

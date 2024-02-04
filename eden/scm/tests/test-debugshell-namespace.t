@@ -1,4 +1,5 @@
 #debugruntest-compatible
+#require ipython
 
   $ eagerepo
   $ cat >> foo.py << EOF

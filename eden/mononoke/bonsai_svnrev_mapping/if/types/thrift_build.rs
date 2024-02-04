@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "bonsai_svnrev_mapping crate
-mononoke_types_thrift mononoke_types_thrift",
+mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -45,6 +45,8 @@ mononoke_types_thrift mononoke_types_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("bonsai_svnrev_mapping_thrift__types");
+        conf.clients_crate("bonsai_svnrev_mapping_thrift__clients");
+        conf.services_crate("bonsai_svnrev_mapping_thrift__services");
 
         let options = "";
         if !options.is_empty() {

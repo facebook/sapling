@@ -29,7 +29,7 @@ use mercurial_types::HgChangesetId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use mononoke_types::MPath;
+use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 
@@ -100,7 +100,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         Some(bubble_id) => {
             let bubble = repo
                 .repo_ephemeral_store()
-                .open_bubble(bubble_id)
+                .open_bubble(&ctx, bubble_id)
                 .await
                 .with_context(|| format!("Failed to open bubble {}", bubble_id))?;
             bubble.wrap_repo_blobstore(repo.repo_blobstore().clone())
@@ -157,7 +157,7 @@ async fn display_hg_entry(
         let mpath = MPath::new(path).with_context(|| format!("Invalid path: {}", path))?;
         hg_cs
             .manifestid()
-            .find_entry(ctx.clone(), blobstore.clone(), Some(mpath))
+            .find_entry(ctx.clone(), blobstore.clone(), mpath)
             .await
             .context("Failed to traverse manifest")?
             .ok_or_else(|| anyhow!("Path does not exist: {}", path))?

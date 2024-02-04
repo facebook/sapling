@@ -1,0 +1,643 @@
+load("@fbcode//eden:defs.bzl", "get_oss_suffix", "make_rule_compatible_with")
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:java_binary.bzl", "java_binary")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/build_defs:audit_dependencies_test.bzl", "audit_dependencies_test")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "main",
+    srcs = [
+        "EdenMain.cpp",
+    ],
+    os_deps = [
+        (
+            "linux",
+            [
+                "//eden/fs/store/git:git",
+            ],
+        ),
+    ],
+    deps = [
+        ":init",
+        ":startup_logger",
+        ":startup_status_subscriber",
+        "//eden/fs:config",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/privhelper:privhelper",
+        "//eden/fs/store:filtered_backing_store",
+        "//eden/fs/store:store",
+        "//eden/fs/store/filter:hg_sparse_filter",
+        "//eden/fs/store/hg:hg_queued_backing_store",
+        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:user_info",
+        "//eden/fs/utils:utils",
+        "//eden/fs/utils:win_stacktrace",
+        "//fb303:function_stat_handler",
+        "//fb303:logging",
+        "//folly:conv",
+        "//folly:map_util",
+        "//folly:stop_watch",
+        "//folly/experimental:function_scheduler",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//folly/portability:unistd",
+        "//folly/ssl:init",
+        "//thrift/lib/cpp2:flags",
+        "//thrift/lib/cpp2:server",
+    ],
+    exported_deps = [
+        ":server",
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/telemetry:activity_recorder",
+    ],
+)
+
+cpp_binary(
+    name = "edenfs",
+    srcs = [
+        "facebook/main.cpp",
+    ],
+    linker_flags = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "/STACK:2097152",  # This was picked arbitrarily as 2 MB
+        ],
+    }),
+    os_deps = [
+        (
+            "linux",
+            [
+                "//eden/fs/store/facebook/http:http",
+                "//eden/fs/store/facebook/recas:recas",
+                "//eden/fs/telemetry/facebook:activity_recorder",
+                "//eden/fs/telemetry/facebook:hive_logger",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "//eden/fs/telemetry/facebook:activity_recorder",
+                "//eden/fs/telemetry/facebook:hive_logger",
+            ],
+        ),
+    ],
+    deps = [
+        ":main",
+        ":server",
+        "//blake3:blake3-constants-cpp2-types",
+        "//common/base:build_info",
+        "//common/fbwhoami:fb_who_am_i",
+        "//common/network:hostname",
+        "//common/services/cpp:build_values",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:activity_recorder",
+        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry/facebook:logview_util",
+        "//fb303:function_stat_handler",
+        "//fb303:logging",
+        "//folly:conv",
+        "//folly:range",
+        "//folly/logging:init",
+        "//thrift/lib/cpp2:server",
+    ],
+)
+
+cpp_binary(
+    name = "edenfs_privhelper",
+    srcs = ["PrivHelperMain.cpp"],
+    # See T103916156
+    allocator = "malloc",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/privhelper:flags",
+        "//eden/fs/privhelper:server",
+        "//eden/fs/utils:user_info",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+    ],
+)
+
+# The privhelper is installed setuid root. Since it is a privileged
+# surface, limit its dependencies.
+audit_dependencies_test(
+    name = "edenfs_privhelper_audit",
+    blocklist_patterns = [
+        # SSLKEYLOGFILE allows writing arbitrary files as root.
+        "fbsource//third-party/rust:openssl-sys",
+        "fbsource//third-party/rust:openssl",
+        "//third-party-buck/platform.*/build/openssl:crypto",
+        # glog supports a GOOGLE_log_dir environment variable. I have
+        # been unable to use it to trigger a write to a root-owned
+        # directory, but ideally we wouldn't link with glog at all.
+        #"//third-party-buck/.*/build/glog:glog",
+        #"fbsource//third-party/glog/.*",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    contacts = [
+        "oncall+scm_client_infra@xmail.facebook.com",
+    ],
+    rule = ":edenfs_privhelper",
+)
+
+cpp_binary(
+    name = "edenfs" + get_oss_suffix(),
+    srcs = [
+        "oss/main.cpp",
+    ],
+    linker_flags = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "/STACK:2097152",  # This was picked arbitrarily as 2 MB
+        ],
+    }),
+    deps = [
+        ":main",
+        ":server",
+    ],
+)
+
+audit_dependencies_test(
+    name = "edenfs_audit",
+    blocklist_patterns = [
+        "//eden/fs/model:testutil",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    contacts = [
+        "oncall+scm_client_infra@xmail.facebook.com",
+    ],
+    rule = ":edenfs" + get_oss_suffix(),
+)
+
+cpp_library(
+    name = "init",
+    srcs = [
+        "EdenInit.cpp",
+    ],
+    deps = [
+        "//eden/fs:config",
+        "//eden/fs/config:config",
+        "//eden/fs/utils:user_info",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:path",
+        "//folly:conv",
+        "//folly/portability:gflags",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_library(
+    name = "edenfs_smartplatform_service",
+    srcs = [
+        "facebook/EdenFSSmartPlatformServiceEndpoint.cpp",
+    ],
+    headers = [
+        "facebook/EdenFSSmartPlatformServiceEndpoint.h",
+    ],
+    os_deps = [
+        (
+            "linux",
+            [
+                "//servicerouter/client/cpp2:cpp2",
+                "//smart/edenfs/edenfs_service:service-if-cpp2-clients",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "//c2p/secure_thrift/cpp/client:secure_thrift",
+                "//smart/edenfs/edenfs_service:service-if-cpp2-clients",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "//eden/fs/prjfs:prjfs",
+            ],
+        ),
+    ],
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/utils:utils",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":usage_service",
+        "//eden/fs:config",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "startup_logger",
+    srcs = [
+        "StartupLogger.cpp",
+    ],
+    headers = [
+        "StartupLogger.h",
+    ],
+    deps = [
+        ":init",
+        ":startup_status_subscriber",
+        "//eden/common/os:os",
+        "//eden/fs:config",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/telemetry:log_info",
+        "//folly:exception",
+        "//folly:file_util",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/config:config",
+        "//eden/fs/utils:io",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process",
+        "//folly:file",
+        "//folly:range",
+        "//folly/lang:assume",
+        "//folly/logging:log_level",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_library(
+    name = "startup_status_subscriber",
+    srcs = [
+        "StartupStatusSubscriber.cpp",
+    ],
+    headers = [
+        "StartupStatusSubscriber.h",
+    ],
+    deps = [
+        "//eden/fs/utils:eden_error",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "thrift_startup_status_subscriber",
+    srcs = [
+        "ThriftStreamStartupStatusSubscriber.cpp",
+    ],
+    headers = [
+        "ThriftStreamStartupStatusSubscriber.h",
+    ],
+    deps = [
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":startup_status_subscriber",
+        "//folly:cancellation_token",
+        "//thrift/lib/cpp2/async:server_stream",
+    ],
+)
+
+cpp_library(
+    name = "usage_service",
+    srcs = [
+        "UsageService.cpp",
+    ],
+    deps = [
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "server",
+    srcs = [
+        "EdenCPUThreadPool.cpp",
+        "EdenServer.cpp",
+        "EdenServiceHandler.cpp",
+        "EdenStateDir.cpp",
+        "PeriodicTask.cpp",
+        "ThriftPermissionChecker.cpp",
+    ],
+    os_deps = [
+        # TODO: The edenfs_smartplatform_service dependency fans out to a ton
+        # of other dependencies, slowing down OSS builds and tests. We ideally
+        # should move it to facebook/main.cpp to avoid the cost in unit tests
+        # and OSS builds and tests.
+        (
+            "linux",
+            [
+                ":edenfs_smartplatform_service",
+            ],
+        ),
+        (
+            "macos",
+            [
+                ":edenfs_smartplatform_service",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "//eden/fs/notifications:windows_notifier",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/cpptoml:cpptoml",
+        "fbsource//third-party/fmt:fmt",
+        ":startup_logger",
+        ":startup_status_subscriber",
+        ":thrift-streaming-cpp2-types",
+        ":thrift_get_object_impl",
+        ":thrift_glob_impl",
+        ":thrift_startup_status_subscriber",
+        ":thrift_util",
+        ":usage_service",
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/config:config",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/journal:journal",
+        "//eden/fs/model:model",
+        "//eden/fs/model/git:gitignore",
+        "//eden/fs/nfs:nfs_server",
+        "//eden/fs/nfs:nfsd3",
+        "//eden/fs/notifications:command_notifier",
+        "//eden/fs/notifications:windows_notifier",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/prjfs:prjfs",
+        "//eden/fs/store:context",
+        "//eden/fs/store:filtered_backing_store",
+        "//eden/fs/store:rocksdb",
+        "//eden/fs/store:sqlite",
+        "//eden/fs/store:store",
+        "//eden/fs/store/filter:glob_filter",
+        "//eden/fs/store/hg:hg_backing_store",
+        "//eden/fs/store/hg:hg_queued_backing_store",
+        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:task_trace",
+        "//eden/fs/utils:clock",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:eden_task_queue",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:fs_channel_types",
+        "//eden/fs/utils:matcher",
+        "//eden/fs/utils:nfs_socket",
+        "//eden/fs/utils:proc_util",
+        "//eden/fs/utils:source_location",
+        "//eden/fs/utils:string",
+        "//eden/fs/utils:user_info",
+        "//fb303:service_data",
+        "//folly:conv",
+        "//folly:exception",
+        "//folly:file_util",
+        "//folly:random",
+        "//folly:stop_watch",
+        "//folly:string",
+        "//folly/chrono:conv",
+        "//folly/executors:serial_executor",
+        "//folly/futures:core",
+        "//folly/io/async:async_signal_handler",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//thrift/lib/cpp/concurrency:thread_manager",
+        "//thrift/lib/cpp/util:enum_utils",
+        "//thrift/lib/cpp2:server",
+        "//thrift/lib/cpp2/async:server_stream",
+        "//thrift/lib/cpp2/server:cpp2_conn_context",
+    ],
+    exported_deps = [
+        ":thrift-cpp2-types",
+        ":thrift-streaming-cpp2-services",
+        "//eden/common/os:os",
+        "//eden/fs:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/takeover:takeover",
+        "//eden/fs/telemetry:activity_buffer",
+        "//eden/fs/telemetry:activity_recorder",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:ref_ptr",
+        "//eden/fs/utils:utils",
+        "//fb303:base_service",
+        "//folly:executor",
+        "//folly:file",
+        "//folly:network_address",
+        "//folly:portability",
+        "//folly:range",
+        "//folly:synchronized",
+        "//folly:thread_local",
+        "//folly/futures:shared_promise",
+        "//folly/io/async:async_base",
+        "//folly/portability:sys_stat",
+        "//thrift/lib/cpp:event_handler_base",
+    ],
+)
+
+# The eden.thrift interface.
+#
+# Note: C++ users should probably depend on the thrift_cpp rule below,
+# rather than directly depending on this thrift_library().  The thrift_cpp rule
+# includes this thrift_library() plus some extra utility code for working with
+# the thrift C++ data structures.
+thrift_library(
+    name = "thrift",
+    languages = [
+        "cpp2",
+        "py",
+        "py3",
+        "python",
+        "rust",
+    ],
+    py_base_module = "facebook",
+    rust_deps = [
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+    ],
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {
+        "eden.thrift": ["EdenService"],
+    },
+    deps = [
+        "//eden/fs/config:config_thrift",
+        "//fb303/thrift:fb303_core",
+    ],
+)
+
+thrift_library(
+    name = "thrift-streaming",
+    languages = [
+        "cpp2",
+        "py3",
+        "python",
+        "rust",
+    ],
+    rust_autocargo = {"cargo_toml_dir": "thrift_streaming"},
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {
+        "streamingeden.thrift": [
+            "StreamingEdenService",
+        ],
+    },
+    deps = [
+        ":thrift",
+    ],
+)
+
+# A helper library for C++ that depends on the generated thrift stubs,
+# and includes a few other utilities for working with the thrift types.
+#
+# Most C++ users should depend on this rule rather than directly using the
+# thrift or thrift-streaming rules above.
+cpp_library(
+    name = "pretty_printers",
+    srcs = ["PrettyPrinters.cpp"],
+    headers = ["PrettyPrinters.h"],
+    deps = [
+        "//folly:conv",
+    ],
+    exported_deps = [
+        ":thrift-cpp2-types",
+    ],
+)
+
+cpp_library(
+    name = "thrift_util",
+    headers = ["ThriftUtil.h"],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/utils:eden_error",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "thrift_glob_impl",
+    srcs = ["ThriftGlobImpl.cpp"],
+    headers = ["ThriftGlobImpl.h"],
+    deps = [
+        ":thrift-cpp2-types",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:utils",
+        "//folly/logging:log_level",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:glob",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:ref_ptr",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "thrift_get_object_impl",
+    srcs = ["ThriftGetObjectImpl.cpp"],
+    headers = ["ThriftGetObjectImpl.h"],
+    deps = [
+        ":thrift_util",
+    ],
+    exported_deps = [
+        ":thrift-cpp2-types",
+        "//eden/common/utils:option_set",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:model",
+        "//eden/fs/store:store",
+        "//eden/fs/utils:eden_error",
+        "//folly:try",
+    ],
+)
+
+# JAVA BINDINGS FOR THRIFT ENDPOINT
+#
+# There are two JAR files that we expect Java clients to use:
+# 1. A JAR that defines Eden's Thrift API.
+# 2. A JAR that contains the general Java library for Thrift.
+#
+# To update Buck's copy of the bindings, run eden/fs/facebook/update-buck-thrift.sh
+
+make_rule_compatible_with(
+    name = "thrift_buck",
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    languages = [
+        "javadeprecated",
+    ],
+    rule = thrift_library,
+    tags = ["noautodeps"],
+    thrift_srcs = {
+        "eden.thrift": ["EdenService"],
+    },
+    deps = [
+        "//eden/fs/config:config_thrift_buck",
+        "//fb303/thrift:fb303_core",
+    ],
+)
+
+# This java_binary() exists as a simple way to get //thrift/lib/java/src:thrift
+# and all of its transitive dependencies into one JAR file.
+make_rule_compatible_with(
+    name = "java-thrift-dependencies",
+    # Currently, //thrift/lib/java/src:thrift pulls in org.slf4j,
+    # org.iq80.snappy, and org.apache.commons.lang. org.iq80.snappy is the only
+    # one we keep.
+    blacklist = [
+        # Thrift only needs this dependency if the generated Java code uses
+        # `HashCodeBuilder`, which we do not.
+        "org.apache.commons.lang",
+
+        # The primary consumer of this JAR is Buck. Buck already has its own copy
+        # of slf4j that should be compatible with the one we are pulling in as
+        # part of this build. We decide to strip it rather than jarjar it.
+        "org.slf4j",
+
+        # Buck already bundles this; don't include it.
+        "javax.servlet",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    jar_style = "jar",
+    java_version = "8",
+    rule = java_binary,
+    runtime = "8",
+    deps = [
+        "//fb303/thrift:fb303_core-javadeprecated",
+        "//third-party-java/org.slf4j:slf4j-api",
+        "//thrift/lib/javadeprecated:thrift",
+    ],
+)

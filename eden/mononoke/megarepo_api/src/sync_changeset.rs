@@ -72,21 +72,27 @@ pub enum MergeMode {
     },
 }
 
-fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i64>, Option<bool>) {
-    let targets = tunables::tunables()
-        .by_repo_megarepo_squashing_config_override_targets(repo_name)
-        .unwrap_or_default();
-    if targets
-        .iter()
-        .any(|target| target.as_str() == target_bookmark)
-    {
-        (
-            tunables::tunables().by_repo_megarepo_override_squashing_limit(repo_name),
-            tunables::tunables().by_repo_megarepo_override_author_check(repo_name),
-        )
+fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i64>, bool) {
+    let switchval = format!("{}:{}", repo_name, target_bookmark);
+    let squashing_limit = justknobs::get(
+        "scm/mononoke:megarepo_override_squashing_limit",
+        Some(&switchval),
+    )
+    .unwrap_or(0);
+
+    let maybe_squashing_limit = if squashing_limit == 0 {
+        None
     } else {
-        (None, None)
-    }
+        Some(squashing_limit)
+    };
+
+    let author_check = justknobs::eval(
+        "scm/mononoke:megarepo_override_author_check",
+        None,
+        Some(&switchval),
+    )
+    .unwrap_or(true);
+    (maybe_squashing_limit, author_check)
 }
 
 pub struct SquashingConfig {
@@ -172,14 +178,14 @@ impl<'a> SyncChangeset<'a> {
         // merged-in commits or squash side-branch.
         let maybe_squashing_config = match &source_config.merge_mode {
             Some(megarepo_config::MergeMode::squashed(sq)) => {
-                let (maybe_squash_limit, maybe_check_author) =
+                let (maybe_squash_limit, check_author) =
                     get_squashing_overrides(target_repo.name(), &target.bookmark);
                 Some(SquashingConfig {
                     squash_limit: maybe_squash_limit
                         .unwrap_or(sq.squash_limit)
                         .try_into()
                         .context("couldn't convert squash commits limit")?,
-                    check_author: maybe_check_author.unwrap_or(true),
+                    check_author,
                 })
             }
             None | Some(megarepo_config::MergeMode::with_move_commit(_)) => None,
@@ -402,11 +408,11 @@ impl<'a> SyncChangeset<'a> {
             .changeset_fetcher()
             .get_parents(ctx, actual_target_location)
             .await?;
-        if parents.get(0) != Some(&expected_target_location) {
+        if parents.first() != Some(&expected_target_location) {
             return Err(MegarepoError::request(anyhow!(
                 "Neither {} nor its first parent {:?} point to a target location {}",
                 actual_target_location,
-                parents.get(0),
+                parents.first(),
                 expected_target_location,
             )));
         }
@@ -602,7 +608,7 @@ mod test {
     use maplit::hashmap;
     use megarepo_mapping::REMAPPING_STATE_FILE;
     use mononoke_types::FileChange;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use tests_utils::bookmark;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
@@ -683,13 +689,13 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, cs_id).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file")? => "content".to_string(),
-                MPath::new("source_1/anotherfile")? => "anothercontent".to_string(),
+                NonRootMPath::new("source_1/file")? => "content".to_string(),
+                NonRootMPath::new("source_1/anotherfile")? => "anothercontent".to_string(),
             }
         );
 
@@ -805,17 +811,17 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, merge_target).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file")? => "mergeresolution".to_string(),
-                MPath::new("source_1/file_from_parent_1")? => "parent_1".to_string(),
-                MPath::new("source_1/file_from_parent_2")? => "parent_2".to_string(),
-                MPath::new("source_1/file_from_parent_3")? => "parent_3".to_string(),
-                MPath::new("source_1/copy_of_file")? => "totallydifferentcontent".to_string(),
-                MPath::new("copyfile")? => "mergeresolution".to_string(),
+                NonRootMPath::new("source_1/file")? => "mergeresolution".to_string(),
+                NonRootMPath::new("source_1/file_from_parent_1")? => "parent_1".to_string(),
+                NonRootMPath::new("source_1/file_from_parent_2")? => "parent_2".to_string(),
+                NonRootMPath::new("source_1/file_from_parent_3")? => "parent_3".to_string(),
+                NonRootMPath::new("source_1/copy_of_file")? => "totallydifferentcontent".to_string(),
+                NonRootMPath::new("copyfile")? => "mergeresolution".to_string(),
             }
         );
 
@@ -825,7 +831,7 @@ mod test {
 
         let copied_file_change_from_bonsai = match merge_target_cs
             .file_changes()
-            .find(|(p, _)| p == &&MPath::new("source_1/copy_of_file").unwrap())
+            .find(|(p, _)| p == &&NonRootMPath::new("source_1/copy_of_file").unwrap())
             .unwrap()
             .1
         {
@@ -834,7 +840,7 @@ mod test {
         };
         assert_eq!(
             copied_file_change_from_bonsai.copy_from().unwrap().0,
-            MPath::new("source_1/file")?
+            NonRootMPath::new("source_1/file")?
         );
 
         // All parents are preserved.
@@ -975,15 +981,15 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file1")? => "content1".to_string(),
-                MPath::new("source_1/anotherfile1")? => "content_from_diamond_merge".to_string(),
-                MPath::new("source_2/file2")? => "content2".to_string(),
-                MPath::new("source_2/anotherfile2")? => "anothercontent".to_string(),
+                NonRootMPath::new("source_1/file1")? => "content1".to_string(),
+                NonRootMPath::new("source_1/anotherfile1")? => "content_from_diamond_merge".to_string(),
+                NonRootMPath::new("source_2/file2")? => "content2".to_string(),
+                NonRootMPath::new("source_2/anotherfile2")? => "anothercontent".to_string(),
             }
         );
 
@@ -1156,17 +1162,17 @@ mod test {
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, merge_target).await?;
 
         // Remove file with commit remapping state because it's never present in source
-        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
 
         assert_eq!(parents.len(), 1);
 
         assert_eq!(
             wc,
             hashmap! {
-                MPath::new("source_1/file")? => "mergeresolution".to_string(),
-                MPath::new("source_1/file_in_sidebranch_1")? => "sidebranch1".to_string(),
-                MPath::new("source_1/file_in_sidebranch_2")? => "sidebranch2".to_string(),
-                MPath::new("source_1/file_in_mainline")? => "mainline1".to_string(),
+                NonRootMPath::new("source_1/file")? => "mergeresolution".to_string(),
+                NonRootMPath::new("source_1/file_in_sidebranch_1")? => "sidebranch1".to_string(),
+                NonRootMPath::new("source_1/file_in_sidebranch_2")? => "sidebranch2".to_string(),
+                NonRootMPath::new("source_1/file_in_mainline")? => "mainline1".to_string(),
             }
         );
         Ok(())

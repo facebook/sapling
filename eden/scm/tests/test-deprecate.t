@@ -3,7 +3,7 @@
   $ configure modern
 
   $ newext deprecatecmd <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('testdeprecate', [], 'hg testdeprecate')

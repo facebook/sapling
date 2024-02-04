@@ -59,3 +59,8 @@ Setup config repo:
   translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
   pulling '11f848659bfcf77abd04f947883badd8efa88d26' from 'mononoke://$LOCALIP:$LOCAL_PORT/small-mon'
   11f848659bfcf77abd04f947883badd8efa88d26
+
+  $ hgedenapi log -r large-mon/master_bookmark -T '{node}\n' --config 'megarepo.transparent-lookup=large-mon' --config extensions.megarepo=
+  translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
+  pulling '11f848659bfcf77abd04f947883badd8efa88d26' from 'mononoke://$LOCALIP:$LOCAL_PORT/small-mon'
+  11f848659bfcf77abd04f947883badd8efa88d26

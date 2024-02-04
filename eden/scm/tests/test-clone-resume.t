@@ -43,7 +43,12 @@ Verify the checkout resumes where it left off
   DEBUG checkout::prefetch: skip prefetch for non-lazychangelog
    INFO from_diff: checkout::actions: enter
    INFO from_diff: checkout::actions: exit
-  DEBUG checkout: Skipping checking out 2 files since they're already written
+  DEBUG checkout: loading progress path="$TESTTMP/client2/.hg/updateprogress"
+   INFO apply_store: checkout: enter
+  DEBUG apply_store: checkout: skipped files based on progress skipped_count=2
+  DEBUG apply_store: checkout: apply_store support_resume=true
+  DEBUG apply_store: checkout: apply_store is_fatal=false
+   INFO apply_store: checkout: exit
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Verify we can disable resumable checkouts

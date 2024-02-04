@@ -1,0 +1,103 @@
+load("@fbcode//eden:defs.bzl", "get_dev_edenfsctl_env", "get_oss_suffix")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_genrule")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+python_binary(
+    name = "gen_wrapper_location",
+    srcs = ["facebook/gen_wrapper_location.py"],
+    main_function = "eden.fs.cli_rs.facebook.gen_wrapper_location.main_2",
+)
+
+buck_genrule(
+    name = "gen_wrapper_location-path.rs",
+    out = "path.rs",
+    cmd = "$(exe :gen_wrapper_location) \"$OUT\" \"$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)\" \"$(exe_target //eden/fs/cli:edenfsctl)\"",
+)
+
+rust_library(
+    name = "wrapper_location",
+    autocargo = {
+        "ignore_rule": True,
+    },
+    mapped_srcs = {
+        ":gen_wrapper_location-path.rs": "lib.rs",
+    },
+)
+
+rust_binary(
+    name = "edenfsctl-wrapper",
+    srcs = ["facebook/edenfsctl.rs"],
+    autocargo = {
+        "ignore_rule": True,
+    },
+    crate_root = "facebook/edenfsctl.rs",
+    deps = [":wrapper_location"],
+)
+
+rust_binary(
+    name = "edenfsctl-wrapper-with-privhelper",
+    srcs = ["facebook/edenfsctl.rs"],
+    autocargo = {
+        "ignore_rule": True,
+    },
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    crate_root = "facebook/edenfsctl.rs",
+    deps = [
+        ":wrapper_location",
+        "//eden/fs/privhelper:privhelper",
+    ],
+)
+
+# Similar to the Python version of this alias
+# (found in fbcode/eden/fs/cli/TARGETS), this exists to compile and bake the
+# correct locations of helper binaries into the environment so
+# `buck run edenfsctl` works from source. Uses the system privhelper for
+# privileged actions (such as mounting) as long as no external sources set the
+# EDENFS_PRIVHELPER_PATH environment variable.
+buck_command_alias(
+    name = "edenfsctl-run",
+    env = get_dev_edenfsctl_env({
+        # Add those so that they get materialized.
+        "__EDENFSCTL_PYTHON": "$(exe_target //eden/fs/cli:edenfsctl)",
+        "__EDENFSCTL_RUST": "$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)",
+    }),
+    exe = ":edenfsctl-wrapper",
+)
+
+buck_command_alias(
+    name = "edenfsctl-run-oss",
+    env = get_dev_edenfsctl_env(
+        {
+            # Add those so that they get materialized.
+            "__EDENFSCTL_PYTHON": "$(exe_target //eden/fs/cli:edenfsctl)",
+            "__EDENFSCTL_RUST": "$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)",
+        },
+        get_oss_suffix(),
+    ),
+    exe = ":edenfsctl-wrapper",
+)
+
+# Similar to above alias, but this target will utilize a development privhelper
+# instead of the system (setuid-root) privhelper. This will require the use of
+# passwordless sudo when starting EdenFS.
+buck_command_alias(
+    name = "edenfsctl-dev-run",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = get_dev_edenfsctl_env({
+        # Add those so that they get materialized.
+        "EDENFS_PRIVHELPER_PATH": "$(location //eden/fs/service:edenfs_privhelper)",
+        "__EDENFSCTL_PYTHON": "$(exe_target //eden/fs/cli:edenfsctl-with-privhelper)",
+        "__EDENFSCTL_RUST": "$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)",
+    }),
+    exe = ":edenfsctl-wrapper-with-privhelper",
+)

@@ -94,7 +94,7 @@ impl IdDagStore for InProcessStore {
                 // This does a duplicated lookup that was done in maybe_merged_flat_segment.
                 // But the overhead is probably okay, and the code is not hard to read.
                 // The motivation was to share logic for stores (ex. `maybe_merged_flat_segment`).
-                .and_then(|index| index.range(..span.low).rev().next())
+                .and_then(|index| index.range(..span.low).next_back())
             {
                 Some((high, store_id)) => {
                     if cfg!(debug_assertions) {
@@ -198,7 +198,7 @@ impl IdDagStore for InProcessStore {
         // update lazy (i.e. track what id_set to remove, and update
         // `id_set_by_group` only when `id_set_by_group` needs to
         // be accessed.
-        let id_set = &mut self.id_set_by_group[span.low.group().0 as usize];
+        let id_set = &mut self.id_set_by_group[span.low.group().0];
         *id_set = id_set.difference(&span.into());
         // Not updating self.non_master_segments and master_segments
         // to keep existing StoreIds valid. Removed entries will be

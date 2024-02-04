@@ -186,7 +186,7 @@ TreeInode::TreeInode(
     std::optional<ObjectId> treeHash)
     : Base(mount), contents_(folly::in_place, std::move(dir), treeHash) {}
 
-TreeInode::~TreeInode() {}
+TreeInode::~TreeInode() = default;
 
 ImmediateFuture<struct stat> TreeInode::stat(
     const ObjectFetchContextPtr& context) {
@@ -408,20 +408,19 @@ TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
       auto virtualInode =
           rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
       if (virtualInode) {
-        result.push_back(
-            std::make_pair(entry.first, std::move(virtualInode.value())));
+        result.emplace_back(entry.first, std::move(virtualInode.value()));
       } else {
         auto childResult = loadChild(contents, entry.first, context);
         // inodeLoadCleanUps.push_back must be no-except to guarantee
         // the cleanup will run if result.push_back below throws.
         XCHECK_LT(inodeLoadCleanUps.size(), inodeLoadCleanUps.capacity());
-        inodeLoadCleanUps.push_back(
-            std::make_pair(entry.first, std::move(childResult.second)));
+        inodeLoadCleanUps.emplace_back(
+            entry.first, std::move(childResult.second));
 
-        result.push_back(std::make_pair(
+        result.emplace_back(
             entry.first,
             ImmediateFuture<InodePtr>{std::move(childResult.first)}.thenValue(
-                [](auto&& inode) { return VirtualInode{inode}; })));
+                [](auto&& inode) { return VirtualInode{inode}; }));
       }
     }
   }
@@ -695,15 +694,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
   // It simplifies their logic to guarantee that we never throw an exception,
   // and always return a Future object.  Therefore we simply wrap
   // startLoadingInode() and convert any thrown exceptions into Future.
-  try {
-    return startLoadingInode(entry, name, fetchContext);
-  } catch (...) {
-    // It's possible that makeFuture() itself could throw, but this only
-    // happens on out of memory, in which case the whole process is pretty much
-    // hosed anyway.
-    return makeFuture<unique_ptr<InodeBase>>(
-        folly::exception_wrapper{std::current_exception()});
-  }
+  return folly::makeFutureWith(
+      [&] { return startLoadingInode(entry, name, fetchContext); });
 }
 
 template <typename T>
@@ -1789,7 +1781,7 @@ int TreeInode::checkPreRemove(const FileInode& /* child */) {
  */
 class TreeInode::TreeRenameLocks {
  public:
-  TreeRenameLocks() {}
+  TreeRenameLocks() = default;
 
   void acquireLocks(
       RenameLock&& renameLock,
@@ -2346,7 +2338,7 @@ bool TreeInode::readdirImpl(
   std::make_heap(indices.begin(), indices.end(), std::greater<>{});
 
   // The provided FuseDirList has limited space. Add entries until no more fit.
-  while (indices.size()) {
+  while (!indices.empty()) {
     std::pop_heap(indices.begin(), indices.end(), std::greater<>{});
     auto& [name, entry] = entries.begin()[indices.back().second];
     indices.pop_back();
@@ -2502,12 +2494,11 @@ ImmediateFuture<Unit> TreeInode::diff(
     inode = gitignoreEntry->getInodePtr();
     if (!inode) {
       gitignoreInodeFuture = loadChildLocked(
-                                 contents->entries,
-                                 kIgnoreFilename,
-                                 *gitignoreEntry,
-                                 pendingLoads,
-                                 context->getFetchContext())
-                                 .semi();
+          contents->entries,
+          kIgnoreFilename,
+          *gitignoreEntry,
+          pendingLoads,
+          context->getFetchContext());
     }
   }
 
@@ -2696,14 +2687,12 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                     ignore.get(),
                     entryIgnored));
           } else if (inodeEntry->isMaterialized()) {
-            ImmediateFuture<InodePtr> inodeFuture =
-                self->loadChildLocked(
-                        contents->entries,
-                        name,
-                        *inodeEntry,
-                        pendingLoads,
-                        context->getFetchContext())
-                    .semi();
+            auto inodeFuture = self->loadChildLocked(
+                contents->entries,
+                name,
+                *inodeEntry,
+                pendingLoads,
+                context->getFetchContext());
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntry(
                     context,
@@ -2719,11 +2708,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             // Collect this future to complete with other
             // deferred entries.
             deferredEntries.emplace_back(DeferredDiffEntry::createAddedScmEntry(
-                context,
-                entryPath,
-                inodeEntry->getHash(),
-                ignore.get(),
-                entryIgnored));
+                context, entryPath, inodeEntry->getHash()));
           }
         }
       }
@@ -2780,14 +2765,12 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       } else if (inodeEntry->isMaterialized()) {
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
-        ImmediateFuture<InodePtr> inodeFuture =
-            self->loadChildLocked(
-                    contents->entries,
-                    componentPath,
-                    *inodeEntry,
-                    pendingLoads,
-                    context->getFetchContext())
-                .semi();
+        auto inodeFuture = self->loadChildLocked(
+            contents->entries,
+            componentPath,
+            *inodeEntry,
+            pendingLoads,
+            context->getFetchContext());
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
             context,
             entryPath,
@@ -2833,9 +2816,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                   context,
                   entryPath,
                   scmEntry.getHash(),
-                  inodeEntry->getHash(),
-                  ignore.get(),
-                  entryIgnored));
+                  inodeEntry->getHash()));
         } else if (scmEntry.isTree()) {
           // This used to be a directory in the source control state,
           // but is now a file or symlink.  Report the new file, then add a
@@ -2955,7 +2936,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       }
 
       // If there are no matches, then we've finished the entire walk.
-      if (!matchingInodeIter && matchingScIters.size() == 0) {
+      if (!matchingInodeIter && matchingScIters.empty()) {
         break;
       }
 
@@ -2968,7 +2949,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // the inode.
         }
       } else { // If the inode has this path...
-        if (matchingScIters.size() == 0) { // ...but no trees do...
+        if (matchingScIters.empty()) { // ...but no trees do...
           // ...then the entry is considered untracked.
           processUntracked(inodeIter->first, &inodeIter->second);
         } else { // ...and some trees do as well...
@@ -3036,7 +3017,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       });
 }
 
-Future<Unit> TreeInode::checkout(
+ImmediateFuture<Unit> TreeInode::checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree) {
@@ -3045,8 +3026,8 @@ Future<Unit> TreeInode::checkout(
              << " --> "
              << (toTree ? toTree->getHash().toLogString() : "<none>");
 
-  vector<unique_ptr<CheckoutAction>> actions;
-  vector<IncompleteInodeLoad> pendingLoads;
+  std::vector<std::shared_ptr<CheckoutAction>> actions;
+  std::vector<IncompleteInodeLoad> pendingLoads;
 
   // This default to true on Windows to always make sure that the directory is
   // a placeholder and is safe to be dematerialized. On Windows, adding a
@@ -3069,21 +3050,19 @@ Future<Unit> TreeInode::checkout(
   }
 
   // Now start all of the checkout actions
-  vector<Future<InvalidationRequired>> actionFutures;
+  std::vector<ImmediateFuture<InvalidationRequired>> actionFutures;
+  actionFutures.reserve(actions.size());
   for (const auto& action : actions) {
     actionFutures.emplace_back(action->run(ctx, &getObjectStore()));
   }
 
-  ImmediateFuture<Unit> faultFuture =
+  auto faultFuture =
       getMount()->getServerState()->getFaultInjector().checkAsync(
           "TreeInode::checkout", getLogPath(), ctx->isDryRun());
-  folly::SemiFuture<vector<folly::Try<facebook::eden::InvalidationRequired>>>
-      collectFuture = folly::collectAll(actionFutures);
+  auto collectFuture = collectAll(std::move(actionFutures));
 
   // Wait for all of the actions, and record any errors.
   return std::move(faultFuture)
-      .semi()
-      .toUnsafeFuture()
       .thenValue([collectFuture = std::move(collectFuture)](auto&&) mutable {
         return std::move(collectFuture);
       })
@@ -3093,7 +3072,8 @@ Future<Unit> TreeInode::checkout(
            toTree = std::move(toTree),
            actions = std::move(actions),
            shouldInvalidateDirectory](
-              vector<folly::Try<InvalidationRequired>> actionResults) mutable {
+              vector<folly::Try<InvalidationRequired>> actionResults) mutable
+          -> ImmediateFuture<folly::Unit> {
             // Record any errors that occurred
             size_t numErrors = 0;
             for (size_t n = 0; n < actionResults.size(); ++n) {
@@ -3134,25 +3114,16 @@ Future<Unit> TreeInode::checkout(
                       });
             }
 
-            auto fut = std::move(invalidation)
-                           .thenValue([self,
-                                       ctx,
-                                       toTree = std::move(toTree),
-                                       numErrors](auto&&) {
-                             // Update our state in the overlay
-                             self->saveOverlayPostCheckout(ctx, toTree.get());
+            return std::move(invalidation)
+                .thenValue(
+                    [self, ctx, toTree = std::move(toTree), numErrors](auto&&) {
+                      // Update our state in the overlay
+                      self->saveOverlayPostCheckout(ctx, toTree.get());
 
-                             XLOG(DBG4) << "checkout: finished update of "
-                                        << self->getLogPath() << ": "
-                                        << numErrors << " errors";
-                           });
-
-            if (fut.isReady()) {
-              return folly::makeFuture(std::move(fut).getTry());
-            } else {
-              return std::move(fut).semi().via(
-                  self->getMount()->getServerThreadPool().get());
-            }
+                      XLOG(DBG4) << "checkout: finished update of "
+                                 << self->getLogPath() << ": " << numErrors
+                                 << " errors";
+                    });
           });
 }
 
@@ -3213,7 +3184,7 @@ void TreeInode::computeCheckoutActions(
     CheckoutContext* ctx,
     const Tree* fromTree,
     const Tree* toTree,
-    vector<unique_ptr<CheckoutAction>>& actions,
+    vector<std::shared_ptr<CheckoutAction>>& actions,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified) {
   // Grab the contents_ lock for the duration of this function
@@ -3241,7 +3212,7 @@ void TreeInode::computeCheckoutActions(
   auto newIter = toTree ? toTree->cbegin() : emptyEntries.cbegin();
   auto newEnd = toTree ? toTree->cend() : emptyEntries.cend();
   while (true) {
-    unique_ptr<CheckoutAction> action;
+    std::shared_ptr<CheckoutAction> action;
 
     if (oldIter == oldEnd) {
       if (newIter == newEnd) {
@@ -3311,7 +3282,7 @@ void TreeInode::computeCheckoutActions(
   }
 }
 
-unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
+std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     CheckoutContext* ctx,
     TreeInodeState& state,
     const Tree::value_type* oldScmEntry,
@@ -3353,79 +3324,18 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   // Look to see if we have a child entry with this name.
-  bool contentsUpdated = false;
   const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
   auto& contents = state.entries;
   auto it = contents.find(name);
   if (it == contents.end()) {
-    if (!oldScmEntry) {
-      // This is a new entry being added, that did not exist in the old tree
-      // and does not currently exist in the filesystem.  Go ahead and add it
-      // now.
-      if (!ctx->isDryRun()) {
-        contentsUpdated = true;
-      }
-    } else if (!newScmEntry) {
-      // This file exists in the old tree, but is being removed in the new
-      // tree.  It has already been removed from the local filesystem, so
-      // we are already in the desired state.
-      //
-      // We can proceed, but we still flag this as a conflict.
-      ctx->addConflict(ConflictType::MISSING_REMOVED, this, oldScmEntry->first);
-    } else {
-      // The file was removed locally, but modified in the new tree.
-      ctx->addConflict(
-          ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first);
-      if (ctx->forceUpdate()) {
-        XDCHECK(!ctx->isDryRun());
-        contentsUpdated = true;
-      }
-    }
-
-    if (contentsUpdated) {
-      // Contents have changed and they need to be written out to the
-      // overlay.  We should not do that here since this code runs per
-      // entry. Today this is reconciled in saveOverlayPostCheckout()
-      // after this inode processes all of its checkout actions. But we
-      // do want to invalidate the kernel's dcache and inode caches.
-      wasDirectoryListModified = true;
-
-      auto success = invalidateChannelEntryCache(state, name, std::nullopt);
-      if (success.hasValue()) {
-        auto [it, inserted] = contents.emplace(
-            newScmEntry->first,
-            modeFromTreeEntryType(filteredEntryType(
-                newScmEntry->second.getType(), windowsSymlinksEnabled)),
-            getOverlay()->allocateInodeNumber(),
-            newScmEntry->second.getHash());
-        XDCHECK(inserted);
-      } else {
-        if (folly::kIsWindows) {
-          if (auto* exc = success.tryGetExceptionObject<std::system_error>();
-              exc && isEnotempty(*exc)) {
-            XLOG(DBG6)
-                << "entry was created on disk while checkout is in progress: "
-                << getLogPath() << "/" << name;
-            if (oldScmEntry) {
-              ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
-            } else {
-              ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name);
-            }
-            return nullptr;
-          }
-        }
-        ctx->addError(this, name, success.exception());
-      }
-    }
-
-    // Nothing else to do when there is no local inode.
-    return nullptr;
+    return processAbsentCheckoutEntry(
+        ctx, state, oldScmEntry, newScmEntry, wasDirectoryListModified);
   }
 
   auto& entry = it->second;
   if (auto childPtr = entry.getInodePtr()) {
     // If the inode is already loaded, create a CheckoutAction to process it
-    return make_unique<CheckoutAction>(
+    return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
   }
 
@@ -3451,7 +3361,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // CheckoutAction to process it once it is loaded.
     auto inodeFuture = loadChildLocked(
         contents, name, entry, pendingLoads, ctx->getFetchContext());
-    return make_unique<CheckoutAction>(
+    return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   } else {
     XLOG(DBG6) << "not loading child: inode=" << getNodeId()
@@ -3483,7 +3393,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         // for sure is to load the inode.
         auto inodeFuture = loadChildLocked(
             contents, name, entry, pendingLoads, ctx->getFetchContext());
-        return make_unique<CheckoutAction>(
+        return std::make_shared<CheckoutAction>(
             ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
       }
       case ObjectComparison::Identical:
@@ -3503,7 +3413,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     if (entry.isDirectory()) {
       auto inodeFuture = loadChildLocked(
           contents, name, entry, pendingLoads, ctx->getFetchContext());
-      return make_unique<CheckoutAction>(
+      return std::make_shared<CheckoutAction>(
           ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
     }
 
@@ -3543,7 +3453,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
                    << getNodeId() << " child=" << name;
         auto inodeFuture = loadChildLocked(
             contents, name, entry, pendingLoads, ctx->getFetchContext());
-        return make_unique<CheckoutAction>(
+        return std::make_shared<CheckoutAction>(
             ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
       }
     }
@@ -3588,6 +3498,79 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   return nullptr;
 }
 
+std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
+    CheckoutContext* ctx,
+    TreeInodeState& state,
+    const Tree::value_type* oldScmEntry,
+    const Tree::value_type* newScmEntry,
+    bool& wasDirectoryListModified) {
+  const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
+  auto& contents = state.entries;
+  bool contentsUpdated = false;
+
+  if (!oldScmEntry) {
+    // This is a new entry being added, that did not exist in the old tree
+    // and does not currently exist in the filesystem.  Go ahead and add it
+    // now.
+    if (!ctx->isDryRun()) {
+      contentsUpdated = true;
+    }
+  } else if (!newScmEntry) {
+    // This file exists in the old tree, but is being removed in the new
+    // tree.  It has already been removed from the local filesystem, so
+    // we are already in the desired state.
+    //
+    // We can proceed, but we still flag this as a conflict.
+    ctx->addConflict(ConflictType::MISSING_REMOVED, this, oldScmEntry->first);
+  } else {
+    // The file was removed locally, but modified in the new tree.
+    ctx->addConflict(ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first);
+    if (ctx->forceUpdate()) {
+      XDCHECK(!ctx->isDryRun());
+      contentsUpdated = true;
+    }
+  }
+
+  if (contentsUpdated) {
+    // Contents have changed and they need to be written out to the
+    // overlay.  We should not do that here since this code runs per
+    // entry. Today this is reconciled in saveOverlayPostCheckout()
+    // after this inode processes all of its checkout actions. But we
+    // do want to invalidate the kernel's dcache and inode caches.
+    wasDirectoryListModified = true;
+
+    auto success = invalidateChannelEntryCache(state, name, std::nullopt);
+    if (success.hasValue()) {
+      auto [it, inserted] = contents.emplace(
+          newScmEntry->first,
+          modeFromTreeEntryType(filteredEntryType(
+              newScmEntry->second.getType(), ctx->getWindowsSymlinksEnabled())),
+          getOverlay()->allocateInodeNumber(),
+          newScmEntry->second.getHash());
+      XDCHECK(inserted);
+    } else {
+      if (folly::kIsWindows) {
+        if (auto* exc = success.tryGetExceptionObject<std::system_error>();
+            exc && isEnotempty(*exc)) {
+          XLOG(DBG6)
+              << "entry was created on disk while checkout is in progress: "
+              << getLogPath() << "/" << name;
+          if (oldScmEntry) {
+            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
+          } else {
+            ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name);
+          }
+          return nullptr;
+        }
+      }
+      ctx->addError(this, name, success.exception());
+    }
+  }
+
+  // Nothing else to do when there is no local inode.
+  return nullptr;
+}
+
 namespace {
 /**
  * Get this Inode's name.
@@ -3597,7 +3580,7 @@ PathComponent getInodeName(CheckoutContext* ctx, const InodePtr& inode) {
 }
 } // namespace
 
-Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
+ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
     InodePtr inode,
@@ -3663,7 +3646,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       contents->entries.erase(it);
 
       if (newScmEntry) {
-        auto [it, inserted] = contents->entries.emplace(
+        auto [_it, inserted] = contents->entries.emplace(
             newScmEntry->first,
             modeFromTreeEntryType(filteredEntryType(
                 newScmEntry->second.getType(), windowsSymlinksEnabled)),
@@ -3717,7 +3700,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
            parentInode = inodePtrFromThis(),
            treeInode,
            windowsSymlinksEnabled,
-           newScmEntry](auto&&) mutable -> folly::Future<InvalidationRequired> {
+           newScmEntry](
+              auto&&) mutable -> ImmediateFuture<InvalidationRequired> {
             if (ctx->isDryRun()) {
               // If this is a dry run, simply report conflicts and don't update
               // or invalidate the inode.
@@ -3852,6 +3836,12 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
     FOLLY_MAYBE_UNUSED std::optional<InodeNumber> ino) {
+  auto faultTry = getMount()->getServerState()->getFaultInjector().checkTry(
+      "invalidateChannelEntryCache", name);
+  if (faultTry.hasException()) {
+    return folly::Try<folly::Unit>{faultTry.exception()};
+  }
+
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);
@@ -4077,7 +4067,7 @@ void TreeInode::saveOverlayPostCheckout(
   }
 }
 
-folly::Future<InodePtr> TreeInode::loadChildLocked(
+ImmediateFuture<InodePtr> TreeInode::loadChildLocked(
     DirContents& /* contents */,
     PathComponentPiece name,
     DirEntry& entry,
@@ -4085,8 +4075,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     const ObjectFetchContextPtr& fetchContext) {
   XDCHECK(!entry.getInode());
 
-  folly::Promise<InodePtr> promise;
-  auto future = promise.getFuture();
+  auto [promise, future] = folly::makePromiseContract<InodePtr>();
   auto childNumber = entry.getInodeNumber();
   bool startLoad = getInodeMap()->startLoadingChildIfNotLoading(
       this, name, childNumber, entry.getInitialMode(), std::move(promise));
@@ -4096,7 +4085,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
         this, std::move(loadFuture), name, entry.getInodeNumber());
   }
 
-  return future;
+  return ImmediateFuture{std::move(future)};
 }
 
 namespace {
@@ -4615,7 +4604,7 @@ void TreeInode::doPrefetch(
       getMount()->getServerThreadPool().get(),
       [prefetchSet, lease = std::move(*prefetchLease)]() mutable {
         std::vector<IncompleteInodeLoad> pendingLoads;
-        std::vector<Future<Unit>> inodeFutures;
+        std::vector<ImmediateFuture<Unit>> inodeFutures;
         // The aliveness of this context is guaranteed by the `.thenTry`
         // capture at the end of this lambda
         auto& context = lease.getContext();
@@ -4663,11 +4652,12 @@ void TreeInode::doPrefetch(
           load.finish();
         }
 
-        return folly::collectAllUnsafe(inodeFutures)
+        return collectAll(std::move(inodeFutures))
             .thenTry([lease = std::move(lease)](auto&&) {
               XLOG(DBG4) << "finished prefetch for "
                          << lease.getTreeInode()->getLogPath();
-            });
+            })
+            .semi();
       });
 }
 

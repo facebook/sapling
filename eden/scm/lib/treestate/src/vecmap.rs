@@ -208,7 +208,9 @@ impl<'a, K: 'a, V: 'a> Iterator for Iter<'a, K, V> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|&(ref k, ref v)| (k, v))
+        // This pattern is used to convert a ref to tuple into a tuple of refs.
+        #[allow(clippy::map_identity)]
+        self.0.next().map(|(k, v)| (k, v))
     }
 }
 

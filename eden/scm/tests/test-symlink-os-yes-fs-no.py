@@ -4,8 +4,9 @@ import os
 import sys
 import time
 
-from edenscm import commands, fscap, hg, ui as uimod, util
 from hghave import require
+
+from sapling import commands, fscap, hg, ui as uimod, util
 
 
 require(["false"])  # incompatible with remotefilelog + non-treemanifest

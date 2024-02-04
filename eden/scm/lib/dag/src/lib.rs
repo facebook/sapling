@@ -6,13 +6,14 @@
  */
 
 #![allow(dead_code)]
-#![allow(clippy::iter_nth_zero, clippy::for_loops_over_fallibles)]
+#![allow(clippy::iter_nth_zero, for_loops_over_fallibles)]
 
 //! # dag
 //!
 //! Building blocks for the commit graph used by source control.
 
 mod bsearch;
+pub mod config;
 mod default_impl;
 mod delegate;
 pub mod errors;

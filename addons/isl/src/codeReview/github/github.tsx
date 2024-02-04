@@ -6,8 +6,15 @@
  */
 
 import type {Operation} from '../../operations/Operation';
-import type {CodeReviewSystem, DiffId, DiffSummary, PreferredSubmitCommand} from '../../types';
+import type {
+  CodeReviewSystem,
+  CommitInfo,
+  DiffId,
+  DiffSummary,
+  PreferredSubmitCommand,
+} from '../../types';
 import type {UICodeReviewProvider} from '../UICodeReviewProvider';
+import type {SyncStatus} from '../syncStatus';
 import type {ReactNode} from 'react';
 
 import {Tooltip} from '../../Tooltip';
@@ -27,6 +34,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     private system: CodeReviewSystem & {type: 'github'},
     private preferredSubmitCommand: PreferredSubmitCommand,
   ) {}
+  cliName?: string | undefined;
 
   DiffBadgeContent({
     diff,
@@ -59,6 +67,14 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     return `#${diffId}`;
   }
 
+  getSyncStatuses(
+    _commits: CommitInfo[],
+    _allDiffSummaries: Map<string, DiffSummary>,
+  ): Map<string, SyncStatus> {
+    // TODO: support finding the sync status for GitHub PRs
+    return new Map();
+  }
+
   RepoInfo = () => {
     return (
       <span>
@@ -73,6 +89,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
       return new GhStackSubmitOperation(options);
     }
     return new PrSubmitOperation(options);
+  }
+
+  submitCommandName() {
+    return `sl ${this.preferredSubmitCommand}`;
   }
 
   getSupportedStackActions() {
@@ -92,19 +112,25 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   }
 
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
+  supportsUpdateMessage = false;
 
   enableMessageSyncing = false;
 
   supportsSuggestedReviewers = false;
+
+  supportsComparingSinceLastSubmit = false;
+
+  supportsRenderingMarkup = false;
 }
 
-type BadgeState = PullRequestState | 'ERROR' | 'DRAFT';
+type BadgeState = PullRequestState | 'ERROR' | 'DRAFT' | 'MERGE_QUEUED';
 
 function iconForPRState(state?: BadgeState) {
   switch (state) {
     case 'ERROR':
       return 'error';
     case 'DRAFT':
+    case 'MERGE_QUEUED':
       return 'git-pull-request';
     case PullRequestState.Open:
       return 'git-pull-request';
@@ -129,6 +155,8 @@ function PRStateLabel({state}: {state: BadgeState}) {
       return <T>Draft</T>;
     case 'ERROR':
       return <T>Error</T>;
+    case 'MERGE_QUEUED':
+      return <T>Merge Queued</T>;
     default:
       return <T>{state}</T>;
   }

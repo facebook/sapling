@@ -1,0 +1,65 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "model",
+    srcs = [
+        "Hash.cpp",
+        "ObjectId.cpp",
+        "RootId.cpp",
+        "Tree.cpp",
+        "TreeEntry.cpp",
+    ],
+    headers = [
+        "Blob.h",
+        "BlobMetadata.h",
+        "EntryAttributeFlags.h",
+    ],
+    deps = [
+        "//eden/fs/digest:blake3_hash",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:throw",
+        "//folly:conv",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/ssl:openssl_hash",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":model-fwd",
+        "//eden/common/utils:option_set",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:c_portability",
+        "//folly:fbstring",
+        "//folly:range",
+        "//folly:try",
+        "//folly/container:array",
+        "//folly/io:iobuf",
+    ],
+    exported_external_deps = [
+        "boost",
+    ],
+)
+
+cpp_library(
+    name = "testutil",
+    srcs = [
+        "TestOps.cpp",
+    ],
+    exported_deps = [
+        ":model",
+    ],
+)
+
+cpp_library(
+    name = "model-fwd",
+    headers = [
+        "BlobFwd.h",
+        "BlobMetadataFwd.h",
+        "TreeFwd.h",
+    ],
+)

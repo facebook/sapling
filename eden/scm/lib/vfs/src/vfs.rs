@@ -170,6 +170,9 @@ impl VFS {
         {
             use std::os::unix::fs::OpenOptionsExt;
             options.custom_flags(libc::O_NOFOLLOW);
+
+            // This sets file mode if file is created during "open".
+            options.mode(Self::update_mode(util::file::apply_umask(0o666), exec));
         }
 
         let mut f = options.open(filepath)?;
@@ -179,9 +182,11 @@ impl VFS {
             let metadata = f.metadata()?;
             let mut permissions = metadata.permissions();
             let mode = Self::update_mode(permissions.mode(), exec);
-            permissions.set_mode(mode);
-            f.set_permissions(permissions)
-                .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
+            if mode != permissions.mode() {
+                permissions.set_mode(mode);
+                f.set_permissions(permissions)
+                    .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
+            }
         }
 
         f.write_all(content)
@@ -353,10 +358,10 @@ impl VFS {
 
     /// Removes file, but unlike Self::remove, does not delete empty directories.
     fn remove_keep_path(&self, filepath: &PathBuf) -> Result<()> {
-        if let Ok(metadata) = symlink_metadata(&filepath) {
+        if let Ok(metadata) = symlink_metadata(filepath) {
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
-                let result = remove_file(&filepath)
+                let result = remove_file(filepath)
                     .with_context(|| format!("Can't remove file {:?}", filepath));
                 if let Err(e) = result {
                     if let Some(io_error) = e.downcast_ref::<io::Error>() {

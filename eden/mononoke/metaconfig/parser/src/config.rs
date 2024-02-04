@@ -223,6 +223,7 @@ fn parse_with_repo_definition(
         update_logging_config,
         commit_graph_config,
         deep_sharding_config,
+        everstore_local_path,
         ..
     } = named_repo_config;
 
@@ -380,6 +381,7 @@ fn parse_with_repo_definition(
         commit_graph_config,
         default_commit_identity_scheme,
         deep_sharding_config,
+        everstore_local_path,
     })
 }
 
@@ -543,13 +545,14 @@ mod test {
     use metaconfig_types::UnodeVersion;
     use metaconfig_types::UpdateLoggingConfig;
     use metaconfig_types::WalkerConfig;
-    use mononoke_types::MPath;
+    use mononoke_types::path::MPath;
+    use mononoke_types::NonRootMPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use regex::Regex;
     use repos::RawCommitSyncConfig;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -569,7 +572,7 @@ mod test {
     fn write_files(
         files: impl IntoIterator<Item = (impl AsRef<Path>, impl AsRef<[u8]>)>,
     ) -> TempDir {
-        let tmp_dir = TempDir::new("mononoke_test_config").expect("tmp_dir failed");
+        let tmp_dir = TempDir::with_prefix("mononoke_test_config.").expect("tmp_dir failed");
 
         // Always create repos directory and repo_definitions directory
         create_dir_all(tmp_dir.path().join("repos")).expect("create repos failed");
@@ -636,16 +639,18 @@ mod test {
                     RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                         map: hashmap! {
-                            MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
-                            MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
+                            NonRootMPath::new("p1").unwrap() => NonRootMPath::new(".r2-legacy/p1").unwrap(),
+                            NonRootMPath::new("p5").unwrap() => NonRootMPath::new(".r2-legacy/p5").unwrap(),
                         },
+                        git_submodules_action: Default::default(),
                     },
                     RepositoryId::new(3) => SmallRepoCommitSyncConfig {
-                        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
+                        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new("subdir").unwrap()),
                         map: hashmap! {
-                            MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),
-                            MPath::new("p4").unwrap() => MPath::new("p5/p4").unwrap(),
+                            NonRootMPath::new("p1").unwrap() => NonRootMPath::new("p1").unwrap(),
+                            NonRootMPath::new("p4").unwrap() => NonRootMPath::new("p5/p4").unwrap(),
                         },
+                        git_submodules_action: Default::default(),
                     }
                 },
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -811,7 +816,7 @@ mod test {
             hook_name="hook1"
 
             [[bookmarks.hooks]]
-            hook_name="rust:rusthook"
+            hook_name="hook2a"
 
             [[bookmarks]]
             regex="[^/]*/stable"
@@ -821,9 +826,11 @@ mod test {
             [[hooks]]
             name="hook1"
             bypass_commit_string="@allow_hook1"
+            config_json = "{\"test\": \"abcde\"}"
 
             [[hooks]]
-            name="rust:rusthook"
+            name="hook2a"
+            implementation="hook2"
             config_ints={ int1 = 44 }
             config_ints_64={ int2 = 42 }
             [hooks.config_string_lists]
@@ -1094,7 +1101,7 @@ mod test {
                 bookmarks: vec![
                     BookmarkParams {
                         bookmark: BookmarkKey::new("master").unwrap().into(),
-                        hooks: vec!["hook1".to_string(), "rust:rusthook".to_string()],
+                        hooks: vec!["hook1".to_string(), "hook2a".to_string()],
                         only_fast_forward: false,
                         allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap().into()),
                         allowed_hipster_group: None,
@@ -1118,8 +1125,10 @@ mod test {
                 hooks: vec![
                     HookParams {
                         name: "hook1".to_string(),
+                        implementation: "hook1".to_string(),
                         config: HookConfig {
                             bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
+                            options: Some(r#"{"test": "abcde"}"#.to_string()),
                             strings: hashmap! {},
                             ints: hashmap! {},
                             ints_64: hashmap! {},
@@ -1129,9 +1138,11 @@ mod test {
                         },
                     },
                     HookParams {
-                        name: "rust:rusthook".to_string(),
+                        name: "hook2a".to_string(),
+                        implementation: "hook2".to_string(),
                         config: HookConfig {
                             bypass: None,
+                            options: None,
                             strings: hashmap! {},
                             ints: hashmap! {
                                 "int1".into() => 44,
@@ -1149,6 +1160,7 @@ mod test {
                 ],
                 push: PushParams {
                     pure_push_allowed: false,
+                    unbundle_commit_limit: None,
                 },
                 pushrebase: PushrebaseParams {
                     flags: PushrebaseFlags {
@@ -1244,7 +1256,7 @@ mod test {
                         regions: vec![AclRegion {
                             roots: vec![ONES_CSID],
                             heads: vec![],
-                            path_prefixes: vec![Some(MPath::new("test/prefix").unwrap()), None],
+                            path_prefixes: vec![MPath::new("test/prefix").unwrap(), MPath::ROOT],
                         }],
                         hipster_acl: "acl_test".to_string(),
                     }],
@@ -1287,6 +1299,7 @@ mod test {
                     preloaded_commit_graph_blobstore_key: None,
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
+                everstore_local_path: None,
             },
         );
 
@@ -1361,6 +1374,7 @@ mod test {
                 update_logging_config: UpdateLoggingConfig::default(),
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,
+                everstore_local_path: None,
             },
         );
         assert_eq!(

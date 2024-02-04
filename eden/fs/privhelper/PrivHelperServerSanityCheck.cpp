@@ -12,9 +12,9 @@
 
 #include "eden/fs/privhelper/PrivHelperServer.h"
 
-#include <errno.h>
 #include <folly/Conv.h>
 #include <folly/String.h>
+#include <cerrno>
 #include <string>
 #include "eden/fs/utils/Throw.h"
 

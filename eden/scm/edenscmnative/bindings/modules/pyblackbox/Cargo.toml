@@ -1,9 +1,0 @@
-[package]
-name = "pyblackbox"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-blackbox = { path = "../../../../lib/blackbox" }
-cpython_ext = { path = "../../../../lib/cpython-ext" }
-cpython = { version = "0.7", default-features = false }

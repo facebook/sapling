@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "live_commit_sync_config",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/cached_config:cached_config",
+        "//configerator/structs/scm/mononoke/pushredirect:pushredirect_enable-rust",
+        "//configerator/structs/scm/mononoke/repos:commitsync-rust",
+        "//eden/mononoke/metaconfig:metaconfig_parser",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)
+
+rust_unittest(
+    name = "live_commit_sync_config_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "live_commit_sync_config_test",
+    crate_root = "test/main.rs",
+    deps = [
+        "fbsource//third-party/rust:pretty_assertions",
+        ":live_commit_sync_config",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

@@ -27,6 +27,7 @@ pub(crate) struct File {
 }
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub(crate) struct MetadataFlags: u8 {
         const IS_SYMLINK = 1 << 0;
         const IS_EXEC = 1 << 1;
@@ -39,7 +40,7 @@ bitflags! {
 
 /// Metadata abstracts across the different places file metadata can come from.
 #[derive(Debug, Clone)]
-pub(crate) struct Metadata {
+pub struct Metadata {
     flags: MetadataFlags,
     size: u64,
     mtime: HgModifiedTime,
@@ -74,6 +75,10 @@ impl Metadata {
 
     pub fn is_dir(&self) -> bool {
         self.flags.intersects(MetadataFlags::IS_DIR)
+    }
+
+    pub fn is_empty(&self) -> Option<bool> {
+        self.len().map(|len| len == 0)
     }
 
     pub fn len(&self) -> Option<u64> {
@@ -129,6 +134,12 @@ impl Metadata {
         }
 
         mode
+    }
+}
+
+impl PartialEq for Metadata {
+    fn eq(&self, other: &Self) -> bool {
+        self.mode() == other.mode() && self.len() == other.len() && self.mtime() == other.mtime()
     }
 }
 

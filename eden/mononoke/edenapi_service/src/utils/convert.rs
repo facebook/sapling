@@ -36,32 +36,26 @@ use mercurial_types::blobs::Extra;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
-use mononoke_api::path::MononokePath;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
+use mononoke_types::path::MPath;
 use mononoke_types::DateTime;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::errors::ErrorKind;
 
-/// Convert a Mercurial `RepoPath` or `RepoPathBuf` into a `MononokePath`.
+/// Convert a Mercurial `RepoPath` or `RepoPathBuf` into an `MPath`.
 /// The input will be copied due to differences in data representation.
-pub fn to_mononoke_path(path: impl AsRef<RepoPath>) -> Result<MononokePath> {
-    Ok(MononokePath::new(to_mpath(path)?))
-}
-
-/// Convert a Mercurial `RepoPath` or `RepoPathBuf` into an `Option<MPath>`.
-/// The input will be copied due to differences in data representation.
-pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<Option<MPath>> {
+pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<MPath> {
     let path_bytes = path.as_ref().as_byte_slice();
-    MPath::new_opt(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
+    MPath::new(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
 }
 
-/// Convert an `MPath` into a Mercurial `RepoPathBuf`.
+/// Convert an `NonRootMPath` into a Mercurial `RepoPathBuf`.
 /// The input will be copied due to differences in data representation.
-pub fn to_hg_path(path: &MPath) -> Result<RepoPathBuf> {
+pub fn to_hg_path(path: &NonRootMPath) -> Result<RepoPathBuf> {
     RepoPathBuf::from_utf8(path.to_vec()).with_context(|| ErrorKind::InvalidPath(path.to_vec()))
 }
 
@@ -79,7 +73,11 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
         files: cs
             .files
             .into_iter()
-            .map(|file| to_mpath(file)?.context(ErrorKind::UnexpectedEmptyPath))
+            .map(|file| {
+                to_mpath(file)?
+                    .into_optional_non_root_path()
+                    .context(ErrorKind::UnexpectedEmptyPath)
+            })
             .collect::<Result<_, _>>()?,
         message: cs.message,
         time: DateTime::from_timestamp(cs.time, cs.tz)?,

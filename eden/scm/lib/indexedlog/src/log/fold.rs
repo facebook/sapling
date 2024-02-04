@@ -306,7 +306,7 @@ mod test {
     fn test_fold_state_load_save() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("foo");
-        let def = FoldDef::new("foo", || Box::new(ConcatFold::default()));
+        let def = FoldDef::new("foo", || Box::<ConcatFold>::default());
         let d = |v: &FoldState| format!("{:?}", v);
 
         let mut state1 = def.empty_state();
@@ -335,8 +335,8 @@ mod test {
 
         // Prepare 2 logs.
         let opts = crate::log::OpenOptions::new()
-            .fold_def("m", || Box::new(ConcatFold::default()))
-            .fold_def("c", || Box::new(CountFold::default()))
+            .fold_def("m", || Box::<ConcatFold>::default())
+            .fold_def("c", || Box::<CountFold>::default())
             .create(true);
         let mut log1 = opts.open(path).unwrap();
         let mut log2 = log1.try_clone().unwrap();

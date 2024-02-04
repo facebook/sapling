@@ -119,7 +119,7 @@ mod tests {
 
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     2    +34 | fib                <mod> line <line>
              | - x = 5            :
@@ -168,12 +168,12 @@ Start Dur.ms | Name               Source
 
         assert_eq!(
             data.lock().ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     2     +2 | fib                <mod> line <line>
              | - x = 0            :
 
-Process _ Thread _:
+Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     6    +10 | fib                <mod> line <line>
              | - x = 3            :
@@ -182,7 +182,7 @@ Start Dur.ms | Name               Source
    12     +2  \ fib               <mod> line <line>
                | - x = 1          :
 
-Process _ Thread _:
+Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
    18     +2 | fib                <mod> line <line>
              | - x = 2            :
@@ -204,7 +204,7 @@ Start Dur.ms | Name               Source
         // fib(6) ... are not logged.
         assert_eq!(
             data.lock().ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     2    +14 | fib                <mod> line <line>
              | - x = 10           :

@@ -6,6 +6,7 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
+
 mod file_history_test;
 mod tracing_blobstore;
 mod utils;
@@ -13,6 +14,7 @@ mod utils;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
 use std::time::Duration;
 
 use ::manifest::Entry;
@@ -20,6 +22,7 @@ use ::manifest::Manifest;
 use ::manifest::ManifestOps;
 use anyhow::Error;
 use assert_matches::assert_matches;
+#[cfg(fbcode_build)]
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
@@ -57,7 +60,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::blob::BlobstoreValue;
@@ -274,7 +277,10 @@ async fn create_two_changesets(fb: FacebookInit) {
     assert!(commit2.manifestid() == roothash);
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
-    let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
+    let expected_files = vec![
+        NonRootMPath::new("dir/file").unwrap(),
+        NonRootMPath::new("file").unwrap(),
+    ];
     assert!(
         files == expected_files,
         "Got {:?}, expected {:?}",
@@ -420,9 +426,9 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         .await
         .unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
-    let file = MPath::new("file").unwrap();
+    let file = NonRootMPath::new("file").unwrap();
     assert!(fc[&file].is_removed());
-    let file_rename = MPath::new("file_rename").unwrap();
+    let file_rename = NonRootMPath::new("file_rename").unwrap();
     assert!(fc[&file_rename].is_changed());
     assert_eq!(
         match &fc[&file_rename] {
@@ -534,10 +540,10 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
     let repo = ManyFilesDirs::getrepo(fb).await;
     let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
     let expected = vec![
-        MPath::new(b"1").unwrap(),
-        MPath::new(b"2").unwrap(),
-        MPath::new(b"dir1").unwrap(),
-        MPath::new(b"dir2/file_1_in_dir2").unwrap(),
+        NonRootMPath::new(b"1").unwrap(),
+        NonRootMPath::new(b"2").unwrap(),
+        NonRootMPath::new(b"dir1").unwrap(),
+        NonRootMPath::new(b"dir2/file_1_in_dir2").unwrap(),
     ];
 
     let cs = HgChangesetId::new(nodehash)
@@ -566,19 +572,19 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
 async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     // Note that this is a commit and its parent commit, so you can use:
-    // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
+    // hg log -T"{node}\n{files % '    NonRootMPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
     // to see how Mercurial would compute the files list and confirm that it's the same
     let repo = ManyFilesDirs::getrepo(fb).await;
     let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
     let parenthash = string_to_nodehash("d261bc7900818dea7c86935b3fb17a33b2e3a6b4");
     let expected = vec![
-        MPath::new(b"dir1").unwrap(),
-        MPath::new(b"dir1/file_1_in_dir1").unwrap(),
-        MPath::new(b"dir1/file_2_in_dir1").unwrap(),
-        MPath::new(b"dir1/subdir1/file_1").unwrap(),
-        MPath::new(b"dir1/subdir1/subsubdir1/file_1").unwrap(),
-        MPath::new(b"dir1/subdir1/subsubdir2/file_1").unwrap(),
-        MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
+        NonRootMPath::new(b"dir1").unwrap(),
+        NonRootMPath::new(b"dir1/file_1_in_dir1").unwrap(),
+        NonRootMPath::new(b"dir1/file_2_in_dir1").unwrap(),
+        NonRootMPath::new(b"dir1/subdir1/file_1").unwrap(),
+        NonRootMPath::new(b"dir1/subdir1/subsubdir1/file_1").unwrap(),
+        NonRootMPath::new(b"dir1/subdir1/subsubdir2/file_1").unwrap(),
+        NonRootMPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
     ];
 
     let cs = (HgChangesetId::new(nodehash).load(&ctx, repo.repo_blobstore()))
@@ -623,7 +629,7 @@ fn make_bonsai_changeset(
         git_tree_hash: None,
         file_changes: changes
             .into_iter()
-            .map(|(path, change)| (MPath::new(path).unwrap(), change))
+            .map(|(path, change)| (NonRootMPath::new(path).unwrap(), change))
             .collect(),
         is_snapshot: false,
         git_annotated_tag: None,
@@ -1262,7 +1268,7 @@ impl TestHelper {
         cs_id: ChangesetId,
         path: &str,
     ) -> Result<Entry<HgManifestId, (FileType, HgFileNodeId)>, Error> {
-        let path = MPath::new(path)?;
+        let path = NonRootMPath::new(path)?;
 
         let hg_cs = self.lookup_changeset(cs_id).await?;
 
@@ -1273,7 +1279,7 @@ impl TestHelper {
             .find_entry(
                 self.ctx.clone(),
                 self.repo.repo_blobstore().clone(),
-                Some(path),
+                path.into(),
             )
             .await?
             .ok_or(err)?;
@@ -1727,7 +1733,10 @@ mod octopus_merges {
             .await?;
 
         let cs = helper.lookup_changeset(commit).await?;
-        assert_eq!(cs.files(), &vec![MPath::new("p3")?, MPath::new("p4")?][..]);
+        assert_eq!(
+            cs.files(),
+            &vec![NonRootMPath::new("p3")?, NonRootMPath::new("p4")?][..]
+        );
 
         Ok(())
     }

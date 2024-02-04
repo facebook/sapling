@@ -14,6 +14,12 @@ use std::sync::Weak;
 
 use crate::IsTty;
 
+impl IsTty for std::io::Empty {
+    fn is_tty(&self) -> bool {
+        false
+    }
+}
+
 impl IsTty for std::io::Stdin {
     fn is_tty(&self) -> bool {
         stdin().is_terminal()

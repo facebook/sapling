@@ -1,0 +1,51 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "mononoke_x_repo_sync_job",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync_test_utils",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:indicatif",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/cmdlib:cmdlib",
+        "//eden/mononoke/cmdlib:cmdlib_cross_repo",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer",
+        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
+        "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/derived_data:derived_data_utils",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job_helper_lib",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mutable_counters:mutable_counters",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/server/metadata:metadata",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)

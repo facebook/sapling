@@ -1,0 +1,455 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "bucketed_log",
+    srcs = ["BucketedLogTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "bug",
+    srcs = ["BugTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly:exception_wrapper",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "chrono",
+    srcs = ["ChronoTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:chrono",
+        "//folly:conv",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "chrono_unit",
+    srcs = ["ChronoUnitTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:chrono",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "coverage_set",
+    srcs = ["CoverageSetTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "fault_injector",
+    srcs = ["FaultInjectorTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly:stop_watch",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "file_descriptor",
+    srcs = ["FileDescriptorTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:io",
+        "//eden/fs/utils:path",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "file_utils",
+    srcs = ["FileUtilsTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:path",
+        "//folly:range",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "future",
+    srcs = ["FutureTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "guid",
+    srcs = ["GuidTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "idgen",
+    srcs = ["IDGenTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "immediate_future",
+    srcs = ["ImmediateFutureTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:immediate_future",
+        "//folly/executors:manual_executor",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "io_future",
+    srcs = ["IoFutureTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:io",
+        "//folly:exception",
+        "//folly:file",
+        "//folly/io/async:async_base",
+        "//folly/portability:gtest",
+        "//folly/portability:sockets",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "lazy_initialize",
+    srcs = ["LazyInitializeTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "mapped_disk_vector",
+    srcs = ["MappedDiskVectorTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "match",
+    srcs = ["MatchTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:match",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "memory",
+    srcs = ["MemoryTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:memory",
+        "//folly:exception",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "path_funcs",
+    srcs = ["PathFuncsTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:path",
+        "//folly:exception",
+        "//folly:file_util",
+        "//folly/experimental:test_util",
+        "//folly/portability:fcntl",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/portability:sys_stat",
+        "//folly/portability:unistd",
+        "//folly/test:test_utils",
+    ],
+    external_deps = [
+        "boost",
+    ],
+)
+
+cpp_unittest(
+    name = "path_map",
+    srcs = ["PathMapTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+        "//folly/portability:unistd",
+    ],
+)
+
+cpp_unittest(
+    name = "proc_util",
+    srcs = ["ProcUtilTest.cpp"],
+    env = {
+        "TEST_DATA": "$(location //eden/fs/utils/test/test-data:test-data)",
+    },
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:proc_util",
+        "//folly:portability",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "process_access_log",
+    srcs = ["ProcessAccessLogTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/utils:process_access_log",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "ref_ptr",
+    srcs = ["RefPtrTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:ref_ptr",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "ring_buffer",
+    srcs = ["RingBufferTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:ring_buffer",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "source_location",
+    srcs = ["SourceLocationTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/utils:source_location",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "spawned_process",
+    srcs = ["SpawnedProcessTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "string",
+    srcs = ["StringTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:string",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "system_error",
+    srcs = ["SystemErrorTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:win_error",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "throw",
+    srcs = ["ThrowTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:throw",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "try",
+    srcs = ["TryTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:match",
+        "//eden/fs/utils:try",
+        "//folly:try",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "unix_socket",
+    srcs = ["UnixSocketTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:io",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:random",
+        "//folly:range",
+        "//folly:string",
+        "//folly/experimental:test_util",
+        "//folly/futures:core",
+        "//folly/io:iobuf",
+        "//folly/io/async:async_base",
+        "//folly/logging:logging",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "user_info",
+    srcs = ["UserInfoTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        ":scoped_env_var",
+        "//eden/fs/utils:user_info",
+        "//folly/portability:gtest",
+        "//folly/portability:stdlib",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
+    name = "utf8",
+    srcs = ["Utf8Test.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:utf8",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "glob_test",
+    srcs = ["GlobMatcherTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/utils:matcher",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_benchmark(
+    name = "bench",
+    srcs = [
+        "IDGenBenchmark.cpp",
+        "ImmediateFutureBenchmark.cpp",
+        "ProcessAccessLogBenchmark.cpp",
+    ],
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//eden/common/utils:process_info_cache",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:process_access_log",
+        "//eden/fs/utils:utils",
+        "//folly:c_portability",
+    ],
+)
+
+cpp_library(
+    name = "scoped_env_var",
+    srcs = ["ScopedEnvVar.cpp"],
+    headers = ["ScopedEnvVar.h"],
+    deps = [
+        "//folly:exception",
+        "//folly/portability:stdlib",
+    ],
+    exported_deps = [
+        "//folly:range",
+    ],
+)
+
+# This cpp_benchmark() rule depends on a library watchman.
+# We disable it on non-Facebook internal builds, just so that the open source
+# build doesn't depend on watchman.  This is the only thing that requires
+# watchman.
+cpp_benchmark(
+    name = "glob_bench_mark",
+    srcs = ["GlobBenchMark.cpp"],
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//eden/fs/utils:matcher",
+        "//watchman/thirdparty/wildmatch:wildmatch",
+    ],
+    external_deps = [
+        "re2",
+    ],
+)

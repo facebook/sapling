@@ -16,6 +16,7 @@ from facebook.eden.ttypes import (
     GetStatInfoParams,
     JournalInfo,
     SynchronizeWorkingCopyParams,
+    TimeSpec,
 )
 
 from .lib import testcase
@@ -113,6 +114,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
 
     def populate_repo(self) -> None:
         self.repo.write_file("foo.txt", "foo\n")
+
         self.repo.commit("Initial commit.")
 
     def test_get_blob(self) -> None:
@@ -128,6 +130,44 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
 
         counters = self.get_counters()
         self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 1)
+
+
+@testcase.eden_test
+class ObjectCacheStatsTest(testcase.EdenRepoTest):
+    def create_repo(self, name: str) -> HgRepository:
+        return self.create_hg_repo(name)
+
+    def populate_repo(self) -> None:
+        self.repo.mkdir("dir")
+        self.repo.write_file("dir/one.txt", "1\n")
+        self.repo.write_file("dir/two.txt", "2\n")
+
+        self.repo.commit("Initial commit.")
+
+    def test_get_tree_memory(self) -> None:
+        MEMORY_COUNTER = "object_store.get_tree.memory.count"
+
+        list(os.scandir(Path(self.mount) / "dir"))
+
+        initial_count = self.get_counters().get(MEMORY_COUNTER, 0)
+
+        # To exercise the in-memory tree cache we have to first unload the
+        # corresponding inodes (which contains its own cache of directory
+        # entries) and OS kernel caches.
+        with self.get_thrift_client_legacy() as thrift_client:
+            thrift_client.unloadInodeForPath(
+                self.mount.encode("utf-8"), b"", TimeSpec(0, 0)
+            )
+
+            thrift_client.invalidateKernelInodeCache(self.mount.encode("utf-8"), b"dir")
+
+        # List the directory again, which should result in a TreeCache hit this
+        # time around.  We use os.scandir because Path.glob seems to do some
+        # caching of its own?
+        list(os.scandir(Path(self.mount) / "dir"))
+
+        final_count = self.get_counters().get(MEMORY_COUNTER, 0)
+        self.assertTrue(final_count > initial_count)
 
 
 @testcase.eden_nfs_repo_test

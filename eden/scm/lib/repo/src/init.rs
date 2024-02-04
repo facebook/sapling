@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -15,6 +14,7 @@ use std::path::PathBuf;
 use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use identity::Identity;
 
 use crate::constants::*;

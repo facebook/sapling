@@ -30,7 +30,7 @@ use crate::HgBlobNode;
 use crate::HgChangesetEnvelopeMut;
 use crate::HgNodeHash;
 use crate::HgParents;
-use crate::MPath;
+use crate::NonRootMPath;
 
 const STEP_PARENTS_METADATA_KEY: &str = "stepparents";
 
@@ -92,7 +92,7 @@ pub struct HgChangesetContent {
     user: Vec<u8>,
     time: DateTime,
     extra: Extra,
-    files: Vec<MPath>,
+    files: Vec<NonRootMPath>,
     message: Vec<u8>,
 }
 
@@ -102,7 +102,7 @@ impl HgChangesetContent {
         parents: HgParents,
         manifestid: HgManifestId,
         cs_metadata: ChangesetMetadata,
-        files: Vec<MPath>,
+        files: Vec<NonRootMPath>,
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
         Self {
@@ -262,7 +262,7 @@ impl HgBlobChangeset {
         &self.content.message
     }
 
-    pub fn files(&self) -> &[MPath] {
+    pub fn files(&self) -> &[NonRootMPath] {
         &self.content.files
     }
 

@@ -59,8 +59,8 @@ mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
 
 export ACL_FILE="$TESTTMP/acls.json"
 
-# The path for tunables. Do not write directly to this! Use merge_tunables instead.
-export MONONOKE_TUNABLES_PATH="${LOCAL_CONFIGERATOR_PATH}/mononoke_tunables.json"
+export MONONOKE_JUST_KNOBS_OVERRIDES_PATH="${LOCAL_CONFIGERATOR_PATH}/just_knobs.json"
+cp "${TEST_FIXTURES}/just_knobs.json" "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 
 function get_configerator_relative_path {
   realpath --relative-to "${LOCAL_CONFIGERATOR_PATH}" "$1"
@@ -78,7 +78,7 @@ fi
 
 COMMON_ARGS=(
   --mysql-master-only
-  --tunables-config "$(get_configerator_relative_path "${MONONOKE_TUNABLES_PATH}")"
+  --just-knobs-config-path "$(get_configerator_relative_path "${MONONOKE_JUST_KNOBS_OVERRIDES_PATH}")"
   --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
   --with-test-megarepo-configs-client=true
@@ -161,11 +161,19 @@ function random_int() {
 function sslcurlas {
   local name="$1"
   shift
-  curl --noproxy localhost --cert "$TEST_CERTDIR/$name.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/$name.key" "$@"
+  curl --noproxy localhost -H 'x-client-info: {"request_info": {"entry_point": "CurlTest", "correlator": "test"}}' --cert "$TEST_CERTDIR/$name.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/$name.key" "$@"
 }
 
 function sslcurl {
   sslcurlas proxy "$@"
+}
+
+function sslcurl_noclientinfo_test {
+  curl --noproxy localhost --cert "$TEST_CERTDIR/proxy.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/proxy.key" "$@"
+}
+
+function curltest {
+  curl -H 'x-client-info: {"request_info": {"entry_point": "CurlTest", "correlator": "test"}}' "$@"
 }
 
 function mononoke {
@@ -317,9 +325,10 @@ function mononoke_x_repo_sync() {
   GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
+    --source-repo-id="$source_repo_id" \
+    --target-repo-id="$target_repo_id" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --source-repo-id "$source_repo_id" \
-    --target-repo-id "$target_repo_id" \
+    --scuba-dataset "file://$TESTTMP/x_repo_sync_scuba_logs" \
     "$@"
 }
 
@@ -448,6 +457,10 @@ function strip_glog {
   sed -E -e 's%^[VDIWECF][[:digit:]]{4} [[:digit:]]{2}:?[[:digit:]]{2}:?[[:digit:]]{2}(\.[[:digit:]]+)?\s+(([0-9a-f]+)\s+)?(\[([^]]+)\]\s+)?(\(([^\)]+)\)\s+)?(([a-zA-Z0-9_./-]+):([[:digit:]]+))\]\s+%%'
 }
 
+function with_stripped_logs {
+  "$@" 2>&1 | strip_glog
+}
+
 function wait_for_json_record_count {
   # We ask jq to count records for us, so that we're a little more robust ot
   # newlines and such.
@@ -525,6 +538,16 @@ function force_update_configerator {
   sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_configerator"
 }
 
+# We can't use the "with client certs" option everywhere
+# because it breaks connecting to ephemeral mysql instances.
+function start_and_wait_for_mononoke_server_with_client_certs {
+    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/proxy.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/proxy.key" \
+    mononoke "$@"
+    wait_for_mononoke
+}
+
 function start_and_wait_for_mononoke_server {
     mononoke "$@"
     wait_for_mononoke
@@ -574,11 +597,6 @@ edenapi.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
 edenapi.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
 edenapi.prefix=localhost
 edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
-[workingcopy]
-use-rust=False
-ruststatus=False
-[status]
-use-rust=False
 EOF
 }
 
@@ -602,6 +620,13 @@ function get_bonsai_hg_mapping {
 
 function get_bonsai_globalrev_mapping {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), globalrev from bonsai_globalrev_mapping order by globalrev";
+}
+
+function set_bonsai_globalrev_mapping {
+  REPO_ID="$1"
+  BCS_ID="$2"
+  GLOBALREV="$3"
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES ($REPO_ID, X'$BCS_ID', $GLOBALREV)";
 }
 
 function setup_mononoke_config {
@@ -913,14 +938,16 @@ function setup_mononoke_repo_config {
   local reponame="$1"
   local reponame_urlencoded
   reponame_urlencoded="$(urlencode encode "$reponame")"
+  everstore_local_path="$TESTTMP/everstore_${reponame_urlencoded}"
   local storageconfig="$2"
   mkdir -p "repos/$reponame_urlencoded"
   mkdir -p "repo_definitions/$reponame_urlencoded"
   mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame_urlencoded"
-  mkdir -p "$TESTTMP/traffic-replay-blobstore"
+  mkdir -p "$everstore_local_path"
   cat > "repos/$reponame_urlencoded/server.toml" <<CONFIG
 hash_validation_percentage=100
+everstore_local_path="$everstore_local_path"
 CONFIG
 
   cat > "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
@@ -1077,6 +1104,12 @@ pure_push_allowed = true
 CONFIG
 fi
 
+if [[ -n "${UNBUNDLE_COMMIT_LIMIT}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+unbundle_commit_limit = ${UNBUNDLE_COMMIT_LIMIT}
+CONFIG
+fi
+
 if [[ -n "${CACHE_WARMUP_BOOKMARK:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [cache_warmup]
@@ -1116,7 +1149,7 @@ CONFIG
 else
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [derived_data_config.available_configs.default]
-types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests", "bssm"]
+types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests", "bssm_v3", "testmanifest", "testshardedmanifest"]
 CONFIG
 fi
 
@@ -1616,11 +1649,6 @@ reponame=$1
 cachepath=$TESTTMP/cachepath
 server=True
 shallowtrees=True
-[workingcopy]
-ruststatus=False
-use-rust=False
-[status]
-use-rust=False
 EOF
 }
 
@@ -1971,6 +1999,11 @@ function log() {
   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@" | sed 's/^[ \t]*$/$/'
 }
 
+function log_globalrev() {
+  # Prepend "$" to the end of the log output to prevent having trailing whitespaces
+  hg log -G -T "{desc} [{phase};globalrev={globalrev};{node|short}] {remotenames}" "$@" | sed 's/^[ \t]*$/$/'
+}
+
 # Default setup that many of the test use
 function default_setup_pre_blobimport() {
   setup_common_config "$@"
@@ -2026,6 +2059,16 @@ remotenames =
 EOF
 }
 
+function gitexport() {
+  log="$TESTTMP/gitexport.out"
+
+  "$MONONOKE_GITEXPORT" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function gitimport() {
   log="$TESTTMP/gitimport.out"
 
@@ -2048,7 +2091,7 @@ function git() {
   GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git "$@"
+  command git -c protocol.file.allow=always "$@"
 }
 
 function git_set_only_author() {
@@ -2059,7 +2102,7 @@ function git_set_only_author() {
   GIT_AUTHOR_DATE="$date" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git "$@"
+  command git -c protocol.file.allow=always "$@"
 }
 
 function summarize_scuba_json() {
@@ -2081,7 +2124,7 @@ if [ -z "$HAS_FB" ]; then
   }
 
   function format_single_scuba_sample_strip_server_info {
-      jq -S 'del(.[].server_tier, .[].tw_task_id, .[].tw_handle)'
+      jq -S 'del(.[].server_tier, .[].tw_task_id, .[].tw_handle, .[].datacenter, .[].region, .[].region_datacenter_prefix)'
   }
 fi
 
@@ -2255,29 +2298,11 @@ function sqlite3() {
   command sqlite3 -cmd '.timeout 1000' "$@"
 }
 
-function merge_tunables() {
+function merge_just_knobs() {
   local new
-  new="$(jq -s '.[0] * .[1]' "$MONONOKE_TUNABLES_PATH" -)"
-  printf "%s" "$new" > "$MONONOKE_TUNABLES_PATH"
-  # This may fail if Mononoke is not started. No big deal.
-  force_update_configerator >/dev/null 2>&1 || true
+  new="$(jq -s '.[0] * .[1]' "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH" -)"
+  printf "%s" "$new" > "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 }
-
-function init_tunables() {
-  if [[ ! -f "$MONONOKE_TUNABLES_PATH" ]]; then
-    cat >> "$MONONOKE_TUNABLES_PATH" <<EOF
-{
-  "ints": {
-    "commit_graph_writes_timeout_ms": 10000
-  }
-}
-EOF
-  fi
-}
-
-# Always initialize tunables, since they're required by our binaries to start
-# unless explicitly disabled (but we don't do that in tests).
-init_tunables
 
 function packer() {
   "$MONONOKE_PACKER" \
@@ -2334,7 +2359,7 @@ function derived_data_client() {
   THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   GLOG_minloglevel=5 "$DERIVED_DATA_CLIENT" \
-  -h "localhost:$DDS_PORT" \
+  --host "localhost:$DDS_PORT" \
   "$@"
 }
 

@@ -247,11 +247,11 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
     }
   }
   // Tell the child to run in the foreground, to avoid fork bombing ourselves.
-  args.push_back("--foreground");
+  args.emplace_back("--foreground");
   // We need to ensure that we pass down the log path, otherwise
   // getLogPath() will spot that we used --foreground and will pass an empty
   // logPath to this function.
-  args.push_back("--logPath");
+  args.emplace_back("--logPath");
   args.push_back(logPath.str());
 
 #ifndef _WIN32
@@ -263,14 +263,14 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
     // startOrConnectToPrivHelper has an intentionally anemic argv parser.
     // It requires that the flag and the value be in separate
     // array entries.
-    args.push_back("--privhelper_fd");
+    args.emplace_back("--privhelper_fd");
     args.push_back(fmt::to_string(fd));
   }
 #endif
 
   // Set up a pipe for the child to pass back startup status
   Pipe exitStatusPipe;
-  args.push_back("--startupLoggerFd");
+  args.emplace_back("--startupLoggerFd");
   args.push_back(
       fmt::to_string(opts.inheritDescriptor(std::move(exitStatusPipe.write))));
 

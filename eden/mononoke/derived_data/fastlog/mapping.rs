@@ -229,8 +229,8 @@ mod tests {
     use mononoke_types::fastlog_batch::max_entries_in_fastlog_batch;
     use mononoke_types::fastlog_batch::MAX_BATCHES;
     use mononoke_types::fastlog_batch::MAX_LATEST_LEN;
-    use mononoke_types::MPath;
     use mononoke_types::ManifestUnodeId;
+    use mononoke_types::NonRootMPath;
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
@@ -298,15 +298,15 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
         let blobstore = Arc::new(repo.repo_blobstore.clone());
-        let path_1 = MPath::new("1").unwrap();
-        let path_files = MPath::new("files").unwrap();
+        let path_1 = NonRootMPath::new("1").unwrap();
+        let path_files = NonRootMPath::new("files").unwrap();
         let entries: Vec<_> = root_unode_mf_id
             .find_entries(ctx.clone(), blobstore.clone(), vec![path_1, path_files])
             .try_collect()
             .await
             .unwrap();
 
-        let list = fetch_list(&ctx, &repo, entries.get(0).unwrap().1.clone()).await;
+        let list = fetch_list(&ctx, &repo, entries.first().unwrap().1.clone()).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
         let list = fetch_list(&ctx, &repo, entries.get(1).unwrap().1.clone()).await;
@@ -364,7 +364,7 @@ mod tests {
             parents = vec![bcs_id];
         }
 
-        let latest = parents.get(0).unwrap();
+        let latest = parents.first().unwrap();
         save_bonsai_changesets(bonsais, ctx.clone(), &repo)
             .await
             .unwrap();
@@ -400,7 +400,7 @@ mod tests {
             parents = vec![bcs_id];
         }
 
-        let latest = parents.get(0).unwrap();
+        let latest = parents.first().unwrap();
         save_bonsai_changesets(bonsais, ctx.clone(), &repo)
             .await
             .unwrap();
@@ -429,10 +429,7 @@ mod tests {
             child_root_unode,
             vec![parent_root_unode],
         )
-        .map_ok(|(path, _)| match path {
-            Some(path) => String::from_utf8(path.to_vec()).unwrap(),
-            None => String::new(),
-        })
+        .map_ok(|(path, _)| String::from_utf8(path.to_vec()).unwrap())
         .try_collect()
         .await?;
         entries.sort();
@@ -496,10 +493,7 @@ mod tests {
                 merge_unode,
                 parent_unodes,
             )
-            .map_ok(|(path, _)| match path {
-                Some(path) => String::from_utf8(path.to_vec()).unwrap(),
-                None => String::new(),
-            })
+            .map_ok(|(path, _)| String::from_utf8(path.to_vec()).unwrap())
             .try_collect()
             .await?;
             entries.sort();

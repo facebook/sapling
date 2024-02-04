@@ -7,8 +7,7 @@
 
 #include "eden/fs/telemetry/Tracing.h"
 
-namespace facebook::eden {
-namespace detail {
+namespace facebook::eden::detail {
 Tracer globalTracer;
 
 void ThreadLocalTracePoints::flush() {
@@ -34,5 +33,4 @@ std::vector<CompactTracePoint> Tracer::getAllTracepoints() {
   });
   return std::move(*points);
 }
-} // namespace detail
-} // namespace facebook::eden
+} // namespace facebook::eden::detail

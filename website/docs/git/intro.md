@@ -76,8 +76,8 @@ If you don't have write access to the repo, you can [fork](https://docs.github.c
 GitHub website, add your fork as a remote, then push to your fork:
 
 ```
-sl paths --add myfork ssh://git@github.com/my-username/sapling.git
-sl push --to myfork/my-new-feature
+sl paths --add my-fork ssh://git@github.com/my-username/sapling.git
+sl push --to my-fork/my-new-feature
 ```
 
 After push, open the repo webpage. You will see GitHub detected the push:

@@ -11,6 +11,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -25,7 +26,6 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
-use once_cell::sync::OnceCell;
 #[cfg(fbcode_build)]
 use thrift_streaming::streaming_eden_service::StreamStartStatusError;
 #[cfg(fbcode_build)]
@@ -52,7 +52,7 @@ use crate::StreamingEdenFsClient;
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
 // EdenFsInstance through every subcommand
-static INSTANCE: OnceCell<EdenFsInstance> = OnceCell::new();
+static INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
 
 /// These paths are relative to the user's client directory.
 const CLIENTS_DIR: &str = "clients";

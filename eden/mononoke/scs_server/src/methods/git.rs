@@ -5,8 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use bytes::Bytes;
 use context::CoreContext;
+use everstore_client::cpp_client::ClientOptionsBuilder;
+use everstore_client::cpp_client::EverstoreCppClient;
+use everstore_client::file_mock_client::EverstoreFileMockClient;
+use everstore_client::write::WriteRequestOptionsBuilder;
+use everstore_client::EverstoreClient;
+use fbtypes::FBType;
+use futures_util::try_join;
 use git_types::GitError;
 use mononoke_api::errors::MononokeError;
 use mononoke_api::ChangesetId;
@@ -14,20 +23,23 @@ use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
 use source_control as thrift;
 
+use crate::errors::internal_error;
 use crate::errors::invalid_request;
 use crate::errors::ServiceErrorResultExt;
 use crate::errors::{self};
 use crate::source_control_impl::SourceControlServiceImpl;
 
+const EVERSTORE_CONTEXT: &str = "mononoke/scs";
+
 impl SourceControlServiceImpl {
     /// Upload raw git object to Mononoke data store for back-and-forth translation.
     /// Not to be used for uploading raw file content blobs.
-    pub(crate) async fn upload_git_object(
+    pub(crate) async fn repo_upload_non_blob_git_object(
         &self,
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
-        params: thrift::UploadGitObjectParams,
-    ) -> Result<thrift::UploadGitObjectResponse, errors::ServiceError> {
+        params: thrift::RepoUploadNonBlobGitObjectParams,
+    ) -> Result<thrift::RepoUploadNonBlobGitObjectResponse, errors::ServiceError> {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
@@ -42,9 +54,9 @@ impl SourceControlServiceImpl {
         let git_hash = gix_hash::oid::try_from_bytes(&params.git_hash)
             .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_hash)))?;
         repo_ctx
-            .upload_git_object(git_hash, params.raw_content)
+            .upload_non_blob_git_object(git_hash, params.raw_content)
             .await?;
-        Ok(thrift::UploadGitObjectResponse {
+        Ok(thrift::RepoUploadNonBlobGitObjectResponse {
             ..Default::default()
         })
     }
@@ -120,17 +132,146 @@ impl SourceControlServiceImpl {
             target: BonsaiAnnotatedTagTarget::Changeset(target_changeset_id),
             pgp_signature: params.pgp_signature.map(Bytes::from),
         };
+        let tag_hash = params
+            .tag_hash
+            .as_ref()
+            .map(|hash| {
+                gix_hash::oid::try_from_bytes(hash)
+                    .map(|oid| oid.to_owned())
+                    .map_err(|err| {
+                        invalid_request(format!(
+                            "Error in creating Git ObjectId from {:?}. Cause: {:#}",
+                            hash, err
+                        ))
+                    })
+            })
+            .transpose()?;
+        let target_is_tag = params.target_is_tag.unwrap_or(false);
         let changeset_context = repo_ctx
             .create_annotated_tag(
+                tag_hash,
                 params.tag_name,
                 params.author,
                 author_date,
                 params.annotation,
                 annotated_tag,
+                target_is_tag,
             )
             .await?;
         Ok(thrift::CreateGitTagResponse {
             created_changeset_id: changeset_context.id().as_ref().to_vec(),
+            ..Default::default()
+        })
+    }
+
+    /// Generate Git bundle for the given stack of commits with the ref BUNDLE_HEAD
+    /// pointing to the top of the stack. Store the bundle in everstore and return
+    /// the everstore handle associated with it.
+    pub(crate) async fn repo_stack_git_bundle_store(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoStackGitBundleStoreParams,
+    ) -> Result<thrift::RepoStackGitBundleStoreResponse, errors::ServiceError> {
+        let repo_ctx = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await
+            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+        // Parse the input as appropriate types
+        let (base_changeset_id, head_changeset_id) = try_join!(
+            self.changeset_id(&repo_ctx, &params.base),
+            self.changeset_id(&repo_ctx, &params.head),
+        )?;
+
+        // Generate the bundle
+        let bundle_content = repo_ctx
+            .repo_stack_git_bundle(head_changeset_id, base_changeset_id)
+            .await?;
+
+        // Store the contents of the bundle in everstore
+        // TODO(mitrandir): the everstore client should be a repo property and instantiated in the
+        // repo factory.
+        let client: Arc<dyn EverstoreClient + Send + Sync> =
+            match &repo_ctx.config().everstore_local_path {
+                None => {
+                    let client_options =
+                        ClientOptionsBuilder::default().build().map_err(|err| {
+                            internal_error(format!(
+                                "Error in building Everstore client options. Cause: {:#}",
+                                err
+                            ))
+                        })?;
+                    Arc::new(
+                        EverstoreCppClient::from_options(repo_ctx.ctx().fb, &client_options)
+                            .map_err(|err| {
+                                internal_error(format!(
+                                    "Error in building Everstore client. Cause: {:#}",
+                                    err
+                                ))
+                            })?,
+                    )
+                }
+                Some(path) => Arc::new(EverstoreFileMockClient::new(path.clone().into())),
+            };
+        let fbtype = FBType::EVERSTORE_SOURCE_BUNDLE.0 as u32;
+        let write_req_opts = WriteRequestOptionsBuilder::default()
+            .fbtype(fbtype)
+            .lower_bound(10) // We should be able to store even small bundles
+            .build()
+            .map_err(|err| {
+                internal_error(format!(
+                    "Error in building Everstore write request options. Cause: {:#}",
+                    err
+                ))
+            })?;
+        let mut write_req = client
+            .create_write_request(&write_req_opts)
+            .map_err(|err| {
+                internal_error(format!(
+                    "Error in creating Everstore write request. Cause: {:#}",
+                    err
+                ))
+            })?;
+        let everstore_handle = write_req
+            .write(EVERSTORE_CONTEXT, bundle_content.into())
+            .await
+            .map_err(|err| {
+                internal_error(format!(
+                    "Error in storing Git bundle in Everstore. Cause: {:#}",
+                    err
+                ))
+            })?
+            .to_string();
+        Ok(thrift::RepoStackGitBundleStoreResponse {
+            everstore_handle,
+            ..Default::default()
+        })
+    }
+
+    /// Upload packfile base item corresponding to git object to Mononoke data store
+    pub(crate) async fn repo_upload_packfile_base_item(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoUploadPackfileBaseItemParams,
+    ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, errors::ServiceError> {
+        let repo_ctx = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await
+            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+        // Validate that the request sender has an internal service identity with the right permission.
+        repo_ctx
+            .authorization_context()
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .await
+            .map_err(MononokeError::from)?;
+        // Validate that the bytes correspond to a valid git hash.
+        let git_hash = gix_hash::oid::try_from_bytes(&params.git_hash)
+            .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_hash)))?;
+        repo_ctx
+            .repo_upload_packfile_base_item(git_hash, params.raw_content)
+            .await?;
+        Ok(thrift::RepoUploadPackfileBaseItemResponse {
             ..Default::default()
         })
     }

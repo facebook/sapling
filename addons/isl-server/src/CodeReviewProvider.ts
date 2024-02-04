@@ -12,6 +12,10 @@ import type {
   Disposable,
   Result,
   OperationCommandProgressReporter,
+  LandInfo,
+  LandConfirmationInfo,
+  CodeReviewProviderSpecificClientToServerMessages,
+  ClientToServerMessage,
 } from 'isl/src/types';
 
 type DiffSummaries = Map<DiffId, DiffSummary>;
@@ -36,7 +40,7 @@ export interface CodeReviewProvider {
   /** Convert Code Review Provider info into a short summary string, usable in analytics */
   getSummaryName(): string;
 
-  typeahead?(kind: TypeaheadKind, query: string): Promise<Array<TypeaheadResult>>;
+  typeahead?(kind: TypeaheadKind, query: string, cwd: string): Promise<Array<TypeaheadResult>>;
 
   getDiffUrlMarkdown(diffId: DiffId): string;
   getCommitHashUrlMarkdown(hash: string): string;
@@ -44,4 +48,16 @@ export interface CodeReviewProvider {
   updateDiffMessage?(diffId: DiffId, newTitle: string, newDescription: string): Promise<void>;
 
   getSuggestedReviewers?(context: {paths: Array<string>}): Promise<Array<string>>;
+
+  /** Convert usernames/emails to avatar URIs */
+  fetchAvatars?(authors: Array<string>): Promise<Map<string, string>>;
+
+  renderMarkup?: (markup: string) => Promise<string>;
+
+  fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;
+  confirmLand?(landConfirmationInfo: NonNullable<LandConfirmationInfo>): Promise<Result<undefined>>;
+
+  handleClientToServerMessage?(
+    message: ClientToServerMessage,
+  ): message is CodeReviewProviderSpecificClientToServerMessages;
 }

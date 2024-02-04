@@ -82,7 +82,7 @@ fn maybe_merge_in_place(
         high: low,
         parents: Vec::new(),
     };
-    if let Some(candidate) = segments.range(..=upper_bound).rev().next() {
+    if let Some(candidate) = segments.range(..=upper_bound).next_back() {
         if candidate.high + 1 == low {
             // Merge
             let candidate = candidate.clone();

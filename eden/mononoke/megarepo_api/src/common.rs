@@ -51,23 +51,23 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
+use mononoke_api::path::MononokePathPrefixes;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
-use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
 use repo_authorization::AuthorizationContext;
 use sorted_vector_map::SortedVectorMap;
-use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 use crate::Repo;
@@ -144,7 +144,7 @@ pub trait MegarepoOp {
                 .paths_in_target_belonging_to_source(ctx, source, *source_cs_id)
                 .await?;
             for path in &paths_in_target_belonging_to_source {
-                if let Some(path) = path.clone().into_mpath() {
+                if let Some(path) = path.clone().into_optional_non_root_path() {
                     all_removed_files.insert(path);
                 }
             }
@@ -285,7 +285,7 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         repo: &RepoContext,
         old_target_cs: &ChangesetContext,
-        removed_files: HashSet<MPath>,
+        removed_files: HashSet<NonRootMPath>,
         new_version: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
         let file_changes = removed_files
@@ -351,7 +351,7 @@ pub trait MegarepoOp {
         // where file is from target and dir from additions_merge
         let mut addition_prefixes = vec![];
         for addition in additions {
-            for dir in addition.prefixes() {
+            for dir in MononokePathPrefixes::new(&addition) {
                 addition_prefixes.push(dir);
             }
         }
@@ -386,7 +386,7 @@ pub trait MegarepoOp {
         cs_id: ChangesetId,
         mover: &MultiMover,
         directory_mover: &DirectoryMultiMover,
-        linkfiles: BTreeMap<MPath, FileChange>,
+        linkfiles: BTreeMap<NonRootMPath, FileChange>,
         source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
@@ -419,7 +419,7 @@ pub trait MegarepoOp {
                 (target, fc)
             }));
         }
-        file_changes.extend(linkfiles.into_iter());
+        file_changes.extend(linkfiles);
 
         let moved_bcs = new_megarepo_automation_commit(
             vec![cs_id],
@@ -453,7 +453,7 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         source: &Source,
         source_changeset_id: ChangesetId,
-    ) -> Result<HashSet<MononokePath>, MegarepoError> {
+    ) -> Result<HashSet<MPath>, MegarepoError> {
         let source_repo = self.find_repo_by_id(ctx, source.repo_id).await?;
         let mover = &create_source_to_target_multi_mover(source.mapping.clone())?;
         let source_changeset = source_repo
@@ -466,24 +466,21 @@ pub trait MegarepoOp {
             .map_err(MegarepoError::internal)?
             .map_err(MegarepoError::internal)
             .and_then(async move |path| {
-                Ok(mover(&path.into_mpath().ok_or_else(|| {
-                    MegarepoError::internal(anyhow!("mpath can't be null"))
-                })?)?)
+                Ok(mover(&path.into_optional_non_root_path().ok_or_else(
+                    || MegarepoError::internal(anyhow!("mpath can't be null")),
+                )?)?)
             })
             .try_collect()
             .await?;
-        let mut all_paths: HashSet<MononokePath> = moved_paths
-            .into_iter()
-            .flatten()
-            .map(|mpath| MononokePath::new(Some(mpath)))
-            .collect();
-        let linkfiles: HashSet<MononokePath> = source
+        let mut all_paths: HashSet<MPath> =
+            moved_paths.into_iter().flatten().map(MPath::from).collect();
+        let linkfiles: HashSet<MPath> = source
             .mapping
             .linkfiles
             .keys()
-            .map(|dst| dst.try_into())
+            .map(|dst| MPath::new(dst.as_bytes()))
             .try_collect()?;
-        all_paths.extend(linkfiles.into_iter());
+        all_paths.extend(linkfiles);
         Ok(all_paths)
     }
 
@@ -508,15 +505,8 @@ pub trait MegarepoOp {
 
         let mut res = vec![];
         for (src_path, entry) in entries {
-            match (src_path, entry) {
+            match (src_path.into_optional_non_root_path(), entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
-                    if tunables()
-                        .megarepo_api_dont_set_file_mutable_renames()
-                        .unwrap_or_default()
-                    {
-                        continue;
-                    }
-
                     // TODO(stash, simonfar, mitrandir): we record file
                     // moves to mutable_renames even though these moves are already
                     // recorded in non-mutable renames. We have to do it because
@@ -527,22 +517,16 @@ pub trait MegarepoOp {
                     for dst_path in dst_paths {
                         let mutable_rename_entry = MutableRenameEntry::new(
                             dst_cs_id,
-                            Some(dst_path),
+                            dst_path.into(),
                             cs_id,
-                            Some(src_path.clone()),
+                            src_path.clone().into(),
                             Entry::Leaf(leaf),
                         )?;
                         res.push(mutable_rename_entry);
                     }
                 }
                 (src_path, Entry::Tree(tree)) => {
-                    if tunables()
-                        .megarepo_api_dont_set_directory_mutable_renames()
-                        .unwrap_or_default()
-                    {
-                        continue;
-                    }
-
+                    let src_path = src_path.into();
                     let dst_paths = directory_mover(&src_path)?;
                     for dst_path in dst_paths {
                         let mutable_rename_entry = MutableRenameEntry::new(
@@ -732,16 +716,16 @@ pub trait MegarepoOp {
         &self,
         source_config: &Source,
         mover: &DirectoryMultiMover,
-    ) -> Result<BTreeMap<MPath, Bytes>, MegarepoError> {
+    ) -> Result<BTreeMap<NonRootMPath, Bytes>, MegarepoError> {
         let mut links = BTreeMap::new();
         for (dst, src) in &source_config.mapping.linkfiles {
             // src is a file inside a given source, so mover needs to be applied to it
             let src = if src == "." {
-                None
+                MPath::ROOT
             } else {
-                MPath::new_opt(src).map_err(MegarepoError::request)?
+                MPath::new(src).map_err(MegarepoError::request)?
             };
-            let dst = MPath::new(dst).map_err(MegarepoError::request)?;
+            let dst = NonRootMPath::new(dst).map_err(MegarepoError::request)?;
             let moved_srcs = mover(&src).map_err(MegarepoError::request)?;
 
             let mut iter = moved_srcs.into_iter();
@@ -749,11 +733,12 @@ pub trait MegarepoOp {
                 // If the source maps to many files we use the first one as the symlink
                 // source this choice doesn't matter for the symlinked content - just the
                 // symlinked path.
-                (Some(moved_src), _) => moved_src,
+                (Some(moved_src), _) => moved_src.into_optional_non_root_path(),
                 (None, _) => {
-                    let src = match src {
-                        None => ".".to_string(),
-                        Some(path) => path.to_string(),
+                    let src = if src.is_root() {
+                        ".".to_string()
+                    } else {
+                        src.to_string()
                     };
                     return Err(MegarepoError::request(anyhow!(
                         "linkfile source {} does not map to any file inside source {}",
@@ -763,9 +748,10 @@ pub trait MegarepoOp {
                 }
             }
             .ok_or_else(|| {
-                let src = match src {
-                    None => ".".to_string(),
-                    Some(path) => path.to_string(),
+                let src = if src.is_root() {
+                    ".".to_string()
+                } else {
+                    src.to_string()
                 };
                 MegarepoError::request(anyhow!(
                     "linkfile source {} does not map to any file inside the destination from source {}",
@@ -783,9 +769,9 @@ pub trait MegarepoOp {
     async fn upload_linkfiles(
         &self,
         ctx: &CoreContext,
-        links: BTreeMap<MPath, Bytes>,
+        links: BTreeMap<NonRootMPath, Bytes>,
         repo: &impl Repo,
-    ) -> Result<BTreeMap<MPath, FileChange>, Error> {
+    ) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
             .map_ok(|(path, content)| async {
@@ -1138,7 +1124,7 @@ pub async fn find_bookmark_and_value(
     Ok((bookmark, cs_id))
 }
 
-fn create_relative_symlink(path: &MPath, base: &MPath) -> Result<Bytes, Error> {
+fn create_relative_symlink(path: &NonRootMPath, base: &NonRootMPath) -> Result<Bytes, Error> {
     let common_components = path.common_components(base);
     let path_no_prefix = path.into_iter().skip(common_components).collect::<Vec<_>>();
     let base_no_prefix = base.into_iter().skip(common_components).collect::<Vec<_>>();
@@ -1169,9 +1155,9 @@ fn create_relative_symlink(path: &MPath, base: &MPath) -> Result<Bytes, Error> {
 
 // Verifies that no two sources create the same path in the target
 fn add_and_check_all_paths<'a>(
-    all_files_in_target: &'a mut HashMap<MPath, SourceName>,
+    all_files_in_target: &'a mut HashMap<NonRootMPath, SourceName>,
     source_name: &'a SourceName,
-    iter: impl Iterator<Item = &'a MPath>,
+    iter: impl Iterator<Item = &'a NonRootMPath>,
 ) -> Result<(), MegarepoError> {
     for path in iter {
         add_and_check(all_files_in_target, source_name, path)?;
@@ -1181,9 +1167,9 @@ fn add_and_check_all_paths<'a>(
 }
 
 fn add_and_check<'a>(
-    all_files_in_target: &'a mut HashMap<MPath, SourceName>,
+    all_files_in_target: &'a mut HashMap<NonRootMPath, SourceName>,
     source_name: &'a SourceName,
-    path: &MPath,
+    path: &NonRootMPath,
 ) -> Result<(), MegarepoError> {
     let existing_source = all_files_in_target.insert(path.clone(), source_name.clone());
     if let Some(existing_source) = existing_source {
@@ -1250,7 +1236,7 @@ pub fn find_source_config<'a, 'b>(
 pub(crate) fn new_megarepo_automation_commit(
     parents: Vec<ChangesetId>,
     message: String,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
 ) -> BonsaiChangesetMut {
     BonsaiChangesetMut {
         parents,
@@ -1274,23 +1260,23 @@ mod test {
 
     #[test]
     fn test_create_relative_symlink() -> Result<(), Error> {
-        let path = MPath::new(&b"dir/1.txt"[..])?;
-        let base = MPath::new(&b"dir/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"dir/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"1.txt"[..]));
 
-        let path = MPath::new(&b"dir/1.txt"[..])?;
-        let base = MPath::new(&b"base/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"base/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"../dir/1.txt"[..]));
 
-        let path = MPath::new(&b"dir/subdir/1.txt"[..])?;
-        let base = MPath::new(&b"dir/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir/subdir/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"dir/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"subdir/1.txt"[..]));
 
-        let path = MPath::new(&b"dir1/subdir1/1.txt"[..])?;
-        let base = MPath::new(&b"dir2/subdir2/2.txt"[..])?;
+        let path = NonRootMPath::new(&b"dir1/subdir1/1.txt"[..])?;
+        let base = NonRootMPath::new(&b"dir2/subdir2/2.txt"[..])?;
         let bytes = create_relative_symlink(&path, &base)?;
         assert_eq!(bytes, Bytes::from(&b"../../dir1/subdir1/1.txt"[..]));
 

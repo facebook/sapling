@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-#include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sysexits.h>
+#include <csignal>
 #include <cstdio>
 
 #include <folly/Exception.h>
@@ -127,7 +127,7 @@ void newProcessGroup() {
 int main(int argc, char* argv[]) {
   std::vector<std::string> initialArgv;
   for (int n = 0; n < argc; ++n) {
-    initialArgv.push_back(argv[n]);
+    initialArgv.emplace_back(argv[n]);
   }
   folly::init(&argc, &argv);
 

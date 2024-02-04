@@ -32,7 +32,7 @@ const config: Config.InitialOptions = {
   setupFilesAfterEnv: ['<rootDir>/integrationTests/setupTests.ts'],
 
   moduleNameMapper: {
-    '\\.css$': '<rootDir>/integrationTests/__mocks__/styleMock.ts',
+    '\\.css$': '<rootDir>/src/__mocks__/styleMock.ts',
   },
 };
 export default config;

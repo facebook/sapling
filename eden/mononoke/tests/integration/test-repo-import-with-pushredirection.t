@@ -109,7 +109,7 @@ Before the change
   $ REPOID="$REPOIDSMALL"
   $ echo "$REPOID"
   1
-  $ echo n | repo_import \
+  $  repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "new_dir/new_repo" \

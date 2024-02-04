@@ -41,13 +41,12 @@ use mononoke_types::unode::UnodeEntry;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use multimap::MultiMap;
 use slog::debug;
 use tokio::sync::Mutex;
-use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 use crate::mapping::RootDeletedManifestIdCommon;
@@ -394,7 +393,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 }
             }
         }
-        let subentries = changes.subentries;
+        let (_, subentries) = changes.deconstruct();
 
         // Base traversal for all entries included in `changes` arg
         let mut recurse_entries = subentries
@@ -605,7 +604,7 @@ pub(crate) async fn get_changes_list(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
-) -> Result<Vec<(MPath, PathChange)>, Error> {
+) -> Result<Vec<(NonRootMPath, PathChange)>, Error> {
     // Get file/directory changes between the current changeset and its parents
     //
     // get unode manifests first
@@ -634,7 +633,7 @@ pub(crate) async fn get_changes_list(
         unode_mf_id
             .list_all_entries(ctx.clone(), derivation_ctx.blobstore().clone())
             .try_filter_map(move |(path, _)| async {
-                match path {
+                match Option::<NonRootMPath>::from(path) {
                     Some(path) => Ok(Some((path, PathChange::Add))),
                     None => Ok(None),
                 }
@@ -653,7 +652,7 @@ async fn diff_against_parents(
     derivation_ctx: &DerivationContext,
     unode: ManifestUnodeId,
     parents: Vec<ManifestUnodeId>,
-) -> Result<Vec<(MPath, PathChange)>, Error> {
+) -> Result<Vec<(NonRootMPath, PathChange)>, Error> {
     let blobstore = derivation_ctx.blobstore();
     let parent_diffs_fut = parents.into_iter().map({
         cloned!(ctx, blobstore, unode);
@@ -668,8 +667,12 @@ async fn diff_against_parents(
         .into_iter()
         .flatten()
         .filter_map(|diff| match diff {
-            Diff::Added(Some(path), _) => Some((path, PathChange::Add)),
-            Diff::Removed(Some(path), _) => Some((path, PathChange::Remove)),
+            Diff::Added(path, _) => {
+                Option::<NonRootMPath>::from(path).map(|path| (path, PathChange::Add))
+            }
+            Diff::Removed(path, _) => {
+                Option::<NonRootMPath>::from(path).map(|path| (path, PathChange::Remove))
+            }
             _ => None,
         });
 
@@ -739,9 +742,6 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
             .into_iter()
             .map(|bonsai| (bonsai.get_changeset_id(), bonsai))
             .collect();
-        let use_new_parallel = !tunables()
-            .deleted_manifest_disable_new_parallel_derivation()
-            .unwrap_or_default();
         borrowed!(id_to_bonsai);
         // Map of ids to derived values.
         // We need to be careful to use this for self-references, since the intermediate derived
@@ -762,12 +762,7 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
                 .map_ok(|root: Root| root.id().clone())
                 .try_collect()
                 .await?;
-            if use_new_parallel {
-                Self::derive_single_stack(ctx, derivation_ctx, bonsais, parents, &mut derived)
-                    .await?;
-            } else {
-                Self::derive_serially(ctx, derivation_ctx, bonsais, &mut derived).await?;
-            }
+            Self::derive_single_stack(ctx, derivation_ctx, bonsais, parents, &mut derived).await?;
         }
         Ok(derived)
     }

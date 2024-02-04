@@ -54,7 +54,7 @@ Case 1: fastlog service calls fails or times out
   $ echo {} > .arcconfig
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbscmquery=
+  > fbcodereview=
   > [fastlog]
   > enabled=True
   > [fbscmquery]

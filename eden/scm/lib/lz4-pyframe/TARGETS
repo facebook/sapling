@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "lz4-pyframe",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [{
+                "harness": False,
+                "name": "bench",
+            }],
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = ["fbsource//third-party/rust:quickcheck"],
+    deps = [
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:lz4-sys",
+        "fbsource//third-party/rust:thiserror",
+    ],
+)

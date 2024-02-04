@@ -86,7 +86,7 @@ impl BlackboxOptions {
     pub fn open(self, path: impl AsRef<Path>) -> Result<Blackbox> {
         let path = path.as_ref();
         let opts = self.rotate_log_open_options();
-        let log = match opts.clone().open(path) {
+        let log = match opts.open(path) {
             Err(_) => {
                 // Some error at opening (ex. metadata corruption).
                 // As a simple recovery strategy, rmdir and retry.
@@ -514,7 +514,7 @@ fn u64_to_slice(value: u64) -> [u8; 8] {
 }
 
 fn u64_to_boxed_slice(value: u64) -> Box<[u8]> {
-    (&u64_to_slice(value)[..]).to_vec().into_boxed_slice()
+    u64_to_slice(value)[..].to_vec().into_boxed_slice()
 }
 
 fn time_to_u64(time: &SystemTime) -> u64 {
@@ -551,7 +551,7 @@ pub(crate) mod tests {
     #[test]
     fn test_query_by_session_ids() {
         let dir = tempdir().unwrap();
-        let mut blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
+        let mut blackbox = BlackboxOptions::new().open(dir.path()).unwrap();
 
         let events = [
             Event::Alias {

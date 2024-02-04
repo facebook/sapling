@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use gotham::prelude::FromState;
 use gotham::state::State;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
+use gotham_ext::middleware::RequestLoad;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
@@ -20,6 +22,7 @@ use crate::handlers::HandlerInfo;
 
 define_stats! {
     prefix = "mononoke.edenapi.request";
+    request_load: histogram(100, 0, 5000, Average; P 50; P 75; P 95; P 99),
     requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
     success: dynamic_timeseries("{}.success", (method: String); Rate, Sum),
     failure_4xx: dynamic_timeseries("{}.failure_4xx", (method: String); Rate, Sum),
@@ -133,6 +136,10 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method,))
         }
     });
+
+    if let Some(request_load) = RequestLoad::try_borrow_from(state) {
+        STATS::request_load.add_value(request_load.0);
+    }
 
     Some(())
 }

@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use commit_graph_testlib::*;
-use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_types::RepositoryId;
@@ -20,9 +19,20 @@ use sql_construct::SqlConstruct;
 
 use crate::CachingCommitGraphStorage;
 
+impl CommitGraphStorageTest for CachingCommitGraphStorage {
+    fn flush(&self) {
+        if let Some(mock) = self.memcache.mock_store() {
+            mock.flush();
+        }
+        if let Some(mock) = self.cachelib.mock_store() {
+            mock.flush();
+        }
+    }
+}
+
 async fn run_test<Fut>(
     fb: FacebookInit,
-    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorage>) -> Fut,
+    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorageTest>) -> Fut,
 ) -> Result<()>
 where
     Fut: Future<Output = Result<()>>,

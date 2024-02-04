@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use abomonation_derive::Abomonation;
-use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -28,9 +27,9 @@ use context::CoreContext;
 use fbthrift::compact_protocol;
 use memcache::KeyGen;
 use mononoke_types::hash::Blake2;
+use mononoke_types::path::MPath;
 use mononoke_types::path_bytes_from_mpath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mutable_rename_thrift as thrift;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
@@ -38,8 +37,11 @@ use path_hash::PathHashBytes;
 use crate::MutableRenameEntry;
 use crate::MutableRenames;
 
-/// Bump this when code changes the layout of memcache
-pub const CODEVER: u32 = 0;
+/// Code version used in memcache keys.  This should be changed whenever
+/// the layout of memcache entries is changed in an incompatible way.
+/// The corresponding sitever, which can be used to flush memcache, is
+/// in the JustKnob scm/mononoke_memcache_sitevers:mutable_renames.
+pub const MC_CODEVER: u32 = 0;
 
 #[derive(Clone)]
 pub struct CacheHandlers {
@@ -54,16 +56,14 @@ pub struct CacheHandlers {
 
 impl CacheHandlers {
     pub fn new(cache_handler_factory: CacheHandlerFactory) -> Result<Self, Error> {
-        let sitever = tunables::tunables()
-            .mutable_renames_sitever()
-            .unwrap_or_default()
-            .try_into()
-            .context("While converting from i64 to u32 sitever")?;
-        let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, sitever);
-        let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", CODEVER, sitever);
+        let sitever =
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:mutable_renames", None)?;
+        let presence_keygen =
+            KeyGen::new("scm.mononoke.mutable_renames.present", MC_CODEVER, sitever);
+        let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", MC_CODEVER, sitever);
         let get_cs_ids_keygen = KeyGen::new(
             "scm.mononoke.mutable_renames.cs_ids_for_path",
-            CODEVER,
+            MC_CODEVER,
             sitever,
         );
         Ok(Self {
@@ -223,7 +223,7 @@ pub struct CacheableMutableRenameEntry {
     dst_cs_id: ChangesetId,
     dst_path_hash: PathHash,
     src_cs_id: ChangesetId,
-    src_path: Option<Vec<u8>>,
+    src_path: Vec<u8>,
     src_path_hash: PathHash,
     src_unode: Blake2,
     is_tree: i8,
@@ -241,7 +241,7 @@ impl TryFrom<CacheableMutableRenameEntry> for MutableRenameEntry {
             src_unode,
             is_tree,
         } = entry;
-        let src_path = src_path.as_ref().map(MPath::new).transpose()?;
+        let src_path = MPath::new(src_path)?;
 
         Ok(Self {
             dst_cs_id,
@@ -265,7 +265,7 @@ impl From<MutableRenameEntry> for CacheableMutableRenameEntry {
             src_unode,
             is_tree,
         } = entry;
-        let src_path = src_path.as_ref().map(MPath::to_vec);
+        let src_path = src_path.to_vec();
 
         Self {
             dst_cs_id,
@@ -287,8 +287,8 @@ fn path_hash_to_thrift(hash: &PathHash) -> thrift::PathHash {
 }
 
 fn path_hash_from_thrift(hash: thrift::PathHash) -> Result<PathHash, Error> {
-    let path = MPath::new_opt(hash.path)?;
-    Ok(PathHash::from_path_and_is_tree(path.as_ref(), hash.is_tree))
+    let path = MPath::new(hash.path)?;
+    Ok(PathHash::from_path_and_is_tree(&path, hash.is_tree))
 }
 
 impl MemcacheEntity for CachedMutableRenameEntry {
@@ -397,13 +397,13 @@ impl<'a> EntityStore<CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RenameKey {
     dst_cs_id: ChangesetId,
-    dst_path: Option<MPath>,
+    dst_path: MPath,
     dst_path_hash: PathHashBytes,
 }
 
 impl RenameKey {
-    pub fn new(dst_cs_id: ChangesetId, dst_path: Option<MPath>) -> Self {
-        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+    pub fn new(dst_cs_id: ChangesetId, dst_path: MPath) -> Self {
+        let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
 
         Self {
@@ -417,12 +417,12 @@ impl RenameKey {
 #[async_trait]
 impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
     fn get_cache_key(&self, key: &RenameKey) -> String {
-        match &key.dst_path {
-            None => format!(
+        match &key.dst_path.is_root() {
+            true => format!(
                 "mutable_renames.rename.cs_id_at_root.repo{}.{}",
                 self.owner.repo_id, key.dst_cs_id
             ),
-            Some(_) => format!(
+            false => format!(
                 "mutable_renames.rename.cs_id_and_path.repo{}.{}.{}",
                 self.owner.repo_id, key.dst_cs_id, key.dst_path_hash
             ),
@@ -520,13 +520,13 @@ impl<'a> EntityStore<ChangesetIdSet> for CachedGetCsIdsWithRename<'a> {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct GetCsIdsKey {
-    dst_path: Option<MPath>,
+    dst_path: MPath,
     dst_path_hash: PathHashBytes,
 }
 
 impl GetCsIdsKey {
-    pub fn new(dst_path: Option<MPath>) -> Self {
-        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+    pub fn new(dst_path: MPath) -> Self {
+        let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
 
         Self {
@@ -539,12 +539,12 @@ impl GetCsIdsKey {
 #[async_trait]
 impl<'a> KeyedEntityStore<GetCsIdsKey, ChangesetIdSet> for CachedGetCsIdsWithRename<'a> {
     fn get_cache_key(&self, key: &GetCsIdsKey) -> String {
-        match &key.dst_path {
-            None => format!(
+        match &key.dst_path.is_root() {
+            true => format!(
                 "mutable_renames.csids_with_renames_at_root.repo{}",
                 self.owner.repo_id
             ),
-            Some(_) => format!(
+            false => format!(
                 "mutable_renames.csids_with_renames_at_path.repo{}.{}",
                 self.owner.repo_id, key.dst_path_hash
             ),

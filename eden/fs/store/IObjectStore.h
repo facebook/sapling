@@ -35,7 +35,7 @@ class ImmediateFuture;
 
 class IObjectStore {
  public:
-  virtual ~IObjectStore() {}
+  virtual ~IObjectStore() = default;
 
   /*
    * Object access APIs.

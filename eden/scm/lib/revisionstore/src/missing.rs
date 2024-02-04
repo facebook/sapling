@@ -22,7 +22,7 @@ impl MissingInjection {
         match env::var(name) {
             Ok(v) => {
                 let mut missing = vec![];
-                for part in v.split(",") {
+                for part in v.split(',') {
                     missing.push(part.to_string());
                 }
                 Self {

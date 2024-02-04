@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use blake2::Blake2b;
+use blake2::Blake2b512;
 use blake2::Digest;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -22,6 +22,8 @@ use clap::builder::NonEmptyStringValueParser;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -166,7 +168,11 @@ fn build_context(
         logger.new(o!("repo" => repo.repo_identity().name().to_string()))
     };
 
-    CoreContext::new_with_logger(fb, logger)
+    CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger,
+        ClientInfo::default_with_entry_point(ClientEntryPoint::StreamingClone),
+    )
 }
 
 // Returns how many chunks were inserted
@@ -423,7 +429,7 @@ async fn upload_data(
 }
 
 fn generate_key(chunk_id: u32, data: &[u8], suffix: &str) -> String {
-    let hash = Blake2b::digest(data);
+    let hash = Blake2b512::digest(data);
 
     format!("streaming_clone-chunk{:06}-{:x}-{}", chunk_id, hash, suffix,)
 }

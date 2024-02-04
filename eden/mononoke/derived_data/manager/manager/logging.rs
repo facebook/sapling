@@ -14,6 +14,7 @@ use context::CoreContext;
 use context::PerfCounters;
 use derived_data_constants::*;
 use futures_stats::FutureStats;
+use metadata::Metadata;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -60,10 +61,18 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
             .unwrap_or_else(|| Derivable::NAME.to_string())
     }
 
-    /// Add a single changeset to the logger.
-    pub(super) fn add_changeset(&mut self, csid: ChangesetId) {
+    /// Add a single changeset id to the logger.
+    pub(super) fn add_changeset_id(&mut self, csid: ChangesetId) {
         self.scuba.add("changeset", csid.to_string());
         self.description = Some(format!("{} {csid}", Derivable::NAME));
+    }
+
+    /// Add a single changeset to the logger.  Logs additional data available
+    /// from the bonsai changeset.
+    pub(super) fn add_changeset(&mut self, bcs: &BonsaiChangeset) {
+        self.add_changeset_id(bcs.get_changeset_id());
+        self.scuba
+            .add("changed_files_count", bcs.file_changes_map().len());
     }
 
     /// Add a batch of changesets to the logger.
@@ -80,6 +89,16 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
             }
         };
         self.scuba.add("changesets", csids);
+        let changed_files_count = changesets
+            .iter()
+            .map(|bcs| bcs.file_changes_map().len())
+            .sum::<usize>();
+        self.scuba.add("changed_files_count", changed_files_count);
+    }
+
+    /// Add metadata to the logger
+    pub fn add_metadata(&mut self, metadata: &Metadata) {
+        self.scuba.add_metadata(metadata);
     }
 
     /// Add values for the parameters controlling batched derivation to the
@@ -220,13 +239,14 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
 
 impl DerivedDataManager {
     fn should_log_slow_derivation(&self, duration: Duration) -> bool {
-        let threshold = tunables::tunables()
-            .derived_data_slow_derivation_threshold_secs()
-            .unwrap_or_default();
-        let threshold = match threshold.try_into() {
-            Ok(t) if t > 0 => t,
-            _ => return false,
-        };
+        const FALLBACK_THRESHOLD_SECS: u64 = 15;
+
+        let threshold: u64 = justknobs::get_as::<u64>(
+            "scm/mononoke_timeouts:derived_data_slow_derivation_threshold_secs",
+            None,
+        )
+        .unwrap_or(FALLBACK_THRESHOLD_SECS);
+
         duration > Duration::from_secs(threshold)
     }
 

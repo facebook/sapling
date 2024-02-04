@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("autocargo")
+
+rust_library(
+    name = "hostcaps",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/fbwhoami:fbwhoami"),  # T172908111
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:once_cell",
+        "//common/rust/fbwhoami:fbwhoami",
+    ],
+)
+
+cpp_library(
+    name = "hostcaps_ffi",
+    headers = ["hostcaps.h"],
+    exported_deps = [
+        ":hostcaps",
+    ],
+)
+
+rust_binary(
+    name = "test-hostcaps",
+    srcs = ["src/bin/test.rs"],
+    crate_root = "src/bin/test.rs",
+    deps = [":hostcaps"],
+)

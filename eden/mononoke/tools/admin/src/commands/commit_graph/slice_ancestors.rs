@@ -9,6 +9,7 @@ use anyhow::Result;
 use clap::Args;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream;
@@ -16,7 +17,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct SliceAncestorsArgs {
@@ -57,7 +57,7 @@ pub async fn slice_ancestors(
                         anyhow::Ok((
                             cs_id,
                             repo.commit_graph_arc()
-                                .changeset_generation_required(ctx, cs_id)
+                                .changeset_generation(ctx, cs_id)
                                 .await?,
                         ))
                     })
@@ -77,7 +77,11 @@ pub async fn slice_ancestors(
         .await?;
 
     for (gen_group, cs_ids) in slices {
-        print!("slice [{}, {}):", gen_group, gen_group + args.slice_size);
+        print!(
+            "slice [{}, {}):",
+            gen_group.value(),
+            gen_group.value() + args.slice_size
+        );
         for cs_id in cs_ids {
             print!(" {}", cs_id);
         }

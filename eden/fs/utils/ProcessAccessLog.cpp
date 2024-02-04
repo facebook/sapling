@@ -12,7 +12,7 @@
 #include <folly/MicroLock.h>
 #include <folly/ThreadLocal.h>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 
 namespace facebook::eden {
 
@@ -131,9 +131,9 @@ void ProcessAccessLog::Bucket::merge(const Bucket& other) {
 }
 
 ProcessAccessLog::ProcessAccessLog(
-    std::shared_ptr<ProcessNameCache> processNameCache)
-    : processNameCache_{std::move(processNameCache)} {
-  XCHECK(processNameCache_) << "Process name cache is mandatory";
+    std::shared_ptr<ProcessInfoCache> processInfoCache)
+    : processInfoCache_{std::move(processInfoCache)} {
+  XCHECK(processInfoCache_) << "Process info cache is mandatory";
 }
 
 ProcessAccessLog::~ProcessAccessLog() {
@@ -177,9 +177,9 @@ void ProcessAccessLog::recordAccess(
     // code, only try to lookup and cache the process name if we haven't seen
     // it this thread-second.
     if (isNewPid) {
-      // It's a bit unfortunate that ProcessNameCache maintains its own
+      // It's a bit unfortunate that ProcessInfoCache maintains its own
       // SharedMutex, but it will be shared with thrift counters.
-      processNameCache_->add(pid);
+      processInfoCache_->add(pid);
     }
   }
 }
@@ -189,7 +189,7 @@ void ProcessAccessLog::recordDuration(
     std::chrono::nanoseconds duration) {
   bool isNewPid = getTlb()->add(getSecondsSinceEpoch(), pid, duration);
   if (pid != 0 && isNewPid) {
-    processNameCache_->add(pid);
+    processInfoCache_->add(pid);
   }
 }
 

@@ -2,7 +2,7 @@ import datetime
 import time
 
 import bindings
-from edenscm import util
+from sapling import util
 
 
 def extsetup(ui):

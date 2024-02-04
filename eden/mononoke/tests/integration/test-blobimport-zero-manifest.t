@@ -5,7 +5,6 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ setconfig workingcopy.ruststatus=False
 
 # setup repo, usefncache flag for forcing algo encoding run
   $ hg init repo-hg --config format.usefncache=False

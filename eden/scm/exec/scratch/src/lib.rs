@@ -67,7 +67,7 @@ pub fn zzencode(path: &str) -> String {
         match b {
             '/' | '\\' => result.push('Z'),
             'Z' => result.push_str("_Z"),
-            ':' => result.push_str("_"),
+            ':' => result.push('_'),
             _ => result.push(b),
         }
     }

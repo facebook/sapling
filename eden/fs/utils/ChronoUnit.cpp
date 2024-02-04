@@ -59,10 +59,10 @@ inline unsigned int ChronoUnitPerfectHash::hash(StringPiece str) {
   switch (hval) {
     default:
       hval += asso_values[static_cast<unsigned char>(str[2])];
-      FOLLY_FALLTHROUGH;
+      [[fallthrough]];
     case 2:
       hval += asso_values[static_cast<unsigned char>(str[1])];
-      FOLLY_FALLTHROUGH;
+      [[fallthrough]];
     case 1:
       hval += asso_values[static_cast<unsigned char>(str[0])];
       break;
@@ -144,7 +144,7 @@ ChronoUnitPerfectHash::in_word_set(StringPiece str) {
        {"day", 86400, 1},
        {"days", 86400, 1}}};
 
-  if (str.size() <= MAX_WORD_LENGTH && str.size() >= MIN_WORD_LENGTH) {
+  if (str.size() <= MAX_WORD_LENGTH && !str.empty()) {
     unsigned int key = hash(str);
     if (key <= MAX_HASH_VALUE) {
       if (wordlist[key].name == str) {

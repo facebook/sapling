@@ -48,8 +48,12 @@ class RestartTestBase(ServiceTestCaseBase):
         return pexpect_spawn(
             restart_cmd[0],
             restart_cmd[1:],
+            # pyre-fixme[6]: For 3rd argument expected `Optional[_Logfile]` but got
+            #  `BinaryIO`.
             logfile=sys.stdout.buffer,
             timeout=120,
+            # pyre-fixme[6]: For 5th argument expected
+            #  `Optional[_Environ[typing.Any]]` but got `Dict[str, str]`.
             env=env,
         )
 

@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "progress-model",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:thread_local",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+    ],
+)

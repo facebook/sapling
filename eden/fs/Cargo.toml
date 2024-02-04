@@ -1,22 +1,14 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
-base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d4b418487ff7726464549b43bf850509694c3e74" }
-curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
-dachshund = { git = "https://github.com/facebookresearch/dachshund", rev = "ec4cc35bc5afb0db5f791ee9e3168e7586986c88" }
+base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
+bindgen = { git = "https://github.com/rust-lang/rust-bindgen", rev = "2997017b5a3065b83e9d76f0080d6cb99c94c0c1" }
+bindgen-cli = { git = "https://github.com/rust-lang/rust-bindgen", rev = "2997017b5a3065b83e9d76f0080d6cb99c94c0c1" }
 graphql-parser = { git = "https://github.com/graphql-rust//graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
+imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "47bb38be50fafe99021b6436672dea1c28920e70" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
-mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
-tracing = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
-tracing-appender = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
-tracing-core = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
-tracing-futures = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
-tracing-log = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
-tracing-serde = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
-tracing-subscriber = { git = "https://github.com/fbsource/tracing.git", rev = "3399637795795560a073fc60a2e6cfa67b8421f1" }
 
 [workspace]
 members = [
@@ -30,11 +22,20 @@ members = [
   "cli_rs/stack-config",
   "cli_rs/stack-config-derive",
   "config",
+  "config/clients",
+  "config/services",
   "config/types",
   "inodes/overlay",
+  "inodes/overlay/clients",
+  "inodes/overlay/services",
   "inodes/overlay/types",
   "service",
+  "service/clients",
+  "service/services",
   "service/thrift_streaming",
+  "service/thrift_streaming/clients",
+  "service/thrift_streaming/services",
   "service/thrift_streaming/types",
   "service/types",
 ]
+resolver = "2"

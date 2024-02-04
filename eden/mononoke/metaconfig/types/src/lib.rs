@@ -28,9 +28,10 @@ use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
 use derive_more::From;
 use derive_more::Into;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use mysql_common::value::convert::ConvIr;
@@ -227,6 +228,8 @@ pub struct RepoConfig {
     /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
     /// on select servers.
     pub deep_sharding_config: Option<ShardingModeConfig>,
+    /// Local directory to write files to instead of uploading to everstore
+    pub everstore_local_path: Option<String>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -577,6 +580,10 @@ impl HookBypass {
 pub struct HookConfig {
     /// An optional way to bypass a hook
     pub bypass: Option<HookBypass>,
+    /// Configuration options (in JSON format)
+    pub options: Option<String>,
+
+    // Deprecated config options
     /// Map of config to it's value. Values here are strings
     pub strings: HashMap<String, String>,
     /// **Warning:** this being deprecated, please use ints_64 instead. Map of config to it's value. Values here are 32bit integers
@@ -596,6 +603,8 @@ pub struct HookConfig {
 pub struct HookParams {
     /// The name of the hook
     pub name: String,
+    /// The name of the hook implementation
+    pub implementation: String,
     /// Configs that should be passed to hook
     pub config: HookConfig,
 }
@@ -605,12 +614,15 @@ pub struct HookParams {
 pub struct PushParams {
     /// Whether normal non-pushrebase pushes are allowed
     pub pure_push_allowed: bool,
+    /// Limit of commits in a single unbundle
+    pub unbundle_commit_limit: Option<u64>,
 }
 
 impl Default for PushParams {
     fn default() -> Self {
         PushParams {
             pure_push_allowed: true,
+            unbundle_commit_limit: None,
         }
     }
 }
@@ -976,6 +988,23 @@ pub struct RemoteDatabaseConfig {
     pub db_address: String,
 }
 
+/// Configuration for a remote OSS MySQL database
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct OssRemoteDatabaseConfig {
+    /// Host to connect to
+    pub host: String,
+    /// Port to connect to
+    pub port: i16,
+    /// Name of the database
+    pub database: String,
+    /// Keychain group where user and password are stored
+    pub secret_group: String,
+    /// Name of the user secret
+    pub user_secret: String,
+    /// Name of the password secret
+    pub password_secret: String,
+}
+
 /// Configuration for a sharded remote MySQL database
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ShardedRemoteDatabaseConfig {
@@ -1041,6 +1070,23 @@ pub struct RemoteMetadataDatabaseConfig {
     pub deletion_log: Option<RemoteDatabaseConfig>,
 }
 
+/// Configuration for the Metadata database when it is remote.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct OssRemoteMetadataDatabaseConfig {
+    /// Database for the primary metadata.
+    pub primary: OssRemoteDatabaseConfig,
+    /// Database for possibly sharded filenodes.
+    pub filenodes: OssRemoteDatabaseConfig,
+    /// Database for commit mutation metadata.
+    pub mutation: OssRemoteDatabaseConfig,
+    /// Database for sparse profiles sizes.
+    pub sparse_profiles: OssRemoteDatabaseConfig,
+    /// Database for bonsai blob mapping
+    pub bonsai_blob_mapping: Option<OssRemoteDatabaseConfig>,
+    /// Database for deletion log
+    pub deletion_log: Option<OssRemoteDatabaseConfig>,
+}
+
 /// Configuration for the Metadata database
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum MetadataDatabaseConfig {
@@ -1048,6 +1094,8 @@ pub enum MetadataDatabaseConfig {
     Local(LocalDatabaseConfig),
     /// Remote MySQL databases
     Remote(RemoteMetadataDatabaseConfig),
+    /// OSS Remote MySQL Databases
+    OssRemote(OssRemoteMetadataDatabaseConfig),
 }
 
 impl Default for MetadataDatabaseConfig {
@@ -1064,6 +1112,7 @@ impl MetadataDatabaseConfig {
         match self {
             MetadataDatabaseConfig::Local(_) => true,
             MetadataDatabaseConfig::Remote(_) => false,
+            MetadataDatabaseConfig::OssRemote(_) => false,
         }
     }
 
@@ -1071,6 +1120,7 @@ impl MetadataDatabaseConfig {
     pub fn primary_address(&self) -> Option<String> {
         match self {
             MetadataDatabaseConfig::Remote(remote) => Some(remote.primary.db_address.clone()),
+            MetadataDatabaseConfig::OssRemote(_) => None,
             MetadataDatabaseConfig::Local(_) => None,
         }
     }
@@ -1167,7 +1217,20 @@ pub enum DefaultSmallToLargeCommitSyncPathAction {
     /// Preserve as is
     Preserve,
     /// Prepend a given prefix to the path
-    PrependPrefix(MPath),
+    PrependPrefix(NonRootMPath),
+}
+
+/// Whether any changes made to git submodules should be stripped from
+/// the changesets before being synced.
+/// Since this is used in the small repo config, defininig a struct to set the
+/// default to true, to avoid accidentally syncing git submodules to large repos.
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum GitSubmodulesChangesAction {
+    /// Sync all changes made to git submodules without alterations.
+    Keep,
+    /// Strip any changes made to git submodules from the synced bonsai.
+    #[default]
+    Strip,
 }
 
 /// Commit sync configuration for a small repo
@@ -1179,7 +1242,10 @@ pub struct SmallRepoCommitSyncConfig {
     /// Default action to take on a path
     pub default_action: DefaultSmallToLargeCommitSyncPathAction,
     /// A map of prefix replacements when syncing
-    pub map: HashMap<MPath, MPath>,
+    pub map: HashMap<NonRootMPath, NonRootMPath>,
+    /// Whether any changes made to git submodules should be stripped from
+    /// the changesets before being synced.
+    pub git_submodules_action: GitSubmodulesChangesAction,
 }
 
 /// Commit sync direction
@@ -1263,6 +1329,12 @@ pub struct CommonCommitSyncConfig {
 pub struct SmallRepoPermanentConfig {
     /// Prefix of the bookmark
     pub bookmark_prefix: AsciiString,
+    /// Mapping from each common_pushrebase_bookmark in the large repo to
+    /// the equivalent bookmark in the small repo.
+    /// This allows using a different bookmark name for the common pushrebase bookmark
+    /// between the large repos and some of the small repos (e.g: a small repo imported
+    /// from git may want to sync its `heads/master` to `master` in a large repo)
+    pub common_pushrebase_bookmarks_map: HashMap<BookmarkKey, BookmarkKey>,
 }
 
 /// Source Control Service options
@@ -1341,7 +1413,7 @@ impl SourceControlServiceParams {
         &self,
         service_identity: impl AsRef<str>,
         bonsai: &'cs BonsaiChangeset,
-    ) -> Result<(), &'cs MPath> {
+    ) -> Result<(), &'cs NonRootMPath> {
         if let Some(restrictions) = self
             .service_write_restrictions
             .get(service_identity.as_ref())
@@ -1565,7 +1637,7 @@ pub struct AclRegion {
 
     /// List of path prefixes that apply to this region.  Prefixes are in terms of
     /// path elements, so the prefix a/b applies to a/b/c but not a/bb.
-    pub path_prefixes: Vec<Option<MPath>>,
+    pub path_prefixes: Vec<MPath>,
 }
 
 /// ACL region rule consisting of multiple regions and path prefixes

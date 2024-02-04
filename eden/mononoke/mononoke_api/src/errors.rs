@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::any::Demand;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -21,18 +20,27 @@ use bookmarks_movement::HookRejection;
 use derived_data::DerivationError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;
+use mononoke_types::path::MPath;
 use pushrebase::PushrebaseError;
 use repo_authorization::AuthorizationError;
 use thiserror::Error;
 
-use crate::path::MononokePath;
-
 #[derive(Clone, Debug)]
 pub struct InternalError(Arc<Error>);
 
+// The cargo build of anyhow disables its backtrace features when using RUSTC_BOOTSTRAP=1
+#[cfg(not(fbcode_build))]
+static DISABLED: Backtrace = Backtrace::disabled();
+
 impl InternalError {
+    #[cfg(fbcode_build)]
     pub fn backtrace(&self) -> &Backtrace {
         self.0.backtrace()
+    }
+
+    #[cfg(not(fbcode_build))]
+    pub fn backtrace(&self) -> &Backtrace {
+        &DISABLED
     }
 }
 
@@ -53,8 +61,9 @@ impl StdError for InternalError {
         Some(&**self.0)
     }
 
-    fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
-        demand.provide_ref::<Backtrace>(self.backtrace());
+    #[cfg(fbcode_build)]
+    fn provide<'a>(&'a self, request: &mut ::std::error::Request<'a>) {
+        request.provide_ref::<Backtrace>(self.backtrace());
     }
 }
 
@@ -63,7 +72,7 @@ pub enum MononokeError {
     #[error("invalid request: {0}")]
     InvalidRequest(String),
     #[error("unresolved path conflicts in merge:\n {}", .conflict_paths.iter().join("\n"))]
-    MergeConflicts { conflict_paths: Vec<MononokePath> },
+    MergeConflicts { conflict_paths: Vec<MPath> },
     #[error("Conflicts while pushrebasing: {0:?}")]
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     #[error(

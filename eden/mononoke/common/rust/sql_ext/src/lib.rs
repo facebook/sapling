@@ -13,7 +13,7 @@ mod sqlite;
 
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
-use sql::Transaction;
+pub use sql::Transaction;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
@@ -30,9 +30,13 @@ pub mod _macro_internal {
     pub use std::hash::Hasher;
 
     pub use anyhow::Result;
+    pub use clientinfo::ClientEntryPoint;
+    pub use clientinfo::ClientRequestInfo;
     pub use paste;
+    pub use serde_json;
     pub use sql::queries;
     pub use sql::Connection;
+    pub use sql::Transaction;
     pub use sql::WriteResult;
     pub use sql_query_config::SqlQueryConfig;
     pub use twox_hash::xxh3::Hash128;
@@ -55,6 +59,8 @@ pub mod facebook {
     pub use r#impl::create_mysql_connections_sharded;
     #[cfg(fbcode_build)]
     pub use r#impl::create_mysql_connections_unsharded;
+    #[cfg(fbcode_build)]
+    pub use r#impl::create_oss_mysql_connections_unsharded;
     #[cfg(fbcode_build)]
     pub use r#impl::myadmin::replication_status_chunked;
     #[cfg(fbcode_build)]

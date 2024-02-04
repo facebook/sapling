@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "cmddebugtop",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:comfy-table",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/cliparser:cliparser",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/debugtop:debugtop",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/runlog:runlog",
+    ],
+)

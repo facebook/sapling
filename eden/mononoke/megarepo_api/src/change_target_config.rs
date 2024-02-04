@@ -388,11 +388,11 @@ impl<'a> ChangeTargetConfig<'a> {
             .changeset_fetcher()
             .get_parents(ctx, actual_target_location)
             .await?;
-        if parents.get(0) != Some(&expected_target_location) {
+        if parents.first() != Some(&expected_target_location) {
             return Err(MegarepoError::request(anyhow!(
                 "Neither {} nor its first parent {:?} point to a target location {}",
                 actual_target_location,
-                parents.get(0),
+                parents.first(),
                 expected_target_location,
             )));
         }

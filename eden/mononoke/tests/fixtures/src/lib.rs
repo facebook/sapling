@@ -23,7 +23,7 @@ use futures::stream;
 use maplit::btreemap;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::HgChangesetId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -42,11 +42,11 @@ pub async fn store_files(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: &impl Repo,
-) -> SortedVectorMap<MPath, FileChange> {
+) -> SortedVectorMap<NonRootMPath, FileChange> {
     let mut res = BTreeMap::new();
 
     for (path, content) in files {
-        let path = MPath::new(path).unwrap();
+        let path = NonRootMPath::new(path).unwrap();
         match content {
             Some(content) => {
                 let content = Bytes::copy_from_slice(content.as_bytes());
@@ -1151,6 +1151,153 @@ impl TestRepoFixture for MergeUneven {
     }
 }
 
+pub struct MergeMultipleFiles;
+
+#[async_trait]
+impl TestRepoFixture for MergeMultipleFiles {
+    const REPO_NAME: &'static str = "merge_multiple_files";
+
+    async fn initrepo(fb: FacebookInit, repo: &impl Repo) {
+        // Common commit
+        let files = btreemap! {
+            "base" => Some("common\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506430496 25200",
+            "message"=> "base",
+            "expected_hg_changeset"=> "860e94a2c490c3ea07ad8e6482c1b53708705565",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        // First branch
+        let files = btreemap! {
+            "branch" => Some("4\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "860e94a2c490c3ea07ad8e6482c1b53708705565",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506430612 25200",
+            "message"=> "Doubled",
+            "expected_hg_changeset"=> "f7281f23f4ff6b323a86faffe1527bc3931caad8",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        let files = btreemap! {
+            "base" => Some("branch1\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "f7281f23f4ff6b323a86faffe1527bc3931caad8",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435062 25200",
+            "message"=> "Replace the base",
+            "expected_hg_changeset"=> "0ecdd411e73b404bf45ea94f86477c4beb202646",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        let files = btreemap! {
+            "1" => Some("1\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "0ecdd411e73b404bf45ea94f86477c4beb202646",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435631 25200",
+            "message"=> "Add 1",
+            "expected_hg_changeset"=> "2f340e879ba100e97fe43fafb1357e01b4e046c0",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        let files = btreemap! {
+            "3" => Some("other\n"),
+        };
+        let commit_metadata: BTreeMap<&str, &str> = btreemap! {
+            "parents"=> "2f340e879ba100e97fe43fafb1357e01b4e046c0",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435632 25200",
+            "message"=> "Add 3",
+            "expected_hg_changeset"=> "c0c7af787afb8dffa4eab1eb45019ab4ac9e8688",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        let files = btreemap! {
+            "5" => Some("5\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "c0c7af787afb8dffa4eab1eb45019ab4ac9e8688",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435633 25200",
+            "message"=> "Add 5",
+            "expected_hg_changeset"=> "5e09a5d3676c8b51db7fee4aa6ce393871860569",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        // Second branch
+        let files = btreemap! {
+            "branch" => Some("4\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "860e94a2c490c3ea07ad8e6482c1b53708705565",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435041 25200",
+            "message"=> "I think 4 is a nice number",
+            "expected_hg_changeset"=> "f2765c353d10cc1666a7cb6d2eed1d3b1ca04edb",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        let files = btreemap! {
+            "base" => Some("other common\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "f2765c353d10cc1666a7cb6d2eed1d3b1ca04edb",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435051 25200",
+            "message"=> "Other common",
+            "expected_hg_changeset"=> "3e672a42c4af4459354c82d4c21a0e7566c1e431",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        let files = btreemap! {
+            "3" => Some("some other\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "3e672a42c4af4459354c82d4c21a0e7566c1e431",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "1506435061 25200",
+            "message"=> "some other",
+            "expected_hg_changeset"=> "a291c0b59375c5321da2a77e215647b405c8cb79",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        // Merge
+        let files = btreemap! {
+            "1" => Some("1\n"),
+            "2" => Some("2\n"),
+            "3" => Some("3\n"),
+            "4" => Some("4\n"),
+            "5" => Some("5\n"),
+            "branch" => Some("4\n"),
+            "base" => Some("branch1\n"),
+        };
+        let commit_metadata = btreemap! {
+            "parents"=> "5e09a5d3676c8b51db7fee4aa6ce393871860569 a291c0b59375c5321da2a77e215647b405c8cb79",
+            "author"=> "Simon Farnsworth <simonfar@fb.com>",
+            "author_date"=> "150643562 25200",
+            "message"=> "Merge two branches",
+            "expected_hg_changeset"=> "c7bfbeed73ed19b01f5309716164d5b37725a61d",
+        };
+        create_bonsai_changeset_from_test_data(fb, repo, files, commit_metadata).await;
+
+        set_bookmark(
+            fb,
+            repo,
+            "c7bfbeed73ed19b01f5309716164d5b37725a61d",
+            BookmarkKey::new("master").unwrap(),
+        )
+        .await;
+    }
+}
+
 pub struct UnsharedMergeEven;
 
 #[async_trait]
@@ -1654,7 +1801,7 @@ pub fn create_bonsai_changeset_with_author(
 
 pub fn create_bonsai_changeset_with_files(
     parents: Vec<ChangesetId>,
-    file_changes: impl Into<SortedVectorMap<MPath, FileChange>>,
+    file_changes: impl Into<SortedVectorMap<NonRootMPath, FileChange>>,
 ) -> BonsaiChangeset {
     BonsaiChangesetMut {
         parents,
@@ -1742,6 +1889,11 @@ mod test {
     #[fbinit::test]
     async fn test_merge_uneven(fb: FacebookInit) {
         MergeUneven::getrepo(fb).await;
+    }
+
+    #[fbinit::test]
+    async fn test_merge_multiple_files(fb: FacebookInit) {
+        MergeMultipleFiles::getrepo(fb).await;
     }
 
     #[fbinit::test]

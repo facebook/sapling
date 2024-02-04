@@ -7,9 +7,9 @@ import json
 import subprocess
 
 import ghstack
-from edenscm import extensions
-from edenscm.ext.github.mock_utils import MockGitHubServer, OWNER, REPO_ID, REPO_NAME
 from ghstack import ghs_types, github_gh_cli, github_utils
+from sapling import extensions
+from sapling.ext.github.mock_utils import MockGitHubServer, OWNER, REPO_ID, REPO_NAME
 
 
 def setup_mock_github_server() -> MockGitHubServer:

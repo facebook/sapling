@@ -123,7 +123,12 @@ InodeNumber SqliteInodeCatalog::scanLocalChanges(
     FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(
-      config, *this, mountPath, windowsSymlinksEnabled, callback);
+      config,
+      *this,
+      InodeCatalogType::Sqlite,
+      mountPath,
+      windowsSymlinksEnabled,
+      callback);
 #else
   (void)config;
   (void)mountPath;

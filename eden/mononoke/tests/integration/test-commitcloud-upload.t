@@ -13,16 +13,6 @@ setup configuration
   >   setup_common_config
   $ cd $TESTTMP
 
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
-
 setup common configuration for these tests
 mononoke  local commit cloud backend
   $ cat >> $HGRCPATH <<EOF
@@ -144,7 +134,6 @@ This test also checks file content deduplication. We upload 1 file content and 1
   edenapi: queue 2 trees for upload
    INFO edenapi::client: Requesting trees upload for 2 item(s)
   edenapi: uploaded 2 trees
-  edenapi: uploading commit '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'...
    INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
 
@@ -198,7 +187,6 @@ The files of the second commit are identical to the files of the first commit, s
   edenapi: queue 1 tree for upload
    INFO edenapi::client: Requesting trees upload for 1 item(s)
   edenapi: uploaded 1 tree
-  edenapi: uploading commit '65289540f44d80cecffca8a3fd655c0ca6243cd9'...
    INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
 
@@ -268,7 +256,6 @@ Also, check that upload will not reupload file contents again.
   edenapi: queue 0 files for upload
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit 'a8c7c28d0391c5948f0a40f43e8b16d7172289cf'...
   edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
@@ -334,7 +321,6 @@ Also, dedup for file contents is expected to work (see queue 100 files but only 
   edenapi: queue 2 trees for upload
    INFO edenapi::client: Requesting trees upload for 2 item(s)
   edenapi: uploaded 2 trees
-  edenapi: uploading commit '32551ca744171ab6eedf48245d4fab816292ae5f'...
    INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
@@ -378,7 +364,6 @@ No trees or filenodes are expected to be reuploaded.
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 0 trees for upload
-  edenapi: uploading commit 'c8b3ca4878376f03b729cc867113280dc38baf23'...
   edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
@@ -427,9 +412,6 @@ Check the force flag for backup. Local cache checks must be ignoree
   edenapi: queue 6 trees for upload
    INFO edenapi::client: Requesting trees upload for 6 item(s)
   edenapi: uploaded 6 trees
-  edenapi: uploading commit '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'...
-  edenapi: uploading commit 'a8c7c28d0391c5948f0a40f43e8b16d7172289cf'...
-  edenapi: uploading commit 'c8b3ca4878376f03b729cc867113280dc38baf23'...
    INFO edenapi::client: Requesting changesets upload for 3 item(s)
   edenapi: uploaded 3 changesets
 

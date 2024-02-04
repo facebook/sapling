@@ -19,15 +19,15 @@ use crate::progress::Progress;
 use crate::receiver::Receiver;
 use crate::RequestContext;
 
-pub struct Streaming<R> {
-    receiver: Option<R>,
+pub struct Streaming {
+    receiver: Option<Box<dyn Receiver>>,
     bytes_sent: usize,
     request_context: RequestContext,
     is_active: bool,
 }
 
-impl<R> Streaming<R> {
-    pub(crate) fn new(receiver: R, request_context: RequestContext) -> Self {
+impl Streaming {
+    pub(crate) fn new(receiver: Box<dyn Receiver>, request_context: RequestContext) -> Self {
         Self {
             receiver: Some(receiver),
             bytes_sent: 0,
@@ -36,7 +36,7 @@ impl<R> Streaming<R> {
         }
     }
 
-    pub fn take_receiver(&mut self) -> Option<R> {
+    pub fn take_receiver(&mut self) -> Option<Box<dyn Receiver>> {
         self.receiver.take()
     }
 
@@ -49,7 +49,7 @@ impl<R> Streaming<R> {
     }
 }
 
-impl<R: Receiver> Handler for Streaming<R> {
+impl Handler for Streaming {
     fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
         self.request_context
             .event_listeners
@@ -136,13 +136,21 @@ impl<R: Receiver> Handler for Streaming<R> {
     }
 }
 
-impl<R: Receiver> HandlerExt for Streaming<R> {
+impl HandlerExt for Streaming {
     fn request_context_mut(&mut self) -> &mut RequestContext {
         &mut self.request_context
     }
 
     fn request_context(&self) -> &RequestContext {
         &self.request_context
+    }
+
+    fn take_receiver(&mut self) -> Option<Box<dyn Receiver>> {
+        Streaming::take_receiver(self)
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
@@ -166,7 +174,8 @@ mod tests {
         let mut buf2 = [0xFF; 3];
         let mut buf3 = [0xFF; 4];
 
-        let mut handler = Streaming::new(NullReceiver, RequestContext::dummy().body(data));
+        let mut handler =
+            Streaming::new(Box::new(NullReceiver), RequestContext::dummy().body(data));
 
         assert_eq!(handler.read(&mut buf1[..]).unwrap(), 5);
         assert_eq!(handler.read(&mut buf2[..]).unwrap(), 3);
@@ -180,7 +189,7 @@ mod tests {
     #[test]
     fn test_write() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
+        let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
 
         let chunks = vec![vec![1, 2, 3], vec![5, 6], vec![7, 8, 9, 0]];
 
@@ -194,7 +203,8 @@ mod tests {
     #[test]
     fn test_seek() {
         let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        let mut handler = Streaming::new(NullReceiver, RequestContext::dummy().body(data));
+        let mut handler =
+            Streaming::new(Box::new(NullReceiver), RequestContext::dummy().body(data));
 
         assert_matches!(handler.seek(SeekFrom::Start(3)), SeekResult::Ok);
         assert_eq!(handler.bytes_sent, 3);
@@ -221,7 +231,7 @@ mod tests {
     #[test]
     fn test_headers() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
+        let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
 
         assert!(handler.header(&b"Content-Length: 1234\r\n"[..]));
         assert!(handler.header(&[1, 2, 58, 3, 4][..])); // Valid UTF-8 but not alphanumeric.
@@ -242,9 +252,9 @@ mod tests {
     #[test]
     fn test_progress() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
+        let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
 
-        let reporter = ProgressReporter::with_callback(|_| ());
+        let reporter = ProgressReporter::default();
         handler
             .request_context_mut()
             .event_listeners()

@@ -626,7 +626,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             for level in (1..=max_level).rev() {
                 let seg = self.find_segment_by_head_and_level(id, level)?;
                 if let Some(seg) = seg {
-                    let span = seg.span()?.into();
+                    let span = seg.span()?;
                     trace(&|| format!(" push lv{} {:?}", level, &span));
                     result.push_span(span);
                     let parents = seg.parents()?;
@@ -676,7 +676,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 let span = seg.span()?;
                 result.push_span((span.low..=id).into());
                 trace(&|| format!(" push {:?}..={:?}", span.low, id));
-                if let Some(&p) = seg.parents()?.get(0) {
+                if let Some(&p) = seg.parents()?.first() {
                     to_visit.push(p);
                 }
             }
@@ -861,7 +861,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             n -= step;
             if n > 0 {
                 // Follow the first parent.
-                id = match seg.parents()?.get(0) {
+                id = match seg.parents()?.first() {
                     None => return Ok(None),
                     Some(&id) => id,
                 };
@@ -993,7 +993,7 @@ pub trait IdDagAlgorithm: IdDagStore {
 
                     // Fragmented linear segments. Convert id~n to next_id~next_n.
                     let child_parents = child_seg.parents()?;
-                    match child_parents.get(0) {
+                    match child_parents.first() {
                         None => {
                             return bug(format!(
                                 "segment {:?} should have parent {:?}",
@@ -1980,17 +1980,16 @@ mod tests {
 
         let flags = SegmentFlags::empty();
 
-        dag.insert(flags, 0, Id::MIN, Id(50), &vec![]).unwrap();
+        dag.insert(flags, 0, Id::MIN, Id(50), &[]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(50)));
 
-        dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
-            .unwrap();
+        dag.insert(flags, 0, Id(51), Id(100), &[Id(50)]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(100)));
 
-        dag.insert(flags, 0, Id(101), Id(150), &vec![]).unwrap();
+        dag.insert(flags, 0, Id(101), Id(150), &[]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(150)));
 
-        dag.insert(flags, 1, Id::MIN, Id(150), &vec![]).unwrap();
+        dag.insert(flags, 1, Id::MIN, Id(150), &[]).unwrap();
         assert_eq!(dag.all().unwrap().max(), Some(Id(150)));
 
         // Helper functions to make the below lines shorter.
@@ -2030,7 +2029,7 @@ mod tests {
 
     fn get_parents(id: Id) -> Result<Vec<Id>> {
         match id.0 {
-            0 | 1 | 2 => Ok(Vec::new()),
+            0..=2 => Ok(Vec::new()),
             _ => Ok(vec![id - 1, Id(id.0 / 2)]),
         }
     }

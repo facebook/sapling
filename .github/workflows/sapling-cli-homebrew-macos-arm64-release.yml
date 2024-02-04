@@ -7,7 +7,7 @@ name: Release - Homebrew macOS-arm64
     - test-release-*
 jobs:
   build:
-    runs-on: macos-12
+    runs-on: macos-13-xlarge
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -16,29 +16,27 @@ jobs:
     - name: set-env SAPLING_VERSION
       shell: bash
       run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
+    - name: Tap homebrew-core
+      run: brew tap homebrew/core
     - name: Prepare build environment
-      run: 'eden/scm/packaging/mac/prepare_environment.py \
-
-        -s c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6 -f openssl@1.1 \
-
-        -s 270d1f7c56978757922b246dfd8bccead979c3d30a8e95d77a7b7b644050e6cd -f python@3.11 \
+      run: 'eden/scm/packaging/mac/prepare_formula.py \
 
         -t aarch64-apple-darwin \
 
         -r ${{ env.SAPLING_VERSION }} \
 
-        -o $(brew tap-info homebrew/core | sed -n ''2p'' | awk ''{printf $1}'')/Formula/sapling.rb'
+        -o $(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/s/sapling.rb'
     - name: Install and build Sapling bottle
-      run: brew install --build-bottle sapling
+      run: HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_FAIL_LOG_LINES=100 brew install --build-bottle sapling
     - name: Create Sapling bottle
-      run: brew bottle sapling
+      run: HOMEBREW_NO_INSTALL_FROM_API=1 brew bottle sapling
     - name: Rename bottle to some platform specific name
-      run: mv sapling*monterey.bottle.tar.gz sapling_${{ env.SAPLING_VERSION }}.arm64_monterey.bottle.tar.gz
+      run: mv sapling*ventura.bottle*.tar.gz sapling_${{ env.SAPLING_VERSION }}.arm64_ventura.bottle.tar.gz
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
         name: macos-homebrew-arm64-bottle
-        path: sapling*monterey.bottle.tar.gz
+        path: sapling*ventura.bottle*.tar.gz
   publish:
     runs-on: ubuntu-latest
     needs: build
@@ -60,4 +58,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
-      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*monterey.bottle.tar.gz
+      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*ventura.bottle*.tar.gz

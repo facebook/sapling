@@ -7,7 +7,7 @@
   $ eagerepo
 
   $ newrepo
-  $ setconfig 'ui.gitignore=1' 'ui.hgignore=0'
+  $ setconfig 'ui.gitignore=1'
 
   $ cat > .gitignore << 'EOF'
   > *.tmp

@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "newfilenodes",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mercurial:mercurial_types-mocks",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/shed/time_ext:time_ext",
+        "//eden/mononoke/common/path_hash:path_hash",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)

@@ -78,7 +78,7 @@ unsafe fn pybytearray_from_slice(
     // There are no public cpython APIs to update these fields.
     // So we update them directly based on our understanding of
     // the PyByteArrayObject struct.
-    (*typed).ob_alloc = alloc_size.unwrap_or_else(|| value.len()) as Py_ssize_t;
+    (*typed).ob_alloc = alloc_size.unwrap_or(value.len()) as Py_ssize_t;
     (*typed).ob_bytes = value.as_mut_ptr();
     {
         (*typed).ob_base.ob_size = value.len() as Py_ssize_t;

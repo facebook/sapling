@@ -215,11 +215,7 @@ impl FileInfo for ControlledFile {
         F: FnMut(Cow<'_, [u8]>) -> T,
     {
         let data = self.data.read().unwrap();
-        if let Some(line) = data.lines.get(index) {
-            Some(call(Cow::Borrowed(line.content.as_slice())))
-        } else {
-            None
-        }
+        data.lines.get(index).map(|line| call(Cow::Borrowed(line.content.as_slice())))
     }
 
     /// Set how many lines are needed.

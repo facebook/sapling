@@ -94,6 +94,11 @@ export class LocalWebSocketEventBus {
       const cwd = decodeURIComponent(cwdParam);
       wsUrl.searchParams.append('cwd', cwd);
     }
+    const sessionIdParam = initialParams.get('sessionId');
+    if (sessionIdParam) {
+      const sessionId = decodeURIComponent(sessionIdParam);
+      wsUrl.searchParams.append('sessionId', sessionId);
+    }
     const platformName = window.islPlatform?.platformName;
     if (platformName) {
       wsUrl.searchParams.append('platform', platformName);
@@ -193,7 +198,7 @@ const messageBus: MessageBus =
     ? new VSCodeMessageBus(vscode)
     : new LocalWebSocketEventBus(
         process.env.NODE_ENV === 'development'
-          ? // in dev mode, Create-React-App hosts our files for hot-reloading.
+          ? // in dev mode, Vite hosts our files for hot-reloading.
             // This means we can't host the ws server on the same port as the page.
             'localhost:3001'
           : // in production, we serve both the static files and ws from the same port
@@ -208,10 +213,11 @@ declare global {
     };
   }
 }
-if (module.hot) {
-  // We can't allow this file to hot reload, since it creates global state.
-  // If we did, we'd accumulate global `messageBus`es, which is buggy.
-  module.hot.decline();
+
+// We can't allow this file to hot reload, since it creates global state.
+// If we did, we'd accumulate global `messageBus`es, which is buggy.
+if (import.meta.hot) {
+  import.meta.hot?.invalidate();
 }
 
 export default messageBus;

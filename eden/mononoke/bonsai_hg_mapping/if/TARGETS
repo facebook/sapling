@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "bonsai_hg_mapping_entry_thrift",
+    languages = [
+        "rust",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_srcs = {
+        "bonsai_hg_mapping.thrift": [],
+    },
+    # The Thrift definitions are private and only used for serialization -- do
+    # not allow other code to use them.
+    visibility = [
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping-unittest",
+    ],
+    deps = [
+        "//eden/mononoke/mercurial/types/if:mercurial-thrift",
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

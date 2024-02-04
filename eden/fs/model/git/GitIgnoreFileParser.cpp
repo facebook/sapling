@@ -23,7 +23,7 @@ folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
     if (!folly::readFile(fileDescriptor, fileContents)) {
       return folly::makeUnexpected((int)errno);
     }
-    if (folly::trimWhitespace(fileContents).size() > 0) {
+    if (!folly::trimWhitespace(fileContents).empty()) {
       gitIgnore.loadFile(fileContents);
     }
   } catch (const std::system_error& ex) {

@@ -2,7 +2,7 @@
 
   $ eagerepo
   $ enable amend rebase
-  $ setconfig experimental.updatecheck=noconflict
+  $ setconfig commands.update.check=noconflict
 
 Updating w/ noconflict prints the conflicting changes:
   $ newrepo

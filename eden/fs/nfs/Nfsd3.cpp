@@ -1972,7 +1972,7 @@ Nfsd3::Nfsd3(
     std::shared_ptr<folly::Executor> threadPool,
     std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     const std::shared_ptr<StructuredLogger>& structuredLogger,
     folly::Duration /*requestTimeout*/,
@@ -1996,7 +1996,7 @@ Nfsd3::Nfsd3(
           evb,
           std::move(threadPool),
           structuredLogger)),
-      processAccessLog_(std::move(processNameCache)),
+      processAccessLog_(std::move(processInfoCache)),
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
       traceDetailedArguments_{0},

@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::Weak;
@@ -16,6 +15,7 @@ use nodeipc::ipc;
 use nodeipc::NodeIpc;
 use serde::Deserialize;
 use serde::Serialize;
+use spawn_ext::CommandExt;
 
 use crate::util;
 
@@ -47,32 +47,7 @@ impl Client {
     /// Run a shell command. Return exit code.
     fn system(&self, env: CommandEnv, command: String) -> i32 {
         tracing::debug!("client::system {}", command);
-        // Maybe we don't actually need a shell.
-        let need_shell = command.contains(|ch| "|&;<>()$`\"' \t\n*?[#~=%".contains(ch)) || {
-            let path = Path::new(&command);
-            path.is_absolute() && !path.exists()
-        };
-        let mut cmd = if need_shell {
-            let mut cmd = if cfg!(windows) {
-                let cmd_spec = std::env::var("ComSpec");
-                Command::new(cmd_spec.unwrap_or_else(|_| "cmd.exe".to_owned()))
-            } else {
-                Command::new("/bin/sh")
-            };
-            #[cfg(windows)]
-            {
-                use std::os::windows::process::CommandExt;
-                cmd.arg("/c").raw_arg(command);
-            }
-            #[cfg(not(windows))]
-            {
-                cmd.arg("-c").arg(command);
-            }
-            cmd
-        } else {
-            Command::new(command)
-        };
-
+        let mut cmd = Command::new_shell(&command);
         let CommandEnv { cwd, env } = env;
         cmd.env_clear().envs(env).current_dir(cwd);
         match cmd.status() {
@@ -121,7 +96,7 @@ impl Server<'_> {
     fn apply_env(&self, env: CommandEnv, umask: Option<u32>) -> bool {
         tracing::debug!("server::apply_env");
         let CommandEnv { cwd, env } = env;
-        if std::env::set_current_dir(&cwd).is_err() {
+        if std::env::set_current_dir(cwd).is_err() {
             return false;
         }
         let new_key_set: HashSet<_> = env.iter().map(|(k, _)| k).collect();
@@ -146,8 +121,8 @@ impl Server<'_> {
     /// Run the given main command. Return exit code.
     fn run_command(&self, argv: Vec<String>) -> i32 {
         tracing::debug!("server::run_command {:?}", &argv);
-        // To avoid circular dependency, we cannot call hgcommands here.
-        // Instead, rely on hgcommands to provide Server::run_func.
+        // To avoid circular dependency, we cannot call commands here.
+        // Instead, rely on commands to provide Server::run_func.
         (self.run_func)(self, argv)
     }
 }

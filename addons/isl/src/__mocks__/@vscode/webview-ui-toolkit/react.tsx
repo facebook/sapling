@@ -24,8 +24,11 @@ import React, {useEffect, useRef, forwardRef} from 'react';
 export const VSCodeLink = (p: React.PropsWithChildren<typeof VSCodeTagType>) => <a {...p} />;
 export const VSCodeTag = (p: React.PropsWithChildren<typeof VSCodeTagType>) => <div {...p} />;
 export const VSCodeBadge = (p: React.PropsWithChildren<typeof VSCodeBadgeType>) => <div {...p} />;
-export const VSCodeButton = (p: React.PropsWithChildren<typeof VSCodeButtonType>) => (
-  <button {...p} />
+export const VSCodeButton = forwardRef(
+  (
+    p: React.PropsWithChildren<typeof VSCodeButtonType>,
+    ref: React.LegacyRef<HTMLButtonElement>,
+  ) => <button {...p} ref={ref} />,
 );
 export const VSCodeDivider = (p: React.PropsWithChildren<typeof VSCodeDividerType>) => (
   <div {...p} />

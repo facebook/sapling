@@ -29,6 +29,7 @@ pub struct CapabilitiesParams {
 }
 
 static CAP_SEGMENTED_CHANGELOG: &str = "segmented-changelog";
+static CAP_COMMIT_GRAPH_SEGMENTS: &str = "commit-graph-segments";
 
 /// Get capabilities as a vector of static strings.
 ///
@@ -44,6 +45,7 @@ async fn get_capabilities_vec(
     if !hg_repo_ctx.segmented_changelog_disabled().await? {
         capabilities.push(CAP_SEGMENTED_CHANGELOG);
     }
+    capabilities.push(CAP_COMMIT_GRAPH_SEGMENTS);
 
     Ok(capabilities)
 }

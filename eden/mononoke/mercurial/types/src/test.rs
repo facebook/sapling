@@ -7,14 +7,14 @@
 
 use std::path::PathBuf;
 
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::fsencode::fncache_fsencode;
 use crate::Globalrev;
 
 fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let mut elements = vec![];
-    let path = &MPath::new(path).unwrap();
+    let path = &NonRootMPath::new(path).unwrap();
     elements.extend(path.into_iter().cloned());
 
     let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();

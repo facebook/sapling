@@ -57,8 +57,8 @@ issue1829: wrong indentation
   $ FAKEPATH=/path/to/nowhere
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' >> $HGRC
-  $ hg version
-  Mercurial * (glob)
+  $ hg version -q
+  * (glob)
   $ unset FAKEPATH
 
 make sure global options given on the cmdline take precedence
@@ -167,10 +167,10 @@ plain hgrc
 with environment variables
 
   $ PAGER=p1 EDITOR=e1 VISUAL=e2 hg showconfig --debug
-  $VISUAL: ui.editor=e2
   --verbose: ui.verbose=False
   --debug: ui.debug=True
   --quiet: ui.quiet=False
+  $VISUAL: ui.editor=e2
 
 don't set editor to empty string
 
@@ -182,7 +182,7 @@ don't set editor to empty string
 plain mode with exceptions
 
   $ cat > plain.py <<EOF
-  > from edenscm import commands, extensions
+  > from sapling import commands, extensions
   > def _config(orig, ui, repo, *values, **opts):
   >     ui.write('plain: %r\n' % ui.plain())
   >     return orig(ui, repo, *values, **opts)

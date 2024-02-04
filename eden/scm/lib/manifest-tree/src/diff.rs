@@ -10,7 +10,6 @@ use std::collections::VecDeque;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -20,6 +19,7 @@ use manifest::DirDiffEntry;
 use manifest::File;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
+use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
 use types::RepoPath;
 
@@ -92,7 +92,7 @@ pub struct Diff<'a> {
     output: VecDeque<DiffEntry>,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
-    progress_bar: Arc<ProgressBar>,
+    progress_bar: ActiveProgressBar,
     #[allow(dead_code)]
     fetch_thread: JoinHandle<()>,
     sender: Sender<DiffItem>,
@@ -132,7 +132,7 @@ impl<'a> Diff<'a> {
             output: VecDeque::new(),
             store: &left.store,
             matcher,
-            progress_bar: ProgressBar::register_new("diffing tree", 18, "depth"),
+            progress_bar: ProgressBar::new_adhoc("diffing tree", 18, "depth"),
             fetch_thread,
             sender: send_prefetch,
             receiver: receive_done,
@@ -174,7 +174,7 @@ impl<'a> Diff<'a> {
 
         let entries = item.process(
             &mut self.sender,
-            &self.store,
+            self.store,
             self.matcher,
             &mut self.pending,
             output_dirs,
@@ -222,8 +222,12 @@ fn prefetch_thread<'a>(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, s
                     };
                 }
                 DiffItem::Changed(left, right) => {
-                    left.key().map(|key| keys.push(key));
-                    right.key().map(|key| keys.push(key));
+                    if let Some(key) = left.key() {
+                        keys.push(key)
+                    }
+                    if let Some(key) = right.key() {
+                        keys.push(key)
+                    }
                 }
             }
         }
@@ -257,7 +261,7 @@ impl<'a> Iterator for Diff<'a> {
         let result = self.output.pop_front();
         if !span.is_disabled() {
             if let Some(ref result) = result {
-                span.record("path", &result.path.as_repo_path().as_str());
+                span.record("path", result.path.as_repo_path().as_str());
             }
         }
         result.map(Ok)

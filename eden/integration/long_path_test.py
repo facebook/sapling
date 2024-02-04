@@ -19,11 +19,6 @@ class LongPathsTest(testcase.EdenRepoTest):
     file: str = path + "/" + "d" * 100
     initial_commit: str = ""
 
-    def setUp(self) -> None:
-        # TODO: Remove this once there are no weird batch hacks around Buck the buck-built hg
-        self.disableBuckHgForTests(["test_materialize", "test_read"])
-        super().setUp()
-
     def populate_repo(self) -> None:
         self.repo.write_file(self.file, "Long path!\n")
         self.initial_commit = self.repo.commit("a")
@@ -38,6 +33,7 @@ class LongPathsTest(testcase.EdenRepoTest):
                     mountPoint=self.mount.encode(),
                     commit=self.initial_commit.encode(),
                     listIgnored=listIgnored,
+                    rootIdOptions=None,
                 )
             )
             return status.status.entries

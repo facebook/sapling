@@ -35,6 +35,7 @@ use uniqueheap::UniqueHeap;
 pub use crate::ancestors::common_ancestors;
 pub use crate::ancestors::greatest_common_ancestor;
 pub use crate::ancestors::AncestorsNodeStream;
+#[cfg(test)]
 pub use crate::test::*;
 
 #[cfg(test)]
@@ -43,8 +44,6 @@ mod test {
     pub use fixtures;
     pub use quickcheck;
 }
-#[cfg(not(test))]
-mod test {}
 #[cfg(test)]
 mod quickchecks;
 #[cfg(test)]

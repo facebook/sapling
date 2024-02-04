@@ -15,9 +15,9 @@ fn main() {
     bench("parse 645KB file", || {
         let mut config_file = String::new();
         for _ in 0..100 {
-            for section in b'a'..b'z' {
+            for section in b'a'..=b'z' {
                 config_file += &format!("[{ch}{ch}{ch}{ch}]\n", ch = section as char);
-                for name in b'a'..b'z' {
+                for name in b'a'..=b'z' {
                     config_file += &format!("{ch}{ch}{ch} = {ch}{ch}{ch}\n", ch = name as char);
                 }
             }
@@ -32,7 +32,7 @@ fn main() {
     bench("load system and user", || {
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.load::<String, String>(None, None).unwrap();
+            cfg.load(None).unwrap();
         })
     });
 
@@ -43,7 +43,7 @@ fn main() {
         std::fs::create_dir(path.join(".sl")).unwrap();
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.load::<String, String>(Some(path), None).unwrap();
+            cfg.load(Some(path)).unwrap();
         })
     });
 }

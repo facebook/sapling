@@ -1,0 +1,126 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "segmented_changelog_types",
+    srcs = glob(["types/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "dag-types": {"features": [
+                        "for-tests",
+                        "serialize-abomonation",
+                    ]},
+                },
+            },
+            "extra_buck_dependencies": {
+                # This rule already depends on dag-lite, but it doesn't have a
+                # generated Cargo.toml file. Instead depend on dag and enable
+                # only lite features on it.
+                "dependencies": [
+                    "//eden/scm/lib/dag:dag",
+                    "//eden/scm/lib/dag/dag-types:dag-types",
+                ],
+            },
+        },
+        "cargo_toml_dir": "types",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/dag:dag-lite",
+    ],
+)
+
+rust_library(
+    name = "segmented_changelog",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/revset:revset",
+        "//eden/mononoke/tests/fixtures:fixtures",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        ":segmented_changelog_types",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/futures_ext:futures_ext",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:blobstore_factory",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/bulkops:bulkops",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/common/reloader:reloader",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/revset:revset",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/mincode:mincode",
+    ],
+)
+
+rust_binary(
+    name = "benchmark_concurrent_idmap",
+    srcs = ["bench/concurrent_idmap/main.rs"],
+    autocargo = {"cargo_toml_dir": "bench/concurrent_idmap"},
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:criterion",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/segmented_changelog:segmented_changelog",
+        "//eden/mononoke/server/context:context",
+    ],
+)

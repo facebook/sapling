@@ -1,0 +1,650 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "enum",
+    headers = [
+        "EnumValue.h",
+    ],
+    exported_deps = [
+        "//folly:utility",
+    ],
+)
+
+cpp_library(
+    name = "system_error",
+    headers = [
+        "SystemError.h",
+    ],
+    exported_deps = [
+        "//eden/common/utils:win_error",
+    ],
+)
+
+cpp_library(
+    name = "event_base_state",
+    headers = ["EventBaseState.h"],
+    exported_deps = [
+        "//folly/io/async:async_base",
+    ],
+)
+
+cpp_library(
+    name = "eden_task_queue",
+    srcs = [
+        "EdenTaskQueue.cpp",
+    ],
+    headers = [
+        "EdenTaskQueue.h",
+    ],
+    exported_deps = [
+        "//folly/concurrency:dynamic_bounded_queue",
+        "//folly/executors:cpu_thread_pool_executor",
+    ],
+)
+
+cpp_library(
+    name = "win_stacktrace",
+    srcs = [
+        "WinStackTrace.cpp",
+    ],
+    headers = [
+        "WinStackTrace.h",
+    ],
+    os_deps = [(
+        "windows",
+        ["fbsource//third-party/toolchains/win:dbghelp.lib"],
+    )],
+    deps = [
+        ":path",
+        "//eden/common/utils:stringconv",
+        "//eden/common/utils:win_error",
+        "//folly:c_portability",
+        "//folly/portability:windows",
+    ],
+)
+
+cpp_library(
+    name = "bufvec",
+    headers = [
+        "BufVec.h",
+    ],
+    exported_deps = [
+        "//folly/io:iobuf",
+    ],
+)
+
+cpp_library(
+    name = "matcher",
+    srcs = [
+        "GlobMatcher.cpp",
+    ],
+    headers = [
+        "GlobMatcher.h",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":case_sensitivity",
+        "//folly:expected",
+    ],
+)
+
+cpp_library(
+    name = "glob",
+    srcs = [
+        "GlobNodeImpl.cpp",
+        "GlobTree.cpp",
+    ],
+    headers = [
+        "GlobNodeImpl.h",
+        "GlobResult.h",
+        "GlobTree.h",
+    ],
+    exported_deps = [
+        ":case_sensitivity",
+        ":enum",
+        ":matcher",
+        ":path",
+        ":utils",
+        "//eden/fs/model:model",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:task_trace",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "eden_error",
+    srcs = [
+        "EdenError.cpp",
+    ],
+    headers = [
+        "EdenError.h",
+        "NotImplemented.h",
+    ],
+    deps = [
+        "//eden/common/utils:win_error",
+        "//eden/fs/utils:system_error",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":utf8",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//folly:exception_wrapper",
+    ],
+)
+
+cpp_library(
+    name = "file_utils",
+    srcs = [
+        "FileUtils.cpp",
+    ],
+    headers = [
+        "FileUtils.h",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:win_error",
+        "//eden/fs/utils:try",
+        "//folly:exception",
+        "//folly:file_util",
+    ],
+    exported_deps = [
+        ":path",
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:handle",
+        "//folly:range",
+        "//folly:try",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_library(
+    name = "file_hash",
+    srcs = [
+        "FileHash.cpp",
+    ],
+    headers = [
+        "FileHash.h",
+    ],
+    deps = [
+        "//eden/common/utils:win_error",
+        "//eden/fs/digest:blake3_hash",
+        "//folly/portability:openssl",
+    ],
+    exported_deps = [
+        ":path",
+        "//eden/fs/model:model",
+    ],
+)
+
+cpp_library(
+    name = "filter_utils",
+    srcs = [
+        "FilterUtils.cpp",
+    ],
+    headers = [
+        "FilterUtils.h",
+    ],
+    deps = [
+        ":throw",
+        "//folly:varint",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "match",
+    headers = ["Match.h"],
+)
+
+cpp_library(
+    name = "proc_util",
+    srcs = ["ProcUtil.cpp"],
+    headers = ["ProcUtil.h"],
+    deps = [
+        ":file_utils",
+        "//folly:conv",
+        "//folly:file_util",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        ":path",
+        "//eden/common/utils:process_info_cache",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "process_access_log",
+    srcs = [
+        "ProcessAccessLog.cpp",
+    ],
+    headers = [
+        "ProcessAccessLog.h",
+    ],
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//folly:exception",
+        "//folly:map_util",
+        "//folly:micro_lock",
+        "//folly:thread_local",
+    ],
+    exported_deps = [
+        ":enum",
+        ":utils",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "ref_ptr",
+    headers = ["RefPtr.h"],
+)
+
+cpp_library(
+    name = "ring_buffer",
+    headers = ["RingBuffer.h"],
+)
+
+cpp_library(
+    name = "static_assert",
+    headers = ["StaticAssert.h"],
+)
+
+cpp_library(
+    name = "throw",
+    headers = ["Throw.h"],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+    ],
+)
+
+cpp_library(
+    name = "try",
+    headers = [
+        "Try.h",
+    ],
+    exported_deps = [
+        "//folly:exception_wrapper",
+        "//folly:try",
+    ],
+)
+
+cpp_library(
+    name = "utils",
+    srcs = [
+        "Bug.cpp",
+        "CoverageSet.cpp",
+        "FaultInjector.cpp",
+        "Guid.cpp",
+        "IDGen.cpp",
+        "TimeUtil.cpp",
+        "UnboundedQueueExecutor.cpp",
+        "XAttr.cpp",
+    ],
+    headers = [
+        "BucketedLog.h",
+        "Bug.h",
+        "CoverageSet.h",
+        "DirType.h",
+        "FaultInjector.h",
+        "Future.h",
+        "Guid.h",
+        "IDGen.h",
+        "LazyInitialize.h",
+        "LeaseCache.h",
+        "MappedDiskVector.h",
+        "PathMap.h",
+        "SortedInsert.h",
+        "StatTimes.h",
+        "TimeUtil.h",
+        "UnboundedQueueExecutor.h",
+        "XAttr.h",
+    ],
+    os_deps = [(
+        "windows",
+        [
+            "fbsource//third-party/toolchains/win:RpcRT4.Lib",
+            "fbsource//third-party/toolchains/win:ole32.lib",
+        ],
+    )],
+    deps = [
+        "//folly:exception_wrapper",
+        "//folly:likely",
+        "//folly:overload",
+        "//folly:string",
+        "//folly/executors:cpu_thread_pool_executor",
+        "//folly/executors:manual_executor",
+        "//folly/executors/task_queue:unbounded_blocking_queue",
+        "//folly/executors/thread_factory:named_thread_factory",
+        "//folly/lang:align",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":case_sensitivity",
+        ":immediate_future",
+        ":path",
+        ":throw",
+        "//eden/common/utils:win_error",
+        "//folly:cpp_attributes",
+        "//folly:exception",
+        "//folly:executor",
+        "//folly:fbvector",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:portability",
+        "//folly:range",
+        "//folly:synchronized",
+        "//folly/chrono:conv",
+        "//folly/container:evicting_cache_map",
+        "//folly/container:f14_hash",
+        "//folly/futures:core",
+        "//folly/futures:shared_promise",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+        "//folly/portability:windows",
+    ],
+    exported_external_deps = [
+        ("boost", None, "boost_regex"),
+        ("glibc", None, "rt"),
+    ],
+)
+
+cpp_library(
+    name = "path",
+    srcs = [
+        "PathFuncs.cpp",
+    ],
+    deps = [
+        "//folly:exception",
+        "//folly/portability:stdlib",
+        "//folly/portability:unistd",
+        "//folly/portability:windows",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":case_sensitivity",
+        ":memory",
+        ":string",
+        ":throw",
+        ":utf8",
+        "//eden/common/utils:stringconv",
+        "//folly:expected",
+        "//folly:fbstring",
+        "//folly:fbvector",
+        "//folly:string",
+        "//folly/hash:hash",
+        "//folly/logging:logging",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+    exported_external_deps = [
+        "boost",
+    ],
+)
+
+cpp_library(
+    name = "memory",
+    srcs = ["Memory.cpp"],
+    headers = ["Memory.h"],
+    exported_deps = [
+        "//folly/memory:malloc",
+    ],
+)
+
+cpp_library(
+    name = "io",
+    srcs = [
+        "FileDescriptor.cpp",
+        "FutureUnixSocket.cpp",
+        "IoFuture.cpp",
+        "Pipe.cpp",
+        "UnixSocket.cpp",
+    ],
+    headers = [
+        "FileDescriptor.h",
+        "FutureUnixSocket.h",
+        "IoFuture.h",
+        "Pipe.h",
+        "UnixSocket.h",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":utils",
+        "//folly:exception",
+        "//folly:file_util",
+        "//folly:network_address",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:fcntl",
+        "//folly/portability:sockets",
+        "//folly/portability:sys_uio",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        ":path",
+        "//folly:conv",
+        "//folly:file",
+        "//folly:portability",
+        "//folly:try",
+        "//folly/futures:core",
+        "//folly/io:iobuf",
+        "//folly/io/async:async_base",
+        "//folly/io/async:delayed_destruction",
+        "//folly/portability:iovec",
+    ],
+)
+
+cpp_library(
+    name = "chrono",
+    srcs = [
+        "ChronoParse.cpp",
+        "ChronoUnit.cpp",
+    ],
+    deps = [
+        "//folly:conv",
+        "//folly:string",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//folly:cpp_attributes",
+        "//folly:expected",
+        "//folly:portability",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "process",
+    srcs = [
+        "SpawnedProcess.cpp",
+    ],
+    headers = [
+        "SpawnedProcess.h",
+    ],
+    deps = [
+        "//eden/common/utils:stringconv",
+        "//eden/common/utils:win_error",
+        "//folly:exception",
+        "//folly:scope_guard",
+        "//folly:string",
+        "//folly/executors:global_executor",
+        "//folly/io/async:async_base",
+        "//folly/io/async:event_base_manager",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+        "//folly/system:shell",
+    ],
+    exported_deps = [
+        ":io",
+        ":path",
+        "//eden/common/utils:handle",
+        "//folly:range",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "thread",
+    srcs = ["Thread.cpp"],
+    external_deps = [
+        ("glibc", None, "pthread"),
+    ],
+)
+
+cpp_library(
+    name = "user_info",
+    srcs = ["UserInfo.cpp"],
+    headers = ["UserInfo.h"],
+    os_deps = [
+        (
+            "linux",
+            ["third-party//libselinux:libselinux"],
+        ),
+        (
+            "windows",
+            ["fbsource//third-party/toolchains/win:advapi32.lib"],
+        ),
+    ],
+    deps = [
+        "//eden/common/utils:handle",
+        "//eden/common/utils:win_error",
+        "//folly:exception",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
+        ":path",
+        "//folly/portability:sys_types",
+    ],
+)
+
+cpp_library(
+    name = "utf8",
+    srcs = ["Utf8.cpp"],
+    headers = ["Utf8.h"],
+    deps = [
+        "//folly:unicode",
+    ],
+    exported_deps = [
+        "//folly:range",
+        "//folly:utility",
+    ],
+)
+
+cpp_library(
+    name = "clock",
+    srcs = ["Clock.cpp"],
+    headers = ["Clock.h"],
+    deps = [
+        "//folly/portability:time",
+    ],
+    exported_external_deps = [
+        ("glibc", None, "rt"),
+    ],
+)
+
+cpp_library(
+    name = "case_sensitivity",
+    headers = ["CaseSensitivity.h"],
+    exported_deps = [
+        "//folly:portability",
+    ],
+)
+
+cpp_library(
+    name = "immediate_future",
+    srcs = ["ImmediateFuture.cpp"],
+    headers = [
+        "ImmediateFuture.h",
+        "ImmediateFuture-inl.h",
+        "ImmediateFuture-pre.h",
+    ],
+    exported_deps = [
+        "//folly:try",
+        "//folly/futures:core",
+        "//folly/lang:assume",
+    ],
+)
+
+cpp_library(
+    name = "nfs_socket",
+    srcs = ["NfsSocket.cpp"],
+    headers = ["NfsSocket.h"],
+    deps = [
+        "//folly:exception",
+    ],
+    exported_deps = [
+        ":path",
+        "//folly:network_address",
+    ],
+)
+
+cpp_library(
+    name = "fs_channel_types",
+    headers = ["FsChannelTypes.h"],
+    os_deps = [
+        (
+            "linux",
+            ["//eden/fs/third-party:fuse_kernel"],
+        ),
+        (
+            "macos",
+            ["//eden/fs/third-party:fuse_kernel"],
+        ),
+    ],
+    exported_deps = [
+        "//folly:file",
+    ],
+)
+
+cpp_library(
+    name = "source_location",
+    headers = ["SourceLocation.h"],
+)
+
+cpp_library(
+    name = "string",
+    srcs = ["String.cpp"],
+    headers = ["String.h"],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+    ],
+)
+
+cpp_library(
+    name = "sysctl_util",
+    srcs = ["SysctlUtil.cpp"],
+    headers = ["SysctlUtil.h"],
+    deps = [
+        "//folly:exception",
+    ],
+)
+
+cpp_library(
+    name = "projfs_util",
+    srcs = ["ProjfsUtil.cpp"],
+    headers = ["ProjfsUtil.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":file_utils",
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:stringconv",
+        "//folly:try",
+    ],
+)

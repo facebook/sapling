@@ -25,11 +25,12 @@ use futures::future::TryFutureExt;
 use futures::future::{self as new_future};
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
-use metaconfig_types::UnodeVersion;
+use mononoke_types::path::MPath;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
@@ -39,10 +40,11 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
+use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
@@ -50,9 +52,11 @@ use crate::ErrorKind;
 pub(crate) async fn derive_unode_manifest_stack(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    file_changes: Vec<(
+        ChangesetId,
+        BTreeMap<NonRootMPath, Option<(ContentId, FileType)>>,
+    )>,
     parent: Option<ManifestUnodeId>,
-    unode_version: UnodeVersion,
 ) -> Result<HashMap<ChangesetId, ManifestUnodeId>, Error> {
     let blobstore = derivation_ctx.blobstore();
 
@@ -72,27 +76,13 @@ pub(crate) async fn derive_unode_manifest_stack(
         {
             cloned!(ctx, blobstore);
             move |tree_info, cs_id| {
-                create_unode_manifest(
-                    ctx.clone(),
-                    cs_id,
-                    blobstore.clone(),
-                    None,
-                    tree_info,
-                    unode_version,
-                )
+                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), None, tree_info)
             }
         },
         {
             cloned!(ctx, blobstore);
             move |leaf_info, cs_id| {
-                create_unode_file(
-                    ctx.clone(),
-                    cs_id,
-                    blobstore.clone(),
-                    None,
-                    leaf_info,
-                    unode_version,
-                )
+                create_unode_file(ctx.clone(), cs_id, blobstore.clone(), None, leaf_info)
             }
         },
     )
@@ -110,8 +100,7 @@ pub(crate) async fn derive_unode_manifest(
     derivation_ctx: &DerivationContext,
     cs_id: ChangesetId,
     parents: Vec<ManifestUnodeId>,
-    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
-    unode_version: UnodeVersion,
+    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
 ) -> Result<ManifestUnodeId, Error> {
     let parents: Vec<_> = parents.into_iter().collect();
     let blobstore = derivation_ctx.blobstore();
@@ -130,7 +119,6 @@ pub(crate) async fn derive_unode_manifest(
                     blobstore.clone(),
                     Some(sender),
                     tree_info,
-                    unode_version,
                 )
             }
         },
@@ -143,7 +131,6 @@ pub(crate) async fn derive_unode_manifest(
                     blobstore.clone(),
                     Some(sender),
                     leaf_info,
-                    unode_version,
                 )
             }
         },
@@ -155,19 +142,13 @@ pub(crate) async fn derive_unode_manifest(
         None => {
             // All files have been deleted, generate empty **root** manifest
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };
-            let ((), tree_id) = create_unode_manifest(
-                ctx.clone(),
-                cs_id,
-                blobstore.clone(),
-                None,
-                tree_info,
-                unode_version,
-            )
-            .await?;
+            let ((), tree_id) =
+                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), None, tree_info)
+                    .await?;
             Ok(tree_id)
         }
     }
@@ -194,11 +175,16 @@ async fn create_unode_manifest(
     linknode: ChangesetId,
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
-    tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
-    unode_version: UnodeVersion,
+    tree_info: TreeInfo<
+        ManifestUnodeId,
+        FileUnodeId,
+        (),
+        TrieMap<Entry<ManifestUnodeId, FileUnodeId>>,
+    >,
 ) -> Result<((), ManifestUnodeId), Error> {
     let mut subentries = SortedVectorMap::new();
-    for (basename, (_context, entry)) in tree_info.subentries {
+    for (basename, (_context, entry)) in flatten_subentries(&ctx, &(), tree_info.subentries).await?
+    {
         match entry {
             Entry::Tree(mf_unode) => {
                 subentries.insert(basename, UnodeEntry::Directory(mf_unode));
@@ -208,7 +194,7 @@ async fn create_unode_manifest(
             }
         }
     }
-    if can_reuse(unode_version) && tree_info.parents.len() > 1 {
+    if tree_info.parents.len() > 1 {
         if let Some(mf_unode_id) =
             reuse_manifest_parent(&ctx, &blobstore, &tree_info.parents, &subentries).await?
         {
@@ -238,7 +224,6 @@ async fn create_unode_file(
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
-    unode_version: UnodeVersion,
 ) -> Result<((), FileUnodeId), Error> {
     borrowed!(ctx, blobstore);
 
@@ -251,9 +236,8 @@ async fn create_unode_file(
         file_type: FileType,
         path_hash: MPathHash,
         linknode: ChangesetId,
-        unode_version: UnodeVersion,
     ) -> Result<FileUnodeId, Error> {
-        if can_reuse(unode_version) && parents.len() > 1 {
+        if parents.len() > 1 {
             if let Some(parent) =
                 reuse_file_parent(ctx, blobstore, &parents, &content_id, file_type).await?
             {
@@ -304,7 +288,6 @@ async fn create_unode_file(
             file_type,
             path.get_path_hash(),
             linknode,
-            unode_version,
         )
         .await?
     } else {
@@ -355,7 +338,6 @@ async fn create_unode_file(
                     *file_type,
                     path.get_path_hash(),
                     linknode,
-                    unode_version,
                 )
                 .await?
             }
@@ -400,10 +382,6 @@ async fn create_unode_file(
 //
 // In that case it would be ideal to preserve that "file.txt" was modified in both commits.
 // But we consider this case is rare enough to not worry about it.
-
-fn can_reuse(unode_version: UnodeVersion) -> bool {
-    unode_version == UnodeVersion::V2 || tunables::tunables().force_unode_v2().unwrap_or_default()
-}
 
 async fn reuse_manifest_parent(
     ctx: &CoreContext,
@@ -487,6 +465,7 @@ mod tests {
     use mercurial_types::blobs::HgBlobManifest;
     use mercurial_types::HgFileNodeId;
     use mercurial_types::HgManifestId;
+    use mononoke_types::path::MPath;
     use mononoke_types::BlobstoreValue;
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::BonsaiChangesetMut;
@@ -523,7 +502,6 @@ mod tests {
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
-                UnodeVersion::V2,
             )
             .await?;
 
@@ -538,9 +516,9 @@ mod tests {
             assert_eq!(
                 paths,
                 vec![
-                    None,
-                    Some(MPath::new("1").unwrap()),
-                    Some(MPath::new("files").unwrap())
+                    MPath::ROOT,
+                    MPath::new("1").unwrap(),
+                    MPath::new("files").unwrap()
                 ]
             );
             unode_id
@@ -556,7 +534,6 @@ mod tests {
                 bcs_id,
                 vec![parent_unode_id.clone()],
                 get_file_changes(&bcs),
-                UnodeVersion::V2,
             )
             .await?;
 
@@ -579,10 +556,10 @@ mod tests {
             assert_eq!(
                 paths,
                 vec![
-                    None,
-                    Some(MPath::new("1").unwrap()),
-                    Some(MPath::new("2").unwrap()),
-                    Some(MPath::new("files").unwrap())
+                    MPath::ROOT,
+                    MPath::new("1").unwrap(),
+                    MPath::new("2").unwrap(),
+                    MPath::new("files").unwrap()
                 ]
             );
         }
@@ -597,7 +574,7 @@ mod tests {
         async fn check_unode_uniqeness(
             ctx: CoreContext,
             repo: TestRepo,
-            file_changes: BTreeMap<MPath, FileChange>,
+            file_changes: BTreeMap<NonRootMPath, FileChange>,
         ) -> Result<(), Error> {
             let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
@@ -609,7 +586,6 @@ mod tests {
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
-                UnodeVersion::V2,
             )
             .await?;
             let unode_mf = unode_id.load(&ctx, &repo.repo_blobstore).await?;
@@ -617,7 +593,7 @@ mod tests {
             // Unodes should be unique even if content is the same. Check it
             let vals: Vec<_> = unode_mf.list().collect();
             assert_eq!(vals.len(), 2);
-            assert_ne!(vals.get(0), vals.get(1));
+            assert_ne!(vals.first(), vals.get(1));
             Ok(())
         }
 
@@ -718,8 +694,8 @@ mod tests {
                     .find_entries(
                         ctx.clone(),
                         repo.repo_blobstore.clone(),
-                        vec![Some(MPath::new(merged_files)?), Some(MPath::new("dir")?)],
-                        // Some(MPath::new(&merged_files)?),
+                        vec![MPath::new(merged_files)?, MPath::new("dir")?],
+                        // Some(NonRootMPath::new(&merged_files)?),
                     )
                     .try_collect()
                     .await?;
@@ -733,7 +709,7 @@ mod tests {
                     .find_entries(
                         ctx.clone(),
                         repo.repo_blobstore.clone(),
-                        vec![Some(MPath::new(merged_files)?), Some(MPath::new("dir")?)],
+                        vec![MPath::new(merged_files)?, MPath::new("dir")?],
                     )
                     .try_collect()
                     .await?;
@@ -790,7 +766,6 @@ mod tests {
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
 
@@ -801,7 +776,6 @@ mod tests {
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
         assert_eq!(root_unode, same_root_unode);
@@ -813,7 +787,6 @@ mod tests {
             bcs_id,
             vec![p2_root_unode_id, p1_root_unode_id],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
 
@@ -839,7 +812,6 @@ mod tests {
             bcs_id,
             vec![],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await
     }
@@ -864,7 +836,6 @@ mod tests {
             first_bcs_id,
             vec![],
             get_file_changes(&bcs),
-            UnodeVersion::V2,
         )
         .await?;
 
@@ -885,7 +856,6 @@ mod tests {
                 merge_p1_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p1),
-                UnodeVersion::V2,
             )
             .await?;
             (merge_p1, merge_p1_unode_id)
@@ -909,7 +879,6 @@ mod tests {
                 merge_p2_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p2),
-                UnodeVersion::V2,
             )
             .await?;
             (merge_p2, merge_p2_unode_id)
@@ -931,7 +900,6 @@ mod tests {
             merge_id,
             vec![merge_p1_unode_id, merge_p2_unode_id],
             get_file_changes(&merge),
-            UnodeVersion::V2,
         )
         .await
     }
@@ -939,7 +907,7 @@ mod tests {
     async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: TestRepo,
-        file_changes: BTreeMap<MPath, FileChange>,
+        file_changes: BTreeMap<NonRootMPath, FileChange>,
     ) -> Result<BonsaiChangeset, Error> {
         create_bonsai_changeset_with_params(fb, repo, file_changes, "message", vec![]).await
     }
@@ -947,7 +915,7 @@ mod tests {
     async fn create_bonsai_changeset_with_params(
         fb: FacebookInit,
         repo: TestRepo,
-        file_changes: BTreeMap<MPath, FileChange>,
+        file_changes: BTreeMap<NonRootMPath, FileChange>,
         message: &str,
         parents: Vec<ChangesetId>,
     ) -> Result<BonsaiChangeset, Error> {
@@ -976,11 +944,11 @@ mod tests {
         ctx: CoreContext,
         files: BTreeMap<&str, Option<(&str, FileType)>>,
         repo: TestRepo,
-    ) -> Result<BTreeMap<MPath, FileChange>, Error> {
+    ) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
         let mut res = btreemap! {};
 
         for (path, content) in files {
-            let path = MPath::new(path).unwrap();
+            let path = NonRootMPath::new(path).unwrap();
             match content {
                 Some((content, file_type)) => {
                     let size = content.len();

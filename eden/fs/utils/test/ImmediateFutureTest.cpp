@@ -7,6 +7,7 @@
 
 #include "eden/fs/utils/ImmediateFuture.h"
 
+#include <folly/executors/ManualExecutor.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
@@ -440,15 +441,19 @@ TEST(ImmediateFuture, collectAllSafeTupleError) {
   auto f1 = ImmediateFuture{std::move(semiFut1)};
   auto f2 = ImmediateFuture{std::move(semiFut2)};
 
-  auto future = collectAllSafe(std::move(f1), std::move(f2))
-                    .semi()
-                    .via(&folly::QueuedImmediateExecutor::instance());
+  auto executor = folly::ManualExecutor();
+
+  auto future =
+      collectAllSafe(std::move(f1), std::move(f2)).semi().via(&executor);
+  executor.drain();
   EXPECT_FALSE(future.isReady());
 
   promise1.setException(std::logic_error("Test"));
+  executor.drain();
   EXPECT_FALSE(future.isReady());
 
   promise2.setValue(42);
+  executor.drain();
   EXPECT_TRUE(future.isReady());
 
   auto res = std::move(future).getTry();
@@ -486,15 +491,18 @@ TEST(ImmediateFuture, collectAllSafeVectorError) {
   vec.emplace_back(std::move(semiFut1));
   vec.emplace_back(std::move(semiFut2));
 
-  auto future = collectAllSafe(std::move(vec))
-                    .semi()
-                    .via(&folly::QueuedImmediateExecutor::instance());
+  auto executor = folly::ManualExecutor();
+
+  auto future = collectAllSafe(std::move(vec)).semi().via(&executor);
+  executor.drain();
   EXPECT_FALSE(future.isReady());
 
   promise1.setException(std::logic_error("Test"));
+  executor.drain();
   EXPECT_FALSE(future.isReady());
 
   promise2.setValue(42);
+  executor.drain();
   EXPECT_TRUE(future.isReady());
 
   auto res = std::move(future).getTry();
@@ -534,16 +542,19 @@ TEST(ImmediateFuture, unit_method_error) {
   auto f1 = ImmediateFuture{std::move(semiFut1)};
   auto f2 = ImmediateFuture{std::move(semiFut2)};
 
-  auto future = collectAllSafe(std::move(f1), std::move(f2))
-                    .semi()
-                    .via(&folly::QueuedImmediateExecutor::instance())
-                    .unit();
+  auto executor = folly::ManualExecutor();
+
+  auto future =
+      collectAllSafe(std::move(f1), std::move(f2)).semi().via(&executor).unit();
+  executor.drain();
   EXPECT_FALSE(future.isReady());
 
   promise1.setException(std::logic_error("Test"));
+  executor.drain();
   EXPECT_FALSE(future.isReady());
 
   promise2.setValue(42);
+  executor.drain();
   EXPECT_TRUE(future.isReady());
 
   auto res = std::move(future).getTry();

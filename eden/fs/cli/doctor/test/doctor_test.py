@@ -31,6 +31,7 @@ from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecke
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
+    getFakeVSCodeExtensionsCheckerWithExtensions,
 )
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
@@ -524,6 +525,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                     parent1=b"\x12\x00\x00\x00" * 5,
                     parent2=None,
                     hg_root_manifest=None,
+                    rootIdOptions=None,
                 )
             ],
         )
@@ -570,6 +572,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                     parent1=b"\x87\x65\x43\x21" * 5,
                     parent2=None,
                     hg_root_manifest=None,
+                    rootIdOptions=None,
                 )
             ],
         )
@@ -619,6 +622,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                     parent1=b"\x87\x65\x43\x21" * 5,
                     parent2=None,
                     hg_root_manifest=None,
+                    rootIdOptions=None,
                 )
             ],
         )
@@ -1594,6 +1598,138 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
 
         # SlowHgImportProblem should not be reported because we've ignored it in
         # the config.
+        self.assertEqual(exit_code, 0)
+
+    def test_vscode_extension_warn_list_config(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(
+            tmp_dir,
+            config={
+                "doctor.vscode-extensions-warn-list": '["nuclide.arclint-1.0.618"]'
+            },
+        )
+
+        out = TestOutput()
+        dry_run = True
+
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            out=out,
+        )
+
+        self.assertEqual(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+Unsupported Visual Studio Code extension detected, this extension may interact poorly with EdenFS:
+nuclide.arclint
+Please consider the effects of this extension.
+
+<yellow>Discovered 1 problem during --dry-run<reset>
+""",
+        )
+
+        self.assertEqual(exit_code, 1)
+
+    def test_vscode_extension_block_list_config(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(
+            tmp_dir,
+            config={
+                "doctor.vscode-extensions-block-list": '["nuclide.arclint-1.0.618"]'
+            },
+        )
+
+        out = TestOutput()
+        dry_run = True
+
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            out=out,
+        )
+
+        self.assertEqual(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+Harmful Visual Studio Code extension detected, this extension is known to interact poorly with EdenFS:
+nuclide.arclint
+Please uninstall this extension.
+
+<yellow>Discovered 1 problem during --dry-run<reset>
+""",
+        )
+
+        self.assertEqual(exit_code, 1)
+
+    def test_vscode_extension_allow_list_config(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(
+            tmp_dir,
+            config={
+                "doctor.vscode-extensions-allow-list": '["randomdev.unknownextension"]'
+            },
+        )
+
+        out = TestOutput()
+        dry_run = True
+
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsCheckerWithExtensions(
+                ["randomdev.unknownextension"]
+            ),
+            out=out,
+        )
+
+        self.assertEqual(exit_code, 0)
+
+    def test_vscode_extension_author_allow_list_config(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(
+            tmp_dir,
+            config={"doctor.vscode-extensions-author-allow-list": '["randomdev"]'},
+        )
+
+        out = TestOutput()
+        dry_run = True
+
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsCheckerWithExtensions(
+                ["randomdev.unknownextension"]
+            ),
+            out=out,
+        )
+
         self.assertEqual(exit_code, 0)
 
 

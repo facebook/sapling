@@ -187,12 +187,6 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        if tunables::tunables()
-            .filenodes_disabled()
-            .unwrap_or_default()
-        {
-            return Ok(Some(FilenodesOnlyPublic::Disabled));
-        }
         let filenode_res = fetch_root_filenode(ctx, derivation_ctx, changeset_id).await?;
         let maybe_root_filenode = match filenode_res {
             FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,

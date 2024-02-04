@@ -49,7 +49,7 @@
     unmatched files in other:
      b
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -76,7 +76,7 @@
     unmatched files in local (from topological common ancestor):
      b
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
    preserving a for resolve of a
    a: versions differ -> m (premerge)
@@ -102,7 +102,7 @@
     unmatched files in other:
      b
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    preserving a for resolve of a
    a: versions differ -> m (premerge)

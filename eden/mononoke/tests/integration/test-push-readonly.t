@@ -9,8 +9,20 @@
 setup configuration
   $ REPONAME="test/repo"
   $ configure modern
-  $ export READ_ONLY_REPO=1
-  $ setup_common_config
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "test/repo": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
+  $ READ_ONLY_REPO=1 REPONAME="test/repo" ACL_NAME="test/repo" setup_common_config
 
   $ cd $TESTTMP
 

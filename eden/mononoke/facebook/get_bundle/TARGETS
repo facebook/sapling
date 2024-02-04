@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("mononoke")
+
+python_binary(
+    name = "get_bundle",
+    srcs = ["get_bundle.py"],
+    main_function = "eden.mononoke.facebook.get_bundle.get_bundle.get_bundle",
+    deps = [
+        "fbsource//third-party/pypi/click:click",
+        ":bundle_store_lib",
+    ],
+)
+
+python_library(
+    name = "bundle_store_lib",
+    srcs = ["bundle_store.py"],
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-py3-types",
+        "//everstore/if:everstore-py",
+        "//manifold/clients/python:manifold_client",
+        "//servicerouter/client/python:stubs",
+        "//thrift/lib/py3:types",
+    ],
+)

@@ -84,11 +84,12 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   ObjectId hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
   auto rootTree = overlay->loadOverlayDir(kRootNodeId);
-  auto file = overlay->openFile(2_ino, FileContentStore::kHeaderIdentifierFile);
+  auto file =
+      overlay->openFile(2_ino, FsFileContentStore::kHeaderIdentifierFile);
   auto subdir = overlay->loadOverlayDir(3_ino);
   auto emptyDir = overlay->loadOverlayDir(4_ino);
   auto hello =
-      overlay->openFile(5_ino, FileContentStore::kHeaderIdentifierFile);
+      overlay->openFile(5_ino, FsFileContentStore::kHeaderIdentifierFile);
 
   ASSERT_TRUE(!rootTree.empty());
   EXPECT_EQ(2, rootTree.size());
@@ -101,7 +102,8 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(hash2, subdirEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
 
-  EXPECT_TRUE(file.lseek(FileContentStore::kHeaderLength, SEEK_SET).hasValue());
+  EXPECT_TRUE(
+      file.lseek(FsFileContentStore::kHeaderLength, SEEK_SET).hasValue());
   auto result = file.readFile();
   EXPECT_FALSE(result.hasError());
   EXPECT_EQ("contents", result.value());
@@ -120,7 +122,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   ASSERT_TRUE(emptyDir.empty());
 
   EXPECT_TRUE(
-      hello.lseek(FileContentStore::kHeaderLength, SEEK_SET).hasValue());
+      hello.lseek(FsFileContentStore::kHeaderLength, SEEK_SET).hasValue());
   result = file.readFile();
   EXPECT_FALSE(result.hasError());
   EXPECT_EQ("", result.value());
@@ -234,17 +236,17 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
 TEST_F(OverlayTest, getFilePath) {
   InodePath path;
 
-  path = FileContentStore::getFilePath(1_ino);
+  path = FsFileContentStore::getFilePath(1_ino);
   EXPECT_EQ("01/1"_relpath, path);
-  path = FileContentStore::getFilePath(1234_ino);
+  path = FsFileContentStore::getFilePath(1234_ino);
   EXPECT_EQ("d2/1234"_relpath, path);
 
   // It's slightly unfortunate that we use hexadecimal for the subdirectory
   // name and decimal for the final inode path.  That doesn't seem worth fixing
   // for now.
-  path = FileContentStore::getFilePath(15_ino);
+  path = FsFileContentStore::getFilePath(15_ino);
   EXPECT_EQ("0f/15"_relpath, path);
-  path = FileContentStore::getFilePath(16_ino);
+  path = FsFileContentStore::getFilePath(16_ino);
   EXPECT_EQ("10/16"_relpath, path);
 }
 
@@ -386,7 +388,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
 
   AbsolutePath getOverlayFilePath(InodeNumber inodeNumber) {
     return getLocalDir() +
-        RelativePathPiece{FileContentStore::getFilePath(inodeNumber)};
+        RelativePathPiece{FsFileContentStore::getFilePath(inodeNumber)};
   }
 
   AbsolutePath getLocalDir() {
@@ -433,7 +435,7 @@ TEST_P(RawOverlayTest, closed_overlay_stress_test) {
         struct iovec iov;
         iov.iov_base = data;
         iov.iov_len = sizeof(data);
-        result.pwritev(&iov, 1, FileContentStore::kHeaderLength).value();
+        result.pwritev(&iov, 1, FsFileContentStore::kHeaderLength).value();
         throw std::system_error(
             EIO,
             std::generic_category(),

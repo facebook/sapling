@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "tracing-collector",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "target": {
+                    "'cfg(windows)'": {
+                        "dependencies": {
+                            "winapi": {
+                                "features": ["processthreadsapi"],
+                                "version": "0.3.7",
+                            },
+                        },
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "fbsource//third-party/rust:winapi"),
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+    ],
+)

@@ -32,9 +32,10 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 
 use crate::mapping::FilenodesOnlyPublic;
@@ -45,12 +46,6 @@ pub async fn derive_filenodes(
     derivation_ctx: &DerivationContext,
     bcs: BonsaiChangeset,
 ) -> Result<FilenodesOnlyPublic> {
-    if tunables::tunables()
-        .filenodes_disabled()
-        .unwrap_or_default()
-    {
-        return Ok(FilenodesOnlyPublic::Disabled);
-    }
     let (_, public_filenode, non_roots) =
         prepare_filenodes_for_cs(ctx, derivation_ctx, bcs).await?;
     if !non_roots.is_empty() {
@@ -61,13 +56,6 @@ pub async fn derive_filenodes(
         {
             return Ok(FilenodesOnlyPublic::Disabled);
         }
-    }
-    // In case it got updated while deriving
-    if tunables::tunables()
-        .filenodes_disabled()
-        .unwrap_or_default()
-    {
-        return Ok(FilenodesOnlyPublic::Disabled);
     }
     Ok(public_filenode)
 }
@@ -237,11 +225,11 @@ pub(crate) fn classify_filenode(
 }
 
 fn create_manifest_filenode(
-    path: Option<MPath>,
+    path: MPath,
     envelope: HgManifestEnvelope,
     linknode: HgChangesetId,
 ) -> PreparedFilenode {
-    let path = match path {
+    let path = match Option::<NonRootMPath>::from(path) {
         Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
     };
@@ -263,11 +251,11 @@ fn create_manifest_filenode(
 }
 
 fn create_file_filenode(
-    path: Option<MPath>,
+    path: MPath,
     envelope: HgFileEnvelope,
     linknode: HgChangesetId,
 ) -> Result<PreparedFilenode> {
-    let path = match path {
+    let path = match path.into() {
         Some(path) => RepoPath::FilePath(path),
         None => {
             return Err(format_err!("unexpected empty file path"));
@@ -308,13 +296,13 @@ mod tests {
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filenodes::FilenodeRange;
+    use filenodes::FilenodeResult;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
     use manifest::ManifestOps;
-    use maplit::hashmap;
     use mercurial_derivation::DeriveHgChangeset;
     use mononoke_types::FileType;
     use repo_blobstore::RepoBlobstore;
@@ -325,8 +313,6 @@ mod tests {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
-    use tunables::with_tunables;
-    use tunables::MononokeTunables;
 
     use super::*;
 
@@ -559,40 +545,6 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
-        let tunables = MononokeTunables::default();
-        tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-
-        with_tunables(tunables, || {
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_time()
-                .build()?;
-            runtime.block_on(test_derive_disabled_filenodes(fb))
-        })
-    }
-
-    async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
-        let derived = repo
-            .repo_derived_data()
-            .derive::<FilenodesOnlyPublic>(&ctx, cs)
-            .await?;
-        assert_eq!(derived, FilenodesOnlyPublic::Disabled);
-
-        assert_eq!(
-            repo.repo_derived_data()
-                .fetch_derived::<FilenodesOnlyPublic>(&ctx, cs)
-                .await?
-                .unwrap(),
-            FilenodesOnlyPublic::Disabled
-        );
-
-        Ok(())
-    }
-
-    #[fbinit::test]
     async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo1: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -766,7 +718,7 @@ mod tests {
             .list_all_entries(ctx.clone(), repo.repo_blobstore.clone())
             .map_ok(|(path, entry)| {
                 async move {
-                    let (path, node) = match (path, entry) {
+                    let (path, node) = match (Option::<NonRootMPath>::from(path), entry) {
                         (Some(path), Entry::Leaf((_, id))) => (RepoPath::FilePath(path), id),
                         (Some(path), Entry::Tree(id)) => (
                             RepoPath::DirectoryPath(path),

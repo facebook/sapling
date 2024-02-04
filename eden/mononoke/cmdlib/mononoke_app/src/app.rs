@@ -368,12 +368,17 @@ impl MononokeApp {
         &self.env.readonly_storage
     }
 
-    /// Create a basic CoreContext without scuba logging.  Good choice for
-    /// simple CLI tools like admin.
+    /// Create a basic CoreContext.
     ///
-    /// Warning: returned context doesn't provide any scuba logging!
+    /// This is a good choice for simple CLI tools like admin.  It will
+    /// contain basic logging, and also scuba logging if configured by the
+    /// command line arguments.
     pub fn new_basic_context(&self) -> CoreContext {
-        CoreContext::new_with_logger(self.env.fb, self.logger().clone())
+        CoreContext::new_with_logger_and_scuba(
+            self.env.fb,
+            self.logger().clone(),
+            self.env.scuba_sample_builder.clone(),
+        )
     }
 
     /// Return repo factory used by app.
@@ -481,6 +486,28 @@ impl MononokeApp {
         let common_config = self.repo_configs().common.clone();
         let repo = self
             .repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
+    /// Open a repository based on user-provided arguments while modifying the repo_factory as
+    /// needed
+    pub async fn open_repo_with_factory_customization<Repo>(
+        &self,
+        repo_args: &impl AsRepoArg,
+        customize_repo_factory: impl Fn(&mut RepoFactory) -> &mut RepoFactory,
+    ) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_arg = repo_args.as_repo_arg();
+        let (repo_name, repo_config) = self.repo_config(repo_arg)?;
+        let common_config = self.repo_configs().common.clone();
+        let mut repo_factory = self.repo_factory.clone();
+        let repo_factory = Arc::make_mut(&mut repo_factory);
+        customize_repo_factory(repo_factory);
+        let repo = repo_factory
             .build(repo_name, repo_config, common_config)
             .await?;
         Ok(repo)

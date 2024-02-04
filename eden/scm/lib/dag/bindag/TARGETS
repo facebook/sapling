@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "bindag",
+    srcs = glob([
+        "src/**/*.rs",
+        "src/*.bindag",
+    ]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "license": "GPL-2.0-only",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/drawdag:drawdag",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)

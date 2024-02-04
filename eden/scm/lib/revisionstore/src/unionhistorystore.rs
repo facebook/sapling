@@ -86,7 +86,7 @@ mod tests {
 
     impl LocalStore for EmptyHgIdHistoryStore {
         fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-            Ok(keys.iter().cloned().collect())
+            Ok(keys.to_vec())
         }
     }
 
@@ -126,10 +126,7 @@ mod tests {
         fn test_bad_historystore_get_node_info(key: Key) -> bool {
             let mut unionstore = UnionHgIdHistoryStore::new();
             unionstore.add(BadHgIdHistoryStore);
-            match unionstore.get_node_info(&key) {
-                Err(_) => true,
-                _ => false,
-            }
+            unionstore.get_node_info(&key).is_err()
         }
 
         fn test_empty_unionstore_get_missing(keys: Vec<StoreKey>) -> bool {
@@ -145,10 +142,7 @@ mod tests {
         fn test_bad_historystore_get_missing(keys: Vec<StoreKey>) -> bool {
             let mut unionstore = UnionHgIdHistoryStore::new();
             unionstore.add(BadHgIdHistoryStore);
-            match unionstore.get_missing(&keys) {
-                Err(_) => true,
-                _ => false,
-            }
+            unionstore.get_missing(&keys).is_err()
         }
     }
 }

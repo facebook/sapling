@@ -5,15 +5,12 @@
  * GNU General Public License version 2.
  */
 
-#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
-
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow as _;
 use anyhow::anyhow;
 use anyhow::Error;
 use fbinit::FacebookInit;
@@ -24,7 +21,11 @@ use scribe::ScribeClient; // oss uses anyhow
 mod oss;
 
 #[cfg(not(fbcode_build))]
+pub use oss::new_scribe_client;
+#[cfg(not(fbcode_build))]
 pub use oss::ScribeClientImplementation;
+#[cfg(fbcode_build)]
+pub use scuba::new_scribe_client;
 #[cfg(fbcode_build)]
 pub use scuba::ScribeClientImplementation;
 
@@ -45,7 +46,7 @@ impl ::std::fmt::Debug for Scribe {
 
 impl Scribe {
     pub fn new(fb: FacebookInit) -> Self {
-        Self::Client(Arc::new(ScribeClientImplementation::new(fb)))
+        Self::Client(Arc::new(new_scribe_client(fb)))
     }
 
     pub fn new_to_file(dir_path: PathBuf) -> Self {

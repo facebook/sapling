@@ -103,7 +103,7 @@ impl TreeEntry {
     pub fn data_checked(&self) -> Result<Bytes, TreeError> {
         if let Some(data) = self.data.as_ref() {
             if let Some(parents) = self.parents {
-                let computed = HgId::from_content(&data, parents);
+                let computed = HgId::from_content(data, parents);
                 if computed != self.key.hgid {
                     let err = InvalidHgId {
                         expected: self.key.hgid,
@@ -177,7 +177,7 @@ impl Arbitrary for TreeEntry {
         let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
-            data: bytes.map(|b| Bytes::from(b)),
+            data: bytes.map(Bytes::from),
             parents: Arbitrary::arbitrary(g),
             // Recursive TreeEntry in children causes stack overflow in QuickCheck
             children: None,

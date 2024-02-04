@@ -1,0 +1,197 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.file-stack-editor,
+.file-unified-stack-editor {
+  border: 1px solid var(--tooltip-border);
+  width: fit-content;
+  height: fit-content;
+}
+
+.file-stack-editor pre {
+  padding: 0;
+  margin: 0;
+  /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
+  line-height: 1.2;
+}
+
+.file-stack-editor .column-left-buttons,
+.file-stack-editor .column-right-buttons,
+.file-stack-editor .column-left-gutter,
+.file-stack-editor .column-right-gutter {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.file-stack-editor .context-button,
+.file-unified-stack-editor .context-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  user-select: none;
+  cursor: pointer;
+}
+
+.file-stack-editor .lineno {
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+  text-align: right;
+  user-select: none;
+  min-width: 1.5rem;
+}
+
+.file-stack-editor .lineno.add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.file-stack-editor .lineno.del {
+  background: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.file-stack-editor .lineno.change {
+  background: var(--editor-changedHighlightBackground);
+}
+
+.file-stack-editor .main-content {
+  min-width: 200px;
+  position: relative;
+}
+
+.file-stack-editor .line {
+  padding-left: var(--halfpad);
+}
+
+.file-stack-editor .selected .button {
+  opacity: 0.8;
+}
+
+.file-stack-editor .button {
+  user-select: none;
+  cursor: pointer;
+  opacity: 0.3;
+}
+
+.file-stack-editor .button:active {
+  color: grey;
+  opacity: 1;
+}
+
+.file-stack-editor .add {
+  background: var(--diffEditor-insertedLineBackground);
+}
+
+.file-stack-editor .del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.file-stack-editor .line.change {
+  background: var(--editor-changedBackground);
+}
+
+.file-stack-editor-row .filerev-title {
+  padding-left: var(--pad);
+  text-overflow: ellipsis;
+}
+
+.file-stack-editor-ribbon-no-clip {
+  position: relative;
+  margin: var(--pad);
+}
+
+.file-stack-editor-ribbon-no-clip .ribbon {
+  position: absolute;
+  stroke: none;
+  fill: var(--editor-changedHighlightBackground);
+  z-index: 1;
+}
+
+.file-stack-editor-ribbon-no-clip .ribbon.add {
+  fill: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.file-stack-editor-ribbon-no-clip .ribbon.del {
+  fill: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.file-unified-stack-editor {
+  background-color: var(--background);
+  width: 100%;
+  border-spacing: 0;
+}
+
+.file-unified-stack-editor thead {
+  position: sticky;
+  top: 0;
+  background-color: var(--background);
+  z-index: 1;
+  user-select: none;
+}
+
+.file-unified-stack-editor th {
+  font-weight: unset;
+}
+
+.file-unified-stack-editor tbody {
+  font-family: var(--monospace-fontFamily);
+  font-size: 13px;
+}
+
+.file-unified-stack-editor td {
+  padding: 0;
+}
+
+.file-unified-stack-editor td:last-child,
+.file-unified-stack-editor th:last-child {
+  width: 100%;
+}
+
+.file-unified-stack-editor .color1 {
+  background-color: rgba(128, 128, 160, 0.08);
+}
+.file-unified-stack-editor .color2 {
+  background-color: rgba(128, 128, 160, 0.15);
+}
+.file-unified-stack-editor .color3 {
+  background-color: rgba(128, 128, 160, 0.08);
+}
+.file-unified-stack-editor .color0 {
+  background-color: rgba(128, 128, 160, 0.15);
+}
+
+.file-unified-stack-editor .checkbox {
+  user-select: none;
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+}
+
+.file-unified-stack-editor .checkbox.mutable {
+  cursor: pointer;
+}
+
+.file-unified-stack-editor .checkbox.mutable.add {
+  background-color: var(--diffEditor-insertedLineHighlightBackground);
+}
+
+.file-unified-stack-editor .checkbox.mutable.del {
+  background-color: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.file-unified-stack-editor td.line.del {
+  background: var(--diffEditor-removedLineBackground);
+}
+
+.file-unified-stack-editor td.line.change {
+  background: var(--editor-changedBackground);
+}
+
+.file-unified-stack-editor span.line {
+  padding-left: var(--pad);
+  white-space: pre;
+}
+
+.file-unified-stack-editor .context-button > span {
+  display: block;
+  height: 1em;
+}

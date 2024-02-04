@@ -67,8 +67,9 @@ impl Head {
     pub fn encoding(&self) -> Result<Encoding, HttpClientError> {
         self.headers
             .get(header::CONTENT_ENCODING)
-            .map(|encoding| Ok(encoding.to_str()?.into()))
-            .unwrap_or(Ok(Encoding::Identity))
+            .map_or(Ok(Encoding::Identity), |encoding| {
+                Ok(encoding.to_str()?.into())
+            })
             .map_err(|_: header::ToStrError| {
                 HttpClientError::BadResponse(anyhow!("Invalid Content-Encoding"))
             })
@@ -118,10 +119,19 @@ impl Response {
     }
 }
 
-impl TryFrom<&mut Buffered> for Response {
+impl TryFrom<&mut Box<dyn HandlerExt>> for Response {
     type Error = HttpClientError;
 
-    fn try_from(buffered: &mut Buffered) -> Result<Self, Self::Error> {
+    fn try_from(buffered: &mut Box<dyn HandlerExt>) -> Result<Self, Self::Error> {
+        let buffered = match buffered.as_any_mut().downcast_mut::<Buffered>() {
+            Some(v) => v,
+            None => {
+                return Err(HttpClientError::Other(anyhow::format_err!(
+                    "wrong type for Response::try_from"
+                )));
+            }
+        };
+
         let (version, status) = match (buffered.version(), buffered.status()) {
             (Some(version), Some(status)) => (version, status),
             _ => {

@@ -9,7 +9,7 @@
 
 #include "eden/fs/telemetry/SessionId.h"
 
-#include <time.h>
+#include <ctime>
 
 namespace {
 /**

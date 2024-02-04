@@ -9,9 +9,14 @@ import type {
   ApplyUncommittedChangesPreviewsFuncType,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {
+  CommandArg,
+  ExactRevset,
+  RepoRelativePath,
+  SucceedableRevset,
+  UncommittedChanges,
+} from '../types';
 
-import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class AmendToOperation extends Operation {
@@ -19,14 +24,17 @@ export class AmendToOperation extends Operation {
    * @param filePathsToAmend if provided, only these file paths will be included in the amend operation. If undefined, ALL uncommitted changes are included. Paths should be relative to repo root.
    * @param message if provided, update commit description to use this title & description
    */
-  constructor(private commit: Hash, private filePathsToAmend?: Array<RepoRelativePath>) {
+  constructor(
+    private commit: SucceedableRevset | ExactRevset,
+    private filePathsToAmend?: Array<RepoRelativePath>,
+  ) {
     super('AmendToOperation');
   }
 
   static opName = 'AmendTo';
 
   getArgs() {
-    const args: Array<CommandArg> = ['amend', '--to', SucceedableRevset(this.commit)];
+    const args: Array<CommandArg> = ['amend', '--to', this.commit];
     if (this.filePathsToAmend) {
       args.push(
         ...this.filePathsToAmend.map(file =>

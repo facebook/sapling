@@ -47,6 +47,10 @@ impl<T> MockStore<T> {
             hits: self.hit_count.load(Ordering::SeqCst),
         }
     }
+
+    pub fn flush(&self) {
+        self.data.lock().expect("poisoned lock").clear();
+    }
 }
 
 impl<T: Clone> MockStore<T> {

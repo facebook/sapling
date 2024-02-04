@@ -7,9 +7,9 @@
 # incrementing sequence.
 import os
 
-from edenscm import extensions, util
+from sapling import extensions, util
 
-from edenscm.ext import extutil
+from sapling.ext import extutil
 
 
 def makestableidentifier(orig, length=16):
@@ -23,11 +23,6 @@ def makestableidentifier(orig, length=16):
         with open(stableidentifierfile, "w") as f:
             f.write("%s\n" % (coid + 1))
     return "%0*d" % (length, coid)
-
-
-def reposetup(ui, repo):
-    assert ui._correlator.get() is None
-    ui._correlator.swap("stableidentifiers:correlator")
 
 
 def uisetup(ui):

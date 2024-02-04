@@ -24,7 +24,6 @@ use blobstore_factory::PackOptions;
 use blobstore_factory::ReadOnlyStorage;
 use blobstore_factory::ReadOnlyStorageArgs;
 use blobstore_factory::ThrottleOptions;
-use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use clap::Args;
 use clap::Command;
@@ -36,8 +35,8 @@ use cmdlib_caching::CachelibSettings;
 use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScubaLoggingArgs;
 use derived_data_remote::RemoteDerivationArgs;
+use environment::BookmarkCacheOptions;
 use environment::MononokeEnvironment;
-use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -46,7 +45,6 @@ use permission_checker::AclProvider;
 use permission_checker::DefaultAclProvider;
 use permission_checker::InternalAclProvider;
 use rendezvous::RendezVousArgs;
-use slog::debug;
 use slog::o;
 use slog::Logger;
 use slog::Never;
@@ -62,9 +60,9 @@ use crate::app::MononokeApp;
 use crate::args::parse_config_spec_to_path;
 use crate::args::AclArgs;
 use crate::args::ConfigArgs;
+use crate::args::JustKnobsArgs;
 use crate::args::MysqlArgs;
 use crate::args::RuntimeArgs;
-use crate::args::TunablesArgs;
 use crate::extension::AppExtension;
 use crate::extension::AppExtensionBox;
 use crate::extension::BoxedAppExtension;
@@ -77,7 +75,7 @@ pub struct MononokeAppBuilder {
     cachelib_settings: CachelibSettings,
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
-    warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    bookmark_cache_options: BookmarkCacheOptions,
 }
 
 #[derive(Args, Debug)]
@@ -97,8 +95,8 @@ pub struct EnvironmentArgs {
     #[clap(flatten, next_help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
 
-    #[clap(flatten, next_help_heading = "TUNABLES OPTIONS")]
-    tunables_args: TunablesArgs,
+    #[clap(flatten, next_help_heading = "JUST KNOBS OPTIONS")]
+    just_knobs_args: JustKnobsArgs,
 
     #[clap(flatten, next_help_heading = "BLOBSTORE OPTIONS")]
     blobstore_args: BlobstoreArgs,
@@ -132,7 +130,7 @@ impl MononokeAppBuilder {
             cachelib_settings: CachelibSettings::default(),
             default_scuba_dataset: None,
             defaults: HashMap::new(),
-            warm_bookmarks_cache_derived_data: None,
+            bookmark_cache_options: Default::default(),
         }
     }
 
@@ -146,11 +144,8 @@ impl MononokeAppBuilder {
         self
     }
 
-    pub fn with_warm_bookmarks_cache(
-        mut self,
-        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
-    ) -> Self {
-        self.warm_bookmarks_cache_derived_data = Some(warm_bookmarks_cache_derived_data);
+    pub fn with_bookmarks_cache(mut self, bookmark_cache_options: BookmarkCacheOptions) -> Self {
+        self.bookmark_cache_options = bookmark_cache_options;
         self
     }
 
@@ -285,7 +280,7 @@ impl MononokeAppBuilder {
             acl_args,
             remote_derivation_args,
             rendezvous_args,
-            tunables_args,
+            just_knobs_args,
         } = env_args;
 
         let log_level = logging_args.create_log_level();
@@ -355,8 +350,8 @@ impl MononokeAppBuilder {
         let acl_provider =
             create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
 
-        init_tunables_worker(
-            &tunables_args,
+        init_just_knobs_worker(
+            &just_knobs_args,
             &config_store,
             logger.clone(),
             runtime.handle().clone(),
@@ -379,7 +374,7 @@ impl MononokeAppBuilder {
             megarepo_configs_options,
             remote_derivation_options,
             disabled_hooks: HashMap::new(),
-            warm_bookmarks_cache_derived_data: self.warm_bookmarks_cache_derived_data,
+            bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
         })
     }
@@ -405,7 +400,6 @@ fn create_config_store(
         let crypto_regex_paths = match &config_args.crypto_path_regex {
             Some(paths) => paths.clone(),
             None => vec![
-                "scm/mononoke/tunables/.*".to_string(),
                 "scm/mononoke/repos/.*".to_string(),
                 "scm/mononoke/redaction/.*".to_string(),
             ],
@@ -523,30 +517,19 @@ fn create_blobstore_options(
     Ok(blobstore_options)
 }
 
-fn init_tunables_worker(
-    tunables_args: &TunablesArgs,
+fn init_just_knobs_worker(
+    just_knobs_args: &JustKnobsArgs,
     config_store: &ConfigStore,
     logger: Logger,
     handle: Handle,
 ) -> Result<()> {
-    if tunables_args.disable_tunables {
-        debug!(logger, "Tunables are disabled");
-        return Ok(());
+    if let Some(just_knobs_config_path) = &just_knobs_args.just_knobs_config_path {
+        let config_handle =
+            config_store.get_config_handle(parse_config_spec_to_path(just_knobs_config_path)?)?;
+        justknobs::cached_config::init_just_knobs_worker(logger, config_handle, handle)
+    } else {
+        Ok(())
     }
-
-    if let Some(tunables_local_path) = &tunables_args.tunables_local_path {
-        let value = std::fs::read_to_string(tunables_local_path)
-            .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
-        let config_handle = ConfigHandle::from_json(&value)
-            .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return tunables::init_tunables(&logger, &config_handle);
-    }
-
-    let tunables_config = tunables_args.tunables_config_or_default();
-    let config_handle =
-        config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
-
-    tunables::init_tunables_worker(logger, config_handle, handle)
 }
 
 fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn AclProvider>> {

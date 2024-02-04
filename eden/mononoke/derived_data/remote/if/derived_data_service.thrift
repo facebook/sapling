@@ -69,6 +69,10 @@ union DerivedData {
   11: DerivedDataDeletedManifestV2 deleted_manifest_v2;
   12: DerivedDataBasenameSuffixSkeletonManifest basename_suffix_skeleton_manifest;
   13: DerivedDataCommitHandle commit_handle;
+  14: DerivedDataGitDeltaManifest git_delta_manifest;
+  15: DerivedDataTestManifest test_manifest;
+  16: DerivedDataTestShardedManifest test_sharded_manifest;
+  17: DerivedDataBssmV3 bssm_v3;
 }
 
 union DerivedDataFsnode {
@@ -122,6 +126,18 @@ union DerivedDataBasenameSuffixSkeletonManifest {
   1: mononoke_types_thrift.BssmDirectory root_basename_suffix_skeleton_manifest;
 }
 
+union DerivedDataBssmV3 {
+  1: mononoke_types_thrift.BssmV3DirectoryId root_bssm_v3_directory_id;
+}
+
+union DerivedDataTestManifest {
+  1: mononoke_types_thrift.TestManifestDirectory root_test_manifest_directory;
+}
+
+union DerivedDataTestShardedManifest {
+  1: mononoke_types_thrift.TestShardedManifestDirectory root_test_sharded_manifest_directory;
+}
+
 union DerivedDataSkeletonManifest {
   1: mononoke_types_thrift.SkeletonManifestId root_skeleton_manifest_id;
 }
@@ -132,6 +148,10 @@ union DerivedDataTreeHandle {
 
 union DerivedDataCommitHandle {
   1: git_types_thrift.MappedGitCommitId mapped_commit_id;
+}
+
+union DerivedDataGitDeltaManifest {
+  1: git_types_thrift.GitDeltaManifestId root_git_delta_manifest_id;
 }
 
 struct DerivedDataTypeNotEnabled {

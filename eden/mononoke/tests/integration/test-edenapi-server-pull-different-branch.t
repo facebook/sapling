@@ -86,23 +86,26 @@ The grepping we do ignores the differences in output between the fast and the sl
 
 I..P are pulled via non-lazy fallback pull path. They can be resolved locally:
 
-  $ LOG=dag::protocol=debug hgedenapi log -Gr $J+$K -T "{desc}\n" | grep -v "DEBUG" | grep -v "mononoke"
+  $ LOG=dag::protocol=debug hgedenapi log -Gr $J+$K -T "{desc}\n" 2>&1 | grep -v "DEBUG" | grep -v "mononoke"
   o  K
   │
   o  J
   │
   ~
 
-  $ LOG=dag::protocol=debug hgedenapi log -Gr "$P~3" -T "{desc}\n" | grep -v "DEBUG" | grep -v "mononoke"
+  $ LOG=dag::protocol=debug hgedenapi log -Gr "$P~3" -T "{desc}\n" 2>&1 | grep -v "DEBUG" | grep -v "mononoke"
   o  M
   │
   ~
 
 Allow server to build up temporary segments on demand:
-
-  $ merge_tunables <<'EOS'
-  > {"ints": {"segmented_changelog_client_max_commits_to_traverse": 100}}
-  > EOS
+  $ merge_just_knobs <<EOF
+  > {
+  >    "ints": {
+  >      "scm/mononoke:segmented_changelog_client_max_commits_to_traverse": 100
+  >    }
+  > }
+  > EOF
 
 Pulling branch1 as main branch now uses fastpath:
 

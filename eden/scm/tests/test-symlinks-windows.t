@@ -88,3 +88,35 @@ Test cloning repos with sparse profiles
   $ hg -R clone2 sparse enable all.sparse
   $ cat clone2/foolink
   hemlo
+
+Test checkout between directory symlinks
+  $ cd
+  $ newrepo repo3
+  $ mkdir -p foo/bar
+  $ echo aoeu > foo/bar/baz
+  $ hg commit -Am "add file" -q
+  $ mkdir -p a/b
+  $ ln -s ../../foo a/b/c
+  $ ls a/b/c/bar
+  baz
+  $ hg commit -Am "add dir symlink" -q
+  $ hg prev --config experimental.nativecheckout=False
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [f4ab5b] add file
+  $ hg st
+  $ hg next --config experimental.nativecheckout=False
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [366768] add dir symlink
+  $ hg st
+  $ ls a/b/c/bar
+  baz
+  $ hg prev --config experimental.nativecheckout=True
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [f4ab5b] add file
+  $ hg st
+  $ hg next --config experimental.nativecheckout=True
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [366768] add dir symlink
+  $ hg st
+  $ ls a/b/c/bar
+  baz

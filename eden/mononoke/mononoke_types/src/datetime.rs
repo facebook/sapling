@@ -201,6 +201,10 @@ impl Timestamp {
         Timestamp(ts)
     }
 
+    pub fn from_thrift(ts: thrift::Timestamp) -> Self {
+        Self::from_timestamp_nanos(ts.0)
+    }
+
     pub fn timestamp_nanos(&self) -> i64 {
         self.0
     }
@@ -221,11 +225,18 @@ impl Timestamp {
     pub fn since_seconds(&self) -> i64 {
         self.since_nanos() / SEC_IN_NS
     }
+
+    pub fn into_thrift(self) -> thrift::Timestamp {
+        thrift::Timestamp(self.0)
+    }
 }
 
 impl From<DateTime> for Timestamp {
     fn from(dt: DateTime) -> Self {
-        Timestamp(dt.0.timestamp_nanos())
+        Timestamp(
+            dt.0.timestamp_nanos_opt()
+                .expect("timestamp cannot be represented with nanosecond precision"),
+        )
     }
 }
 
@@ -233,7 +244,7 @@ impl From<Timestamp> for DateTime {
     fn from(ts: Timestamp) -> Self {
         let ts_secs = ts.timestamp_seconds();
         let ts_nsecs = (ts.0 % SEC_IN_NS) as u32;
-        DateTime::new(ChronoDateTime::<FixedOffset>::from_utc(
+        DateTime::new(ChronoDateTime::<FixedOffset>::from_naive_utc_and_offset(
             NaiveDateTime::from_timestamp_opt(ts_secs, ts_nsecs).unwrap(),
             FixedOffset::west_opt(0).unwrap(),
         ))

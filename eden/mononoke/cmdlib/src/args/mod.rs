@@ -234,7 +234,7 @@ pub mod not_shardmanager_compatible {
         Ok(repo_id)
     }
 
-    pub fn open_source_sql<'a, T>(
+    pub async fn open_source_sql<'a, T>(
         fb: FacebookInit,
         config_store: &ConfigStore,
         matches: &'a MononokeMatches<'a>,
@@ -250,6 +250,7 @@ pub mod not_shardmanager_compatible {
             matches.mysql_options(),
             matches.readonly_storage().0,
         )
+        .await
     }
 
     pub async fn open_source_repo<'a, R: 'a>(
@@ -336,7 +337,7 @@ pub mod not_shardmanager_compatible {
         .await
     }
 
-    pub fn open_sql<'a, T>(
+    pub async fn open_sql<'a, T>(
         fb: FacebookInit,
         config_store: &ConfigStore,
         matches: &'a MononokeMatches<'a>,
@@ -351,6 +352,7 @@ pub mod not_shardmanager_compatible {
             matches.mysql_options(),
             matches.readonly_storage().0,
         )
+        .await
     }
 
     /// Create a new repo object -- for local instances, expect its contents to be empty.
@@ -456,7 +458,7 @@ fn resolve_repo_given_name(name: &str, configs: &RepoConfigs) -> Result<Resolved
     }
 }
 
-pub fn open_sql_with_config<'a, T>(
+pub async fn open_sql_with_config<'a, T>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
     repo_config: &RepoConfig,
@@ -470,6 +472,7 @@ where
         matches.mysql_options(),
         matches.readonly_storage().0,
     )
+    .await
 }
 
 #[inline]

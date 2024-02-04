@@ -5,13 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+use std::fmt::Debug;
 use std::sync::Arc;
+use std::sync::Weak;
 
 use once_cell::sync::Lazy;
 use parking_lot::Condvar;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use parking_lot::RwLockUpgradableReadGuard;
+use thread_local::ThreadLocal;
 
 use crate::CacheStats;
 use crate::IoTimeSeries;
@@ -23,7 +27,7 @@ use crate::ProgressBar;
 /// - I/O time series. (ex. "Network [▁▂▄█▇▅▃▆] 3MB/s")
 /// - Ordinary progress bars with "position" and "total".
 ///   (ex. "fetching files 123/456")
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct Registry {
     render_cond: Arc<(Mutex<bool>, Condvar)>,
     inner: Arc<RwLock<Inner>>,
@@ -34,9 +38,12 @@ macro_rules! impl_model {
         $( $field:ident: $type:ty, )*
     } => {
         paste::paste! {
-            #[derive(Default, Debug)]
+            #[derive(Default)]
             struct Inner {
-                $( $field: Vec<Arc<$type>>, )*
+                $(
+                    $field: Vec<Arc<$type>>,
+                    [< active_ $field>]: ThreadLocal<RefCell<Option<Weak<$type>>>>,
+                )*
             }
 
             impl Registry {
@@ -73,8 +80,22 @@ macro_rules! impl_model {
                                 .drain(..)
                                 .filter(|b| Arc::strong_count(b) > 1)
                                 .collect();
+
+                            if inner.$field.is_empty() {
+                                inner.[< active_ $field >].clear();
+                            }
                         }
                         orphan_count
+                    }
+
+                    /// Set active model.
+                    pub fn [< set_active_ $field >](&self, model: Option<Arc<$type>>) {
+                        self.inner.read().[< active_ $field >].get_or_default().replace(model.map(|m| Arc::downgrade(&m)));
+                    }
+
+                    /// Get active model.
+                    pub fn [< get_active_ $field >](&self) -> Option<Arc<$type>> {
+                        self.inner.read().[< active_ $field >].get().and_then(|m| m.borrow().clone().and_then(|w| w.upgrade()))
                     }
                 )*
 
@@ -98,10 +119,7 @@ impl Registry {
     pub fn main() -> &'static Self {
         static REGISTRY: Lazy<Registry> = Lazy::new(|| {
             tracing::debug!("main progress Registry initialized");
-            Registry {
-                render_cond: Arc::new((Mutex::new(false), Condvar::new())),
-                ..Default::default()
-            }
+            Registry::default()
         });
         &REGISTRY
     }
@@ -112,7 +130,7 @@ impl Registry {
     /// waits for the next wait() call, ensuring that the registry
     /// processing loop finished its iteration.
     pub fn step(&self) {
-        let &(ref lock, ref var) = &*self.render_cond;
+        let (lock, var) = &*self.render_cond;
         let mut ready = lock.lock();
         *ready = true;
         var.notify_one();
@@ -122,7 +140,7 @@ impl Registry {
 
     /// See step().
     pub fn wait(&self) {
-        let &(ref lock, ref var) = &*self.render_cond;
+        let (lock, var) = &*self.render_cond;
         let mut ready = lock.lock();
         if *ready {
             // We've come around to the next iteration's wait() call -
@@ -132,6 +150,17 @@ impl Registry {
         }
         // Wait for next step() call.
         var.wait(&mut ready);
+    }
+}
+
+impl Debug for Registry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = self.inner.read();
+        f.debug_struct("Registry")
+            .field("cache_states", &inner.cache_stats)
+            .field("io_time_series", &inner.io_time_series)
+            .field("progress_bar", &inner.progress_bar)
+            .finish()
     }
 }
 
@@ -195,5 +224,44 @@ mod tests {
         drop(series2);
         assert_eq!(registry.remove_orphan_io_time_series(), 2);
         assert_eq!(format!("{:?}", registry.list_io_time_series()), "[]");
+    }
+
+    #[test]
+    fn test_active_model() {
+        let reg = Registry::default();
+        assert!(reg.get_active_progress_bar().is_none());
+
+        let bar1 = ProgressBar::new("", 0, "");
+        reg.register_progress_bar(&bar1);
+        reg.set_active_progress_bar(Some(bar1.clone()));
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar1));
+
+        let reg2 = reg.clone();
+        std::thread::spawn(|| {
+            let reg = reg2;
+            assert!(reg.get_active_progress_bar().is_none());
+
+            let bar2 = ProgressBar::new("", 0, "");
+            reg.register_progress_bar(&bar2);
+            reg.set_active_progress_bar(Some(bar2.clone()));
+            assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar2));
+        })
+        .join()
+        .unwrap();
+
+        reg.set_active_progress_bar(Some(bar1.clone()));
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar1));
+
+        drop(bar1);
+
+        // Sanity that we have 2 thread locals.
+        assert_eq!(reg.inner.write().active_progress_bar.iter_mut().count(), 2);
+
+        // Make sure we can clean up the models.
+        reg.remove_orphan_models();
+        assert!(reg.list_progress_bar().is_empty());
+
+        // And the thread locals are cleaned up as well.
+        assert_eq!(reg.inner.write().active_progress_bar.iter_mut().count(), 0);
     }
 }

@@ -1,0 +1,52 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pycheckout",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                    "io": {"optional": True},
+                    "workingcopy": {"optional": True},
+                },
+            },
+            "features": {
+                "default": [],
+                "eden": [
+                    "checkout/eden",
+                    "io",
+                    "workingcopy",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["eden"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:parking_lot",
+        "//eden/scm/lib/checkout:checkout",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/io/term/logger:termlogger",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/vfs:vfs",
+        "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/saplingnative/bindings/modules/pymanifest:pymanifest",
+        "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
+        "//eden/scm/saplingnative/bindings/modules/pystatus:pystatus",
+        "//eden/scm/saplingnative/bindings/modules/pytreestate:pytreestate",
+    ],
+)

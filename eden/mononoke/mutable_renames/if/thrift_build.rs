@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "mononoke_types_thrift mononoke_types_thrift
+        "mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust
 mutable_rename crate",
     ).expect("Failed to write cratemap");
 
@@ -45,6 +45,8 @@ mutable_rename crate",
         conf.base_path(base_path);
 
         conf.types_crate("mutable-rename-thrift__types");
+        conf.clients_crate("mutable-rename-thrift__clients");
+        conf.services_crate("mutable-rename-thrift__services");
 
         let options = "";
         if !options.is_empty() {

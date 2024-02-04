@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import namespaces, registrar
+from sapling import namespaces, registrar
 
 
 namespacepredicate = registrar.namespacepredicate()

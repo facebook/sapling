@@ -5,9 +5,9 @@
 
 from __future__ import absolute_import
 
-from edenscm import error, registrar, revsetlang
+from sapling import error, registrar, revsetlang
 
-from edenscm.ext import rebase
+from sapling.ext import rebase
 
 
 try:

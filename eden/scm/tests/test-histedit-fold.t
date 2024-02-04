@@ -149,7 +149,7 @@ description is taken from rollup target commit
 check saving last-message.txt
 
   $ cat > $TESTTMP/abortfolding.py <<EOF
-  > from edenscm import util
+  > from sapling import util
   > def abortfolding(ui, repo, hooktype, **kwargs):
   >     ctx = repo[kwargs.get('node')]
   >     if set(ctx.files()) == {'c', 'd', 'f'}:

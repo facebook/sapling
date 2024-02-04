@@ -32,6 +32,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
@@ -43,6 +44,7 @@ use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::fsnode::FsnodeSummary;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
@@ -50,8 +52,9 @@ use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
+use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -59,7 +62,10 @@ use crate::FsnodeDerivationError;
 pub(crate) async fn derive_fsnodes_stack(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    file_changes: Vec<(
+        ChangesetId,
+        BTreeMap<NonRootMPath, Option<(ContentId, FileType)>>,
+    )>,
     parent: Option<FsnodeId>,
 ) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
     let blobstore = derivation_ctx.blobstore();
@@ -123,7 +129,7 @@ pub(crate) async fn derive_fsnode(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     parents: Vec<FsnodeId>,
-    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
+    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
 ) -> Result<FsnodeId> {
     let blobstore = derivation_ctx.blobstore();
     let content_ids = changes
@@ -169,7 +175,7 @@ pub(crate) async fn derive_fsnode(
         None => {
             // All files have been deleted, generate empty fsnode
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };
@@ -322,14 +328,21 @@ async fn create_fsnode(
     blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadataV2>>,
-    tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
+    tree_info: TreeInfo<
+        FsnodeId,
+        (ContentId, FileType),
+        Option<FsnodeSummary>,
+        TrieMap<Entry<FsnodeId, FsnodeFile>>,
+    >,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
     let entries = collect_fsnode_subentries(
         ctx,
         &blobstore,
         prefetched_content_metadata.as_ref(),
         tree_info.parents,
-        tree_info.subentries,
+        flatten_subentries(ctx, &(), tree_info.subentries)
+            .await?
+            .collect(),
     )
     .await?;
 
@@ -520,9 +533,9 @@ mod test {
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
-                    &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("files").unwrap())
+                    &MPath::ROOT,
+                    &MPath::new("1").unwrap(),
+                    &MPath::new("files").unwrap()
                 ]
             );
 
@@ -576,10 +589,10 @@ mod test {
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
-                    &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("2").unwrap()),
-                    &Some(MPath::new("files").unwrap())
+                    &MPath::ROOT,
+                    &MPath::new("1").unwrap(),
+                    &MPath::new("2").unwrap(),
+                    &MPath::new("files").unwrap()
                 ]
             );
 
@@ -665,21 +678,21 @@ mod test {
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
-                    &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("2").unwrap()),
-                    &Some(MPath::new("dir1").unwrap()),
-                    &Some(MPath::new("dir1/file_1_in_dir1").unwrap()),
-                    &Some(MPath::new("dir1/file_2_in_dir1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/file_1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir1/file_1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir2").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir2/file_1").unwrap()),
-                    &Some(MPath::new("dir1/subdir1/subsubdir2/file_2").unwrap()),
-                    &Some(MPath::new("dir2").unwrap()),
-                    &Some(MPath::new("dir2/file_1_in_dir2").unwrap()),
+                    &MPath::ROOT,
+                    &MPath::new("1").unwrap(),
+                    &MPath::new("2").unwrap(),
+                    &MPath::new("dir1").unwrap(),
+                    &MPath::new("dir1/file_1_in_dir1").unwrap(),
+                    &MPath::new("dir1/file_2_in_dir1").unwrap(),
+                    &MPath::new("dir1/subdir1").unwrap(),
+                    &MPath::new("dir1/subdir1/file_1").unwrap(),
+                    &MPath::new("dir1/subdir1/subsubdir1").unwrap(),
+                    &MPath::new("dir1/subdir1/subsubdir1/file_1").unwrap(),
+                    &MPath::new("dir1/subdir1/subsubdir2").unwrap(),
+                    &MPath::new("dir1/subdir1/subsubdir2/file_1").unwrap(),
+                    &MPath::new("dir1/subdir1/subsubdir2/file_2").unwrap(),
+                    &MPath::new("dir2").unwrap(),
+                    &MPath::new("dir2/file_1_in_dir2").unwrap(),
                 ]
             );
 
@@ -723,7 +736,7 @@ mod test {
             );
 
             // Check one of the deeper fsnodes.
-            let deep_fsnode_id = match all_fsnodes.get(&Some(MPath::new("dir1/subdir1").unwrap())) {
+            let deep_fsnode_id = match all_fsnodes.get(&MPath::new("dir1/subdir1").unwrap()) {
                 Some(Entry::Tree(fsnode_id)) => fsnode_id,
                 _ => panic!("dir1/subdir1 fsnode should be a tree"),
             };
@@ -850,12 +863,12 @@ mod test {
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
-                    &None,
-                    &Some(MPath::new("1").unwrap()),
-                    &Some(MPath::new("2").unwrap()),
-                    &Some(MPath::new("dir1").unwrap()),
-                    &Some(MPath::new("dir2").unwrap()),
-                    &Some(MPath::new("dir2/file_1_in_dir2").unwrap()),
+                    &MPath::ROOT,
+                    &MPath::new("1").unwrap(),
+                    &MPath::new("2").unwrap(),
+                    &MPath::new("dir1").unwrap(),
+                    &MPath::new("dir2").unwrap(),
+                    &MPath::new("dir2/file_1_in_dir2").unwrap(),
                 ]
             );
 

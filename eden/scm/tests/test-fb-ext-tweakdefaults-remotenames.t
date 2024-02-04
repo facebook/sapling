@@ -34,14 +34,16 @@ Test that hg pull --rebase aborts without --dest
   $ touch foo
   $ hg commit -qAm 'foo'
   $ hg pull --rebase
-  abort: you must use a bookmark with tracking or manually specify a destination for the rebase
-  (set up tracking with `hg book <name> -t <destination>` or manually supply --dest / -d)
+  abort: missing rebase destination - supply --dest / -d
   [255]
   $ hg bookmark bm
   $ hg pull --rebase
-  abort: you must use a bookmark with tracking or manually specify a destination for the rebase
-  (set up tracking with `hg book -t <destination>` or manually supply --dest / -d)
+  abort: missing rebase destination - supply --dest / -d
   [255]
+
+  $ cp -R "$(hg root)" "$TESTTMP/repo-2"
+
+Implicit rebase destination using tracking bookmark
   $ hg book bm -t remote/two
   $ hg pull --rebase
   pulling from test:repo_server (glob)
@@ -49,6 +51,12 @@ Test that hg pull --rebase aborts without --dest
   $ hg pull --rebase --dest three
   pulling from test:repo_server (glob)
   rebasing 54ac787ff1c5 "foo" (bm)
+
+Implicit rebase destination using main bookmark
+  $ hg pull --rebase --config remotenames.selectivepulldefault=two --cwd "$TESTTMP/repo-2"
+  pulling from test:repo_server
+  rebasing 3de6bbccf693 "foo" (bm)
+
 
 Test that hg pull --update aborts without --dest
   $ hg pull --update

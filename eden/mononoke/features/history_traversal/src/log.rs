@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
@@ -40,10 +41,10 @@ use futures_util::TryStreamExt;
 use itertools::Itertools;
 use manifest::Entry;
 use manifest::ManifestOps;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::Generation;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mutable_renames::MutableRenames;
 use stats::prelude::*;
@@ -79,12 +80,12 @@ pub enum HistoryAcrossDeletions {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum FollowMutableFileHistory {
-    MutableFileParents,
-    ImmutableCommitParents,
+pub enum FollowMutableRenames {
+    Yes,
+    No,
 }
 
-pub type CsAndPath = (ChangesetId, Arc<Option<MPath>>);
+pub type CsAndPath = (ChangesetId, Arc<MPath>);
 
 pub enum NextChangeset {
     // Changeset is new and hasn't been returned
@@ -241,9 +242,10 @@ async fn resolve_path_state(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-    path: &Option<MPath>,
+    path: &MPath,
 ) -> Result<Option<PathState>, Error> {
-    RootDeletedManifestV2Id::resolve_path_state(ctx, repo.as_blob_repo(), cs_id, path).await
+    let path = path.clone();
+    RootDeletedManifestV2Id::resolve_path_state(ctx, repo.as_blob_repo(), cs_id, &path).await
 }
 
 /// Returns a full history of the given path starting from the given unode in generation number order.
@@ -288,19 +290,22 @@ async fn resolve_path_state(
 pub async fn list_file_history<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    path: Option<MPath>,
+    path: MPath,
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
-    mut follow_mutable_renames: FollowMutableFileHistory,
+    mut follow_mutable_renames: FollowMutableRenames,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + 'a, FastlogError> {
-    if tunables::tunables()
-        .by_repo_fastlog_disable_mutable_renames(repo.repo_identity().name())
-        .unwrap_or(false)
+    if justknobs::eval(
+        "scm/mononoke:fastlog_disable_mutable_renames",
+        None,
+        Some(repo.repo_identity().name()),
+    )
+    .context("Failed to contact justknob server")?
     {
-        follow_mutable_renames = FollowMutableFileHistory::ImmutableCommitParents;
+        follow_mutable_renames = FollowMutableRenames::No;
     }
     let path = Arc::new(path);
 
@@ -335,7 +340,7 @@ pub async fn list_file_history<'a>(
     // Find out if there's mutable rename between the current changeset and last
     // changeset that touched the path. (There's no such if the current
     // changeset and last changeset are the same commit.)
-    let last_changesets = if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents
+    let last_changesets = if follow_mutable_renames == FollowMutableRenames::Yes
         && !last_changesets
             .iter()
             .any(|x| x == &(changeset_id, path.clone()))
@@ -479,7 +484,7 @@ async fn process_deletion_nodes(
     repo: &impl Repo,
     history_graph: &mut CommitGraph,
     deletion_nodes: Vec<(ChangesetId, UnodeEntry)>,
-    path: Arc<Option<MPath>>,
+    path: Arc<MPath>,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     let mut deleted_linknodes = vec![];
     let mut last_unodes = vec![];
@@ -516,7 +521,7 @@ async fn fetch_linknodes_and_update_graph(
     repo: &impl Repo,
     unode_entries: Vec<UnodeEntry>,
     history_graph: &mut CommitGraph,
-    path: Arc<Option<MPath>>,
+    path: Arc<MPath>,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     let linknodes = unode_entries.into_iter().map({
         let path = &path;
@@ -555,7 +560,7 @@ async fn derive_unode_entry(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-    path: &Option<MPath>,
+    path: &MPath,
 ) -> Result<Option<UnodeEntry>, Error> {
     let root_unode_mf_id = RootUnodeManifestId::derive(ctx, repo.as_blob_repo(), cs_id).await?;
     root_unode_mf_id
@@ -565,7 +570,7 @@ async fn derive_unode_entry(
 }
 
 type CommitGraph = HashMap<CsAndPath, Option<Vec<CsAndPath>>>;
-type PossibleMutableAncestorsCache = HashMap<Option<MPath>, Vec<(Generation, ChangesetId)>>;
+type PossibleMutableAncestorsCache = HashMap<MPath, Vec<(Generation, ChangesetId)>>;
 
 struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
@@ -581,7 +586,7 @@ async fn do_history_unfold<V>(
     repo: &impl Repo,
     state: TraversalState<V>,
     history_across_deletions: HistoryAcrossDeletions,
-    follow_mutable_renames: FollowMutableFileHistory,
+    follow_mutable_renames: FollowMutableRenames,
     mutable_renames: &MutableRenames,
 ) -> Result<Option<(Vec<ChangesetId>, TraversalState<V>)>, Error>
 where
@@ -686,7 +691,7 @@ where
 async fn find_mutable_renames(
     ctx: &CoreContext,
     repo: &impl Repo,
-    (cs_id, path): (ChangesetId, Arc<Option<MPath>>),
+    (cs_id, path): (ChangesetId, Arc<MPath>),
     history_graph: &mut CommitGraph,
     mutable_renames: &MutableRenames,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
@@ -694,7 +699,7 @@ async fn find_mutable_renames(
         .get_rename(ctx, cs_id, (path.as_ref()).clone())
         .await?
     {
-        let src_path = Arc::new(rename.src_path().cloned());
+        let src_path = Arc::new(rename.src_path().clone());
         // TODO(stash): this unode can be used to avoid unode manifest traversal
         // later while doing prefetching
         let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
@@ -714,7 +719,7 @@ async fn find_mutable_renames(
 pub(crate) async fn find_possible_mutable_ancestors<'a>(
     ctx: &CoreContext,
     repo: &impl Repo,
-    path: &Option<MPath>,
+    path: &MPath,
     possible_mutable_ancestors_cache: &'a mut PossibleMutableAncestorsCache,
 ) -> Result<&'a Vec<(Generation, ChangesetId)>, Error> {
     if !possible_mutable_ancestors_cache.contains_key(path) {
@@ -731,7 +736,7 @@ pub(crate) async fn find_possible_mutable_ancestors<'a>(
 pub(crate) async fn _find_possible_mutable_ancestors(
     ctx: &CoreContext,
     repo: &impl Repo,
-    path: &Option<MPath>,
+    path: &MPath,
 ) -> Result<Vec<(Generation, ChangesetId)>, Error> {
     let mutable_renames = repo.mutable_renames();
     let mutable_csids = mutable_renames
@@ -903,7 +908,7 @@ async fn replace_ancestors_with_mutable_ancestors(
                 Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
             };
             Ok((
-                vec![(linknode, Arc::new(rename.src_path().cloned()))],
+                vec![(linknode, Arc::new(rename.src_path().clone()))],
                 vec![],
             ))
         } else {
@@ -988,7 +993,7 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
                         // this node during the unode graph traversal.
                         Some((
                             (*possible_ancestor_cs_id, path.clone()),
-                            Some(vec![(linknode, Arc::new(rename.src_path().cloned()))]),
+                            Some(vec![(linknode, Arc::new(rename.src_path().clone()))]),
                         )),
                     ));
                 }
@@ -1004,10 +1009,10 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
 async fn try_continue_traversal_when_no_parents(
     ctx: &CoreContext,
     repo: &impl Repo,
-    (cs_id, path): (ChangesetId, Arc<Option<MPath>>),
+    (cs_id, path): (ChangesetId, Arc<MPath>),
     history_across_deletions: HistoryAcrossDeletions,
     history_graph: &mut CommitGraph,
-    follow_mutable_renames: FollowMutableFileHistory,
+    follow_mutable_renames: FollowMutableRenames,
     mutable_renames: &MutableRenames,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     if history_across_deletions == HistoryAcrossDeletions::Track {
@@ -1024,14 +1029,10 @@ async fn try_continue_traversal_when_no_parents(
         }
     }
 
-    if !tunables::tunables()
-        .by_repo_fastlog_disable_mutable_renames(repo.repo_identity().name())
-        .unwrap_or(follow_mutable_renames == FollowMutableFileHistory::ImmutableCommitParents)
-    {
+    if follow_mutable_renames == FollowMutableRenames::Yes {
         return find_mutable_renames(ctx, repo, (cs_id, path), history_graph, mutable_renames)
             .await;
     }
-
     Ok(vec![])
 }
 
@@ -1047,7 +1048,7 @@ async fn find_where_file_was_deleted(
     ctx: &CoreContext,
     repo: &impl Repo,
     commit_no_more_history: ChangesetId,
-    path: &Option<MPath>,
+    path: &MPath,
 ) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
     let parents = repo
         .changeset_fetcher()
@@ -1087,16 +1088,16 @@ async fn prefetch_and_process_history(
     ctx: &CoreContext,
     repo: &impl Repo,
     visitor: &mut impl Visitor,
-    (changeset_id, path): (ChangesetId, Arc<Option<MPath>>),
+    (changeset_id, path): (ChangesetId, Arc<MPath>),
     history_graph: &mut CommitGraph,
-    follow_mutable_renames: FollowMutableFileHistory,
+    follow_mutable_renames: FollowMutableRenames,
     possible_mutable_ancestors_cache: &mut PossibleMutableAncestorsCache,
 ) -> Result<(), Error> {
     let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, &path).await?;
     let affected_changesets: Vec<_> = fastlog_batch.iter().map(|(cs_id, _)| *cs_id).collect();
     let mut graph_insertions = process_unode_batch(fastlog_batch, history_graph, path.clone());
 
-    if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents {
+    if follow_mutable_renames == FollowMutableRenames::Yes {
         graph_insertions = augment_history_graph_insertions_with_mutable_ancestry(
             ctx,
             repo,
@@ -1129,7 +1130,7 @@ async fn prefetch_and_process_history(
 fn process_unode_batch(
     unode_batch: Vec<(ChangesetId, Vec<FastlogParent>)>,
     graph: &CommitGraph,
-    path: Arc<Option<MPath>>,
+    path: Arc<MPath>,
 ) -> Vec<(CsAndPath, Option<Vec<CsAndPath>>)> {
     let mut graph_insertions = Vec::new();
     for (cs_id, parents) in unode_batch {
@@ -1173,7 +1174,7 @@ async fn prefetch_fastlog_by_changeset(
     ctx: &CoreContext,
     repo: &impl Repo,
     changeset_id: ChangesetId,
-    path: &Option<MPath>,
+    path: &MPath,
 ) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
     let unode_entry_opt = derive_unode_entry(ctx, repo, changeset_id.clone(), path).await?;
     let entry = unode_entry_opt
@@ -1213,15 +1214,17 @@ mod test {
     use filestore::FilestoreConfig;
     use futures::future::FutureExt;
     use futures::future::TryFutureExt;
+    use justknobs::test_helpers::override_just_knobs;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
     use maplit::hashmap;
     use mutable_renames::MutableRenameEntry;
     use mutable_renames::MutableRenamesArc;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
-    use repo_identity::RepoIdentityRef;
     use tests_utils::CreateCommitContext;
-    use tunables::with_tunables_async_arc;
 
     use super::*;
 
@@ -1253,6 +1256,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
+        override_just_knobs(None);
         // generate couple of hundreds linear file changes and list history
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
@@ -1279,7 +1283,7 @@ mod test {
             parents = vec![bcs_id];
         }
 
-        let top = parents.get(0).unwrap().clone();
+        let top = parents.first().unwrap().clone();
 
         RootFastlog::derive(ctx, blob_repo, top).await?;
 
@@ -1287,12 +1291,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            path(filename),
+            path(filename)?,
             top,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1329,6 +1333,7 @@ mod test {
         //           A
         //
 
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let blob_repo = repo.as_blob_repo();
@@ -1362,12 +1367,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            path(filename),
+            path(filename)?,
             top,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1402,6 +1407,7 @@ mod test {
         //           o
         //
 
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let blob_repo = repo.as_blob_repo();
@@ -1428,12 +1434,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            path(filename),
+            path(filename)?,
             prev_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1463,13 +1469,14 @@ mod test {
         //        |   |
         //        o   o
         //
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
         let filename = "1";
-        let filepath = path(filename);
+        let filepath = path(filename)?;
 
         let graph = HashMap::new();
 
@@ -1508,7 +1515,7 @@ mod test {
             NothingVisitor {},
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![],
         )
         .await?;
@@ -1534,7 +1541,7 @@ mod test {
             top,
             SingleBranchOfHistoryVisitor {},
             HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             mutable_renames,
             TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
         )
@@ -1554,6 +1561,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1603,7 +1611,7 @@ mod test {
                     (),
                     HistoryAcrossDeletions::Track,
                     mutable_renames,
-                    FollowMutableFileHistory::ImmutableCommitParents,
+                    FollowMutableRenames::No,
                     expected,
                 )
                 .await?;
@@ -1614,9 +1622,9 @@ mod test {
 
         expected.reverse();
         // check deleted file
-        history(bcs_id.clone(), path(filename), expected.clone()).await?;
+        history(bcs_id.clone(), path(filename)?, expected.clone()).await?;
         // check deleted directory
-        history(bcs_id.clone(), path("dir"), expected.clone()).await?;
+        history(bcs_id.clone(), path("dir")?, expected.clone()).await?;
 
         // recreate dir and check
         let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
@@ -1626,7 +1634,7 @@ mod test {
 
         let mut res = vec![bcs_id];
         res.extend(expected);
-        history(bcs_id.clone(), path("dir"), res).await?;
+        history(bcs_id.clone(), path("dir")?, res).await?;
 
         Ok(())
     }
@@ -1648,6 +1656,7 @@ mod test {
         //     |
         //     A
         //
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1736,7 +1745,7 @@ mod test {
                     (),
                     HistoryAcrossDeletions::Track,
                     mutable_renames,
-                    FollowMutableFileHistory::ImmutableCommitParents,
+                    FollowMutableRenames::No,
                     expected,
                 )
                 .await?;
@@ -1754,13 +1763,13 @@ mod test {
             e.clone(),
             a.clone(),
         ];
-        history(l.clone(), path("file"), expected).await?;
+        history(l.clone(), path("file")?, expected).await?;
 
         let expected = vec![i.clone(), g.clone(), c.clone(), d.clone()];
-        history(l.clone(), path("dir/file"), expected).await?;
+        history(l.clone(), path("dir/file")?, expected).await?;
 
         let expected = vec![k.clone(), i.clone(), b.clone(), c.clone()];
-        history(l.clone(), path("dir_1/file_1"), expected).await?;
+        history(l.clone(), path("dir_1/file_1")?, expected).await?;
 
         let expected = vec![
             k.clone(),
@@ -1770,13 +1779,14 @@ mod test {
             d.clone(),
             b.clone(),
         ];
-        history(l.clone(), path("dir_1"), expected).await?;
+        history(l.clone(), path("dir_1")?, expected).await?;
 
         Ok(())
     }
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1805,12 +1815,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1818,12 +1828,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::DontTrack,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![bcs_id],
         )
         .await?;
@@ -1833,6 +1843,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1885,12 +1896,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected.clone(),
         )
         .await?;
@@ -1900,12 +1911,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(filename)?,
+            MPath::new(filename)?,
             merge,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1953,12 +1964,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![third_bcs_id],
         )
         .await?;
@@ -1966,34 +1977,26 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![third_bcs_id],
         )
         .await?;
 
         // Set mutable renames
-        let first_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            second_bcs_id,
-            &MPath::new_opt(first_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let first_src_unode =
+            derive_unode_entry(ctx, &repo, second_bcs_id, &MPath::new(first_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
-        let second_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            second_bcs_id,
-            &MPath::new_opt(second_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let second_src_unode =
+            derive_unode_entry(ctx, &repo, second_bcs_id, &MPath::new(second_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
         mutable_renames
             .add_or_overwrite_renames(
@@ -2002,80 +2005,96 @@ mod test {
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,
-                        MPath::new_opt(first_dst_filename)?,
+                        MPath::new(first_dst_filename)?,
                         second_bcs_id,
-                        MPath::new_opt(first_src_filename)?,
+                        MPath::new(first_src_filename)?,
                         first_src_unode,
                     )?,
                     MutableRenameEntry::new(
                         third_bcs_id,
-                        MPath::new_opt(second_dst_filename)?,
+                        MPath::new(second_dst_filename)?,
                         second_bcs_id,
-                        MPath::new_opt(second_src_filename)?,
+                        MPath::new(second_src_filename)?,
                         second_src_unode,
                     )?,
                 ],
             )
             .await?;
 
-        let tunables = tunables::MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.repo_identity().name().to_string() => hashmap! {
-                "fastlog_disable_mutable_renames".to_string() => true,
-            },
-        });
-        let tunables = Arc::new(tunables);
-        // Tunable is not enabled, so result is the same
+        // justknob is disabled, so result is the same
         let actual = check_history(
             ctx,
             &repo,
-            MPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![third_bcs_id],
         );
-        with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
-
-        let actual = check_history(
-            ctx,
-            &repo,
-            MPath::new_opt(second_dst_filename)?,
-            third_bcs_id,
-            (),
-            HistoryAcrossDeletions::Track,
-            mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
-            vec![third_bcs_id],
-        );
-        with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
-
-        // Now check the actual mutable history.
-        check_history(
-            ctx,
-            &repo,
-            MPath::new_opt(first_dst_filename)?,
-            third_bcs_id,
-            (),
-            HistoryAcrossDeletions::Track,
-            mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
-            vec![third_bcs_id, second_bcs_id, first_bcs_id],
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:fastlog_disable_mutable_renames".to_string() => KnobVal::Bool(true)
+            ]),
+            actual.boxed(),
         )
         .await?;
 
-        check_history(
+        let actual = check_history(
             ctx,
             &repo,
-            MPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
+            third_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            FollowMutableRenames::Yes,
+            vec![third_bcs_id],
+        );
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:fastlog_disable_mutable_renames".to_string() => KnobVal::Bool(true)
+            ]),
+            actual.boxed(),
+        )
+        .await?;
+        // Now check the actual mutable history.
+        let actual = check_history(
+            ctx,
+            &repo,
+            MPath::new(first_dst_filename)?,
+            third_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            FollowMutableRenames::Yes,
+            vec![third_bcs_id, second_bcs_id, first_bcs_id],
+        );
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:fastlog_disable_mutable_renames".to_string() => KnobVal::Bool(false)
+            ]),
+            actual.boxed(),
+        )
+        .await?;
+
+        let actual = check_history(
+            ctx,
+            &repo,
+            MPath::new(second_dst_filename)?,
             third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![third_bcs_id, first_bcs_id],
+        );
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:fastlog_disable_mutable_renames".to_string() => KnobVal::Bool(false)
+            ]),
+            actual.boxed(),
         )
         .await?;
 
@@ -2086,6 +2105,7 @@ mod test {
     async fn test_list_history_with_mutable_renames_attached_to_unrelated_commits(
         fb: FacebookInit,
     ) -> Result<(), Error> {
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2150,23 +2170,15 @@ mod test {
         //  * file from 2nd changeset -> moved_file from 5th changeset
 
         // Set mutable renames
-        let first_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            first_bcs_id,
-            &MPath::new_opt(first_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let first_src_unode =
+            derive_unode_entry(ctx, &repo, first_bcs_id, &MPath::new(first_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
-        let second_src_unode = derive_unode_entry(
-            ctx,
-            &repo,
-            second_bcs_id,
-            &MPath::new_opt(second_src_filename)?,
-        )
-        .await?
-        .ok_or_else(|| format_err!("not found source unode id"))?;
+        let second_src_unode =
+            derive_unode_entry(ctx, &repo, second_bcs_id, &MPath::new(second_src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
 
         mutable_renames
             .add_or_overwrite_renames(
@@ -2175,16 +2187,16 @@ mod test {
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,
-                        MPath::new_opt(first_dst_filename)?,
+                        MPath::new(first_dst_filename)?,
                         first_bcs_id,
-                        MPath::new_opt(first_src_filename)?,
+                        MPath::new(first_src_filename)?,
                         first_src_unode,
                     )?,
                     MutableRenameEntry::new(
                         fifth_bcs_id,
-                        MPath::new_opt(second_dst_filename)?,
+                        MPath::new(second_dst_filename)?,
                         second_bcs_id,
-                        MPath::new_opt(second_src_filename)?,
+                        MPath::new(second_src_filename)?,
                         second_src_unode,
                     )?,
                 ],
@@ -2194,12 +2206,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(first_dst_filename)?,
+            MPath::new(first_dst_filename)?,
             sixth_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![fourth_bcs_id, third_bcs_id, first_bcs_id],
         )
         .await?;
@@ -2207,12 +2219,12 @@ mod test {
         check_history(
             ctx,
             &repo,
-            MPath::new_opt(second_dst_filename)?,
+            MPath::new(second_dst_filename)?,
             sixth_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![fifth_bcs_id, first_bcs_id],
         )
         .await?;
@@ -2222,6 +2234,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_different_order(fb: FacebookInit) -> Result<(), Error> {
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2272,11 +2285,11 @@ mod test {
         let history_stream = list_file_history(
             ctx,
             &repo,
-            MPath::new_opt(filename)?,
+            MPath::new(filename)?,
             merge,
             (),
             HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             mutable_renames.clone(),
             TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
         )
@@ -2290,6 +2303,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_simple_gen_num(fb: FacebookInit) -> Result<(), Error> {
+        override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2340,11 +2354,11 @@ mod test {
         let history_stream = list_file_history(
             ctx,
             &repo,
-            MPath::new_opt(filename)?,
+            MPath::new(filename)?,
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             mutable_renames.clone(),
             TraversalOrder::new_gen_num_order(ctx.clone(), Arc::new(cs_fetcher)),
         )
@@ -2479,19 +2493,19 @@ mod test {
         response
     }
 
-    fn path(path_str: &str) -> Option<MPath> {
-        MPath::new(path_str).ok()
+    fn path(path_str: &str) -> anyhow::Result<MPath> {
+        MPath::new(path_str)
     }
 
     async fn check_history(
         ctx: &CoreContext,
         repo: &TestRepoWithMutableRenames,
-        path: Option<MPath>,
+        path: MPath,
         changeset_id: ChangesetId,
         visitor: impl Visitor + Clone,
         history_across_deletions: HistoryAcrossDeletions,
         mutable_renames: Arc<MutableRenames>,
-        follow_mutable_file_history: FollowMutableFileHistory,
+        follow_mutable_file_history: FollowMutableRenames,
         expected: Vec<ChangesetId>,
     ) -> Result<(), Error> {
         let history = list_file_history(

@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "termlogger",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/lazystr:lazystr",
+    ],
+)

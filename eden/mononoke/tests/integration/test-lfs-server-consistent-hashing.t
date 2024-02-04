@@ -44,7 +44,7 @@
   > EOF
 
 # Make sure we get a normal download URL
-  $ curl -s --data-binary @batch.json "$LFS_URI/objects/batch" | jq ".objects[0].actions.download.href"
+  $ curltest -s --data-binary @batch.json "$LFS_URI/objects/batch" | jq ".objects[0].actions.download.href"
   "http://$LOCALIP:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=*" (glob)
 
 # Update the config to enable consistent routing
@@ -54,7 +54,7 @@
   $ sleep 1
 
 # Make sure we get a normal download URL
-  $ curl -s --data-binary @batch.json "$LFS_URI/objects/batch" | jq ".objects[0].actions.download.href"
+  $ curltest -s --data-binary @batch.json "$LFS_URI/objects/batch" | jq ".objects[0].actions.download.href"
   "http://$LOCALIP:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?routing=ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746?server_hostname=*" (glob)
 
 # Make sure we can read it back

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use configloader::hg::PinnedConfig;
+
+use crate::global_flags::HgGlobalOpts;
+
 #[macro_export]
 macro_rules! abort_if {
     ( $cond:expr, $($arg:tt)+ ) => {
@@ -32,6 +36,74 @@ macro_rules! fallback {
     ( $($arg:tt)+ ) => {
         return Err($crate::errors::FallbackToPython(format!($($arg)*).into()).into());
     };
+}
+
+pub(crate) fn pinned_configs(global_opts: &HgGlobalOpts) -> Vec<PinnedConfig> {
+    let mut pinned = PinnedConfig::from_cli_opts(&global_opts.config, &global_opts.configfile);
+
+    if global_opts.hidden {
+        pinned.push(PinnedConfig::KeyValue(
+            "visibility".into(),
+            "all-heads".into(),
+            "true".into(),
+            "--hidden".into(),
+        ));
+    }
+
+    if global_opts.trace || global_opts.traceback {
+        pinned.push(PinnedConfig::KeyValue(
+            "ui".into(),
+            "traceback".into(),
+            "on".into(),
+            "--traceback".into(),
+        ));
+    }
+    if global_opts.profile {
+        pinned.push(PinnedConfig::KeyValue(
+            "profiling".into(),
+            "enabled".into(),
+            "true".into(),
+            "--profile".into(),
+        ));
+    }
+    if !global_opts.color.is_empty() {
+        pinned.push(PinnedConfig::KeyValue(
+            "ui".into(),
+            "color".into(),
+            global_opts.color.clone().into(),
+            "--color".into(),
+        ));
+    }
+    if global_opts.verbose || global_opts.debug || global_opts.quiet {
+        pinned.push(PinnedConfig::KeyValue(
+            "ui".into(),
+            "verbose".into(),
+            global_opts.verbose.to_string().into(),
+            "--verbose".into(),
+        ));
+        pinned.push(PinnedConfig::KeyValue(
+            "ui".into(),
+            "debug".into(),
+            global_opts.debug.to_string().into(),
+            "--debug".into(),
+        ));
+        pinned.push(PinnedConfig::KeyValue(
+            "ui".into(),
+            "quiet".into(),
+            global_opts.quiet.to_string().into(),
+            "--quiet".into(),
+        ));
+    }
+    if global_opts.noninteractive {
+        pinned.push(PinnedConfig::KeyValue(
+            "ui".into(),
+            "interactive".into(),
+            "off".into(),
+            "-y".into(),
+        ));
+    }
+
+    pinned
 }
 
 #[cfg(test)]

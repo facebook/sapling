@@ -1,0 +1,48 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//common/automock:automock.bzl", "thrift_plugin_automock")
+
+oncall("source_control")
+
+thrift_library(
+    name = "megarepo_configs",
+    languages = [
+        "rust",
+        "py3",
+        "cpp2",
+        "py",
+    ],
+    plugins = [
+        thrift_plugin_automock,
+    ],
+    py3_namespace = "scm.service.thrift",
+    py_base_module = "scm.service.thrift",
+    py_remote_service_router = True,
+    thrift_cpp2_options = [
+        "reflection",
+    ],
+    thrift_py_options = "utf8strings",
+    thrift_rust_options = "serde",
+    thrift_srcs = {
+        "megarepo_configs.thrift": [],
+    },
+)
+
+thrift_library(
+    name = "version_cconf_index",
+    languages = [
+        "rust",
+        "py3",
+        "cpp2",
+        "py",
+    ],
+    py3_namespace = "scm.service.thrift",
+    py_base_module = "scm.service.thrift",
+    py_remote_service_router = True,
+    rust_autocargo = {"cargo_toml_dir": "version_cconf_index"},
+    thrift_py_options = "utf8strings",
+    thrift_rust_options = "serde",
+    thrift_srcs = {
+        "version_cconf_index.thrift": [],
+    },
+    deps = [":megarepo_configs"],
+)

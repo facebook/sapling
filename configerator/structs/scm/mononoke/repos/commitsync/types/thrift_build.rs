@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "commitsync crate
-repos repos",
+repos repos //configerator/structs/scm/mononoke/repos:repos-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -45,6 +45,8 @@ repos repos",
         conf.base_path(base_path);
 
         conf.types_crate("commitsync__types");
+        conf.clients_crate("commitsync__clients");
+        conf.services_crate("commitsync__services");
 
         let options = "serde";
         if !options.is_empty() {

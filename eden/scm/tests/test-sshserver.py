@@ -4,8 +4,7 @@ import io
 import unittest
 
 import silenttestrunner
-from edenscm import sshserver, wireproto
-from hghave import require
+from sapling import sshserver, wireproto
 
 
 class SSHServerGetArgsTests(unittest.TestCase):

@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "pathmatcher",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:fancy-regex",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:glob",
+        "fbsource//third-party/rust:globset",
+        "fbsource//third-party/rust:ignore",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:regex-automata",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+    ],
+)

@@ -1,0 +1,60 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "scsc",
+    srcs = glob(["src/**/*.rs"]),
+    allow_oss_build = False,
+    os_deps = [
+        (
+            "linux",
+            [
+                "//common/rust/thrift/srclient:srclient",
+                "//eden/mononoke/scs/if:source_control-rust-srclients",
+                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+                "//common/rust/build_info:build_info",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "//common/rust/build_info:build_info",
+                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:ansi_term",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:bytesize",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:num",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:strum",
+        "fbsource//third-party/rust:textwrap",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:unicode-truncate",
+        "fbsource//third-party/rust:unicode-width",
+        "//c2p/secure_thrift/rust/client:x2pclient",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/cmdlib/base_app:base_app",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/common/bounded_traversal:bounded_traversal",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-x2pclients",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)

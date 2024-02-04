@@ -10,6 +10,7 @@ html .vscode-dark {
   --scm-modified-foreground: #e2c08d;
   --scm-added-foreground: #73c991;
   --scm-removed-foreground: #f3674f;
+  --scm-missing-foreground: #b4eaed;
   --selected-commit-background: rgba(255, 255, 255, 0.1);
 
   --error-fg-color: #f3674f;
@@ -19,6 +20,7 @@ html .vscode-dark {
   --tooltip-border: var(--vscode-editorWidget-border, #454545);
 
   --hover-darken: rgba(255, 255, 255, 0.1);
+  --subtle-hover-darken: rgba(255, 255, 255, 0.03);
   --highlight-foreground: #f0f0f0;
 
   --selection-mix-mode: lighten;
@@ -39,6 +41,16 @@ html .vscode-dark {
   --diffEditor-modifiedLineBackground: #deb94033;
   --diffEditor-modifiedLineHighlightBackground: #deb94066;
   --editor-selectionBackground: #264f78;
+  --editor-changedBackground: hsla(212, 90%, 70%, 0.15);
+  --editor-changedHighlightBackground: hsla(212, 90%, 70%, 0.3);
+
+  --hint-background: rgba(252, 193, 43, 0.2);
+
+  --banner-fg: rgb(235, 236, 237);
+  --banner-warning-bg: #deb94066;
+  --banner-error-bg: #fa7e7c55;
+  --banner-default-bg: #45454577;
+  --banner-green-bg: #73a280;
 
   /* Signal colors */
   --signal-good-bg: #2da44e;

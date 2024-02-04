@@ -167,7 +167,8 @@ check state of working copy
 abort editing session, after first forcibly updating away
   $ hg up 0
   abort: histedit in progress
-  (use 'hg histedit --continue' or 'hg histedit --abort')
+  (use 'hg histedit --continue' to continue or
+       'hg histedit --abort' to abort)
   [255]
   $ mv .hg/histedit-state .hg/histedit-state-ignore
   $ hg up 'desc(a)'

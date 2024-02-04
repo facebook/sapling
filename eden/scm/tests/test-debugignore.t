@@ -65,6 +65,6 @@ Works with sparse checkouts as well.
   a: ignored by rule a from .gitignore
   
   $ hg debugignore b
-  b is not ignored
+  b: not ignored
   $ hg debugignore c
   c is not in sparse profile

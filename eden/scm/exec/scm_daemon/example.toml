@@ -6,4 +6,4 @@ title = "Scm Daemon configuration example"
 authors = ["Source Control Team"]
 
 [commitcloud]
-notification_url = "https://streaming-example.com/commitcloud_live_updates"
+polling_update_url = "https://example-endpoint.com/commit_cloud/updates/poll"

@@ -9,7 +9,6 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
@@ -29,7 +28,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
@@ -38,9 +37,11 @@ use slog::info;
 use tokio::time::sleep;
 use unodes::RootUnodeManifestId;
 
+use crate::Repo;
+
 pub async fn create_deletion_head_commits<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a Repo,
     head_bookmark: BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
@@ -106,7 +107,7 @@ pub async fn create_deletion_head_commits<'a>(
 
 pub async fn validate(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     head_commit: ChangesetId,
     to_merge_commit: ChangesetId,
     path_regex: Regex,
@@ -172,11 +173,11 @@ pub async fn validate(
 // 2) Either do not exist in `commit_to_merge` or have different content/filetype.
 async fn find_files_that_need_to_be_deleted(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     head_bookmark: &BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
-) -> Result<Vec<MPath>, Error> {
+) -> Result<Vec<NonRootMPath>, Error> {
     let maybe_head_bookmark_val = repo.bookmarks().get(ctx.clone(), head_bookmark).await?;
 
     let head_bookmark_val =
@@ -197,11 +198,16 @@ async fn find_files_that_need_to_be_deleted(
         )
         .try_filter_map(|diff| async move {
             use Diff::*;
-            let maybe_path = match diff {
-                Added(_maybe_path, _entry) => None,
-                Removed(maybe_path, entry) => entry.into_leaf().and(maybe_path),
-                Changed(maybe_path, _old_entry, new_entry) => new_entry.into_leaf().and(maybe_path),
-            };
+            let maybe_path =
+                match diff {
+                    Added(_maybe_path, _entry) => None,
+                    Removed(maybe_path, entry) => entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                    Changed(maybe_path, _old_entry, new_entry) => new_entry
+                        .into_leaf()
+                        .and(Option::<NonRootMPath>::from(maybe_path)),
+                };
 
             Ok(maybe_path)
         })
@@ -248,10 +254,10 @@ mod test {
         assert_eq!(
             paths,
             vec![
-                MPath::new("changed/a")?,
-                MPath::new("changed/b")?,
-                MPath::new("toremove/file1")?,
-                MPath::new("toremove/file2")?,
+                NonRootMPath::new("changed/a")?,
+                NonRootMPath::new("changed/b")?,
+                NonRootMPath::new("toremove/file1")?,
+                NonRootMPath::new("toremove/file2")?,
             ]
         );
 
@@ -262,7 +268,7 @@ mod test {
     async fn test_find_changed_files_with_revert(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file", "a")
@@ -295,7 +301,7 @@ mod test {
         .await?;
 
         paths.sort();
-        assert_eq!(paths, vec![MPath::new("file")?,]);
+        assert_eq!(paths, vec![NonRootMPath::new("file")?,]);
 
         Ok(())
     }
@@ -361,8 +367,8 @@ mod test {
         Ok(())
     }
 
-    async fn prepare_repo(ctx: &CoreContext) -> Result<BlobRepo, Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    async fn prepare_repo(ctx: &CoreContext) -> Result<Repo, Error> {
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let root_commit = CreateCommitContext::new_root(ctx, &repo)
             .add_file("unchanged/a", "a")

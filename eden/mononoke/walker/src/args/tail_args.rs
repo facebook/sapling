@@ -42,7 +42,7 @@ pub struct TailArgs {
 }
 
 impl TailArgs {
-    pub fn parse_args(
+    pub async fn parse_args(
         &self,
         fb: FacebookInit,
         dbconfig: &MetadataDatabaseConfig,
@@ -50,7 +50,10 @@ impl TailArgs {
     ) -> Result<TailParams, Error> {
         Ok(TailParams {
             tail_secs: self.tail_interval.clone(),
-            chunking: self.chunking.parse_args(fb, dbconfig, mysql_options)?,
+            chunking: self
+                .chunking
+                .parse_args(fb, dbconfig, mysql_options)
+                .await?,
             state_max_age: Duration::from_secs(self.state_max_age),
         })
     }
@@ -104,7 +107,7 @@ pub struct ChunkingArgs {
 }
 
 impl ChunkingArgs {
-    pub fn parse_args(
+    pub async fn parse_args(
         &self,
         fb: FacebookInit,
         dbconfig: &MetadataDatabaseConfig,
@@ -145,7 +148,10 @@ impl ChunkingArgs {
             chunk_size: self.chunk_size,
             direction,
             clear_state,
-            checkpoints: self.checkpoint.parse_args(fb, dbconfig, mysql_options)?,
+            checkpoints: self
+                .checkpoint
+                .parse_args(fb, dbconfig, mysql_options)
+                .await?,
             allow_remaining_deferred: self.allow_remaining_deferred,
             repo_lower_bound_override: self.repo_lower_bound,
             repo_upper_bound_override: self.repo_upper_bound,
@@ -167,7 +173,7 @@ pub struct CheckpointArgs {
 }
 
 impl CheckpointArgs {
-    pub fn parse_args(
+    pub async fn parse_args(
         &self,
         fb: FacebookInit,
         dbconfig: &MetadataDatabaseConfig,
@@ -177,7 +183,8 @@ impl CheckpointArgs {
             let sql_checkpoints = if let Some(checkpoint_path) = &self.checkpoint_path {
                 SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
             } else {
-                SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)?
+                SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)
+                    .await?
             };
 
             Ok(Some(CheckpointsByName::new(

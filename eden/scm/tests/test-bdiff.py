@@ -4,11 +4,7 @@ import collections
 import struct
 import unittest
 
-from edenscm import mdiff
-from hghave import require
-
-
-require(["py2"])
+from sapling import mdiff
 
 
 class diffreplace(collections.namedtuple("diffreplace", "start end from_ to")):
@@ -37,25 +33,25 @@ class BdiffTests(unittest.TestCase):
 
     def test_bdiff_basic(self):
         cases = [
-            ("a\nc\n\n\n\n", "a\nb\n\n\n"),
-            ("a\nb\nc\n", "a\nc\n"),
-            ("", ""),
-            ("a\nb\nc", "a\nb\nc"),
-            ("a\nb\nc\nd\n", "a\nd\n"),
-            ("a\nb\nc\nd\n", "a\nc\ne\n"),
-            ("a\nb\nc\n", "a\nc\n"),
-            ("a\n", "c\na\nb\n"),
-            ("a\n", ""),
-            ("a\n", "b\nc\n"),
-            ("a\n", "c\na\n"),
-            ("", "adjfkjdjksdhfksj"),
-            ("", "ab"),
-            ("", "abc"),
-            ("a", "a"),
-            ("ab", "ab"),
-            ("abc", "abc"),
-            ("a\n", "a\n"),
-            ("a\nb", "a\nb"),
+            (b"a\nc\n\n\n\n", b"a\nb\n\n\n"),
+            (b"a\nb\nc\n", b"a\nc\n"),
+            (b"", b""),
+            (b"a\nb\nc", b"a\nb\nc"),
+            (b"a\nb\nc\nd\n", b"a\nd\n"),
+            (b"a\nb\nc\nd\n", b"a\nc\ne\n"),
+            (b"a\nb\nc\n", b"a\nc\n"),
+            (b"a\n", b"c\na\nb\n"),
+            (b"a\n", b""),
+            (b"a\n", b"b\nc\n"),
+            (b"a\n", b"c\na\n"),
+            (b"", b"adjfkjdjksdhfksj"),
+            (b"", b"ab"),
+            (b"", b"abc"),
+            (b"a", b"a"),
+            (b"ab", b"ab"),
+            (b"abc", b"abc"),
+            (b"a\n", b"a\n"),
+            (b"a\nb", b"a\nb"),
         ]
         for a, b in cases:
             self.assert_bdiff(a, b)
@@ -80,19 +76,19 @@ class BdiffTests(unittest.TestCase):
     def test_issue1295(self):
         cases = [
             (
-                "x\n\nx\n\nx\n\nx\n\nz\n",
-                "x\n\nx\n\ny\n\nx\n\nx\n\nz\n",
-                ["x\n\nx\n\n", diffreplace(6, 6, "", "y\n\n"), "x\n\nx\n\nz\n"],
+                b"x\n\nx\n\nx\n\nx\n\nz\n",
+                b"x\n\nx\n\ny\n\nx\n\nx\n\nz\n",
+                [b"x\n\nx\n\n", diffreplace(6, 6, b"", b"y\n\n"), b"x\n\nx\n\nz\n"],
             ),
             (
-                "x\n\nx\n\nx\n\nx\n\nz\n",
-                "x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n",
+                b"x\n\nx\n\nx\n\nx\n\nz\n",
+                b"x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n",
                 [
-                    "x\n\nx\n\n",
-                    diffreplace(6, 6, "", "y\n\n"),
-                    "x\n\n",
-                    diffreplace(9, 9, "", "y\n\n"),
-                    "x\n\nz\n",
+                    b"x\n\nx\n\n",
+                    diffreplace(6, 6, b"", b"y\n\n"),
+                    b"x\n\n",
+                    diffreplace(9, 9, b"", b"y\n\n"),
+                    b"x\n\nz\n",
                 ],
             ),
         ]
@@ -102,35 +98,35 @@ class BdiffTests(unittest.TestCase):
     def test_issue1295_varies_on_pure(self):
         # we should pick up abbbc. rather than bc.de as the longest match
         got = self.showdiff(
-            "a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n",
-            "a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n",
+            b"a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n",
+            b"a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n",
         )
         want_c = [
-            "a\nb\nb\n",
-            diffreplace(6, 6, "", "a\nb\nb\nb\nc\n.\n"),
-            "b\nc\n.\nd\ne\n",
-            diffreplace(16, 18, ".\n", ""),
-            "f\n",
+            b"a\nb\nb\n",
+            diffreplace(6, 6, b"", b"a\nb\nb\nb\nc\n.\n"),
+            b"b\nc\n.\nd\ne\n",
+            diffreplace(16, 18, b".\n", b""),
+            b"f\n",
         ]
         want_pure = [
-            diffreplace(0, 0, "", "a\nb\nb\n"),
-            "a\nb\nb\nb\nc\n.\n",
-            diffreplace(12, 12, "", "b\nc\n.\n"),
-            "d\ne\n",
-            diffreplace(16, 18, ".\n", ""),
-            "f\n",
+            diffreplace(0, 0, b"", b"a\nb\nb\n"),
+            b"a\nb\nb\nb\nc\n.\n",
+            diffreplace(12, 12, b"", b"b\nc\n.\n"),
+            b"d\ne\n",
+            diffreplace(16, 18, b".\n", b""),
+            b"f\n",
         ]
-        self.assert_(
+        self.assertTrue(
             got in (want_c, want_pure),
             "got: %r, wanted either %r or %r" % (got, want_c, want_pure),
         )
 
     def test_fixws(self):
         cases = [
-            (" \ta\r b\t\n", "ab\n", 1),
-            (" \ta\r b\t\n", " a b\n", 0),
-            ("", "", 1),
-            ("", "", 0),
+            (b" \ta\r b\t\n", b"ab\n", 1),
+            (b" \ta\r b\t\n", b" a b\n", 0),
+            (b"", b"", 1),
+            (b"", b"", 0),
         ]
         for a, b, allws in cases:
             c = mdiff.fixws(a, allws)
@@ -141,43 +137,45 @@ class BdiffTests(unittest.TestCase):
     def test_nice_diff_for_trivial_change(self):
         self.assertEqual(
             self.showdiff(
-                "".join("<%s\n-\n" % i for i in range(5)),
-                "".join(">%s\n-\n" % i for i in range(5)),
+                b"".join(b"<%d\n-\n" % i for i in range(5)),
+                b"".join(b">%d\n-\n" % i for i in range(5)),
             ),
             [
-                diffreplace(0, 3, "<0\n", ">0\n"),
-                "-\n",
-                diffreplace(5, 8, "<1\n", ">1\n"),
-                "-\n",
-                diffreplace(10, 13, "<2\n", ">2\n"),
-                "-\n",
-                diffreplace(15, 18, "<3\n", ">3\n"),
-                "-\n",
-                diffreplace(20, 23, "<4\n", ">4\n"),
-                "-\n",
+                diffreplace(0, 3, b"<0\n", b">0\n"),
+                b"-\n",
+                diffreplace(5, 8, b"<1\n", b">1\n"),
+                b"-\n",
+                diffreplace(10, 13, b"<2\n", b">2\n"),
+                b"-\n",
+                diffreplace(15, 18, b"<3\n", b">3\n"),
+                b"-\n",
+                diffreplace(20, 23, b"<4\n", b">4\n"),
+                b"-\n",
             ],
         )
 
     def test_prefer_appending(self):
         # 1 line to 3 lines
         self.assertEqual(
-            self.showdiff("a\n", "a\n" * 3), ["a\n", diffreplace(2, 2, "", "a\na\n")]
+            self.showdiff(b"a\n", b"a\n" * 3),
+            [b"a\n", diffreplace(2, 2, b"", b"a\na\n")],
         )
         # 1 line to 5 lines
         self.assertEqual(
-            self.showdiff("a\n", "a\n" * 5),
-            ["a\n", diffreplace(2, 2, "", "a\na\na\na\n")],
+            self.showdiff(b"a\n", b"a\n" * 5),
+            [b"a\n", diffreplace(2, 2, b"", b"a\na\na\na\n")],
         )
 
     def test_prefer_removing_trailing(self):
         # 3 lines to 1 line
         self.assertEqual(
-            self.showdiff("a\n" * 3, "a\n"), ["a\n", diffreplace(2, 6, "a\na\n", "")]
+            self.showdiff(b"a\n" * 3, b"a\n"),
+            [b"a\n", diffreplace(2, 6, b"a\na\n", b"")],
         )
         # 5 lines to 1 line
         self.assertEqual(
-            self.showdiff("a\n" * 5, "a\n"),
-            ["a\n", diffreplace(2, 10, "a\na\na\na\n", "")],
+            self.showdiff(b"a\n" * 5, b"a\n"),
+            [b"a\n", diffreplace(2, 10, b"a\na\na\na\n", b"")],
         )
 
 

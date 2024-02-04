@@ -126,7 +126,7 @@ Check that we validate the file type
 
 -- run the validator one more time, expect to fail and say it's because of filetypes
   $ REPOIDLARGE=0 validate_commit_sync 4 |& grep "Different filetype"
-  * Different filetype for path MPath("fbcode/fbcodefile3_fbsource"): meg-mon: Executable fbs-mon: Regular (glob)
+  * Different filetype for path NonRootMPath("fbcode/fbcodefile3_fbsource"): meg-mon: Executable fbs-mon: Regular (glob)
 
 -- restore the original commit mapping
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_MASTER_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
@@ -147,7 +147,7 @@ Check that we validate the file contents
 
 -- run the validator one more time, expect to fail and say it's because of contents
   $ REPOIDLARGE=0 validate_commit_sync 5 |& grep 'Different contents'
-  * Different contents for path MPath("fbcode/fbcodefile3_fbsource"): meg-mon: * fbs-mon: * (glob)
+  * Different contents for path NonRootMPath("fbcode/fbcodefile3_fbsource"): meg-mon: * fbs-mon: * (glob)
 
 -- restore the original commit mapping
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_MASTER_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
@@ -168,7 +168,7 @@ Check that we pay attention to missing files in small repo, but present in large
 
 -- run the validator one more time, expect to fail and say it's because of contents
   $ REPOIDLARGE=0 validate_commit_sync 6 |& grep "is present in meg-mon"
-  * A change to MPath("fbcode/fbcodefile4_fbsource") is present in meg-mon, but missing in fbs-mon * (glob)
+  * A change to NonRootMPath("fbcode/fbcodefile4_fbsource") is present in meg-mon, but missing in fbs-mon * (glob)
 
 -- restore the original commit mapping
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_MASTER_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
@@ -196,7 +196,7 @@ Check that we pay attention to missing files in large repo, but present in small
 
 -- run the validator one more time, expect to fail and say it's because of contents
   $ REPOIDLARGE=0 validate_commit_sync 7 |& grep "present in fbs-mon, but missing in meg-mon"
-  * A change to MPath("fbcode/fbcodefile6") is present in fbs-mon, but missing in meg-mon * (glob)
+  * A change to NonRootMPath("fbcode/fbcodefile6") is present in fbs-mon, but missing in meg-mon * (glob)
 
 Check that for bookmarks_update_log entries, which touch >1 commit in master, we pay
 attention to more than just the last commit (successful validation of many commits)
@@ -294,7 +294,7 @@ attention to more than just the last commit (failed validation of inner commit)
   $ REPOIDLARGE=0 validate_commit_sync 9 |& grep -E "(Preparing entry|Different contents)"
   * Preparing entry Entry 9 (1/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
   * Preparing entry Entry 9 (2/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * Different contents for path MPath("arvr/tripple_2"): meg-mon: ContentId(Blake2(*)) fbs-mon: ContentId(Blake2(*)) (glob)
+  * Different contents for path NonRootMPath("arvr/tripple_2"): meg-mon: ContentId(Blake2(*)) fbs-mon: ContentId(Blake2(*)) (glob)
 
 Check that we validate the topological order
 -- Create three commits in the large repo

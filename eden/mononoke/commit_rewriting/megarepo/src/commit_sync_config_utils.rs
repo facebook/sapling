@@ -9,16 +9,16 @@ use std::collections::HashMap;
 
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 pub struct SmallRepoCommitSyncConfigDiff {
     pub default_action_change: Option<(
         DefaultSmallToLargeCommitSyncPathAction,
         DefaultSmallToLargeCommitSyncPathAction,
     )>,
-    pub mapping_added: HashMap<MPath, MPath>,
-    pub mapping_changed: HashMap<MPath, (MPath, MPath)>,
-    pub mapping_removed: HashMap<MPath, MPath>,
+    pub mapping_added: HashMap<NonRootMPath, NonRootMPath>,
+    pub mapping_changed: HashMap<NonRootMPath, (NonRootMPath, NonRootMPath)>,
+    pub mapping_removed: HashMap<NonRootMPath, NonRootMPath>,
 }
 
 pub fn diff_small_repo_commit_sync_configs(

@@ -24,7 +24,7 @@ use types::Key;
 use types::RepoPathBuf;
 
 // TODO(meyer): Find a better place for this. testutil? A debug command isn't really a test.
-// Maybe refactor so less logic happens in hgcommands / pyrevisionstore, and migrate the actual
+// Maybe refactor so less logic happens in commands / pyrevisionstore, and migrate the actual
 // business logic into revisionstore::scmstore::util or something.
 pub async fn file_to_async_key_stream(path: PathBuf) -> Result<impl Stream<Item = Key>> {
     let file = BufReader::new(File::open(&path).await?);

@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("pushredirect_enable__types");
+        conf.clients_crate("pushredirect_enable__clients");
+        conf.services_crate("pushredirect_enable__services");
 
         let options = "serde";
         if !options.is_empty() {

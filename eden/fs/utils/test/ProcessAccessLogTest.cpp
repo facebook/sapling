@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <utility>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 using ::testing::Contains;
@@ -21,13 +21,13 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 TEST(ProcessAccessLog, emptyLogHasNoAccesses) {
-  auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
+  auto log = ProcessAccessLog{std::make_shared<ProcessInfoCache>()};
   EXPECT_THAT(log.getAccessCounts(10s), ElementsAre());
 }
 
 TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   auto pid = pid_t{42};
-  auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
+  auto log = ProcessAccessLog{std::make_shared<ProcessInfoCache>()};
 
   log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelRead);
   log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelWrite);
@@ -44,10 +44,10 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   EXPECT_THAT(log.getAccessCounts(10s), Contains(std::pair{pid, ac}));
 }
 
-TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
+TEST(ProcessAccessLog, accessAddsProcessToProcessInfoCache) {
   auto pid = pid_t{1};
-  auto processNameCache = std::make_shared<ProcessNameCache>();
-  auto log = ProcessAccessLog{processNameCache};
+  auto processInfoCache = std::make_shared<ProcessInfoCache>();
+  auto log = ProcessAccessLog{processInfoCache};
   log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelOther);
-  EXPECT_THAT(processNameCache->getAllProcessNames(), Contains(Key(Eq(pid))));
+  EXPECT_THAT(processInfoCache->getAllProcessInfos(), Contains(Key(Eq(pid))));
 }

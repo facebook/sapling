@@ -186,6 +186,10 @@ impl HandlerExt for Buffered {
     fn request_context(&self) -> &RequestContext {
         &self.request_context
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]
@@ -294,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_progress() {
-        let reporter = ProgressReporter::with_callback(|_| ());
+        let reporter = ProgressReporter::default();
 
         let mut handler = Buffered::new(RequestContext::dummy());
         handler

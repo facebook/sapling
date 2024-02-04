@@ -23,7 +23,7 @@
 # very quickly and curl still attempts to send data because it does not assume
 # mTLS connection, but it fails to do so. Whether curl is quick enough to make
 # the initial GET request depends whether the exit code will be 55 or 56.
-  $ curl -sk "$lfs_uri" || echo "$?"
+  $ curltest -sk "$lfs_uri" || echo "$?"
   (35|56|55) (re)
   $ grep -o "HTTPS Server error: Error performing TLS handshake" "$lfs_log"
   HTTPS Server error: Error performing TLS handshake

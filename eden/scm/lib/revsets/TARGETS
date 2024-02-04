@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "revsets",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/refencode:refencode",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/types:types",
+    ],
+)

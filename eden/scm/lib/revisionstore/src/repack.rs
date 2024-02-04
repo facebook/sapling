@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::io::Error as IoError;
 use std::io::ErrorKind as IoErrorKind;
 use std::path::Path;
@@ -19,6 +18,7 @@ use anyhow::Result;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use minibytes::Bytes;
 use thiserror::Error;
 use types::Key;
@@ -75,7 +75,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
 
                 // If we managed to get a delta, the metadata must be present.
                 match data_pack.get_meta(StoreKey::hgid(delta.key.clone()))? {
-                    StoreResult::Found(meta) => mut_pack.add(&delta, &meta)?,
+                    StoreResult::Found(meta) => mut_pack.add(delta, &meta)?,
                     _ => {}
                 }
             }
@@ -269,7 +269,7 @@ fn filter_incrementalpacks(
             let size = p
                 .with_extension(extension)
                 .metadata()
-                .and_then(|m| Ok(m.len()))
+                .map(|m| m.len())
                 .unwrap_or(u64::max_value());
             (p, size)
         })
@@ -362,7 +362,7 @@ fn repack_datapack_to_contentstore(
 
     let new_packs = store
         .commit_pending(location)?
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_else(std::vec::Vec::new)
         .into_iter()
         .collect::<HashSet<PathBuf>>();
 
@@ -422,7 +422,7 @@ fn repack_histpack_to_metadatastore(
 
     let new_packs = store
         .commit_pending(location)?
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_else(std::vec::Vec::new)
         .into_iter()
         .collect::<HashSet<PathBuf>>();
 
@@ -494,11 +494,11 @@ pub fn repack(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::fs::set_permissions;
-    use std::fs::File;
-    use std::fs::OpenOptions;
     use std::io::Write;
 
+    use fs_err::set_permissions;
+    use fs_err::File;
+    use fs_err::OpenOptions;
     use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -587,7 +587,7 @@ mod tests {
     fn test_repack_no_datapack() {
         let tempdir = TempDir::new().unwrap();
 
-        let newpath = repack_datapacks(vec![].into_iter(), tempdir.path());
+        let newpath = repack_datapacks(vec![], tempdir.path());
         assert!(newpath.is_ok());
         let newpath = newpath.unwrap();
         assert_eq!(newpath, None);
@@ -607,10 +607,7 @@ mod tests {
         )];
 
         let pack = make_datapack(&tempdir, &revisions);
-        let newpath = repack_datapacks(
-            vec![pack.base_path().to_path_buf()].into_iter(),
-            tempdir.path(),
-        );
+        let newpath = repack_datapacks(vec![pack.base_path().to_path_buf()], tempdir.path());
         assert!(newpath.is_ok());
         let newpath2 = newpath.unwrap().unwrap();
         assert_eq!(newpath2.with_extension("datapack"), pack.pack_path());
@@ -662,9 +659,9 @@ mod tests {
             paths.push(path);
         }
 
-        let newpath = repack_datapacks(paths.into_iter(), tempdir.path());
+        let newpath = repack_datapacks(paths, tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = DataPack::new(&newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
+        let newpack = DataPack::new(newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
         assert_eq!(
             newpack
                 .to_keys()
@@ -684,7 +681,7 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
 
         let paths = vec![PathBuf::from("foo.datapack"), PathBuf::from("bar.datapack")];
-        let res = repack_datapacks(paths.clone().into_iter(), tempdir.path());
+        let res = repack_datapacks(paths, tempdir.path());
 
         assert!(res.unwrap().is_none());
     }
@@ -721,7 +718,7 @@ mod tests {
             paths.push(path);
         }
 
-        let mut to_corrupt = paths.get(0).unwrap().clone();
+        let mut to_corrupt = paths.first().unwrap().clone();
         to_corrupt.set_extension("datapack");
         let mut perms = to_corrupt.metadata().unwrap().permissions();
         perms.set_readonly(false);
@@ -733,16 +730,14 @@ mod tests {
         file.write_all(b"FOOBARBAZ").unwrap();
         drop(file);
 
-        let res = repack_datapacks(paths.into_iter(), tempdir.path())
-            .err()
-            .unwrap();
+        let res = repack_datapacks(paths, tempdir.path()).err().unwrap();
 
         if let Some(RepackFailure::Partial(errors)) = res.downcast_ref() {
-            assert_eq!(errors.iter().count(), 1);
+            assert_eq!(errors.len(), 1);
             to_corrupt.set_extension("");
-            assert!(errors.iter().find(|(p, _)| p == &to_corrupt).is_some());
+            assert!(errors.iter().any(|(p, _)| p == &to_corrupt));
         } else {
-            assert!(false);
+            panic!("unexpected res. Expected `Some(RepackFailure::Partial(...))`");
         }
     }
 
@@ -754,14 +749,11 @@ mod tests {
         let nodes = get_nodes(&mut rng);
 
         let pack = make_historypack(&tempdir, &nodes);
-        let newpath = repack_historypacks(
-            vec![pack.base_path().to_path_buf()].into_iter(),
-            tempdir.path(),
-        );
+        let newpath = repack_historypacks(vec![pack.base_path().to_path_buf()], tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
+        let newpack = HistoryPack::new(newpath.unwrap().unwrap()).unwrap();
 
-        for (ref key, _) in nodes.iter() {
+        for (key, _) in nodes.iter() {
             let response = newpack.get_node_info(key).unwrap().unwrap();
             assert_eq!(&response, nodes.get(key).unwrap());
         }
@@ -783,12 +775,12 @@ mod tests {
             paths.push(path);
         }
 
-        let newpath = repack_historypacks(paths.into_iter(), tempdir.path());
+        let newpath = repack_historypacks(paths, tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
+        let newpack = HistoryPack::new(newpath.unwrap().unwrap()).unwrap();
 
         for (key, _) in nodes.iter() {
-            let response = newpack.get_node_info(&key).unwrap().unwrap();
+            let response = newpack.get_node_info(key).unwrap().unwrap();
             assert_eq!(&response, nodes.get(key).unwrap());
         }
     }

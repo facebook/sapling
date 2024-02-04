@@ -25,7 +25,6 @@ use sql::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error as DeriveError;
-use tunables::tunables;
 use vec1::Vec1;
 
 define_stats! {
@@ -108,11 +107,6 @@ impl FilenodesWriter {
         filenodes: Vec<(PathHash, PreparedFilenode)>,
         replace: bool,
     ) -> Result<FilenodeResult<()>, Error> {
-        if tunables().filenodes_disabled().unwrap_or_default() {
-            STATS::adds_disabled.add_value(1);
-            return Ok(FilenodeResult::Disabled);
-        }
-
         for chunk in filenodes.chunks(self.chunk_size) {
             let read_conn = &self.read_connections[shard_number];
             let write_conn = &self.write_connections[shard_number];

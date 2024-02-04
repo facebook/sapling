@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+
+oncall("scm_client_infra")
+
+# The :eden rule is a convenience to ensure that the EdenFS CLI, daemon, and SCM
+# integration are built.
+buck_genrule(
+    name = "eden",
+    out = "eden-stamp",
+    cmd = "echo $(location //eden/fs/cli:edenfsctl) " +
+          "$(location //eden/fs/service:edenfs) " +
+          "$(location //eden/fs/service:edenfs_privhelper) " +
+          "> $OUT",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+)

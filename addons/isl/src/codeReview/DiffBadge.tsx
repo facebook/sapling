@@ -5,44 +5,55 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary} from '../types';
+import type {CommitInfo, DiffId, DiffSummary} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
-import {CircleEllipsisIcon} from '../CircleEllipsisIcon';
+import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {ExternalLink} from '../ExternalLink';
+import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
-import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
+import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
+import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
+import {configBackedAtom} from '../jotaiUtils';
+import {PullRevOperation} from '../operations/PullRevOperation';
 import platform from '../platform';
+import {useRunOperation} from '../serverAPIState';
+import {exactRevset} from '../types';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
+import {SyncStatus, syncStatusByHash} from './syncStatus';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useState, Component, Suspense} from 'react';
-import {atom, useRecoilValue} from 'recoil';
-import {useContextMenu} from 'shared/ContextMenu';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';
 
-export const showDiffNumberConfig = atom<boolean>({
-  key: 'showDiffNumberConfig',
-  default: false,
-  effects: [persistAtomToConfigEffect('isl.show-diff-number')],
-});
+export const showDiffNumberConfig = configBackedAtom<boolean>('isl.show-diff-number', false);
 
 /**
  * Component that shows inline summary information about a Diff,
  * such as its status, number of comments, CI state, etc.
  */
-export function DiffInfo({diffId}: {diffId: string}) {
+export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions: boolean}) {
   const repo = useRecoilValue(codeReviewProvider);
-  if (repo == null) {
+  const diffId = commit.diffId;
+  if (repo == null || diffId == null) {
     return null;
+  }
+  // Do not show diff info (and "Ship It" button) if there are successors.
+  // Users should look at the diff info and buttons from the successor commit instead.
+  // But the diff number can still be useful so show it.
+  if (commit.successorInfo != null) {
+    return <DiffNumber>{repo.formatDiffNumber(diffId)}</DiffNumber>;
   }
   return (
     <DiffErrorBoundary provider={repo} diffId={diffId}>
       <Suspense fallback={<DiffSpinner diffId={diffId} provider={repo} />}>
-        <DiffInfoInner diffId={diffId} provider={repo} />
+        <DiffInfoInner commit={commit} diffId={diffId} provider={repo} hideActions={hideActions} />
       </Suspense>
     </DiffErrorBoundary>
   );
@@ -53,28 +64,19 @@ export function DiffBadge({
   children,
   url,
   provider,
+  syncStatus,
 }: {
   diff?: DiffSummary;
   children?: ReactNode;
   url?: string;
   provider: UICodeReviewProvider;
+  syncStatus?: SyncStatus;
 }) {
   const openerUrl = useRecoilValue(openerUrlForDiffUrl(url));
 
-  const contextMenu = useContextMenu(() => {
-    return [
-      {
-        label: <T replace={{$number: diff?.number}}>Copy Diff Number "$number"</T>,
-        onClick: () => platform.clipboardCopy(diff?.number ?? ''),
-      },
-    ];
-  });
   return (
-    <ExternalLink
-      href={openerUrl}
-      className={`diff-badge ${provider.name}-diff-badge`}
-      onContextMenu={contextMenu}>
-      <provider.DiffBadgeContent diff={diff} children={children} />
+    <ExternalLink href={openerUrl} className={`diff-badge ${provider.name}-diff-badge`}>
+      <provider.DiffBadgeContent diff={diff} children={children} syncStatus={syncStatus} />
     </ExternalLink>
   );
 }
@@ -90,8 +92,19 @@ function DiffSpinner({diffId, provider}: {diffId: DiffId; provider: UICodeReview
   );
 }
 
-function DiffInfoInner({diffId, provider}: {diffId: DiffId; provider: UICodeReviewProvider}) {
+function DiffInfoInner({
+  diffId,
+  commit,
+  provider,
+  hideActions,
+}: {
+  diffId: DiffId;
+  commit: CommitInfo;
+  provider: UICodeReviewProvider;
+  hideActions: boolean;
+}) {
   const diffInfoResult = useRecoilValue(diffSummary(diffId));
+  const syncStatus = useRecoilValue(syncStatusByHash(commit.hash));
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }
@@ -99,21 +112,94 @@ function DiffInfoInner({diffId, provider}: {diffId: DiffId; provider: UICodeRevi
     return <DiffSpinner diffId={diffId} provider={provider} />;
   }
   const info = diffInfoResult.value;
+  const shouldHideActions = hideActions || provider.isDiffClosed(info);
   return (
     <div
       className={`diff-info ${provider.name}-diff-info`}
       data-testid={`${provider.name}-diff-info`}>
       <DiffSignalSummary diff={info} />
-      <DiffBadge provider={provider} diff={info} url={info.url} />
+      <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
+      {provider.DiffLandButtonContent && (
+        <provider.DiffLandButtonContent diff={info} commit={commit} />
+      )}
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
+      {shouldHideActions ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
+        <DownloadNewVersionButton diffId={diffId} provider={provider} />
+      ) : syncStatus === SyncStatus.LocalIsNewer ? (
+        <ResubmitSyncButton commit={commit} provider={provider} />
+      ) : null}
     </div>
+  );
+}
+
+function DownloadNewVersionButton({
+  diffId,
+  provider,
+}: {
+  diffId: DiffId;
+  provider: UICodeReviewProvider;
+}) {
+  const runOperation = useRunOperation();
+  return (
+    <Tooltip
+      title={t('$provider has a newer version of this Diff. Click to download the newer version.', {
+        replace: {$provider: provider.label},
+      })}>
+      <VSCodeButton
+        appearance="icon"
+        onClick={() => {
+          if (Internal.diffDownloadOperation != null) {
+            runOperation(Internal.diffDownloadOperation(exactRevset(diffId)));
+          } else {
+            runOperation(new PullRevOperation(exactRevset(diffId)));
+          }
+        }}>
+        <Icon icon="cloud-download" slot="start" />
+        <T>Download New Version</T>
+      </VSCodeButton>
+    </Tooltip>
+  );
+}
+
+function ResubmitSyncButton({
+  commit,
+  provider,
+}: {
+  commit: CommitInfo;
+  provider: UICodeReviewProvider;
+}) {
+  const runOperation = useRunOperation();
+  const confirmShouldSubmit = useShowConfirmSubmitStack();
+
+  return (
+    <Tooltip
+      title={t('This commit has changed locally since it was last submitted. Click to resubmit.')}>
+      <VSCodeButton
+        appearance="icon"
+        data-testid="commit-submit-button"
+        onClick={async () => {
+          const confirmation = await confirmShouldSubmit('submit', [commit]);
+          if (!confirmation) {
+            return [];
+          }
+          runOperation(
+            provider.submitOperation([commit], {
+              draft: confirmation.submitAsDraft,
+              updateMessage: confirmation.updateMessage,
+            }),
+          );
+        }}>
+        <Icon icon="cloud-upload" slot="start" />
+        <T>Submit</T>
+      </VSCodeButton>
+    </Tooltip>
   );
 }
 
 function DiffNumber({children}: {children: string}) {
   const [showing, setShowing] = useState(false);
-  const showDiffNumber = useRecoilValue(showDiffNumberConfig);
+  const showDiffNumber = useAtomValue(showDiffNumberConfig);
   if (!children || !showDiffNumber) {
     return null;
   }
@@ -171,7 +257,7 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
       tooltip = t('No signal from test run on this Diff.');
       break;
     case 'warning':
-      icon = 'question';
+      icon = <CircleExclamationIcon />;
       tooltip = t(
         'Test Signals were not fully successful for this Diff. See Diff for more details.',
       );

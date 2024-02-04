@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from edenscm import changegroup, error, extensions
-from edenscm.i18n import _
+from sapling import changegroup, error, extensions
+from sapling.i18n import _
 
 
 def abort(orig, *args, **kwargs):

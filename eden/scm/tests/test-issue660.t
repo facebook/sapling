@@ -34,7 +34,7 @@
 
 # Removing shadow:
 
-  $ hg rm --after a
+  $ hg rm --mark a
 
 # Should succeed - shadow removed:
 
@@ -53,7 +53,7 @@
 
 # Removing shadow:
 
-  $ hg rm --after b/b
+  $ hg rm --mark b/b
 
 # Should succeed - shadow removed:
 
@@ -138,7 +138,7 @@
 
 # Removing shadow:
 
-  $ hg rm --after d/d/d
+  $ hg rm --mark d/d/d
 
 # Should succeed - shadow removed:
 

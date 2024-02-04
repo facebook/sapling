@@ -30,14 +30,15 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use rand::Rng;
+use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use rendezvous::TunablesRendezVousController;
 use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::_macro_internal::ClientRequestInfo;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
@@ -71,7 +72,7 @@ impl RendezVousConnection {
         Self {
             conn,
             rdv: RendezVous::new(
-                TunablesRendezVousController::new(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!("changesets.{}", name,))),
             ),
         }
@@ -406,8 +407,14 @@ impl Changesets for SqlChangesets {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let fetched_cs =
-            select_many_changesets(ctx.fb, &self.read_connection, self.repo_id, &cs_ids).await?;
+        let fetched_cs = select_many_changesets(
+            ctx.fb,
+            ctx.metadata().client_request_info(),
+            &self.read_connection,
+            self.repo_id,
+            &cs_ids,
+        )
+        .await?;
         let fetched_set: HashSet<_> = fetched_cs
             .clone()
             .into_iter()
@@ -426,6 +433,7 @@ impl Changesets for SqlChangesets {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let mut master_fetched_cs = select_many_changesets(
                 ctx.fb,
+                ctx.metadata().client_request_info(),
                 &self.read_master_connection,
                 self.repo_id,
                 &notfetched_cs_ids,
@@ -677,6 +685,7 @@ async fn select_changeset(
 
 async fn select_many_changesets(
     fb: FacebookInit,
+    cri: Option<&ClientRequestInfo>,
     connection: &RendezVousConnection,
     repo_id: RepositoryId,
     cs_ids: &[ChangesetId],
@@ -689,13 +698,18 @@ async fn select_many_changesets(
         .rdv
         .dispatch(fb, cs_ids.iter().copied().collect(), || {
             let conn = connection.conn.clone();
+            let cri = cri.cloned();
             move |cs_ids| async move {
                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
 
                 let tok: i32 = rand::thread_rng().gen();
 
-                let fetched_changesets =
-                    SelectManyChangesets::query(&conn, &repo_id, &tok, &cs_ids[..]).await?;
+                let fetched_changesets = if let Some(cri) = cri {
+                    SelectManyChangesets::traced_query(&conn, &cri, &repo_id, &tok, &cs_ids[..])
+                        .await?
+                } else {
+                    SelectManyChangesets::query(&conn, &repo_id, &tok, &cs_ids[..]).await?
+                };
 
                 let mut cs_id_to_cs_entry = HashMap::new();
                 for (cs_id, gen, maybe_parent, _, _) in fetched_changesets {

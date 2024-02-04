@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "termstyle",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/util/hgplain:hgplain",
+    ],
+)

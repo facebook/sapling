@@ -20,15 +20,15 @@ Create an extension to test bundle2 API
   > import gc
   > import os
   > import sys
-  > from edenscm import util
-  > from edenscm import bundle2
-  > from edenscm import scmutil
-  > from edenscm import discovery
-  > from edenscm import changegroup
-  > from edenscm import error
-  > from edenscm import obsolete
-  > from edenscm import pycompat
-  > from edenscm import registrar
+  > from sapling import util
+  > from sapling import bundle2
+  > from sapling import scmutil
+  > from sapling import discovery
+  > from sapling import changegroup
+  > from sapling import error
+  > from sapling import obsolete
+  > from sapling import pycompat
+  > from sapling import registrar
   > 
   > 
   > cmdtable = {}
@@ -283,7 +283,7 @@ Test old style bundle are detected and refused
 
   $ hg bundle --all --type v1 ../bundle.hg --config format.allowbundle1=True
   devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+   at: *changegroup* (makechangegroup) (glob)
   1 changesets found
   $ hg statbundle2 < ../bundle.hg
   abort: unknown bundle version 10

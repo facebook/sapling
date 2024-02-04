@@ -12,9 +12,9 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 
@@ -175,7 +175,7 @@ impl AuthorizationContext {
         ctx: &CoreContext,
         repo: &(impl RepoPermissionCheckerRef + AclRegionsRef),
         csid: ChangesetId,
-        path: Option<&MPath>,
+        path: &MPath,
     ) -> Result<AuthorizationCheckOutcome> {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
@@ -206,12 +206,12 @@ impl AuthorizationContext {
         ctx: &CoreContext,
         repo: &(impl RepoPermissionCheckerRef + AclRegionsRef),
         csid: ChangesetId,
-        path: Option<&MPath>,
+        path: &MPath,
     ) -> Result<(), AuthorizationError> {
         self.check_path_read(ctx, repo, csid, path)
             .await?
             .permitted_or_else(|| {
-                self.permission_denied(ctx, DeniedAction::PathRead(csid, path.cloned()))
+                self.permission_denied(ctx, DeniedAction::PathRead(csid, path.clone()))
             })
     }
 

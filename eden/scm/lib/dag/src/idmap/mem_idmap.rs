@@ -60,7 +60,7 @@ impl Clone for MemIdMap {
 
 impl CoreMemIdMap {
     pub fn lookup_vertex_id(&self, name: &VertexName) -> Option<Id> {
-        self.name2id.get(&name).copied()
+        self.name2id.get(name).copied()
     }
 
     pub fn lookup_vertex_name(&self, id: Id) -> Option<VertexName> {

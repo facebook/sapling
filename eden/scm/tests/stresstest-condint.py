@@ -13,18 +13,20 @@ from __future__ import absolute_import
 import ctypes
 import os
 import random
-import sys
 import threading
 import time
 
 
 def importrustthreading():
-    if not "TESTTMP" in os.environ:
-        # Make this directly runnable
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from edenscmnative import threading as rustthreading
+    try:
+        import bindings
+    except ImportError:
+        print("Cannot import bindings to test Rust Condition.")
+        print("Did you forget to run the test using 'sl/hg debugpython'?")
+        print("Set COND=py to test the CPython's Condition implementation.")
+        raise
 
-    return rustthreading
+    return bindings.threading
 
 
 try:
@@ -151,9 +153,11 @@ if __name__ == "__main__":
             "Passing != bug-free. AssertionError, RuntimeError or hanging = buggy\n\n"
             "Affected by https://bugs.python.org/issue29988, this test is expected\n"
             "to fail with all Condition implementation if run enough times.\n"
-            "The parameters are tweaked to make it relatively easy to fail for Py2,\n"
-            "Py3, Rust Condition implementations at the time of writing. It might\n"
-            "need some tweaks for future software or hardware.\n"
+            "\n"
+            "At the time of writing, CPython 3.8 is known to fail the test.\n"
+            "The Rust Condition implementation seems okay with CPython 3.8.\n"
+            "Technically, with W=1 (Issue29988 workaround), it is even less\n"
+            "likely to fail.\n"
         )
         % os.getpid()
     )

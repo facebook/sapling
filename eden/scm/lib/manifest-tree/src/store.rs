@@ -14,8 +14,11 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use minibytes::Bytes;
-use storemodel::TreeFormat;
+use storemodel::InsertOpts;
+use storemodel::Kind;
+use storemodel::SerializationFormat;
 pub use storemodel::TreeStore;
+pub use types::tree::TreeItemFlag as Flag;
 use types::HgId;
 use types::Key;
 use types::PathComponent;
@@ -24,15 +27,15 @@ use types::RepoPath;
 
 #[derive(Clone)]
 pub struct InnerStore {
-    tree_store: Arc<dyn TreeStore + Send + Sync>,
+    tree_store: Arc<dyn TreeStore>,
 }
 
 impl InnerStore {
-    pub fn new(tree_store: Arc<dyn TreeStore + Send + Sync>) -> Self {
+    pub fn new(tree_store: Arc<dyn TreeStore>) -> Self {
         InnerStore { tree_store }
     }
 
-    pub fn format(&self) -> TreeFormat {
+    pub fn format(&self) -> SerializationFormat {
         self.tree_store.format()
     }
 
@@ -42,18 +45,20 @@ impl InnerStore {
             id = AsRef::<str>::as_ref(&hgid.to_hex())
         )
         .in_scope(|| {
-            let bytes = self.tree_store.get(path, hgid)?;
+            let bytes = self.tree_store.get_content(path, hgid)?;
             Ok(Entry(bytes, self.tree_store.format()))
         })
     }
 
-    pub fn insert_entry(&self, path: &RepoPath, hgid: HgId, entry: Entry) -> Result<()> {
-        tracing::debug_span!(
-            "tree::store::insert",
-            path = path.as_str(),
-            id = AsRef::<str>::as_ref(&hgid.to_hex())
-        )
-        .in_scope(|| self.tree_store.insert(path, hgid, entry.0))
+    pub(crate) fn insert_entry(&self, path: &RepoPath, entry: Entry) -> Result<HgId> {
+        tracing::debug_span!("tree::store::insert", path = path.as_str(),).in_scope(|| {
+            let opts = InsertOpts {
+                kind: Kind::Tree,
+                ..Default::default()
+            };
+            let id = self.tree_store.insert_data(opts, path, entry.0.as_ref())?;
+            Ok(id)
+        })
     }
 
     pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Result<()> {
@@ -92,9 +97,9 @@ impl InnerStore {
 /// representation. For this serialization format it is important that they don't contain
 /// `\0` or `\n`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Entry(pub minibytes::Bytes, pub TreeFormat);
+pub struct Entry(pub minibytes::Bytes, pub SerializationFormat);
 
-pub struct EntryMut(Vec<u8>, TreeFormat);
+pub struct EntryMut(Vec<u8>, SerializationFormat);
 
 /// The `Element` is a parsed element of a directory. Directory elements are either files either
 /// direcotries. The type of element is signaled by `Flag`.
@@ -105,13 +110,6 @@ pub struct Element {
     pub flag: Flag,
 }
 
-/// Used to signal the type of element in a directory: file or directory.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Flag {
-    File(FileType),
-    Directory,
-}
-
 impl Entry {
     /// Returns an iterator over the elements that the current `Entry` contains. This is the
     /// primary method of inspection for an `Entry`.
@@ -120,18 +118,18 @@ impl Entry {
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
-    pub fn from_elements(mut elements: Vec<Element>, format: TreeFormat) -> Entry {
+    pub fn from_elements(mut elements: Vec<Element>, format: SerializationFormat) -> Entry {
         let cmp = crate::namecmp::get_namecmp_func(format);
         elements.sort_unstable_by(|a, b| cmp(&a.component, a.flag, &b.component, b.flag));
         let mut underlying = Vec::new();
         match format {
-            TreeFormat::Hg => {
+            SerializationFormat::Hg => {
                 for element in elements.into_iter() {
                     underlying.extend(element.to_byte_vec_hg());
                     underlying.extend(b"\n");
                 }
             }
-            TreeFormat::Git => {
+            SerializationFormat::Git => {
                 for element in elements.into_iter() {
                     underlying.extend(element.to_byte_vec_git());
                 }
@@ -148,7 +146,7 @@ impl Entry {
 
 impl EntryMut {
     /// Constructs an empty `Entry`. It is not valid to save an empty `Entry`.
-    pub fn new(format: TreeFormat) -> Self {
+    pub fn new(format: SerializationFormat) -> Self {
         EntryMut(Vec::new(), format)
     }
 
@@ -173,12 +171,12 @@ impl AsRef<[u8]> for Entry {
 pub struct Elements<'a> {
     byte_slice: &'a [u8],
     position: usize,
-    format: TreeFormat,
+    format: SerializationFormat,
 }
 
 impl<'a> Elements<'a> {
     /// Constructs `Elements` from raw byte slice.
-    pub(crate) fn from_byte_slice(byte_slice: &'a [u8], format: TreeFormat) -> Self {
+    pub(crate) fn from_byte_slice(byte_slice: &'a [u8], format: SerializationFormat) -> Self {
         Elements {
             byte_slice,
             position: 0,
@@ -250,8 +248,8 @@ impl<'a> Elements<'a> {
     /// This can be faster than checking `next()` entries if only called once.
     pub fn lookup(&self, name: &PathComponent) -> Result<Option<(HgId, Flag)>> {
         match self.format {
-            TreeFormat::Hg => self.lookup_hg(name),
-            TreeFormat::Git => self.lookup_git(name),
+            SerializationFormat::Hg => self.lookup_hg(name),
+            SerializationFormat::Git => self.lookup_git(name),
         }
     }
 
@@ -346,8 +344,8 @@ impl<'a> Iterator for Elements<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = match self.format {
-            TreeFormat::Hg => self.next_hg(),
-            TreeFormat::Git => self.next_git(),
+            SerializationFormat::Hg => self.next_hg(),
+            SerializationFormat::Git => self.next_git(),
         };
 
         if cfg!(debug_assertions) {
@@ -568,7 +566,7 @@ mod tests {
         // TREE=$(git cat-file -p HEAD | grep tree | sed 's/.* //')
         // git cat-file tree $TREE
         let data = b"40000 dir\x00\x8d\xc8w\xa9\x98\xd8\xc6\x1f\x90\x0e\x8bN\xe9\xb5\x01\xfa\n\x03\x93X100755 exe\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91100644 normal\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91120000 symlink\x00Z\xe04cN\x8d8,\x86F\x06\x8b\x8bR8\x18\x15\xed\xab\xf0";
-        let entry = Entry(Bytes::copy_from_slice(data), TreeFormat::Git);
+        let entry = Entry(Bytes::copy_from_slice(data), SerializationFormat::Git);
         let elements = entry.elements();
         let elements_str = elements
             .map(|e| format!("{:?}", e.unwrap()))
@@ -593,7 +591,7 @@ mod tests {
             element("a"),
             element("c"),
         ];
-        for format in [TreeFormat::Git, TreeFormat::Hg] {
+        for format in [SerializationFormat::Git, SerializationFormat::Hg] {
             let entry = Entry::from_elements(elements.clone(), format);
             // Exercise the `assert_eq!` about `lookup` in `next()`.
             let _ = entry.elements().collect::<Vec<_>>();

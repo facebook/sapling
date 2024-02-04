@@ -323,7 +323,7 @@ where
         bang: bool,
         cmds: Vec<(Vec<Newline>, Self::PipeableCommand)>,
     ) -> Result<Self::ListableCommand, Self::Error> {
-        debug_assert_eq!(cmds.is_empty(), false);
+        debug_assert!(!cmds.is_empty());
         let mut cmds: Vec<_> = cmds.into_iter().map(|(_, c)| c).collect();
 
         // Pipe is the only AST node which allows for a status
@@ -799,7 +799,7 @@ fn compress<C>(word: ComplexWordKind<C>) -> ComplexWordKind<C> {
             DoubleQuoted(v) => DoubleQuoted(Coalesce::new(v, coalesce_simple).collect()),
         }),
         Concat(v) => {
-            let mut body: Vec<_> = Coalesce::new(v.into_iter(), coalesce_word).collect();
+            let mut body: Vec<_> = Coalesce::new(v, coalesce_word).collect();
             if body.len() == 1 {
                 Single(body.pop().unwrap())
             } else {

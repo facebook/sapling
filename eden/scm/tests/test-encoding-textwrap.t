@@ -8,7 +8,7 @@ Test text wrapping for multibyte characters
 define commands to display help text
 
   $ cat << EOF > show.py
-  > from edenscm import registrar
+  > from sapling import registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)

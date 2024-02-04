@@ -14,6 +14,7 @@ use crate::errors::MononokeHgError;
 
 bitflags! {
     // names are from hg revlog.py
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct RevFlags: u16 {
         const REVIDX_DEFAULT_FLAGS = 0;
         const REVIDX_EXTSTORED = 1 << 13;  // data is stored externally

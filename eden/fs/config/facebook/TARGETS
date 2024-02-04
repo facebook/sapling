@@ -1,0 +1,50 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "edenfs_config_util",
+    srcs = ["edenfs_config_util.py"],
+    os_deps = [
+        (
+            "linux",
+            [
+                "//gatekeeper/py:client",
+                "//libfb/py:employee",
+            ],
+        ),
+    ],
+)
+
+python_library(
+    name = "edenfs_config_manager_lib",
+    srcs = ["edenfs_config_manager_lib.py"],
+    deps = [
+        "fbsource//third-party/pypi/distro:distro",
+        "fbsource//third-party/pypi/pytz:pytz",
+        "fbsource//third-party/pypi/requests:requests",
+        "fbsource//third-party/pypi/toml:toml",
+        "fbsource//xplat/python/interntools:auth",
+        "fbsource//xplat/python/x2p:x2p",
+        ":edenfs_config_util",
+        "//configerator/structs/scm/eden/config:edenfs_config-py3-types",
+        "//eden/fs/cli:hostname",
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:telemetry",
+        "//thrift/lib/py3:common",
+        "//thrift/lib/py3:types",
+    ],
+)
+
+python_binary(
+    name = "edenfs_config_manager",
+    srcs = ["edenfs_config_manager.py"],
+    main_function = "eden.fs.config.facebook.edenfs_config_manager.main",
+    deps = [
+        ":edenfs_config_manager_lib",
+        ":edenfs_config_util",
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:telemetry",
+    ],
+)

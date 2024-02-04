@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "bonsai_svnrev_mapping",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/bonsai_svnrev_mapping/if:bonsai_svnrev_mapping_thrift-rust",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_unittest(
+    name = "bonsai_svnrev_mapping_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "bonsai_svnrev_mapping_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":bonsai_svnrev_mapping",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/server/context:context",
+    ],
+)

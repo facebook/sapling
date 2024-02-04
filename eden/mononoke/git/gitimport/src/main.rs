@@ -25,6 +25,8 @@ use cacheblob::MemWritesBlobstore;
 use changesets::ArcChangesets;
 use clap::Parser;
 use clap::Subcommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -120,6 +122,9 @@ struct GitimportArgs {
     /// When set, the gitimport tool would bypass the read-only check while creating and moving bookmarks.
     #[clap(long)]
     bypass_readonly: bool,
+    /// The concurrency to be used while importing commits in Mononoke
+    #[clap(long, default_value_t = 20)]
+    concurrency: usize,
     /// Set the path to the git binary - preset to git.real
     #[clap(long)]
     git_command_path: Option<String>,
@@ -132,6 +137,14 @@ struct GitimportArgs {
     subcommand: GitimportSubcommand,
     #[clap(flatten)]
     repo_args: RepoArgs,
+    /// Discard any git submodule during import.
+    /// **WARNING**: This will make the repo import lossy: round trip between Mononoke and git won't be
+    /// possible anymore.
+    /// In particular, this is not suitable as a precursor step to setting up live sync with
+    /// Mononoke.
+    /// Only use if you are sure that's what you want.
+    #[clap(long)]
+    discard_submodules: bool,
 }
 
 #[derive(Subcommand)]
@@ -164,10 +177,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let logger = app.logger();
-    let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        app.fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::GitImport),
+    );
     let args: GitimportArgs = app.args()?;
-    let mut prefs = GitimportPreferences::default();
-
+    let mut prefs = GitimportPreferences {
+        concurrency: args.concurrency,
+        submodules: !args.discard_submodules,
+        ..Default::default()
+    };
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
     // things below.
     let dry_run = app.readonly_storage().0;

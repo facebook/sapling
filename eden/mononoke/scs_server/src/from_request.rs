@@ -39,10 +39,10 @@ use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::HgChangesetId;
 use mononoke_api::HgChangesetIdPrefix;
-use mononoke_api::MononokePath;
 use mononoke_api::TreeId;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
@@ -318,7 +318,7 @@ impl FromRequest<thrift::RepoCreateCommitParamsFileCopyInfo> for CreateCopyInfo 
     fn from_request(
         copy_info: &thrift::RepoCreateCommitParamsFileCopyInfo,
     ) -> Result<Self, thrift::RequestError> {
-        let path = MononokePath::try_from(&copy_info.path).map_err(|e| {
+        let path = MPath::try_from(&copy_info.path).map_err(|e| {
             errors::invalid_request(format!(
                 "invalid copy-from path '{}': {}",
                 copy_info.path, e

@@ -7,9 +7,9 @@
 
 #include "eden/fs/service/ThriftGlobImpl.h"
 
-#include <folly/futures/Future.h>
 #include <folly/logging/LogLevel.h>
 #include <folly/logging/xlog.h>
+#include <memory>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -19,9 +19,34 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/PathLoader.h"
 #include "eden/fs/utils/EdenError.h"
+#include "eden/fs/utils/GlobNodeImpl.h"
+#include "eden/fs/utils/GlobResult.h"
+#include "eden/fs/utils/GlobTree.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
+
+namespace {
+// Compile the list of globs into a tree
+void compileGlobs(const std::vector<std::string>& globs, GlobNodeImpl& root) {
+  try {
+    for (auto& globString : globs) {
+      try {
+        root.parse(globString);
+      } catch (const std::domain_error& exc) {
+        throw newEdenError(
+            EdenErrorType::ARGUMENT_ERROR,
+            "Invalid glob (",
+            exc.what(),
+            "): ",
+            globString);
+      }
+    }
+  } catch (const std::system_error& exc) {
+    throw newEdenError(exc);
+  }
+}
+} // namespace
 
 ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
     : includeDotfiles_{*params.includeDotfiles_ref()},
@@ -45,31 +70,9 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     const ObjectFetchContextPtr& fetchContext) {
   bool windowsSymlinksEnabled =
       edenMount->getCheckoutConfig()->getEnableWindowsSymlinks();
-  // Compile the list of globs into a tree
-  auto globRoot = std::make_shared<GlobNode>(
-      includeDotfiles_,
-      serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
-          ? edenMount->getCheckoutConfig()->getCaseSensitive()
-          : CaseSensitivity::Sensitive);
-  try {
-    for (auto& globString : globs) {
-      try {
-        globRoot->parse(globString);
-      } catch (const std::domain_error& exc) {
-        throw newEdenError(
-            EdenErrorType::ARGUMENT_ERROR,
-            "Invalid glob (",
-            exc.what(),
-            "): ",
-            globString);
-      }
-    }
-  } catch (const std::system_error& exc) {
-    throw newEdenError(exc);
-  }
 
   auto fileBlobsToPrefetch =
-      prefetchFiles_ ? std::make_shared<GlobNode::PrefetchList>() : nullptr;
+      prefetchFiles_ ? std::make_shared<PrefetchList>() : nullptr;
 
   // These hashes must outlive the GlobResult created by evaluate as the
   // GlobResults will hold on to references to these hashes
@@ -78,18 +81,26 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   // Globs will be evaluated against the specified commits or the current commit
   // if none are specified. The results will be collected here.
   std::vector<ImmediateFuture<folly::Unit>> globFutures{};
-  auto globResults = std::make_shared<GlobNode::ResultList>();
+  auto globResults = std::make_shared<ResultList>();
 
   RelativePath searchRoot;
   if (!(searchRootUser_.empty() || searchRootUser_ == ".")) {
     searchRoot = RelativePath{searchRootUser_};
   }
+  std::shared_ptr<GlobTree> globTree = nullptr;
+  std::shared_ptr<GlobNode> globNode = nullptr;
 
   if (!rootHashes_.empty()) {
     // Note that we MUST reserve here, otherwise while emplacing we might
     // invalidate the earlier commitHash refrences
     globFutures.reserve(rootHashes_.size());
     originRootIds->reserve(rootHashes_.size());
+    globTree = std::make_shared<GlobTree>(
+        includeDotfiles_,
+        serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
+            ? edenMount->getCheckoutConfig()->getCaseSensitive()
+            : CaseSensitivity::Sensitive);
+    compileGlobs(globs, *globTree);
     for (auto& rootHash : rootHashes_) {
       const RootId& originRootId = originRootIds->emplace_back(
           edenMount->getObjectStore()->parseRootId(rootHash));
@@ -98,7 +109,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
           edenMount->getObjectStore()
               ->getRootTree(originRootId, fetchContext)
               .thenValue([edenMount,
-                          globRoot,
+                          globTree,
                           fetchContext = fetchContext.copy(),
                           searchRoot](ObjectStore::GetRootTreeResult rootTree) {
                 return resolveTree(
@@ -109,12 +120,12 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               })
               .thenValue(
                   [edenMount,
-                   globRoot,
+                   globTree,
                    fetchContext = fetchContext.copy(),
                    fileBlobsToPrefetch,
                    globResults,
                    &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
-                    return globRoot->evaluate(
+                    return globTree->evaluate(
                         edenMount->getObjectStore(),
                         fetchContext,
                         RelativePathPiece(),
@@ -125,17 +136,23 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                   }));
     }
   } else {
+    globNode = std::make_shared<GlobNode>(
+        includeDotfiles_,
+        serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
+            ? edenMount->getCheckoutConfig()->getCaseSensitive()
+            : CaseSensitivity::Sensitive);
+    compileGlobs(globs, *globNode);
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getCheckedOutRootId());
     globFutures.emplace_back(
         edenMount->getInodeSlow(searchRoot, fetchContext)
             .thenValue([fetchContext = fetchContext.copy(),
-                        globRoot,
+                        globNode,
                         edenMount,
                         fileBlobsToPrefetch,
                         globResults,
                         &originRootId](InodePtr inode) mutable {
-              return globRoot->evaluate(
+              return globNode->evaluate(
                   edenMount->getObjectStore(),
                   fetchContext,
                   RelativePathPiece(),
@@ -152,7 +169,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                       globResults = std::move(globResults),
                       suppressFileList = suppressFileList_](
                          std::vector<folly::Try<folly::Unit>>&& tries) {
-            std::vector<GlobNode::GlobResult> sortedResults;
+            std::vector<GlobResult> sortedResults;
             if (!suppressFileList) {
               std::swap(sortedResults, *globResults->wlock());
               for (auto& try_ : tries) {
@@ -192,7 +209,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                fetchContext = fetchContext.copy(),
                windowsSymlinksEnabled = windowsSymlinksEnabled,
                config = serverState->getEdenConfig()](
-                  std::vector<GlobNode::GlobResult>&& results) mutable
+                  std::vector<GlobResult>&& results) mutable
               -> ImmediateFuture<std::unique_ptr<Glob>> {
                 auto out = std::make_unique<Glob>();
 
@@ -245,9 +262,10 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                 }
                 return std::move(out);
               })
-          .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
-            // keep globRoot and originRootIds alive until the end
-          });
+          .ensure(
+              [globTree, globNode, originRootIds = std::move(originRootIds)]() {
+                // keep globRoot and originRootIds alive until the end
+              });
 
   return prefetchFuture;
 }

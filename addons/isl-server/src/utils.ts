@@ -165,6 +165,6 @@ export function parseExecJson<T>(
     });
 }
 
-export function isExecaError(s: unknown): s is ExecaError {
-  return s != null && typeof s === 'object' && 'stderr' in s;
+export function isExecaError(s: unknown): s is ExecaError & {code?: string} {
+  return s != null && typeof s === 'object' && 'exitCode' in s;
 }

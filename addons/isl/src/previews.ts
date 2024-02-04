@@ -5,21 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
+import type {Dag} from './dag/dag';
+import type {CommitTreeWithPreviews} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
 import {latestSuccessorsMap} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
+import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
   operationBeingPreviewed,
+  latestCommits,
   latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
-  latestCommitTree,
-  latestCommitTreeMap,
+  latestDag,
   latestHeadCommit,
   latestUncommittedChanges,
   operationList,
@@ -41,46 +43,22 @@ export enum CommitPreview {
   HIDDEN_DESCENDANT = 'hidden-descendant',
   STACK_EDIT_ROOT = 'stack-edit-root',
   STACK_EDIT_DESCENDANT = 'stack-edit-descendant',
+  FOLD_PREVIEW = 'fold-preview',
+  FOLD = 'fold',
   // Commit being rendered in some other context than the commit tree,
   // such as the commit info sidebar
   NON_ACTIONABLE_COMMIT = 'non-actionable-commit',
 }
 
 /**
- * A preview applier function provides a way of iterating the tree of commits and modify it & mark commits as being in a preview state.
- * Given a commit in the tree, you can overwrite what children to render and what preview type to set.
- * This function is used to walk the entire tree and alter how it would be rendered without needing to make a copy of the entire tree that needs to be mutated.
- * The preview type is used when rendering the commit to de-emphasize it, put it in a green color, add a confirm rebase button, etc.
- * If the preview applier returns null, it means to hide the commit and all of its children.
- *
- * Preview Appliers may also be called on individual commits (as opposed to walking the entire tree)
- * when rendering their details in the Commit Info View. As such, they should not depend on being called in
- * any specific order of commits.
- */
-export type ApplyPreviewsFuncType = (
-  tree: CommitTree,
-  previewType: CommitPreview | undefined,
-  childPreviewType?: CommitPreview | undefined,
-) => (
-  | {
-      info: null;
-      children?: undefined;
-    }
-  | {info: CommitInfo; children: Array<CommitTree>}
-) & {
-  previewType?: CommitPreview;
-  childPreviewType?: CommitPreview;
-};
-
-/**
- * Like ApplyPreviewsFuncType, this provides a way to alter the set of Uncommitted Changes.
+ * Alter the set of Uncommitted Changes.
  */
 export type ApplyUncommittedChangesPreviewsFuncType = (
   changes: UncommittedChanges,
 ) => UncommittedChanges;
 
 /**
- * Like ApplyPreviewsFuncType, this provides a way to alter the set of Merge Conflicts.
+ * Alter the set of Merge Conflicts.
  */
 export type ApplyMergeConflictsPreviewsFuncType = (
   conflicts: MergeConflicts | undefined,
@@ -253,118 +231,99 @@ export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
   },
 });
 
-export const treeWithPreviews = selector({
-  key: 'treeWithPreviews',
-  get: ({
-    get,
-  }): {trees: Array<CommitTree>; treeMap: Map<Hash, CommitTree>; headCommit?: CommitInfo} => {
-    const trees = get(latestCommitTree);
+export type TreeWithPreviews = {
+  trees: Array<CommitTreeWithPreviews>;
+  treeMap: Map<Hash, CommitTreeWithPreviews>;
+  headCommit?: CommitInfo;
+};
 
-    // gather operations from past, current, and queued commands which could have optimistic state appliers
-    type Applier = (context: PreviewContext) => ApplyPreviewsFuncType | undefined;
-    const appliersSources: Array<Applier> = [];
+export type WithPreviewType = {
+  previewType?: CommitPreview;
+  /**
+   * Insertion batch. Larger: later inserted.
+   * All 'sl log' commits share a same initial number.
+   * Later previews might have larger numbers.
+   * Used for sorting.
+   */
+  seqNumber?: number;
+};
 
-    // preview applier can either come from an operation being previewed...
-    const currentPreview = get(operationBeingPreviewed);
-    // ...or from an operation that is being run right now
-    // or ran recently and is still showing optimistic state while waiting for new commits or uncommitted changes
+export type {Dag};
+
+export const dagWithPreviews = selector<Dag>({
+  key: 'dagWithPreviews',
+  get: ({get}) => {
+    const originalDag = get(latestDag);
     const list = get(operationList);
     const queued = get(queuedOperations);
     const currentOperation = list.currentOperation;
-
-    // previous commands
-    for (const op of list.operationHistory) {
-      if (op != null && !op.hasCompletedOptimisticState) {
-        if (op.operation.makeOptimisticApplier != null) {
-          appliersSources.push(op.operation.makeOptimisticApplier.bind(op.operation));
-        }
-      }
+    const history = list.operationHistory;
+    const currentPreview = get(operationBeingPreviewed);
+    let dag = originalDag;
+    for (const op of optimisticOperations({history, queued, currentOperation})) {
+      dag = op.optimisticDag(dag);
     }
-
-    // currently running/last command
-    if (
-      currentOperation != null &&
-      !currentOperation.hasCompletedOptimisticState &&
-      // don't show optimistic state if we hit an error
-      (currentOperation.exitCode == null || currentOperation.exitCode === 0)
-    ) {
-      if (currentOperation.operation.makeOptimisticApplier != null) {
-        appliersSources.push(
-          currentOperation.operation.makeOptimisticApplier.bind(currentOperation.operation),
-        );
-      }
+    if (currentPreview) {
+      dag = currentPreview.previewDag(dag);
     }
+    return dag;
+  },
+});
 
-    // queued commands
-    for (const op of queued) {
-      if (op != null) {
-        if (op.makeOptimisticApplier != null) {
-          appliersSources.push(op.makeOptimisticApplier.bind(op));
-        }
-      }
-    }
-
-    // operation being previewed (would be queued next)
-    if (currentPreview?.makePreviewApplier != null) {
-      appliersSources.push(currentPreview.makePreviewApplier.bind(currentPreview));
-    }
+export const treeWithPreviews = selector({
+  key: 'treeWithPreviews',
+  get: ({get}): TreeWithPreviews => {
+    const dag = get(dagWithPreviews);
+    const commits = [...dag.values()];
+    const trees = getCommitTree(commits);
 
     let headCommit = get(latestHeadCommit);
-    let treeMap = get(latestCommitTreeMap);
-    const successorMap = get(latestSuccessorsMap);
-
-    // apply in order
-    if (appliersSources.length) {
-      let finalTrees = trees;
-
-      for (const applierSource of appliersSources) {
-        const context: PreviewContext = {
-          trees: finalTrees,
-          headCommit,
-          treeMap,
-          successorMap,
-        };
-        let nextHeadCommit = headCommit;
-        const nextTreeMap = new Map<Hash, CommitTree>();
-
-        const applier = applierSource(context);
-        if (applier == null) {
-          continue;
-        }
-
-        const processTree = (
-          tree: CommitTreeWithPreviews,
-          inheritedPreviewType?: CommitPreview,
-        ): CommitTreeWithPreviews | undefined => {
-          const result = applier(tree, inheritedPreviewType);
-          if (result?.info == null) {
-            return undefined;
-          }
-          if (result.info.isHead) {
-            nextHeadCommit = result.info;
-          }
-          const {info, children, previewType, childPreviewType} = result;
-          const newTree = {
-            info,
-            previewType,
-            children: children
-              .map(child => processTree(child, childPreviewType))
-              .filter((tree): tree is CommitTreeWithPreviews => tree != null),
-          };
-
-          nextTreeMap.set(newTree.info.hash, result);
-          return newTree;
-        };
-        finalTrees = finalTrees.map(tree => processTree(tree)).filter(notEmpty);
-        headCommit = nextHeadCommit;
-        treeMap = nextTreeMap;
-      }
-      return {trees: finalTrees, treeMap, headCommit};
+    // The headCommit might be changed by dag previews. Double check.
+    if (headCommit && !dag.get(headCommit.hash)?.isHead) {
+      headCommit = dag.resolve('.');
+    }
+    // Open-code latestCommitTreeMap to pick up tree changes done by `dag`.
+    const treeMap = new Map<Hash, CommitTreeWithPreviews>();
+    for (const tree of walkTreePostorder(trees)) {
+      treeMap.set(tree.info.hash, tree);
     }
 
     return {trees, treeMap, headCommit};
   },
 });
+
+/** Yield operations that might need optimistic state. */
+function* optimisticOperations(props: {
+  history: OperationInfo[];
+  queued: Operation[];
+  currentOperation?: OperationInfo;
+}): Generator<Operation> {
+  const {history, queued, currentOperation} = props;
+
+  // previous commands
+  for (const op of history) {
+    if (op != null && !op.hasCompletedOptimisticState) {
+      yield op.operation;
+    }
+  }
+
+  // currently running/last command
+  if (
+    currentOperation != null &&
+    !currentOperation.hasCompletedOptimisticState &&
+    // don't show optimistic state if we hit an error
+    (currentOperation.exitCode == null || currentOperation.exitCode === 0)
+  ) {
+    yield currentOperation.operation;
+  }
+
+  // queued commands
+  for (const op of queued) {
+    if (op != null) {
+      yield op;
+    }
+  }
+}
 
 /**
  * Mark operations as completed when their optimistic applier is no longer needed.
@@ -374,9 +333,7 @@ export const treeWithPreviews = selector({
  */
 export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useRecoilValue(latestCommitsData);
-  const trees = useRecoilValue(latestCommitTree);
-  const headCommit = useRecoilValue(latestHeadCommit);
-  const treeMap = useRecoilValue(latestCommitTreeMap);
+  const commits = useRecoilValue(latestCommits);
   const uncommittedChanges = useRecoilValue(latestUncommittedChangesData);
   const conflicts = useRecoilValue(mergeConflicts);
   const successorMap = useRecoilValue(latestSuccessorsMap);
@@ -388,12 +345,6 @@ export function useMarkOperationsCompleted(): void {
   // when ongoingOperation is used elsewhere in the tree
   useEffect(() => {
     const toMarkResolved: Array<ReturnType<typeof shouldMarkOptimisticChangesResolved>> = [];
-    const context = {
-      trees,
-      headCommit,
-      treeMap,
-      successorMap,
-    };
     const uncommittedContext = {
       uncommittedChanges: uncommittedChanges.files ?? [],
     };
@@ -405,12 +356,7 @@ export function useMarkOperationsCompleted(): void {
     for (const operation of [...list.operationHistory, currentOperation]) {
       if (operation) {
         toMarkResolved.push(
-          shouldMarkOptimisticChangesResolved(
-            operation,
-            context,
-            uncommittedContext,
-            mergeConflictsContext,
-          ),
+          shouldMarkOptimisticChangesResolved(operation, uncommittedContext, mergeConflictsContext),
         );
       }
     }
@@ -455,7 +401,6 @@ export function useMarkOperationsCompleted(): void {
 
     function shouldMarkOptimisticChangesResolved(
       operation: OperationInfo,
-      context: PreviewContext,
       uncommittedChangesContext: UncommittedChangesPreviewContext,
       mergeConflictsContext: MergeConflictsPreviewContext,
     ): {commits: boolean; files: boolean; conflicts: boolean} | undefined {
@@ -505,17 +450,8 @@ export function useMarkOperationsCompleted(): void {
       }
 
       if (operation != null && !operation.hasCompletedOptimisticState) {
-        if (operation.operation.makeOptimisticApplier != null) {
-          const optimisticApplier = operation.operation.makeOptimisticApplier(context);
-          if (operation.exitCode != null) {
-            if (optimisticApplier == null || operation.exitCode !== 0) {
-              commits = true;
-            } else if (fetchedCommits.fetchStartTimestamp > unwrap(operation.endTime).valueOf()) {
-              getTracker()?.track('OptimisticCommitsStateForceResolved', {extras: {}});
-              commits = true;
-            }
-          }
-        } else if (operation.exitCode != null) {
+        const endTime = operation.endTime?.valueOf();
+        if (endTime && fetchedCommits.fetchStartTimestamp >= endTime) {
           commits = true;
         }
       }
@@ -528,23 +464,13 @@ export function useMarkOperationsCompleted(): void {
   }, [
     list,
     setOperationList,
-    headCommit,
-    trees,
-    treeMap,
+    commits,
     uncommittedChanges,
     conflicts,
     fetchedCommits,
     successorMap,
   ]);
 }
-
-/** Set of info about commit tree to generate appropriate previews */
-export type PreviewContext = {
-  trees: Array<CommitTree>;
-  headCommit?: CommitInfo;
-  treeMap: Map<string, CommitTree>;
-  successorMap: Map<string, string>;
-};
 
 export type UncommittedChangesPreviewContext = {
   uncommittedChanges: UncommittedChanges;

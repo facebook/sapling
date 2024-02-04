@@ -3,7 +3,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import extensions, patch as patchmod, registrar, util
+from sapling import extensions, patch as patchmod, registrar, util
 
 
 configtable = {}

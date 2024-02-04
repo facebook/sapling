@@ -6,12 +6,12 @@
  */
 
 use std::fs::File;
+use std::io;
 use std::path::Path;
 
 use fs2::FileExt;
 
 use crate::errors::IOContext;
-use crate::errors::IOResult;
 use crate::file::open;
 
 /// RAII lock on a filesystem path.
@@ -23,7 +23,7 @@ pub struct PathLock {
 impl PathLock {
     /// Take an exclusive lock on `path`. The lock file will be created on
     /// demand.
-    pub fn exclusive<P: AsRef<Path>>(path: P) -> IOResult<Self> {
+    pub fn exclusive<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = open(path.as_ref(), "wc").io_context("lock file")?;
         file.lock_exclusive()
             .path_context("error locking file", path.as_ref())?;

@@ -110,7 +110,14 @@ impl<'op> DeleteBookmarkOp<'op> {
             });
         }
 
-        check_repo_lock(repo, kind, self.pushvars, ctx.metadata().identities()).await?;
+        check_repo_lock(
+            repo,
+            kind,
+            self.pushvars,
+            ctx.metadata().identities(),
+            authz,
+        )
+        .await?;
 
         ctx.scuba()
             .clone()

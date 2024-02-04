@@ -10,6 +10,10 @@ body {
   overflow: hidden;
 }
 
+html .vscode-high-contrast {
+  --selected-commit-border: 1px solid var(--vscode-button-border);
+}
+
 .webview-view .isl-root {
   --background: var(--vscode-sidebar-background);
   outline: 1px solid var(--vscode-panel-border);
@@ -21,4 +25,16 @@ code {
    which is an undesirably noticeable red color.
    Just unset this to reset to more browser-like style. */
   color: unset;
+}
+
+/* Improve handling of the "Modern" themes, which have a particularly "loud" badge color. */
+body[data-vscode-theme-id='Default Light Modern'] .commit-rows vscode-tag::part(control),
+body[data-vscode-theme-id='Default Dark Modern'] .commit-rows vscode-tag::part(control) {
+  background-color: var(--vscode-tab-unfocusedHoverBackground);
+  color: var(--vscode-tab-activeForeground);
+}
+
+body[data-vscode-theme-kind='vscode-high-contrast'] .inline-badge.badge-primary {
+  background-color: var(--background);
+  outline: 1px solid var(--vscode-button-border);
 }

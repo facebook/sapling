@@ -1,0 +1,86 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("mercurial_release")
+
+cpp_library(
+    name = "util",
+    headers = [
+        "util.h",
+    ],
+    exported_deps = [
+        "//eden/scm:core_headers",
+    ],
+)
+
+cpp_library(
+    name = "bdiff",
+    srcs = [
+        "bdiff.c",
+    ],
+    compiler_flags = [
+        "-fno-strict-aliasing",
+        "-Wno-missing-field-initializers",
+    ],
+    deps = [
+        "fbsource//third-party/python:python",
+        ":util",
+        "//eden/scm:core_headers",
+        "//eden/scm:libbdiff",
+    ],
+)
+
+cpp_library(
+    name = "mpatch",
+    srcs = [
+        "mpatch.c",
+    ],
+    compiler_flags = [
+        "-fno-strict-aliasing",
+        "-Wno-missing-field-initializers",
+        "-Wno-deprecated-declarations",
+    ],
+    deps = [
+        "fbsource//third-party/python:python",
+        ":util",
+        "//eden/scm:core_headers",
+        "//eden/scm:libmpatch",
+    ],
+)
+
+cpp_library(
+    name = "osutil",
+    srcs = ["osutil.c"],
+    compiler_flags = [
+        "-fno-strict-aliasing",
+        "-Wno-missing-field-initializers",
+    ],
+    preprocessor_flags = ["-DHAVE_LINUX_STATFS"],
+    deps = [
+        "fbsource//third-party/python:python",
+        ":util",
+    ],
+)
+
+cpp_library(
+    name = "parsers",
+    srcs = [
+        "charencode.c",
+        "manifest.c",
+        "parsers.c",
+        "revlog.c",
+    ],
+    # Python 2.x violate's C's strict aliasing rules, so compile with
+    # -fno-strict-aliasing.  This has been fixed in Python 3 (PEP 3123)
+    compiler_flags = [
+        "-fno-strict-aliasing",
+        "-Wno-missing-field-initializers",
+        "-Wno-sign-compare",
+    ],
+    deps = [
+        ":util",
+    ],
+    exported_deps = [
+        "fbsource//third-party/python:python",
+        "//eden/scm:core_headers",
+    ],
+)

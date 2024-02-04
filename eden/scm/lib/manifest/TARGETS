@@ -1,0 +1,46 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "manifest",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dev-dependencies": {
+                    "types": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:quickcheck",
+                    "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+                    "//eden/scm/lib/types:types",
+                ],
+            },
+            "features": {
+                "default": [],
+                "for-tests": [
+                    "quickcheck",
+                    "quickcheck_arbitrary_derive",
+                ],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["for-tests"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:quickcheck",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/types:types",
+    ],
+)

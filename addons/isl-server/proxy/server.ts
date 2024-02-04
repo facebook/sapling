@@ -15,6 +15,7 @@ import {onClientConnection} from '../src/index';
 import {areTokensEqual} from './proxyUtils';
 import fs from 'fs';
 import http from 'http';
+import {grammars} from 'isl/src/generated/textmate/TextMateGrammarManifest';
 import path from 'path';
 import urlModule from 'url';
 import WebSocket from 'ws';
@@ -56,14 +57,26 @@ export function startServer({
   return new Promise(resolve => {
     try {
       const manifest = JSON.parse(
-        fs.readFileSync(path.join(ossSmartlogDir, 'build/asset-manifest.json'), 'utf-8'),
-      ) as {files: Array<string>};
-      for (const file of Object.values(manifest.files)) {
-        if (!file.startsWith('/')) {
-          resolve({type: 'error', error: `expected entry to start with / but was: \`${file}\``});
+        fs.readFileSync(path.join(ossSmartlogDir, 'build/.vite/manifest.json'), 'utf-8'),
+      ) as {[key: string]: {file: string; css?: string[]}};
+      const files = [];
+      for (const [file, asset] of Object.entries(manifest)) {
+        if (file.endsWith('.html')) {
+          files.push(file); // html file
+          files.push(asset.file); // js script file
+        } else {
+          // lazily loaded scripts
+          files.push(asset.file);
+          if (asset.css) {
+            for (const css of asset.css) {
+              files.push(css);
+            }
+          }
         }
+      }
 
-        requestUrlToResource[file] = file.slice(1);
+      for (const file of files) {
+        requestUrlToResource['/' + file] = file;
       }
     } catch (e) {
       // ignore...
@@ -155,11 +168,13 @@ export function startServer({
       let providedToken: string | undefined;
       let cwd: string | undefined;
       let platform: string | undefined;
+      let sessionId: string | undefined;
       if (connectionRequest.url) {
         const searchParams = getSearchParams(connectionRequest.url);
         providedToken = searchParams.get('token');
         const cwdParam = searchParams.get('cwd');
         platform = searchParams.get('platform') as string;
+        sessionId = searchParams.get('sessionId');
         if (cwdParam) {
           cwd = decodeURIComponent(cwdParam);
         }
@@ -188,9 +203,18 @@ export function startServer({
         case 'standalone':
           platformImpl = (await import('../platform/standaloneServerPlatform')).platform;
           break;
+        case 'webview':
+          platformImpl = (await import('../platform/webviewServerPlatform')).platform;
+          break;
+        case 'chromelike_app':
+          platformImpl = (await import('../platform/chromelikeAppServerPlatform')).platform;
+          break;
         default:
         case undefined:
           break;
+      }
+      if (sessionId != null && platformImpl) {
+        platformImpl.sessionId = sessionId;
       }
 
       const dispose = onClientConnection({
@@ -266,7 +290,20 @@ const extensionToMIMEType: {[key: string]: string} = {
 
 const requestUrlToResource: {[key: string]: string} = {
   '/': 'index.html',
+  ...allGeneratedFileResources(),
 };
+
+function allGeneratedFileResources(): Record<string, string> {
+  const resources = Object.fromEntries(
+    Object.entries(grammars).map(([_, grammar]) => {
+      const p = `generated/textmate/${grammar.fileName}.${grammar.fileFormat}`;
+      return ['/' + p, p];
+    }),
+  );
+  // the WASM file is not in the manifest but is needed to highlight
+  resources['/generated/textmate/onig.wasm'] = 'generated/textmate/onig.wasm';
+  return resources;
+}
 
 function htmlEscape(str: string): string {
   return str

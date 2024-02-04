@@ -16,12 +16,12 @@
 
 # Query it and cause an error
 
-  $ curl --silent "$LFS_URI/download/foo" | jq -S .
+  $ curltest --silent "$LFS_URI/download/foo" | jq -S .
   {
     "message": "Could not parse Content ID: invalid blake2 input: need exactly 64 hex digits",
     "request_id": "*" (glob)
   }
-  $ curl --silent "$LFS_URI/download/1111111111111111111111111111111111111111111111111111111111111111" | jq -S .
+  $ curltest --silent "$LFS_URI/download/1111111111111111111111111111111111111111111111111111111111111111" | jq -S .
   {
     "message": "Object does not exist: Canonical(ContentId(Blake2(1111111111111111111111111111111111111111111111111111111111111111)))",
     "request_id": "*" (glob)

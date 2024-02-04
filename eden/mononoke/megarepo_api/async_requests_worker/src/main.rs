@@ -18,7 +18,9 @@ use anyhow::Error;
 use clap::Parser;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
-use environment::WarmBookmarksCacheDerivedData;
+use environment::BookmarkCacheDerivedData;
+use environment::BookmarkCacheKind;
+use environment::BookmarkCacheOptions;
 use fbinit::FacebookInit;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
@@ -51,7 +53,10 @@ struct AsyncRequestsWorkerArgs {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
-        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::NoDerivation)
+        .with_bookmarks_cache(BookmarkCacheOptions {
+            cache_kind: BookmarkCacheKind::Local,
+            derived_data: BookmarkCacheDerivedData::NoDerivation,
+        })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(HooksAppExtension {})
         .with_app_extension(Fb303AppExtension {})

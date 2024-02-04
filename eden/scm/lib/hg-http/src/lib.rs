@@ -70,11 +70,7 @@ pub fn http_config(
     url_for_auth: &Url,
 ) -> Result<http_client::Config, auth::MissingCerts> {
     let mut hc = http_client::Config {
-        convert_cert: config
-            .get_or("http", "convert-cert", || cfg!(windows))
-            .unwrap_or(cfg!(windows)),
-
-        client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
+        client_info: ClientInfo::new().and_then(|i| i.to_json()).ok(),
         disable_tls_verification: INSECURE_MODE.load(Relaxed),
         unix_socket_path: config
             .get_nonempty_opt("auth_proxy", "unix_socket_path")
@@ -82,12 +78,15 @@ pub fn http_config(
         unix_socket_domains: HashSet::from_iter(
             config
                 .get_or("auth_proxy", "unix_socket_domains", Vec::new)
-                .unwrap_or_else(|_| vec![])
-                .into_iter(),
+                .unwrap_or_else(|_| vec![]),
         ),
         verbose: config.get_or_default("http", "verbose").unwrap_or(false),
         ..Default::default()
     };
+
+    if let Some(convert) = config.get_opt("http", "convert-cert").unwrap_or_default() {
+        hc.convert_cert = convert;
+    }
 
     let using_auth_proxy = hc.unix_socket_path.is_some()
         && url_for_auth
@@ -224,11 +223,6 @@ mod tests {
         let mut hg_config = BTreeMap::<&str, &str>::new();
 
         let url: Url = "https://example.com".parse().unwrap();
-
-        assert_eq!(
-            cfg!(windows),
-            http_config(&hg_config, &url).unwrap().convert_cert
-        );
 
         hg_config.insert("http.convert-cert", "True");
         assert!(http_config(&hg_config, &url).unwrap().convert_cert);

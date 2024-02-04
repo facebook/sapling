@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("@fbsource//xplat/third-party/yarn:yarn_offline_mirror_helper.bzl", "yarn_offline_mirror_path")
+
+oncall("scm_client_infra")
+
+python_binary(
+    name = "build-tar-script",
+    main_function = ".build-tar.main",
+    main_src = "build-tar.py",
+)
+
+buck_genrule(
+    name = "isl-tar",
+    # While it may be tedious to maintain the list of srcs by hand, it ensures
+    # that changes in the addons/ folder that are not part of ISL do not trigger
+    # a rebuild.
+    srcs = glob(
+        [
+            "eslint-rules/**",
+            "isl/**",
+            "isl-server/**",
+            "shared/**",
+        ],
+        exclude = [
+            "**/node_modules/**",
+            "isl/build/**",
+            "isl-server/dist/**",
+        ],
+    ) + [
+        ".eslintrc.js",
+        ".gitignore",
+        ".prettierrc",
+        "package.json",
+        "yarn.lock",
+    ],
+    out = "isl-dist.tar.xz",
+    cmd = '$(exe :build-tar-script) --yarn "$(exe fbsource//xplat/third-party/yarn:yarn)" --yarn-offline-mirror "{yarn_offline_mirror}" -o "$OUT" --src "$SRCDIR" --tmp "$TMP"'.format(yarn_offline_mirror = yarn_offline_mirror_path()),
+)
