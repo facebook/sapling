@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EnabledSCMApiFeature} from './types';
 import type {Repository} from 'isl-server/src/Repository';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {
@@ -19,6 +18,12 @@ import {executeVSCodeCommand} from './commands';
 import {t} from './i18n';
 import * as pathModule from 'path';
 import * as vscode from 'vscode';
+
+const IMAGE_EXTENSIONS = new Set(['.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.png', '.webp']);
+function looksLikeImageUri(uri: vscode.Uri): boolean {
+  const ext = pathModule.extname(uri.path).toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext);
+}
 
 export const VSCodePlatform: ServerPlatform = {
   platformName: 'vscode',
@@ -37,6 +42,10 @@ export const VSCodePlatform: ServerPlatform = {
           }
           const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
           const uri = vscode.Uri.file(path);
+          if (looksLikeImageUri(uri)) {
+            await vscode.commands.executeCommand('vscode.open', uri);
+            return;
+          }
           const editorPromise = vscode.window.showTextDocument(uri);
           const line = message.options?.line;
           if (line != null) {
