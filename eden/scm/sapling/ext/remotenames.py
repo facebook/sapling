@@ -551,7 +551,7 @@ def extsetup(ui):
             ),
         ),
         (pushcmd, ("t", "to", "", "push commits to this bookmark", "BOOKMARK")),
-        (pushcmd, ("d", "delete", "", "delete remote bookmark", "BOOKMARK")),
+        (pushcmd, ("", "delete", "", "delete remote bookmark", "BOOKMARK")),
         (pushcmd, ("", "create", None, "create a new remote bookmark")),
         (
             pushcmd,
