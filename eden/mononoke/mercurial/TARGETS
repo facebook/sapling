@@ -9,6 +9,7 @@ rust_library(
     srcs = glob(["revlog/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "revlog"},
     named_deps = {
+        "futures-old": "fbsource//third-party/rust:futures-old",
         "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
     },
     test_deps = [
@@ -31,7 +32,6 @@ rust_library(
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:flate2",
-        "fbsource//third-party/rust:futures-old",
         "fbsource//third-party/rust:memmap2",
         "fbsource//third-party/rust:nom-old",
         "fbsource//third-party/rust:thiserror",

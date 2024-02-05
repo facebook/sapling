@@ -11,13 +11,13 @@ use std::hash::Hash;
 use std::hash::Hasher;
 
 use anyhow::Error;
-use futures::future::Future;
-use futures::stream::empty;
-use futures::stream::iter_ok;
-use futures::stream::once;
-use futures::stream::Stream;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
+use futures_old::future::Future;
+use futures_old::stream::empty;
+use futures_old::stream::iter_ok;
+use futures_old::stream::once;
+use futures_old::stream::Stream;
 use mercurial_types::MPath;
 use mercurial_types::MPathElement;
 use mercurial_types::Type;

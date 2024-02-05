@@ -19,10 +19,9 @@ use std::io;
 use std::io::BufRead;
 use std::io::Read;
 
-use futures::future::poll_fn;
-use futures::Async;
-use futures::Future;
-use tokio_io::try_nb;
+use futures_old::future::poll_fn;
+use futures_old::Async;
+use futures_old::Future;
 use tokio_io::AsyncRead;
 
 /// Structure that wraps around a `AsyncRead + BufRead` object to provide chunked-based encoding
@@ -60,7 +59,13 @@ where
         poll_fn(move || {
             let is_done = match this {
                 None => panic!("called poll after completed"),
-                Some(ref mut this) => try_nb!(this.fill_buf()).is_empty(),
+                Some(ref mut this) => match this.fill_buf() {
+                    Ok(t) => t.is_empty(),
+                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        return Ok(Async::NotReady);
+                    }
+                    Err(e) => return Err(e),
+                },
             };
 
             let this = this.take().expect("This was Some few lines above");

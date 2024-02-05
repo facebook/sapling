@@ -18,12 +18,12 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiStr;
-use futures::future;
-use futures::stream;
-use futures::stream::Stream;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
+use futures_old::future;
+use futures_old::stream;
+use futures_old::stream::Stream;
 use mercurial_types::HgChangesetId;
 use thiserror::Error;
 
@@ -131,7 +131,7 @@ mod tests {
     use assert_matches::assert_matches;
     use failure_ext::err_downcast;
     use failure_ext::err_downcast_ref;
-    use futures::Future;
+    use futures_old::Future;
     use mercurial_types_mocks::nodehash::*;
 
     use super::*;

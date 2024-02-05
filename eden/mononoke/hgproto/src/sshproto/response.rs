@@ -11,9 +11,9 @@ use std::io::Write;
 
 use bytes_old::Bytes;
 use bytes_old::BytesMut;
-use futures::stream;
-use futures::Stream;
 use futures_ext::StreamExt;
+use futures_old::stream;
+use futures_old::Stream;
 use itertools::Itertools;
 
 use crate::batch;
