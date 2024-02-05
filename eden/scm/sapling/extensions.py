@@ -374,6 +374,11 @@ def _getattr(obj, name, default):
     try:
         return getattr(obj, name)
     except AttributeError as e:
+        # AttributeError.name was added in 3.10, let's
+        # skip the check if Python version is < 3.10
+        if sys.version_info < (3, 10):
+            return default
+
         if e.name == name:
             return default
         else:
