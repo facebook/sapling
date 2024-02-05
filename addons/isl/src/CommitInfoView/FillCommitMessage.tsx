@@ -10,6 +10,7 @@ import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
 import {globalRecoil} from '../AccessGlobalRecoil';
+import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {LinkButton} from '../components/LinkButton';
 import {T, t} from '../i18n';
@@ -35,9 +36,11 @@ const fillCommitMessageMethods: Array<{
     commit: CommitInfo,
     mode: CommitInfoMode,
   ) => CommitMessageFields | undefined | Promise<CommitMessageFields | undefined>;
+  tooltip: string;
 }> = [
   {
     label: t('last commit'),
+    tooltip: t("Fill in the previous commit's message here."),
     getMessage: (commit: CommitInfo, mode: CommitInfoMode) => {
       const schema = globalRecoil().getLoadable(commitMessageFieldsSchema).valueMaybe();
       const dag = globalRecoil().getLoadable(dagWithPreviews).valueMaybe();
@@ -55,6 +58,9 @@ const fillCommitMessageMethods: Array<{
   },
   {
     label: t('template file'),
+    tooltip: t(
+      'Fill in your configured commit message template.\nSee `sl help config` for more information.',
+    ),
     getMessage: (_commit: CommitInfo, _mode: CommitInfoMode) => {
       const template = globalRecoil().getLoadable(commitMessageTemplate).valueMaybe();
       return template?.fields as CommitMessageFields | undefined;
@@ -117,24 +123,29 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
   const methods = (
     <>
       {fillCommitMessageMethods.map(method => (
-        <LinkButton
+        <Tooltip
+          title={method.tooltip}
           key={method.label}
-          onClick={() => {
-            tracker.operation(
-              'FillCommitMessage',
-              'FetchError',
-              {extras: {method: method.label}},
-              async () => {
-                const newMessage = await method.getMessage(commit, mode);
-                if (newMessage == null) {
-                  return;
-                }
-                fillMessage(newMessage);
-              },
-            );
-          }}>
-          {method.label}
-        </LinkButton>
+          placement="bottom"
+          delayMs={DOCUMENTATION_DELAY}>
+          <LinkButton
+            onClick={() => {
+              tracker.operation(
+                'FillCommitMessage',
+                'FetchError',
+                {extras: {method: method.label}},
+                async () => {
+                  const newMessage = await method.getMessage(commit, mode);
+                  if (newMessage == null) {
+                    return;
+                  }
+                  fillMessage(newMessage);
+                },
+              );
+            }}>
+            {method.label}
+          </LinkButton>
+        </Tooltip>
       ))}
     </>
   );
