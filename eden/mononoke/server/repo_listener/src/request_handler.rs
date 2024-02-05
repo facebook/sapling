@@ -19,10 +19,13 @@ use context::SessionContainer;
 use context::SessionId;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::compat::Sink01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future::TryFutureExt;
+use futures::sink::SinkExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures_old::sync::mpsc;
-use futures_old::Future;
-use futures_old::Stream;
 use futures_stats::TimedFutureExt;
 use hgproto::sshproto;
 use hgproto::HgProtoHandler;
@@ -161,7 +164,7 @@ pub async fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         conn_log.clone(),
-        stdin,
+        stdin.compat(),
         repo_client,
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
@@ -172,14 +175,15 @@ pub async fn request_handler(
 
     // send responses back
     let endres = proto_handler
-        .inspect(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
+        .into_stream()
+        .inspect_ok(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
         .map_err(Error::from)
-        .map(|b| Bytes::copy_from_slice(b.as_ref()))
-        .forward(stdout)
-        .map(|_| ());
+        .map_ok(|b| Bytes::copy_from_slice(b.as_ref()))
+        .forward(stdout.sink_compat().sink_map_err(Error::from))
+        .map_ok(|_| ());
 
     // If we got an error at this point, then catch it and print a message
-    let (stats, result) = endres.compat().timed().await;
+    let (stats, result) = endres.timed().await;
 
     let wireproto_calls = {
         let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");

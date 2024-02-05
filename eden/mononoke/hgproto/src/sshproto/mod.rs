@@ -45,8 +45,8 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::BytesMut as BytesMutOld;
-use tokio_io::codec::Decoder;
+use bytes::BytesMut;
+use tokio_util::codec::Decoder;
 
 use crate::handler::OutputStream;
 use crate::handler::ResponseEncoder;
@@ -71,7 +71,7 @@ impl Decoder for HgSshCommandDecode {
     type Item = Request;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Request>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Request>> {
         request::parse_request(buf)
     }
 }

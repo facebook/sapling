@@ -9,11 +9,11 @@ use std::fmt::Display;
 use std::io;
 use std::io::Write;
 
-use bytes_old::Bytes as BytesOld;
-use bytes_old::BytesMut as BytesMutOld;
-use futures_ext::StreamExt;
-use futures_old::stream;
-use futures_old::Stream;
+use bytes::Bytes;
+use bytes::BytesMut;
+use futures::future;
+use futures::stream;
+use futures::stream::StreamExt;
 use itertools::Itertools;
 
 use crate::batch;
@@ -45,10 +45,10 @@ where
 pub fn encode(response: Response) -> OutputStream {
     match response {
         Response::Batch(resps) => {
-            let separator = BytesOld::from(&b";"[..]);
+            let separator = Bytes::from(&b";"[..]);
             let escaped_results = resps
                 .into_iter()
-                .map(move |resp| BytesOld::from(batch::escape(&encode_cmd(resp))));
+                .map(move |resp| Bytes::from(batch::escape(&encode_cmd(resp))));
 
             let separated_results = Itertools::intersperse(escaped_results, separator);
             let separated_results: Vec<_> = separated_results.collect();
@@ -56,10 +56,10 @@ pub fn encode(response: Response) -> OutputStream {
             for res in separated_results.iter() {
                 len += res.len();
             }
-            let len = format!("{}\n", len);
-            let len = stream::once(Ok(BytesOld::from(len.as_bytes())));
+            let len = stream::once(future::ok(Bytes::from(format!("{}\n", len))));
 
-            len.chain(stream::iter_ok(separated_results)).boxify()
+            len.chain(stream::iter(separated_results.into_iter().map(Ok)))
+                .boxed()
         }
         Response::Single(resp) => encode_single(resp),
     }
@@ -69,19 +69,15 @@ fn encode_single(response: SingleResponse) -> OutputStream {
     let is_stream = response.is_stream();
     let res = encode_cmd(response);
     if is_stream {
-        stream::once(Ok(res)).boxify()
+        stream::once(future::ok(res)).boxed()
     } else {
-        stream::iter_ok(vec![
-            BytesOld::from(format!("{}\n", res.len()).as_bytes()),
-            res,
-        ])
-        .boxify()
+        stream::iter(vec![Ok(Bytes::from(format!("{}\n", res.len()))), Ok(res)]).boxed()
     }
 }
 
 /// Encode the result of an individual command completion. This is used by both
 /// single and batch responses encoding
-fn encode_cmd(response: SingleResponse) -> BytesOld {
+fn encode_cmd(response: SingleResponse) -> Bytes {
     use SingleResponse::*;
 
     match response {
@@ -92,7 +88,7 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
                 write!(out, "{}: {}\n", k, caps.join(" ")).expect("write to vec failed");
             }
 
-            BytesOld::from(out)
+            Bytes::from(out)
         }
 
         Between(vecs) => {
@@ -102,10 +98,10 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
                 separated(&mut out, v, " ").expect("write to vec failed");
             }
 
-            BytesOld::from(out)
+            Bytes::from(out)
         }
 
-        ClientTelemetry(hostname) => BytesOld::from(hostname),
+        ClientTelemetry(hostname) => Bytes::from(hostname),
 
         Debugwireargs(res) => res,
 
@@ -114,7 +110,7 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
 
             separated(&mut out, set, " ").expect("write to vec failed");
 
-            BytesOld::from(out)
+            Bytes::from(out)
         }
 
         Known(knowns) => {
@@ -123,7 +119,7 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
                 .map(|known| if known { b'1' } else { b'0' })
                 .collect();
 
-            BytesOld::from(out)
+            Bytes::from(out)
         }
 
         Knownnodes(knowns) => {
@@ -132,10 +128,10 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
                 .map(|known| if known { b'1' } else { b'0' })
                 .collect();
 
-            BytesOld::from(out)
+            Bytes::from(out)
         }
 
-        ReadyForStream => BytesOld::from(b"0\n".as_ref()),
+        ReadyForStream => Bytes::from(b"0\n".as_ref()),
 
         // TODO(luk, T25574469) The response for Unbundle should be chunked stream of bundle2
         Unbundle(res) => res,
@@ -147,7 +143,7 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
         Lookup(res) => res,
 
         Listkeys(res) => {
-            let mut bytes = BytesMutOld::new();
+            let mut bytes = BytesMut::new();
             for (name, key) in res {
                 bytes.extend_from_slice(&name);
                 bytes.extend_from_slice("\t".as_bytes());
@@ -170,7 +166,7 @@ fn encode_cmd(response: SingleResponse) -> BytesOld {
         Branchmap(_res) => {
             // We have no plans to support mercurial branches and hence no plans for branchmap,
             // so just return fake response.
-            BytesOld::new()
+            Bytes::new()
         }
 
         StreamOutShallow(res) => res,

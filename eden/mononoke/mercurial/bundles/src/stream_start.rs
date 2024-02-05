@@ -13,8 +13,8 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use bytes_old::BytesMut as BytesMutOld;
-use tokio_io::codec::Decoder;
+use bytes::BytesMut;
+use tokio_util::codec::Decoder;
 
 use crate::errors::ErrorKind;
 use crate::types::StreamHeader;
@@ -27,7 +27,7 @@ impl Decoder for StartDecoder {
     type Item = StreamHeader;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<StreamHeader>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<StreamHeader>> {
         // bundle2 spec: "HG20" + u32 length of header + header + payload
         if buf.len() <= 8 {
             return Ok(None);
@@ -59,7 +59,7 @@ impl Decoder for StartDecoder {
 }
 
 fn decode_stream_params(
-    buf: &mut BytesMutOld,
+    buf: &mut BytesMut,
     header_len: usize,
 ) -> Result<(HashMap<String, String>, HashMap<String, String>)> {
     let mut m_stream_params = HashMap::new();

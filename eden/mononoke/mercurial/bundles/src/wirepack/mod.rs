@@ -27,7 +27,7 @@ use revisionstore_types::Metadata;
 
 use crate::delta;
 use crate::errors::ErrorKind;
-use crate::utils::BytesNewExt;
+use crate::utils::BytesExt;
 
 pub mod converter;
 pub mod packer;

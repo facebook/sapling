@@ -13,42 +13,30 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io;
-use std::io::BufRead;
 use std::io::Cursor;
 use std::sync::Arc;
 
-use anyhow::bail;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_stream::try_stream;
+use bytes::Buf;
 use bytes::Bytes;
-use bytes_old::Buf;
-use bytes_old::Bytes as BytesOld;
-use bytes_old::BytesMut as BytesMutOld;
-use failure_ext::FutureErrorContext;
-use futures::compat::Stream01CompatExt;
+use bytes::BytesMut;
+use futures::channel::oneshot;
+use futures::future;
+use futures::future::ok;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::pin_mut;
 use futures::stream::once;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_ext::BoxFuture as OldBoxFuture;
-use futures_ext::BoxStream as OldBoxStream;
-use futures_ext::BytesStream;
-use futures_ext::FutureExt as _;
-use futures_ext::StreamExt as _;
-use futures_old::future::err;
-use futures_old::future::ok;
-use futures_old::future::Either;
-use futures_old::future::Future;
-use futures_old::stream;
-use futures_old::stream::futures_ordered;
-use futures_old::stream::Stream;
-use futures_old::sync::oneshot;
-use futures_old::IntoFuture;
-use limited_async_read::LimitedAsyncRead;
+use futures::Stream;
 use mercurial_bundles::bundle2;
+use mercurial_bundles::bundle2::bundle2_stream;
 use mercurial_bundles::bundle2::Bundle2Stream;
 use mercurial_bundles::bundle2::StreamEvent;
 use mercurial_bundles::Bundle2Item;
@@ -57,8 +45,10 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::NonRootMPath;
 use qps::Qps;
 use slog::Logger;
-use tokio_io::codec::Decoder;
-use tokio_io::AsyncRead;
+use tokio::io::AsyncBufRead;
+use tokio::io::AsyncBufReadExt;
+use tokio_util::codec::Decoder;
+use tokio_util::io::StreamReader;
 
 use crate::dechunker::Dechunker;
 use crate::errors::*;
@@ -74,7 +64,7 @@ pub struct HgCommandHandler<H> {
     src_region: Option<String>,
 }
 
-impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
+impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
     pub fn new(
         logger: Logger,
         commands: H,
@@ -95,13 +85,13 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
     pub fn handle<S>(
         &self,
         req: SingleRequest,
-        instream: BytesStream<S>,
+        instream: StreamReader<S, Bytes>,
     ) -> (
-        OldBoxStream<SingleResponse, Error>,
-        OldBoxFuture<BytesStream<S>, Error>,
+        BoxStream<'static, Result<SingleResponse>>,
+        BoxFuture<'static, Result<StreamReader<S, Bytes>>>,
     )
     where
-        S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
+        S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
     {
         let hgcmds = &self.commands;
 
@@ -113,82 +103,72 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Between { pairs } => (
                 hgcmds
                     .between(pairs)
-                    .compat()
-                    .map(SingleResponse::Between)
+                    .map_ok(SingleResponse::Between)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Branchmap => (
                 hgcmds
                     .branchmap()
-                    .compat()
-                    .map(SingleResponse::Branchmap)
+                    .map_ok(SingleResponse::Branchmap)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Capabilities => (
                 hgcmds
                     .capabilities()
-                    .compat()
-                    .map(SingleResponse::Capabilities)
+                    .map_ok(SingleResponse::Capabilities)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::ClientTelemetry { args } => (
                 hgcmds
                     .clienttelemetry(args)
-                    .compat()
-                    .map(SingleResponse::ClientTelemetry)
+                    .map_ok(SingleResponse::ClientTelemetry)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Debugwireargs { one, two, all_args } => (
                 self.debugwireargs(one, two, all_args)
-                    .compat()
-                    .map(SingleResponse::Debugwireargs)
+                    .map_ok(SingleResponse::Debugwireargs)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Getbundle(args) => (
                 hgcmds
                     .getbundle(args)
-                    .map_ok(|b| BytesOld::from(&b[..]))
-                    .compat()
-                    .map(SingleResponse::Getbundle)
-                    .boxify(),
-                ok(instream).boxify(),
+                    .map_ok(SingleResponse::Getbundle)
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Heads => (
                 hgcmds
                     .heads()
-                    .compat()
-                    .map(SingleResponse::Heads)
+                    .map_ok(SingleResponse::Heads)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Hello => (
                 hgcmds
                     .hello()
-                    .compat()
-                    .map(SingleResponse::Hello)
+                    .map_ok(SingleResponse::Hello)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Listkeys { namespace } => (
                 hgcmds
                     .listkeys(namespace)
-                    .compat()
-                    .map(SingleResponse::Listkeys)
+                    .map_ok(SingleResponse::Listkeys)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::ListKeysPatterns {
                 namespace,
@@ -196,172 +176,131 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             } => (
                 hgcmds
                     .listkeyspatterns(namespace, patterns)
-                    .compat()
-                    .map(SingleResponse::ListKeysPatterns)
+                    .map_ok(SingleResponse::ListKeysPatterns)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Lookup { key } => (
                 hgcmds
                     .lookup(key)
-                    .map_ok(|b| BytesOld::from(&b[..]))
-                    .compat()
-                    .map(SingleResponse::Lookup)
+                    .map_ok(SingleResponse::Lookup)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Known { nodes } => (
                 hgcmds
                     .known(nodes)
-                    .compat()
-                    .map(SingleResponse::Known)
+                    .map_ok(SingleResponse::Known)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Knownnodes { nodes } => (
                 hgcmds
                     .knownnodes(nodes)
-                    .compat()
-                    .map(SingleResponse::Known)
+                    .map_ok(SingleResponse::Known)
                     .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::Unbundle { heads } => self.handle_unbundle(instream, heads, None, None),
             SingleRequest::UnbundleReplay {
                 heads,
                 replaydata,
                 respondlightly,
-            } => {
-                let (resp, instream) =
-                    self.handle_unbundle(instream, heads, Some(respondlightly), Some(replaydata));
-                (resp, instream)
-            }
+            } => self.handle_unbundle(instream, heads, Some(respondlightly), Some(replaydata)),
             SingleRequest::Gettreepack(args) => (
                 hgcmds
                     .gettreepack(args)
-                    .map_ok(|b| BytesOld::from(&b[..]))
-                    .compat()
-                    .map(SingleResponse::Gettreepack)
-                    .boxify(),
-                ok(instream).boxify(),
+                    .map_ok(SingleResponse::Gettreepack)
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::StreamOutShallow { tag } => (
                 hgcmds
                     .stream_out_shallow(tag)
-                    .map_ok(|b| BytesOld::from(&b[..]))
-                    .compat()
-                    .map(SingleResponse::StreamOutShallow)
-                    .boxify(),
-                ok(instream).boxify(),
+                    .map_ok(SingleResponse::StreamOutShallow)
+                    .boxed(),
+                ok(instream).boxed(),
             ),
             SingleRequest::GetpackV1 => {
-                let (reqs, instream) =
-                    decode_getpack_arg_stream(instream, Getpackv1ArgDecoder::new);
+                let (reqs, instream) = decode_getpack_arg_stream(instream);
                 (
                     hgcmds
-                        .getpackv1(reqs.compat().boxed())
-                        .map_ok(|b| BytesOld::from(&b[..]))
-                        .compat()
-                        .map(SingleResponse::Getpackv1)
-                        .boxify(),
+                        .getpackv1(reqs)
+                        .map_ok(SingleResponse::Getpackv1)
+                        .boxed(),
                     instream,
                 )
             }
             SingleRequest::GetpackV2 => {
-                let (reqs, instream) =
-                    decode_getpack_arg_stream(instream, Getpackv1ArgDecoder::new);
+                let (reqs, instream) = decode_getpack_arg_stream(instream);
                 (
                     hgcmds
-                        .getpackv2(reqs.compat().boxed())
-                        .map_ok(|b| BytesOld::from(&b[..]))
-                        .compat()
-                        .map(SingleResponse::Getpackv2)
-                        .boxify(),
+                        .getpackv2(reqs)
+                        .map_ok(SingleResponse::Getpackv2)
+                        .boxed(),
                     instream,
                 )
             }
             SingleRequest::GetCommitData { nodes } => (
                 hgcmds
                     .getcommitdata(nodes)
-                    .map_ok(|b| BytesOld::from(&b[..]))
-                    .compat()
-                    .map(SingleResponse::GetCommitData)
-                    .boxify(),
-                ok(instream).boxify(),
+                    .map_ok(SingleResponse::GetCommitData)
+                    .boxed(),
+                ok(instream).boxed(),
             ),
         }
     }
 
     fn handle_unbundle<S>(
         &self,
-        instream: BytesStream<S>,
+        instream: StreamReader<S, Bytes>,
         heads: Vec<String>,
         respondlightly: Option<bool>,
         replaydata: Option<String>,
     ) -> (
-        OldBoxStream<SingleResponse, Error>,
-        OldBoxFuture<BytesStream<S>, Error>,
+        BoxStream<'static, Result<SingleResponse>>,
+        BoxFuture<'static, Result<StreamReader<S, Bytes>>>,
     )
     where
-        S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
+        S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
     {
         let hgcmds = &self.commands;
         let dechunker = Dechunker::new(instream);
 
-        let bundle2stream =
-            Bundle2Stream::new(self.logger.clone(), LimitedAsyncRead::new(dechunker));
+        let bundle2stream = bundle2_stream(self.logger.clone(), dechunker, None);
         let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
 
-        let remainder = remainder
-            .then(|rest| {
-                let (bytes, remainder) = match rest {
-                    Err(e) => return Either::A(err(e)),
-                    Ok(rest) => rest,
-                };
-                if !bytes.is_empty() {
-                    Either::A(err(ErrorKind::UnconsumedData(
-                        String::from_utf8_lossy(bytes.as_ref()).into_owned(),
-                    )
-                    .into()))
-                } else {
-                    Either::B(remainder.into_inner().check_is_done().from_err())
-                }
-            })
-            .then(
-                |check_is_done: Result<(bool, Dechunker<_>)>| match check_is_done {
-                    Ok((true, remainder)) => ok(remainder.into_inner()),
-                    Ok((false, mut remainder)) => match remainder.fill_buf() {
-                        Err(e) => err(e.into()),
-                        Ok(buf) => err(ErrorKind::UnconsumedData(
-                            String::from_utf8_lossy(buf).into_owned(),
-                        )
-                        .into()),
-                    },
-                    Err(e) => err(e),
-                },
-            )
-            .boxify();
+        let remainder = async move {
+            let (bytes, mut remainder) = remainder.await?;
+            if !bytes.is_empty() {
+                return Err(ErrorKind::UnconsumedData(
+                    String::from_utf8_lossy(bytes.as_ref()).into_owned(),
+                )
+                .into());
+            }
+            let buf = remainder.fill_buf().await?;
+            if !buf.is_empty() {
+                return Err(
+                    ErrorKind::UnconsumedData(String::from_utf8_lossy(buf).into_owned()).into(),
+                );
+            }
+            Ok(remainder.into_inner())
+        }
+        .boxed();
 
-        let resps = futures_ordered(vec![
-            Either::A(ok(SingleResponse::ReadyForStream)),
-            Either::B({
-                hgcmds
-                    .unbundle(
-                        heads,
-                        bundle2stream.compat().boxed(),
-                        respondlightly,
-                        replaydata,
-                    )
-                    .map_ok(|b| BytesOld::from(&b[..]))
-                    .compat()
-                    .map(SingleResponse::Unbundle)
-            }),
-        ]);
-        (resps.boxify(), remainder)
+        let unbundle_fut = hgcmds.unbundle(heads, bundle2stream, respondlightly, replaydata);
+
+        let resps = try_stream! {
+            yield SingleResponse::ReadyForStream;
+            yield SingleResponse::Unbundle(unbundle_fut.await?);
+        }
+        .boxed();
+
+        (resps, remainder)
     }
 
     // @wireprotocommand('debugwireargs', 'one two *')
@@ -372,7 +311,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         one: Vec<u8>,
         two: Vec<u8>,
         all_args: HashMap<Vec<u8>, Vec<u8>>,
-    ) -> HgCommandRes<BytesOld> {
+    ) -> HgCommandRes<Bytes> {
         let mut out = Vec::<u8>::new();
         out.extend_from_slice(&one[..]);
         out.push(b' ');
@@ -392,92 +331,35 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
 
 const NONE: &[u8] = b"None";
 
-fn decode_getpack_arg_stream<D, RType, S>(
-    input: BytesStream<S>,
-    create_decoder: impl Fn() -> D + Send + 'static,
+fn decode_getpack_arg_stream<S>(
+    input: StreamReader<S, Bytes>,
 ) -> (
-    OldBoxStream<RType, Error>,
-    OldBoxFuture<BytesStream<S>, Error>,
+    BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>)>>,
+    BoxFuture<'static, Result<StreamReader<S, Bytes>>>,
 )
 where
-    D: Decoder<Item = Option<RType>, Error = Error> + Send + 'static,
-    RType: Send + 'static,
-    S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
+    S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
 {
-    let (send, recv) = oneshot::channel();
+    let (tx, rx) = futures::channel::oneshot::channel();
 
-    // stream::unfold() requires us to to return None if it's finished, or Some(Future) if not.
-    // We can't say if node file stream is finished before we parse the entry, that means that
-    // we can't stop unfolding by returning None. Instead we return a "fake" error. This fake
-    // error is a Result. If this fake error is Ok(...) then no real error happened.
-    // Note that fake error also contains input stream that will be send back to the future that
-    // waits for it.
-    let entry_stream: OldBoxStream<_, Result<BytesStream<S>, (_, BytesStream<S>)>> =
-        stream::unfold(input, move |input| {
-            let fut_decode = input.into_future_decode(create_decoder());
-            let fut = fut_decode
-                .map_err(Err) // Real error happened, wrap it in result
-                .and_then(|(maybe_item, instream)| match maybe_item {
-                    None => {
-                        // None here means we hit EOF, but that shouldn't happen
-                        Err(Err((Error::msg("unexpected EOF"), instream)))
-                            .into_future()
-                            .boxify()
-                    }
-                    Some(maybe_nodehash) => {
-                        match maybe_nodehash {
-                            None => {
-                                // None here means that we've read all the node-file pairs
-                                // that client has sent us. Return fake error that means that
-                                // we've successfully parsed the stream.
-                                Err(Ok(instream)).into_future().boxify()
-                            }
-                            Some(nodehash) => {
-                                // Parsed one more entry - continue
-                                Ok((nodehash, instream)).into_future().boxify()
-                            }
-                        }
-                    }
-                });
-
-            Some(fut)
-        })
-        .boxify();
-
-    let try_send_instream =
-        |wrapped_send: &mut Option<oneshot::Sender<_>>, instream: BytesStream<S>| -> Result<()> {
-            let send = wrapped_send.take();
-            let send =
-                send.ok_or_else(|| Error::msg("internal error: tried to send input stream twice"))?;
-            match send.send(instream) {
-                Ok(_) => Ok(()), // Finished
-                Err(_) => bail!("internal error while sending input stream back"),
-            }
-        };
-
-    // We are parsing errors (both fake and real), and sending instream to the future
-    // that awaits it. Note: instream should be send only once!
-    let entry_stream = entry_stream.then({
-        let mut wrapped_send = Some(send);
-        move |val| {
-            match val {
-                Ok(nodefile) => Ok(Some(nodefile)),
-                Err(Ok(instream)) => try_send_instream(&mut wrapped_send, instream).map(|_| None),
-                Err(Err((err, instream))) => {
-                    match try_send_instream(&mut wrapped_send, instream) {
-                        // TODO(stash): if send fails, then Mononoke is deadlocked
-                        // ignore send errors
-                        Ok(_) => Err(err),
-                        Err(_) => Err(err),
-                    }
+    let stream = try_stream! {
+        let mut decoded = tokio_util::codec::FramedRead::new(input, Getpackv1ArgDecoder::new());
+        {
+            let decoded = &mut decoded;
+            pin_mut!(decoded);
+            while let Some(item) = decoded.try_next().await? {
+                match item {
+                    Some(item) => yield item,
+                    None => break,
                 }
             }
         }
-    });
+        tx.send(decoded.into_inner()).map_err(|_| anyhow::anyhow!("Failed to send decoded stream"))?;
+    };
 
-    // Finally, filter out last None value
-    let entry_stream = entry_stream.filter_map(|val| val);
-    (entry_stream.boxify(), recv.map_err(Error::from).boxify())
+    let remainder = async move { Ok(rx.await?) };
+
+    (stream.boxed(), remainder.boxed())
 }
 
 #[derive(Clone)]
@@ -513,7 +395,7 @@ impl Decoder for Getpackv1ArgDecoder {
     type Item = Option<(NonRootMPath, Vec<HgFileNodeId>)>;
     type Error = Error;
 
-    fn decode(&mut self, src: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
         use self::GetPackv1ParsingState::*;
 
         let mut state = self.state.clone();
@@ -525,7 +407,7 @@ impl Decoder for Getpackv1ArgDecoder {
                         break (Ok(None), Start);
                     }
                     let len_bytes = src.split_to(prefix_len);
-                    let len = Cursor::new(len_bytes.freeze()).get_u16_be();
+                    let len = Cursor::new(len_bytes.freeze()).get_u16();
                     if len == 0 {
                         // Finished parsing the stream
                         // 'Ok' means no error, 'Some' means that no more bytes needed,
@@ -550,7 +432,7 @@ impl Decoder for Getpackv1ArgDecoder {
                     }
 
                     let len_bytes = src.split_to(prefix_len);
-                    let nodes_count = Cursor::new(len_bytes.freeze()).get_u32_be();
+                    let nodes_count = Cursor::new(len_bytes.freeze()).get_u32();
 
                     ParsingFileNodes(file, nodes_count, vec![])
                 }
@@ -584,38 +466,39 @@ impl Decoder for Getpackv1ArgDecoder {
 fn extract_remainder_from_bundle2<R>(
     bundle2: Bundle2Stream<R>,
 ) -> (
-    OldBoxStream<Bundle2Item<'static>, Error>,
-    OldBoxFuture<bundle2::Remainder<R>, Error>,
+    BoxStream<'static, Result<Bundle2Item<'static>, Error>>,
+    BoxFuture<'static, Result<bundle2::Remainder<R>, Error>>,
 )
 where
-    R: AsyncRead + BufRead + 'static + Send,
+    R: AsyncBufRead + Send + Unpin + 'static,
 {
     let (send, recv) = oneshot::channel();
     let mut send = Some(send);
 
     let bundle2items = bundle2
-        .then(move |res_stream_event| {
-            match res_stream_event {
-                Ok(StreamEvent::Next(bundle2item)) => Ok(Some(bundle2item)),
-                Ok(StreamEvent::Done(remainder)) => {
-                    let send = send.take().ok_or_else(|| {
-                        ErrorKind::Bundle2Invalid("stream remainder was sent twice".into())
-                    })?;
-                    // Receiving end will deal with failures
-                    let _ = send.send(remainder);
-                    Ok(None)
+        .try_filter_map(move |stream_event| {
+            match stream_event {
+                StreamEvent::Next(bundle2item) => future::ok(Some(bundle2item)),
+                StreamEvent::Done(remainder) => {
+                    match send.take() {
+                        None => future::err(
+                            ErrorKind::Bundle2Invalid("stream remainder was sent twice".into())
+                                .into(),
+                        ),
+                        Some(send) => {
+                            // Receiving end will deal with failures
+                            let _ = send.send(remainder);
+                            future::ok(None)
+                        }
+                    }
                 }
-                Err(err) => Err(err),
             }
         })
-        .filter_map(|val| val)
-        .boxify();
+        .boxed();
 
     (
         bundle2items,
-        recv.context("While extracting bundle2 remainder")
-            .from_err()
-            .boxify(),
+        async move { recv.await.context("Failed to extract bundle2 remainder") }.boxed(),
     )
 }
 
@@ -765,7 +648,8 @@ pub trait HgCommands {
 
 #[cfg(test)]
 mod test {
-    use bytes_old::BufMut;
+    use bytes::BufMut;
+    use futures::stream;
     use slog::o;
     use slog::Discard;
 
@@ -790,13 +674,13 @@ mod test {
         HgFileNodeId::new("1111111111111111111111111111111111111111".parse().unwrap())
     }
 
-    #[test]
-    fn hello() {
+    #[tokio::test]
+    async fn hello() -> Result<()> {
         let logger = Logger::root(Discard, o!());
         let handler = HgCommandHandler::new(logger, Dummy, None, None);
 
-        let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
-        let r = assert_one(r.wait().collect::<Vec<_>>());
+        let (r, _) = handler.handle(SingleRequest::Hello, StreamReader::new(stream::empty()));
+        let r = assert_one(r.collect::<Vec<_>>().await);
         println!("hello r = {:?}", r);
 
         let mut res: HashMap<String, Vec<String>> = HashMap::new();
@@ -806,57 +690,60 @@ mod test {
             Ok(SingleResponse::Hello(ref r)) if r == &res => {}
             bad => panic!("Bad result {:?}", bad),
         }
+
+        Ok(())
     }
 
-    #[test]
-    fn unimpl() {
+    #[tokio::test]
+    async fn unimpl() -> Result<()> {
         let logger = Logger::root(Discard, o!());
         let handler = HgCommandHandler::new(logger, Dummy, None, None);
 
-        let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));
-        let r = assert_one(r.wait().collect::<Vec<_>>());
+        let (r, _) = handler.handle(SingleRequest::Heads, StreamReader::new(stream::empty()));
+        let r = assert_one(r.collect::<Vec<_>>().await);
         println!("heads r = {:?}", r);
 
         match r {
             Err(ref err) => println!("got expected error {:?}", err),
             bad => panic!("Bad result {:?}", bad),
         }
+
+        Ok(())
     }
 
     #[test]
     fn getpackv1decoder() {
         let mut decoder = Getpackv1ArgDecoder::new();
         let mut buf = vec![];
-        buf.put_u16_be(0);
+        buf.put_u16(0);
         assert_eq!(
             decoder
-                .decode(&mut BytesMutOld::from(buf))
+                .decode(&mut BytesMut::from(buf.as_slice()))
                 .expect("unexpected error"),
             Some(None)
         );
 
         let mut buf = vec![];
         let path = NonRootMPath::new("file".as_bytes()).unwrap();
-        buf.put_u16_be(4);
+        buf.put_u16(4);
         buf.put_slice(&path.to_vec());
-        buf.put_u32_be(1);
+        buf.put_u32(1);
         buf.put_slice(hash_ones().as_bytes());
         assert_eq!(
             decoder
-                .decode(&mut BytesMutOld::from(buf))
+                .decode(&mut BytesMut::from(buf.as_slice()))
                 .expect("unexpected error"),
             Some(Some((path, vec![hash_ones()])))
         );
     }
 
-    #[test]
-    fn getpackv1() {
+    #[tokio::test]
+    async fn getpackv1() {
         let input = "\u{0}\u{4}path\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}";
-        let (paramstream, _input) = decode_getpack_arg_stream(
-            BytesStream::new(stream::once(Ok(BytesOld::from(input)))),
-            Getpackv1ArgDecoder::new,
-        );
-        let res = paramstream.collect().wait().unwrap();
+        let input = async move { Ok(Bytes::from(input)) };
+        let stream = StreamReader::new(stream::once(input.boxed()));
+        let (paramstream, _input) = decode_getpack_arg_stream(stream);
+        let res = paramstream.try_collect::<Vec<_>>().await.unwrap();
         assert_eq!(res, vec![(NonRootMPath::new("path").unwrap(), vec![])]);
     }
 }

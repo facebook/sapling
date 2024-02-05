@@ -9,32 +9,26 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::io::BufRead;
 use std::str;
 
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
-use bytes::Bytes;
 use bytes::BytesMut;
-use futures::compat::Stream01CompatExt;
 use futures::future;
+use futures::future::BoxFuture;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use futures_ext::BoxFuture;
-use futures_ext::FutureExt as _;
-use futures_ext::StreamExt as _;
-use futures_old::Future;
-use futures_old::Stream;
+use futures_ext::stream::FbStreamExt;
 use lazy_static::lazy_static;
 use maplit::hashset;
 use slog::o;
 use slog::warn;
 use slog::Logger;
-use tokio_io::AsyncRead;
+use tokio::io::AsyncBufRead;
 use tokio_util::codec::Decoder;
 
 use crate::capabilities;
@@ -43,7 +37,6 @@ use crate::errors::ErrorKind;
 use crate::infinitepush;
 use crate::part_header::PartHeader;
 use crate::part_header::PartHeaderType;
-use crate::part_outer::OuterFrame;
 use crate::part_outer::OuterStream;
 use crate::pushrebase;
 use crate::utils::decode_stream;
@@ -145,16 +138,20 @@ pub fn get_cg_unpacker(
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.
-pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
+pub(crate) fn inner_stream<R: AsyncBufRead + Send + 'static>(
     logger: Logger,
     header: PartHeader,
     stream: OuterStream<R>,
-) -> (Bundle2Item<'static>, BoxFuture<OuterStream<R>, Error>) {
+) -> (
+    Bundle2Item<'static>,
+    BoxFuture<'static, Result<OuterStream<R>, Error>>,
+) {
     let wrapped_stream = stream
-        .take_while(|frame| futures_old::future::ok(frame.is_payload()))
-        .map(OuterFrame::get_payload as fn(OuterFrame) -> Bytes);
+        .try_take_while(|frame| {
+            futures::future::ok(frame.as_ref().map_or(false, |frame| frame.is_payload()))
+        })
+        .map_ok(|frame| frame.unwrap().get_payload());
     let (wrapped_stream, remainder) = wrapped_stream.return_remainder();
-    let wrapped_stream = wrapped_stream.boxify().compat();
 
     let bundle2item = match *header.part_type() {
         PartHeaderType::Changegroup => {
@@ -262,9 +259,9 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
     (
         bundle2item,
         remainder
-            .map(|s| s.into_inner().into_inner())
-            .from_err()
-            .boxify(),
+            .map_ok(|s| s.into_inner().into_inner())
+            .map_err(Error::from)
+            .boxed(),
     )
 }
 

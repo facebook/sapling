@@ -13,8 +13,8 @@ use std::str::FromStr;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::Bytes as BytesOld;
-use bytes_old::BytesMut as BytesMutOld;
+use bytes::Bytes;
+use bytes::BytesMut;
 use hex::FromHex;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
@@ -121,16 +121,16 @@ named!(
 );
 
 named!(
-    batch_param_comma_separated<BytesOld>,
+    batch_param_comma_separated<Bytes>,
     map_res!(
         do_parse!(key: take_while!(notcomma) >> take!(1) >> (key)),
-        |k: &[u8]| { Ok::<_, Error>(BytesOld::from(batch::unescape(k)?)) }
+        |k: &[u8]| { Ok::<_, Error>(Bytes::from(batch::unescape(k)?)) }
     )
 );
 
 // List of comma-separated values, each of which is encoded using batch param encoding.
 named!(
-    gettreepack_directories<Vec<BytesOld>>,
+    gettreepack_directories<Vec<Bytes>>,
     complete!(many0!(batch_param_comma_separated))
 );
 
@@ -549,7 +549,7 @@ fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>> {
 
     let mut parsed_cmds = Vec::with_capacity(batch.cmds.len());
     for cmd in batch.cmds {
-        let full_cmd = BytesOld::from([cmd.0, cmd.1].join(&b'\n'));
+        let full_cmd = Bytes::from([cmd.0, cmd.1].join(&b'\n'));
         // Jump through hoops to prevent the lifetime of `full_cmd` from leaking into the IResult
         // via errors.
         let cmd = match complete!(&full_cmd[..], parse_cmd) {
@@ -567,7 +567,7 @@ fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>> {
     IResult::Done(rest, parsed_cmds)
 }
 
-pub fn parse_request(buf: &mut BytesMutOld) -> Result<Option<Request>> {
+pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
     let res = {
         let origlen = buf.len();
         let parse_res = alt!(
@@ -1236,19 +1236,19 @@ mod test_parse {
 
         // check for short inputs
         for l in 0..inbytes.len() - 1 {
-            let mut buf = BytesMutOld::from(inbytes[0..l].to_vec());
+            let mut buf = BytesMut::from(&inbytes[0..l]);
             match parse_request(&mut buf) {
                 Ok(None) => {}
                 Ok(Some(val)) => panic!(
                     "BAD PASS: inp >>{:?}<< lpassed unexpectedly val {:?} pass with {}/{} bytes",
-                    BytesOld::from(inbytes.to_vec()),
+                    Bytes::from(inbytes.to_vec()),
                     val,
                     l,
                     inbytes.len()
                 ),
                 Err(err) => panic!(
                     "BAD FAIL: inp >>{:?}<< failed {:?} (not incomplete) with {}/{} bytes",
-                    BytesOld::from(inbytes.to_vec()),
+                    Bytes::from(inbytes.to_vec()),
                     err,
                     l,
                     inbytes.len()
@@ -1258,21 +1258,21 @@ mod test_parse {
 
         // check for exact and extra
         for l in 0..extra.len() {
-            let mut buf = BytesMutOld::from(inbytes.to_vec());
+            let mut buf = BytesMut::from(inbytes);
             buf.extend_from_slice(&extra[0..l]);
             let buflen = buf.len();
             match parse_request(&mut buf) {
                 Ok(Some(val)) => assert_eq!(val, exp, "with {}/{} bytes", buflen, inbytes.len()),
                 Ok(None) => panic!(
                     "BAD INCOMPLETE: inp >>{:?}<< extra {} incomplete {}/{} bytes",
-                    BytesOld::from(inbytes.to_vec()),
+                    Bytes::from(inbytes.to_vec()),
                     l,
                     buflen,
                     inbytes.len()
                 ),
                 Err(err) => panic!(
                     "BAD FAIL: inp >>{:?}<< extra {} failed {:?} (not incomplete) with {}/{} bytes",
-                    BytesOld::from(inbytes.to_vec()),
+                    Bytes::from(inbytes.to_vec()),
                     l,
                     err,
                     buflen,
@@ -1514,7 +1514,7 @@ mod test_parse {
                 rootdir: MPath::new("ololo").unwrap(),
                 mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
-                directories: vec![BytesOld::from("".as_bytes())],
+                directories: vec![Bytes::from("".as_bytes())],
                 depth: Some(1),
             })),
         );
@@ -1538,10 +1538,7 @@ mod test_parse {
                 rootdir: MPath::new("ololo").unwrap(),
                 mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
-                directories: vec![
-                    BytesOld::from(",".as_bytes()),
-                    BytesOld::from(";".as_bytes()),
-                ],
+                directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
                 depth: Some(1),
             })),
         );
@@ -1562,10 +1559,7 @@ mod test_parse {
                 rootdir: MPath::ROOT,
                 mfnodes: vec![hash_ones_manifest()],
                 basemfnodes: btreeset![hash_ones_manifest()],
-                directories: vec![
-                    BytesOld::from(b"".as_ref()),
-                    BytesOld::from(b"foo".as_ref()),
-                ],
+                directories: vec![Bytes::from(b"".as_ref()), Bytes::from(b"foo".as_ref())],
                 depth: None,
             })),
         );

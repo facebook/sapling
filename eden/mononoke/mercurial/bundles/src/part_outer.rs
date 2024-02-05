@@ -9,25 +9,22 @@
 //! stream-level parameters (see `stream_start` for those). This parses bundle2
 //! part headers and puts together chunks for inner codecs to parse.
 
-use std::io::BufRead;
 use std::mem;
+use std::pin::Pin;
 
 use anyhow::Error;
 use anyhow::Result;
-use async_compression::Decompressor;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes::Buf;
 use bytes::Bytes;
-use bytes_old::BytesMut as BytesMutOld;
-use futures_ext::io::Either;
-use futures_ext::io::Either::A as UncompressedRead;
-use futures_ext::io::Either::B as CompressedRead;
-use limited_async_read::LimitedAsyncRead;
+use bytes::BytesMut;
 use slog::debug;
 use slog::o;
 use slog::Logger;
-use tokio_codec::Decoder;
-use tokio_codec::Framed;
-use tokio_codec::FramedParts;
-use tokio_io::AsyncRead;
+use tokio::io::AsyncBufRead;
+use tokio_util::codec::Decoder;
+use tokio_util::codec::FramedRead;
 
 use crate::errors::ErrorKind;
 use crate::part_header;
@@ -36,35 +33,25 @@ use crate::part_header::PartHeaderType;
 use crate::part_header::PartId;
 use crate::part_inner::validate_header;
 use crate::types::StreamHeader;
-use crate::utils::get_decompressor_type;
-use crate::utils::BytesExt;
+use crate::utils::Decompressor;
 
-pub fn outer_stream<R: AsyncRead + BufRead + Send + 'static>(
+pub fn outer_stream<R: AsyncBufRead + Send + 'static>(
     logger: Logger,
     stream_header: &StreamHeader,
-    r: R,
+    read: R,
 ) -> Result<OuterStream<R>> {
-    let decompressor_type = get_decompressor_type(
-        stream_header
-            .m_stream_params
-            .get("compression")
-            .map(String::as_ref),
-    )?;
+    let compression = stream_header
+        .m_stream_params
+        .get("compression")
+        .map(String::as_ref);
 
-    Ok(Framed::from_parts(FramedParts::new(
-        match decompressor_type {
-            None => UncompressedRead(r),
-            Some(decompressor_type) => CompressedRead(LimitedAsyncRead::new(Decompressor::new(
-                r,
-                decompressor_type,
-            ))),
-        },
+    Ok(Box::pin(FramedRead::new(
+        Decompressor::new(read, compression)?,
         OuterDecoder::new(logger.new(o!("stream" => "outer"))),
     )))
 }
 
-pub type OuterStream<R> =
-    Framed<Either<R, LimitedAsyncRead<Decompressor<'static, R>>>, OuterDecoder>;
+pub type OuterStream<R> = Pin<Box<FramedRead<Decompressor<R>, OuterDecoder>>>;
 
 #[derive(Debug)]
 enum OuterState {
@@ -83,7 +70,7 @@ impl OuterState {
         mem::replace(self, OuterState::Invalid)
     }
 
-    pub fn payload_frame(&self, data: BytesMutOld) -> OuterFrame {
+    pub fn payload_frame(&self, data: BytesMut) -> OuterFrame {
         match *self {
             OuterState::Payload {
                 ref part_type,
@@ -91,7 +78,7 @@ impl OuterState {
             } => OuterFrame::Payload {
                 part_type: part_type.clone(),
                 part_id: *part_id,
-                payload: bytes_ext::copy_from_old(data.freeze()),
+                payload: data.freeze(),
             },
             OuterState::DiscardPayload => OuterFrame::Discard,
             _ => panic!("payload_frame called for state without payloads"),
@@ -116,10 +103,13 @@ pub struct OuterDecoder {
 }
 
 impl Decoder for OuterDecoder {
-    type Item = OuterFrame;
+    // The decoder may be able to recover from errors, in which case the
+    // decoded item will be `Err(_)` with the recoverable error.
+    type Item = Result<OuterFrame>;
+    // Unrecoverable errors are returned at the outer level.
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         let (ret, next_state) = Self::decode_next(&self.logger, buf, self.state.take());
         self.state = next_state;
         ret
@@ -134,11 +124,16 @@ impl OuterDecoder {
         }
     }
 
+    /// Decode the next frame.
+    ///
+    /// Frame decoding may be recoverable in the case of application-level
+    /// errors.  In which case, this function returns `Ok(Some(Err(_)))`, and
+    /// the stream may continue.
     fn decode_next(
         logger: &Logger,
-        buf: &mut BytesMutOld,
+        buf: &mut BytesMut,
         mut state: OuterState,
-    ) -> (Result<Option<OuterFrame>>, OuterState) {
+    ) -> (Result<Option<Result<OuterFrame>>>, OuterState) {
         // TODO: the only state valid when the stream terminates is
         // StreamEnd. Communicate that to callers.
         match state.take() {
@@ -153,7 +148,7 @@ impl OuterDecoder {
                     return (Ok(None), OuterState::Header);
                 }
 
-                let header_len = buf.peek_u32() as usize;
+                let header_len = BigEndian::read_u32(&buf[..4]) as usize;
                 if buf.len() < 4 + header_len {
                     return (Ok(None), OuterState::Header);
                 }
@@ -161,18 +156,15 @@ impl OuterDecoder {
                 let _ = buf.split_to(4);
                 if header_len == 0 {
                     // A zero-length header indicates that the stream has ended.
-                    return (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd);
+                    return (Ok(Some(Ok(OuterFrame::StreamEnd))), OuterState::StreamEnd);
                 }
 
-                let part_header = Self::decode_header(
-                    logger,
-                    bytes_ext::copy_from_old(buf.split_to(header_len).freeze()),
-                );
+                let part_header = Self::decode_header(logger, buf.split_to(header_len).freeze());
                 if let Err(e) = part_header {
                     let next = match e.downcast::<ErrorKind>() {
                         Ok(ek) => {
                             if ek.is_app_error() {
-                                (Err(ek.into()), OuterState::DiscardPayload)
+                                (Ok(Some(Err(ek.into()))), OuterState::DiscardPayload)
                             } else {
                                 (Err(ek.into()), OuterState::Invalid)
                             }
@@ -185,12 +177,15 @@ impl OuterDecoder {
                 // If no part header was returned, this part wasn't
                 // recognized. Throw it away.
                 match part_header {
-                    None => (Ok(Some(OuterFrame::Discard)), OuterState::DiscardPayload),
+                    None => (
+                        Ok(Some(Ok(OuterFrame::Discard))),
+                        OuterState::DiscardPayload,
+                    ),
                     Some(header) => {
                         let part_type = *header.part_type();
                         let part_id = header.part_id();
                         (
-                            Ok(Some(OuterFrame::Header(header))),
+                            Ok(Some(Ok(OuterFrame::Header(header)))),
                             OuterState::Payload { part_type, part_id },
                         )
                     }
@@ -199,10 +194,10 @@ impl OuterDecoder {
 
             cur_state @ OuterState::Payload { .. } | cur_state @ OuterState::DiscardPayload => {
                 let (payload, next_state) = Self::decode_payload(buf, cur_state);
-                (payload, next_state)
+                (Ok(payload.transpose()), next_state)
             }
 
-            OuterState::StreamEnd => (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd),
+            OuterState::StreamEnd => (Ok(Some(Ok(OuterFrame::StreamEnd))), OuterState::StreamEnd),
 
             OuterState::Invalid => (
                 Err(ErrorKind::Bundle2Decode("byte stream corrupt".into()).into()),
@@ -226,7 +221,7 @@ impl OuterDecoder {
     }
 
     fn decode_payload(
-        buf: &mut BytesMutOld,
+        buf: &mut BytesMut,
         state: OuterState,
     ) -> (Result<Option<OuterFrame>>, OuterState) {
         if buf.len() < 4 {
@@ -244,9 +239,9 @@ impl OuterDecoder {
         // TODO: -1 means this part has been interrupted. Handle that
         // case.
 
-        let total_len = buf.peek_i32();
+        let total_len = BigEndian::read_u32(&buf[..4]);
         if total_len == 0 {
-            let _ = buf.drain_i32();
+            let _ = buf.get_i32();
             // A zero-size chunk indicates that this part has
             // ended. More parts might be coming up, so go back to the
             // header state.
@@ -258,7 +253,7 @@ impl OuterDecoder {
     }
 
     fn decode_payload_chunk(
-        buf: &mut BytesMutOld,
+        buf: &mut BytesMut,
         state: &OuterState,
         total_len: usize,
     ) -> Option<OuterFrame> {
@@ -267,7 +262,7 @@ impl OuterDecoder {
             return None;
         }
 
-        let _ = buf.drain_i32();
+        let _ = buf.get_i32();
         let chunk = buf.split_to(total_len);
 
         Some(state.payload_frame(chunk))

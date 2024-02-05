@@ -19,7 +19,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
-use bytes_old::Bytes as BytesOld;
+use bytes::Bytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 
@@ -182,7 +182,7 @@ pub struct GettreepackArgs {
     pub basemfnodes: BTreeSet<HgManifestId>,
     /// The fullpath (not relative path) of directories underneath
     /// the rootdir that should be sent.
-    pub directories: Vec<BytesOld>,
+    pub directories: Vec<Bytes>,
     /// The depth from the root that should be sent.
     pub depth: Option<usize>,
 }
@@ -199,22 +199,22 @@ pub enum SingleResponse {
     Branchmap(HashMap<String, HashSet<HgChangesetId>>),
     Capabilities(Vec<String>),
     ClientTelemetry(String),
-    Debugwireargs(BytesOld),
-    Getbundle(BytesOld),
+    Debugwireargs(Bytes),
+    Getbundle(Bytes),
     Heads(HashSet<HgChangesetId>),
     Hello(HashMap<String, Vec<String>>),
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
     ListKeysPatterns(BTreeMap<String, HgChangesetId>),
-    Lookup(BytesOld),
+    Lookup(Bytes),
     Known(Vec<bool>),
     Knownnodes(Vec<bool>),
     ReadyForStream,
-    Unbundle(BytesOld),
-    Gettreepack(BytesOld),
-    StreamOutShallow(BytesOld),
-    Getpackv1(BytesOld),
-    Getpackv2(BytesOld),
-    GetCommitData(BytesOld),
+    Unbundle(Bytes),
+    Gettreepack(Bytes),
+    StreamOutShallow(Bytes),
+    Getpackv1(Bytes),
+    Getpackv2(Bytes),
+    GetCommitData(Bytes),
 }
 
 impl SingleResponse {

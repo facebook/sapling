@@ -15,62 +15,54 @@
 //! 0-sized chunk is the indication of end of stream, so a proper stream of data should not
 //! contain empty chunks inside.
 
-use std::io;
-use std::io::BufRead;
-use std::io::Read;
+use std::io::Result as IoResult;
+use std::pin::Pin;
+use std::task::Context;
+use std::task::Poll;
 
-use futures_old::future::poll_fn;
-use futures_old::Async;
-use futures_old::Future;
-use tokio_io::AsyncRead;
+use futures::ready;
+use pin_project::pin_project;
+use tokio::io::AsyncBufRead;
+use tokio::io::AsyncRead;
+use tokio::io::ReadBuf;
 
-/// Structure that wraps around a `AsyncRead + BufRead` object to provide chunked-based encoding
+/// Structure that wraps around a `AsyncBufRead` object to provide chunked-based encoding
 /// over it. See this module's doc for the description of the format.
 ///
-/// This structure ensures that you don't override the underlying BufRead, so if you read EOF while
+/// This structure ensures that you don't override the underlying AsyncBufRead, so if you read EOF while
 /// reading from `Dechunker` and call `Dechunker::into_inner` on it then you will get the original
-/// `BufRead` object that contains data following the encoded chunks.
+/// `AsyncBufRead` object that contains data following the encoded chunks.
+#[pin_project]
 pub struct Dechunker<R> {
+    #[pin]
     bufread: R,
     state: DechunkerState,
 }
 
 enum DechunkerState {
-    ParsingInt(Vec<u8>),
+    ParsingInt,
     ReadingChunk(usize),
     Done,
 }
 
-use self::DechunkerState::*;
-
 impl<R> Dechunker<R>
 where
-    R: AsyncRead + BufRead,
+    R: AsyncBufRead,
 {
     pub fn new(bufread: R) -> Self {
         Self {
             bufread,
-            state: ParsingInt(Vec::new()),
+            state: DechunkerState::ParsingInt,
         }
     }
 
-    pub fn check_is_done(self) -> impl Future<Item = (bool, Self), Error = io::Error> {
-        let mut this = Some(self);
-        poll_fn(move || {
-            let is_done = match this {
-                None => panic!("called poll after completed"),
-                Some(ref mut this) => match this.fill_buf() {
-                    Ok(t) => t.is_empty(),
-                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                        return Ok(Async::NotReady);
-                    }
-                    Err(e) => return Err(e),
-                },
-            };
-
-            let this = this.take().expect("This was Some few lines above");
-            Ok(Async::Ready((is_done, this)))
-        })
+    #[cfg(test)]
+    pub async fn is_done(&mut self) -> IoResult<bool>
+    where
+        Self: Unpin,
+    {
+        use tokio::io::AsyncBufReadExt;
+        Ok(self.fill_buf().await?.is_empty())
     }
 
     pub fn into_inner(self) -> R {
@@ -88,108 +80,122 @@ where
     ///
     /// If the integer parsed was of value `0` then the parsing is done, otherwise we continue by
     /// reading a chunk of the size equal to the provided integer.
-    fn advance_parsing_int(&mut self) -> io::Result<()> {
-        let chunk_size = match &mut self.state {
-            &mut ParsingInt(ref mut buf) => {
-                self.bufread.read_until(b'\n', buf)?;
-
-                let mut size = 0;
-                for inp in &*buf {
-                    match *inp {
-                        digit @ b'0'..=b'9' => size = size * 10 + ((digit - b'0') as usize),
-                        b'\n' => break,
+    fn advance_parsing_int(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<IoResult<usize>> {
+        let mut this = self.project();
+        match this.state {
+            DechunkerState::ParsingInt => {
+                let available = ready!(this.bufread.as_mut().poll_fill_buf(cx))?;
+                let mut size = 0usize;
+                for (idx, ch) in available.iter().enumerate() {
+                    match ch {
+                        b'0'..=b'9' => {
+                            size = size
+                                .checked_mul(10)
+                                .and_then(|s| s.checked_add((ch - b'0') as usize))
+                                .ok_or_else(|| {
+                                    std::io::Error::new(
+                                        std::io::ErrorKind::InvalidData,
+                                        format!(
+                                            "Failed to parse int for Dechunker from '{:?}'",
+                                            &available[..idx + 1]
+                                        ),
+                                    )
+                                })?
+                        }
+                        b'\n' => {
+                            this.bufread.as_mut().consume(idx + 1);
+                            if size == 0 {
+                                *this.state = DechunkerState::Done;
+                            } else {
+                                *this.state = DechunkerState::ReadingChunk(size);
+                            }
+                            return Poll::Ready(Ok(size));
+                        }
                         _ => {
-                            return Err(io::Error::new(
-                                io::ErrorKind::InvalidData,
-                                format!("Failed to parse int for Dechunker from '{:?}'", buf),
-                            ));
+                            return Poll::Ready(Err(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                format!(
+                                    "Failed to parse int for Dechunker from '{:?}'",
+                                    &available[..idx + 1]
+                                ),
+                            )));
                         }
                     }
                 }
-
-                size
+                Poll::Ready(Ok(0))
             }
-            _ => return Ok(()),
-        };
-
-        if chunk_size == 0 {
-            self.state = Done;
-        } else {
-            self.state = ReadingChunk(chunk_size);
+            DechunkerState::ReadingChunk(size) => Poll::Ready(Ok(*size)),
+            DechunkerState::Done => Poll::Ready(Ok(0)),
         }
-        Ok(())
     }
+}
 
+impl DechunkerState {
     fn consume_chunk(&mut self, amt: usize) {
         if amt > 0 {
-            let chunk_size = match &self.state {
-                ReadingChunk(chunk_size) => *chunk_size,
+            let chunk_size = match self {
+                DechunkerState::ReadingChunk(chunk_size) => *chunk_size,
                 _ => panic!("Trying to consume bytes while internally not reading chunk yet"),
             };
 
             if amt == chunk_size {
-                self.state = ParsingInt(Vec::new());
+                *self = DechunkerState::ParsingInt;
             } else {
                 assert!(
                     chunk_size > amt,
                     "Trying to consume more bytes than the size of chunk"
                 );
-                self.state = ReadingChunk(chunk_size - amt);
+                *self = DechunkerState::ReadingChunk(chunk_size - amt);
             }
         }
     }
 }
 
-impl<R> Read for Dechunker<R>
+impl<R> AsyncRead for Dechunker<R>
 where
-    R: AsyncRead + BufRead,
+    R: AsyncBufRead,
 {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.advance_parsing_int()?;
-        let chunk_size = match self.state {
-            ParsingInt(_) => panic!("expected to get pass parsing int state"),
-            ReadingChunk(ref chunk_size) => *chunk_size,
-            Done => return Ok(0),
-        };
-
-        let buf_size = if buf.len() > chunk_size {
-            chunk_size
-        } else {
-            buf.len()
-        };
-
-        let buf_size = self.bufread.read(&mut buf[0..buf_size])?;
-        self.consume_chunk(buf_size);
-        Ok(buf_size)
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<IoResult<()>> {
+        let size = ready!(self.as_mut().advance_parsing_int(cx))?;
+        if size > 0 {
+            let mut remaining = buf.take(size);
+            let this = self.project();
+            ready!(this.bufread.poll_read(cx, &mut remaining))?;
+            let amt = remaining.filled().len();
+            unsafe {
+                // SAFETY: initialized by the inner call to `poll_read`.
+                buf.assume_init(amt);
+            }
+            buf.advance(amt);
+            this.state.consume_chunk(amt);
+        }
+        Poll::Ready(Ok(()))
     }
 }
 
-impl<R> AsyncRead for Dechunker<R> where R: AsyncRead + BufRead {}
-
-impl<R> BufRead for Dechunker<R>
+impl<R> AsyncBufRead for Dechunker<R>
 where
-    R: AsyncRead + BufRead,
+    R: AsyncBufRead,
 {
-    fn fill_buf(&mut self) -> io::Result<&[u8]> {
-        self.advance_parsing_int()?;
-        let chunk_size = match self.state {
-            ParsingInt(_) => panic!("expected to get pass parsing int state"),
-            ReadingChunk(ref chunk_size) => *chunk_size,
-            Done => return Ok(&[]),
-        };
-
-        let buf = self.bufread.fill_buf()?;
-        let buf_size = if buf.len() > chunk_size {
-            chunk_size
+    fn poll_fill_buf(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<IoResult<&[u8]>> {
+        let size = ready!(self.as_mut().advance_parsing_int(cx))?;
+        if size > 0 {
+            let buf = ready!(self.project().bufread.poll_fill_buf(cx))?;
+            let max = std::cmp::min(buf.len(), size);
+            Poll::Ready(Ok(&buf[0..max]))
         } else {
-            buf.len()
-        };
-        Ok(&buf[0..buf_size])
+            Poll::Ready(Ok(&[]))
+        }
     }
 
-    fn consume(&mut self, amt: usize) {
-        self.consume_chunk(amt);
-        self.bufread.consume(amt);
+    fn consume(self: Pin<&mut Self>, amt: usize) {
+        let this = self.project();
+        this.state.consume_chunk(amt);
+        this.bufread.consume(amt);
     }
 }
 
@@ -203,6 +209,9 @@ mod tests {
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
     use quickcheck::TestResult;
+    use tokio::io::AsyncBufReadExt;
+    use tokio::io::AsyncReadExt;
+    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -234,33 +243,35 @@ mod tests {
 
     quickcheck! {
         fn test_bufread_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
+            let runtime = Runtime::new().unwrap();
             let chunks = &chunks;
             let remainder = remainder.as_slice();
             let concat_chunks = concat_chunks(chunks, remainder);
 
             let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
-            match check_bufread_api(
+            match runtime.block_on(check_bufread_api(
                 dechunker,
                 chunks,
                 remainder,
-            ) {
+            )) {
                 Ok(()) => TestResult::passed(),
                 Err(e) =>TestResult::error(format!("{}", e)),
             }
         }
 
         fn test_read_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
+            let runtime = Runtime::new().unwrap();
             let chunks = &chunks;
             let remainder = remainder.as_slice();
             let concat_chunks = concat_chunks(chunks, remainder);
 
             let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
 
-            match check_read_api(
+            match runtime.block_on(check_read_api(
                 dechunker,
                 chunks,
                 remainder,
-            ) {
+            )) {
                 Ok(()) => TestResult::passed(),
                 Err(e) => TestResult::error(format!("{}", e)),
             }
@@ -278,14 +289,14 @@ mod tests {
         buf
     }
 
-    fn check_bufread_api<R: AsyncRead + BufRead>(
+    async fn check_bufread_api<R: AsyncBufRead + Unpin>(
         mut d: Dechunker<R>,
         chunks: &Chunks,
         remainder: &[u8],
     ) -> Result<()> {
         for chunk in &chunks.0 {
             let buf_len = {
-                let buf = d.fill_buf()?;
+                let buf = d.fill_buf().await?;
                 ensure!(
                     buf == chunk.as_slice(),
                     "expected {:?} found {:?} in bufread api check",
@@ -297,15 +308,15 @@ mod tests {
             d.consume(buf_len);
         }
 
-        check_remainder(d, remainder)
+        check_remainder(d, remainder).await
     }
 
-    fn check_read_api<R: AsyncRead + BufRead>(
+    async fn check_read_api<R: AsyncBufRead + Unpin>(
         mut d: Dechunker<R>,
         chunks: &Chunks,
         remainder: &[u8],
     ) -> Result<()> {
-        let concat_chunks = {
+        let all_chunks = {
             let mut buf = Vec::new();
             for chunk in &chunks.0 {
                 buf.extend_from_slice(chunk.as_slice());
@@ -314,30 +325,32 @@ mod tests {
         };
 
         let mut buf = Vec::new();
-        let buf_len = d.read_to_end(&mut buf)?;
+        let buf_len = d.read_to_end(&mut buf).await?;
         ensure!(
-            buf_len == concat_chunks.len(),
+            buf_len == all_chunks.len(),
             "expected read_to_end {:?} bytes, but read {:?}",
-            concat_chunks.len(),
+            all_chunks.len(),
             buf_len
         );
         ensure!(
-            buf == concat_chunks,
+            buf == all_chunks,
             "expected read_to_end {:?}, but read {:?}",
-            concat_chunks,
+            all_chunks,
             buf
         );
 
-        check_remainder(d, remainder)
+        check_remainder(d, remainder).await
     }
 
-    fn check_remainder<R: AsyncRead + BufRead>(d: Dechunker<R>, remainder: &[u8]) -> Result<()> {
-        let (is_done, d) = d.check_is_done().wait()?;
-        ensure!(is_done, "expected the dechunker to be done");
+    async fn check_remainder<R: AsyncBufRead + Unpin>(
+        mut d: Dechunker<R>,
+        remainder: &[u8],
+    ) -> Result<()> {
+        ensure!(d.is_done().await?, "expected the dechunker to be done");
 
         let mut inner = d.into_inner();
         let mut buf = Vec::new();
-        let buf_len = inner.read_to_end(&mut buf)?;
+        let buf_len = inner.read_to_end(&mut buf).await?;
         ensure!(
             buf_len == remainder.len(),
             "expected read_to_end {:?} bytes from inner reader, but read {:?}",

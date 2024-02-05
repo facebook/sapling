@@ -30,7 +30,7 @@ use super::Kind;
 use super::Part;
 use super::WIREPACK_END;
 use crate::errors::ErrorKind;
-use crate::utils::BytesNewExt;
+use crate::utils::BytesExt;
 
 #[derive(Debug)]
 pub struct WirePackUnpacker {

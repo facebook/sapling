@@ -31,7 +31,7 @@ use super::Part;
 use super::Section;
 use crate::delta;
 use crate::errors::ErrorKind;
-use crate::utils::BytesNewExt;
+use crate::utils::BytesExt;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CgVersion {

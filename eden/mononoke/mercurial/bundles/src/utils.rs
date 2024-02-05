@@ -7,37 +7,41 @@
 
 //! Utilities for decoding bundles.
 
-use std::ops::Deref;
+use std::io::Result as IoResult;
+use std::pin::Pin;
 use std::str;
+use std::task::Context;
+use std::task::Poll;
 
 use anyhow::bail;
-use anyhow::Context;
-use anyhow::Error;
+use anyhow::Context as _;
 use anyhow::Result;
-use async_compression::DecompressorType;
+use async_compression::tokio::bufread::BzDecoder;
+use async_compression::tokio::bufread::GzipDecoder;
+use async_compression::tokio::bufread::ZstdDecoder;
 use async_stream::try_stream;
-use byteorder::BigEndian;
-use byteorder::ByteOrder;
 use bytes::Bytes;
 use bytes::BytesMut;
-use bytes_old::Bytes as BytesOld;
-use bytes_old::BytesMut as BytesMutOld;
 use futures::pin_mut;
 use futures::Stream;
 use futures::TryStreamExt;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
+use pin_project::pin_project;
+use tokio::io::AsyncBufRead;
+use tokio::io::AsyncRead;
+use tokio::io::ReadBuf;
 use tokio_util::codec::Decoder;
 
 use crate::errors::ErrorKind;
 
-pub trait BytesNewExt {
+pub trait BytesExt {
     fn get_str(&mut self, len: usize) -> Result<String>;
     fn get_path(&mut self, len: usize) -> Result<NonRootMPath>;
     fn get_node(&mut self) -> Result<HgNodeHash>;
 }
 
-impl BytesNewExt for Bytes {
+impl BytesExt for Bytes {
     fn get_str(&mut self, len: usize) -> Result<String> {
         std::str::from_utf8(self.split_to(len).as_ref())
             .context("invalid UTF-8")
@@ -52,7 +56,7 @@ impl BytesNewExt for Bytes {
     }
 }
 
-impl BytesNewExt for BytesMut {
+impl BytesExt for BytesMut {
     fn get_str(&mut self, len: usize) -> Result<String> {
         std::str::from_utf8(self.split_to(len).as_ref())
             .context("invalid UTF-8")
@@ -64,104 +68,6 @@ impl BytesNewExt for BytesMut {
     fn get_node(&mut self) -> Result<HgNodeHash> {
         // This only fails if the size of input passed in isn't 20 bytes.
         HgNodeHash::from_bytes(self.split_to(20).as_ref()).context("insufficient bytes in input")
-    }
-}
-
-pub trait SplitTo {
-    fn split_to(&mut self, at: usize) -> Self;
-}
-
-impl SplitTo for BytesOld {
-    #[inline]
-    fn split_to(&mut self, at: usize) -> Self {
-        BytesOld::split_to(self, at)
-    }
-}
-
-impl SplitTo for BytesMutOld {
-    #[inline]
-    fn split_to(&mut self, at: usize) -> Self {
-        BytesMutOld::split_to(self, at)
-    }
-}
-
-pub trait BytesExt {
-    fn drain_u8(&mut self) -> u8;
-    fn drain_u16(&mut self) -> u16;
-    fn drain_u32(&mut self) -> u32;
-    fn drain_u64(&mut self) -> u64;
-    fn drain_i32(&mut self) -> i32;
-    fn drain_str(&mut self, len: usize) -> Result<String>;
-    fn drain_path(&mut self, len: usize) -> Result<NonRootMPath>;
-    fn drain_node(&mut self) -> HgNodeHash;
-    fn peek_u16(&self) -> u16;
-    fn peek_u32(&self) -> u32;
-    fn peek_i32(&self) -> i32;
-}
-
-impl<T> BytesExt for T
-where
-    T: SplitTo + AsRef<[u8]> + Deref<Target = [u8]>,
-{
-    #[inline]
-    fn drain_u8(&mut self) -> u8 {
-        self.split_to(1)[0]
-    }
-
-    #[inline]
-    fn drain_u16(&mut self) -> u16 {
-        BigEndian::read_u16(self.split_to(2).as_ref())
-    }
-
-    #[inline]
-    fn drain_u32(&mut self) -> u32 {
-        BigEndian::read_u32(self.split_to(4).as_ref())
-    }
-
-    #[inline]
-    fn drain_u64(&mut self) -> u64 {
-        BigEndian::read_u64(self.split_to(8).as_ref())
-    }
-
-    #[inline]
-    fn drain_i32(&mut self) -> i32 {
-        BigEndian::read_i32(self.split_to(4).as_ref())
-    }
-
-    #[inline]
-    fn drain_str(&mut self, len: usize) -> Result<String> {
-        Ok(str::from_utf8(self.split_to(len).as_ref())
-            .context("invalid UTF-8")?
-            .into())
-    }
-
-    #[inline]
-    fn drain_path(&mut self, len: usize) -> Result<NonRootMPath> {
-        NonRootMPath::new(self.split_to(len))
-            .context("invalid path")
-            .map_err(Error::from)
-    }
-
-    #[inline]
-    fn drain_node(&mut self) -> HgNodeHash {
-        // This only fails if the size of input passed in isn't 20
-        // bytes. drain_to would have panicked in that case anyway.
-        HgNodeHash::from_bytes(self.split_to(20).as_ref()).unwrap()
-    }
-
-    #[inline]
-    fn peek_u16(&self) -> u16 {
-        BigEndian::read_u16(&self[..2])
-    }
-
-    #[inline]
-    fn peek_u32(&self) -> u32 {
-        BigEndian::read_u32(&self[..4])
-    }
-
-    #[inline]
-    fn peek_i32(&self) -> i32 {
-        BigEndian::read_i32(&self[..4])
     }
 }
 
@@ -177,17 +83,50 @@ pub fn is_mandatory_param(s: &str) -> Result<bool> {
     }
 }
 
-pub fn get_decompressor_type(compression: Option<&str>) -> Result<Option<DecompressorType>> {
-    match compression {
-        Some("BZ") => Ok(Some(DecompressorType::Bzip2)),
-        Some("GZ") => Ok(Some(DecompressorType::Gzip)),
-        Some("ZS") => Ok(Some(DecompressorType::OverreadingZstd)),
-        Some("UN") => Ok(None),
-        Some(s) => bail!(ErrorKind::Bundle2Decode(format!(
-            "unknown compression '{}'",
-            s
-        ),)),
-        None => Ok(None),
+#[pin_project(project = DecompressorProj)]
+pub enum Decompressor<R: AsyncBufRead> {
+    Uncompressed(#[pin] R),
+    Bzip2(#[pin] BzDecoder<R>),
+    Gzip(#[pin] GzipDecoder<R>),
+    Zstd(#[pin] ZstdDecoder<R>),
+}
+
+impl<R: AsyncBufRead> Decompressor<R> {
+    pub fn new(read: R, compression: Option<&str>) -> Result<Self> {
+        match compression {
+            Some("BZ") => Ok(Self::Bzip2(BzDecoder::new(read))),
+            Some("GZ") => Ok(Self::Gzip(GzipDecoder::new(read))),
+            Some("ZS") => Ok(Self::Zstd(ZstdDecoder::new(read))),
+            Some("UN") | None => Ok(Self::Uncompressed(read)),
+            Some(s) => bail!(ErrorKind::Bundle2Decode(format!(
+                "unknown compression '{}'",
+                s
+            ),)),
+        }
+    }
+
+    pub fn into_inner(self) -> R {
+        match self {
+            Self::Uncompressed(read) => read,
+            Self::Bzip2(decoder) => decoder.into_inner(),
+            Self::Gzip(decoder) => decoder.into_inner(),
+            Self::Zstd(decoder) => decoder.into_inner(),
+        }
+    }
+}
+
+impl<R: AsyncBufRead> AsyncRead for Decompressor<R> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<IoResult<()>> {
+        match self.project() {
+            DecompressorProj::Uncompressed(r) => r.poll_read(cx, buf),
+            DecompressorProj::Bzip2(r) => r.poll_read(cx, buf),
+            DecompressorProj::Gzip(r) => r.poll_read(cx, buf),
+            DecompressorProj::Zstd(r) => r.poll_read(cx, buf),
+        }
     }
 }
 

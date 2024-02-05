@@ -20,7 +20,7 @@ use quickcheck::Gen;
 
 use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
-use crate::utils::BytesNewExt;
+use crate::utils::BytesExt;
 
 pub type PartId = u32;
 
