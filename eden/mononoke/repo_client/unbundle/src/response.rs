@@ -16,14 +16,13 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
-use futures::compat::Stream01CompatExt;
 use futures::future::try_join;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use getbundle_response::create_getbundle_response;
 use getbundle_response::PhasesPart;
 use getbundle_response::SessionLfsParams;
-use mercurial_bundles::create_bundle_stream;
+use mercurial_bundles::create_bundle_stream_new;
 use mercurial_bundles::parts;
 use mercurial_bundles::Bundle2EncodeBuilder;
 use mercurial_bundles::PartId;
@@ -171,8 +170,7 @@ impl UnbundleResponse {
             cg_part_builder.extend(bookmark_reply_part.into_iter());
             cg_part_builder.extend(obsmarkers_part.into_iter());
             let compression = None;
-            let chunks = create_bundle_stream(cg_part_builder, compression)
-                .compat()
+            let chunks = create_bundle_stream_new(cg_part_builder, compression)
                 .try_collect::<Vec<_>>()
                 .await?;
 

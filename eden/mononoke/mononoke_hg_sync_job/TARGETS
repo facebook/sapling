@@ -13,7 +13,6 @@ rust_binary(
         "schemas/**/*.sql",
     ]),
     named_deps = {
-        "bytes-old": "fbsource//third-party/rust:bytes-old",
         "clap-old": "fbsource//third-party/rust:clap-2",
     },
     test_deps = [

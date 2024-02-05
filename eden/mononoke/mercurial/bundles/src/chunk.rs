@@ -8,6 +8,7 @@
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use bytes::Bytes as BytesNew;
 use bytes_old::BufMut;
 use bytes_old::Bytes;
 use bytes_old::BytesMut;
@@ -54,6 +55,11 @@ impl Chunk {
             )));
         }
         Ok(Chunk(ChunkInner::Normal(bytes)))
+    }
+
+    pub fn new_new(val: impl Into<BytesNew>) -> Result<Self> {
+        let bytes: BytesNew = val.into();
+        Self::new(bytes_ext::copy_from_new(bytes))
     }
 
     pub fn empty() -> Self {

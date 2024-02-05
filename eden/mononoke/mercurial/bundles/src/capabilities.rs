@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::Bytes;
+use bytes::Bytes;
 use bytes_old::BytesMut;
 use mercurial_types::utils::percent_encode;
 use percent_encoding::percent_decode;
@@ -85,7 +85,7 @@ pub fn encode_capabilities(caps: Capabilities) -> Bytes {
         let values = itertools::join(values.into_iter().map(|v| percent_encode(&v)), ",");
         res.push(format!("{}={}", key, values));
     }
-    Bytes::from(itertools::join(res, "\n").as_str())
+    Bytes::from(itertools::join(res, "\n"))
 }
 
 #[cfg(test)]
@@ -107,7 +107,7 @@ mod test {
         let mut unpacker = CapabilitiesUnpacker;
 
         let decoded = unpacker
-            .decode_eof(&mut BytesMut::from(encoded))
+            .decode_eof(&mut BytesMut::from(&encoded[..]))
             .unwrap()
             .unwrap();
         assert_eq!(decoded.caps, caps);

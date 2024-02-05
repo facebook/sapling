@@ -241,9 +241,9 @@ where
         .flatten()
 }
 
-pub fn replycaps_part(caps: Bytes) -> Result<PartEncodeBuilder> {
+pub fn replycaps_part(caps: BytesNew) -> Result<PartEncodeBuilder> {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Replycaps)?;
-    builder.set_data_fixed(Chunk::new(caps)?);
+    builder.set_data_fixed(Chunk::new_new(caps)?);
 
     Ok(builder)
 }

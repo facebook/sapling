@@ -35,13 +35,16 @@ use std::fmt;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream::BoxStream;
+use futures::stream::Stream;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures_ext::BoxFuture as OldBoxFuture;
 use futures_ext::BoxStream as OldBoxStream;
 use futures_ext::SinkToAsyncWrite;
@@ -228,4 +231,13 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
             Ok(res) => res,
             Err(()) => bail!("error while receiving gettreepack response from the channel"),
         })
+}
+
+pub fn create_bundle_stream_new<C: Into<Option<async_compression::CompressorType>>>(
+    parts: Vec<part_encode::PartEncodeBuilder>,
+    ct: C,
+) -> impl Stream<Item = Result<BytesNew, Error>> {
+    create_bundle_stream(parts, ct)
+        .compat()
+        .map_ok(bytes_ext::copy_from_old)
 }
