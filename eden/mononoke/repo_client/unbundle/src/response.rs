@@ -15,7 +15,6 @@ use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures::future::try_join;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
@@ -83,7 +82,7 @@ impl UnbundleResponse {
         for part_id in bookmark_ids {
             bundle.add_part(parts::replypushkey_part(true, part_id)?);
         }
-        let cursor = bundle.build().compat().await?;
+        let cursor = bundle.build().await?;
         Ok(Bytes::from(cursor.into_inner()))
     }
 
@@ -201,7 +200,6 @@ impl UnbundleResponse {
         bundle.add_part(parts::replypushkey_part(true, bookmark_push_part_id)?);
         let cursor = bundle
             .build()
-            .compat()
             .await
             .context("While preparing bookmark-only pushrebase response")?;
 
@@ -219,7 +217,7 @@ impl UnbundleResponse {
     ) -> Result<Bytes> {
         if let Some(true) = respondlightly {
             let bundle = Self::get_bundle_builder();
-            let cursor = bundle.build().compat().await?;
+            let cursor = bundle.build().await?;
             return Ok(Bytes::from(cursor.into_inner()));
         }
         match self {

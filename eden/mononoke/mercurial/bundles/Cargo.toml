@@ -30,6 +30,7 @@ mercurial_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
+pin-project = "0.4.30"
 quickcheck = "1.0"
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
@@ -37,6 +38,7 @@ thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"
+tokio-util = { version = "0.7.8", features = ["full"] }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
 

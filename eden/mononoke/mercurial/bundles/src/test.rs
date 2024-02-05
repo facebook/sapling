@@ -122,7 +122,7 @@ fn test_empty_bundle_roundtrip_uncompressed() {
     let encode_fut = builder.build();
 
     let runtime = Runtime::new().unwrap();
-    let mut buf = runtime.block_on(encode_fut.compat()).unwrap();
+    let mut buf = runtime.block_on(encode_fut).unwrap();
     buf.set_position(0);
 
     // Now decode it.
@@ -176,10 +176,7 @@ fn test_phases_part_encording(fb: FacebookInit) {
     let part = phases_part(ctx, phases_entries).unwrap();
     builder.add_part(part);
 
-    let mut cursor = Runtime::new()
-        .unwrap()
-        .block_on(builder.build().compat())
-        .unwrap();
+    let mut cursor = Runtime::new().unwrap().block_on(builder.build()).unwrap();
     cursor.set_position(0);
     let buf = cursor.fill_buf().unwrap();
 
@@ -202,7 +199,7 @@ fn test_unknown_part_uncompressed() {
     let encode_fut = builder.build();
 
     let runtime = Runtime::new().unwrap();
-    let mut buf = runtime.block_on(encode_fut.compat()).unwrap();
+    let mut buf = runtime.block_on(encode_fut).unwrap();
     buf.set_position(0);
 
     let logger = Logger::root(Discard, o!());

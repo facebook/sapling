@@ -32,22 +32,20 @@ mod utils;
 
 use std::fmt;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
-use futures::compat::Future01CompatExt;
-use futures::compat::Stream01CompatExt;
+use futures::channel::mpsc;
+use futures::channel::oneshot;
 use futures::future::BoxFuture;
+use futures::sink::SinkExt;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
-use futures::stream::TryStreamExt;
-use futures_ext::SinkToAsyncWrite;
-use futures_old::sync::mpsc;
-use futures_old::sync::oneshot;
-use futures_old::Future as OldFuture;
-use futures_old::Stream as OldStream;
+use futures::stream::StreamExt;
+use futures::FutureExt;
+use tokio_util::io::CopyToBytes;
+use tokio_util::io::SinkWriter;
 
 pub use crate::bundle2_encode::Bundle2EncodeBuilder;
 pub use crate::part_header::PartHeader;
@@ -125,55 +123,38 @@ impl<'a> fmt::Debug for Bundle2Item<'a> {
     }
 }
 
-/// Given bundle parts, returns a stream of BytesOld that represent an encoded bundle with these parts
-pub fn create_bundle_stream(
+/// Given bundle parts, returns a stream of Bytes that represent an encoded bundle with these parts
+pub fn create_bundle_stream_new(
     parts: Vec<part_encode::PartEncodeBuilder>,
-) -> impl OldStream<Item = BytesOld, Error = Error> {
-    let (sender, receiver) = mpsc::channel::<BytesOld>(1);
-    // Sends either and empty BytesOld if bundle generation was successful or an error.
-    // Empty BytesOld are used just to make chaining of streams below easier.
-    let (result_sender, result_receiver) = oneshot::channel::<Result<BytesOld>>();
-    // Bundle2EncodeBuilder accepts writer which implements AsyncWrite. To workaround that we
-    // use SinkToAsyncWrite. It implements AsyncWrite trait and sends everything that was written
-    // into the Sender
-    let mut bundle = Bundle2EncodeBuilder::new(SinkToAsyncWrite::new(sender));
+) -> impl Stream<Item = Result<Bytes, Error>> {
+    let (sender, receiver) = mpsc::channel::<Bytes>(1);
+    // Sends either and empty Bytes if bundle generation was successful or an error.
+    // Empty Bytes are used just to make chaining of streams below easier.
+    let (result_sender, result_receiver) = oneshot::channel::<Result<Bytes>>();
+    let mut bundle = Bundle2EncodeBuilder::new(SinkWriter::new(
+        CopyToBytes::new(sender)
+            .sink_map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{e:?}"))),
+    ));
     for part in parts {
         bundle.add_part(part);
     }
 
-    tokio::spawn(
-        bundle
-            .build()
-            .then(move |val| {
-                // Ignore send errors, because they can only happen if receiver was deallocated already
-                match val {
-                    Ok(_) => {
-                        // Bundle was successfully generated, so there is nothing add.
-                        // So just add empty bytes.
-                        let _ = result_sender.send(Ok(BytesOld::new()));
-                    }
-                    Err(err) => {
-                        let _ = result_sender.send(Err(err));
-                    }
-                };
-                Result::<_, Error>::Ok(())
-            })
-            .compat(),
-    );
+    tokio::spawn(async move {
+        match bundle.build().await {
+            Ok(_) => {
+                // Bundle was successfully generated, so there is nothing add.
+                // So just add empty bytes.
+                let _ = result_sender.send(Ok(Bytes::new()));
+            }
+            Err(err) => {
+                let _ = result_sender.send(Err(err));
+            }
+        }
+
+        anyhow::Ok(())
+    });
 
     receiver
         .map(Ok)
-        .chain(result_receiver.into_stream().map_err(|_err| ()))
-        .then(|entry| match entry {
-            Ok(res) => res,
-            Err(()) => bail!("error while receiving gettreepack response from the channel"),
-        })
-}
-
-pub fn create_bundle_stream_new(
-    parts: Vec<part_encode::PartEncodeBuilder>,
-) -> impl Stream<Item = Result<Bytes, Error>> {
-    create_bundle_stream(parts)
-        .compat()
-        .map_ok(bytes_ext::copy_from_old)
+        .chain(result_receiver.map(|res| anyhow::Ok(res??)).into_stream())
 }
