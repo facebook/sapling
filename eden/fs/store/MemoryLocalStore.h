@@ -7,7 +7,7 @@
 
 #pragma once
 #include <folly/Synchronized.h>
-#include <folly/experimental/StringKeyedUnorderedMap.h>
+#include <folly/container/F14Map.h>
 #include "eden/fs/store/LocalStore.h"
 
 namespace facebook::eden {

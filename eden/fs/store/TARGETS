@@ -212,7 +212,6 @@ cpp_library(
         "//folly:synchronized",
         "//folly/container:evicting_cache_map",
         "//folly/container:f14_hash",
-        "//folly/experimental:string_keyed_unordered_map",
         "//folly/logging:logging",
         "//folly/synchronization:distributed_mutex",
     ],
