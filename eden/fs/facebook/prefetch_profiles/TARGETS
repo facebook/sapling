@@ -44,7 +44,6 @@ python_binary(
 )
 
 python_library(
-    # @autodeps-skip
     name = "glob_filenames_main",
     srcs = [
         "glob_filenames.py",
@@ -53,7 +52,7 @@ python_library(
         "ovr_config//os:linux",
     ],
     deps = [
-        ":prefetch_profile_util",
+        ":prefetch_profile_util",  # @manual
         "//eden/fs/cli:telemetry",
         "//eden/fs/cli/facebook:telemetry",
         "//eden/mononoke/scs/if:source_control-py3-clients",
