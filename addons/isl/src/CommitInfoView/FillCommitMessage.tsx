@@ -147,7 +147,7 @@ function MessageConflictWarning({
   newMessage: CommitMessageFields;
 }) {
   return (
-    <div>
+    <div data-testid="fill-message-conflict-warning">
       <div>
         <T>The new commit message being loaded conflicts with your current message.</T>
       </div>
