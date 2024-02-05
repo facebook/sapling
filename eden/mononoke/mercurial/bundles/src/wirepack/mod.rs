@@ -16,8 +16,9 @@ use anyhow::Context;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
+use bytes::Buf;
 use bytes::BufMut;
-use bytes_old::BytesMut as BytesMutOld;
+use bytes::BytesMut;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
@@ -26,7 +27,7 @@ use revisionstore_types::Metadata;
 
 use crate::delta;
 use crate::errors::ErrorKind;
-use crate::utils::BytesExt;
+use crate::utils::BytesNewExt;
 
 pub mod converter;
 pub mod packer;
@@ -115,7 +116,7 @@ pub struct HistoryEntry {
 }
 
 impl HistoryEntry {
-    pub(crate) fn decode(buf: &mut BytesMutOld, kind: Kind) -> Result<Option<Self>> {
+    pub(crate) fn decode(buf: &mut BytesMut, kind: Kind) -> Result<Option<Self>> {
         if buf.len() < HISTORY_HEADER_SIZE {
             return Ok(None);
         }
@@ -137,14 +138,14 @@ impl HistoryEntry {
             return Ok(None);
         }
 
-        let node = buf.drain_node();
-        let p1 = buf.drain_node();
-        let p2 = buf.drain_node();
-        let linknode = buf.drain_node();
-        let _ = buf.drain_u16();
+        let node = buf.get_node()?;
+        let p1 = buf.get_node()?;
+        let p2 = buf.get_node()?;
+        let linknode = buf.get_node()?;
+        let _ = buf.get_u16();
         let copy_from =
             if copy_from_len > 0 {
-                let path = buf.drain_path(copy_from_len)?;
+                let path = buf.get_path(copy_from_len)?;
                 match kind {
                     Kind::Tree => bail!(ErrorKind::WirePackDecode(format!(
                         "tree entry {} is marked as copied from path {}, but they cannot be copied",
@@ -166,8 +167,6 @@ impl HistoryEntry {
         }))
     }
 
-    // This would ideally be generic over any BufMut, but that won't be very useful until
-    // https://github.com/carllerche/bytes/issues/170 is fixed.
     pub(crate) fn encode(&self, kind: Kind, buf: &mut Vec<u8>) -> Result<()> {
         self.verify(kind).with_context(|| {
             ErrorKind::WirePackEncode("attempted to encode an invalid history entry".into())
@@ -243,7 +242,7 @@ pub enum DataEntryVersion {
 }
 
 impl DataEntry {
-    pub(crate) fn decode(buf: &mut BytesMutOld, version: DataEntryVersion) -> Result<Option<Self>> {
+    pub(crate) fn decode(buf: &mut BytesMut, version: DataEntryVersion) -> Result<Option<Self>> {
         if buf.len() < DATA_HEADER_SIZE {
             return Ok(None);
         }
@@ -289,9 +288,9 @@ impl DataEntry {
             }
         }
 
-        let node = buf.drain_node();
-        let delta_base = buf.drain_node();
-        let _ = buf.drain_u64();
+        let node = buf.get_node()?;
+        let delta_base = buf.get_node()?;
+        let _ = buf.get_u64();
         let delta = buf.split_to(delta_len);
 
         let delta = if delta_base == NULL_HASH {
@@ -323,8 +322,6 @@ impl DataEntry {
         }))
     }
 
-    // This would ideally be generic over any BufMut, but that won't be very useful until
-    // https://github.com/carllerche/bytes/issues/170 is fixed.
     pub(crate) fn encode(&self, buf: &mut Vec<u8>) -> Result<()> {
         self.verify()?;
         buf.put_slice(self.node.as_ref());
@@ -445,7 +442,8 @@ mod test {
             .encode(kind, &mut encoded)
             .expect("encoding this history entry should succeed");
 
-        let mut encoded_bytes = BytesMutOld::from(encoded);
+        let mut encoded_bytes = BytesMut::with_capacity(encoded.len());
+        encoded_bytes.extend_from_slice(&encoded);
 
         // Ensure that a partial entry results in None.
         let bytes_len = encoded_bytes.len();
@@ -519,7 +517,8 @@ mod test {
             let mut encoded = vec![];
             entry.encode(&mut encoded).expect("encoding this data entry should succeed");
 
-            let mut encoded_bytes = BytesMutOld::from(encoded);
+            let mut encoded_bytes = BytesMut::with_capacity(encoded.len());
+            encoded_bytes.extend_from_slice(&encoded);
 
             // Ensure that a partial entry results in None.
             let bytes_len = encoded_bytes.len();

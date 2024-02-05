@@ -53,25 +53,19 @@ pub struct CgDeltaChunk {
 mod test {
     use std::io::Cursor;
 
-    use futures::compat::Stream01CompatExt;
     use futures::StreamExt;
     use futures::TryStreamExt;
-    use futures_ext::StreamExt as _;
-    use futures_ext::StreamLayeredExt;
-    use futures_old::Stream;
     use partial_io::quickcheck_types::GenWouldBlock;
     use partial_io::quickcheck_types::PartialWithErrors;
+    use partial_io::PartialAsyncRead;
     use partial_io::PartialAsyncWrite;
-    use partial_io_old::GenWouldBlock as OldGenWouldBlock;
-    use partial_io_old::PartialAsyncRead as OldPartialAsyncRead;
-    use partial_io_old::PartialWithErrors as OldPartialWithErrors;
     use quickcheck::Gen;
     use quickcheck::QuickCheck;
     use quickcheck::TestResult;
     use slog::o;
     use slog::Discard;
     use slog::Logger;
-    use tokio_codec::FramedRead;
+    use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 
     use super::*;
@@ -95,7 +89,7 @@ mod test {
                 as fn(
                     CgPartSequence,
                     PartialWithErrors<GenWouldBlock>,
-                    OldPartialWithErrors<OldGenWouldBlock>,
+                    PartialWithErrors<GenWouldBlock>,
                 ) -> TestResult,
         );
     }
@@ -110,7 +104,7 @@ mod test {
                 as fn(
                     CgPartSequence,
                     PartialWithErrors<GenWouldBlock>,
-                    OldPartialWithErrors<OldGenWouldBlock>,
+                    PartialWithErrors<GenWouldBlock>,
                 ) -> TestResult,
         );
     }
@@ -118,7 +112,7 @@ mod test {
     fn roundtrip(
         seq: CgPartSequence,
         write_ops: PartialWithErrors<GenWouldBlock>,
-        read_ops: OldPartialWithErrors<OldGenWouldBlock>,
+        read_ops: PartialWithErrors<GenWouldBlock>,
     ) -> TestResult {
         let fut = async move {
             // Encode this sequence.
@@ -135,16 +129,15 @@ mod test {
             // Decode it.
             cursor.set_position(0);
 
-            let partial_read = OldPartialAsyncRead::new(cursor, read_ops);
-            let chunks = FramedRead::new(partial_read, ChunkDecoder).map(|chunk| {
-                bytes_ext::copy_from_new(chunk.into_bytes().expect("expected normal chunk"))
-            });
+            let partial_read = PartialAsyncRead::new(cursor, read_ops);
+            let chunks = FramedRead::new(partial_read, ChunkDecoder)
+                .map_ok(|chunk| chunk.into_bytes().expect("expected normal chunk"));
 
             let logger = Logger::root(Discard, o!());
             let unpacker = unpacker::CgUnpacker::new(logger, unpacker_version);
-            let part_stream = chunks.decode(unpacker);
+            let part_stream = crate::utils::decode_stream(chunks, unpacker);
 
-            let parts: Vec<_> = part_stream.boxify().compat().try_collect().await.unwrap();
+            let parts: Vec<_> = part_stream.try_collect().await.unwrap();
             if seq != parts[..] {
                 TestResult::failed()
             } else {

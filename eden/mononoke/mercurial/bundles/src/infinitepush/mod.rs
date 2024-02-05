@@ -14,16 +14,14 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use bytes::Buf;
 use bytes::Bytes;
-use bytes_old::Bytes as BytesOld;
-use bytes_old::BytesMut as BytesMutOld;
+use bytes::BytesMut;
 use mercurial_mutation::HgMutationEntry;
-use tokio_io::codec::Decoder;
+use tokio_util::codec::Decoder;
 use types::mutation::MutationEntry;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
-
-use crate::utils::BytesExt;
 
 #[derive(Debug)]
 pub struct InfinitepushBookmarksUnpacker {
@@ -41,10 +39,10 @@ impl InfinitepushBookmarksUnpacker {
 }
 
 impl Decoder for InfinitepushBookmarksUnpacker {
-    type Item = BytesOld;
+    type Item = Bytes;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         if self.finished {
             return Ok(None);
         }
@@ -59,7 +57,7 @@ impl Decoder for InfinitepushBookmarksUnpacker {
             }
             None => {
                 if buf.len() >= 4 {
-                    self.expected_len = Some(buf.drain_u32() as usize);
+                    self.expected_len = Some(buf.get_u32() as usize);
                 }
                 Ok(None)
             }
@@ -85,11 +83,11 @@ impl Decoder for InfinitepushMutationUnpacker {
     type Item = Vec<HgMutationEntry>;
     type Error = Error;
 
-    fn decode(&mut self, _buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         Ok(None)
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         let mut entries = Vec::new();
         let mut cursor = Cursor::new(buf);
         let version = cursor.read_u8()?;

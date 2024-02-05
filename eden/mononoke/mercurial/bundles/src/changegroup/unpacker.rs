@@ -17,18 +17,21 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::BytesMut as BytesMutOld;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes::Buf;
+use bytes::BytesMut;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 use slog::Logger;
-use tokio_io::codec::Decoder;
+use tokio_util::codec::Decoder;
 
 use super::CgDeltaChunk;
 use super::Part;
 use super::Section;
 use crate::delta;
 use crate::errors::ErrorKind;
-use crate::utils::BytesExt;
+use crate::utils::BytesNewExt;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CgVersion {
@@ -108,7 +111,7 @@ impl Decoder for CgUnpacker {
     type Item = Part;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match Self::decode_next(buf, self.state.take(), &self.version) {
             Err(e) => {
                 self.state = State::Invalid;
@@ -124,7 +127,7 @@ impl Decoder for CgUnpacker {
         }
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match self.decode(buf)? {
             None => {
                 if !buf.is_empty() {
@@ -168,7 +171,7 @@ impl CgUnpacker {
     }
 
     fn decode_next(
-        buf: &mut BytesMutOld,
+        buf: &mut BytesMut,
         state: State,
         version: &CgVersion,
     ) -> Result<(Option<Part>, State)> {
@@ -222,7 +225,7 @@ impl CgUnpacker {
     }
 
     fn decode_filelog_chunk(
-        buf: &mut BytesMutOld,
+        buf: &mut BytesMut,
         f: NonRootMPath,
         version: &CgVersion,
     ) -> Result<(Option<Part>, State)> {
@@ -238,17 +241,17 @@ impl CgUnpacker {
         }
     }
 
-    fn decode_chunk(buf: &mut BytesMutOld, version: &CgVersion) -> Result<Option<CgChunk>> {
+    fn decode_chunk(buf: &mut BytesMut, version: &CgVersion) -> Result<Option<CgChunk>> {
         if buf.len() < 4 {
             return Ok(None);
         }
 
-        let chunk_len = buf.peek_i32();
+        let chunk_len = BigEndian::read_i32(&buf[..4]);
         // Note that chunk_len includes the 4 bytes consumed by itself
         // TODO: chunk_len < 0 = error
         let chunk_len = chunk_len as usize;
         if chunk_len == 0 {
-            let _ = buf.drain_i32();
+            let _ = buf.get_i32();
             return Ok(Some(CgChunk::Empty));
         }
         if chunk_len < Self::chunk_header_len(version) {
@@ -268,11 +271,11 @@ impl CgUnpacker {
     }
 
     fn decode_delta(
-        buf: &mut BytesMutOld,
+        buf: &mut BytesMut,
         chunk_len: usize,
         version: &CgVersion,
     ) -> Result<Option<CgChunk>> {
-        let _ = buf.drain_i32();
+        let _ = buf.get_i32();
 
         // A chunk header has:
         // ---
@@ -284,15 +287,15 @@ impl CgUnpacker {
         // flags: unsigned short (2 bytes) -- (version 3 only)
         // ---
 
-        let node = buf.drain_node();
-        let p1 = buf.drain_node();
-        let p2 = buf.drain_node();
-        let base = buf.drain_node();
-        let linknode = buf.drain_node();
+        let node = buf.get_node()?;
+        let p1 = buf.get_node()?;
+        let p2 = buf.get_node()?;
+        let base = buf.get_node()?;
+        let linknode = buf.get_node()?;
         let flags = match version {
             CgVersion::Cg2Version => None,
             CgVersion::Cg3Version => {
-                let bits = buf.drain_u16();
+                let bits = buf.get_u16();
                 let flags = RevFlags::from_bits(bits)
                     .ok_or_else(|| format_err!("unknown revlog flags: {}", bits))?;
                 Some(flags)
@@ -312,11 +315,11 @@ impl CgUnpacker {
         })))
     }
 
-    fn decode_filename(buf: &mut BytesMutOld) -> Result<DecodeRes<NonRootMPath>> {
+    fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<NonRootMPath>> {
         if buf.len() < 4 {
             return Ok(DecodeRes::None);
         }
-        let filename_len = buf.peek_i32();
+        let filename_len = BigEndian::read_i32(&buf[..4]);
         // TODO: filename_len < 0 == error
         if filename_len == 0 {
             let _ = buf.split_to(4);
@@ -328,7 +331,7 @@ impl CgUnpacker {
             return Ok(DecodeRes::None);
         }
         let _ = buf.split_to(4);
-        let filename = buf.drain_path(filename_len - 4).with_context(|| {
+        let filename = buf.get_path(filename_len - 4).with_context(|| {
             let msg = format!("invalid filename of length {}", filename_len);
             ErrorKind::CgDecode(msg)
         })?;

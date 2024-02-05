@@ -15,14 +15,19 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_compression::DecompressorType;
+use async_stream::try_stream;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::Bytes;
 use bytes::BytesMut;
 use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
+use futures::pin_mut;
+use futures::Stream;
+use futures::TryStreamExt;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
+use tokio_util::codec::Decoder;
 
 use crate::errors::ErrorKind;
 
@@ -194,6 +199,30 @@ pub fn capitalize_first(s: String) -> String {
     match chars.next() {
         None => String::new(),
         Some(ch) => ch.to_uppercase().collect::<String>() + chars.as_str(),
+    }
+}
+
+pub(crate) fn decode_stream<S, Dec, Err>(
+    stream: S,
+    mut decoder: Dec,
+) -> impl Stream<Item = Result<Dec::Item, Dec::Error>>
+where
+    S: Stream<Item = Result<Bytes, Err>>,
+    Dec: Decoder,
+    Dec::Error: From<Err>,
+{
+    try_stream! {
+        pin_mut!(stream);
+        let mut buf = BytesMut::with_capacity(8 * 1024);
+        while let Some(data) = stream.try_next().await? {
+            buf.extend_from_slice(data.as_ref());
+            while let Some(frame) = decoder.decode(&mut buf)? {
+                yield frame;
+            }
+        }
+        while !buf.is_empty() && let Some(frame) = decoder.decode_eof(&mut buf)? {
+            yield frame;
+        }
     }
 }
 

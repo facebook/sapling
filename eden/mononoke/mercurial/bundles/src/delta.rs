@@ -11,18 +11,18 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bufsize::SizeCounter;
+use bytes::Buf;
 use bytes::BufMut;
-use bytes_old::BytesMut as BytesMutOld;
+use bytes::BytesMut;
 use mercurial_types::delta::Delta;
 use mercurial_types::delta::Fragment;
 
 use crate::errors::ErrorKind;
-use crate::utils::BytesExt;
 
 const DELTA_HEADER_LEN: usize = 12;
 
-/// Decodes this delta. Consumes the entire buffer, so accepts a BytesMutOld.
-pub fn decode_delta(buf: BytesMutOld) -> Result<Delta> {
+/// Decodes this delta. Consumes the entire buffer, so accepts a BytesMut.
+pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     let mut buf = buf;
     let mut frags = vec![];
     let mut remaining = buf.len();
@@ -35,9 +35,9 @@ pub fn decode_delta(buf: BytesMutOld) -> Result<Delta> {
         // new length: i32
         // content (new length bytes)
         // ---
-        let start = buf.drain_i32();
-        let end = buf.drain_i32();
-        let new_len = buf.drain_i32();
+        let start = buf.get_i32();
+        let end = buf.get_i32();
+        let new_len = buf.get_i32();
         // TODO: handle negative values for all the above
 
         let delta_len = (new_len as usize) + DELTA_HEADER_LEN;
@@ -95,14 +95,14 @@ mod test {
 
     #[test]
     fn invalid_deltas() {
-        let short_delta = BytesMutOld::from(&b"\0\0\0\0\0\0\0\0\0\0\0\x20"[..]);
+        let short_delta = BytesMut::from(&b"\0\0\0\0\0\0\0\0\0\0\0\x20"[..]);
         assert_matches!(
             err_downcast!(decode_delta(short_delta).unwrap_err(), err: ErrorKind => err),
             Ok(ErrorKind::InvalidDelta(ref msg))
             if msg == "expected 44 bytes, 12 remaining"
         );
 
-        let short_header = BytesMutOld::from(&b"\0\0\0\0\0\0"[..]);
+        let short_header = BytesMut::from(&b"\0\0\0\0\0\0"[..]);
         assert_matches!(
             err_downcast!(decode_delta(short_header).unwrap_err(), err: ErrorKind => err),
             Ok(ErrorKind::InvalidDelta(ref msg))
@@ -110,7 +110,7 @@ mod test {
         );
 
         // start = 2, end = 0
-        let start_after_end = BytesMutOld::from(&b"\0\0\0\x02\0\0\0\0\0\0\0\0"[..]);
+        let start_after_end = BytesMut::from(&b"\0\0\0\x02\0\0\0\0\0\0\0\0"[..]);
         match decode_delta(start_after_end) {
             Ok(bad) => panic!("unexpected success {:?}", bad),
             Err(err) => match err_downcast_ref!(err, err: ErrorKind => err) {
@@ -126,7 +126,9 @@ mod test {
             let mut out = vec![];
             encode_delta(&delta, &mut out);
             assert_eq!(encoded_len(&delta), out.len());
-            delta == decode_delta(out.into()).unwrap()
+            let mut out_bytes = BytesMut::with_capacity(out.len());
+            out_bytes.extend_from_slice(&out);
+            delta == decode_delta(out_bytes).unwrap()
         }
     }
 }

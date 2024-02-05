@@ -14,11 +14,14 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::BytesMut as BytesMutOld;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes::Buf;
+use bytes::BytesMut;
 use mercurial_types::RepoPath;
 use slog::trace;
 use slog::Logger;
-use tokio_codec::Decoder;
+use tokio_util::codec::Decoder;
 
 use super::DataEntry;
 use super::DataEntryVersion;
@@ -27,7 +30,7 @@ use super::Kind;
 use super::Part;
 use super::WIREPACK_END;
 use crate::errors::ErrorKind;
-use crate::utils::BytesExt;
+use crate::utils::BytesNewExt;
 
 #[derive(Debug)]
 pub struct WirePackUnpacker {
@@ -39,7 +42,7 @@ impl Decoder for WirePackUnpacker {
     type Item = Part;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match self.inner.decode_next(buf, self.state.take()) {
             Err(e) => {
                 self.state = State::Invalid;
@@ -55,7 +58,7 @@ impl Decoder for WirePackUnpacker {
         }
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match self.decode(buf)? {
             None => {
                 if !buf.is_empty() {
@@ -96,11 +99,7 @@ struct UnpackerInner {
 }
 
 impl UnpackerInner {
-    fn decode_next(
-        &mut self,
-        buf: &mut BytesMutOld,
-        state: State,
-    ) -> Result<(Option<Part>, State)> {
+    fn decode_next(&mut self, buf: &mut BytesMut, state: State) -> Result<(Option<Part>, State)> {
         use self::State::*;
         let mut state = state;
 
@@ -180,7 +179,7 @@ impl UnpackerInner {
         }
     }
 
-    fn decode_filename(&mut self, buf: &mut BytesMutOld) -> Result<DecodeRes<RepoPath>> {
+    fn decode_filename(&mut self, buf: &mut BytesMut) -> Result<DecodeRes<RepoPath>> {
         // Notes:
         // - A zero-length filename indicates the root manifest for tree packs.
         //   (It is not allowed for file packs.)
@@ -195,7 +194,7 @@ impl UnpackerInner {
             return Ok(DecodeRes::End);
         }
 
-        let filename_len = buf.peek_u16() as usize;
+        let filename_len = BigEndian::read_u16(&buf[..2]) as usize;
         if buf.len() < filename_len + 2 {
             return Ok(DecodeRes::None);
         }
@@ -208,7 +207,7 @@ impl UnpackerInner {
                 )),
             }
         } else {
-            let mpath = buf.drain_path(filename_len).with_context(|| {
+            let mpath = buf.get_path(filename_len).with_context(|| {
                 let msg = format!("invalid filename of length {}", filename_len);
                 ErrorKind::WirePackDecode(msg)
             })?;
@@ -225,21 +224,21 @@ impl UnpackerInner {
         Ok(DecodeRes::Some(filename))
     }
 
-    fn decode_section_start(&mut self, buf: &mut BytesMutOld) -> Option<u32> {
+    fn decode_section_start(&mut self, buf: &mut BytesMut) -> Option<u32> {
         if buf.len() < 4 {
             None
         } else {
-            Some(buf.drain_u32())
+            Some(buf.get_u32())
         }
     }
 
     #[inline]
-    fn decode_history(&mut self, buf: &mut BytesMutOld) -> Result<Option<HistoryEntry>> {
+    fn decode_history(&mut self, buf: &mut BytesMut) -> Result<Option<HistoryEntry>> {
         HistoryEntry::decode(buf, self.kind)
     }
 
     #[inline]
-    fn decode_data(&mut self, buf: &mut BytesMutOld) -> Result<Option<DataEntry>> {
+    fn decode_data(&mut self, buf: &mut BytesMut) -> Result<Option<DataEntry>> {
         DataEntry::decode(buf, DataEntryVersion::V1)
     }
 }
@@ -271,12 +270,10 @@ enum DecodeRes<T> {
 mod test {
     use std::io::Cursor;
 
-    use futures::compat::Future01CompatExt;
-    use futures_old::Future;
-    use futures_old::Stream;
+    use futures::TryStreamExt;
     use slog::o;
     use slog::Discard;
-    use tokio_codec::FramedRead;
+    use tokio_util::codec::FramedRead;
 
     use super::*;
 
@@ -288,41 +285,34 @@ mod test {
         let empty_1 = Cursor::new(WIREPACK_END);
         let unpacker = new(logger.clone(), Kind::Tree);
         let stream = FramedRead::new(empty_1, unpacker);
-        let collect_fut = stream.collect();
+        let parts: Vec<_> = stream.try_collect().await.unwrap();
 
-        let fut = collect_fut
-            .and_then(move |parts| {
-                assert_eq!(parts, vec![Part::End]);
+        assert_eq!(parts, vec![Part::End]);
 
-                // A file with no entries:
-                // - filename b"\0\x03foo"
-                // - history count: b"\0\0\0\0"
-                // - data count: b"\0\0\0\0"
-                // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
-                let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-                let unpacker = new(logger.clone(), Kind::File);
-                let stream = FramedRead::new(empty_2, unpacker);
-                stream.collect()
-            })
-            .map(|parts| {
-                let foo_dir = RepoPath::file("foo").unwrap();
-                assert_eq!(
-                    parts,
-                    vec![
-                        Part::HistoryMeta {
-                            path: foo_dir.clone(),
-                            entry_count: 0,
-                        },
-                        Part::DataMeta {
-                            path: foo_dir,
-                            entry_count: 0,
-                        },
-                        Part::End,
-                    ]
-                );
-            })
-            .map_err(|err| panic!("{:#?}", err));
+        // A file with no entries:
+        // - filename b"\0\x03foo"
+        // - history count: b"\0\0\0\0"
+        // - data count: b"\0\0\0\0"
+        // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
+        let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+        let unpacker = new(logger.clone(), Kind::File);
+        let stream = FramedRead::new(empty_2, unpacker);
+        let parts: Vec<_> = stream.try_collect().await.unwrap();
 
-        fut.compat().await.unwrap();
+        let foo_dir = RepoPath::file("foo").unwrap();
+        assert_eq!(
+            parts,
+            vec![
+                Part::HistoryMeta {
+                    path: foo_dir.clone(),
+                    entry_count: 0,
+                },
+                Part::DataMeta {
+                    path: foo_dir,
+                    entry_count: 0,
+                },
+                Part::End,
+            ]
+        );
     }
 }

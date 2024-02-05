@@ -16,7 +16,6 @@ use anyhow::Error;
 use anyhow::Result;
 use async_compression::Decompressor;
 use bytes::Bytes;
-use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
 use futures_ext::io::Either;
 use futures_ext::io::Either::A as UncompressedRead;
@@ -92,7 +91,7 @@ impl OuterState {
             } => OuterFrame::Payload {
                 part_type: part_type.clone(),
                 part_id: *part_id,
-                payload: data.freeze(),
+                payload: bytes_ext::copy_from_old(data.freeze()),
             },
             OuterState::DiscardPayload => OuterFrame::Discard,
             _ => panic!("payload_frame called for state without payloads"),
@@ -281,7 +280,7 @@ pub enum OuterFrame {
     Payload {
         part_type: PartHeaderType,
         part_id: PartId,
-        payload: BytesOld,
+        payload: Bytes,
     },
     PartEnd {
         part_type: PartHeaderType,
@@ -299,7 +298,7 @@ impl OuterFrame {
         }
     }
 
-    pub fn get_payload(self) -> BytesOld {
+    pub fn get_payload(self) -> Bytes {
         match self {
             OuterFrame::Payload { payload, .. } => payload,
             _ => panic!("get_payload called on an OuterFrame without a payload!"),

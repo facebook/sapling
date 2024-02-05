@@ -8,16 +8,16 @@
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes::Buf;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
-use bytes_old::BufMut as BufMutOld;
-use bytes_old::BytesMut as BytesMutOld;
-use tokio_codec::Decoder;
-use tokio_codec::Encoder;
+use tokio_util::codec::Decoder;
+use tokio_util::codec::Encoder;
 
 use crate::errors::ErrorKind;
-use crate::utils::BytesExt;
 
 /// A bundle2 chunk.
 ///
@@ -99,34 +99,10 @@ impl Chunk {
     }
 }
 
-/// Encode a bundle2 chunk into a bytestream.
-#[derive(Debug)]
-pub struct ChunkEncoder;
-
-impl Encoder for ChunkEncoder {
-    type Item = Chunk;
-    type Error = Error;
-
-    fn encode(&mut self, item: Chunk, dst: &mut BytesMutOld) -> Result<()> {
-        match item.0 {
-            ChunkInner::Normal(bytes) => {
-                dst.reserve(4 + bytes.len());
-                dst.put_i32_be(bytes.len() as i32);
-                dst.put_slice(&bytes);
-            }
-            ChunkInner::Error => {
-                dst.reserve(4);
-                dst.put_i32_be(-1);
-            }
-        }
-        Ok(())
-    }
-}
-
 #[derive(Debug)]
 pub struct NewChunkEncoder;
 
-impl tokio_util::codec::Encoder<Chunk> for NewChunkEncoder {
+impl Encoder<Chunk> for NewChunkEncoder {
     type Error = Error;
 
     fn encode(&mut self, item: Chunk, dst: &mut BytesMut) -> Result<()> {
@@ -153,14 +129,14 @@ impl Decoder for ChunkDecoder {
     type Item = Chunk;
     type Error = Error;
 
-    fn decode(&mut self, src: &mut BytesMutOld) -> Result<Option<Chunk>> {
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Chunk>> {
         if src.len() < 4 {
             return Ok(None);
         }
 
-        let len = src.peek_i32();
+        let len = BigEndian::read_i32(&src[..4]);
         if len == -1 {
-            src.drain_i32();
+            src.get_i32();
             return Ok(Some(Chunk::error()));
         }
         if len < 0 {
@@ -175,8 +151,8 @@ impl Decoder for ChunkDecoder {
             return Ok(None);
         }
 
-        src.drain_i32();
-        let chunk = Chunk::new(bytes_ext::copy_from_old(src.split_to(len).freeze()))?;
+        src.get_i32();
+        let chunk = Chunk::new(src.split_to(len).freeze())?;
         Ok(Some(chunk))
     }
 }
@@ -186,21 +162,20 @@ mod test {
     use std::io::Cursor;
 
     use assert_matches::assert_matches;
-    use futures::compat::Stream01CompatExt;
     use futures::stream;
     use futures::SinkExt;
     use futures::TryStreamExt;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
-    use tokio_codec::FramedRead;
+    use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 
     use super::*;
 
     #[test]
     fn test_empty_chunk() {
-        let mut buf = BytesMutOld::with_capacity(4);
-        buf.put_i32_be(0);
+        let mut buf = BytesMut::with_capacity(4);
+        buf.put_i32(0);
 
         let mut decoder = ChunkDecoder;
         let chunk = decoder.decode(&mut buf).unwrap().unwrap();
@@ -213,8 +188,8 @@ mod test {
 
     #[test]
     fn test_error_chunk() {
-        let mut buf = BytesMutOld::with_capacity(4);
-        buf.put_i32_be(-1);
+        let mut buf = BytesMut::with_capacity(4);
+        buf.put_i32(-1);
 
         let mut decoder = ChunkDecoder;
         let chunk = decoder.decode(&mut buf).unwrap().unwrap();
@@ -227,8 +202,8 @@ mod test {
 
     #[test]
     fn test_invalid_chunk() {
-        let mut buf = BytesMutOld::with_capacity(4);
-        buf.put_i32_be(-2);
+        let mut buf = BytesMut::with_capacity(4);
+        buf.put_i32(-2);
 
         let mut decoder = ChunkDecoder;
         let chunk_err = decoder.decode(&mut buf);
@@ -273,7 +248,7 @@ mod test {
 
             let mut collector: Vec<Chunk> = Vec::with_capacity(count);
             collector
-                .send_all(&mut stream.compat().map_err(|err| {
+                .send_all(&mut stream.map_err(|err| {
                     panic!("Unexpected error: {}", err);
                 }))
                 .await

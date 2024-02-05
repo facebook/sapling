@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(let_chains)]
+
 pub mod bundle2;
 pub mod bundle2_encode;
 pub mod capabilities;
@@ -35,7 +37,6 @@ use std::fmt;
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
-use bytes_old::Bytes as BytesOld;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
@@ -64,7 +65,7 @@ pub enum Bundle2Item<'a> {
     B2xInfinitepush(PartHeader, BoxStream<'a, Result<changegroup::Part>>),
     B2xTreegroup2(PartHeader, BoxStream<'a, Result<wirepack::Part>>),
     // B2xInfinitepushBookmarks returns BytesOld because this part is not going to be used.
-    B2xInfinitepushBookmarks(PartHeader, BoxStream<'a, Result<BytesOld>>),
+    B2xInfinitepushBookmarks(PartHeader, BoxStream<'a, Result<Bytes>>),
     B2xInfinitepushMutation(
         PartHeader,
         BoxStream<'a, Result<Vec<mercurial_mutation::HgMutationEntry>>>,
