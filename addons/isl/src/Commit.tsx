@@ -21,6 +21,7 @@ import {HighlightCommitsWhileHovering, isHighlightedCommit} from './HighlightedC
 import {InlineBadge} from './InlineBadge';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
+import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -227,6 +228,22 @@ export const Commit = memo(
       }
       if (!isPublic && !actionsPrevented) {
         bodyOnly || items.push({type: 'divider'});
+        const suggestedRebases = snapshot.getLoadable(suggestedRebaseDestinations).valueMaybe();
+        items.push({
+          label: 'Rebase onto',
+          type: 'submenu',
+          children:
+            suggestedRebases?.map(([dest, name]) => ({
+              label: <T>{name}</T>,
+              onClick: () => {
+                const operation = getSuggestedRebaseOperation(
+                  dest,
+                  latestSuccessorUnlessExplicitlyObsolete(commit),
+                );
+                runOperation(operation);
+              },
+            })) ?? [],
+        });
         if (isAmendToAllowedForCommit(commit, snapshot)) {
           items.push({
             label: <T>Amend changes to here</T>,
