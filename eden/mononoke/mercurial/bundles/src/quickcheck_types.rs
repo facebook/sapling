@@ -9,16 +9,14 @@
 //! and for a few other test types.
 
 use std::iter;
-#[cfg(test)]
-use std::vec::IntoIter;
 
-#[cfg(test)]
-use anyhow::Error;
 #[cfg(test)]
 use anyhow::Result;
 use bytes::Bytes;
 #[cfg(test)]
-use futures_old::stream;
+use futures::stream;
+#[cfg(test)]
+use futures::Stream;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
@@ -91,13 +89,10 @@ impl CgPartSequence {
     }
 
     /// Combine all the changesets, manifests and filelogs into a single stream.
-    ///
-    /// This returns a clone of everything because streams can't really return
-    /// references at the moment.
     #[cfg(test)]
-    pub fn to_stream(&self) -> stream::IterOk<IntoIter<Result<changegroup::Part>>, Error> {
+    pub fn to_stream(&self) -> impl Stream<Item = Result<changegroup::Part>> {
         let part_results: Vec<_> = self.as_iter().cloned().map(Ok).collect();
-        stream::iter_ok(part_results)
+        stream::iter(part_results)
     }
 
     #[cfg(test)]

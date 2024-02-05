@@ -5,15 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use anyhow::Result;
+use async_stream::try_stream;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use bytes_old::BufMut;
-use futures_old::try_ready;
-use futures_old::Async;
-use futures_old::Poll;
-use futures_old::Stream;
+use bytes::BufMut;
+use futures::pin_mut;
+use futures::Stream;
+use futures::TryStreamExt;
 
 use super::CgDeltaChunk;
 use super::Part;
@@ -21,44 +20,25 @@ use super::Section;
 use crate::chunk::Chunk;
 use crate::delta;
 
-pub struct CgPacker<S> {
-    delta_stream: S,
-    last_seen: Section,
-}
-
-impl<S> CgPacker<S> {
-    pub fn new(delta_stream: S) -> Self {
-        CgPacker {
-            delta_stream,
-            last_seen: Section::Changeset,
-        }
-    }
-}
-
-impl<S> Stream for CgPacker<S>
-where
-    S: Stream<Item = Part>,
-    Error: From<S::Error>,
-{
-    type Item = Chunk;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Chunk>, Error> {
-        use self::Part::*;
-
-        match try_ready!(self.delta_stream.poll()) {
-            None => Ok(Async::Ready(None)),
-            Some(CgChunk(section, delta_chunk)) => {
-                let mut builder = ChunkBuilder::new();
-                if self.last_seen != section {
-                    builder.encode_section(&section)?;
-                    self.last_seen = section;
+pub fn changegroup_packer(
+    delta_stream: impl Stream<Item = Result<Part>>,
+) -> impl Stream<Item = Result<Chunk>> {
+    try_stream! {
+        pin_mut!(delta_stream);
+        let mut last_seen = Section::Changeset;
+        while let Some(part) = delta_stream.try_next().await? {
+            match part {
+                Part::CgChunk(section, delta_chunk) => {
+                    let mut builder = ChunkBuilder::new();
+                    if last_seen != section {
+                        builder.encode_section(&section)?;
+                        last_seen = section;
+                    }
+                    builder.encode_delta_chunk(delta_chunk);
+                    yield builder.build()?;
                 }
-                builder.encode_delta_chunk(delta_chunk);
-                Ok(Async::Ready(Some(builder.build()?)))
+                Part::SectionEnd(_) | Part::End => yield empty_cg_chunk(),
             }
-            Some(SectionEnd(_section)) => Ok(Async::Ready(Some(empty_cg_chunk()))),
-            Some(End) => Ok(Async::Ready(Some(empty_cg_chunk()))),
         }
     }
 }

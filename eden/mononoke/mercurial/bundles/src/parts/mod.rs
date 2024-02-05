@@ -41,7 +41,7 @@ use mononoke_types::path::MPath;
 use mononoke_types::DateTime;
 use phases::Phase;
 
-use super::changegroup::packer::CgPacker;
+use super::changegroup::packer::changegroup_packer;
 use super::changegroup::unpacker::CgVersion;
 use super::changegroup::CgDeltaChunk;
 use super::changegroup::Part;
@@ -159,8 +159,7 @@ where
 
     let changegroup = changegroup.chain(stream::once(future::ok(Part::End)));
 
-    let cgdata = CgPacker::new(changegroup.boxed().compat());
-    builder.set_data_generated(cgdata.compat());
+    builder.set_data_generated(changegroup_packer(changegroup));
 
     Ok(builder)
 }
