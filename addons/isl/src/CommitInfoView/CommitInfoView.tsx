@@ -70,6 +70,7 @@ import {
   editedMessageSubset,
   removeNoopEdits,
 } from './CommitMessageFields';
+import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
   VSCodeBadge,
@@ -297,7 +298,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </Tooltip>
         </div>
       )}
-
+      {mode === 'commit' && commit.isHead && <FillCommitMessage commit={commit} mode={mode} />}
       <div
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
