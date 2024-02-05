@@ -48,7 +48,6 @@ python_library(
 )
 
 python_binary(
-    # @autodeps-skip
     name = "edenfs_restarter",
     srcs = ["edenfs_restarter.py"],
     main_function = "eden.fs.facebook.edenfs_restarter.main",
@@ -60,6 +59,7 @@ python_binary(
         ":edenfs_restarter_lib",
         "//eden/fs/cli:lib",
         "//eden/fs/cli:telemetry",
+        "//eden/fs/cli/facebook:telemetry",
         "//libfb/py:dateutil",
     ],
 )
