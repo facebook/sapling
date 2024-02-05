@@ -130,12 +130,14 @@ rust_library(
     test_deps = [
         "fbcode//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "fbsource//third-party/rust:assert_matches",
-        "fbsource//third-party/rust:partial-io",
         "fbsource//third-party/rust:tokio",
         ":mercurial_types-mocks",
         "//common/rust/shed/failure_ext:failure_ext",
         "//common/rust/shed/fbinit:fbinit",
     ],
+    test_named_deps = {
+        "partial-io-old": "fbsource//third-party/rust:partial-io-old",
+    },
     test_srcs = glob(["bundles/src/fixtures/*"]),
     deps = [
         "fbsource//third-party/rust:anyhow",

@@ -57,10 +57,10 @@ mod test {
     use futures_ext::StreamLayeredExt;
     use futures_old::Future;
     use futures_old::Stream;
-    use partial_io::GenWouldBlock;
-    use partial_io::PartialAsyncRead;
-    use partial_io::PartialAsyncWrite;
-    use partial_io::PartialWithErrors;
+    use partial_io_old::GenWouldBlock;
+    use partial_io_old::PartialAsyncRead;
+    use partial_io_old::PartialAsyncWrite;
+    use partial_io_old::PartialWithErrors;
     use quickcheck::Gen;
     use quickcheck::QuickCheck;
     use quickcheck::TestResult;
