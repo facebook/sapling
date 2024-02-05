@@ -89,8 +89,10 @@ export function removeNoopEdits(
   );
 }
 
-function isFieldNonEmpty(field: string | Array<string>) {
-  return Array.isArray(field) ? field.length > 0 : field && field.trim().length > 0;
+export function isFieldNonEmpty(field: string | Array<string>) {
+  return Array.isArray(field)
+    ? field.length > 0 && (field.length > 1 || field[0].trim().length > 0)
+    : field && field.trim().length > 0;
 }
 
 export function commitMessageFieldsToString(
@@ -119,6 +121,34 @@ export function commitMessageFieldsToString(
       return prefix + value;
     })
     .join('\n\n');
+}
+
+/**
+ * Returns which fields prevent two messages from being merged without any fields being combined.
+ * That is, the `key` for every field which is non-empty and different in both messages.
+ */
+export function findConflictingFieldsWhenMerging(
+  schema: Array<FieldConfig>,
+  a: CommitMessageFields,
+  b: CommitMessageFields,
+): Array<FieldConfig> {
+  return schema
+    .map(config => {
+      const isANonEmpty = isFieldNonEmpty(a[config.key]);
+      const isBNonEmpty = isFieldNonEmpty(b[config.key]);
+      if (!isANonEmpty && !isBNonEmpty) {
+        return null;
+      } else if (!isANonEmpty || !isBNonEmpty) {
+        return null;
+      } else if (Array.isArray(a[config.key])) {
+        const av = a[config.key] as Array<string>;
+        const bv = b[config.key] as Array<string>;
+        return arraysEqual(av, bv) ? null : config;
+      } else {
+        return a[config.key] === b[config.key] ? null : config;
+      }
+    })
+    .filter(notEmpty);
 }
 
 export function mergeCommitMessageFields(

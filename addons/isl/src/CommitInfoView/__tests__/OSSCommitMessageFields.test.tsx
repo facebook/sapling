@@ -7,11 +7,24 @@
 
 import {
   commitMessageFieldsToString,
+  isFieldNonEmpty,
   mergeCommitMessageFields,
   mergeManyCommitMessageFields,
   OSSDefaultFieldSchema,
   parseCommitMessageFields,
 } from '../CommitMessageFields';
+
+describe('isFieldNonEmpty', () => {
+  it('handles strings', () => {
+    expect(isFieldNonEmpty('foo')).toBeTruthy();
+    expect(isFieldNonEmpty('')).toBeFalsy();
+  });
+  it('handles arays', () => {
+    expect(isFieldNonEmpty(['foo'])).toBeTruthy();
+    expect(isFieldNonEmpty([])).toBeFalsy();
+    expect(isFieldNonEmpty([''])).toBeFalsy();
+  });
+});
 
 describe('InternalCommitInfoFields', () => {
   it('parses messages correctly', () => {
