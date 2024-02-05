@@ -161,7 +161,7 @@ pub async fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         conn_log.clone(),
-        stdin.map(|b| bytes_old::Bytes::from(b.as_ref())),
+        stdin,
         repo_client,
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::Error;
+use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use failure_ext::FutureErrorContext;
 use futures_ext::BoxFuture;
@@ -64,7 +65,7 @@ impl HgProtoHandler {
         src_region: Option<String>,
     ) -> Self
     where
-        In: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
+        In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
         H: HgCommands + Send + Sync + 'static,
         Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
         Dec::Error: From<io::Error> + Send + 'static,
@@ -79,7 +80,7 @@ impl HgProtoHandler {
         });
 
         HgProtoHandler {
-            outstream: handle(input, inner),
+            outstream: handle(input.map(|b| BytesOld::from(b.as_ref())), inner),
         }
     }
 }
