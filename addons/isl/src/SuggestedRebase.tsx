@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Operation} from './operations/Operation';
 import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
 import {globalRecoil} from './AccessGlobalRecoil';
@@ -129,21 +130,7 @@ export function SuggestedRebaseButton({
             </span>
           ),
           onClick: () => {
-            const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
-            tracker.track('ClickSuggestedRebase', {
-              extras: {destination, isBulk},
-            });
-
-            runOperation(
-              source != null
-                ? new RebaseOperation(source, succeedableRevset(destination))
-                : sources != null
-                ? new BulkRebaseOperation(sources, succeedableRevset(destination))
-                : new RebaseAllDraftCommitsOperation(
-                    globalRecoil().getLoadable(commitsShownRange).valueMaybe(),
-                    succeedableRevset(destination),
-                  ),
-            );
+            runOperation(getSuggestedRebaseOperation(dest, source ?? sources));
             afterRun?.();
           },
         };
@@ -170,4 +157,33 @@ function firstNonEmptySublist(...lists: Array<ReadonlyArray<string> | undefined>
       return list.join(', ');
     }
   }
+}
+
+/**
+ * Returns an operation that will rebase the given source onto the given destination.
+ * If source is undefined, rebase all draft commits.
+ * If source is an Array of revsets, bulk rebase those commits.
+ * If source is a single revset, rebase that commit.
+ */
+export function getSuggestedRebaseOperation(
+  dest: CommitInfo,
+  source: SucceedableRevset | ExactRevset | Array<SucceedableRevset> | undefined,
+): Operation {
+  const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
+  const isBulk = source != null && Array.isArray(source);
+  tracker.track('ClickSuggestedRebase', {
+    extras: {destination, isBulk},
+  });
+
+  const operation =
+    source == null
+      ? new RebaseAllDraftCommitsOperation(
+          globalRecoil().getLoadable(commitsShownRange).valueMaybe(),
+          succeedableRevset(destination),
+        )
+      : Array.isArray(source)
+      ? new BulkRebaseOperation(source, succeedableRevset(destination))
+      : new RebaseOperation(source, succeedableRevset(destination));
+
+  return operation;
 }
