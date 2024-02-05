@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -37,13 +38,12 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_01_ext::BoxFuture as OldBoxFuture;
 use futures_01_ext::BoxStream as OldBoxStream;
-use futures_01_ext::BufferedParams;
 use futures_01_ext::FutureExt as _;
 use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::stream::FbStreamExt;
-use futures_old::future as old_future;
+use futures_ext::BufferedParams;
+use futures_ext::FbTryStreamExt;
 use futures_old::stream as old_stream;
-use futures_old::Future as OldFuture;
 use futures_old::Stream as OldStream;
 use futures_stats::TimedTryFutureExt;
 use futures_util::try_join;
@@ -961,12 +961,14 @@ fn create_filenodes_weighted(
     ctx: CoreContext,
     repo: impl RepoBlobstoreRef + Clone + Sync + Send + 'static,
     entries: HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
-) -> impl OldStream<
-    Item = (
-        impl OldFuture<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error>,
-        u64,
-    ),
-    Error = Error,
+) -> impl Stream<
+    Item = Result<
+        (
+            impl Future<Output = Result<(NonRootMPath, Vec<FilenodeEntry>), Error>>,
+            u64,
+        ),
+        Error,
+    >,
 > {
     let items = entries.into_iter().map({
         cloned!(ctx, repo);
@@ -979,34 +981,30 @@ fn create_filenodes_weighted(
                 .into_iter()
                 .map({
                     |entry| {
-                        {
-                            cloned!(ctx, repo);
-                            async move { entry.into_filenode(&ctx, repo.repo_blobstore()).await }
-                        }
-                        .boxed()
-                        .compat()
+                        cloned!(ctx, repo);
+                        async move { entry.into_filenode(&ctx, repo.repo_blobstore()).await }
                     }
                 })
                 .collect();
 
-            let fut = old_future::join_all(entry_futs).map(|entries| (path, entries));
+            let fut = future::try_join_all(entry_futs).map_ok(|entries| (path, entries));
 
-            (fut, total_weight)
+            anyhow::Ok((fut, total_weight))
         }
     });
-    old_stream::iter_ok(items)
+    stream::iter(items)
 }
 
 pub fn create_filenodes(
     ctx: CoreContext,
     repo: impl RepoBlobstoreRef + Clone + Sync + Send + 'static,
     entries: HashMap<NonRootMPath, Vec<PreparedFilenodeEntry>>,
-) -> impl OldStream<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error> {
+) -> impl Stream<Item = Result<(NonRootMPath, Vec<FilenodeEntry>), Error>> {
     let params = BufferedParams {
         weight_limit: MAX_FILENODE_BYTES_IN_MEMORY,
         buffer_size: 100,
     };
-    create_filenodes_weighted(ctx, repo, entries).buffered_weight_limited(params)
+    create_filenodes_weighted(ctx, repo, entries).try_buffered_weight_limited(params)
 }
 
 // This function preserves the topological order of entries i.e. filenods or manifest

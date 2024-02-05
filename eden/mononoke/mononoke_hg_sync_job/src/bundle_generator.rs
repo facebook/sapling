@@ -299,9 +299,11 @@ async fn create_bundle_impl(
             filenode_verifier
                 .verify_entries(&ctx, &prepared_filenode_entries)
                 .await?;
-            anyhow::Ok(
-                create_filenodes(ctx.clone(), repo.clone(), prepared_filenode_entries).compat(),
-            )
+            anyhow::Ok(create_filenodes(
+                ctx.clone(),
+                repo.clone(),
+                prepared_filenode_entries,
+            ))
         }
     })
     .try_flatten()
