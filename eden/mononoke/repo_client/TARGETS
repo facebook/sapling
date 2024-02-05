@@ -43,7 +43,6 @@ rust_library(
         ":remotefilelog",
         ":streaming_clone",
         ":unbundle",
-        "//common/rust/shed/bytes_ext:bytes_ext",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_01_ext:futures_01_ext",
         "//common/rust/shed/futures_ext:futures_ext",

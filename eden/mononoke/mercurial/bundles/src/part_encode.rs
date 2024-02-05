@@ -98,7 +98,7 @@ impl PartEncodeBuilder {
         B: Into<Bytes> + Send + 'static,
     {
         let stream = future
-            .and_then(|data| async move { Chunk::new_new(data) })
+            .and_then(|data| async move { Chunk::new(data) })
             .into_stream();
         self.set_data_generated(stream)
     }

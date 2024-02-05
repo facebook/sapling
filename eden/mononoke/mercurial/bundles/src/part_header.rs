@@ -12,15 +12,15 @@ use std::collections::HashMap;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use bytes::Buf;
+use bytes::BufMut;
 use bytes::Bytes;
-use bytes_old::BufMut;
-use bytes_old::Bytes as BytesOld;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
 use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
-use crate::utils::BytesExt;
+use crate::utils::BytesNewExt;
 
 pub type PartId = u32;
 
@@ -194,7 +194,7 @@ impl PartHeader {
         out_buf.put_slice(part_type);
 
         // part id
-        out_buf.put_u32_be(self.0.part_id);
+        out_buf.put_u32(self.0.part_id);
 
         // mandatory/advisory params
         let num_mparams = self.0.mparams.len() as u8;
@@ -204,20 +204,10 @@ impl PartHeader {
         out_buf.put_u8(num_aparams);
 
         // sort the params to ensure determinism
-        let mut mparams: Vec<(String, BytesOld)> = self
-            .0
-            .mparams
-            .into_iter()
-            .map(|(k, v)| (k, bytes_ext::copy_from_new(v)))
-            .collect();
+        let mut mparams: Vec<(String, Bytes)> = self.0.mparams.into_iter().collect();
         mparams.sort();
 
-        let mut aparams: Vec<(String, BytesOld)> = self
-            .0
-            .aparams
-            .into_iter()
-            .map(|(k, v)| (k, bytes_ext::copy_from_new(v)))
-            .collect();
+        let mut aparams: Vec<(String, Bytes)> = self.0.aparams.into_iter().collect();
         aparams.sort();
 
         // param sizes
@@ -247,7 +237,7 @@ impl PartHeader {
     }
 }
 
-pub fn decode(mut header_bytes: BytesOld) -> Result<PartHeader> {
+pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
     // Header internals:
     // ---
     // type_size: u8
@@ -259,18 +249,18 @@ pub fn decode(mut header_bytes: BytesOld) -> Result<PartHeader> {
     // parameters: key, val are both strings of lengths corresponding to index in param_sizes
     // ---
     // This function assumes that the full header is available.
-    let type_size = header_bytes.drain_u8() as usize;
+    let type_size = header_bytes.get_u8() as usize;
     let part_type_encoded = header_bytes
-        .drain_str(type_size)
+        .get_str(type_size)
         .with_context(|| ErrorKind::Bundle2Decode("invalid part type".into()))?;
     let part_type = PartHeaderType::decode(&part_type_encoded)?;
 
     let mandatory = part_type_encoded.chars().any(|c| c.is_ascii_uppercase());
 
-    let part_id = header_bytes.drain_u32();
+    let part_id = header_bytes.get_u32();
 
-    let nmparams = header_bytes.drain_u8() as usize;
-    let naparams = header_bytes.drain_u8() as usize;
+    let nmparams = header_bytes.get_u8() as usize;
+    let naparams = header_bytes.get_u8() as usize;
 
     let mut param_sizes = Vec::with_capacity(nmparams + naparams);
     let mut header = PartHeaderBuilder::with_capacity(part_type, mandatory, nmparams, naparams)
@@ -279,8 +269,8 @@ pub fn decode(mut header_bytes: BytesOld) -> Result<PartHeader> {
     for _ in 0..(nmparams + naparams) {
         // TODO: ensure none of the params is empty
         param_sizes.push((
-            header_bytes.drain_u8() as usize,
-            header_bytes.drain_u8() as usize,
+            header_bytes.get_u8() as usize,
+            header_bytes.get_u8() as usize,
         ));
     }
 
@@ -325,10 +315,9 @@ pub fn decode(mut header_bytes: BytesOld) -> Result<PartHeader> {
     Ok(header.build(part_id))
 }
 
-fn decode_header_param(buf: &mut BytesOld, ksize: usize, vsize: usize) -> Result<(String, Bytes)> {
-    let key = buf.drain_str(ksize).context("invalid key")?;
+fn decode_header_param(buf: &mut Bytes, ksize: usize, vsize: usize) -> Result<(String, Bytes)> {
+    let key = buf.get_str(ksize).context("invalid key")?;
     let val = buf.split_to(vsize);
-    let val = bytes_ext::copy_from_old(val);
     Ok((key, val))
 }
 

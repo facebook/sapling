@@ -18,7 +18,6 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }
-bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 filenodes = { version = "0.1.0", path = "../filenodes" }

@@ -11,8 +11,7 @@ use anyhow::Result;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
-use bytes_old::BufMut as _;
-use bytes_old::Bytes as BytesOld;
+use bytes_old::BufMut as BufMutOld;
 use bytes_old::BytesMut as BytesMutOld;
 use tokio_codec::Decoder;
 use tokio_codec::Encoder;
@@ -42,13 +41,13 @@ pub struct Chunk(ChunkInner);
 // This is separate to prevent constructing chunks with unexpected BytesOld objects.
 #[derive(Clone, Debug, PartialEq)]
 enum ChunkInner {
-    Normal(BytesOld),
+    Normal(Bytes),
     Error,
 }
 
 impl Chunk {
-    pub fn new<T: Into<BytesOld>>(val: T) -> Result<Self> {
-        let bytes: BytesOld = val.into();
+    pub fn new(val: impl Into<Bytes>) -> Result<Self> {
+        let bytes: Bytes = val.into();
         if bytes.len() > i32::max_value() as usize {
             bail!(ErrorKind::Bundle2Chunk(format!(
                 "chunk of length {} exceeds maximum {}",
@@ -59,13 +58,8 @@ impl Chunk {
         Ok(Chunk(ChunkInner::Normal(bytes)))
     }
 
-    pub fn new_new(val: impl Into<Bytes>) -> Result<Self> {
-        let bytes: Bytes = val.into();
-        Self::new(bytes_ext::copy_from_new(bytes))
-    }
-
     pub fn empty() -> Self {
-        Chunk(ChunkInner::Normal(BytesOld::new()))
+        Chunk(ChunkInner::Normal(Bytes::new()))
     }
 
     pub fn error() -> Self {
@@ -97,7 +91,7 @@ impl Chunk {
     ///
     /// Returns an error if this chunk was an error chunk, since those do not
     /// have any bytes associated with them.
-    pub fn into_bytes(self) -> Result<BytesOld> {
+    pub fn into_bytes(self) -> Result<Bytes> {
         match self.0 {
             ChunkInner::Normal(bytes) => Ok(bytes),
             ChunkInner::Error => bail!("error chunk, no associated bytes"),
@@ -182,7 +176,7 @@ impl Decoder for ChunkDecoder {
         }
 
         src.drain_i32();
-        let chunk = Chunk::new(src.split_to(len))?;
+        let chunk = Chunk::new(bytes_ext::copy_from_old(src.split_to(len).freeze()))?;
         Ok(Some(chunk))
     }
 }

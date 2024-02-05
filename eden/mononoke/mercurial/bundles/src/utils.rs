@@ -17,12 +17,50 @@ use anyhow::Result;
 use async_compression::DecompressorType;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
+use bytes::Bytes;
+use bytes::BytesMut;
 use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
 
 use crate::errors::ErrorKind;
+
+pub trait BytesNewExt {
+    fn get_str(&mut self, len: usize) -> Result<String>;
+    fn get_path(&mut self, len: usize) -> Result<NonRootMPath>;
+    fn get_node(&mut self) -> Result<HgNodeHash>;
+}
+
+impl BytesNewExt for Bytes {
+    fn get_str(&mut self, len: usize) -> Result<String> {
+        std::str::from_utf8(self.split_to(len).as_ref())
+            .context("invalid UTF-8")
+            .map(String::from)
+    }
+    fn get_path(&mut self, len: usize) -> Result<NonRootMPath> {
+        NonRootMPath::new(self.split_to(len)).context("invalid path")
+    }
+    fn get_node(&mut self) -> Result<HgNodeHash> {
+        // This only fails if the size of input passed in isn't 20 bytes.
+        HgNodeHash::from_bytes(self.split_to(20).as_ref()).context("insufficient bytes in input")
+    }
+}
+
+impl BytesNewExt for BytesMut {
+    fn get_str(&mut self, len: usize) -> Result<String> {
+        std::str::from_utf8(self.split_to(len).as_ref())
+            .context("invalid UTF-8")
+            .map(String::from)
+    }
+    fn get_path(&mut self, len: usize) -> Result<NonRootMPath> {
+        NonRootMPath::new(self.split_to(len)).context("invalid path")
+    }
+    fn get_node(&mut self) -> Result<HgNodeHash> {
+        // This only fails if the size of input passed in isn't 20 bytes.
+        HgNodeHash::from_bytes(self.split_to(20).as_ref()).context("insufficient bytes in input")
+    }
+}
 
 pub trait SplitTo {
     fn split_to(&mut self, at: usize) -> Self;

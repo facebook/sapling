@@ -12,7 +12,7 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use bytes_old::BufMut;
+use bytes::BufMut;
 use futures::future;
 use futures::stream;
 use futures::Stream;

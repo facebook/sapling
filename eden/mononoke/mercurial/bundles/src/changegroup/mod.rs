@@ -136,8 +136,9 @@ mod test {
             cursor.set_position(0);
 
             let partial_read = OldPartialAsyncRead::new(cursor, read_ops);
-            let chunks = FramedRead::new(partial_read, ChunkDecoder)
-                .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
+            let chunks = FramedRead::new(partial_read, ChunkDecoder).map(|chunk| {
+                bytes_ext::copy_from_new(chunk.into_bytes().expect("expected normal chunk"))
+            });
 
             let logger = Logger::root(Discard, o!());
             let unpacker = unpacker::CgUnpacker::new(logger, unpacker_version);

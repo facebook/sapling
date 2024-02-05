@@ -11,7 +11,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bufsize::SizeCounter;
-use bytes_old::BufMut;
+use bytes::BufMut;
 use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::delta::Delta;
 use mercurial_types::delta::Fragment;
@@ -77,9 +77,9 @@ pub fn encoded_len(delta: &Delta) -> usize {
 
 pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
     for fragment in delta.fragments() {
-        out.put_i32_be(fragment.start as i32);
-        out.put_i32_be(fragment.end as i32);
-        out.put_i32_be(fragment.content.len() as i32);
+        out.put_i32(fragment.start as i32);
+        out.put_i32(fragment.end as i32);
+        out.put_i32(fragment.content.len() as i32);
         out.put_slice(&fragment.content[..]);
     }
 }

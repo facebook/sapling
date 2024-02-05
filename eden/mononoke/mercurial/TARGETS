@@ -143,7 +143,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
-        "fbsource//third-party/rust:bufsize-old",
+        "fbsource//third-party/rust:bufsize",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",

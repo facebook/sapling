@@ -786,9 +786,7 @@ impl RepoClient {
                     .chain(stream::once(future::ok(wirepack::Part::End)));
 
                 wirepack::packer::pack_wirepack(serialized_stream, wirepack::Kind::File)
-                    .and_then(
-                        |chunk| async move { Ok(bytes_ext::copy_from_old(chunk.into_bytes()?)) },
-                    )
+                    .and_then(|chunk| async move { chunk.into_bytes() })
                     .inspect_ok({
                         cloned!(ctx);
                         move |bytes| {

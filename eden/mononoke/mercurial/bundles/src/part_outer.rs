@@ -15,6 +15,7 @@ use std::mem;
 use anyhow::Error;
 use anyhow::Result;
 use async_compression::Decompressor;
+use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
 use futures_ext::io::Either;
@@ -164,7 +165,10 @@ impl OuterDecoder {
                     return (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd);
                 }
 
-                let part_header = Self::decode_header(logger, buf.split_to(header_len).freeze());
+                let part_header = Self::decode_header(
+                    logger,
+                    bytes_ext::copy_from_old(buf.split_to(header_len).freeze()),
+                );
                 if let Err(e) = part_header {
                     let next = match e.downcast::<ErrorKind>() {
                         Ok(ek) => {
@@ -208,7 +212,7 @@ impl OuterDecoder {
         }
     }
 
-    fn decode_header(logger: &Logger, header_bytes: BytesOld) -> Result<Option<PartHeader>> {
+    fn decode_header(logger: &Logger, header_bytes: Bytes) -> Result<Option<PartHeader>> {
         let header = part_header::decode(header_bytes)?;
         debug!(logger, "Decoded header: {:?}", header);
         match validate_header(header)? {

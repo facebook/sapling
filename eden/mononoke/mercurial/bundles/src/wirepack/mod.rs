@@ -16,7 +16,7 @@ use anyhow::Context;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use bytes_old::BufMut;
+use bytes::BufMut;
 use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
@@ -183,7 +183,7 @@ impl HistoryEntry {
         } else {
             vec![]
         };
-        buf.put_u16_be(path_vec.len() as u16);
+        buf.put_u16(path_vec.len() as u16);
         buf.put_slice(&path_vec);
         Ok(())
     }
@@ -336,10 +336,10 @@ impl DataEntry {
                 .delta
                 .maybe_fulltext()
                 .expect("verify will have already checked that the delta is a fulltext");
-            buf.put_u64_be(fulltext.len() as u64);
+            buf.put_u64(fulltext.len() as u64);
             buf.put_slice(fulltext);
         } else {
-            buf.put_u64_be(delta::encoded_len(&self.delta) as u64);
+            buf.put_u64(delta::encoded_len(&self.delta) as u64);
             delta::encode_delta(&self.delta, buf);
         }
 
