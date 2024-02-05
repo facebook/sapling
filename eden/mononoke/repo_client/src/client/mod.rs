@@ -39,9 +39,6 @@ use bookmarks_types::BookmarkKind;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
-use bytes_old::BufMut as BufMutOld;
-use bytes_old::Bytes as BytesOld;
-use bytes_old::BytesMut as BytesMutOld;
 use cloned::cloned;
 use context::CoreContext;
 use context::LoggingContainer;
@@ -76,7 +73,6 @@ use futures_old::stream as stream_old;
 use futures_old::try_ready;
 use futures_old::Async;
 use futures_old::Future as OldFuture;
-use futures_old::IntoFuture;
 use futures_old::Poll;
 use futures_old::Stream as OldStream;
 use futures_stats::TimedFutureExt;
@@ -96,7 +92,7 @@ use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
 use maplit::hashmap;
-use mercurial_bundles::create_bundle_stream;
+use mercurial_bundles::create_bundle_stream_new;
 use mercurial_bundles::parts;
 use mercurial_bundles::wirepack;
 use mercurial_bundles::Bundle2Item;
@@ -471,41 +467,40 @@ impl RepoClient {
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl OldFuture<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
+    ) -> impl Future<Output = Result<HashMap<Bookmark, HgChangesetId>>> {
         let session_bookmarks_cache = self.session_bookmarks_cache.clone();
-        (async move { session_bookmarks_cache.get_publishing_bookmarks(ctx).await })
-            .boxed()
-            .compat()
+        async move { session_bookmarks_cache.get_publishing_bookmarks(ctx).await }
     }
 
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl OldFuture<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
-        self.get_publishing_bookmarks_maybe_stale(ctx)
-            .map(|bookmarks| {
-                bookmarks
-                    .into_iter()
-                    .filter_map(|(book, cs)| {
-                        let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                        if book.kind() == &BookmarkKind::PullDefaultPublishing {
-                            Some((book.into_key().into_byte_vec(), hash))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            })
+    ) -> impl Future<Output = Result<HashMap<Vec<u8>, Vec<u8>>>> {
+        let publishing_bookmarks = self.get_publishing_bookmarks_maybe_stale(ctx);
+
+        async move {
+            Ok(publishing_bookmarks
+                .await?
+                .into_iter()
+                .filter_map(|(book, cs)| {
+                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
+                    if book.kind() == &BookmarkKind::PullDefaultPublishing {
+                        Some((book.into_key().into_byte_vec(), hash))
+                    } else {
+                        None
+                    }
+                })
+                .collect())
+        }
     }
 
     fn create_bundle(
         &self,
         ctx: CoreContext,
         args: GetbundleArgs,
-    ) -> OldBoxStream<BytesOld, Error> {
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
         let lfs_params = self.lfs_params();
         let blobrepo = self.repo.blob_repo().clone();
-        let mut bundle2_parts = vec![];
 
         let GetbundleArgs {
             bundlecaps,
@@ -529,10 +524,11 @@ impl RepoClient {
                 }
             }
         }
+
         let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
 
         async move {
-            create_getbundle_response(
+            let mut getbundle_response = create_getbundle_response(
                 &ctx,
                 &blobrepo,
                 common,
@@ -544,11 +540,9 @@ impl RepoClient {
                 },
                 &lfs_params,
             )
-            .await
-        }
-        .boxed()
-        .compat()
-        .and_then(move |mut getbundle_response| {
+            .await?;
+
+            let mut bundle2_parts = vec![];
             bundle2_parts.append(&mut getbundle_response);
 
             // listkeys bookmarks part is added separately.
@@ -556,25 +550,26 @@ impl RepoClient {
             // TODO: generalize this to other listkey types
             // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
             if listkeys.contains(&b"bookmarks".to_vec()) {
-                let items = pull_default_bookmarks
-                    .map(stream_old::iter_ok)
-                    .flatten_stream();
+                let items = stream::iter(pull_default_bookmarks.await?)
+                    .map(anyhow::Ok)
+                    .boxed()
+                    .compat();
                 bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
             }
             // TODO(stash): handle includepattern= and excludepattern=
 
             let compression = None;
-            Ok(create_bundle_stream(bundle2_parts, compression).boxify())
-        })
-        .flatten_stream()
-        .boxify()
+            Ok(create_bundle_stream_new(bundle2_parts, compression))
+        }
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn gettreepack_untimed(
         &self,
         ctx: CoreContext,
         params: GettreepackArgs,
-    ) -> OldBoxStream<BytesOld, Error> {
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -604,10 +599,9 @@ impl RepoClient {
         // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
         // TODO: possibly enable compression support once this is fixed.
         let compression = None;
-        part.into_future()
-            .map(move |part| create_bundle_stream(vec![part], compression))
-            .flatten_stream()
-            .boxify()
+        async move { Ok(create_bundle_stream_new(vec![part?], compression)) }
+            .try_flatten_stream()
+            .boxed()
     }
 
     fn getpack<WeightedContent, Content, GetpackHandler>(
@@ -615,11 +609,11 @@ impl RepoClient {
         params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
         handler: GetpackHandler,
         name: &'static str,
-    ) -> BoxStream<'static, Result<BytesOld, Error>>
+    ) -> BoxStream<'static, Result<Bytes, Error>>
     where
         WeightedContent:
-            OldFuture<Item = (GetpackBlobInfo, Content), Error = Error> + Send + 'static,
-        Content: OldFuture<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error>
+            Future<Output = Result<(GetpackBlobInfo, Content), Error>> + Send + 'static,
+        Content: Future<Output = Result<(HgFileNodeId, Bytes, Option<Metadata>), Error>>
             + Send
             + 'static,
         GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
@@ -677,7 +671,6 @@ impl RepoClient {
                                                 lfs_params.clone(),
                                                 true,
                                             )
-                                            .compat()
                                         })
                                         .collect();
 
@@ -703,8 +696,7 @@ impl RepoClient {
                                             .iter()
                                             .map(|(blob_info, _)| blob_info.weight)
                                             .sum();
-                                        let content_futs =
-                                            blobs.into_iter().map(|(_, fut)| fut.compat());
+                                        let content_futs = blobs.into_iter().map(|(_, fut)| fut);
                                         let contents_and_history = future::try_join(
                                             future::try_join_all(content_futs),
                                             history_fut,
@@ -801,8 +793,12 @@ impl RepoClient {
                     .chain(stream_old::once(Ok(wirepack::Part::End)));
 
                 wirepack::packer::WirePackPacker::new(serialized_stream, wirepack::Kind::File)
-                    .and_then(|chunk| chunk.into_bytes())
-                    .inspect({
+                    .boxify()
+                    .compat()
+                    .and_then(
+                        |chunk| async move { Ok(bytes_ext::copy_from_old(chunk.into_bytes()?)) },
+                    )
+                    .inspect_ok({
                         cloned!(ctx);
                         move |bytes| {
                             let len = bytes.len() as i64;
@@ -815,8 +811,6 @@ impl RepoClient {
                             }
                         }
                     })
-                    .boxify()
-                    .compat()
                     .timed({
                         cloned!(ctx);
                         move |stats| {
@@ -1171,8 +1165,7 @@ impl HgCommands for RepoClient {
             // Heads are all the commits that has a publishing bookmarks
             // that points to it.
             self.get_publishing_bookmarks_maybe_stale(ctx)
-                .map(|map| map.into_values().collect())
-                .compat()
+                .map_ok(|map| map.into_values().collect())
                 .timeout(default_timeout())
                 .flatten_err()
                 .timed()
@@ -1410,7 +1403,6 @@ impl HgCommands for RepoClient {
         self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
             let s = self
                 .create_bundle(ctx, args)
-                .compat()
                 .whole_stream_timeout(getbundle_timeout())
                 .yield_periodically()
                 .flatten_err()
@@ -1428,8 +1420,6 @@ impl HgCommands for RepoClient {
 
             throttle_stream(&self.session, Metric::Commits, ops::GETBUNDLE, move || s)
         })
-        .map_ok(bytes_ext::copy_from_old)
-        .boxed()
     }
 
     // @wireprotocommand('hello')
@@ -1455,7 +1445,6 @@ impl HgCommands for RepoClient {
         if namespace == "bookmarks" {
             self.command_future(ops::LISTKEYS, UNSAMPLED, |ctx, command_logger| {
                 self.get_pull_default_bookmarks_maybe_stale(ctx)
-                    .compat()
                     .timed()
                     .map(move |(stats, res)| {
                         command_logger.without_wireproto().finalize_command(&stats);
@@ -1751,8 +1740,6 @@ impl HgCommands for RepoClient {
 
                 let s = self
                     .gettreepack_untimed(ctx.clone(), params)
-                    .compat()
-                    .map_ok(bytes_ext::copy_from_old)
                     .whole_stream_timeout(default_timeout())
                     .yield_periodically()
                     .flatten_err()
@@ -1925,19 +1912,19 @@ impl HgCommands for RepoClient {
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
-                async move { create_getpack_v1_blob(&ctx, &repo, node, validate_hash).await }
-                    .boxed()
-                    .compat()
-                    .map(|(size, fut)| {
-                        // GetpackV1 has no metadata.
-                        let fut = fut.boxed().compat().map(|(id, bytes)| (id, bytes, None));
-                        (size, fut)
-                    })
+                async move {
+                    let (size, fut) =
+                        create_getpack_v1_blob(&ctx, &repo, node, validate_hash).await?;
+                    // GetpackV1 has no metadata.
+                    let fut = async move {
+                        let (id, bytes) = fut.await?;
+                        anyhow::Ok((id, bytes, None))
+                    };
+                    anyhow::Ok((size, fut))
+                }
             },
             ops::GETPACKV1,
         )
-        .map_ok(bytes_ext::copy_from_old)
-        .boxed()
     }
 
     // @wireprotocommand('getpackv2')
@@ -1949,23 +1936,20 @@ impl HgCommands for RepoClient {
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
                 async move {
-                    create_getpack_v2_blob(&ctx, &repo, node, lfs_thresold, validate_hash).await
-                }
-                .boxed()
-                .compat()
-                .map(|(size, fut)| {
+                    let (size, fut) =
+                        create_getpack_v2_blob(&ctx, &repo, node, lfs_thresold, validate_hash)
+                            .await?;
                     // GetpackV2 always has metadata.
-                    let fut = fut
-                        .boxed()
-                        .compat()
-                        .map(|(id, bytes, metadata)| (id, bytes, Some(metadata)));
-                    (size, fut)
-                })
+                    let fut = async move {
+                        let (id, bytes, metadata) = fut.await?;
+
+                        anyhow::Ok((id, bytes, Some(metadata)))
+                    };
+                    anyhow::Ok((size, fut))
+                }
             },
             ops::GETPACKV2,
         )
-        .map_ok(bytes_ext::copy_from_old)
-        .boxed()
     }
 
     // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
@@ -1988,7 +1972,7 @@ impl HgCommands for RepoClient {
                                 RevlogChangeset::load(&ctx, blobrepo.repo_blobstore(), hg_cs_id)
                                     .await?;
                             let bytes = serialize_getcommitdata(hg_cs_id, revlog_cs)?;
-                            anyhow::Ok(bytes_ext::copy_from_old(bytes))
+                            anyhow::Ok(bytes)
                         }
                     }
                 })
@@ -2336,7 +2320,7 @@ fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, Has
 fn serialize_getcommitdata(
     hg_cs_id: HgChangesetId,
     revlog_changeset: Option<RevlogChangeset>,
-) -> Result<BytesOld> {
+) -> Result<Bytes> {
     // For each changeset, write:
     //
     //   HEX(HASH) + ' ' + STR(LEN(SERIALIZED)) + '\n' + SERIALIZED + '\n'
@@ -2353,10 +2337,10 @@ fn serialize_getcommitdata(
         }
     }
     // capacity = hash + " " + length + "\n" + content + "\n"
-    let mut buffer = BytesMutOld::with_capacity(40 + 1 + 10 + 1 + revlog_commit.len() + 1);
+    let mut buffer = BytesMut::with_capacity(40 + 1 + 10 + 1 + revlog_commit.len() + 1);
     write!(buffer, "{} {}\n", hg_cs_id, revlog_commit.len())?;
     buffer.extend_from_slice(&revlog_commit);
-    buffer.put("\n");
+    buffer.put_u8(b'\n');
     Ok(buffer.freeze())
 }
 
