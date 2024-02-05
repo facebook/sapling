@@ -38,7 +38,7 @@ rust_binary(
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
-        "//common/rust/shed/async_compression:async_compression",
+        "fbsource//third-party/rust:zstd",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hash_memo:hash_memo",

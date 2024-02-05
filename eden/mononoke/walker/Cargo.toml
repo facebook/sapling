@@ -12,7 +12,6 @@ ahash = "0.8"
 anyhow = "1.0.75"
 array-init = "0.1"
 async-trait = "0.1.71"
-async_compression = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 auto_impl = "1.1.0"
 bitflags = "2.4"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
@@ -82,6 +81,7 @@ thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }
+zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

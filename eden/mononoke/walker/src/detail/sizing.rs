@@ -9,16 +9,11 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
-use std::io::Cursor;
-use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
-use async_compression::metered::MeteredWrite;
-use async_compression::Compressor;
-use async_compression::CompressorType;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use cloned::cloned;
@@ -94,14 +89,11 @@ impl fmt::Display for SizingStats {
     }
 }
 
-fn try_compress(raw_data: &Bytes, compressor_type: CompressorType) -> Result<SizingStats, Error> {
+fn try_compress(raw_data: &Bytes, level: i32) -> Result<SizingStats, Error> {
     let raw = raw_data.len() as u64;
-    let compressed_buf = MeteredWrite::new(Cursor::new(Vec::with_capacity(4 * 1024)));
-    let mut compressor = Compressor::new(compressed_buf, compressor_type);
-    compressor.write_all(raw_data)?;
-    let compressed_buf = compressor.try_finish().map_err(|(_encoder, e)| e)?;
-    // Assume we wouldn't compress if its bigger
-    let compressed = min(raw, compressed_buf.total_thru());
+    let compressed_data = zstd::stream::encode_all(raw_data.as_ref(), level)?;
+    // Assume we wouldn't compress if it's bigger
+    let compressed = min(raw, compressed_data.len() as u64);
     Ok(SizingStats { raw, compressed })
 }
 
@@ -109,7 +101,7 @@ fn try_compress(raw_data: &Bytes, compressor_type: CompressorType) -> Result<Siz
 fn size_sampling_stream<InStream, InStats>(
     scheduled_max: usize,
     s: InStream,
-    compressor_type: CompressorType,
+    compression_level: i32,
     sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SizingStats>), Error>>
 where
@@ -151,7 +143,7 @@ where
                                 sizing_sample.data.values().try_fold(
                                     SizingStats::default(),
                                     |acc, v| {
-                                        try_compress(v.as_bytes(), compressor_type)
+                                        try_compress(v.as_bytes(), compression_level)
                                             .map(|sizes| acc + sizes)
                                     },
                                 )
@@ -181,7 +173,8 @@ where
                             .data
                             .values()
                             .try_fold(SizingStats::default(), |acc, v| {
-                                try_compress(v.as_bytes(), compressor_type).map(|sizes| acc + sizes)
+                                try_compress(v.as_bytes(), compression_level)
+                                    .map(|sizes| acc + sizes)
                             })
                     })
                     .transpose();
@@ -375,9 +368,7 @@ async fn run_one(
                 let compressor = size_sampling_stream(
                     scheduled_max,
                     walk_progress,
-                    CompressorType::Zstd {
-                        level: command.compression_level,
-                    },
+                    command.compression_level,
                     command.sampler,
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, compressor);
