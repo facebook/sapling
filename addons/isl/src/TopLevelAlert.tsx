@@ -12,6 +12,7 @@ import {Banner, BannerKind} from './Banner';
 import serverAPI from './ClientToServerAPI';
 import {Link} from './Link';
 import {Subtle} from './Subtle';
+import {tracker} from './analytics';
 import {T} from './i18n';
 import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
 import {layout} from './stylexUtils';
@@ -19,6 +20,7 @@ import {colors, font, radius, spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
+import {useEffect} from 'react';
 import {Icon} from 'shared/Icon';
 
 const dismissedAlerts = localStorageBackedAtom<{[key: string]: boolean}>(
@@ -29,6 +31,8 @@ const dismissedAlerts = localStorageBackedAtom<{[key: string]: boolean}>(
 const activeAlerts = atom<Array<Alert>>([]);
 
 const ALERT_FETCH_INTERVAL_MS = 5 * 60 * 1000;
+
+const alertsAlreadyLogged = new Set<string>();
 
 serverAPI.onMessageOfType('fetchedActiveAlerts', event => {
   writeAtom(activeAlerts, event.alerts);
@@ -47,6 +51,15 @@ export function TopLevelAlerts() {
   const [dismissed, setDismissed] = useAtom(dismissedAlerts);
   const alerts = useAtomValue(activeAlerts);
 
+  useEffect(() => {
+    for (const {key} of alerts) {
+      if (!alertsAlreadyLogged.has(key)) {
+        tracker.track('AlertShown', {extras: {key}});
+        alertsAlreadyLogged.add(key);
+      }
+    }
+  }, [alerts]);
+
   return (
     <div>
       {alerts
@@ -57,6 +70,7 @@ export function TopLevelAlerts() {
             key={i}
             onDismiss={() => {
               setDismissed(old => ({...old, [alert.key]: true}));
+              tracker.track('AlertDismissed', {extras: {key: alert.key}});
             }}
           />
         ))}

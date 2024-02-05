@@ -19,6 +19,8 @@ export type TrackEventName =
   | 'AbortMergeOperation'
   | 'AddOperation'
   | 'AddRemoveOperation'
+  | 'AlertShown'
+  | 'AlertDismissed'
   | 'AmendMessageOperation'
   | 'AmendOperation'
   | 'AmendFileSubsetOperation'
