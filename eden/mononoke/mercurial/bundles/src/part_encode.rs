@@ -14,8 +14,8 @@ use std::mem;
 
 use anyhow::Error;
 use anyhow::Result;
-use bytes::Bytes as BytesNew;
-use bytes_old::Bytes;
+use bytes::Bytes;
+use bytes_old::Bytes as BytesOld;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
 use futures_old::Async;
@@ -90,7 +90,7 @@ impl PartEncodeBuilder {
     pub fn add_mparam<S, B>(&mut self, key: S, val: B) -> Result<&mut Self>
     where
         S: Into<String>,
-        B: Into<BytesNew>,
+        B: Into<Bytes>,
     {
         self.headerb.add_mparam(key, val)?;
         Ok(self)
@@ -100,7 +100,7 @@ impl PartEncodeBuilder {
     pub fn add_aparam<S, B>(&mut self, key: S, val: B) -> Result<&mut Self>
     where
         S: Into<String>,
-        B: Into<BytesNew>,
+        B: Into<Bytes>,
     {
         self.headerb.add_aparam(key, val)?;
         Ok(self)
@@ -111,7 +111,7 @@ impl PartEncodeBuilder {
         self
     }
 
-    pub fn set_data_bytes<T: Into<Bytes>>(&mut self, data: T) -> Result<&mut Self> {
+    pub fn set_data_bytes<T: Into<BytesOld>>(&mut self, data: T) -> Result<&mut Self> {
         self.data = PartEncodeData::Fixed(Chunk::new(data.into())?);
         Ok(self)
     }
@@ -119,7 +119,7 @@ impl PartEncodeBuilder {
     pub fn set_data_future<T>(&mut self, future: T) -> &mut Self
     where
         T: Future<Error = Error> + Send + 'static,
-        T::Item: Into<Bytes>,
+        T::Item: Into<BytesOld>,
     {
         let stream = future.and_then(Chunk::new).into_stream();
         self.set_data_generated(stream)

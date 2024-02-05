@@ -8,10 +8,10 @@
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use bytes::Bytes as BytesNew;
+use bytes::Bytes;
 use bytes_old::BufMut;
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use tokio_codec::Decoder;
 use tokio_codec::Encoder;
 
@@ -31,22 +31,22 @@ use crate::utils::BytesExt;
 /// There are two special kinds of chunks:
 ///
 /// 1. An "empty chunk", which is simply a chunk of size 0. This is represented
-///    as a Normal chunk below with an empty Bytes.
+///    as a Normal chunk below with an empty BytesOld.
 /// 2. An "error chunk", which is a chunk with size -1 and no data. Error chunks
 ///    interrupt a chunk stream and are followed by a new part.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Chunk(ChunkInner);
 
-// This is separate to prevent constructing chunks with unexpected Bytes objects.
+// This is separate to prevent constructing chunks with unexpected BytesOld objects.
 #[derive(Clone, Debug, PartialEq)]
 enum ChunkInner {
-    Normal(Bytes),
+    Normal(BytesOld),
     Error,
 }
 
 impl Chunk {
-    pub fn new<T: Into<Bytes>>(val: T) -> Result<Self> {
-        let bytes: Bytes = val.into();
+    pub fn new<T: Into<BytesOld>>(val: T) -> Result<Self> {
+        let bytes: BytesOld = val.into();
         if bytes.len() > i32::max_value() as usize {
             bail!(ErrorKind::Bundle2Chunk(format!(
                 "chunk of length {} exceeds maximum {}",
@@ -57,13 +57,13 @@ impl Chunk {
         Ok(Chunk(ChunkInner::Normal(bytes)))
     }
 
-    pub fn new_new(val: impl Into<BytesNew>) -> Result<Self> {
-        let bytes: BytesNew = val.into();
+    pub fn new_new(val: impl Into<Bytes>) -> Result<Self> {
+        let bytes: Bytes = val.into();
         Self::new(bytes_ext::copy_from_new(bytes))
     }
 
     pub fn empty() -> Self {
-        Chunk(ChunkInner::Normal(Bytes::new()))
+        Chunk(ChunkInner::Normal(BytesOld::new()))
     }
 
     pub fn error() -> Self {
@@ -95,7 +95,7 @@ impl Chunk {
     ///
     /// Returns an error if this chunk was an error chunk, since those do not
     /// have any bytes associated with them.
-    pub fn into_bytes(self) -> Result<Bytes> {
+    pub fn into_bytes(self) -> Result<BytesOld> {
         match self.0 {
             ChunkInner::Normal(bytes) => Ok(bytes),
             ChunkInner::Error => bail!("error chunk, no associated bytes"),
@@ -111,7 +111,7 @@ impl Encoder for ChunkEncoder {
     type Item = Chunk;
     type Error = Error;
 
-    fn encode(&mut self, item: Chunk, dst: &mut BytesMut) -> Result<()> {
+    fn encode(&mut self, item: Chunk, dst: &mut BytesMutOld) -> Result<()> {
         match item.0 {
             ChunkInner::Normal(bytes) => {
                 dst.reserve(4 + bytes.len());
@@ -135,7 +135,7 @@ impl Decoder for ChunkDecoder {
     type Item = Chunk;
     type Error = Error;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Chunk>> {
+    fn decode(&mut self, src: &mut BytesMutOld) -> Result<Option<Chunk>> {
         if src.len() < 4 {
             return Ok(None);
         }
@@ -182,7 +182,7 @@ mod test {
 
     #[test]
     fn test_empty_chunk() {
-        let mut buf = BytesMut::with_capacity(4);
+        let mut buf = BytesMutOld::with_capacity(4);
         buf.put_i32_be(0);
 
         let mut decoder = ChunkDecoder;
@@ -196,7 +196,7 @@ mod test {
 
     #[test]
     fn test_error_chunk() {
-        let mut buf = BytesMut::with_capacity(4);
+        let mut buf = BytesMutOld::with_capacity(4);
         buf.put_i32_be(-1);
 
         let mut decoder = ChunkDecoder;
@@ -210,7 +210,7 @@ mod test {
 
     #[test]
     fn test_invalid_chunk() {
-        let mut buf = BytesMut::with_capacity(4);
+        let mut buf = BytesMutOld::with_capacity(4);
         buf.put_i32_be(-2);
 
         let mut decoder = ChunkDecoder;

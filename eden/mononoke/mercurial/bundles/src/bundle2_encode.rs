@@ -21,7 +21,7 @@ use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes_old::Buf;
 use bytes_old::BufMut;
-use bytes_old::Bytes;
+use bytes_old::Bytes as BytesOld;
 use bytes_old::IntoBuf;
 use futures_ext::io::Either;
 use futures_ext::io::Either::A as UncompressedRead;
@@ -154,7 +154,7 @@ where
             state: EncodeState::Start(StartState {
                 writer: self.writer,
                 compressor_type: self.compressor_type,
-                header_buf: Bytes::from(header_buf).into_buf(),
+                header_buf: BytesOld::from(header_buf).into_buf(),
                 parts: self.parts,
             }),
         }
@@ -216,7 +216,7 @@ where
 {
     writer: W,
     compressor_type: Option<CompressorType>,
-    header_buf: Cursor<Bytes>,
+    header_buf: Cursor<BytesOld>,
     parts: Vec<PartEncode>,
 }
 

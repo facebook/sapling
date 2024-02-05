@@ -35,8 +35,8 @@ use std::fmt;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use bytes::Bytes as BytesNew;
-use bytes_old::Bytes;
+use bytes::Bytes;
+use bytes_old::Bytes as BytesOld;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future::BoxFuture;
@@ -69,8 +69,8 @@ pub enum Bundle2Item<'a> {
     ),
     B2xInfinitepush(PartHeader, BoxStream<'a, Result<changegroup::Part>>),
     B2xTreegroup2(PartHeader, BoxStream<'a, Result<wirepack::Part>>),
-    // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
-    B2xInfinitepushBookmarks(PartHeader, BoxStream<'a, Result<bytes_old::Bytes>>),
+    // B2xInfinitepushBookmarks returns BytesOld because this part is not going to be used.
+    B2xInfinitepushBookmarks(PartHeader, BoxStream<'a, Result<BytesOld>>),
     B2xInfinitepushMutation(
         PartHeader,
         BoxStream<'a, Result<Vec<mercurial_mutation::HgMutationEntry>>>,
@@ -146,7 +146,7 @@ impl<'a> From<OldBundle2Item> for Bundle2Item<'a> {
             B2xTreegroup2(header, stream) => {
                 Bundle2Item::B2xTreegroup2(header, stream.compat().boxed())
             }
-            // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
+            // B2xInfinitepushBookmarks returns BytesOld because this part is not going to be used.
             B2xInfinitepushBookmarks(header, stream) => {
                 Bundle2Item::B2xInfinitepushBookmarks(header, stream.compat().boxed())
             }
@@ -173,8 +173,8 @@ pub(crate) enum OldBundle2Item {
     ),
     B2xInfinitepush(PartHeader, OldBoxStream<changegroup::Part, Error>),
     B2xTreegroup2(PartHeader, OldBoxStream<wirepack::Part, Error>),
-    // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
-    B2xInfinitepushBookmarks(PartHeader, OldBoxStream<bytes_old::Bytes, Error>),
+    // B2xInfinitepushBookmarks returns BytesOld because this part is not going to be used.
+    B2xInfinitepushBookmarks(PartHeader, OldBoxStream<BytesOld, Error>),
     B2xInfinitepushMutation(
         PartHeader,
         OldBoxStream<Vec<mercurial_mutation::HgMutationEntry>, Error>,
@@ -186,15 +186,15 @@ pub(crate) enum OldBundle2Item {
     Pushvars(PartHeader, OldBoxFuture<(), Error>),
 }
 
-/// Given bundle parts, returns a stream of Bytes that represent an encoded bundle with these parts
+/// Given bundle parts, returns a stream of BytesOld that represent an encoded bundle with these parts
 pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
     parts: Vec<part_encode::PartEncodeBuilder>,
     ct: C,
-) -> impl OldStream<Item = bytes_old::Bytes, Error = Error> {
-    let (sender, receiver) = mpsc::channel::<Bytes>(1);
-    // Sends either and empty Bytes if bundle generation was successful or an error.
-    // Empty Bytes are used just to make chaining of streams below easier.
-    let (result_sender, result_receiver) = oneshot::channel::<Result<Bytes>>();
+) -> impl OldStream<Item = BytesOld, Error = Error> {
+    let (sender, receiver) = mpsc::channel::<BytesOld>(1);
+    // Sends either and empty BytesOld if bundle generation was successful or an error.
+    // Empty BytesOld are used just to make chaining of streams below easier.
+    let (result_sender, result_receiver) = oneshot::channel::<Result<BytesOld>>();
     // Bundle2EncodeBuilder accepts writer which implements AsyncWrite. To workaround that we
     // use SinkToAsyncWrite. It implements AsyncWrite trait and sends everything that was written
     // into the Sender
@@ -213,7 +213,7 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
                     Ok(_) => {
                         // Bundle was successfully generated, so there is nothing add.
                         // So just add empty bytes.
-                        let _ = result_sender.send(Ok(Bytes::new()));
+                        let _ = result_sender.send(Ok(BytesOld::new()));
                     }
                     Err(err) => {
                         let _ = result_sender.send(Err(err));
@@ -236,7 +236,7 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
 pub fn create_bundle_stream_new<C: Into<Option<async_compression::CompressorType>>>(
     parts: Vec<part_encode::PartEncodeBuilder>,
     ct: C,
-) -> impl Stream<Item = Result<BytesNew, Error>> {
+) -> impl Stream<Item = Result<Bytes, Error>> {
     create_bundle_stream(parts, ct)
         .compat()
         .map_ok(bytes_ext::copy_from_old)

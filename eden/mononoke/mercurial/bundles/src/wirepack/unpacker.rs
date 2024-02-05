@@ -14,7 +14,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::BytesMut;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::RepoPath;
 use slog::trace;
 use slog::Logger;
@@ -39,7 +39,7 @@ impl Decoder for WirePackUnpacker {
     type Item = Part;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         match self.inner.decode_next(buf, self.state.take()) {
             Err(e) => {
                 self.state = State::Invalid;
@@ -55,7 +55,7 @@ impl Decoder for WirePackUnpacker {
         }
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         match self.decode(buf)? {
             None => {
                 if !buf.is_empty() {
@@ -96,7 +96,11 @@ struct UnpackerInner {
 }
 
 impl UnpackerInner {
-    fn decode_next(&mut self, buf: &mut BytesMut, state: State) -> Result<(Option<Part>, State)> {
+    fn decode_next(
+        &mut self,
+        buf: &mut BytesMutOld,
+        state: State,
+    ) -> Result<(Option<Part>, State)> {
         use self::State::*;
         let mut state = state;
 
@@ -176,7 +180,7 @@ impl UnpackerInner {
         }
     }
 
-    fn decode_filename(&mut self, buf: &mut BytesMut) -> Result<DecodeRes<RepoPath>> {
+    fn decode_filename(&mut self, buf: &mut BytesMutOld) -> Result<DecodeRes<RepoPath>> {
         // Notes:
         // - A zero-length filename indicates the root manifest for tree packs.
         //   (It is not allowed for file packs.)
@@ -221,7 +225,7 @@ impl UnpackerInner {
         Ok(DecodeRes::Some(filename))
     }
 
-    fn decode_section_start(&mut self, buf: &mut BytesMut) -> Option<u32> {
+    fn decode_section_start(&mut self, buf: &mut BytesMutOld) -> Option<u32> {
         if buf.len() < 4 {
             None
         } else {
@@ -230,12 +234,12 @@ impl UnpackerInner {
     }
 
     #[inline]
-    fn decode_history(&mut self, buf: &mut BytesMut) -> Result<Option<HistoryEntry>> {
+    fn decode_history(&mut self, buf: &mut BytesMutOld) -> Result<Option<HistoryEntry>> {
         HistoryEntry::decode(buf, self.kind)
     }
 
     #[inline]
-    fn decode_data(&mut self, buf: &mut BytesMut) -> Result<Option<DataEntry>> {
+    fn decode_data(&mut self, buf: &mut BytesMutOld) -> Result<Option<DataEntry>> {
         DataEntry::decode(buf, DataEntryVersion::V1)
     }
 }

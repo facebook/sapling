@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::utils::percent_encode;
 use percent_encoding::percent_decode;
 use tokio_io::codec::Decoder;
@@ -45,11 +45,11 @@ impl Decoder for CapabilitiesUnpacker {
     type Item = Capabilities;
     type Error = Error;
 
-    fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, _buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         Ok(None) // This unpacker unpacks single element, wait for EOF
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         let mut caps = HashMap::new();
         for kv in buf.split(|b| b == &b'\n') {
             let mut kv = kv.splitn(2, |b| b == &b'=');
@@ -107,7 +107,7 @@ mod test {
         let mut unpacker = CapabilitiesUnpacker;
 
         let decoded = unpacker
-            .decode_eof(&mut BytesMut::from(&encoded[..]))
+            .decode_eof(&mut BytesMutOld::from(&encoded[..]))
             .unwrap()
             .unwrap();
         assert_eq!(decoded.caps, caps);

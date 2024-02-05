@@ -14,8 +14,8 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_mutation::HgMutationEntry;
 use tokio_io::codec::Decoder;
 use types::mutation::MutationEntry;
@@ -40,10 +40,10 @@ impl InfinitepushBookmarksUnpacker {
 }
 
 impl Decoder for InfinitepushBookmarksUnpacker {
-    type Item = Bytes;
+    type Item = BytesOld;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         if self.finished {
             return Ok(None);
         }
@@ -84,11 +84,11 @@ impl Decoder for InfinitepushMutationUnpacker {
     type Item = Vec<HgMutationEntry>;
     type Error = Error;
 
-    fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, _buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         Ok(None)
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         let mut entries = Vec::new();
         let mut cursor = Cursor::new(buf);
         let version = cursor.read_u8()?;
@@ -107,7 +107,7 @@ impl Decoder for InfinitepushMutationUnpacker {
     }
 }
 
-pub fn infinitepush_mutation_packer(entries: Vec<HgMutationEntry>) -> Result<Bytes> {
+pub fn infinitepush_mutation_packer(entries: Vec<HgMutationEntry>) -> Result<BytesOld> {
     let mut buf = Vec::with_capacity(entries.len() * types::mutation::DEFAULT_ENTRY_SIZE);
     buf.write_u8(MUTATION_PART_VERSION)?;
     buf.write_vlq(entries.len())?;

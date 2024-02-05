@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use bytes::Bytes as BytesNew;
+use bytes::Bytes;
 use bytes_old::BufMut;
-use bytes_old::Bytes;
+use bytes_old::Bytes as BytesOld;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
@@ -142,8 +142,8 @@ pub struct PartHeaderInner {
     pub part_id: PartId,
     // Part parameter keys are strings and values are arbitrary bytestrings
     // (which can even include null characters).
-    pub mparams: HashMap<String, BytesNew>,
-    pub aparams: HashMap<String, BytesNew>,
+    pub mparams: HashMap<String, Bytes>,
+    pub aparams: HashMap<String, Bytes>,
 }
 
 /// A bundle2 part header.
@@ -162,12 +162,12 @@ impl PartHeader {
     }
 
     #[inline]
-    pub fn mparams(&self) -> &HashMap<String, BytesNew> {
+    pub fn mparams(&self) -> &HashMap<String, Bytes> {
         &self.0.mparams
     }
 
     #[inline]
-    pub fn aparams(&self) -> &HashMap<String, BytesNew> {
+    pub fn aparams(&self) -> &HashMap<String, Bytes> {
         &self.0.aparams
     }
 
@@ -204,7 +204,7 @@ impl PartHeader {
         out_buf.put_u8(num_aparams);
 
         // sort the params to ensure determinism
-        let mut mparams: Vec<(String, Bytes)> = self
+        let mut mparams: Vec<(String, BytesOld)> = self
             .0
             .mparams
             .into_iter()
@@ -212,7 +212,7 @@ impl PartHeader {
             .collect();
         mparams.sort();
 
-        let mut aparams: Vec<(String, Bytes)> = self
+        let mut aparams: Vec<(String, BytesOld)> = self
             .0
             .aparams
             .into_iter()
@@ -247,7 +247,7 @@ impl PartHeader {
     }
 }
 
-pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
+pub fn decode(mut header_bytes: BytesOld) -> Result<PartHeader> {
     // Header internals:
     // ---
     // type_size: u8
@@ -325,7 +325,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
     Ok(header.build(part_id))
 }
 
-fn decode_header_param(buf: &mut Bytes, ksize: usize, vsize: usize) -> Result<(String, BytesNew)> {
+fn decode_header_param(buf: &mut BytesOld, ksize: usize, vsize: usize) -> Result<(String, Bytes)> {
     let key = buf.drain_str(ksize).context("invalid key")?;
     let val = buf.split_to(vsize);
     let val = bytes_ext::copy_from_old(val);
@@ -337,8 +337,8 @@ fn decode_header_param(buf: &mut Bytes, ksize: usize, vsize: usize) -> Result<(S
 pub struct PartHeaderBuilder {
     part_type: PartHeaderType,
     mandatory: bool,
-    mparams: HashMap<String, BytesNew>,
-    aparams: HashMap<String, BytesNew>,
+    mparams: HashMap<String, Bytes>,
+    aparams: HashMap<String, Bytes>,
 }
 
 impl PartHeaderBuilder {
@@ -363,7 +363,7 @@ impl PartHeaderBuilder {
     pub fn add_mparam<S, B>(&mut self, key: S, val: B) -> Result<&mut Self>
     where
         S: Into<String>,
-        B: Into<BytesNew>,
+        B: Into<Bytes>,
     {
         let key = key.into();
         let val = val.into();
@@ -381,7 +381,7 @@ impl PartHeaderBuilder {
     pub fn add_aparam<S, B>(&mut self, key: S, val: B) -> Result<&mut Self>
     where
         S: Into<String>,
-        B: Into<BytesNew>,
+        B: Into<Bytes>,
     {
         let key = key.into();
         let val = val.into();
@@ -543,7 +543,7 @@ mod test {
         Ok(TestResult::passed())
     }
 
-    fn assert_param<S: Into<String>, B: Into<BytesNew>>(
+    fn assert_param<S: Into<String>, B: Into<Bytes>>(
         header: &mut PartHeaderBuilder,
         key: S,
         val: B,

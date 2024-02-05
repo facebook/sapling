@@ -18,8 +18,8 @@ use async_compression::CompressorType;
 use async_compression::DecompressorType;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
 
@@ -29,17 +29,17 @@ pub trait SplitTo {
     fn split_to(&mut self, at: usize) -> Self;
 }
 
-impl SplitTo for Bytes {
+impl SplitTo for BytesOld {
     #[inline]
     fn split_to(&mut self, at: usize) -> Self {
-        Bytes::split_to(self, at)
+        BytesOld::split_to(self, at)
     }
 }
 
-impl SplitTo for BytesMut {
+impl SplitTo for BytesMutOld {
     #[inline]
     fn split_to(&mut self, at: usize) -> Self {
-        BytesMut::split_to(self, at)
+        BytesMutOld::split_to(self, at)
     }
 }
 

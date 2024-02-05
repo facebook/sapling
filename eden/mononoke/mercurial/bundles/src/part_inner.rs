@@ -16,8 +16,8 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use futures_ext::BoxFuture;
 use futures_ext::FutureExt;
 use futures_ext::StreamExt;
@@ -147,7 +147,7 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
 ) -> (OldBundle2Item, BoxFuture<OuterStream<R>, Error>) {
     let wrapped_stream = stream
         .take_while(|frame| future::ok(frame.is_payload()))
-        .map(OuterFrame::get_payload as fn(OuterFrame) -> Bytes);
+        .map(OuterFrame::get_payload as fn(OuterFrame) -> BytesOld);
     let (wrapped_stream, remainder) = wrapped_stream.return_remainder();
 
     let bundle2item = match *header.part_type() {
@@ -248,7 +248,7 @@ impl Decoder for EmptyUnpacker {
     type Item = ();
     type Error = Error;
 
-    fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, _buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         Ok(None)
     }
 }

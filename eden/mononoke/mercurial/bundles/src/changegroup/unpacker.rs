@@ -17,7 +17,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::BytesMut;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 use slog::Logger;
@@ -108,7 +108,7 @@ impl Decoder for CgUnpacker {
     type Item = Part;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         match Self::decode_next(buf, self.state.take(), &self.version) {
             Err(e) => {
                 self.state = State::Invalid;
@@ -124,7 +124,7 @@ impl Decoder for CgUnpacker {
         }
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode_eof(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         match self.decode(buf)? {
             None => {
                 if !buf.is_empty() {
@@ -168,7 +168,7 @@ impl CgUnpacker {
     }
 
     fn decode_next(
-        buf: &mut BytesMut,
+        buf: &mut BytesMutOld,
         state: State,
         version: &CgVersion,
     ) -> Result<(Option<Part>, State)> {
@@ -222,7 +222,7 @@ impl CgUnpacker {
     }
 
     fn decode_filelog_chunk(
-        buf: &mut BytesMut,
+        buf: &mut BytesMutOld,
         f: NonRootMPath,
         version: &CgVersion,
     ) -> Result<(Option<Part>, State)> {
@@ -238,7 +238,7 @@ impl CgUnpacker {
         }
     }
 
-    fn decode_chunk(buf: &mut BytesMut, version: &CgVersion) -> Result<Option<CgChunk>> {
+    fn decode_chunk(buf: &mut BytesMutOld, version: &CgVersion) -> Result<Option<CgChunk>> {
         if buf.len() < 4 {
             return Ok(None);
         }
@@ -268,7 +268,7 @@ impl CgUnpacker {
     }
 
     fn decode_delta(
-        buf: &mut BytesMut,
+        buf: &mut BytesMutOld,
         chunk_len: usize,
         version: &CgVersion,
     ) -> Result<Option<CgChunk>> {
@@ -312,7 +312,7 @@ impl CgUnpacker {
         })))
     }
 
-    fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<NonRootMPath>> {
+    fn decode_filename(buf: &mut BytesMutOld) -> Result<DecodeRes<NonRootMPath>> {
         if buf.len() < 4 {
             return Ok(DecodeRes::None);
         }

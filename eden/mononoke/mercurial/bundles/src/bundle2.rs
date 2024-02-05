@@ -18,7 +18,7 @@ use std::io::Read;
 use std::mem;
 
 use anyhow::Error;
-use bytes_old::BytesMut;
+use bytes_old::BytesMut as BytesMutOld;
 use futures_ext::io::Either;
 use futures_ext::BoxFuture;
 use futures_old::Async;
@@ -62,7 +62,7 @@ impl<I, S> Debug for StreamEvent<I, S> {
     }
 }
 
-pub type Remainder<R> = (BytesMut, R);
+pub type Remainder<R> = (BytesMutOld, R);
 
 #[derive(Debug)]
 pub struct Bundle2Stream<R>
@@ -84,8 +84,8 @@ where
     R: AsyncRead + BufRead + 'static + Send,
 {
     Start(Framed<R, StartDecoder>),
-    Outer(OuterStream<Chain<Cursor<BytesMut>, R>>),
-    Inner(BoxFuture<OuterStream<Chain<Cursor<BytesMut>, R>>, Error>),
+    Outer(OuterStream<Chain<Cursor<BytesMutOld>, R>>),
+    Inner(BoxFuture<OuterStream<Chain<Cursor<BytesMutOld>, R>>, Error>),
     Invalid,
     End,
 }

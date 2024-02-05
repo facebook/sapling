@@ -17,7 +17,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes_old::BufMut;
-use bytes_old::BytesMut;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
@@ -115,7 +115,7 @@ pub struct HistoryEntry {
 }
 
 impl HistoryEntry {
-    pub(crate) fn decode(buf: &mut BytesMut, kind: Kind) -> Result<Option<Self>> {
+    pub(crate) fn decode(buf: &mut BytesMutOld, kind: Kind) -> Result<Option<Self>> {
         if buf.len() < HISTORY_HEADER_SIZE {
             return Ok(None);
         }
@@ -243,7 +243,7 @@ pub enum DataEntryVersion {
 }
 
 impl DataEntry {
-    pub(crate) fn decode(buf: &mut BytesMut, version: DataEntryVersion) -> Result<Option<Self>> {
+    pub(crate) fn decode(buf: &mut BytesMutOld, version: DataEntryVersion) -> Result<Option<Self>> {
         if buf.len() < DATA_HEADER_SIZE {
             return Ok(None);
         }
@@ -445,7 +445,7 @@ mod test {
             .encode(kind, &mut encoded)
             .expect("encoding this history entry should succeed");
 
-        let mut encoded_bytes = BytesMut::from(encoded);
+        let mut encoded_bytes = BytesMutOld::from(encoded);
 
         // Ensure that a partial entry results in None.
         let bytes_len = encoded_bytes.len();
@@ -519,7 +519,7 @@ mod test {
             let mut encoded = vec![];
             entry.encode(&mut encoded).expect("encoding this data entry should succeed");
 
-            let mut encoded_bytes = BytesMut::from(encoded);
+            let mut encoded_bytes = BytesMutOld::from(encoded);
 
             // Ensure that a partial entry results in None.
             let bytes_len = encoded_bytes.len();

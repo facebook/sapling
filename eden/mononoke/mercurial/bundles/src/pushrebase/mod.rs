@@ -9,7 +9,7 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use bytes_old::BytesMut;
+use bytes_old::BytesMut as BytesMutOld;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use tokio_codec::Decoder;
@@ -27,7 +27,7 @@ impl Decoder for CommonHeadsUnpacker {
     type Item = HgChangesetId;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         if buf.len() >= 20 {
             let newcsid = buf.split_to(20).freeze();
             let nodehash = HgNodeHash::from_bytes(&newcsid)?;

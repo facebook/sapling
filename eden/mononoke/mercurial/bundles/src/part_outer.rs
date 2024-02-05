@@ -15,8 +15,8 @@ use std::mem;
 use anyhow::Error;
 use anyhow::Result;
 use async_compression::Decompressor;
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use futures_ext::io::Either;
 use futures_ext::io::Either::A as UncompressedRead;
 use futures_ext::io::Either::B as CompressedRead;
@@ -83,7 +83,7 @@ impl OuterState {
         mem::replace(self, OuterState::Invalid)
     }
 
-    pub fn payload_frame(&self, data: BytesMut) -> OuterFrame {
+    pub fn payload_frame(&self, data: BytesMutOld) -> OuterFrame {
         match *self {
             OuterState::Payload {
                 ref part_type,
@@ -119,7 +119,7 @@ impl Decoder for OuterDecoder {
     type Item = OuterFrame;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, buf: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         let (ret, next_state) = Self::decode_next(&self.logger, buf, self.state.take());
         self.state = next_state;
         ret
@@ -136,7 +136,7 @@ impl OuterDecoder {
 
     fn decode_next(
         logger: &Logger,
-        buf: &mut BytesMut,
+        buf: &mut BytesMutOld,
         mut state: OuterState,
     ) -> (Result<Option<OuterFrame>>, OuterState) {
         // TODO: the only state valid when the stream terminates is
@@ -208,7 +208,7 @@ impl OuterDecoder {
         }
     }
 
-    fn decode_header(logger: &Logger, header_bytes: Bytes) -> Result<Option<PartHeader>> {
+    fn decode_header(logger: &Logger, header_bytes: BytesOld) -> Result<Option<PartHeader>> {
         let header = part_header::decode(header_bytes)?;
         debug!(logger, "Decoded header: {:?}", header);
         match validate_header(header)? {
@@ -223,7 +223,7 @@ impl OuterDecoder {
     }
 
     fn decode_payload(
-        buf: &mut BytesMut,
+        buf: &mut BytesMutOld,
         state: OuterState,
     ) -> (Result<Option<OuterFrame>>, OuterState) {
         if buf.len() < 4 {
@@ -255,7 +255,7 @@ impl OuterDecoder {
     }
 
     fn decode_payload_chunk(
-        buf: &mut BytesMut,
+        buf: &mut BytesMutOld,
         state: &OuterState,
         total_len: usize,
     ) -> Option<OuterFrame> {
@@ -277,7 +277,7 @@ pub enum OuterFrame {
     Payload {
         part_type: PartHeaderType,
         part_id: PartId,
-        payload: Bytes,
+        payload: BytesOld,
     },
     PartEnd {
         part_type: PartHeaderType,
@@ -295,7 +295,7 @@ impl OuterFrame {
         }
     }
 
-    pub fn get_payload(self) -> Bytes {
+    pub fn get_payload(self) -> BytesOld {
         match self {
             OuterFrame::Payload { payload, .. } => payload,
             _ => panic!("get_payload called on an OuterFrame without a payload!"),
