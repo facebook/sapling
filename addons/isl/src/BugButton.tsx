@@ -17,8 +17,8 @@ import {t, T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {Suspense} from 'react';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './BugButton.css';
@@ -66,7 +66,7 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
 }
 
 function ISLVersion() {
-  const info = useRecoilValue(applicationinfo);
+  const info = useAtomValue(applicationinfo);
   if (info == null) {
     return <Icon icon="loading" />;
   }
@@ -79,7 +79,7 @@ function ISLVersion() {
 }
 
 function HeartbeatWarning({heartbeat}: {heartbeat: Heartbeat}) {
-  const appInfo = useRecoilValue(applicationinfo);
+  const appInfo = useAtomValue(applicationinfo);
   if (heartbeat.type === 'timeout') {
     return (
       <>

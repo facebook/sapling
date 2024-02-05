@@ -41,7 +41,7 @@ import {ModalContainer} from './useModal';
 import {isTest} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {Provider, useAtomValue, useSetAtom, useStore} from 'jotai';
+import {Provider, useAtom, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React from 'react';
 import {RecoilRoot, useRecoilValue} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
@@ -155,7 +155,7 @@ function ISLDrawers() {
 
 function MainContent() {
   const repoInfo = useRecoilValue(repositoryInfo);
-  useRecoilValue(applicationinfo); // ensure this info is always fetched
+  useAtom(applicationinfo); // ensure this info is always fetched
 
   const ref = useMainContentWidth();
 

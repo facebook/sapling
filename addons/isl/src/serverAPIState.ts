@@ -32,6 +32,7 @@ import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
+import {atom as jotaiAtom} from 'jotai';
 import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
@@ -72,24 +73,23 @@ export const repositoryInfo = selector<RepoInfo | undefined>({
   },
 });
 
-export const applicationinfo = atom<ApplicationInfo | undefined>({
-  key: 'applicationinfo',
-  default: undefined,
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('applicationInfo', event => {
-        setSelf(event.info);
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onSetup(() =>
-        serverAPI.postMessage({
-          type: 'requestApplicationInfo',
-        }),
-      ),
-  ],
-});
+export const applicationinfo = jotaiAtom<ApplicationInfo | undefined>(undefined);
+registerDisposable(
+  applicationinfo,
+  serverAPI.onMessageOfType('applicationInfo', event => {
+    writeAtom(applicationinfo, event.info);
+  }),
+  import.meta.hot,
+);
+registerCleanup(
+  applicationinfo,
+  serverAPI.onSetup(() =>
+    serverAPI.postMessage({
+      type: 'requestApplicationInfo',
+    }),
+  ),
+  import.meta.hot,
+);
 
 export const reconnectingStatus = atom<MessageBusStatus>({
   key: 'reconnectingStatus',
