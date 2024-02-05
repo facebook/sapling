@@ -9,19 +9,14 @@
 //! The format is documented at
 //! <https://phab.mercurial-scm.org/diffusion/FBHGX/browse/default/remotefilelog/wirepack.py>
 
-#![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
-
 use anyhow::bail;
-use anyhow::Error;
 use anyhow::Result;
-use byteorder::BigEndian;
-use bytes_old::BufMut;
-use futures_old::Poll;
-use futures_old::Stream;
+use bytes::BufMut;
+use futures::Stream;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 
-use super::converter::WirePackConverter;
+use super::converter::convert_wirepack;
 use super::converter::WirePackPartProcessor;
 use super::DataEntry;
 use super::HistoryEntry;
@@ -31,39 +26,16 @@ use super::WIREPACK_END;
 use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
 
-pub struct WirePackPacker<S> {
-    stream: WirePackConverter<S, PackerProcessor>,
-}
-
-impl<S> WirePackPacker<S>
-where
-    S: Stream<Item = Part, Error = Error>,
-{
-    pub fn new(part_stream: S, kind: Kind) -> Self {
-        Self {
-            stream: WirePackConverter::new(part_stream, PackerProcessor { kind }),
-        }
-    }
-}
-
-impl<S> Stream for WirePackPacker<S>
-where
-    S: Stream<Item = Part, Error = Error>,
-{
-    type Item = Chunk;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Chunk>, Error> {
-        self.stream.poll()
-    }
+pub fn pack_wirepack(
+    part_stream: impl Stream<Item = Result<Part>>,
+    kind: Kind,
+) -> impl Stream<Item = Result<Chunk>> {
+    convert_wirepack(part_stream, PackerProcessor { kind })
 }
 
 struct PackerProcessor {
     kind: Kind,
 }
-
-unsafe impl Send for PackerProcessor {}
-unsafe impl Sync for PackerProcessor {}
 
 impl WirePackPartProcessor for PackerProcessor {
     type Data = Chunk;
@@ -132,11 +104,11 @@ impl ChunkBuilder {
 
         match mpath {
             Some(mpath) => {
-                self.inner.put_u16::<BigEndian>(mpath.len() as u16);
+                self.inner.put_u16(mpath.len() as u16);
                 mpath.generate(&mut self.inner)?;
             }
             None => {
-                self.inner.put_u16::<BigEndian>(0);
+                self.inner.put_u16(0);
             }
         }
         Ok(self)
@@ -144,7 +116,7 @@ impl ChunkBuilder {
 
     #[inline]
     fn encode_entry_count(&mut self, entry_count: u32) -> &mut Self {
-        self.inner.put_u32::<BigEndian>(entry_count);
+        self.inner.put_u32(entry_count);
         self
     }
 

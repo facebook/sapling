@@ -16,7 +16,6 @@ use byteorder::BigEndian;
 use byteorder::WriteBytesExt;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::BoxFuture;
 use futures::stream;
@@ -51,7 +50,7 @@ use super::infinitepush::infinitepush_mutation_packer;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
 use super::obsmarkers::MetadataEntry;
 use super::wirepack;
-use super::wirepack::packer::WirePackPacker;
+use super::wirepack::packer::pack_wirepack;
 use crate::errors::ErrorKind;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::PartHeaderType;
@@ -367,8 +366,7 @@ where
         .try_flatten()
         .chain(stream::once(future::ok(wirepack::Part::End)));
 
-    let packer = WirePackPacker::new(wirepack_parts.boxed().compat(), wirepack::Kind::Tree);
-    builder.set_data_generated(packer.compat());
+    builder.set_data_generated(pack_wirepack(wirepack_parts, wirepack::Kind::Tree));
 
     Ok(builder)
 }

@@ -275,11 +275,9 @@ rust_library(
     name = "wirepack",
     srcs = glob(["wirepack/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "wirepack"},
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-    },
     test_deps = [
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:tokio",
         "//eden/mononoke/mercurial:mercurial_types-mocks",
     ],
     deps = [

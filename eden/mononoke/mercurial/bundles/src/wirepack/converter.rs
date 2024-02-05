@@ -11,12 +11,11 @@ use std::mem;
 
 use anyhow::bail;
 use anyhow::ensure;
-use anyhow::Error;
 use anyhow::Result;
-use futures_old::try_ready;
-use futures_old::Async;
-use futures_old::Poll;
-use futures_old::Stream;
+use async_stream::try_stream;
+use futures::pin_mut;
+use futures::Stream;
+use futures::TryStreamExt;
 use mercurial_types::RepoPath;
 
 use super::DataEntry;
@@ -34,83 +33,68 @@ pub trait WirePackPartProcessor {
     fn end(&mut self) -> Result<Option<Self::Data>>;
 }
 
-pub struct WirePackConverter<S, P> {
+pub fn convert_wirepack<S, P>(
     part_stream: S,
-    state: State,
-    processor: P,
-}
-
-impl<S, P> WirePackConverter<S, P> {
-    pub fn new(part_stream: S, processor: P) -> Self {
-        Self {
-            part_stream,
-            state: State::HistoryMeta,
-            processor,
-        }
-    }
-}
-
-impl<S, P> Stream for WirePackConverter<S, P>
+    mut processor: P,
+) -> impl Stream<Item = Result<<P as WirePackPartProcessor>::Data>>
 where
-    S: Stream<Item = Part, Error = Error>,
+    S: Stream<Item = Result<Part>>,
     P: WirePackPartProcessor,
 {
-    type Item = <P as WirePackPartProcessor>::Data;
-    type Error = Error;
+    try_stream! {
+        let mut state = State::HistoryMeta;
+        pin_mut!(part_stream);
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
-        use self::Part::*;
-
-        if self.state == State::End {
-            // The stream is over.
-            return Ok(Async::Ready(None));
-        }
-
-        loop {
-            match try_ready!(self.part_stream.poll()) {
-                None => {
-                    self.state.seen_none()?;
-                    return Ok(Async::Ready(None));
-                }
-                Some(HistoryMeta { path, entry_count }) => {
-                    if let Some(history_meta) = self.processor.history_meta(&path, entry_count)? {
-                        self.state.seen_history_meta(path, entry_count)?;
-                        return Ok(Async::Ready(Some(history_meta)));
-                    }
+        while let Some(part) = part_stream.try_next().await? {
+            match part {
+                Part::HistoryMeta { path, entry_count } => {
                     // seen_history_meta comes afterwards because we have to transfer
                     // ownership of path
-                    self.state.seen_history_meta(path, entry_count)?;
-                }
-
-                Some(History(history_entry)) => {
-                    self.state.seen_history(&history_entry)?;
-                    if let Some(encoded_history) = self.processor.history(&history_entry)? {
-                        return Ok(Async::Ready(Some(encoded_history)));
+                    if let Some(history_meta) = processor.history_meta(&path, entry_count)? {
+                        state.seen_history_meta(path, entry_count)?;
+                        yield history_meta;
+                    } else {
+                        state.seen_history_meta(path, entry_count)?;
                     }
                 }
 
-                Some(DataMeta { path, entry_count }) => {
-                    if let Some(data_meta) = self.processor.data_meta(&path, entry_count)? {
-                        self.state.seen_data_meta(path, entry_count)?;
-                        return Ok(Async::Ready(Some(data_meta)));
-                    }
-                    self.state.seen_data_meta(path, entry_count)?;
-                }
-
-                Some(Data(data_entry)) => {
-                    self.state.seen_data(&data_entry)?;
-                    if let Some(data_entry) = self.processor.data(&data_entry)? {
-                        return Ok(Async::Ready(Some(data_entry)));
+                Part::History(history_entry) => {
+                    state.seen_history(&history_entry)?;
+                    if let Some(encoded_history) = processor.history(&history_entry)? {
+                        yield encoded_history;
                     }
                 }
 
-                Some(End) => {
-                    self.state.seen_end()?;
-                    if let Some(end) = self.processor.end()? {
-                        return Ok(Async::Ready(Some(end)));
+                Part::DataMeta { path, entry_count } => {
+                    if let Some(data_meta) = processor.data_meta(&path, entry_count)? {
+                        state.seen_data_meta(path, entry_count)?;
+                        yield data_meta;
+                    } else {
+                        state.seen_data_meta(path, entry_count)?;
+                    }
+                }
+
+                Part::Data(data_entry) => {
+                    state.seen_data(&data_entry)?;
+                    if let Some(data_entry) = processor.data(&data_entry)? {
+                        yield data_entry;
+                    }
+                }
+
+                Part::End => {
+                    state.seen_end()?;
+                    if let Some(end) = processor.end()? {
+                        yield end;
                     }
                 }
             }
+        }
+
+        if state != State::End {
+            Err(ErrorKind::WirePackEncode(format!(
+                "invalid encode stream: unexpected None (state: {:?})",
+                state
+            )))?;
         }
     }
 }
@@ -236,20 +220,6 @@ impl State {
             other => {
                 bail!(ErrorKind::WirePackEncode(format!(
                     "invalid encode stream: unexpected end (state: {:?})",
-                    other
-                )));
-            }
-        };
-        Ok(())
-    }
-
-    fn seen_none(&mut self) -> Result<()> {
-        let state = mem::replace(self, State::Invalid);
-        *self = match state {
-            State::End => State::End,
-            other => {
-                bail!(ErrorKind::WirePackEncode(format!(
-                    "invalid encode stream: unexpected None (state: {:?})",
                     other
                 )));
             }

@@ -8,15 +8,10 @@
 use std::fmt::Debug;
 use std::mem;
 
-use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
-use futures::compat::Compat;
-use futures::stream::BoxStream;
-use futures::TryStreamExt;
-use futures_old::Poll;
-use futures_old::Stream as OldStream;
-use mercurial_bundles::wirepack::converter::WirePackConverter;
+use futures::Stream;
+use mercurial_bundles::wirepack::converter::convert_wirepack;
 use mercurial_bundles::wirepack::converter::WirePackPartProcessor;
 use mercurial_bundles::wirepack::DataEntry;
 use mercurial_bundles::wirepack::HistoryEntry;
@@ -41,25 +36,10 @@ pub enum ErrorKind {
 /// It assumes a few things:
 /// 1) all data is sent as a delta from the null revision (i.e. data is basically non-deltaed).
 /// 2) there are exactly one history entry and exactly one data entry for each tree.
-pub struct TreemanifestBundle2Parser {
-    stream: WirePackConverter<Compat<BoxStream<'static, Result<Part>>>, TreemanifestPartProcessor>,
-}
-
-impl TreemanifestBundle2Parser {
-    pub fn new(part_stream: BoxStream<'static, Result<Part>>) -> Self {
-        Self {
-            stream: WirePackConverter::new(part_stream.compat(), TreemanifestPartProcessor::new()),
-        }
-    }
-}
-
-impl OldStream for TreemanifestBundle2Parser {
-    type Item = TreemanifestEntry;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
-        self.stream.poll()
-    }
+pub fn parse_treemanifest_bundle2(
+    part_stream: impl Stream<Item = Result<Part>>,
+) -> impl Stream<Item = Result<TreemanifestEntry>> {
+    convert_wirepack(part_stream, TreemanifestPartProcessor::new())
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -177,7 +157,7 @@ fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> 
 mod test {
     use futures::stream;
     use futures::stream::StreamExt;
-    use futures_old::Future;
+    use futures::stream::TryStreamExt;
     use maplit::btreemap;
     use mercurial_revlog::manifest::Details;
     use mercurial_types::manifest::Type;
@@ -187,8 +167,8 @@ mod test {
 
     use super::*;
 
-    #[test]
-    fn test_simple() {
+    #[tokio::test]
+    async fn test_simple() {
         let parts = vec![
             get_history_meta(),
             get_history_entry(),
@@ -202,24 +182,24 @@ mod test {
         ];
 
         let part_stream = stream::iter(parts.into_iter().map(Ok)).boxed();
-        let stream = TreemanifestBundle2Parser::new(part_stream);
+        let stream = parse_treemanifest_bundle2(part_stream);
         assert_eq!(
-            stream.collect().wait().unwrap(),
+            stream.try_collect::<Vec<_>>().await.unwrap(),
             vec![get_expected_entry(), get_expected_entry()]
         );
     }
 
-    #[test]
-    fn test_broken() {
+    #[tokio::test]
+    async fn test_broken() {
         let parts = vec![get_history_meta(), get_history_entry(), Part::End];
-        assert_fails(parts);
+        assert_fails(parts).await;
         let parts = vec![
             get_history_meta(),
             get_history_entry(),
             get_data_meta(),
             Part::End,
         ];
-        assert_fails(parts);
+        assert_fails(parts).await;
         let parts = vec![
             get_history_meta(),
             get_history_entry(),
@@ -227,7 +207,7 @@ mod test {
             get_data_meta(),
             Part::End,
         ];
-        assert_fails(parts);
+        assert_fails(parts).await;
 
         let parts = vec![
             get_history_meta(),
@@ -239,7 +219,7 @@ mod test {
             get_data_entry(),
             Part::End,
         ];
-        assert_fails(parts);
+        assert_fails(parts).await;
     }
 
     fn get_history_meta() -> Part {
@@ -305,10 +285,10 @@ mod test {
         })
     }
 
-    fn assert_fails(parts: Vec<Part>) {
+    async fn assert_fails(parts: Vec<Part>) {
         let part_stream = stream::iter(parts.into_iter().map(Ok)).boxed();
-        let stream = TreemanifestBundle2Parser::new(part_stream);
-        assert!(stream.collect().wait().is_err());
+        let stream = parse_treemanifest_bundle2(part_stream);
+        assert!(stream.try_collect::<Vec<_>>().await.is_err());
     }
 
     fn get_expected_entry() -> TreemanifestEntry {

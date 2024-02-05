@@ -716,9 +716,7 @@ impl RepoClient {
                     .whole_stream_timeout(getpack_timeout())
                     .yield_periodically()
                     .flatten_err()
-                    .boxed()
-                    .compat()
-                    .map({
+                    .map_ok({
                         cloned!(ctx);
                         move |(path, contents, history)| {
                             let mut res = vec![wirepack::Part::HistoryMeta {
@@ -781,15 +779,13 @@ impl RepoClient {
                                     metadata,
                                 }));
                             }
-                            stream_old::iter_ok(res)
+                            stream::iter(res).map(anyhow::Ok)
                         }
                     })
-                    .flatten()
-                    .chain(stream_old::once(Ok(wirepack::Part::End)));
+                    .try_flatten()
+                    .chain(stream::once(future::ok(wirepack::Part::End)));
 
-                wirepack::packer::WirePackPacker::new(serialized_stream, wirepack::Kind::File)
-                    .boxify()
-                    .compat()
+                wirepack::packer::pack_wirepack(serialized_stream, wirepack::Kind::File)
                     .and_then(
                         |chunk| async move { Ok(bytes_ext::copy_from_old(chunk.into_bytes()?)) },
                     )

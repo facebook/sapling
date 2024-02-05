@@ -26,7 +26,6 @@ use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
 use context::SessionClass;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::try_join_all;
 use futures::stream;
@@ -53,7 +52,7 @@ use rate_limiting::RateLimitBody;
 use repo_identity::RepoIdentityRef;
 use slog::trace;
 use topo_sort::sort_topological;
-use wirepack::TreemanifestBundle2Parser;
+use wirepack::parse_treemanifest_bundle2;
 use wireproto_handler::BackupSourceRepo;
 
 use crate::changegroup::convert_to_revlog_changesets;
@@ -1146,13 +1145,10 @@ impl<'r> Bundle2Resolver<'r> {
         match bundle2.try_next().await? {
             Some(Bundle2Item::B2xTreegroup2(_, parts))
             | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
-                let manifests = upload_hg_blobs(
-                    self.ctx,
-                    self.repo,
-                    TreemanifestBundle2Parser::new(parts).compat(),
-                )
-                .await
-                .context("While uploading Manifest Blobs")?;
+                let manifests =
+                    upload_hg_blobs(self.ctx, self.repo, parse_treemanifest_bundle2(parts))
+                        .await
+                        .context("While uploading Manifest Blobs")?;
 
                 Ok((manifests, bundle2))
             }
