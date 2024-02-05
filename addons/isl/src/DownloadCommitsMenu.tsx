@@ -89,11 +89,22 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
     // This is not a correctness issue because we show no optimistically downloaded result to act on.
     // Worst case, the rebase/goto will be queued after some other unrelated actions which should be fine.
 
-    // TODO: don't use different internal download operation once phrevset is supported in SL_AUTOMATION_EXCEPT.
-    if (Internal.diffDownloadOperation != null) {
-      await runOperation(Internal.diffDownloadOperation(exactRevset(enteredDiffNum)));
-    } else {
-      await runOperation(new PullRevOperation(exactRevset(enteredDiffNum)));
+    try {
+      await runOperation(
+        new PullRevOperation(exactRevset(enteredDiffNum)),
+        /* throwOnError */ true,
+      );
+    } catch (err) {
+      if (Internal.diffDownloadOperation != null) {
+        // Note: try backup diff download system internally
+        await runOperation(
+          Internal.diffDownloadOperation(exactRevset(enteredDiffNum)),
+          /* throwOnError */ true,
+        );
+      } else {
+        // If there's no backup operation, respect the error and don't try further actions
+        throw err;
+      }
     }
 
     // Lookup the result of the pull

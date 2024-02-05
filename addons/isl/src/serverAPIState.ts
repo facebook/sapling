@@ -604,15 +604,18 @@ export const operationList = atom<OperationList>({
                 return current;
               }
 
+              const exitCode = progress.exitCode;
               const complete = operationCompletionCallbacks.get(currentOperation.operation.id);
-              complete?.();
+              complete?.(
+                exitCode === 0 ? undefined : new Error(`Process exited with code ${exitCode}`),
+              );
               operationCompletionCallbacks.delete(currentOperation.operation.id);
 
               return {
                 ...current,
                 currentOperation: {
                   ...currentOperation,
-                  exitCode: progress.exitCode,
+                  exitCode,
                   endTime: new Date(progress.timestamp),
                   inlineProgress: undefined, // inline progress never lasts after exiting
                 },
@@ -647,7 +650,7 @@ export const inlineProgressByHash = selectorFamily<string | undefined, string>({
  */
 const operationsById = new Map<string, Operation>();
 /** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
-const operationCompletionCallbacks = new Map<string, () => void>();
+const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 
 export const queuedOperations = atom<Array<Operation>>({
   key: 'queuedOperations',
@@ -690,7 +693,7 @@ function runOperationImpl(
   snapshot: CallbackInterface['snapshot'],
   set: CallbackInterface['set'],
   operation: Operation,
-): Promise<void> {
+): Promise<undefined | Error> {
   // TODO: check for hashes in arguments that are known to be obsolete already,
   // and mark those to not be rewritten.
   serverAPI.postMessage({
@@ -703,8 +706,10 @@ function runOperationImpl(
       trackEventName: operation.trackEventName,
     },
   });
-  const defered = defer<void>();
-  operationCompletionCallbacks.set(operation.id, () => defered.resolve());
+  const defered = defer<undefined | Error>();
+  operationCompletionCallbacks.set(operation.id, (err?: Error) => {
+    defered.resolve(err);
+  });
 
   operationsById.set(operation.id, operation);
   const ongoing = snapshot.getLoadable(operationList).valueMaybe();
@@ -726,14 +731,19 @@ function runOperationImpl(
  * Will be queued by the server if other operations are already running.
  * This returns a promise that resolves when this operation has exited
  * (though its optimistic state may not have finished resolving yet).
+ * Note: Most callsites won't await this promise, and just use queueing. If you do, you should probably use `throwOnError = true` to detect errors.
+ * TODO: should we refactor this into a separate function if you want to await the result, which always throws?
  * Note: There's no need to wait for this promise to resolve before starting another operation,
  * successive operations will queue up with a nicer UX than if you awaited each one.
  */
 export function useRunOperation() {
   return useRecoilCallback(
     ({snapshot, set}) =>
-      (operation: Operation): Promise<void> => {
-        return runOperationImpl(snapshot, set, operation);
+      async (operation: Operation, throwOnError?: boolean): Promise<void> => {
+        const result = await runOperationImpl(snapshot, set, operation);
+        if (result != null && throwOnError) {
+          throw result;
+        }
       },
     [],
   );
