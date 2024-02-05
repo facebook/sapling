@@ -18,11 +18,11 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use futures::channel::mpsc;
+use futures::future;
 use futures::future::try_join_all;
 use futures::future::BoxFuture;
-use futures::future::FutureExt as NewFutureExt;
+use futures::future::FutureExt;
 use futures::future::TryFutureExt;
-use futures::future::{self as new_future};
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
@@ -389,7 +389,7 @@ async fn reuse_manifest_parent(
     parents: &[ManifestUnodeId],
     subentries: &SortedVectorMap<MPathElement, UnodeEntry>,
 ) -> Result<Option<ManifestUnodeId>, Error> {
-    let parents = new_future::try_join_all(
+    let parents = future::try_join_all(
         parents
             .iter()
             .map(|id| id.load(ctx, blobstore).map_err(Error::from)),
@@ -410,7 +410,7 @@ async fn reuse_file_parent(
     content_id: &ContentId,
     file_type: FileType,
 ) -> Result<Option<FileUnodeId>, Error> {
-    let parents = new_future::try_join_all(
+    let parents = future::try_join_all(
         parents
             .iter()
             .map(|id| id.load(ctx, blobstore).map_err(Error::from)),

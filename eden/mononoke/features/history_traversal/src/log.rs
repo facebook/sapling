@@ -34,7 +34,7 @@ use fastlog::RootFastlog;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::stream;
-use futures::stream::Stream as NewStream;
+use futures::stream::Stream;
 use futures_stats::futures03::TimedFutureExt;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
@@ -297,7 +297,7 @@ pub async fn list_file_history<'a>(
     mut follow_mutable_renames: FollowMutableRenames,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
-) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + 'a, FastlogError> {
+) -> Result<impl Stream<Item = Result<ChangesetId, Error>> + 'a, FastlogError> {
     if justknobs::eval(
         "scm/mononoke:fastlog_disable_mutable_renames",
         None,
