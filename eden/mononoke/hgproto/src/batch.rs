@@ -59,7 +59,7 @@ pub fn escape<T: AsRef<[u8]>>(res: T) -> Vec<u8> {
 
 #[cfg(test)]
 mod test {
-    use bytes_old::Bytes;
+    use bytes_old::Bytes as BytesOld;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
 
@@ -70,14 +70,14 @@ mod test {
 
     quickcheck! {
         fn test_roundtrip(input: Vec<u8>) -> bool {
-            let bytes = Bytes::from(input);
+            let bytes = BytesOld::from(input);
             let escaped = escape(&bytes);
             let unescaped = unescape(&escaped).unwrap();
             unescaped == bytes
         }
 
         fn test_bad_bytes(input: Vec<u8>) -> bool {
-            let bytes = Bytes::from(input);
+            let bytes = BytesOld::from(input);
             let escaped = escape(&bytes);
             escaped.iter().all(|&b| !BAD_BYTES.contains(&b))
         }
@@ -92,7 +92,7 @@ mod test {
                     acc
                 }
             });
-            let bytes = Bytes::from(input);
+            let bytes = BytesOld::from(input);
             let escaped = escape(&bytes);
             bytes.len() + nbad == escaped.len()
         }
@@ -105,7 +105,7 @@ mod test {
             let unescaped = unescape(&input);
             let unescaped_bytes = match unescaped {
                 Err(_) => return TestResult::discard(),
-                Ok(v) => Bytes::from(v),
+                Ok(v) => BytesOld::from(v),
             };
             let escaped = escape(&unescaped_bytes);
             TestResult::from_bool(escaped == input)

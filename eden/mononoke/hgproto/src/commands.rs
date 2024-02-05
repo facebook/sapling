@@ -21,8 +21,8 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use bytes_old::Buf;
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use failure_ext::FutureErrorContext;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
@@ -94,7 +94,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         BoxFuture<BytesStream<S>, Error>,
     )
     where
-        S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+        S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
     {
         let hgcmds = &self.commands;
 
@@ -275,7 +275,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         BoxFuture<BytesStream<S>, Error>,
     )
     where
-        S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+        S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
     {
         let hgcmds = &self.commands;
         let dechunker = Dechunker::new(instream);
@@ -333,7 +333,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         one: Vec<u8>,
         two: Vec<u8>,
         all_args: HashMap<Vec<u8>, Vec<u8>>,
-    ) -> HgCommandRes<Bytes> {
+    ) -> HgCommandRes<BytesOld> {
         let mut out = Vec::<u8>::new();
         out.extend_from_slice(&one[..]);
         out.push(b' ');
@@ -360,7 +360,7 @@ fn decode_getpack_arg_stream<D, RType, S>(
 where
     D: Decoder<Item = Option<RType>, Error = Error> + Send + 'static,
     RType: Send + 'static,
-    S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+    S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
 {
     let (send, recv) = oneshot::channel();
 
@@ -471,7 +471,7 @@ impl Decoder for Getpackv1ArgDecoder {
     type Item = Option<(NonRootMPath, Vec<HgFileNodeId>)>;
     type Error = Error;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
+    fn decode(&mut self, src: &mut BytesMutOld) -> Result<Option<Self::Item>> {
         use self::GetPackv1ParsingState::*;
 
         let mut state = self.state.clone();
@@ -632,7 +632,7 @@ pub trait HgCommands {
 
     // @wireprotocommand('getbundle', '*')
     // TODO: make this streaming
-    fn getbundle(&self, _args: GetbundleArgs) -> BoxStream<Bytes, Error> {
+    fn getbundle(&self, _args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         once(Err(ErrorKind::Unimplemented("getbundle".into()).into())).boxify()
     }
 
@@ -661,7 +661,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('lookup', 'key')
-    fn lookup(&self, _key: String) -> HgCommandRes<Bytes> {
+    fn lookup(&self, _key: String) -> HgCommandRes<BytesOld> {
         unimplemented("lookup")
     }
 
@@ -682,17 +682,17 @@ pub trait HgCommands {
         _stream: BoxStream<Bundle2Item<'static>, Error>,
         _respondlightly: Option<bool>,
         _replaydata: Option<String>,
-    ) -> HgCommandRes<Bytes> {
+    ) -> HgCommandRes<BytesOld> {
         unimplemented("unbundle")
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, _params: GettreepackArgs) -> BoxStream<Bytes, Error> {
+    fn gettreepack(&self, _params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
         once(Err(ErrorKind::Unimplemented("gettreepack".into()).into())).boxify()
     }
 
     // @wireprotocommand('stream_out_shallow', '*')
-    fn stream_out_shallow(&self, _tag: Option<String>) -> BoxStream<Bytes, Error> {
+    fn stream_out_shallow(&self, _tag: Option<String>) -> BoxStream<BytesOld, Error> {
         once(Err(
             ErrorKind::Unimplemented("stream_out_shallow".into()).into()
         ))
@@ -703,19 +703,19 @@ pub trait HgCommands {
     fn getpackv1(
         &self,
         _params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<Bytes, Error> {
+    ) -> BoxStream<BytesOld, Error> {
         once(Err(ErrorKind::Unimplemented("getpackv1".into()).into())).boxify()
     }
 
     fn getpackv2(
         &self,
         _params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<Bytes, Error> {
+    ) -> BoxStream<BytesOld, Error> {
         once(Err(ErrorKind::Unimplemented("getpackv2".into()).into())).boxify()
     }
 
     // @wireprotocommand('getcommitdata', 'nodes *')
-    fn getcommitdata(&self, _nodes: Vec<HgChangesetId>) -> BoxStream<Bytes, Error> {
+    fn getcommitdata(&self, _nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
         once(Err(ErrorKind::Unimplemented("getcommitdata".into()).into())).boxify()
     }
 }
@@ -723,7 +723,7 @@ pub trait HgCommands {
 #[cfg(test)]
 mod test {
     use bytes_old::BufMut;
-    use bytes_old::BytesMut;
+    use bytes_old::BytesMut as BytesMutOld;
     use futures_old::future;
     use futures_old::stream;
     use slog::o;
@@ -790,7 +790,7 @@ mod test {
         buf.put_u16_be(0);
         assert_eq!(
             decoder
-                .decode(&mut BytesMut::from(buf))
+                .decode(&mut BytesMutOld::from(buf))
                 .expect("unexpected error"),
             Some(None)
         );
@@ -803,7 +803,7 @@ mod test {
         buf.put_slice(hash_ones().as_bytes());
         assert_eq!(
             decoder
-                .decode(&mut BytesMut::from(buf))
+                .decode(&mut BytesMutOld::from(buf))
                 .expect("unexpected error"),
             Some(Some((path, vec![hash_ones()])))
         );
@@ -813,7 +813,7 @@ mod test {
     fn getpackv1() {
         let input = "\u{0}\u{4}path\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}";
         let (paramstream, _input) = decode_getpack_arg_stream(
-            BytesStream::new(stream::once(Ok(Bytes::from(input)))),
+            BytesStream::new(stream::once(Ok(BytesOld::from(input)))),
             Getpackv1ArgDecoder::new,
         );
         let res = paramstream.collect().wait().unwrap();

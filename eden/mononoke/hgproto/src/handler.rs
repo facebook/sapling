@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::Error;
-use bytes_old::Bytes;
+use bytes_old::Bytes as BytesOld;
 use failure_ext::FutureErrorContext;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
@@ -35,7 +35,7 @@ use crate::HgCommands;
 use crate::Request;
 use crate::Response;
 
-pub type OutputStream = BoxStream<Bytes, Error>;
+pub type OutputStream = BoxStream<BytesOld, Error>;
 
 pub trait ResponseEncoder {
     fn encode(&self, response: Response) -> OutputStream;
@@ -64,7 +64,7 @@ impl HgProtoHandler {
         src_region: Option<String>,
     ) -> Self
     where
-        In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+        In: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
         H: HgCommands + Send + Sync + 'static,
         Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
         Dec::Error: From<io::Error> + Send + 'static,
@@ -85,7 +85,7 @@ impl HgProtoHandler {
 }
 
 impl Stream for HgProtoHandler {
-    type Item = Bytes;
+    type Item = BytesOld;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -98,7 +98,7 @@ fn handle<In, H, Dec, Enc>(
     handler: Arc<HgProtoHandlerInner<H, Dec, Enc>>,
 ) -> OutputStream
 where
-    In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+    In: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
     H: HgCommands + Send + Sync + 'static,
     Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
     Dec::Error: From<io::Error> + Send + 'static,
@@ -174,7 +174,7 @@ fn handle_request<In, H, Dec, Enc>(
     BoxFuture<BytesStream<In>, Error>,
 )
 where
-    In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+    In: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
     H: HgCommands + Send + Sync + 'static,
     Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
     Dec::Error: From<io::Error> + Send + 'static,

@@ -9,8 +9,8 @@ use std::fmt::Display;
 use std::io;
 use std::io::Write;
 
-use bytes_old::Bytes;
-use bytes_old::BytesMut;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use futures_ext::StreamExt;
 use futures_old::stream;
 use futures_old::Stream;
@@ -45,10 +45,10 @@ where
 pub fn encode(response: Response) -> OutputStream {
     match response {
         Response::Batch(resps) => {
-            let separator = Bytes::from(&b";"[..]);
+            let separator = BytesOld::from(&b";"[..]);
             let escaped_results = resps
                 .into_iter()
-                .map(move |resp| Bytes::from(batch::escape(&encode_cmd(resp))));
+                .map(move |resp| BytesOld::from(batch::escape(&encode_cmd(resp))));
 
             let separated_results = Itertools::intersperse(escaped_results, separator);
             let separated_results: Vec<_> = separated_results.collect();
@@ -57,7 +57,7 @@ pub fn encode(response: Response) -> OutputStream {
                 len += res.len();
             }
             let len = format!("{}\n", len);
-            let len = stream::once(Ok(Bytes::from(len.as_bytes())));
+            let len = stream::once(Ok(BytesOld::from(len.as_bytes())));
 
             len.chain(stream::iter_ok(separated_results)).boxify()
         }
@@ -72,7 +72,7 @@ fn encode_single(response: SingleResponse) -> OutputStream {
         stream::once(Ok(res)).boxify()
     } else {
         stream::iter_ok(vec![
-            Bytes::from(format!("{}\n", res.len()).as_bytes()),
+            BytesOld::from(format!("{}\n", res.len()).as_bytes()),
             res,
         ])
         .boxify()
@@ -81,7 +81,7 @@ fn encode_single(response: SingleResponse) -> OutputStream {
 
 /// Encode the result of an individual command completion. This is used by both
 /// single and batch responses encoding
-fn encode_cmd(response: SingleResponse) -> Bytes {
+fn encode_cmd(response: SingleResponse) -> BytesOld {
     use SingleResponse::*;
 
     match response {
@@ -92,7 +92,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
                 write!(out, "{}: {}\n", k, caps.join(" ")).expect("write to vec failed");
             }
 
-            Bytes::from(out)
+            BytesOld::from(out)
         }
 
         Between(vecs) => {
@@ -102,10 +102,10 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
                 separated(&mut out, v, " ").expect("write to vec failed");
             }
 
-            Bytes::from(out)
+            BytesOld::from(out)
         }
 
-        ClientTelemetry(hostname) => Bytes::from(hostname),
+        ClientTelemetry(hostname) => BytesOld::from(hostname),
 
         Debugwireargs(res) => res,
 
@@ -114,7 +114,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
 
             separated(&mut out, set, " ").expect("write to vec failed");
 
-            Bytes::from(out)
+            BytesOld::from(out)
         }
 
         Known(knowns) => {
@@ -123,7 +123,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
                 .map(|known| if known { b'1' } else { b'0' })
                 .collect();
 
-            Bytes::from(out)
+            BytesOld::from(out)
         }
 
         Knownnodes(knowns) => {
@@ -132,10 +132,10 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
                 .map(|known| if known { b'1' } else { b'0' })
                 .collect();
 
-            Bytes::from(out)
+            BytesOld::from(out)
         }
 
-        ReadyForStream => Bytes::from(b"0\n".as_ref()),
+        ReadyForStream => BytesOld::from(b"0\n".as_ref()),
 
         // TODO(luk, T25574469) The response for Unbundle should be chunked stream of bundle2
         Unbundle(res) => res,
@@ -147,7 +147,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
         Lookup(res) => res,
 
         Listkeys(res) => {
-            let mut bytes = BytesMut::new();
+            let mut bytes = BytesMutOld::new();
             for (name, key) in res {
                 bytes.extend_from_slice(&name);
                 bytes.extend_from_slice("\t".as_bytes());
@@ -170,7 +170,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
         Branchmap(_res) => {
             // We have no plans to support mercurial branches and hence no plans for branchmap,
             // so just return fake response.
-            Bytes::new()
+            BytesOld::new()
         }
 
         StreamOutShallow(res) => res,
