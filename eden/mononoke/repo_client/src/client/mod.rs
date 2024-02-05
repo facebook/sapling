@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Write;
+use std::future::Future;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::mem;
@@ -49,15 +50,17 @@ use filenodes::FilenodeResult;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future;
+use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::FuturesUnordered;
+use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_01_ext::try_boxstream;
-use futures_01_ext::BoxFuture;
-use futures_01_ext::BoxStream;
+use futures_01_ext::BoxFuture as OldBoxFuture;
+use futures_01_ext::BoxStream as OldBoxStream;
 use futures_01_ext::FutureExt as OldFutureExt;
 use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::stream::FbTryStreamExt;
@@ -66,14 +69,13 @@ use futures_ext::FbFutureExt;
 use futures_ext::FbStreamExt;
 use futures_ext::FbTryFutureExt;
 use futures_old::future as future_old;
-use futures_old::future::ok;
 use futures_old::stream as stream_old;
 use futures_old::try_ready;
 use futures_old::Async;
-use futures_old::Future;
+use futures_old::Future as OldFuture;
 use futures_old::IntoFuture;
 use futures_old::Poll;
-use futures_old::Stream;
+use futures_old::Stream as OldStream;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedStreamExt;
 use getbundle_response::create_getbundle_response;
@@ -413,9 +415,9 @@ impl RepoClient {
         command: &str,
         sampling_rate: SamplingRate,
         handler: H,
-    ) -> BoxFuture<I, E>
+    ) -> OldBoxFuture<I, E>
     where
-        F: Future<Item = I, Error = E> + Send + 'static,
+        F: OldFuture<Item = I, Error = E> + Send + 'static,
         H: FnOnce(CoreContext, CommandLogger) -> F,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
@@ -427,9 +429,9 @@ impl RepoClient {
         command: &str,
         sampling_rate: SamplingRate,
         handler: H,
-    ) -> BoxStream<I, E>
+    ) -> OldBoxStream<I, E>
     where
-        S: Stream<Item = I, Error = E> + Send + 'static,
+        S: OldStream<Item = I, Error = E> + Send + 'static,
         H: FnOnce(CoreContext, CommandLogger) -> S,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
@@ -466,7 +468,7 @@ impl RepoClient {
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
+    ) -> impl OldFuture<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
         let session_bookmarks_cache = self.session_bookmarks_cache.clone();
         (async move { session_bookmarks_cache.get_publishing_bookmarks(ctx).await })
             .boxed()
@@ -476,7 +478,7 @@ impl RepoClient {
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+    ) -> impl OldFuture<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
         self.get_publishing_bookmarks_maybe_stale(ctx)
             .map(|bookmarks| {
                 bookmarks
@@ -493,7 +495,11 @@ impl RepoClient {
             })
     }
 
-    fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
+    fn create_bundle(
+        &self,
+        ctx: CoreContext,
+        args: GetbundleArgs,
+    ) -> OldBoxStream<BytesOld, Error> {
         let lfs_params = self.lfs_params();
         let blobrepo = self.repo.blob_repo().clone();
         let mut bundle2_parts = vec![];
@@ -565,7 +571,7 @@ impl RepoClient {
         &self,
         ctx: CoreContext,
         params: GettreepackArgs,
-    ) -> BoxStream<BytesOld, Error> {
+    ) -> OldBoxStream<BytesOld, Error> {
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -603,14 +609,16 @@ impl RepoClient {
 
     fn getpack<WeightedContent, Content, GetpackHandler>(
         &self,
-        params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
+        params: OldBoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
         handler: GetpackHandler,
         name: &'static str,
-    ) -> BoxStream<BytesOld, Error>
+    ) -> OldBoxStream<BytesOld, Error>
     where
-        WeightedContent: Future<Item = (GetpackBlobInfo, Content), Error = Error> + Send + 'static,
-        Content:
-            Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
+        WeightedContent:
+            OldFuture<Item = (GetpackBlobInfo, Content), Error = Error> + Send + 'static,
+        Content: OldFuture<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error>
+            + Send
+            + 'static,
         GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
             + Send
             + 'static,
@@ -937,7 +945,7 @@ impl RepoClient {
         Func: FnOnce(CoreContext, Vec<HgChangesetId>, Vec<(HgChangesetId, ChangesetId)>) -> Fut
             + Send
             + 'static,
-        Fut: future::Future<Output = Result<Vec<bool>, Error>> + Send + 'static,
+        Fut: Future<Output = Result<Vec<bool>, Error>> + Send + 'static,
     {
         self.command_future(command, UNSAMPLED, |ctx, mut command_logger| {
             let blobrepo = self.repo.blob_repo().clone();
@@ -1000,10 +1008,10 @@ fn throttle_stream<F, S, V>(
     metric: Metric,
     request_name: &'static str,
     func: F,
-) -> impl Stream<Item = V, Error = Error>
+) -> impl OldStream<Item = V, Error = Error>
 where
     F: FnOnce() -> S + Send + 'static,
-    S: Stream<Item = V, Error = Error> + Send + 'static,
+    S: OldStream<Item = V, Error = Error> + Send + 'static,
 {
     let session = session.clone();
     async move {
@@ -1053,7 +1061,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        impl Stream for ParentStream<BoxFuture<HgBlobChangeset, Error>> {
+        impl OldStream for ParentStream<OldBoxFuture<HgBlobChangeset, Error>> {
             type Item = HgChangesetId;
             type Error = Error;
 
@@ -1268,7 +1276,9 @@ impl HgCommands for RepoClient {
                         .compat()
                         .boxify()
                     }
-                    Err(_) => ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify(),
+                    Err(_) => {
+                        futures_old::future::ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify()
+                    }
                 },
             };
 
@@ -1414,7 +1424,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getbundle', '*')
-    fn getbundle(&self, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
+    fn getbundle(&self, args: GetbundleArgs) -> OldBoxStream<BytesOld, Error> {
         self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
             let s = self
                 .create_bundle(ctx, args)
@@ -1563,7 +1573,7 @@ impl HgCommands for RepoClient {
     fn unbundle(
         &self,
         _heads: Vec<String>,
-        stream: BoxStream<Bundle2Item<'static>, Error>,
+        stream: OldBoxStream<Bundle2Item<'static>, Error>,
         respondlightly: Option<bool>,
         maybereplaydata: Option<String>,
     ) -> HgCommandRes<BytesOld> {
@@ -1732,7 +1742,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
+    fn gettreepack(&self, params: GettreepackArgs) -> OldBoxStream<BytesOld, Error> {
         let sampling_rate = gettreepack_scuba_sampling_rate(&params);
         self.command_stream(
             ops::GETTREEPACK,
@@ -1817,7 +1827,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('stream_out_shallow')
-    fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<BytesOld, Error> {
+    fn stream_out_shallow(&self, tag: Option<String>) -> OldBoxStream<BytesOld, Error> {
         self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
             let streaming_clone = self.repo.inner_repo().streaming_clone_arc();
 
@@ -1901,9 +1911,8 @@ impl HgCommands for RepoClient {
                     fn build_file_stream(
                         name: &str,
                         size: usize,
-                        data: Vec<futures::future::BoxFuture<'static, Result<Bytes, Error>>>,
-                    ) -> impl futures::stream::Stream<Item = Result<Bytes, Error>> + Send
-                    {
+                        data: Vec<BoxFuture<'static, Result<Bytes, Error>>>,
+                    ) -> impl Stream<Item = Result<Bytes, Error>> + Send {
                         let header = format!("{}\0{}\n", name, size);
 
                         stream::once(future::ready(Ok(header.into_bytes().into())))
@@ -1945,8 +1954,8 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('getpackv1')
     fn getpackv1(
         &self,
-        params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<BytesOld, Error> {
+        params: OldBoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
+    ) -> OldBoxStream<BytesOld, Error> {
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
@@ -1966,8 +1975,8 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('getpackv2')
     fn getpackv2(
         &self,
-        params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<BytesOld, Error> {
+        params: OldBoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
+    ) -> OldBoxStream<BytesOld, Error> {
         self.getpack(
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
@@ -1990,7 +1999,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
-    fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
+    fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> OldBoxStream<BytesOld, Error> {
         self.command_stream(ops::GETCOMMITDATA, UNSAMPLED, |ctx, mut command_logger| {
             let args = json!(nodes);
             let blobrepo = self.repo.blob_repo().clone();
@@ -2058,7 +2067,7 @@ pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,
-) -> BoxStream<(HgManifestId, MPath), Error> {
+) -> OldBoxStream<(HgManifestId, MPath), Error> {
     let GettreepackArgs {
         rootdir,
         mfnodes,
@@ -2152,7 +2161,7 @@ fn get_changed_manifests_stream(
     basemfid: HgManifestId,
     rootpath: MPath,
     max_depth: usize,
-) -> BoxStream<(HgManifestId, MPath), Error> {
+) -> OldBoxStream<(HgManifestId, MPath), Error> {
     if max_depth == 1 {
         return stream_old::iter_ok(vec![(mfid, rootpath)]).boxify();
     }
@@ -2197,7 +2206,7 @@ pub fn fetch_treepack_part_input(
     hg_mf_id: HgManifestId,
     path: MPath,
     validate_content: bool,
-) -> BoxFuture<parts::TreepackPartInput, Error> {
+) -> OldBoxFuture<parts::TreepackPartInput, Error> {
     let repo_path = match path.into_optional_non_root_path() {
         Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
