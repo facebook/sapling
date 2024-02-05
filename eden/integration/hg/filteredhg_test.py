@@ -5,7 +5,7 @@
 
 
 import os
-from typing import Optional
+from typing import Optional, Set
 
 from eden.integration.hg.lib.hg_extension_test_base import (
     filteredhg_test,
@@ -104,7 +104,7 @@ bdir/README.md
         return os.path.exists(self.repo.get_path(path))
 
     def ensure_filtered_and_unfiltered(
-        self, filtered: set[str], unfiltered: set[str]
+        self, filtered: Set[str], unfiltered: Set[str]
     ) -> None:
         for f in filtered:
             self.assertFalse(
