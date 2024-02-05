@@ -36,7 +36,6 @@ use crate::part_outer::OuterFrame;
 use crate::part_outer::OuterStream;
 use crate::stream_start::StartDecoder;
 use crate::Bundle2Item;
-use crate::OldBundle2Item;
 
 pub enum StreamEvent<I, S> {
     Next(I),
@@ -168,17 +167,7 @@ where
 
         let (ret, stream) = self.inner.poll_next(current_stream);
         self.current_stream = stream;
-        match ret {
-            Ok(Async::Ready(Some(StreamEvent::Next(item)))) => {
-                Ok(Async::Ready(Some(StreamEvent::Next(item.into()))))
-            }
-            Ok(Async::Ready(Some(StreamEvent::Done(rem)))) => {
-                Ok(Async::Ready(Some(StreamEvent::Done(rem))))
-            }
-            Ok(Async::Ready(None)) => Ok(Async::Ready(None)),
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(err) => Err(err),
-        }
+        ret
     }
 }
 
@@ -187,7 +176,7 @@ impl Bundle2StreamInner {
         &mut self,
         current_stream: CurrentStream<R>,
     ) -> (
-        Poll<Option<StreamEvent<OldBundle2Item, Remainder<R>>>, Error>,
+        Poll<Option<StreamEvent<Bundle2Item<'static>, Remainder<R>>>, Error>,
         CurrentStream<R>,
     )
     where
@@ -226,9 +215,9 @@ impl Bundle2StreamInner {
                             Ok(v) => {
                                 let outer = CurrentStream::Outer(v);
                                 (
-                                    Ok(Async::Ready(Some(StreamEvent::Next(
-                                        OldBundle2Item::Start(start),
-                                    )))),
+                                    Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Start(
+                                        start,
+                                    ))))),
                                     outer,
                                 )
                             }

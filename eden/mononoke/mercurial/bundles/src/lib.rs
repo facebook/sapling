@@ -40,13 +40,9 @@ use bytes_old::Bytes as BytesOld;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future::BoxFuture;
-use futures::future::FutureExt;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
-use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_ext::BoxFuture as OldBoxFuture;
-use futures_ext::BoxStream as OldBoxStream;
 use futures_ext::SinkToAsyncWrite;
 use futures_old::sync::mpsc;
 use futures_old::sync::oneshot;
@@ -127,63 +123,6 @@ impl<'a> fmt::Debug for Bundle2Item<'a> {
             Pushvars(ref header, _) => write!(f, "Bundle2Item::Pushvars({:?}, ...)", header),
         }
     }
-}
-
-impl<'a> From<OldBundle2Item> for Bundle2Item<'a> {
-    fn from(this: OldBundle2Item) -> Self {
-        use crate::OldBundle2Item::*;
-        match this {
-            Start(header) => Bundle2Item::Start(header),
-            Changegroup(header, stream) => {
-                Bundle2Item::Changegroup(header, stream.compat().boxed())
-            }
-            B2xCommonHeads(header, stream) => {
-                Bundle2Item::B2xCommonHeads(header, stream.compat().boxed())
-            }
-            B2xInfinitepush(header, stream) => {
-                Bundle2Item::B2xInfinitepush(header, stream.compat().boxed())
-            }
-            B2xTreegroup2(header, stream) => {
-                Bundle2Item::B2xTreegroup2(header, stream.compat().boxed())
-            }
-            // B2xInfinitepushBookmarks returns BytesOld because this part is not going to be used.
-            B2xInfinitepushBookmarks(header, stream) => {
-                Bundle2Item::B2xInfinitepushBookmarks(header, stream.compat().boxed())
-            }
-            B2xInfinitepushMutation(header, stream) => {
-                Bundle2Item::B2xInfinitepushMutation(header, stream.compat().boxed())
-            }
-            B2xRebasePack(header, stream) => {
-                Bundle2Item::B2xRebasePack(header, stream.compat().boxed())
-            }
-            B2xRebase(header, stream) => Bundle2Item::B2xRebase(header, stream.compat().boxed()),
-            Replycaps(header, future) => Bundle2Item::Replycaps(header, future.compat().boxed()),
-            Pushkey(header, future) => Bundle2Item::Pushkey(header, future.compat().boxed()),
-            Pushvars(header, future) => Bundle2Item::Pushvars(header, future.compat().boxed()),
-        }
-    }
-}
-
-pub(crate) enum OldBundle2Item {
-    Start(StreamHeader),
-    Changegroup(PartHeader, OldBoxStream<changegroup::Part, Error>),
-    B2xCommonHeads(
-        PartHeader,
-        OldBoxStream<mercurial_types::HgChangesetId, Error>,
-    ),
-    B2xInfinitepush(PartHeader, OldBoxStream<changegroup::Part, Error>),
-    B2xTreegroup2(PartHeader, OldBoxStream<wirepack::Part, Error>),
-    // B2xInfinitepushBookmarks returns BytesOld because this part is not going to be used.
-    B2xInfinitepushBookmarks(PartHeader, OldBoxStream<BytesOld, Error>),
-    B2xInfinitepushMutation(
-        PartHeader,
-        OldBoxStream<Vec<mercurial_mutation::HgMutationEntry>, Error>,
-    ),
-    B2xRebasePack(PartHeader, OldBoxStream<wirepack::Part, Error>),
-    B2xRebase(PartHeader, OldBoxStream<changegroup::Part, Error>),
-    Replycaps(PartHeader, OldBoxFuture<capabilities::Capabilities, Error>),
-    Pushkey(PartHeader, OldBoxFuture<(), Error>),
-    Pushvars(PartHeader, OldBoxFuture<(), Error>),
 }
 
 /// Given bundle parts, returns a stream of BytesOld that represent an encoded bundle with these parts
