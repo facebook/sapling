@@ -18,7 +18,6 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
-use bytes_old::Bytes as BytesOld;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
 use cloned::cloned;
@@ -30,21 +29,18 @@ use derived_data::BonsaiDerived;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::future;
+use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_01_ext::BoxFuture as OldBoxFuture;
-use futures_01_ext::BoxStream as OldBoxStream;
-use futures_01_ext::FutureExt as _;
-use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::stream::FbStreamExt;
 use futures_ext::BufferedParams;
 use futures_ext::FbTryStreamExt;
 use futures_old::stream as old_stream;
-use futures_old::Stream as OldStream;
 use futures_stats::TimedTryFutureExt;
 use futures_util::try_join;
 use manifest::find_intersection_of_diffs_and_parents;
@@ -864,35 +860,34 @@ pub fn create_manifest_entries_stream(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     manifests: Vec<(MPath, HgManifestId, HgChangesetId)>,
-) -> OldBoxStream<OldBoxFuture<parts::TreepackPartInput, Error>, Error> {
-    old_stream::iter_ok(manifests)
-        .filter(|(fullpath, mf_id, _linknode)| {
-            !(fullpath.is_root() && mf_id.clone().into_nodehash() == NULL_HASH)
-        })
-        .map({
-            move |(fullpath, mf_id, linknode)| {
-                cloned!(ctx, blobstore);
-                async move {
-                    fetch_manifest_envelope(&ctx, &blobstore.boxed(), mf_id)
-                        .map_ok(move |mf_envelope| {
-                            let (p1, p2) = mf_envelope.parents();
-                            parts::TreepackPartInput {
-                                node: mf_id.into_nodehash(),
-                                p1,
-                                p2,
-                                content: BytesOld::from(mf_envelope.contents().as_ref()),
-                                fullpath,
-                                linknode: linknode.into_nodehash(),
-                            }
-                        })
-                        .await
-                }
-                .boxed()
-                .compat()
-                .boxify()
+) -> BoxStream<'static, Result<BoxFuture<'static, Result<parts::TreepackPartInput, Error>>, Error>>
+{
+    stream::iter(
+        manifests
+            .into_iter()
+            .filter(|(fullpath, mf_id, _linknode)| {
+                !(fullpath.is_root() && mf_id.clone().into_nodehash() == NULL_HASH)
+            }),
+    )
+    .map({
+        move |(fullpath, mf_id, linknode)| {
+            cloned!(ctx, blobstore);
+            Ok(async move {
+                let mf_envelope = fetch_manifest_envelope(&ctx, &blobstore.boxed(), mf_id).await?;
+                let (p1, p2) = mf_envelope.parents();
+                Ok(parts::TreepackPartInput {
+                    node: mf_id.into_nodehash(),
+                    p1,
+                    p2,
+                    content: mf_envelope.contents().clone(),
+                    fullpath,
+                    linknode: linknode.into_nodehash(),
+                })
             }
-        })
-        .boxify()
+            .boxed())
+        }
+    })
+    .boxed()
 }
 
 async fn diff_with_parents(

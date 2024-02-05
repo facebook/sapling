@@ -2236,7 +2236,7 @@ pub fn fetch_treepack_part_input(
                 node: hg_mf_id.into_nodehash(),
                 p1,
                 p2,
-                content: bytes_ext::copy_from_new(content),
+                content,
                 fullpath,
                 linknode: linknode.into_nodehash(),
             })

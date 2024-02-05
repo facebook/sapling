@@ -13,8 +13,7 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::WriteBytesExt;
-use bytes::Bytes as BytesNew;
-use bytes_old::Bytes;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
 use futures::FutureExt;
@@ -61,7 +60,7 @@ pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFla
 
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
-    N: Into<BytesNew>,
+    N: Into<Bytes>,
     S: Stream<Item = (K, V), Error = Error> + Send + 'static,
     K: AsRef<[u8]>,
     V: AsRef<[u8]>,
@@ -125,7 +124,7 @@ where
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam(
         "version",
-        BytesNew::copy_from_slice(version.to_str().as_bytes()),
+        Bytes::copy_from_slice(version.to_str().as_bytes()),
     )?;
 
     let changelogentries = convert_changeset_stream(changelogentries, version)
@@ -241,7 +240,7 @@ where
         .flatten()
 }
 
-pub fn replycaps_part(caps: BytesNew) -> Result<PartEncodeBuilder> {
+pub fn replycaps_part(caps: Bytes) -> Result<PartEncodeBuilder> {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Replycaps)?;
     builder.set_data_fixed(Chunk::new_new(caps)?);
 
@@ -462,7 +461,7 @@ where
     Ok(builder)
 }
 
-pub fn pushvars_part(push_vars: HashMap<String, BytesNew>) -> Result<PartEncodeBuilder> {
+pub fn pushvars_part(push_vars: HashMap<String, Bytes>) -> Result<PartEncodeBuilder> {
     let mut builder = PartEncodeBuilder::advisory(PartHeaderType::Pushvars)?;
     for (var, bytes) in push_vars {
         builder.add_aparam(var, bytes)?;
