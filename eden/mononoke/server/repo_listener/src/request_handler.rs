@@ -19,13 +19,11 @@ use context::SessionContainer;
 use context::SessionId;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::compat::Sink01CompatExt;
-use futures::compat::Stream01CompatExt;
+use futures::channel::mpsc;
 use futures::future::TryFutureExt;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_old::sync::mpsc;
 use futures_stats::TimedFutureExt;
 use hgproto::sshproto;
 use hgproto::HgProtoHandler;
@@ -164,7 +162,7 @@ pub async fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         conn_log.clone(),
-        stdin.compat(),
+        stdin,
         repo_client,
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
@@ -179,7 +177,7 @@ pub async fn request_handler(
         .inspect_ok(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
         .map_err(Error::from)
         .map_ok(|b| Bytes::copy_from_slice(b.as_ref()))
-        .forward(stdout.sink_compat().sink_map_err(Error::from))
+        .forward(stdout.sink_map_err(Error::from))
         .map_ok(|_| ());
 
     // If we got an error at this point, then catch it and print a message
@@ -212,7 +210,7 @@ pub async fn request_handler(
             scuba.log_with_msg("Request finished - Success", None)
         }
         Err(err) => {
-            if err.is::<mpsc::SendError<Bytes>>() {
+            if err.is::<mpsc::SendError>() {
                 STATS::request_outcome_permille.add_value(0);
                 scuba.log_with_msg("Request finished - Client Disconnected", format!("{}", err));
             } else {

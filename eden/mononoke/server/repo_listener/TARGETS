@@ -5,9 +5,6 @@ oncall("mononoke")
 rust_library(
     name = "repo_listener",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:base64",
@@ -34,7 +31,6 @@ rust_library(
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/failure_ext:failure_ext",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/futures_01_ext:futures_01_ext",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/hostname:hostname",

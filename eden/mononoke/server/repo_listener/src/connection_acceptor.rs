@@ -25,15 +25,15 @@ use connection_security_checker::ConnectionSecurityChecker;
 use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
+use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::Future;
 use futures::select_biased;
-use futures_01_ext::BoxStream;
+use futures::sink::SinkExt;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::Stream;
 use futures_ext::FbFutureExt;
-use futures_old::stream;
-use futures_old::sync::mpsc;
-use futures_old::Stream;
-use futures_util::compat::Stream01CompatExt;
 use futures_util::future::AbortHandle;
 use futures_util::future::FutureExt;
 use futures_util::stream::StreamExt;
@@ -394,7 +394,7 @@ where
 }
 
 pub struct ChannelConn {
-    stdin: BoxStream<Bytes, io::Error>,
+    stdin: BoxStream<'static, Result<Bytes, io::Error>>,
     stdout: mpsc::Sender<Bytes>,
     stderr: mpsc::UnboundedSender<Bytes>,
     logger: Logger,
@@ -414,11 +414,11 @@ impl ChannelConn {
     {
         let FramedConn { rd, wr } = framed;
 
-        let stdin = Box::new(rd.compat().filter_map(|s| {
+        let stdin = Box::pin(rd.try_filter_map(|s| async move {
             if s.stream() == IoStream::Stdin {
-                Some(s.data())
+                Ok(Some(s.data()))
             } else {
-                None
+                Ok(None)
             }
         }));
 
@@ -430,12 +430,12 @@ impl ChannelConn {
             let orx = orx
                 .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
                 .flatten()
-                .map(|v| SshMsg::new(IoStream::Stdout, v));
+                .map_ok(|v| SshMsg::new(IoStream::Stdout, v));
             let erx = erx
                 .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
                 .flatten()
-                .map(|v| SshMsg::new(IoStream::Stderr, v));
-            let krx = krx.map(|v| SshMsg::new(IoStream::Stderr, v));
+                .map_ok(|v| SshMsg::new(IoStream::Stderr, v));
+            let krx = krx.map_ok(|v| SshMsg::new(IoStream::Stderr, v));
 
             // Glue them together
             let fwd = async move {
@@ -443,10 +443,7 @@ impl ChannelConn {
 
                 futures::pin_mut!(wr);
 
-                let res = orx
-                    .select(erx)
-                    .select(krx)
-                    .compat()
+                let res = stream::select(orx, stream::select(erx, krx))
                     .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
                     .forward(wr.as_mut())
                     .await;
@@ -476,13 +473,15 @@ impl ChannelConn {
                     scuba.log_with_msg("Forwarding failed", format!("{:#}", e));
                 }
 
+                wr.flush().await?;
+                wr.close().await?;
                 Ok(())
             };
 
             let keep_alive_sender = async move {
                 loop {
                     tokio::time::sleep(KEEP_ALIVE_INTERVAL).await;
-                    if ktx.unbounded_send(Bytes::new()).is_err() {
+                    if ktx.unbounded_send(Ok(Bytes::new())).is_err() {
                         break;
                     }
                 }
@@ -526,14 +525,14 @@ impl ChannelConn {
 
 // TODO(stash): T33775046 we had to chunk responses because hgcli
 // can't cope with big chunks
-fn split_bytes_in_chunk<E>(blob: Bytes, chunksize: usize) -> impl Stream<Item = Bytes, Error = E> {
-    stream::unfold(blob, move |mut remain| {
+fn split_bytes_in_chunk<E>(blob: Bytes, chunksize: usize) -> impl Stream<Item = Result<Bytes, E>> {
+    stream::try_unfold(blob, move |mut remain| async move {
         let len = remain.len();
         if len > 0 {
             let ret = remain.split_to(::std::cmp::min(chunksize, len));
-            Some(Ok((ret, remain)))
+            Ok(Some((ret, remain)))
         } else {
-            None
+            Ok(None)
         }
     })
 }

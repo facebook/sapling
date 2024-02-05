@@ -13,8 +13,8 @@ use anyhow::Result;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
-use futures_ext::BoxStream;
-use futures_old::sync::mpsc;
+use futures::channel::mpsc;
+use futures::stream::BoxStream;
 use metadata::Metadata;
 use netstring::NetstringDecoder;
 use netstring::NetstringEncoder;
@@ -36,7 +36,7 @@ pub struct SshEncoder {
 
 pub struct Stdio {
     pub metadata: Arc<Metadata>,
-    pub stdin: BoxStream<Bytes, io::Error>,
+    pub stdin: BoxStream<'static, Result<Bytes, io::Error>>,
     pub stdout: mpsc::Sender<Bytes>,
     pub stderr: mpsc::UnboundedSender<Bytes>,
 }
