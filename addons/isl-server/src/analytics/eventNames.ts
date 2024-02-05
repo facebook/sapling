@@ -39,6 +39,7 @@ export type TrackEventName =
   | 'DiscardOperation'
   | 'ForgetOperation'
   | 'FoldOperation'
+  | 'FillCommitMessage'
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
   | 'GetAlertsCommand'

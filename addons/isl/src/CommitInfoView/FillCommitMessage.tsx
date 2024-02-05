@@ -10,6 +10,7 @@ import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
 import {globalRecoil} from '../AccessGlobalRecoil';
+import {tracker} from '../analytics';
 import {LinkButton} from '../components/LinkButton';
 import {T, t} from '../i18n';
 import {dagWithPreviews} from '../previews';
@@ -118,12 +119,19 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
       {fillCommitMessageMethods.map(method => (
         <LinkButton
           key={method.label}
-          onClick={async () => {
-            const newMessage = await method.getMessage(commit, mode);
-            if (newMessage == null) {
-              return;
-            }
-            fillMessage(newMessage);
+          onClick={() => {
+            tracker.operation(
+              'FillCommitMessage',
+              'FetchError',
+              {extras: {method: method.label}},
+              async () => {
+                const newMessage = await method.getMessage(commit, mode);
+                if (newMessage == null) {
+                  return;
+                }
+                fillMessage(newMessage);
+              },
+            );
           }}>
           {method.label}
         </LinkButton>
