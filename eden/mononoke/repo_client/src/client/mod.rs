@@ -36,7 +36,9 @@ use bookmarks::Bookmark;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkPrefix;
 use bookmarks_types::BookmarkKind;
+use bytes::BufMut;
 use bytes::Bytes;
+use bytes::BytesMut;
 use bytes_old::BufMut as BufMutOld;
 use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
@@ -54,6 +56,7 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::FuturesUnordered;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -415,13 +418,13 @@ impl RepoClient {
         command: &str,
         sampling_rate: SamplingRate,
         handler: H,
-    ) -> OldBoxFuture<I, E>
+    ) -> BoxFuture<'static, Result<I, E>>
     where
-        F: OldFuture<Item = I, Error = E> + Send + 'static,
+        F: Future<Output = Result<I, E>> + Send + 'static,
         H: FnOnce(CoreContext, CommandLogger) -> F,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        Box::new(handler(ctx, command_logger))
+        Box::pin(handler(ctx, command_logger))
     }
 
     fn command_stream<S, I, E, H>(
@@ -429,13 +432,13 @@ impl RepoClient {
         command: &str,
         sampling_rate: SamplingRate,
         handler: H,
-    ) -> OldBoxStream<I, E>
+    ) -> BoxStream<'static, Result<I, E>>
     where
-        S: OldStream<Item = I, Error = E> + Send + 'static,
+        S: Stream<Item = Result<I, E>> + Send + 'static,
         H: FnOnce(CoreContext, CommandLogger) -> S,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        Box::new(handler(ctx, command_logger))
+        Box::pin(handler(ctx, command_logger))
     }
 
     fn start_command(
@@ -609,10 +612,10 @@ impl RepoClient {
 
     fn getpack<WeightedContent, Content, GetpackHandler>(
         &self,
-        params: OldBoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
+        params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
         handler: GetpackHandler,
         name: &'static str,
-    ) -> OldBoxStream<BytesOld, Error>
+    ) -> BoxStream<'static, Result<BytesOld, Error>>
     where
         WeightedContent:
             OldFuture<Item = (GetpackBlobInfo, Content), Error = Error> + Send + 'static,
@@ -646,7 +649,7 @@ impl RepoClient {
                         // Let's fetch the whole request before responding.
                         // That's prevents deadlocks, because hg client doesn't start reading the response
                         // before all the arguments were sent.
-                        let params = params.compat().try_collect::<Vec<_>>().await?;
+                        let params = params.try_collect::<Vec<_>>().await?;
 
                         ctx.scuba()
                             .clone()
@@ -848,11 +851,9 @@ impl RepoClient {
                             }
                         }
                     })
-                    .boxed()
-                    .compat()
             };
 
-            throttle_stream(&self.session, Metric::GetpackFiles, name, request_stream).boxify()
+            throttle_stream(&self.session, Metric::GetpackFiles, name, request_stream).boxed()
         })
     }
 
@@ -997,8 +998,6 @@ impl RepoClient {
                 command_logger.without_wireproto().finalize_command(&stats);
                 known_nodes
             })
-            .boxed()
-            .compat()
         })
     }
 }
@@ -1008,10 +1007,10 @@ fn throttle_stream<F, S, V>(
     metric: Metric,
     request_name: &'static str,
     func: F,
-) -> impl OldStream<Item = V, Error = Error>
+) -> impl Stream<Item = Result<V, Error>>
 where
     F: FnOnce() -> S + Send + 'static,
-    S: OldStream<Item = V, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<V, Error>> + Send + 'static,
 {
     let session = session.clone();
     async move {
@@ -1023,11 +1022,9 @@ where
                 reason,
             })?;
 
-        Result::<_, Error>::Ok(func())
+        anyhow::Ok(func())
     }
-    .boxed()
-    .compat()
-    .flatten_stream()
+    .try_flatten_stream()
 }
 
 impl HgCommands for RepoClient {
@@ -1124,8 +1121,6 @@ impl HgCommands for RepoClient {
                     command_logger.without_wireproto().finalize_command(&stats);
                     res
                 })
-                .boxed()
-                .compat()
         })
     }
 
@@ -1160,13 +1155,10 @@ impl HgCommands for RepoClient {
                     }
                 }
 
-                future::ok(hostname)
-                    .timed()
-                    .map(move |(stats, res)| {
-                        command_logger.without_wireproto().finalize_command(&stats);
-                        res
-                    })
-                    .compat()
+                future::ok(hostname).timed().map(move |(stats, res)| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    res
+                })
             },
         )
     }
@@ -1188,18 +1180,14 @@ impl HgCommands for RepoClient {
                     command_logger.without_wireproto().finalize_command(&stats);
                     res
                 })
-                .boxed()
-                .compat()
         })
     }
 
     // @wireprotocommand('lookup', 'key')
-    fn lookup(&self, key: String) -> HgCommandRes<BytesOld> {
+    fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         // Generate positive response including HgChangesetId as hex.
-        fn generate_changeset_resp_buf(csid: HgChangesetId) -> HgCommandRes<BytesOld> {
-            Ok(generate_lookup_resp_buf(true, csid.to_hex().as_bytes()))
-                .into_future()
-                .boxify()
+        fn generate_changeset_resp_buf(csid: HgChangesetId) -> HgCommandRes<Bytes> {
+            async move { Ok(generate_lookup_resp_buf(true, csid.to_hex().as_bytes())) }.boxed()
         }
 
         // Generate error response with the message including suggestions (commits info).
@@ -1208,7 +1196,7 @@ impl HgCommands for RepoClient {
             ctx: CoreContext,
             repo: BlobRepo,
             suggestion_cids: Vec<HgChangesetId>,
-        ) -> HgCommandRes<BytesOld> {
+        ) -> HgCommandRes<Bytes> {
             let futs = suggestion_cids
                 .into_iter()
                 .map(|hg_csid| {
@@ -1233,6 +1221,8 @@ impl HgCommands for RepoClient {
                     generate_lookup_resp_buf(false, &infos.join(&[b'\n'][..]))
                 })
                 .boxify()
+                .compat()
+                .boxed()
         }
 
         // Controls how many suggestions to fetch in case of ambiguous outcome of prefix lookup.
@@ -1248,18 +1238,15 @@ impl HgCommands for RepoClient {
             let node_fut = match HgChangesetId::from_str(&key) {
                 Ok(csid) => {
                     cloned!(ctx, repo);
-                    async move { repo.hg_changeset_exists(ctx, csid).await }
-                }
-                .boxed()
-                .compat()
-                .map(move |exists| {
-                    if exists {
-                        HgChangesetIdsResolvedFromPrefix::Single(csid)
-                    } else {
-                        HgChangesetIdsResolvedFromPrefix::NoMatch
+                    async move {
+                        if repo.hg_changeset_exists(ctx, csid).await? {
+                            Ok(HgChangesetIdsResolvedFromPrefix::Single(csid))
+                        } else {
+                            Ok(HgChangesetIdsResolvedFromPrefix::NoMatch)
+                        }
                     }
-                })
-                .boxify(),
+                    .boxed()
+                }
                 Err(_) => match HgChangesetIdPrefix::from_str(&key) {
                     Ok(cs_prefix) => {
                         cloned!(repo, ctx);
@@ -1273,11 +1260,9 @@ impl HgCommands for RepoClient {
                                 .await
                         }
                         .boxed()
-                        .compat()
-                        .boxify()
                     }
                     Err(_) => {
-                        futures_old::future::ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify()
+                        futures::future::ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxed()
                     }
                 },
             };
@@ -1298,8 +1283,8 @@ impl HgCommands for RepoClient {
 
                         // Describing the priority relative to bookmark presence for the key.
                         enum LookupOutcome {
-                            HighPriority(HgCommandRes<BytesOld>),
-                            LowPriority(HgCommandRes<BytesOld>),
+                            HighPriority(HgCommandRes<Bytes>),
+                            LowPriority(HgCommandRes<Bytes>),
                         }
 
                         let outcome = match resolved_cids {
@@ -1314,43 +1299,42 @@ impl HgCommands for RepoClient {
                                 ))
                             }
                             TooMany(_) => LookupOutcome::LowPriority(
-                                Ok(generate_lookup_resp_buf(
-                                    false,
-                                    format!("ambiguous identifier '{}'", key).as_bytes(),
-                                ))
-                                .into_future()
-                                .boxify(),
+                                async move {
+                                    Ok(generate_lookup_resp_buf(
+                                        false,
+                                        format!("ambiguous identifier '{}'", key).as_bytes(),
+                                    ))
+                                }
+                                .boxed(),
                             ),
                             NoMatch => LookupOutcome::LowPriority(
-                                Ok(generate_lookup_resp_buf(
-                                    false,
-                                    format!("{} not found", key).as_bytes(),
-                                ))
-                                .into_future()
-                                .boxify(),
+                                async move {
+                                    Ok(generate_lookup_resp_buf(
+                                        false,
+                                        format!("{} not found", key).as_bytes(),
+                                    ))
+                                }
+                                .boxed(),
                             ),
                         };
 
                         match (outcome, bookmark) {
                             (LookupOutcome::HighPriority(res), _) => res,
-                            (LookupOutcome::LowPriority(res), Some(bookmark)) => {
-                                async move { repo.get_bookmark_hg(ctx.clone(), &bookmark).await }
-                                    .boxed()
-                                    .compat()
-                                    .and_then(move |maybe_csid| {
-                                        if let Some(csid) = maybe_csid {
-                                            generate_changeset_resp_buf(csid)
-                                        } else {
-                                            res
-                                        }
-                                    })
-                                    .boxify()
+                            (LookupOutcome::LowPriority(res), Some(bookmark)) => async move {
+                                let maybe_cs_id =
+                                    repo.get_bookmark_hg(ctx.clone(), &bookmark).await?;
+                                if let Some(csid) = maybe_cs_id {
+                                    generate_changeset_resp_buf(csid).await
+                                } else {
+                                    res.await
+                                }
                             }
+                            .boxed(),
                             (LookupOutcome::LowPriority(res), None) => res,
                         }
                     }
                 })
-                .boxify();
+                .boxed();
 
             async move {
                 if let Some(git_lookup) = maybe_git_lookup {
@@ -1358,7 +1342,7 @@ impl HgCommands for RepoClient {
                         return Ok(res);
                     }
                 }
-                lookup_fut.compat().await
+                lookup_fut.await
             }
             .timeout(default_timeout())
             .flatten_err()
@@ -1367,8 +1351,6 @@ impl HgCommands for RepoClient {
                 command_logger.without_wireproto().finalize_command(&stats);
                 res
             })
-            .boxed()
-            .compat()
         })
     }
 
@@ -1424,7 +1406,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getbundle', '*')
-    fn getbundle(&self, args: GetbundleArgs) -> OldBoxStream<BytesOld, Error> {
+    fn getbundle(&self, args: GetbundleArgs) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
             let s = self
                 .create_bundle(ctx, args)
@@ -1442,13 +1424,12 @@ impl HgCommands for RepoClient {
                             command_logger.finalize_command(&stats);
                         }
                     }
-                })
-                .boxed()
-                .compat()
-                .boxify();
+                });
 
             throttle_stream(&self.session, Metric::Commits, ops::GETBUNDLE, move || s)
         })
+        .map_ok(bytes_ext::copy_from_old)
+        .boxed()
     }
 
     // @wireprotocommand('hello')
@@ -1466,8 +1447,6 @@ impl HgCommands for RepoClient {
                     res
                 })
                 .boxed()
-                .compat()
-                .boxify()
         })
     }
 
@@ -1482,15 +1461,13 @@ impl HgCommands for RepoClient {
                         command_logger.without_wireproto().finalize_command(&stats);
                         res
                     })
-                    .compat()
-                    .boxify()
             })
         } else {
             info!(
                 self.logging.logger(),
                 "unsupported listkeys namespace: {}", namespace
             );
-            future_old::ok(HashMap::new()).boxify()
+            future::ok(HashMap::new()).boxed()
         }
     }
 
@@ -1505,11 +1482,11 @@ impl HgCommands for RepoClient {
                 self.logging.logger(),
                 "unsupported listkeyspatterns namespace: {}", namespace,
             );
-            return future_old::err(format_err!(
+            return future::err(format_err!(
                 "unsupported listkeyspatterns namespace: {}",
                 namespace
             ))
-            .boxify();
+            .boxed();
         }
 
         self.command_future(ops::LISTKEYSPATTERNS, UNSAMPLED, |ctx, command_logger| {
@@ -1564,8 +1541,6 @@ impl HgCommands for RepoClient {
                     command_logger.without_wireproto().finalize_command(&stats);
                     res
                 })
-                .boxed()
-                .compat()
         })
     }
 
@@ -1573,10 +1548,10 @@ impl HgCommands for RepoClient {
     fn unbundle(
         &self,
         _heads: Vec<String>,
-        stream: OldBoxStream<Bundle2Item<'static>, Error>,
+        stream: BoxStream<'static, Result<Bundle2Item<'static>, Error>>,
         respondlightly: Option<bool>,
         maybereplaydata: Option<String>,
-    ) -> HgCommandRes<BytesOld> {
+    ) -> HgCommandRes<Bytes> {
         let reponame = self.repo.inner_repo().repo_identity().name().to_string();
         cloned!(self.session_bookmarks_cache, self as repoclient);
 
@@ -1589,160 +1564,155 @@ impl HgCommands for RepoClient {
         let lfs_params = self.lfs_params();
 
         let client = repoclient.clone();
-        repoclient
-            .command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
-                async move {
-                    let repo = client.repo.inner_repo();
+        repoclient.command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
+            async move {
+                let repo = client.repo.inner_repo();
 
-                    // To use unbundle wireproto command the user needs at least all-repo `draft` permission.
-                    // This is overkill - we could check more granular permissions but wireproto is deprecated and
-                    // it doesn't seem worth auditing each codepath there so let's use the big hammer!
-                    let authz = AuthorizationContext::new(&ctx);
-                    authz
-                        .require_full_repo_draft(&ctx, &repo)
-                        .await
-                        .map_err(|err| BundleResolverError::Error(err.into()))?;
+                // To use unbundle wireproto command the user needs at least all-repo `draft` permission.
+                // This is overkill - we could check more granular permissions but wireproto is deprecated and
+                // it doesn't seem worth auditing each codepath there so let's use the big hammer!
+                let authz = AuthorizationContext::new(&ctx);
+                authz
+                    .require_full_repo_draft(&ctx, &repo)
+                    .await
+                    .map_err(|err| BundleResolverError::Error(err.into()))?;
 
-                    let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
-                    let pushrebase_params = repo.repo_config().pushrebase.clone();
-                    let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
+                let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
+                let pushrebase_params = repo.repo_config().pushrebase.clone();
+                let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
-                    let pushrebase_flags = pushrebase_params.flags.clone();
-                    let action = unbundle::resolve(
-                        &ctx,
-                        repo.as_blob_repo(),
-                        infinitepush_writes_allowed,
-                        stream.compat().boxed(),
-                        &repo.repo_config().push,
-                        pushrebase_flags,
-                        maybe_backup_repo_source,
-                    )
-                    .await?;
+                let pushrebase_flags = pushrebase_params.flags.clone();
+                let action = unbundle::resolve(
+                    &ctx,
+                    repo.as_blob_repo(),
+                    infinitepush_writes_allowed,
+                    stream,
+                    &repo.repo_config().push,
+                    pushrebase_flags,
+                    maybe_backup_repo_source,
+                )
+                .await?;
 
-                    let unbundle_future = async {
-                        maybe_validate_pushed_bonsais(&ctx, repo.as_blob_repo(), &maybereplaydata)
+                let unbundle_future = async {
+                    maybe_validate_pushed_bonsais(&ctx, repo.as_blob_repo(), &maybereplaydata)
+                        .await?;
+
+                    match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
+                        Some(push_redirector) => {
+                            // Push-redirection will cause
+                            // hooks to be run in the large
+                            // repo, but we must also run them
+                            // in the small repo.
+                            run_hooks(
+                                &ctx,
+                                repo.as_blob_repo(),
+                                hook_manager.as_ref(),
+                                &action,
+                                CrossRepoPushSource::NativeToThisRepo,
+                            )
                             .await?;
 
-                        match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
-                            Some(push_redirector) => {
-                                // Push-redirection will cause
-                                // hooks to be run in the large
-                                // repo, but we must also run them
-                                // in the small repo.
-                                run_hooks(
-                                    &ctx,
-                                    repo.as_blob_repo(),
-                                    hook_manager.as_ref(),
-                                    &action,
-                                    CrossRepoPushSource::NativeToThisRepo,
-                                )
-                                .await?;
-
-                                let ctx = ctx.with_mutated_scuba(|mut sample| {
-                                    sample.add(
-                                        "target_repo_name",
-                                        push_redirector.repo.inner_repo().repo_identity().name(),
-                                    );
-                                    sample.add(
-                                        "target_repo_id",
-                                        push_redirector.repo.inner_repo().repo_identity().id().id(),
-                                    );
-                                    sample
-                                });
-                                ctx.scuba()
-                                    .clone()
-                                    .log_with_msg("Push redirected to large repo", None);
-                                push_redirector
-                                    .run_redirected_post_resolve_action(&ctx, action)
-                                    .await?
-                            }
-                            None => {
-                                run_post_resolve_action(
-                                    &ctx,
-                                    repo,
-                                    hook_manager.as_ref(),
-                                    action,
-                                    CrossRepoPushSource::NativeToThisRepo,
-                                )
+                            let ctx = ctx.with_mutated_scuba(|mut sample| {
+                                sample.add(
+                                    "target_repo_name",
+                                    push_redirector.repo.inner_repo().repo_identity().name(),
+                                );
+                                sample.add(
+                                    "target_repo_id",
+                                    push_redirector.repo.inner_repo().repo_identity().id().id(),
+                                );
+                                sample
+                            });
+                            ctx.scuba()
+                                .clone()
+                                .log_with_msg("Push redirected to large repo", None);
+                            push_redirector
+                                .run_redirected_post_resolve_action(&ctx, action)
                                 .await?
+                        }
+                        None => {
+                            run_post_resolve_action(
+                                &ctx,
+                                repo,
+                                hook_manager.as_ref(),
+                                action,
+                                CrossRepoPushSource::NativeToThisRepo,
+                            )
+                            .await?
+                        }
+                    }
+                    .generate_bytes(
+                        &ctx,
+                        repo.as_blob_repo(),
+                        pushrebase_params,
+                        &lfs_params,
+                        respondlightly,
+                    )
+                    .await
+                };
+
+                let response = unbundle_future.await?;
+
+                // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
+                // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
+                // this is something we need to resolve by sending down the commits we know the client doesn't have,
+                // or by getting bookmarks atomically with the commits we send back.
+                //
+                // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
+                // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
+                // will just be from this client's push, rather than from a later push that came in during the RTT
+                // needed to get the `listkeys` request from the client.
+                //
+                // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
+                // depend on the reply part with a bookmark change in - T57874233
+                session_bookmarks_cache
+                    .update_publishing_bookmarks_after_push(ctx.clone())
+                    .compat()
+                    .await?;
+                Ok(response)
+            }
+            .inspect_err({
+                cloned!(reponame);
+                move |err| {
+                    use BundleResolverError::*;
+                    match err {
+                        HookError(hooks) => {
+                            let failed_hooks: HashSet<String> = hooks
+                                .iter()
+                                .map(|fail| fail.get_hook_name().to_string())
+                                .collect();
+
+                            for failed_hook in failed_hooks {
+                                STATS::push_hook_failure
+                                    .add_value(1, (reponame.clone(), failed_hook));
                             }
                         }
-                        .generate_bytes(
-                            &ctx,
-                            repo.as_blob_repo(),
-                            pushrebase_params,
-                            &lfs_params,
-                            respondlightly,
-                        )
-                        .await
+                        PushrebaseConflicts(..) => {
+                            STATS::push_conflicts.add_value(1, (reponame,));
+                        }
+                        RateLimitExceeded { .. } => {
+                            STATS::rate_limits_exceeded.add_value(1, (reponame,));
+                        }
+                        Error(..) => {
+                            STATS::push_error.add_value(1, (reponame,));
+                        }
                     };
-
-                    let response = unbundle_future.await?;
-
-                    // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
-                    // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
-                    // this is something we need to resolve by sending down the commits we know the client doesn't have,
-                    // or by getting bookmarks atomically with the commits we send back.
-                    //
-                    // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
-                    // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
-                    // will just be from this client's push, rather than from a later push that came in during the RTT
-                    // needed to get the `listkeys` request from the client.
-                    //
-                    // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
-                    // depend on the reply part with a bookmark change in - T57874233
-                    session_bookmarks_cache
-                        .update_publishing_bookmarks_after_push(ctx.clone())
-                        .compat()
-                        .await?;
-                    Ok(response)
                 }
-                .inspect_err({
-                    cloned!(reponame);
-                    move |err| {
-                        use BundleResolverError::*;
-                        match err {
-                            HookError(hooks) => {
-                                let failed_hooks: HashSet<String> = hooks
-                                    .iter()
-                                    .map(|fail| fail.get_hook_name().to_string())
-                                    .collect();
-
-                                for failed_hook in failed_hooks {
-                                    STATS::push_hook_failure
-                                        .add_value(1, (reponame.clone(), failed_hook));
-                                }
-                            }
-                            PushrebaseConflicts(..) => {
-                                STATS::push_conflicts.add_value(1, (reponame,));
-                            }
-                            RateLimitExceeded { .. } => {
-                                STATS::rate_limits_exceeded.add_value(1, (reponame,));
-                            }
-                            Error(..) => {
-                                STATS::push_error.add_value(1, (reponame,));
-                            }
-                        };
-                    }
-                })
-                .inspect_ok(move |_| STATS::push_success.add_value(1, (reponame,)))
-                .map_ok(bytes_ext::copy_from_new)
-                .map_err(Error::from)
-                .timeout(default_timeout())
-                .flatten_err()
-                .timed()
-                .map(move |(stats, res)| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    res
-                })
-                .boxed()
-                .compat()
             })
-            .boxify()
+            .inspect_ok(move |_| STATS::push_success.add_value(1, (reponame,)))
+            .map_err(Error::from)
+            .timeout(default_timeout())
+            .flatten_err()
+            .timed()
+            .map(move |(stats, res)| {
+                command_logger.without_wireproto().finalize_command(&stats);
+                res
+            })
+        })
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, params: GettreepackArgs) -> OldBoxStream<BytesOld, Error> {
+    fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<'static, Result<Bytes, Error>> {
         let sampling_rate = gettreepack_scuba_sampling_rate(&params);
         self.command_stream(
             ops::GETTREEPACK,
@@ -1782,6 +1752,7 @@ impl HgCommands for RepoClient {
                 let s = self
                     .gettreepack_untimed(ctx.clone(), params)
                     .compat()
+                    .map_ok(bytes_ext::copy_from_old)
                     .whole_stream_timeout(default_timeout())
                     .yield_periodically()
                     .flatten_err()
@@ -1812,9 +1783,7 @@ impl HgCommands for RepoClient {
                                 command_logger.finalize_command(&stats);
                             }
                         }
-                    })
-                    .boxed()
-                    .compat();
+                    });
 
                 throttle_stream(
                     &self.session,
@@ -1827,7 +1796,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('stream_out_shallow')
-    fn stream_out_shallow(&self, tag: Option<String>) -> OldBoxStream<BytesOld, Error> {
+    fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
             let streaming_clone = self.repo.inner_repo().streaming_clone_arc();
 
@@ -1940,22 +1909,19 @@ impl HgCommands for RepoClient {
                 .whole_stream_timeout(clone_timeout())
                 .yield_periodically()
                 .flatten_err()
-                .map_ok(bytes_ext::copy_from_new)
                 .timed(|stats| {
                     if stats.completed {
                         command_logger.finalize_command(&stats);
                     }
                 })
-                .boxed()
-                .compat()
         })
     }
 
     // @wireprotocommand('getpackv1')
     fn getpackv1(
         &self,
-        params: OldBoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> OldBoxStream<BytesOld, Error> {
+        params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
@@ -1970,13 +1936,15 @@ impl HgCommands for RepoClient {
             },
             ops::GETPACKV1,
         )
+        .map_ok(bytes_ext::copy_from_old)
+        .boxed()
     }
 
     // @wireprotocommand('getpackv2')
     fn getpackv2(
         &self,
-        params: OldBoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> OldBoxStream<BytesOld, Error> {
+        params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
         self.getpack(
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
@@ -1996,10 +1964,12 @@ impl HgCommands for RepoClient {
             },
             ops::GETPACKV2,
         )
+        .map_ok(bytes_ext::copy_from_old)
+        .boxed()
     }
 
     // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
-    fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> OldBoxStream<BytesOld, Error> {
+    fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::GETCOMMITDATA, UNSAMPLED, |ctx, mut command_logger| {
             let args = json!(nodes);
             let blobrepo = self.repo.blob_repo().clone();
@@ -2018,7 +1988,7 @@ impl HgCommands for RepoClient {
                                 RevlogChangeset::load(&ctx, blobrepo.repo_blobstore(), hg_cs_id)
                                     .await?;
                             let bytes = serialize_getcommitdata(hg_cs_id, revlog_cs)?;
-                            Result::<_, Error>::Ok(bytes)
+                            anyhow::Ok(bytes_ext::copy_from_old(bytes))
                         }
                     }
                 })
@@ -2049,9 +2019,7 @@ impl HgCommands for RepoClient {
                         }
                         command_logger.finalize_command(&stats);
                     }
-                })
-                .boxed()
-                .compat();
+                });
 
             throttle_stream(
                 &self.session,
@@ -2399,11 +2367,7 @@ enum GitLookup {
 }
 
 impl GitLookup {
-    pub async fn lookup(
-        &self,
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-    ) -> Result<Option<BytesOld>, Error> {
+    pub async fn lookup(&self, ctx: &CoreContext, repo: &BlobRepo) -> Result<Option<Bytes>, Error> {
         use GitLookup::*;
         match self {
             GitToHg(git_sha1) => {
@@ -2466,16 +2430,16 @@ fn parse_git_lookup(s: &str) -> Option<GitLookup> {
     }
 }
 
-fn generate_lookup_resp_buf(success: bool, message: &[u8]) -> BytesOld {
-    let mut buf = BytesMutOld::with_capacity(message.len() + 3);
+fn generate_lookup_resp_buf(success: bool, message: &[u8]) -> Bytes {
+    let mut buf = BytesMut::with_capacity(message.len() + 3);
     if success {
-        buf.put(b'1');
+        buf.put_u8(b'1');
     } else {
-        buf.put(b'0');
+        buf.put_u8(b'0');
     }
-    buf.put(b' ');
+    buf.put_u8(b' ');
     buf.put(message);
-    buf.put(b'\n');
+    buf.put_u8(b'\n');
     buf.freeze()
 }
 

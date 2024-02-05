@@ -20,23 +20,30 @@ use std::sync::Arc;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use bytes::Bytes;
 use bytes_old::Buf;
 use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
 use failure_ext::FutureErrorContext;
-use futures_ext::BoxFuture;
-use futures_ext::BoxStream;
+use futures::compat::Stream01CompatExt;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::once;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures_ext::BoxFuture as OldBoxFuture;
+use futures_ext::BoxStream as OldBoxStream;
 use futures_ext::BytesStream;
-use futures_ext::FutureExt;
-use futures_ext::StreamExt;
-use futures_old::future;
+use futures_ext::FutureExt as _;
+use futures_ext::StreamExt as _;
 use futures_old::future::err;
 use futures_old::future::ok;
 use futures_old::future::Either;
 use futures_old::future::Future;
 use futures_old::stream;
 use futures_old::stream::futures_ordered;
-use futures_old::stream::once;
 use futures_old::stream::Stream;
 use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
@@ -90,8 +97,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         req: SingleRequest,
         instream: BytesStream<S>,
     ) -> (
-        BoxStream<SingleResponse, Error>,
-        BoxFuture<BytesStream<S>, Error>,
+        OldBoxStream<SingleResponse, Error>,
+        OldBoxFuture<BytesStream<S>, Error>,
     )
     where
         S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
@@ -106,6 +113,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Between { pairs } => (
                 hgcmds
                     .between(pairs)
+                    .compat()
                     .map(SingleResponse::Between)
                     .into_stream()
                     .boxify(),
@@ -114,6 +122,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Branchmap => (
                 hgcmds
                     .branchmap()
+                    .compat()
                     .map(SingleResponse::Branchmap)
                     .into_stream()
                     .boxify(),
@@ -122,6 +131,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Capabilities => (
                 hgcmds
                     .capabilities()
+                    .compat()
                     .map(SingleResponse::Capabilities)
                     .into_stream()
                     .boxify(),
@@ -130,6 +140,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::ClientTelemetry { args } => (
                 hgcmds
                     .clienttelemetry(args)
+                    .compat()
                     .map(SingleResponse::ClientTelemetry)
                     .into_stream()
                     .boxify(),
@@ -137,6 +148,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             ),
             SingleRequest::Debugwireargs { one, two, all_args } => (
                 self.debugwireargs(one, two, all_args)
+                    .compat()
                     .map(SingleResponse::Debugwireargs)
                     .into_stream()
                     .boxify(),
@@ -145,6 +157,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Getbundle(args) => (
                 hgcmds
                     .getbundle(args)
+                    .map_ok(|b| BytesOld::from(&b[..]))
+                    .compat()
                     .map(SingleResponse::Getbundle)
                     .boxify(),
                 ok(instream).boxify(),
@@ -152,6 +166,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Heads => (
                 hgcmds
                     .heads()
+                    .compat()
                     .map(SingleResponse::Heads)
                     .into_stream()
                     .boxify(),
@@ -160,6 +175,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Hello => (
                 hgcmds
                     .hello()
+                    .compat()
                     .map(SingleResponse::Hello)
                     .into_stream()
                     .boxify(),
@@ -168,6 +184,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Listkeys { namespace } => (
                 hgcmds
                     .listkeys(namespace)
+                    .compat()
                     .map(SingleResponse::Listkeys)
                     .into_stream()
                     .boxify(),
@@ -179,6 +196,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             } => (
                 hgcmds
                     .listkeyspatterns(namespace, patterns)
+                    .compat()
                     .map(SingleResponse::ListKeysPatterns)
                     .into_stream()
                     .boxify(),
@@ -187,6 +205,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Lookup { key } => (
                 hgcmds
                     .lookup(key)
+                    .map_ok(|b| BytesOld::from(&b[..]))
+                    .compat()
                     .map(SingleResponse::Lookup)
                     .into_stream()
                     .boxify(),
@@ -195,6 +215,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Known { nodes } => (
                 hgcmds
                     .known(nodes)
+                    .compat()
                     .map(SingleResponse::Known)
                     .into_stream()
                     .boxify(),
@@ -203,6 +224,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Knownnodes { nodes } => (
                 hgcmds
                     .knownnodes(nodes)
+                    .compat()
                     .map(SingleResponse::Known)
                     .into_stream()
                     .boxify(),
@@ -221,6 +243,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Gettreepack(args) => (
                 hgcmds
                     .gettreepack(args)
+                    .map_ok(|b| BytesOld::from(&b[..]))
+                    .compat()
                     .map(SingleResponse::Gettreepack)
                     .boxify(),
                 ok(instream).boxify(),
@@ -228,6 +252,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::StreamOutShallow { tag } => (
                 hgcmds
                     .stream_out_shallow(tag)
+                    .map_ok(|b| BytesOld::from(&b[..]))
+                    .compat()
                     .map(SingleResponse::StreamOutShallow)
                     .boxify(),
                 ok(instream).boxify(),
@@ -237,7 +263,9 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     decode_getpack_arg_stream(instream, Getpackv1ArgDecoder::new);
                 (
                     hgcmds
-                        .getpackv1(reqs)
+                        .getpackv1(reqs.compat().boxed())
+                        .map_ok(|b| BytesOld::from(&b[..]))
+                        .compat()
                         .map(SingleResponse::Getpackv1)
                         .boxify(),
                     instream,
@@ -248,7 +276,9 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     decode_getpack_arg_stream(instream, Getpackv1ArgDecoder::new);
                 (
                     hgcmds
-                        .getpackv2(reqs)
+                        .getpackv2(reqs.compat().boxed())
+                        .map_ok(|b| BytesOld::from(&b[..]))
+                        .compat()
                         .map(SingleResponse::Getpackv2)
                         .boxify(),
                     instream,
@@ -257,6 +287,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::GetCommitData { nodes } => (
                 hgcmds
                     .getcommitdata(nodes)
+                    .map_ok(|b| BytesOld::from(&b[..]))
+                    .compat()
                     .map(SingleResponse::GetCommitData)
                     .boxify(),
                 ok(instream).boxify(),
@@ -271,8 +303,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         respondlightly: Option<bool>,
         replaydata: Option<String>,
     ) -> (
-        BoxStream<SingleResponse, Error>,
-        BoxFuture<BytesStream<S>, Error>,
+        OldBoxStream<SingleResponse, Error>,
+        OldBoxFuture<BytesStream<S>, Error>,
     )
     where
         S: Stream<Item = BytesOld, Error = io::Error> + Send + 'static,
@@ -318,7 +350,14 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             Either::A(ok(SingleResponse::ReadyForStream)),
             Either::B({
                 hgcmds
-                    .unbundle(heads, bundle2stream, respondlightly, replaydata)
+                    .unbundle(
+                        heads,
+                        bundle2stream.compat().boxed(),
+                        respondlightly,
+                        replaydata,
+                    )
+                    .map_ok(|b| BytesOld::from(&b[..]))
+                    .compat()
                     .map(SingleResponse::Unbundle)
             }),
         ]);
@@ -347,7 +386,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         // default value "None" is used.
         out.extend_from_slice(NONE);
 
-        future::ok(out.into()).boxify()
+        async { anyhow::Ok(out.into()) }.boxed()
     }
 }
 
@@ -356,7 +395,10 @@ const NONE: &[u8] = b"None";
 fn decode_getpack_arg_stream<D, RType, S>(
     input: BytesStream<S>,
     create_decoder: impl Fn() -> D + Send + 'static,
-) -> (BoxStream<RType, Error>, BoxFuture<BytesStream<S>, Error>)
+) -> (
+    OldBoxStream<RType, Error>,
+    OldBoxFuture<BytesStream<S>, Error>,
+)
 where
     D: Decoder<Item = Option<RType>, Error = Error> + Send + 'static,
     RType: Send + 'static,
@@ -370,7 +412,7 @@ where
     // error is a Result. If this fake error is Ok(...) then no real error happened.
     // Note that fake error also contains input stream that will be send back to the future that
     // waits for it.
-    let entry_stream: BoxStream<_, Result<BytesStream<S>, (_, BytesStream<S>)>> =
+    let entry_stream: OldBoxStream<_, Result<BytesStream<S>, (_, BytesStream<S>)>> =
         stream::unfold(input, move |input| {
             let fut_decode = input.into_future_decode(create_decoder());
             let fut = fut_decode
@@ -542,8 +584,8 @@ impl Decoder for Getpackv1ArgDecoder {
 fn extract_remainder_from_bundle2<R>(
     bundle2: Bundle2Stream<R>,
 ) -> (
-    BoxStream<Bundle2Item<'static>, Error>,
-    BoxFuture<bundle2::Remainder<R>, Error>,
+    OldBoxStream<Bundle2Item<'static>, Error>,
+    OldBoxFuture<bundle2::Remainder<R>, Error>,
 )
 where
     R: AsyncRead + BufRead + 'static + Send,
@@ -591,11 +633,12 @@ where
     S: Into<String>,
     T: Send + 'static,
 {
-    future::err(ErrorKind::Unimplemented(op.into()).into()).boxify()
+    let msg = op.into();
+    async move { Err(ErrorKind::Unimplemented(msg).into()) }.boxed()
 }
 
 // Async response from an Hg command
-pub type HgCommandRes<T> = BoxFuture<T, Error>;
+pub type HgCommandRes<T> = BoxFuture<'static, Result<T, Error>>;
 
 // Trait representing Mercurial protocol operations, generic across protocols
 // Derived from hg/mercurial/wireprotocol.py, functions with the `@wireprotocommand`
@@ -617,7 +660,7 @@ pub trait HgCommands {
     fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<HgChangesetId>>> {
         // We have no plans to support mercurial branches and hence no plans for branchmap,
         // so just return fake response.
-        future::ok(HashMap::new()).boxify()
+        async { Ok(HashMap::new()) }.boxed()
     }
 
     // @wireprotocommand('capabilities')
@@ -632,8 +675,8 @@ pub trait HgCommands {
 
     // @wireprotocommand('getbundle', '*')
     // TODO: make this streaming
-    fn getbundle(&self, _args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
-        once(Err(ErrorKind::Unimplemented("getbundle".into()).into())).boxify()
+    fn getbundle(&self, _args: GetbundleArgs) -> BoxStream<'static, Result<Bytes, Error>> {
+        once(async { Err(ErrorKind::Unimplemented("getbundle".into()).into()) }).boxed()
     }
 
     // @wireprotocommand('heads')
@@ -661,7 +704,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('lookup', 'key')
-    fn lookup(&self, _key: String) -> HgCommandRes<BytesOld> {
+    fn lookup(&self, _key: String) -> HgCommandRes<Bytes> {
         unimplemented("lookup")
     }
 
@@ -679,53 +722,50 @@ pub trait HgCommands {
     fn unbundle(
         &self,
         _heads: Vec<String>,
-        _stream: BoxStream<Bundle2Item<'static>, Error>,
+        _stream: BoxStream<'static, Result<Bundle2Item<'static>, Error>>,
         _respondlightly: Option<bool>,
         _replaydata: Option<String>,
-    ) -> HgCommandRes<BytesOld> {
+    ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, _params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
-        once(Err(ErrorKind::Unimplemented("gettreepack".into()).into())).boxify()
+    fn gettreepack(&self, _params: GettreepackArgs) -> BoxStream<'static, Result<Bytes, Error>> {
+        once(async { Err(ErrorKind::Unimplemented("gettreepack".into()).into()) }).boxed()
     }
 
     // @wireprotocommand('stream_out_shallow', '*')
-    fn stream_out_shallow(&self, _tag: Option<String>) -> BoxStream<BytesOld, Error> {
-        once(Err(
-            ErrorKind::Unimplemented("stream_out_shallow".into()).into()
-        ))
-        .boxify()
+    fn stream_out_shallow(&self, _tag: Option<String>) -> BoxStream<'static, Result<Bytes, Error>> {
+        once(async { Err(ErrorKind::Unimplemented("stream_out_shallow".into()).into()) }).boxed()
     }
 
     // @wireprotocommand()
     fn getpackv1(
         &self,
-        _params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<BytesOld, Error> {
-        once(Err(ErrorKind::Unimplemented("getpackv1".into()).into())).boxify()
+        _params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
+        once(async { Err(ErrorKind::Unimplemented("getpackv1".into()).into()) }).boxed()
     }
 
     fn getpackv2(
         &self,
-        _params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<BytesOld, Error> {
-        once(Err(ErrorKind::Unimplemented("getpackv2".into()).into())).boxify()
+        _params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
+        once(async { Err(ErrorKind::Unimplemented("getpackv2".into()).into()) }).boxed()
     }
 
     // @wireprotocommand('getcommitdata', 'nodes *')
-    fn getcommitdata(&self, _nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
-        once(Err(ErrorKind::Unimplemented("getcommitdata".into()).into())).boxify()
+    fn getcommitdata(
+        &self,
+        _nodes: Vec<HgChangesetId>,
+    ) -> BoxStream<'static, Result<Bytes, Error>> {
+        once(async { Err(ErrorKind::Unimplemented("getcommitdata".into()).into()) }).boxed()
     }
 }
 
 #[cfg(test)]
 mod test {
     use bytes_old::BufMut;
-    use bytes_old::BytesMut as BytesMutOld;
-    use futures_old::future;
-    use futures_old::stream;
     use slog::o;
     use slog::Discard;
 
@@ -737,7 +777,7 @@ mod test {
             let mut res = HashMap::new();
             res.insert("capabilities".into(), vec!["something".into()]);
 
-            future::ok(res).boxify()
+            async move { anyhow::Ok(res) }.boxed()
         }
     }
 

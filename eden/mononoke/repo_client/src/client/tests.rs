@@ -423,9 +423,15 @@ async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Resul
     );
 
     let bytes = repo_client
-        .getpackv2(stream_old::iter_ok(vec![(path.clone(), vec![filenode_id])]).boxify())
-        .concat2()
-        .compat()
+        .getpackv2(
+            futures::stream::iter(vec![(path.clone(), vec![filenode_id])])
+                .map(anyhow::Ok)
+                .boxed(),
+        )
+        .try_fold(BytesMut::new(), |mut buf, b| async move {
+            buf.extend_from_slice(&b);
+            anyhow::Ok(buf)
+        })
         .await?;
 
     let lfs_url: &[u8] = b"version https://git-lfs.github.com/spec/v1";
