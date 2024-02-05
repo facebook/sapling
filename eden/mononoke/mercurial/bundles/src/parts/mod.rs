@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::future::Future;
 use std::io::Write;
 
 use anyhow::Error;
@@ -15,16 +16,16 @@ use byteorder::BigEndian;
 use byteorder::WriteBytesExt;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future;
+use futures::future::BoxFuture;
+use futures::stream;
+use futures::stream::BoxStream;
 use futures::FutureExt;
+use futures::Stream;
+use futures::StreamExt;
 use futures::TryFutureExt;
-use futures_ext::BoxFuture;
-use futures_ext::BoxStream;
-use futures_ext::StreamExt;
-use futures_old::stream::iter_ok;
-use futures_old::stream::once;
-use futures_old::Future;
-use futures_old::Stream;
+use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::Delta;
@@ -61,21 +62,21 @@ pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFla
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
     N: Into<Bytes>,
-    S: Stream<Item = (K, V), Error = Error> + Send + 'static,
-    K: AsRef<[u8]>,
-    V: AsRef<[u8]>,
+    S: Stream<Item = Result<(K, V), Error>> + Send + 'static,
+    K: AsRef<[u8]> + Send + 'static,
+    V: AsRef<[u8]> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Listkeys)?;
     builder.add_mparam("namespace", namespace)?;
     // Ideally we'd use a size_hint here, but streams don't appear to have one.
     let payload = Vec::with_capacity(256);
     let fut = items
-        .fold(payload, |mut payload, (key, value)| {
+        .try_fold(payload, |mut payload, (key, value)| async move {
             payload.extend_from_slice(key.as_ref());
             payload.push(b'\t');
             payload.extend_from_slice(value.as_ref());
             payload.push(b'\n');
-            Ok::<_, Error>(payload)
+            anyhow::Ok(payload)
         })
         .map_err(|err| err.context(ErrorKind::ListkeyGeneration));
 
@@ -86,19 +87,18 @@ where
 
 pub fn phases_part<S>(ctx: CoreContext, phases_entries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (HgChangesetId, Phase), Error = Error> + Send + 'static,
+    S: Stream<Item = Result<(HgChangesetId, Phase), Error>> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::PhaseHeads)?;
     let mut scuba_logger = ctx.scuba().clone();
     let payload = Vec::with_capacity(1024);
     let fut = phases_entries
-        .fold(payload, |mut payload, (value, phase)| {
+        .try_fold(payload, |mut payload, (value, phase)| async move {
             payload.write_u32::<BigEndian>(u32::from(phase))?;
             payload.write_all(value.as_ref())?;
-            Ok::<_, Error>(payload)
+            anyhow::Ok(payload)
         })
         .map_err(|err| err.context(ErrorKind::PhaseHeadsGeneration))
-        .compat()
         .timed()
         .map(move |(stats, result)| {
             if result.is_ok() {
@@ -107,19 +107,18 @@ where
                     .log_with_msg("Phases calculated - Success", None);
             }
             result
-        })
-        .compat();
+        });
     builder.set_data_future(fut);
     Ok(builder)
 }
 
 pub fn changegroup_part<CS>(
     changelogentries: CS,
-    filenodeentries: Option<BoxStream<(NonRootMPath, Vec<FilenodeEntry>), Error>>,
+    filenodeentries: Option<BoxStream<'static, Result<(NonRootMPath, Vec<FilenodeEntry>), Error>>>,
     version: CgVersion,
 ) -> Result<PartEncodeBuilder>
 where
-    CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
+    CS: Stream<Item = Result<(HgNodeHash, HgBlobNode), Error>> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam(
@@ -128,20 +127,26 @@ where
     )?;
 
     let changelogentries = convert_changeset_stream(changelogentries, version)
-        .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
+        .chain(stream::once(future::ok(Part::SectionEnd(
+            Section::Changeset,
+        ))))
         // One more SectionEnd entry is necessary because hg client excepts filelog section
         // even if it's empty. Add a fake SectionEnd part (the choice of
         // Manifest is just for convenience).
-        .chain(once(Ok(Part::SectionEnd(Section::Manifest))));
+        .chain(stream::once(future::ok(Part::SectionEnd(
+            Section::Manifest,
+        ))));
 
     let changelogentries = if version == CgVersion::Cg3Version {
         // Changegroup V3 requires one empty chunk after manifest section
         // hence adding Part::SectionEnd below
         changelogentries
-            .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
-            .boxify()
+            .chain(stream::once(future::ok(Part::SectionEnd(
+                Section::Manifest,
+            ))))
+            .left_stream()
     } else {
-        changelogentries.boxify()
+        changelogentries.right_stream()
     };
 
     let changegroup = if let Some(filenodeentries) = filenodeentries {
@@ -152,10 +157,10 @@ where
         changelogentries.right_stream()
     };
 
-    let changegroup = changegroup.chain(once(Ok(Part::End)));
+    let changegroup = changegroup.chain(stream::once(future::ok(Part::End)));
 
-    let cgdata = CgPacker::new(changegroup);
-    builder.set_data_generated(cgdata);
+    let cgdata = CgPacker::new(changegroup.boxed().compat());
+    builder.set_data_generated(cgdata.compat());
 
     Ok(builder)
 }
@@ -163,11 +168,11 @@ where
 fn convert_changeset_stream<S>(
     changelogentries: S,
     version: CgVersion,
-) -> impl Stream<Item = Part, Error = Error>
+) -> impl Stream<Item = Result<Part, Error>>
 where
-    S: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
+    S: Stream<Item = Result<(HgNodeHash, HgBlobNode), Error>> + Send + 'static,
 {
-    changelogentries.map(move |(node, blobnode)| {
+    changelogentries.map_ok(move |(node, blobnode)| {
         let parents = blobnode.parents().get_nodes();
         let p1 = parents.0.unwrap_or(NULL_HASH);
         let p2 = parents.1.unwrap_or(NULL_HASH);
@@ -199,12 +204,12 @@ where
 fn convert_file_stream<FS>(
     filenodeentries: FS,
     cg_version: CgVersion,
-) -> impl Stream<Item = Part, Error = Error>
+) -> impl Stream<Item = Result<Part, Error>>
 where
-    FS: Stream<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
+    FS: Stream<Item = Result<(NonRootMPath, Vec<FilenodeEntry>), Error>> + Send + 'static,
 {
     filenodeentries
-        .map(move |(path, nodes)| {
+        .map_ok(move |(path, nodes)| {
             let mut items = vec![];
             for (node, hg_cs_id, blobnode, flags) in nodes {
                 let parents = blobnode.parents().get_nodes();
@@ -226,18 +231,18 @@ where
                     flags,
                 };
                 if flags.is_some() && cg_version == CgVersion::Cg2Version {
-                    return once(Err(Error::msg(
+                    return stream::once(future::err(Error::msg(
                         "internal error: unexpected flags in cg2 generation",
                     )))
-                    .boxify();
+                    .left_stream();
                 }
                 items.push(Part::CgChunk(Section::Filelog(path.clone()), deltachunk));
             }
 
             items.push(Part::SectionEnd(Section::Filelog(path)));
-            iter_ok(items).boxify()
+            stream::iter(items).map(anyhow::Ok).right_stream()
         })
-        .flatten()
+        .try_flatten()
 }
 
 pub fn replycaps_part(caps: Bytes) -> Result<PartEncodeBuilder> {
@@ -281,14 +286,18 @@ pub enum StoreInHgCache {
 
 pub fn treepack_part<S>(entries: S, hg_cache_policy: StoreInHgCache) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<BoxFuture<'static, Result<TreepackPartInput, Error>>, Error>>
+        + Send
+        + 'static,
 {
     treepack_part_impl(entries, PartHeaderType::B2xTreegroup2, hg_cache_policy)
 }
 
 pub fn pushrebase_treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<BoxFuture<'static, Result<TreepackPartInput, Error>>, Error>>
+        + Send
+        + 'static,
 {
     treepack_part_impl(entries, PartHeaderType::B2xRebasePack, StoreInHgCache::Yes)
 }
@@ -299,7 +308,9 @@ fn treepack_part_impl<S>(
     hg_cache_policy: StoreInHgCache,
 ) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<BoxFuture<'static, Result<TreepackPartInput, Error>>, Error>>
+        + Send
+        + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(header_type)?;
     builder.add_mparam("version", "1")?;
@@ -319,8 +330,8 @@ where
             .unwrap_or(1000);
 
     let wirepack_parts = entries
-        .buffered(buffer_size)
-        .map(|input| {
+        .try_buffered(buffer_size)
+        .map_ok(|input| {
             let path = match input.fullpath.into_optional_non_root_path() {
                 Some(path) => RepoPath::DirectoryPath(path),
                 None => RepoPath::RootPath,
@@ -352,13 +363,13 @@ where
                 metadata: None,
             });
 
-            iter_ok(vec![history_meta, history, data_meta, data])
+            stream::iter(vec![history_meta, history, data_meta, data]).map(anyhow::Ok)
         })
-        .flatten()
-        .chain(once(Ok(wirepack::Part::End)));
+        .try_flatten()
+        .chain(stream::once(future::ok(wirepack::Part::End)));
 
-    let packer = WirePackPacker::new(wirepack_parts, wirepack::Kind::Tree);
-    builder.set_data_generated(packer);
+    let packer = WirePackPacker::new(wirepack_parts.boxed().compat(), wirepack::Kind::Tree);
+    builder.set_data_generated(packer.compat());
 
     Ok(builder)
 }
@@ -442,7 +453,7 @@ pub fn obsmarkers_part<S>(
     metadata: Vec<MetadataEntry>,
 ) -> Result<PartEncodeBuilder>
 where
-    S: 'static + Stream<Item = (HgChangesetId, Vec<HgChangesetId>), Error = Error> + Send,
+    S: Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>), Error>> + Send + 'static,
 {
     let stream = obsmarkers_packer_stream(pairs, time, metadata);
 
@@ -453,10 +464,10 @@ where
 
 pub fn infinitepush_mutation_part<F>(entries: F) -> Result<PartEncodeBuilder>
 where
-    F: Future<Item = Vec<HgMutationEntry>, Error = Error> + Send + 'static,
+    F: Future<Output = Result<Vec<HgMutationEntry>, Error>> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::advisory(PartHeaderType::B2xInfinitepushMutation)?;
-    let data = entries.and_then(infinitepush_mutation_packer);
+    let data = entries.and_then(|entries| future::ready(infinitepush_mutation_packer(entries)));
     builder.set_data_future(data);
     Ok(builder)
 }

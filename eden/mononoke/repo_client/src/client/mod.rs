@@ -550,10 +550,7 @@ impl RepoClient {
             // TODO: generalize this to other listkey types
             // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
             if listkeys.contains(&b"bookmarks".to_vec()) {
-                let items = stream::iter(pull_default_bookmarks.await?)
-                    .map(anyhow::Ok)
-                    .boxed()
-                    .compat();
+                let items = stream::iter(pull_default_bookmarks.await?).map(anyhow::Ok);
                 bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
             }
             // TODO(stash): handle includepattern= and excludepattern=
@@ -590,10 +587,13 @@ impl RepoClient {
                         STATS::quicksand_tree_count.add_value(1);
                     }
                     fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, true)
+                        .compat()
+                        .boxed()
                 }
             });
 
-        let part = parts::treepack_part(changed_entries, parts::StoreInHgCache::Yes);
+        let part =
+            parts::treepack_part(changed_entries.compat().boxed(), parts::StoreInHgCache::Yes);
         async move { Ok(create_bundle_stream_new(vec![part?])) }
             .try_flatten_stream()
             .boxed()

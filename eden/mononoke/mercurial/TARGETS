@@ -139,6 +139,7 @@ rust_library(
     test_srcs = glob(["bundles/src/fixtures/*"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:bufsize-old",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:bytes",

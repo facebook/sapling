@@ -13,8 +13,11 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes_old::BufMut;
-use futures_old::stream::iter_result;
-use futures_old::Stream;
+use futures::future;
+use futures::stream;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 
@@ -24,17 +27,22 @@ use crate::chunk::Chunk;
 const VERSION: u8 = 1;
 
 pub fn obsmarkers_packer_stream(
-    pairs_stream: impl Stream<Item = (HgChangesetId, Vec<HgChangesetId>), Error = Error>,
+    pairs_stream: impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>), Error>>,
     time: DateTime,
     metadata: Vec<MetadataEntry>,
-) -> impl Stream<Item = Chunk, Error = Error> {
+) -> impl Stream<Item = Result<Chunk, Error>> {
     let version_chunk = Chunk::new(vec![VERSION]);
 
     let chunks_stream = pairs_stream.and_then(move |(predecessor, successors)| {
-        prepare_obsmarker_chunk(&predecessor, &successors, &time, &metadata)
+        future::ready(prepare_obsmarker_chunk(
+            &predecessor,
+            &successors,
+            &time,
+            &metadata,
+        ))
     });
 
-    iter_result(vec![version_chunk]).chain(chunks_stream)
+    stream::once(future::ready(version_chunk)).chain(chunks_stream)
 }
 
 fn prepare_obsmarker_chunk(
@@ -100,12 +108,9 @@ fn prepare_obsmarker_chunk(
 #[cfg(test)]
 mod test {
     use anyhow::Error;
-    use futures_ext::StreamExt;
-    use futures_old::stream;
-    use futures_old::Async;
-    use futures_old::Poll;
     use mercurial_types_mocks::nodehash;
     use quickcheck::quickcheck;
+    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -265,19 +270,8 @@ mod test {
 
     fn stream_for_pairs(
         pairs: Vec<(HgChangesetId, Vec<HgChangesetId>)>,
-    ) -> impl Stream<Item = (HgChangesetId, Vec<HgChangesetId>), Error = Error> {
-        stream::iter_ok(pairs).boxify()
-    }
-
-    fn extract_chunk(wrapped: Poll<Option<Chunk>, Error>) -> Result<Chunk> {
-        if let Ok(Async::Ready(Some(chunk))) = wrapped {
-            return Ok(chunk);
-        }
-        Err(Error::msg("no chunk"))
-    }
-
-    fn extract_vec(wrapped: Poll<Option<Chunk>, Error>) -> Result<Vec<u8>> {
-        Ok(extract_chunk(wrapped)?.into_bytes()?.to_vec())
+    ) -> impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>), Error>> {
+        stream::iter(pairs).map(anyhow::Ok)
     }
 
     #[test]
@@ -288,12 +282,18 @@ mod test {
         ]);
         let time = DateTime::now();
         let meta = vec![];
-        let mut packer = obsmarkers_packer_stream(pairs_stream, time, meta.clone());
+        let packer = obsmarkers_packer_stream(pairs_stream, time, meta.clone());
 
-        let r1 = extract_vec(packer.poll()).unwrap();
+        let runtime = Runtime::new().unwrap();
+        let mut chunks = runtime
+            .block_on(packer.try_collect::<Vec<Chunk>>())
+            .unwrap()
+            .into_iter();
+
+        let r1 = chunks.next().unwrap().into_bytes().unwrap().to_vec();
         assert_eq!(r1, vec![VERSION]);
 
-        let r2 = extract_vec(packer.poll()).unwrap();
+        let r2 = chunks.next().unwrap().into_bytes().unwrap().to_vec();
         assert!(size_matches(&r2));
         assert!(content_matches(
             &r2,
@@ -303,7 +303,7 @@ mod test {
             &meta
         ));
 
-        let r3 = extract_vec(packer.poll()).unwrap();
+        let r3 = chunks.next().unwrap().into_bytes().unwrap().to_vec();
         assert!(size_matches(&r3));
         assert!(content_matches(
             &r3,
@@ -313,6 +313,6 @@ mod test {
             &meta
         ));
 
-        assert!(extract_vec(packer.poll()).is_err());
+        assert!(chunks.next().is_none());
     }
 }

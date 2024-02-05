@@ -26,8 +26,6 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use futures_01_ext::FutureExt;
-use futures_01_ext::StreamExt as _;
 use getbundle_response::create_filenodes;
 use getbundle_response::create_manifest_entries_stream;
 use getbundle_response::get_manifests_and_filenodes;
@@ -308,13 +306,12 @@ async fn create_bundle_impl(
         }
     })
     .try_flatten()
-    .boxed()
-    .compat();
+    .boxed();
 
     if any_commits {
         bundle2_parts.push(parts::changegroup_part(
-            changelog_entries.boxed().compat(),
-            Some(filenode_entries.boxify()),
+            changelog_entries,
+            Some(filenode_entries),
             cg_version,
         )?);
 
@@ -326,9 +323,7 @@ async fn create_bundle_impl(
                     .into_iter()
                     .map(|(path, m_id, cs_id)| (path, m_id, cs_id))
                     .collect(),
-            )
-            .map_ok(|fut| fut.compat().boxify())
-            .compat(),
+            ),
             parts::StoreInHgCache::Yes,
         )?);
     }

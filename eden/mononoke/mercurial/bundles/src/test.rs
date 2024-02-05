@@ -18,9 +18,10 @@ use async_compression::membuf::MemBuf;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
+use futures::stream;
 use futures::stream::BoxStream;
+use futures::StreamExt;
 use futures::TryStreamExt;
-use futures_old::stream;
 use futures_old::stream::Stream;
 use futures_old::stream::Stream as OldStream;
 use mercurial_types::HgChangesetId;
@@ -154,7 +155,7 @@ fn test_empty_bundle_roundtrip_uncompressed() {
 
 #[fbinit::test]
 fn test_phases_part_encording(fb: FacebookInit) {
-    let phases_entries = stream::iter_ok(vec![
+    let phases_entries = stream::iter(vec![
         (
             HgChangesetId::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
             Phase::Public,
@@ -167,7 +168,8 @@ fn test_phases_part_encording(fb: FacebookInit) {
             HgChangesetId::from_bytes(b"aaaaaaaaaaaaaaaaaaaa").unwrap(),
             Phase::Draft,
         ),
-    ]);
+    ])
+    .map(anyhow::Ok);
 
     let cursor = Cursor::new(Vec::new());
     let mut builder = Bundle2EncodeBuilder::new(cursor);

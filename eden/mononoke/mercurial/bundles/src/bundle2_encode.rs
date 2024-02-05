@@ -17,7 +17,6 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::BufMut;
-use futures::compat::Stream01CompatExt;
 use futures::Sink;
 use futures::SinkExt;
 use futures::StreamExt;
@@ -145,7 +144,7 @@ where
         };
 
         for part in self.parts {
-            part.compat().forward(&mut sink).await?;
+            part.forward(&mut sink).await?;
         }
 
         sink.send(Chunk::empty()).await?;

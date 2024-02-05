@@ -40,7 +40,6 @@ use futures::stream::TryStreamExt;
 use futures_ext::stream::FbStreamExt;
 use futures_ext::BufferedParams;
 use futures_ext::FbTryStreamExt;
-use futures_old::stream as old_stream;
 use futures_stats::TimedTryFutureExt;
 use futures_util::try_join;
 use manifest::find_intersection_of_diffs_and_parents;
@@ -141,8 +140,6 @@ pub async fn create_getbundle_response(
                         .all_predecessors(&ctx, draft_commits)
                         .await
                 }
-                .boxed()
-                .compat()
             };
             let mut_part = parts::infinitepush_mutation_part(mutations_fut)?;
             parts.push(mut_part);
@@ -154,7 +151,7 @@ pub async fn create_getbundle_response(
         let phase_heads = find_phase_heads(ctx, blobrepo, heads, phases).await?;
         parts.push(parts::phases_part(
             ctx.clone(),
-            old_stream::iter_ok(phase_heads),
+            stream::iter(phase_heads).map(anyhow::Ok),
         )?);
     }
 
@@ -412,9 +409,7 @@ async fn create_hg_changeset_part(
                 node,
                 HgBlobNode::new(Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
             ))
-        })
-        .boxed()
-        .compat();
+        });
 
     let cg_version = if lfs_params.threshold.is_some() {
         CgVersion::Cg3Version

@@ -13,8 +13,6 @@ use context::CoreContext;
 use futures::future;
 use futures::stream::FuturesUnordered;
 use futures::Stream;
-use futures::StreamExt;
-use futures::TryStreamExt;
 use mercurial_bundles::obsmarkers::MetadataEntry;
 use mercurial_bundles::part_encode::PartEncodeBuilder;
 use mercurial_bundles::parts;
@@ -48,7 +46,7 @@ pub fn pushrebased_changesets_to_obsmarkers_part(
         metadata.push(MetadataEntry::new("user", user));
     }
 
-    let part = parts::obsmarkers_part(hg_pushrebased_changesets.boxed().compat(), time, metadata);
+    let part = parts::obsmarkers_part(hg_pushrebased_changesets, time, metadata);
 
     Some(part)
 }

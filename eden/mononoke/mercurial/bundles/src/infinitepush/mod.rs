@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use bytes_old::BytesMut as BytesMutOld;
 use mercurial_mutation::HgMutationEntry;
@@ -107,7 +108,7 @@ impl Decoder for InfinitepushMutationUnpacker {
     }
 }
 
-pub fn infinitepush_mutation_packer(entries: Vec<HgMutationEntry>) -> Result<BytesOld> {
+pub fn infinitepush_mutation_packer(entries: Vec<HgMutationEntry>) -> Result<Bytes> {
     let mut buf = Vec::with_capacity(entries.len() * types::mutation::DEFAULT_ENTRY_SIZE);
     buf.write_u8(MUTATION_PART_VERSION)?;
     buf.write_vlq(entries.len())?;
