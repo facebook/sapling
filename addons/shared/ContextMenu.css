@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.context-menu-container {
+.context-menu-container,
+.context-menu-submenu-navigation {
   position: absolute;
   padding: var(--halfpad);
   background-color: var(--tooltip-background);
@@ -20,6 +21,7 @@
 
 .context-menu {
   overflow-y: auto;
+  position: relative;
 }
 
 .context-menu-divider {
@@ -32,6 +34,12 @@
   padding: var(--halfpad);
   border-radius: var(--halfpad);
   cursor: pointer;
+}
+.context-menu-submenu {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .context-menu-item:hover,

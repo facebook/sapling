@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Icon} from './Icon';
 import {findParentWithClassName} from './utils';
 import {getZoomLevel} from './zoom';
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 
 import './ContextMenu.css';
@@ -41,6 +42,11 @@ export function useContextMenu<T>(
 type ContextMenuData = {x: number; y: number; items: Array<ContextMenuItem>};
 export type ContextMenuItem =
   | {type?: undefined; label: string | React.ReactNode; onClick?: () => void}
+  | {
+      type: 'submenu';
+      label: string | React.ReactNode;
+      children: Array<ContextMenuItem>;
+    }
   | {type: 'divider'};
 
 const contextMenuState = atom<null | ContextMenuData>({
@@ -124,26 +130,19 @@ export function ContextMenus() {
           className={`context-menu-arrow context-menu-arrow-top context-menu-arrow-${leftOrRight}`}
         />
       ) : null}
-      <div className="context-menu">
-        {state.items.map((item, i) =>
-          item.type === 'divider' ? (
-            <div className="context-menu-divider" key={i} />
-          ) : (
-            <div
-              key={i}
-              onClick={() => {
-                // don't allow double-clicking to run the action twice
-                if (state != null) {
-                  item.onClick?.();
-                  setState(null);
-                }
-              }}
-              className={'context-menu-item'}>
-              {item.label}
-            </div>
-          ),
-        )}
-      </div>
+      <ContextMenuList
+        items={state.items}
+        clickItem={item => {
+          if (item.type != null) {
+            return;
+          }
+          // don't allow double-clicking to run the action twice
+          if (state != null) {
+            item.onClick?.();
+            setState(null);
+          }
+        }}
+      />
 
       {topOrBottom === 'bottom' ? (
         <div
@@ -151,5 +150,72 @@ export function ContextMenus() {
         />
       ) : null}
     </div>
+  );
+}
+
+function ContextMenuList({
+  items,
+  clickItem,
+}: {
+  items: Array<ContextMenuItem>;
+  clickItem: (item: ContextMenuItem) => void;
+}) {
+  // Each ContextMenuList renders one additional layer of submenu
+  const [submenuNavigation, setSubmenuNavigation] = useState<
+    {x: number; y: number; children: Array<ContextMenuItem>} | undefined
+  >(undefined);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  return (
+    <>
+      <div className="context-menu" ref={ref}>
+        {items.map((item, i) =>
+          item.type === 'divider' ? (
+            <div className="context-menu-divider" key={i} />
+          ) : item.type === 'submenu' ? (
+            <div
+              key={i}
+              className={'context-menu-item context-menu-submenu'}
+              onPointerEnter={e => {
+                const target = e.currentTarget as HTMLElement;
+                const parent = ref.current;
+                if (!parent) {
+                  return;
+                }
+                const parentRect = parent?.getBoundingClientRect();
+                const rect = target.getBoundingClientRect();
+                // attach to top right corner
+                const x = -1 * parentRect.left + rect.right;
+                const y = -1 * parentRect.top + rect.top;
+                setSubmenuNavigation({
+                  x,
+                  y,
+                  children: item.children,
+                });
+              }}>
+              <span>{item.label}</span>
+              <Icon icon="chevron-right" />
+            </div>
+          ) : (
+            <div
+              key={i}
+              onPointerEnter={() => setSubmenuNavigation(undefined)}
+              onClick={() => {
+                clickItem(item);
+              }}
+              className={'context-menu-item'}>
+              {item.label}
+            </div>
+          ),
+        )}
+      </div>
+      {submenuNavigation != null && (
+        <div
+          className="context-menu-submenu-navigation"
+          style={{position: 'absolute', top: submenuNavigation.y, left: submenuNavigation.x}}>
+          <ContextMenuList items={submenuNavigation.children} clickItem={clickItem} />
+        </div>
+      )}
+    </>
   );
 }
