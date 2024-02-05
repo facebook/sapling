@@ -339,8 +339,7 @@ async fn create_bundle_impl(
         maybe_to.map(|x| x.to_string()).unwrap_or_default(),
     )?);
 
-    let compression = None;
-    let bytes = create_bundle_stream_new(bundle2_parts, compression)
+    let bytes = create_bundle_stream_new(bundle2_parts)
         .try_collect::<BytesMut>()
         .await?;
     Ok(bytes.freeze())

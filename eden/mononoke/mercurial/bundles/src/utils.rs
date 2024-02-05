@@ -14,7 +14,6 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use async_compression::CompressorType;
 use async_compression::DecompressorType;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
@@ -146,15 +145,6 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<Option<Decompr
             s
         ),)),
         None => Ok(None),
-    }
-}
-
-pub fn get_compression_param(ct: &Option<CompressorType>) -> &'static str {
-    match *ct {
-        Some(CompressorType::Bzip2(_)) => "BZ",
-        Some(CompressorType::Gzip(_)) => "GZ",
-        Some(CompressorType::Zstd { .. }) => "ZS",
-        None => "UN",
     }
 }
 

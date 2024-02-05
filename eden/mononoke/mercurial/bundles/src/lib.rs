@@ -126,9 +126,8 @@ impl<'a> fmt::Debug for Bundle2Item<'a> {
 }
 
 /// Given bundle parts, returns a stream of BytesOld that represent an encoded bundle with these parts
-pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
+pub fn create_bundle_stream(
     parts: Vec<part_encode::PartEncodeBuilder>,
-    ct: C,
 ) -> impl OldStream<Item = BytesOld, Error = Error> {
     let (sender, receiver) = mpsc::channel::<BytesOld>(1);
     // Sends either and empty BytesOld if bundle generation was successful or an error.
@@ -138,7 +137,6 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
     // use SinkToAsyncWrite. It implements AsyncWrite trait and sends everything that was written
     // into the Sender
     let mut bundle = Bundle2EncodeBuilder::new(SinkToAsyncWrite::new(sender));
-    bundle.set_compressor_type(ct);
     for part in parts {
         bundle.add_part(part);
     }
@@ -172,11 +170,10 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
         })
 }
 
-pub fn create_bundle_stream_new<C: Into<Option<async_compression::CompressorType>>>(
+pub fn create_bundle_stream_new(
     parts: Vec<part_encode::PartEncodeBuilder>,
-    ct: C,
 ) -> impl Stream<Item = Result<Bytes, Error>> {
-    create_bundle_stream(parts, ct)
+    create_bundle_stream(parts)
         .compat()
         .map_ok(bytes_ext::copy_from_old)
 }

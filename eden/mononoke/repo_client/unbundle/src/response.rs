@@ -66,13 +66,7 @@ pub enum UnbundleResponse {
 
 impl UnbundleResponse {
     fn get_bundle_builder() -> Bundle2EncodeBuilder<Cursor<Vec<u8>>> {
-        let writer = Cursor::new(Vec::new());
-        let mut bundle = Bundle2EncodeBuilder::new(writer);
-        // Mercurial currently hangs while trying to read compressed bundles over the wire:
-        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-        // TODO: possibly enable compression support once this is fixed.
-        bundle.set_compressor_type(None);
-        bundle
+        Bundle2EncodeBuilder::new(Cursor::new(Vec::new()))
     }
 
     async fn generate_push_or_infinitepush_response(
@@ -169,8 +163,7 @@ impl UnbundleResponse {
 
             cg_part_builder.extend(bookmark_reply_part.into_iter());
             cg_part_builder.extend(obsmarkers_part.into_iter());
-            let compression = None;
-            let chunks = create_bundle_stream_new(cg_part_builder, compression)
+            let chunks = create_bundle_stream_new(cg_part_builder)
                 .try_collect::<Vec<_>>()
                 .await?;
 

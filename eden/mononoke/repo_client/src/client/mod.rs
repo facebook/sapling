@@ -558,8 +558,7 @@ impl RepoClient {
             }
             // TODO(stash): handle includepattern= and excludepattern=
 
-            let compression = None;
-            Ok(create_bundle_stream_new(bundle2_parts, compression))
+            Ok(create_bundle_stream_new(bundle2_parts))
         }
         .try_flatten_stream()
         .boxed()
@@ -595,11 +594,7 @@ impl RepoClient {
             });
 
         let part = parts::treepack_part(changed_entries, parts::StoreInHgCache::Yes);
-        // Mercurial currently hangs while trying to read compressed bundles over the wire:
-        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-        // TODO: possibly enable compression support once this is fixed.
-        let compression = None;
-        async move { Ok(create_bundle_stream_new(vec![part?], compression)) }
+        async move { Ok(create_bundle_stream_new(vec![part?])) }
             .try_flatten_stream()
             .boxed()
     }

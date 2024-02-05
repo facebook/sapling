@@ -15,9 +15,6 @@ use std::str::FromStr;
 use anyhow::Result;
 use assert_matches::assert_matches;
 use async_compression::membuf::MemBuf;
-use async_compression::Bzip2Compression;
-use async_compression::CompressorType;
-use async_compression::FlateCompression;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -53,7 +50,6 @@ use crate::part_header::PartHeaderBuilder;
 use crate::part_header::PartHeaderType;
 use crate::parts::phases_part;
 use crate::types::StreamHeader;
-use crate::utils::get_compression_param;
 use crate::wirepack;
 use crate::Bundle2Item;
 
@@ -113,25 +109,10 @@ fn test_parse_unknown_compression() {
 }
 
 #[test]
-fn test_empty_bundle_roundtrip_bzip() {
-    empty_bundle_roundtrip(Some(CompressorType::Bzip2(Bzip2Compression::Default)));
-}
-
-#[test]
-fn test_empty_bundle_roundtrip_gzip() {
-    empty_bundle_roundtrip(Some(CompressorType::Gzip(FlateCompression::best())));
-}
-
-#[test]
 fn test_empty_bundle_roundtrip_uncompressed() {
-    empty_bundle_roundtrip(None);
-}
-
-fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     // Encode an empty bundle.
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
-    builder.set_compressor_type(ct);
     builder
         .add_stream_param("Foo".into(), "123".into())
         .unwrap();
@@ -152,7 +133,7 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     let mut mparams = HashMap::new();
     let mut aparams = HashMap::new();
     mparams.insert("foo".into(), "123".into());
-    mparams.insert("compression".into(), get_compression_param(&ct).into());
+    mparams.insert("compression".into(), "UN".into());
     aparams.insert("bar".into(), "456".into());
     let expected_header = StreamHeader {
         m_stream_params: mparams,
@@ -190,7 +171,6 @@ fn test_phases_part_encording(fb: FacebookInit) {
 
     let cursor = Cursor::new(Vec::new());
     let mut builder = Bundle2EncodeBuilder::new(cursor);
-    builder.set_compressor_type(None);
 
     let ctx = CoreContext::test_mock(fb);
     let part = phases_part(ctx, phases_entries).unwrap();
@@ -212,25 +192,9 @@ fn test_phases_part_encording(fb: FacebookInit) {
 }
 
 #[test]
-fn test_unknown_part_bzip() {
-    unknown_part(Some(CompressorType::Bzip2(Bzip2Compression::Default)));
-}
-
-#[test]
-fn test_unknown_part_gzip() {
-    unknown_part(Some(CompressorType::Gzip(FlateCompression::best())));
-}
-
-#[test]
 fn test_unknown_part_uncompressed() {
-    unknown_part(None);
-}
-
-fn unknown_part(ct: Option<CompressorType>) {
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
-
-    builder.set_compressor_type(ct);
 
     let unknown_part = PartEncodeBuilder::mandatory(PartHeaderType::Listkeys).unwrap();
 
@@ -252,7 +216,7 @@ fn unknown_part(ct: Option<CompressorType>) {
 
     // Only the stream header should have been returned.
     let mut m_stream_params = HashMap::new();
-    m_stream_params.insert("compression".into(), get_compression_param(&ct).into());
+    m_stream_params.insert("compression".into(), "UN".into());
     let expected = StreamHeader {
         m_stream_params,
         a_stream_params: HashMap::new(),
