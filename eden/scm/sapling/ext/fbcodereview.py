@@ -1088,10 +1088,21 @@ def diffidtonode(repo, diffid):
     if not util.istest() and (
         _normalize_slash(diffreponame) != _normalize_slash(localreponame)
     ):
-        raise error.Abort(
-            "D%s is for repo '%s', not this repo ('%s')"
-            % (diffid, diffreponame, localreponame)
+        megarepo_can_handle = extensions.isenabled(
+            repo.ui, "megarepo"
+        ) and _normalize_slash(diffreponame) in repo.ui.configlist(
+            "megarepo", "transparent-lookup"
         )
+
+        if megarepo_can_handle:
+            # megarepo extension might be able to translate diff/commit to
+            # local repo - don't abort the entire command.
+            pass
+        else:
+            raise error.Abort(
+                "D%s is for repo '%s', not this repo ('%s')"
+                % (diffid, diffreponame, localreponame)
+            )
 
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
 

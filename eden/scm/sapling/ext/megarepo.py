@@ -28,6 +28,7 @@ from sapling import (
     util,
 )
 from sapling.autopull import deferredpullattempt, pullattempt
+from sapling.ext import fbcodereview
 from sapling.i18n import _
 from sapling.namespaces import namespace
 from sapling.node import bin, hex
@@ -89,9 +90,26 @@ def _xrepopull(repo, name) -> deferredpullattempt:
 
 
 _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
+_diffidre = re.compile(r"\AD\d+\Z")
 
 
 def _xrepotranslate(repo, commitid):
+    commit_ids = {commitid}
+
+    if _diffidre.match(commitid):
+        # If it looks like a phabricator diff, first resolve the diff ID to a commit hash.
+        try:
+            commitid = fbcodereview.diffidtonode(
+                repo,
+                commitid[1:],
+            )
+            commitid = hex(commitid)
+            commit_ids.add(commitid)
+        except Exception as ex:
+            repo.ui.note_err(
+                _("error resolving diff %s to commit: %s\n") % (commitid, ex)
+            )
+
     if not _commithashre.match(commitid) and "/" not in commitid:
         return None
 
@@ -109,8 +127,6 @@ def _xrepotranslate(repo, commitid):
 
     if commitid in cache:
         return cache[commitid]
-
-    commit_ids = {commitid}
 
     localnode = None
     for xrepo in repo.ui.configlist("megarepo", "transparent-lookup"):
