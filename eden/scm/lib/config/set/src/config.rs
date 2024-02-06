@@ -400,39 +400,48 @@ impl ConfigSet {
         visited: &mut HashSet<PathBuf>,
         errors: &mut Vec<Error>,
     ) {
-        if let Ok(path) = path.canonicalize() {
-            let path = &path;
-            debug_assert!(path.is_absolute());
+        match path.canonicalize() {
+            Ok(path) => {
+                let path = &path;
+                debug_assert!(path.is_absolute());
 
-            if !visited.insert(path.to_path_buf()) {
-                // skip - visited before
-                return;
-            }
-
-            self.files.push(path.to_path_buf());
-
-            match fs::read_to_string(path) {
-                Ok(mut text) => {
-                    text.push('\n');
-                    let text = Text::from(text);
-                    self.load_file_content(path, text, opts, visited, errors);
+                if !visited.insert(path.to_path_buf()) {
+                    // skip - visited before
+                    return;
                 }
-                Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
-            }
-        } else {
-            // On Windows, a UNC path `\\?\C:\foo\.\x` will fail to canonicalize
-            // because it contains `.`. That path can be constructed by using
-            // `PathBuf::join` to concatenate a UNC path `\\?\C:\foo` with
-            // a "normal" path `.\x`.
-            // Try to fix it automatically by stripping the UNC prefix and retry
-            // `canonicalize`. `C:\foo\.\x` would be canonicalized without errors.
-            #[cfg(windows)]
-            {
-                if let Some(path_str) = path.to_str() {
-                    if path_str.starts_with(r"\\?\") {
-                        let path = Path::new(&path_str[4..]);
-                        self.load_file(&path, opts, visited, errors);
+
+                self.files.push(path.to_path_buf());
+
+                match fs::read_to_string(path) {
+                    Ok(mut text) => {
+                        text.push('\n');
+                        let text = Text::from(text);
+                        self.load_file_content(path, text, opts, visited, errors);
                     }
+                    Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
+                }
+            }
+            Err(err) => {
+                // On Windows, a UNC path `\\?\C:\foo\.\x` will fail to canonicalize
+                // because it contains `.`. That path can be constructed by using
+                // `PathBuf::join` to concatenate a UNC path `\\?\C:\foo` with
+                // a "normal" path `.\x`.
+                // Try to fix it automatically by stripping the UNC prefix and retry
+                // `canonicalize`. `C:\foo\.\x` would be canonicalized without errors.
+                if cfg!(windows) {
+                    if let Some(without_unc) = path.to_str().and_then(|p| p.strip_prefix(r"\\?\")) {
+                        self.load_file(without_unc.as_ref(), opts, visited, errors);
+                        return;
+                    }
+                }
+
+                tracing::debug!(?err, ?path, "not loading config file");
+
+                // If it is absolute, record it in `files` anyway. This is important to
+                // record that we've loaded the repo's config file even if the config file
+                // doesn't exist.
+                if path.is_absolute() {
+                    self.files.push(path.to_path_buf());
                 }
             }
         }

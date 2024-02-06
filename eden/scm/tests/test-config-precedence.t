@@ -42,3 +42,11 @@ Only load config a single time.
   $ LOG=configloader::hg=info hg files abc
    INFO configloader::hg: loading config repo_path=$TESTTMP* (glob)
   [1]
+
+Only load config a single time when repo config file doesn't exist:
+  $ ls .hg/hgrc
+  .hg/hgrc
+  $ rm .hg/hgrc
+  $ LOG=configloader::hg=info hg files abc --config paths.default=test:test1_server
+   INFO configloader::hg: loading config repo_path=$TESTTMP* (glob)
+  [1]
