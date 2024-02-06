@@ -76,6 +76,10 @@ pub trait Config: Send + Sync {
 
     /// The name of the current layer.
     fn layer_name(&self) -> Text;
+
+    fn pinned(&self) -> Vec<(Text, Text, Vec<ValueSource>)> {
+        Vec::new()
+    }
 }
 
 /// Extra APIs (incompatible with trait objects) around reading config.

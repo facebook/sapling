@@ -96,6 +96,8 @@ pub fn load(repo_path: Option<&Path>, pinned: &[PinnedConfig]) -> Result<ConfigS
     let mut cfg = ConfigSet::new();
     let mut errors = Vec::new();
 
+    tracing::debug!(?pinned, ?repo_path);
+
     // "--configfile" and "--config" values are loaded as "pinned". This lets us load them
     // first so they can inform further config loading, but also make sure they still take
     // precedence over "regular" configs.

@@ -196,6 +196,18 @@ impl Config for ConfigSet {
             Vec::new()
         }
     }
+
+    fn pinned(&self) -> Vec<(Text, Text, Vec<ValueSource>)> {
+        self.pinned
+            .iter()
+            .flat_map(|(sname, svalues)| {
+                svalues
+                    .items
+                    .iter()
+                    .map(|(kname, values)| (sname.clone(), kname.clone(), values.to_vec()))
+            })
+            .collect()
+    }
 }
 
 /// Merge two lists. Preserve order (a is before b). Remove duplicated items.
@@ -253,10 +265,21 @@ impl ConfigSet {
     /// Create a (mutable) ConfigSet wrapping `config`.
     /// This allows you to overlay new configs on top of `config`.
     pub fn wrap(config: Arc<dyn Config>) -> Self {
-        Self {
-            secondary: Some(config),
+        let mut wrapped = Self {
+            secondary: Some(config.clone()),
             ..Default::default()
+        };
+
+        for (sname, kname, values) in config.pinned() {
+            wrapped
+                .pinned
+                .entry(sname)
+                .or_default()
+                .items
+                .insert(kname, values);
         }
+
+        wrapped
     }
 
     /// Attach a secondary config as fallback for items missing from the
@@ -1370,5 +1393,37 @@ x = 2
 
         let sources = cfg.get_sources("shared_sec", "value");
         assert_eq!(sources.len(), 1);
+    }
+
+    #[test]
+    fn test_wrap_maintains_pinned_config() {
+        let mut cfg = ConfigSet::new();
+
+        cfg.set(
+            "pinned",
+            "pinned",
+            Some("pinned"),
+            &Options::default().pin(true),
+        );
+
+        cfg.set(
+            "not-pinned",
+            "not-pinned",
+            Some("not-pinned"),
+            &Options::default().pin(false),
+        );
+
+        let mut wrapped = ConfigSet::wrap(Arc::new(cfg));
+
+        assert_eq!(wrapped.get("pinned", "pinned"), Some("pinned".into()));
+        assert_eq!(
+            wrapped.get("not-pinned", "not-pinned"),
+            Some("not-pinned".into())
+        );
+
+        wrapped.clear_unpinned();
+
+        assert_eq!(wrapped.get("pinned", "pinned"), Some("pinned".into()));
+        assert_eq!(wrapped.get("not-pinned", "not-pinned"), None);
     }
 }
