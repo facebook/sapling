@@ -6,11 +6,11 @@
  */
 
 import type {MouseEvent, ReactNode} from 'react';
-import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
+import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {findParentWithClassName} from 'shared/utils';
 import {getZoomLevel} from 'shared/zoom';
 
@@ -22,6 +22,16 @@ export type Placement = 'top' | 'bottom' | 'left' | 'right';
  * Default delay used for hover tooltips to convey documentation information.
  */
 export const DOCUMENTATION_DELAY = 750;
+
+const tooltipGroups: Map<string, TypedEventEmitter<'change', HTMLDivElement>> = new Map();
+function getTooltipGroup(group: string): TypedEventEmitter<'change', HTMLDivElement> {
+  let found = tooltipGroups.get(group);
+  if (found == null) {
+    found = new TypedEventEmitter();
+    tooltipGroups.set(group, found);
+  }
+  return found;
+}
 
 type TooltipProps = {
   children: ReactNode;
@@ -49,6 +59,9 @@ type TooltipProps = {
     trigger: 'click';
     component: (dismiss: () => void) => JSX.Element;
     title?: string | React.ReactNode;
+    /** If provided, opening this tooltip will close all other tooltips using the same group */
+    group?: string;
+    /** TypedEventEmitter that allows external callers to toggle this tooltip */
     additionalToggles?: TypedEventEmitter<'change', unknown> | TypedEventEmitter<'change', null>;
   }
 >;
@@ -91,6 +104,7 @@ export function Tooltip({
   shouldShow,
   onDismiss,
   additionalToggles,
+  group,
 }: TooltipProps) {
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
@@ -142,6 +156,23 @@ export function Tooltip({
       additionalToggles?.off('change', cb);
     };
   }, [additionalToggles]);
+
+  useEffect(() => {
+    if (group) {
+      const hide = (clickedOn: HTMLDivElement) => {
+        if (clickedOn === ref.current) {
+          // don't hide the tooltip we're trying to show right now
+          return;
+        }
+        setVisible(false);
+      };
+      const found = getTooltipGroup(group);
+      found.on('change', hide);
+      return () => {
+        found?.off('change', hide);
+      };
+    }
+  }, [group]);
 
   // scrolling or resizing the window should hide all tooltips to prevent lingering.
   useEffect(() => {
@@ -198,6 +229,11 @@ export function Tooltip({
         trigger === 'click'
           ? (event: MouseEvent) => {
               if (visible !== true || !eventIsFromInsideTooltip(event)) {
+                if (group != null) {
+                  // close other tooltips in the same group before opening
+                  const found = getTooltipGroup(group);
+                  found.emit('change', ref.current as HTMLDivElement);
+                }
                 setVisible(vis => vis !== true);
                 // don't trigger global click listener in the same tick
                 event.stopPropagation();

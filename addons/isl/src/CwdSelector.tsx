@@ -60,6 +60,7 @@ export function CwdSelector() {
       trigger="click"
       component={dismiss => <CwdDetails dismiss={dismiss} />}
       additionalToggles={additionalToggles}
+      group="topbar"
       placement="bottom"
       title={
         <T replace={{$shortcut: <Kbd keycode={KeyCode.C} modifiers={[Modifier.ALT]} />}}>

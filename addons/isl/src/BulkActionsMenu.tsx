@@ -26,6 +26,7 @@ export function BulkActionsMenu() {
       component={dismiss => <BulkActions dismiss={dismiss} />}
       trigger="click"
       placement="bottom"
+      group="topbar"
       title={
         <T replace={{$shortcut: <Kbd keycode={KeyCode.B} modifiers={[Modifier.ALT]} />}}>
           Bulk Actions ($shortcut)

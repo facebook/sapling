@@ -52,6 +52,7 @@ export function SettingsGearButton() {
       component={dismiss => (
         <SettingsDropdown dismiss={dismiss} showShortcutsHelp={showShortcutsHelp} />
       )}
+      group="topbar"
       placement="bottom">
       <VSCodeButton appearance="icon" data-testid="settings-gear-button">
         <Icon icon="gear" />

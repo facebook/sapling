@@ -41,6 +41,7 @@ export function DownloadCommitsTooltipButton() {
       component={dismiss => <DownloadCommitsTooltip dismiss={dismiss} />}
       placement="bottom"
       additionalToggles={additionalToggles}
+      group="topbar"
       title={
         <div>
           <T replace={{$shortcut: <Kbd modifiers={[Modifier.ALT]} keycode={KeyCode.D} />}}>

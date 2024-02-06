@@ -28,6 +28,7 @@ export function BugButton() {
     <Tooltip
       trigger="click"
       component={dismiss => <BugDropdown dismiss={dismiss} />}
+      group="topbar"
       placement="bottom">
       <VSCodeButton appearance="icon" data-testid="bug-button">
         <Icon icon="bug" />

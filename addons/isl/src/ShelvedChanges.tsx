@@ -52,6 +52,7 @@ export function ShelvedChangesMenu() {
       trigger="click"
       placement="bottom"
       additionalToggles={additionalToggles}
+      group="topbar"
       title={
         <T replace={{$shortcut: <Kbd keycode={KeyCode.S} modifiers={[Modifier.ALT]} />}}>
           Shelved Changes ($shortcut)

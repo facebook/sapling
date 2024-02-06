@@ -29,6 +29,7 @@ export function DebugToolsButton() {
       )}
       title={t('Debug Tools')}
       trigger="click"
+      group="topbar"
       placement="bottom">
       <VSCodeButton appearance="icon">
         <Icon icon="pulse" />

@@ -254,4 +254,54 @@ describe('tooltip', () => {
       expect(onDismiss).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('groups', () => {
+    it('dismisses other tooltips in the same group', () => {
+      const content = (value: string) => {
+        return () => <div>{value}</div>;
+      };
+      renderCustom(
+        <div>
+          <Tooltip trigger="click" group="test" component={content('Tooltip A')}>
+            Button A
+          </Tooltip>
+          <Tooltip trigger="click" group="test" component={content('Tooltip B')}>
+            Button B
+          </Tooltip>
+        </div>,
+      );
+      const a = screen.getByText('Button A');
+      const b = screen.getByText('Button B');
+      fireEvent.click(a);
+      expect(screen.getByText('Tooltip A')).toBeInTheDocument();
+      expect(screen.queryByText('Tooltip B')).not.toBeInTheDocument();
+      fireEvent.click(b);
+      expect(screen.queryByText('Tooltip A')).not.toBeInTheDocument();
+      expect(screen.getByText('Tooltip B')).toBeInTheDocument();
+    });
+
+    it('does not dismiss from other groups', () => {
+      const content = (value: string) => {
+        return () => <div>{value}</div>;
+      };
+      renderCustom(
+        <div>
+          <Tooltip trigger="click" group="test1" component={content('Tooltip A')}>
+            Button A
+          </Tooltip>
+          <Tooltip trigger="click" group="test2" component={content('Tooltip B')}>
+            Button B
+          </Tooltip>
+        </div>,
+      );
+      const a = screen.getByText('Button A');
+      const b = screen.getByText('Button B');
+      fireEvent.click(a);
+      expect(screen.getByText('Tooltip A')).toBeInTheDocument();
+      expect(screen.queryByText('Tooltip B')).not.toBeInTheDocument();
+      fireEvent.click(b);
+      expect(screen.getByText('Tooltip A')).toBeInTheDocument();
+      expect(screen.getByText('Tooltip B')).toBeInTheDocument();
+    });
+  });
 });
