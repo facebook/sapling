@@ -101,26 +101,7 @@ pub fn load(repo_path: Option<&Path>, pinned: &[PinnedConfig]) -> Result<ConfigS
     // "--configfile" and "--config" values are loaded as "pinned". This lets us load them
     // first so they can inform further config loading, but also make sure they still take
     // precedence over "regular" configs.
-    for pinned in pinned {
-        let opts = Options::default().pin(true);
-
-        match pinned {
-            PinnedConfig::Raw(raw, source) => {
-                if let Err(err) = set_override(&mut cfg, raw, opts.clone().source(source.clone())) {
-                    errors.push(err);
-                }
-            }
-            PinnedConfig::KeyValue(section, name, value, source) => cfg.set(
-                section,
-                name,
-                Some(value),
-                &opts.clone().source(source.clone()),
-            ),
-            PinnedConfig::File(path, source) => {
-                errors.extend(cfg.load_path(path.as_ref(), &opts.clone().source(source.clone())));
-            }
-        }
-    }
+    set_pinned_with_errors(&mut cfg, pinned, &mut errors);
 
     match cfg.load(repo_path) {
         Ok(_) => {
@@ -135,6 +116,39 @@ pub fn load(repo_path: Option<&Path>, pinned: &[PinnedConfig]) -> Result<ConfigS
     }
 
     Ok(cfg)
+}
+
+pub fn set_pinned(cfg: &mut ConfigSet, pinned: &[PinnedConfig]) -> Result<()> {
+    let mut errors = Vec::new();
+    set_pinned_with_errors(cfg, pinned, &mut errors);
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(Errors(errors).into())
+    }
+}
+
+fn set_pinned_with_errors(cfg: &mut ConfigSet, pinned: &[PinnedConfig], errors: &mut Vec<Error>) {
+    for pinned in pinned {
+        let opts = Options::default().pin(true);
+
+        match pinned {
+            PinnedConfig::Raw(raw, source) => {
+                if let Err(err) = set_override(cfg, raw, opts.clone().source(source.clone())) {
+                    errors.push(err);
+                }
+            }
+            PinnedConfig::KeyValue(section, name, value, source) => cfg.set(
+                section,
+                name,
+                Some(value),
+                &opts.clone().source(source.clone()),
+            ),
+            PinnedConfig::File(path, source) => {
+                errors.extend(cfg.load_path(path.as_ref(), &opts.clone().source(source.clone())));
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
