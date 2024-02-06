@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("mercurial_release")
 
@@ -20,6 +21,7 @@ rust_library(
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
+    ] + ([] if rust_oss.is_oss_build() else [
         "//eden/scm/lib/config/loader:configloader",
-    ],
+    ]),
 )
