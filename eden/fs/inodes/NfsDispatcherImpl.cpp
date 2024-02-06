@@ -363,9 +363,9 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
         }
         auto res = collectAllSafe(std::move(futuresVec));
         return std::move(res).thenValue(
-            [dirList = std::move(dirList),
-             isEof = isEof](std::vector<folly::Unit>&&) mutable {
-              return ReaddirRes{std::move(dirList), isEof};
+            [dirList_2 = std::move(dirList),
+             isEof_2 = isEof](std::vector<folly::Unit>&&) mutable {
+              return ReaddirRes{std::move(dirList_2), isEof_2};
             });
       });
 #else
