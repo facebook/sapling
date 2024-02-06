@@ -145,7 +145,7 @@ where
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &mut OptionalRepo| {
-            f(ReqCtx::new(opts, io.clone())?, repo)
+            f(ReqCtx::new(repo.config().clone(), opts, io.clone())?, repo)
         };
         let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
@@ -162,7 +162,7 @@ where
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &mut Repo| {
-            f(ReqCtx::new(opts, io.clone())?, repo)
+            f(ReqCtx::new(repo.config().clone(), opts, io.clone())?, repo)
         };
         let func = CommandFunc::Repo(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
@@ -179,7 +179,7 @@ where
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, config: &Arc<dyn Config>| {
-            f(ReqCtx::new(opts, io.clone())?, config)
+            f(ReqCtx::new(config.clone(), opts, io.clone())?, config)
         };
         let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
@@ -197,7 +197,11 @@ where
         self.insert_aliases(aliases);
         let func =
             move |opts: ParseOutput, io: &IO, repo: &mut Repo, working_copy: &mut WorkingCopy| {
-                f(ReqCtx::new(opts, io.clone())?, repo, working_copy)
+                f(
+                    ReqCtx::new(repo.config().clone(), opts, io.clone())?,
+                    repo,
+                    working_copy,
+                )
             };
         let func = CommandFunc::WorkingCopy(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);

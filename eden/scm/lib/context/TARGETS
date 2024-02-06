@@ -7,6 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     deps = [
+        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/io/term/logger:termlogger",
     ],

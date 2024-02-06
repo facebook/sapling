@@ -6,6 +6,7 @@
  */
 
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use anyhow::Result;
 use cliparser::parser::ParseOutput;
@@ -34,13 +35,13 @@ impl<O> RequestContext<O>
 where
     O: TryFrom<ParseOutput, Error = anyhow::Error>,
 {
-    pub(crate) fn new(p: ParseOutput, io: IO) -> Result<Self> {
+    pub(crate) fn new(config: Arc<dyn Config>, p: ParseOutput, io: IO) -> Result<Self> {
         let global_opts: HgGlobalOpts = p.clone().try_into()?;
         let logger = TermLogger::new(&io)
             .with_quiet(global_opts.quiet)
             .with_verbose(global_opts.verbose);
         Ok(Self {
-            core: CoreContext { io, logger },
+            core: CoreContext { config, io, logger },
             opts: p.try_into()?,
             global_opts,
         })

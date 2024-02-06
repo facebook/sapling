@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
+use configmodel::Config;
 use io::IO;
 use termlogger::TermLogger;
 
 /// Context is a container for common facilities intended to be
 /// passed into upper level library code.
 pub struct CoreContext {
+    pub config: Arc<dyn Config>,
     pub io: IO,
     pub logger: TermLogger,
 }
