@@ -77,7 +77,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
         }
     }
     #[cfg(not(feature = "fb"))]
-    let _ = (ctx, config);
+    let _ = ctx;
 
     Ok(0)
 }
