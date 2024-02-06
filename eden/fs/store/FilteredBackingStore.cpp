@@ -275,7 +275,7 @@ FilteredBackingStore::getRootTree(
       parsedRootId.value(),
       filterId);
   auto fut = backingStore_->getRootTree(parsedRootId, context);
-  return std::move(fut).thenValue([filterId = std::move(filterId),
+  return std::move(fut).thenValue([filterId_2 = std::move(filterId),
                                    self = shared_from_this()](
                                       GetRootTreeResult
                                           rootTreeResult) mutable {
@@ -284,22 +284,23 @@ FilteredBackingStore::getRootTree(
     auto filterFut = self->filterImpl(
         rootTreeResult.tree,
         RelativePath{""},
-        filterId,
+        filterId_2,
         FilteredObjectIdType::OBJECT_TYPE_TREE);
-    return std::move(filterFut).thenValue(
-        [self,
-         filterId = std::move(filterId),
-         treeId = std::move(rootTreeResult.treeId)](
-            std::unique_ptr<PathMap<TreeEntry>> pathMap) {
-          auto rootFOID = FilteredObjectId{RelativePath{""}, filterId, treeId};
-          auto res = GetRootTreeResult{
-              std::make_shared<const Tree>(
-                  std::move(*pathMap), ObjectId{rootFOID.getValue()}),
-              ObjectId{rootFOID.getValue()},
-          };
-          pathMap.reset();
-          return res;
-        });
+    return std::move(filterFut).thenValue([self,
+                                           filterId_3 = std::move(filterId_2),
+                                           treeId = std::move(
+                                               rootTreeResult.treeId)](
+                                              std::unique_ptr<
+                                                  PathMap<TreeEntry>> pathMap) {
+      auto rootFOID = FilteredObjectId{RelativePath{""}, filterId_3, treeId};
+      auto res = GetRootTreeResult{
+          std::make_shared<const Tree>(
+              std::move(*pathMap), ObjectId{rootFOID.getValue()}),
+          ObjectId{rootFOID.getValue()},
+      };
+      pathMap.reset();
+      return res;
+    });
   });
 }
 
