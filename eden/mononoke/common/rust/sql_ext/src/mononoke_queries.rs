@@ -34,6 +34,8 @@ const RETRY_ATTEMPTS: usize = 2;
 /// - Adding "cacheable" keyword to your query.
 /// - Make sure all parameters (input) to the query implement the Hash trait.
 /// - Making sure the return values (output) implement Serialize, Deserialize, and Abomonation.
+///
+/// Queries that return no rows are not cached to allow later retries to succeed.
 #[macro_export]
 macro_rules! mononoke_queries {
     () => {};
@@ -208,7 +210,7 @@ macro_rules! mononoke_queries {
 
                     Ok(query_with_retry(
                         data,
-                        || async move { Ok(MemcacheWrapper([<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*).await?)) },
+                        || async move { Ok(CachedQueryResult([<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*).await?)) },
                     ).await?.0)
                 }
 
@@ -241,7 +243,7 @@ macro_rules! mononoke_queries {
                         || {
                         let cri = cri.clone();
                         async move {
-                            Ok(MemcacheWrapper([<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*).await?))
+                            Ok(CachedQueryResult([<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*).await?))
                         }
         },
                     ).await?.0)
@@ -471,13 +473,13 @@ pub struct CacheData<'a> {
 struct QueryCacheStore<'a, F, T> {
     key: Key,
     cache_config: &'a CachingConfig,
-    cachelib: CachelibHandler<T>,
+    cachelib: CachelibHandler<CachedQueryResult<Vec<T>>>,
     memcache: MemcacheHandler,
     fetcher: F,
 }
 
-impl<F, V> EntityStore<V> for QueryCacheStore<'_, F, V> {
-    fn cachelib(&self) -> &CachelibHandler<V> {
+impl<F, T> EntityStore<CachedQueryResult<Vec<T>>> for QueryCacheStore<'_, F, T> {
+    fn cachelib(&self) -> &CachelibHandler<CachedQueryResult<Vec<T>>> {
         &self.cachelib
     }
 
@@ -489,19 +491,23 @@ impl<F, V> EntityStore<V> for QueryCacheStore<'_, F, V> {
         &self.memcache
     }
 
-    fn cache_determinator(&self, _v: &V) -> CacheDisposition {
-        CacheDisposition::Cache(CacheTtl::NoTtl)
+    fn cache_determinator(&self, v: &CachedQueryResult<Vec<T>>) -> CacheDisposition {
+        if v.0.is_empty() {
+            CacheDisposition::Ignore
+        } else {
+            CacheDisposition::Cache(CacheTtl::NoTtl)
+        }
     }
 
     caching_ext::impl_singleton_stats!("sql");
 }
 
 #[async_trait]
-impl<V, F, Fut> KeyedEntityStore<Key, V> for QueryCacheStore<'_, F, V>
+impl<T, F, Fut> KeyedEntityStore<Key, CachedQueryResult<Vec<T>>> for QueryCacheStore<'_, F, T>
 where
-    V: Send + 'static,
+    T: Send + 'static,
     F: Fn() -> Fut + Send + Sync,
-    Fut: Future<Output = Result<V>> + Send,
+    Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {
     fn get_cache_key(&self, key: &Key) -> String {
         // We just need a unique representation of the key as a String.
@@ -509,7 +515,10 @@ where
         base64::encode(key.to_ne_bytes())
     }
 
-    async fn get_from_db(&self, keys: HashSet<Key>) -> Result<HashMap<Key, V>> {
+    async fn get_from_db(
+        &self,
+        keys: HashSet<Key>,
+    ) -> Result<HashMap<Key, CachedQueryResult<Vec<T>>>> {
         let key = keys.into_iter().exactly_one()?;
         anyhow::ensure!(key == self.key, "Fetched invalid key {}", key);
         let val = (self.fetcher)().await?;
@@ -518,9 +527,9 @@ where
 }
 
 #[derive(Abomonation, Clone)]
-pub struct MemcacheWrapper<T>(pub T);
+pub struct CachedQueryResult<T>(pub T);
 
-impl<T> MemcacheEntity for MemcacheWrapper<T>
+impl<T> MemcacheEntity for CachedQueryResult<Vec<T>>
 where
     T: serde::Serialize + for<'a> serde::Deserialize<'a>,
 {
@@ -567,10 +576,11 @@ where
 pub async fn query_with_retry<T, Fut>(
     cache_data: CacheData<'_>,
     do_query: impl Fn() -> Fut + Send + Sync,
-) -> Result<T>
+) -> Result<CachedQueryResult<Vec<T>>>
 where
-    T: Send + Abomonation + MemcacheEntity + Clone + 'static,
-    Fut: Future<Output = Result<T>> + Send,
+    T: Send + Abomonation + Clone + 'static,
+    CachedQueryResult<Vec<T>>: MemcacheEntity,
+    Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {
     if let Ok(true) = justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None) {
         return query_with_retry_no_cache(&do_query).await;

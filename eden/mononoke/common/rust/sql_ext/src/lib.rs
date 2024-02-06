@@ -45,7 +45,7 @@ pub mod _macro_internal {
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;
     pub use crate::mononoke_queries::CacheData;
-    pub use crate::mononoke_queries::MemcacheWrapper;
+    pub use crate::mononoke_queries::CachedQueryResult;
 }
 
 pub mod facebook {
