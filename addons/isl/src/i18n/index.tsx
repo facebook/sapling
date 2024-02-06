@@ -8,8 +8,8 @@
 import type {ReactNode} from 'react';
 
 import * as en from './en/common.json';
-import EventEmitter from 'events';
 import React, {createContext, useContext, useEffect, useState} from 'react';
+import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 /**
  * ISO 639-3 language code used to control which translation we use
@@ -33,7 +33,7 @@ let currentLanguage: LanguageId =
   (typeof window !== 'undefined' ? window.saplingLanguage : null) ?? 'en';
 
 const I18nContext = createContext(currentLanguage);
-export const onChangeLanguage = new EventEmitter();
+export const onChangeLanguage = new TypedEventEmitter<'change', string>();
 
 /**
  * We need to re-render translated components when the language is changed.
@@ -43,7 +43,7 @@ export function I18nSupport({children}: {children: React.ReactNode}) {
   const [lang, setLang] = useState(currentLanguage);
   useEffect(() => {
     onChangeLanguage.on('change', setLang);
-    return () => void onChangeLanguage.removeListener('change', setLang);
+    return () => void onChangeLanguage.off('change', setLang);
   }, []);
   return <I18nContext.Provider value={lang}>{children}</I18nContext.Provider>;
 }
