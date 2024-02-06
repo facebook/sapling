@@ -828,10 +828,17 @@ export class Repository {
   public async getCommitCloudState(cwd: string): Promise<CommitCloudSyncState> {
     const lastChecked = new Date();
 
-    const [backupStatuses, cloudStatus] = await Promise.allSettled([
+    const [extension, backupStatuses, cloudStatus] = await Promise.allSettled([
+      this.getConfig('extensions.commitcloud'),
       this.fetchCommitCloudBackupStatuses(cwd),
       this.fetchCommitCloudStatus(cwd),
     ]);
+    if (extension.status === 'fulfilled' && extension.value !== '') {
+      return {
+        lastChecked,
+        isDisabled: true,
+      };
+    }
 
     if (backupStatuses.status === 'rejected') {
       return {

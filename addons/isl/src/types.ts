@@ -321,6 +321,8 @@ export type CommitCloudSyncState = {
   fetchError?: Error;
   syncError?: Error;
   workspaceError?: Error;
+  // if true, commit cloud is disabled in this repo
+  isDisabled?: boolean;
 };
 
 export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';
@@ -486,6 +488,7 @@ export const allConfigNames = [
   'isl.download-commit-rebase-type',
   'isl.experimental-features',
   'isl.hold-off-refresh-ms',
+  'extensions.commitcloud',
   // which graph renderer to use (0: tree; 1: dag; 2: show both).
   'isl.experimental-graph-renderer',
 ] as const;

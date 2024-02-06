@@ -93,6 +93,14 @@ export function CommitCloudInfo() {
         {isLoading && <Icon icon="loading" />}
       </div>
 
+      {cloudSyncState?.value?.isDisabled !== true ? null : (
+        <div className="commit-cloud-row">
+          <Subtle>
+            <T>Commit Cloud is disabled in this repository</T>
+          </Subtle>
+        </div>
+      )}
+
       {cloudSyncState?.value?.syncError == null ? null : (
         <div className="commit-cloud-row">
           <InlineErrorBadge error={cloudSyncState?.value?.syncError}>
