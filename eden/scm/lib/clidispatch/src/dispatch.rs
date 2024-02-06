@@ -17,6 +17,7 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configloader::config::ConfigSet;
+use configloader::hg::set_pinned;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use repo::repo::Repo;
@@ -147,7 +148,7 @@ pub fn parse_global_opts(args: &[String]) -> Result<HgGlobalOpts> {
 pub struct Dispatcher {
     args: Vec<String>,
     early_result: ParseOutput,
-    global_opts: HgGlobalOpts,
+    early_global_opts: HgGlobalOpts,
     optional_repo: OptionalRepo,
 }
 
@@ -187,7 +188,7 @@ impl Dispatcher {
             Ok(optional_repo) => Ok(Self {
                 args,
                 early_result,
-                global_opts,
+                early_global_opts: global_opts,
                 optional_repo,
             }),
             Err(err) => {
@@ -213,7 +214,7 @@ impl Dispatcher {
 
     /// Get a reference to the global options.
     pub fn global_opts(&self) -> &HgGlobalOpts {
-        &self.global_opts
+        &self.early_global_opts
     }
 
     pub fn repo(&self) -> Option<&Repo> {
@@ -234,13 +235,13 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        configloader::hg::load(None, &pinned_configs(&self.global_opts))
+        configloader::hg::load(None, &pinned_configs(&self.early_global_opts))
     }
 
     fn default_command(&self) -> Result<String, UnknownCommand> {
         // Passing in --verbose also disables this behavior,
         // but that option is handled somewhere else
-        if self.global_opts.help || hgplain::is_plain(None) {
+        if self.early_global_opts.help || hgplain::is_plain(None) {
             return Err(errors::UnknownCommand(String::new()));
         }
         Ok(if let OptionalRepo::Some(repo) = &self.optional_repo {
@@ -261,8 +262,8 @@ impl Dispatcher {
     ) -> Result<(&'a CommandDefinition, ParseOutput)> {
         let config = self.optional_repo.config();
 
-        if !self.global_opts.cwd.is_empty() {
-            env::set_current_dir(&self.global_opts.cwd)?;
+        if !self.early_global_opts.cwd.is_empty() {
+            env::set_current_dir(&self.early_global_opts.cwd)?;
         }
 
         initialize_indexedlog(config)?;
@@ -351,7 +352,17 @@ impl Dispatcher {
         let parsed = parse(def, &new_args)?;
 
         let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
-        last_chance_to_abort(&self.global_opts, &global_opts)?;
+        last_chance_to_abort(&self.early_global_opts, &global_opts)?;
+
+        // Update pinned config values using the "true" global opts. The early global are
+        // parsed conservatively (i.e. incompletely) because they can't read aliases from
+        // the config yet, and in general don't know which command is being run yet.
+        let pinned_configs = pinned_configs(&global_opts);
+        if !pinned_configs.is_empty() {
+            let mut config = ConfigSet::wrap(self.config().clone());
+            set_pinned(&mut config, &pinned_configs)?;
+            self.set_config(Arc::new(config));
+        }
 
         initialize_blackbox(&self.optional_repo)?;
 
@@ -432,6 +443,13 @@ impl Dispatcher {
                 )
                 .into())
             }
+        }
+    }
+
+    fn set_config(&mut self, new: Arc<dyn Config>) {
+        match &mut self.optional_repo {
+            OptionalRepo::Some(repo) => repo.set_config(new),
+            OptionalRepo::None(old) => *old = new,
         }
     }
 }

@@ -147,6 +147,19 @@ Testing -q/--quiet:
   8580ff50825a
   b6c483daf290
 
+  $ hg config ui.quiet -q --config config.use-rust=true
+  true
+  $ hg config ui.quiet --quiet --config config.use-rust=true
+  true
+  $ hg config ui.quiet --quie --config config.use-rust=true
+  true
+  $ hg config ui.quiet -q --config config.use-rust=false
+  True
+  $ hg config ui.quiet --quiet --config config.use-rust=false
+  True
+  $ hg config ui.quiet --quie --config config.use-rust=false
+  True
+
 Testing -v/--verbose:
 
   $ hg --cwd c head -v

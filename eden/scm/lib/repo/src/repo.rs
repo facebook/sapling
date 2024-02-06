@@ -246,6 +246,10 @@ impl Repo {
         &self.config
     }
 
+    pub fn set_config(&mut self, config: Arc<dyn Config>) {
+        self.config = config;
+    }
+
     pub fn locker(&self) -> &Arc<RepoLocker> {
         &self.locker
     }
