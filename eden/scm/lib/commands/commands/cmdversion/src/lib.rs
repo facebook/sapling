@@ -8,14 +8,13 @@
 use std::sync::Arc;
 
 use clidispatch::ReqCtx;
-use cmdutil::Config;
 use cmdutil::NoOpts;
 use cmdutil::Result;
 
 #[cfg(feature = "fb")]
 mod fb;
 
-pub fn run(ctx: ReqCtx<NoOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<NoOpts>) -> Result<u8> {
     let id = identity::default();
     let io = ctx.io();
     io.write(format!("{} {}\n", id.product_name(), ::version::VERSION))?;

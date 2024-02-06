@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 #[cfg(feature = "fb")]
 use cmdutil::Config;
 #[cfg(feature = "fb")]
 use cmdutil::ConfigExt;
+use cmdutil::Repo;
 use cmdutil::Result;
 #[cfg(feature = "fb")]
 use configloader::hg::generate_internalconfig;
@@ -23,16 +23,17 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&mut Repo>) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         use configloader::fb::FbConfigMode;
-        let (dot_hg_path, repo_name) = match &repo {
-            OptionalRepo::Some(repo) => (Some(repo.shared_dot_hg_path()), repo.repo_name()),
-            OptionalRepo::None(_) => (None, None),
+        let (dot_hg_path, repo_name) = match repo {
+            Some(repo) => (Some(repo.shared_dot_hg_path()), repo.repo_name()),
+            None => (None, None),
         };
-        let username = repo
-            .config()
+
+        let config = ctx.config().clone();
+        let username = config
             .get("ui", "username")
             .map_or_else(|| "".to_string(), |u| u.to_string());
 
@@ -44,7 +45,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut OptionalRepo) -> Resu
             repo_name,
             ctx.opts.canary,
             username,
-            repo.config().get_opt("auth_proxy", "unix_socket_path")?,
+            config.get_opt("auth_proxy", "unix_socket_path")?,
         )?;
     }
     #[cfg(not(feature = "fb"))]

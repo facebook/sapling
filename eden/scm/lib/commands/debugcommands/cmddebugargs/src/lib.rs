@@ -5,11 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-use cmdutil::Config;
 use cmdutil::Result;
 
 define_flags! {
@@ -19,7 +16,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugArgsOpts>) -> Result<u8> {
     match ctx.io().write(format!("{:?}\n", ctx.opts.args)) {
         Ok(_) => Ok(0),
         Err(_) => Ok(255),

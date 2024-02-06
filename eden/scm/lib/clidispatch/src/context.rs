@@ -83,4 +83,8 @@ where
     pub fn logger(&self) -> TermLogger {
         self.core.logger.clone()
     }
+
+    pub fn config(&self) -> &Arc<dyn Config> {
+        &self.core.config
+    }
 }

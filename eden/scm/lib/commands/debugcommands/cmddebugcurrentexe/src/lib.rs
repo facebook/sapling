@@ -12,7 +12,7 @@ use cmdutil::Config;
 use cmdutil::NoOpts;
 use cmdutil::Result;
 
-pub fn run(ctx: ReqCtx<NoOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<NoOpts>) -> Result<u8> {
     let path = std::env::current_exe()?;
     let out = format!("{}\n", path.display());
     ctx.io().write(out)?;

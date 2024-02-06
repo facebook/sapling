@@ -9,9 +9,9 @@ use std::io::Write;
 
 use clidispatch::abort;
 use clidispatch::abort_if;
-use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::Repo;
 use cmdutil::Result;
 
 define_flags! {
@@ -30,7 +30,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: &mut OptionalRepo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: Option<&mut Repo>) -> Result<u8> {
     let optcnt = (ctx.opts.user as i32) + (ctx.opts.local as i32) + (ctx.opts.system as i32);
 
     abort_if!(
@@ -52,7 +52,7 @@ pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: &mut OptionalRepo) -> Res
     }
 
     if show_all || ctx.opts.local {
-        if let OptionalRepo::Some(repo) = repo {
+        if let Some(repo) = repo {
             if show_all {
                 write!(out, "Repo config path: ")?;
             }

@@ -7,11 +7,9 @@
 
 #[cfg(feature = "fb")]
 use std::str::FromStr;
-use std::sync::Arc;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-use cmdutil::Config;
 #[cfg(feature = "fb")]
 use cmdutil::ConfigExt;
 use cmdutil::Result;
@@ -37,10 +35,12 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         use configloader::fb::FbConfigMode;
+
+        let config = ctx.config().clone();
 
         let reponame = ctx.opts.reponame;
         let mut username = ctx.opts.username;

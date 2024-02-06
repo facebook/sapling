@@ -140,12 +140,15 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(ReqCtx<S>, &mut OptionalRepo) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>, Option<&mut Repo>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &mut OptionalRepo| {
-            f(ReqCtx::new(repo.config().clone(), opts, io.clone())?, repo)
+            f(
+                ReqCtx::new(repo.config().clone(), opts, io.clone())?,
+                repo.repo_opt(),
+            )
         };
         let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
@@ -174,12 +177,12 @@ where
 impl<S, FN> Register<FN, ((), (), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(ReqCtx<S>, &Arc<dyn Config>) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, config: &Arc<dyn Config>| {
-            f(ReqCtx::new(config.clone(), opts, io.clone())?, config)
+            f(ReqCtx::new(config.clone(), opts, io.clone())?)
         };
         let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);

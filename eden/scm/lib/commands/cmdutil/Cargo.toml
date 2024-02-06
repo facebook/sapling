@@ -13,4 +13,5 @@ configmodel = { version = "0.1.0", path = "../../config/model" }
 configset = { version = "0.1.0", path = "../../config/set" }
 formatter = { version = "0.1.0", path = "../../formatter" }
 hgplain = { version = "0.1.0", path = "../../util/hgplain" }
+repo = { version = "0.1.0", path = "../../repo" }
 termstyle = { version = "0.1.0", path = "../../io/term/style" }

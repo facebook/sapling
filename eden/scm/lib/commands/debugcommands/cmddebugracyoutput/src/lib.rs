@@ -15,7 +15,6 @@ use std::time::Duration;
 
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use cmdutil::Config;
 use cmdutil::Result;
 use cmdutil::IO;
 use progress_model::IoSample;
@@ -45,7 +44,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugRacyOutputOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugRacyOutputOpts>) -> Result<u8> {
     add_time_series(ctx.opts.time_series as _);
     add_progress_bar_threads(
         ctx.opts.progress_bars as _,

@@ -10,7 +10,6 @@ use std::sync::Arc;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-use cmdutil::Config;
 use cmdutil::Result;
 
 define_flags! {
@@ -20,7 +19,7 @@ define_flags! {
     }
 }
 
-pub fn run(_ctx: ReqCtx<DebugPythonOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(_ctx: ReqCtx<DebugPythonOpts>) -> Result<u8> {
     let e = errors::Abort("wrong debugpython code path used".into());
     Err(e.into())
 }

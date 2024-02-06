@@ -13,13 +13,13 @@ use clidispatch::errors::FallbackToPython;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::Write;
 pub use clidispatch::io::IO;
-pub use clidispatch::OptionalRepo;
 pub use clidispatch::ReqCtx;
 pub use cliparser::define_flags;
 pub use configmodel::Config;
 pub use configmodel::ConfigExt;
 pub use configset::config::ConfigSet;
 pub use formatter::formatter;
+pub use repo::Repo;
 
 pub fn get_formatter(
     config: &dyn Config,

@@ -9,9 +9,9 @@ use std::io::Write;
 use std::sync::Arc;
 
 use clidispatch::abort;
-use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
+use cmdutil::Repo;
 use cmdutil::Result;
 
 define_flags! {
@@ -30,7 +30,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<TestCommandOpts>, _repo: &mut OptionalRepo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<TestCommandOpts>, _repo: Option<&mut Repo>) -> Result<u8> {
     if ctx.opts.abort {
         abort!("aborting");
     }

@@ -11,11 +11,11 @@ use std::collections::BTreeSet;
 use anyhow::bail;
 use clidispatch::abort_if;
 use clidispatch::errors;
-use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 use cmdutil::get_formatter;
 use cmdutil::FormatterOpts;
+use cmdutil::Repo;
 use cmdutil::Result;
 use configloader::Config;
 use configmodel::ConfigExt;
@@ -61,8 +61,9 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
-    let config = repo.config();
+pub fn run(ctx: ReqCtx<ConfigOpts>, _repo: Option<&mut Repo>) -> Result<u8> {
+    let config = ctx.config();
+
     let force_rust = config
         .get_or_default::<Vec<String>>("commands", "force-rust")?
         .contains(&"config".to_owned());
@@ -86,7 +87,6 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
         ));
     }
 
-    let config = repo.config();
     let mut formatter = get_formatter(
         config,
         short_name(),
@@ -95,10 +95,10 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
         Box::new(ctx.io().output()),
     )?;
 
-    ctx.maybe_start_pager(repo.config())?;
+    ctx.maybe_start_pager(config)?;
 
     formatter.begin_list()?;
-    let exit_code = show_configs(ctx, config, formatter.as_mut())?;
+    let exit_code = show_configs(ctx, formatter.as_mut())?;
     formatter.end_list()?;
 
     Ok(exit_code)
@@ -232,13 +232,10 @@ fn source_to_display_string(source: &ValueSource) -> String {
         .unwrap_or_else(|| source.source().to_string())
 }
 
-fn show_configs(
-    ctx: ReqCtx<ConfigOpts>,
-    config: &dyn Config,
-    formatter: &mut dyn ListFormatter,
-) -> Result<u8> {
+fn show_configs(ctx: ReqCtx<ConfigOpts>, formatter: &mut dyn ListFormatter) -> Result<u8> {
     let verbose = ctx.global_opts().verbose;
     let debug = ctx.global_opts().debug;
+    let config = ctx.config().clone();
 
     let requested_items: Vec<_> = ctx
         .opts
@@ -270,7 +267,7 @@ fn show_configs(
         let item = &requested_items[0];
         let parts: Vec<_> = item.splitn(2, '.').collect();
 
-        if let Some(item) = get_config_item(config, parts[0], parts[1], true, debug) {
+        if let Some(item) = get_config_item(&config, parts[0], parts[1], true, debug) {
             formatter.format_item(&item)?;
             return Ok(0);
         }
@@ -295,7 +292,7 @@ fn show_configs(
         let mut keys = config.keys(section);
         keys.sort();
         for key in keys {
-            if let Some(item) = get_config_item(config, section, &key, false, debug) {
+            if let Some(item) = get_config_item(&config, section, &key, false, debug) {
                 if empty_selection && item.builtin && !verbose {
                     continue;
                 }

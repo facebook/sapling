@@ -163,10 +163,10 @@ fn looks_like_windows_path(s: &str) -> bool {
     bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
-pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
+pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let logger = ctx.logger();
 
-    let mut config = ConfigSet::wrap(config.clone());
+    let mut config = ConfigSet::wrap(ctx.config().clone());
 
     let deprecated_options = [
         ("--rev", "rev-option", ctx.opts.rev.is_empty()),

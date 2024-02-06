@@ -16,3 +16,4 @@ mod trait_impls;
 pub mod trees;
 
 pub use commits_trait::DagCommits;
+pub use repo::Repo;
