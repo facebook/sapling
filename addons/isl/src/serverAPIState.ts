@@ -27,7 +27,7 @@ import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
-import {configBackedAtom, writeAtom} from './jotaiUtils';
+import {configBackedAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
 import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
@@ -375,23 +375,19 @@ export const isFetchingUncommittedChanges = atom<boolean>({
   ],
 });
 
-export const commitsShownRange = atom<number | undefined>({
-  key: 'commitsShownRange',
-  default: DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
-  effects: [
-    clearOnCwdChange(),
-    ({setSelf}) => {
-      const disposables = [
-        serverAPI.onMessageOfType('commitsShownRange', event => {
-          setSelf(event.rangeInDays);
-        }),
-      ];
-      return () => {
-        disposables.forEach(d => d.dispose());
-      };
-    },
-  ],
-});
+export const commitsShownRange = jotaiAtom<number | undefined>(DEFAULT_DAYS_OF_COMMITS_TO_LOAD);
+registerCleanup(
+  commitsShownRange,
+  resetOnCwdChange(commitsShownRange, DEFAULT_DAYS_OF_COMMITS_TO_LOAD),
+  import.meta.hot,
+);
+registerDisposable(
+  applicationinfo,
+  serverAPI.onMessageOfType('commitsShownRange', event => {
+    writeAtom(commitsShownRange, event.rangeInDays);
+  }),
+  import.meta.hot,
+);
 
 /**
  * Latest head commit from original data from the server, without any previews.

@@ -360,7 +360,7 @@ function FetchingAdditionalCommitsIndicator() {
 }
 
 function FetchingAdditionalCommitsButton() {
-  const shownRange = useRecoilValue(commitsShownRange);
+  const shownRange = useAtomValue(commitsShownRange);
   const isFetching = useRecoilValue(isFetchingAdditionalCommits);
   if (shownRange === undefined) {
     return null;

@@ -8,11 +8,11 @@
 import type {Operation} from './operations/Operation';
 import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
-import {globalRecoil} from './AccessGlobalRecoil';
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {findCurrentPublicBase} from './getCommitTree';
 import {T, t} from './i18n';
+import {readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -178,7 +178,7 @@ export function getSuggestedRebaseOperation(
   const operation =
     source == null
       ? new RebaseAllDraftCommitsOperation(
-          globalRecoil().getLoadable(commitsShownRange).valueMaybe(),
+          readAtom(commitsShownRange),
           succeedableRevset(destination),
         )
       : Array.isArray(source)
