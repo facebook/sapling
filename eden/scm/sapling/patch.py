@@ -998,7 +998,7 @@ class header:
     diff_re = re.compile(b"diff -r .* (.*)$")
     allhunks_re = re.compile(b"(?:index|deleted file) ")
     pretty_re = re.compile(b"(?:new file|deleted file) ")
-    special_re = re.compile(b"(?:index|deleted|copy|rename) ")
+    special_re = re.compile(b"(?:index|deleted|copy|rename|old mode|new mode) ")
     newfile_re = re.compile(b"(?:new file)")
     copyre = re.compile(b"(?:copy|rename) from (.*)$")
 
