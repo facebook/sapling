@@ -16,6 +16,7 @@ edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true 
 fs-err = { version = "2.6.0", features = ["tokio"] }
 hgtime = { version = "0.1.0", path = "../hgtime" }
 identity = { version = "0.1.0", path = "../identity" }
+journal = { version = "0.1.0", path = "../journal" }
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }

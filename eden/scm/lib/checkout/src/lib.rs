@@ -859,6 +859,7 @@ pub fn checkout(
         ]),
     )?;
 
+    let source_commit = wc.first_parent()?;
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
@@ -913,6 +914,14 @@ pub fn checkout(
 
         wc.set_active_bookmark(maybe_bookmark)?;
     }
+
+    wc.journal.record_new_entry(
+        &ctx.raw_args,
+        "wdirparent",
+        ".",
+        &[source_commit],
+        &[target_commit],
+    )?;
 
     Ok(stats)
 }

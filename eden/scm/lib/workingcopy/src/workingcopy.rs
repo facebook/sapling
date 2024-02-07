@@ -18,6 +18,7 @@ use configmodel::ConfigExt;
 #[cfg(feature = "eden")]
 use edenfs_client::EdenFsClient;
 use identity::Identity;
+use journal::Journal;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
@@ -92,6 +93,7 @@ pub struct WorkingCopy {
     pub(crate) locker: Arc<RepoLocker>,
     pub(crate) dot_hg_path: PathBuf,
     eden_client: Option<Arc<EdenFsClient>>,
+    pub journal: Journal,
 }
 
 const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
@@ -222,6 +224,7 @@ impl WorkingCopy {
             }
         };
         let dot_hg_path = vfs.join(RepoPath::from_str(ident.dot_dir())?);
+        let journal = Journal::open(dot_hg_path.clone())?;
 
         Ok(WorkingCopy {
             vfs,
@@ -235,6 +238,7 @@ impl WorkingCopy {
             locker,
             dot_hg_path,
             eden_client,
+            journal,
         })
     }
 

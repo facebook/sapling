@@ -46,6 +46,7 @@ rust_library(
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/io/term/logger:termlogger",
+        "//eden/scm/lib/journal:journal",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/pathmatcher:pathmatcher",
