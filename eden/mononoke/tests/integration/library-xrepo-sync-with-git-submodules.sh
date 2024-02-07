@@ -74,15 +74,16 @@ function default_initial_import_config {
 EOF
 }
 
-# Modify a small repo config in a specific config version to keep the git
-# submodules
-function keep_git_submodules_in_config_version {
+# Update the value for the git submodule action in a small repo config
+# e.g. to keep or expand the changes.
+function set_git_submodules_action_in_config_version {
   VERSION_NAME=$1
   MOD_SMALL_REPO=$2
+  NEW_ACTION=$3
 
   TEMP_FILE="/tmp/COMMIT_SYNC_CONF_all"
 
-  jq ".repos.large_repo.versions |= map(if .version_name != \"$VERSION_NAME\" then . else  .small_repos |= map(if .repoid == $MOD_SMALL_REPO then . + {\"git_submodules_action\": 1} else . end) end)" "$COMMIT_SYNC_CONF/all" > "$TEMP_FILE"
+  jq ".repos.large_repo.versions |= map(if .version_name != \"$VERSION_NAME\" then . else  .small_repos |= map(if .repoid == $MOD_SMALL_REPO then . + {\"git_submodules_action\": $NEW_ACTION} else . end) end)" "$COMMIT_SYNC_CONF/all" > "$TEMP_FILE"
 
   cat "$TEMP_FILE" > "$COMMIT_SYNC_CONF/all"
 }

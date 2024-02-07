@@ -11,7 +11,8 @@
 
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
-  $ keep_git_submodules_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SMALL_REPO_ID"
+# Action 1 is to Keep submodules
+  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SMALL_REPO_ID" 1
 
 
 # Test that if, for some reason, we want to keep the git submodules in the
