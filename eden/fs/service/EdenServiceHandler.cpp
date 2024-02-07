@@ -1206,11 +1206,11 @@ EdenServiceHandler::traceThriftRequestEvents() {
 
   h->handle = thriftRequestTraceBus_->subscribeFunction(
       "Live Thrift request tracing",
-      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+      [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)}](
           const ThriftRequestTraceEvent& event) mutable {
         ThriftRequestEvent thriftEvent;
         convertThriftRequestTraceEventToThriftRequestEvent(event, thriftEvent);
-        publisher.next(thriftEvent);
+        publisher_2.next(thriftEvent);
       });
 
   return std::move(serverStream);
@@ -1232,7 +1232,7 @@ apache::thrift::ServerStream<TaskEvent> EdenServiceHandler::traceTaskEvents(
 
   h->handle = TaskTraceEvent::getTraceBus()->subscribeFunction(
       "Live Thrift request tracing",
-      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+      [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)}](
           const TaskTraceEvent& event) mutable {
         TaskEvent taskEvent;
         taskEvent.times() = thriftTraceEventTimes(event);
@@ -1241,7 +1241,7 @@ apache::thrift::ServerStream<TaskEvent> EdenServiceHandler::traceTaskEvents(
         taskEvent.threadId() = event.threadId;
         taskEvent.duration() = event.duration.count();
         taskEvent.start() = event.start.count();
-        publisher.next(taskEvent);
+        publisher_2.next(taskEvent);
       });
 
   return std::move(serverStream);
@@ -1343,7 +1343,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   if (fuseChannel) {
     context->subHandle = fuseChannel->getTraceBus().subscribeFunction(
         fmt::format("strace-{}", edenMount.getPath().basename()),
-        [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
+        [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
          serverState = server_->getServerState(),
          eventCategoryMask](const FuseTraceEvent& event) {
           if (isEventMasked(eventCategoryMask, event)) {
@@ -1379,12 +1379,12 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           te.requestInfo_ref() = thriftRequestInfo(
               event.getRequest().pid, *serverState->getProcessInfoCache());
 
-          publisher.next(te);
+          publisher_2.next(te);
         });
   } else if (nfsdChannel) {
     context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
         fmt::format("strace-{}", edenMount.getPath().basename()),
-        [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
+        [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
          eventCategoryMask](const NfsTraceEvent& event) {
           if (isEventMasked(eventCategoryMask, event)) {
             return;
@@ -1414,7 +1414,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 
           te.requestInfo_ref() = RequestInfo{};
 
-          publisher.next(te);
+          publisher_2.next(te);
         });
   }
 #endif // _WIN32
@@ -1565,14 +1565,14 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
       fmt::format(
           "hgtrace-{}", mountHandle.getEdenMount().getPath().basename()),
-      [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
+      [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
        processInfoCache =
            mountHandle.getEdenMount().getServerState()->getProcessInfoCache()](
           const HgImportTraceEvent& event) {
         HgEvent thriftEvent;
         convertHgImportTraceEventToHgEvent(
             event, *processInfoCache, thriftEvent);
-        publisher.next(thriftEvent);
+        publisher_2.next(thriftEvent);
       });
 
   return std::move(serverStream);
@@ -1620,7 +1620,7 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
       mountHandle.getEdenMount().getInodeTraceBus().subscribeFunction(
           fmt::format(
               "inodetrace-{}", mountHandle.getEdenMount().getPath().basename()),
-          [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
+          [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
            inodeMap](const InodeTraceEvent& event) {
             InodeEvent thriftEvent;
             ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent);
@@ -1631,7 +1631,7 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
             } catch (const std::system_error& /* e */) {
               thriftEvent.path() = event.getPath();
             }
-            publisher.next(thriftEvent);
+            publisher_2.next(thriftEvent);
           });
 
   return std::move(serverStream);
