@@ -380,6 +380,11 @@ impl LockPaths {
     }
 }
 
+/// Similar to `try_lock`, but fills the contents by default
+pub fn try_lock_with_contents(dir: &Path, name: &str) -> Result<LockHandle, LockError> {
+    try_lock(dir, name, lock_contents()?.as_bytes())
+}
+
 /// try_lock attempts to acquire an advisory file lock and write
 /// specified contents. Lock acquisition and content writing are
 /// atomic as long as the content reader also uses this method. If
