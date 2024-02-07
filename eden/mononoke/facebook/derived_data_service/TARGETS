@@ -202,6 +202,7 @@ rust_binary(
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//zeus/rust/lib:zeus_rust_lib_log",
     ],
 )
 
