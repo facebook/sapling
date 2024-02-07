@@ -9,5 +9,5 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
-dashmap = { version = "5.4", features = ["rayon", "serde"] }
+dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 thiserror = "1.0.49"
