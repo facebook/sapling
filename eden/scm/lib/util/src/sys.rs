@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::io;
+pub fn hostname() -> String {
+    whoami::devicename()
+}
 
-use crate::errors::IOContext;
-
-pub fn hostname() -> io::Result<String> {
-    Ok(hostname::get()
-        .io_context("error getting hostname")?
-        .to_string_lossy()
-        .into())
+pub fn username() -> String {
+    if std::env::var_os("TESTTMP").is_some() || cfg!(test) {
+        "test".to_owned()
+    } else {
+        whoami::username()
+    }
 }
