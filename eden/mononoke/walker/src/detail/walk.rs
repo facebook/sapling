@@ -1904,6 +1904,7 @@ pub struct RepoWalkParams {
     pub scheduled_max: usize,
     pub sql_shard_info: SqlShardInfo,
     pub walk_roots: Vec<OutgoingEdge>,
+    pub exclude_nodes: HashSet<Node>,
     pub include_node_types: HashSet<NodeType>,
     pub include_edge_types: HashSet<EdgeType>,
     pub hash_validation_node_types: HashSet<NodeType>,

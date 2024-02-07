@@ -196,6 +196,7 @@ pub struct WalkState {
     include_node_types: HashSet<NodeType>,
     include_edge_types: HashSet<EdgeType>,
     always_emit_edge_types: HashSet<EdgeType>,
+    exclude_nodes: HashSet<Node>,
     enable_derive: bool,
     chunk_direction: Option<Direction>,
     // Interning
@@ -248,6 +249,7 @@ impl WalkState {
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
         always_emit_edge_types: HashSet<EdgeType>,
+        exclude_nodes: HashSet<Node>,
         enable_derive: bool,
         chunk_direction: Option<Direction>,
     ) -> Self {
@@ -256,6 +258,7 @@ impl WalkState {
             // Params
             include_node_types,
             include_edge_types,
+            exclude_nodes,
             always_emit_edge_types,
             enable_derive,
             chunk_direction,
@@ -499,6 +502,10 @@ impl WalkState {
 
     fn needs_visit_impl(&self, outgoing: &OutgoingEdge, executing_step: bool) -> bool {
         let target_node: &Node = &outgoing.target;
+        // Short circuit for nodes that should be never visited.
+        if self.exclude_nodes.contains(target_node) {
+            return false;
+        }
         let k = target_node.get_type();
         if !executing_step {
             self.visit_count[k as usize].fetch_add(1, Ordering::Release);

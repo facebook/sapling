@@ -6,6 +6,7 @@
  */
 
 pub mod arg_types;
+pub mod exclude_node;
 mod graph_arg_types;
 pub mod hash_validation;
 pub mod progress;
@@ -17,6 +18,7 @@ pub mod walk_params;
 pub mod walk_root;
 
 use clap::Args;
+pub use exclude_node::ExcludeNodeArgs;
 pub use graph_arg_types::NodeTypeArg;
 pub use hash_validation::HashValidationArgs;
 pub use progress::ProgressArgs;
@@ -64,6 +66,8 @@ pub struct WalkerCommonArgs {
 
     #[clap(flatten, next_help_heading = "WALKING ROOTS")]
     pub walk_roots: WalkRootArgs,
+    #[clap(flatten, next_help_heading = "NODE EXCLUSION")]
+    pub exclude_nodes: ExcludeNodeArgs,
     #[clap(flatten, next_help_heading = "GRAPH OPTIONS")]
     pub graph_params: WalkerGraphArgs,
     #[clap(flatten, next_help_heading = "HASH VALIDATION OPTIONS")]

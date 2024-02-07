@@ -510,6 +510,7 @@ async fn run_one(
     let walk_state = SamplingWalkVisitor::new(
         repo_params.include_node_types.clone(),
         repo_params.include_edge_types.clone(),
+        repo_params.exclude_nodes.clone(),
         command.sampling_options,
         None,
         command.sampler,

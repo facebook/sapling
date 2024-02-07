@@ -201,6 +201,7 @@ impl ValidatingVisitor {
         include_edge_types: HashSet<EdgeType>,
         include_checks: HashSet<CheckType>,
         always_emit_edge_types: HashSet<EdgeType>,
+        exclude_nodes: HashSet<Node>,
         enable_derive: bool,
         lfs_threshold: Option<u64>,
         chunk_direction: Option<Direction>,
@@ -211,6 +212,7 @@ impl ValidatingVisitor {
                 include_node_types,
                 include_edge_types,
                 always_emit_edge_types,
+                exclude_nodes,
                 enable_derive,
                 chunk_direction,
             ),
@@ -952,6 +954,7 @@ async fn run_one(
         repo_params.include_edge_types.clone(),
         command.include_check_types,
         always_emit_edge_types.clone(),
+        repo_params.exclude_nodes.clone(),
         job_params.enable_derive,
         sub_params.lfs_threshold,
         sub_params

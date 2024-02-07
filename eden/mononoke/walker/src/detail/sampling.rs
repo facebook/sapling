@@ -78,6 +78,7 @@ impl<T> SamplingWalkVisitor<T> {
     pub fn new(
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
+        exclude_nodes: HashSet<Node>,
         options: SamplingOptions,
         sample_path_regex: Option<Regex>,
         sampler: Arc<T>,
@@ -89,6 +90,7 @@ impl<T> SamplingWalkVisitor<T> {
                 include_node_types,
                 include_edge_types,
                 HashSet::new(),
+                exclude_nodes,
                 enable_derive,
                 chunk_direction,
             ),

@@ -50,6 +50,7 @@ use crate::commands::RepoSubcommandParams;
 use crate::detail::blobstore::replace_blobconfig;
 use crate::detail::blobstore::StatsScrubHandler;
 use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
 use crate::detail::graph::SqlShardInfo;
 use crate::detail::log;
@@ -135,6 +136,7 @@ pub async fn setup_common<'a>(
     let mysql_options = app.mysql_options();
 
     let walk_roots = common_args.walk_roots.parse_args()?;
+    let exclude_nodes = common_args.exclude_nodes.parse_args()?;
     let mut parsed_tail_params = parse_tail_params(
         app.fb,
         &common_args.tailing,
@@ -224,6 +226,7 @@ pub async fn setup_common<'a>(
             repo.clone(),
             &repo_conf,
             walk_roots.clone(),
+            exclude_nodes.clone(),
             tail_params.clone(),
             include_edge_types.clone(),
             included_nodes,
@@ -398,6 +401,7 @@ async fn setup_repo<'a>(
     repo_name: String,
     repo_config: &'a RepoConfig,
     walk_roots: Vec<OutgoingEdge>,
+    exclude_nodes: HashSet<Node>,
     mut tail_params: TailParams,
     include_edge_types: HashSet<EdgeType>,
     mut include_node_types: HashSet<NodeType>,
@@ -481,6 +485,7 @@ async fn setup_repo<'a>(
             scheduled_max,
             sql_shard_info,
             walk_roots,
+            exclude_nodes,
             include_node_types,
             include_edge_types,
             hash_validation_node_types,
