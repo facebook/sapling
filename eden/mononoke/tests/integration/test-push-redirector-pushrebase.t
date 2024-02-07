@@ -94,8 +94,9 @@ Noop bookmark-only pushrebase
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn push -d master_bookmark_2 2>&1 | grep deleting
+  $ REPONAME=small-mon quiet_grep deleting -- hgmn push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
+  [1]
   $ hg book --all
   no bookmarks set
      default/master_bookmark   ce81c7d38286

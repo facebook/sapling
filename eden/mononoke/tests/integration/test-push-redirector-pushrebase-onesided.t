@@ -302,8 +302,9 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-mon-1 hgmn push -d master_bookmark_2 2>&1 | grep deleting
+  $ REPONAME=small-mon-1 quiet_grep deleting -- hgmn push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
+  [1]
   $ hg book --all
   no bookmarks set
      default/master_bookmark   6989db12d1e5
