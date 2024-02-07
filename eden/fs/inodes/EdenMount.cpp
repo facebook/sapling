@@ -823,7 +823,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         ? objectStore_->getTree(objs.at(0).id, ctx->getFetchContext())
         : collectAllSafe(std::move(getTreeEntryFutures))
               .thenValue(
-                  [objs = std::move(objs),
+                  [objs_2 = std::move(objs),
                    caseSensitive = getCheckoutConfig()->getCaseSensitive()](
                       std::vector<shared_ptr<TreeEntry>> entries) {
                     // Make up a fake ObjectId for this tree.
@@ -834,7 +834,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
                     Tree::container treeEntries{caseSensitive};
                     for (size_t i = 0; i < entries.size(); ++i) {
                       treeEntries.emplace(
-                          PathComponent{objs.at(i).path.basename()},
+                          PathComponent{objs_2.at(i).path.basename()},
                           std::move(*entries.at(i)));
                     }
 
@@ -2034,7 +2034,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                         useReaddirplus)
                     .thenTry([this,
                               mountPromise = std::move(mountPromise),
-                              channel = std::move(channel)](
+                              channel_2 = std::move(channel)](
                                  Try<folly::Unit>&& try_) mutable {
                       if (try_.hasException()) {
                         mountPromise->setException(try_.exception());
@@ -2042,7 +2042,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                       }
 
                       mountPromise->setValue();
-                      channel_ = std::move(channel);
+                      channel_ = std::move(channel_2);
                       return makeFuture(folly::unit);
                     });
 #else
