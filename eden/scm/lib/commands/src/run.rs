@@ -596,14 +596,14 @@ fn maybe_write_trace(
 
 pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()> {
     enum Format {
-        ASCII,
+        Ascii,
         TraceEventJSON,
         TraceEventGzip,
         SpansJSON,
     }
 
     let format = if path.ends_with(".txt") {
-        Format::ASCII
+        Format::Ascii
     } else if path.ends_with("spans.json") {
         Format::SpansJSON
     } else if path.ends_with(".json") {
@@ -611,7 +611,7 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
     } else if path.ends_with(".gz") {
         Format::TraceEventGzip
     } else {
-        Format::ASCII
+        Format::Ascii
     };
 
     let mut out: Box<dyn Write> = if path == "-" || path.is_empty() {
@@ -621,7 +621,7 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
     };
 
     match format {
-        Format::ASCII => {
+        Format::Ascii => {
             let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
             ascii_opts.min_duration_parent_percentage_to_show = 10;
             ascii_opts.min_duration_micros_to_hide = 100000;
