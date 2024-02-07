@@ -67,6 +67,7 @@ rust_library(
         "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:shell-escape",
         "fbsource//third-party/rust:shellexpand",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:whoami",

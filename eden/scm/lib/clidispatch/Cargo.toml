@@ -22,7 +22,6 @@ io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
 repo = { version = "0.1.0", path = "../repo" }
 sampling = { version = "0.1.0", path = "../sampling" }
-shell-escape = "0.1.5"
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
 thiserror = "1.0.49"
 thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }

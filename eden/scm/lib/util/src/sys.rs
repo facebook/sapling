@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+
 pub fn hostname() -> String {
     whoami::devicename()
 }
@@ -15,4 +17,11 @@ pub fn username() -> String {
     } else {
         whoami::username()
     }
+}
+
+pub fn shell_escape(args: &[String]) -> String {
+    args.iter()
+        .map(|a| shell_escape::escape(Cow::Borrowed(a.as_str())))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
