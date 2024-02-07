@@ -9,6 +9,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/hgtime:hgtime",
+        "//eden/scm/lib/repolock:repolock",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
     ],

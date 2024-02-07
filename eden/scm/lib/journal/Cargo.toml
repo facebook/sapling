@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 hgtime = { version = "0.1.0", path = "../hgtime" }
+repolock = { version = "0.1.0", path = "../repolock" }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }

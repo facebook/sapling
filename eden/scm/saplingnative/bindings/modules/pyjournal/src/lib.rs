@@ -58,7 +58,9 @@ py_class!(class journalentry |py| {
     }
 
     def serialize(&self) -> PyResult<PyBytes> {
-        Ok(PyBytes::new(py, self.inner(py).serialize().map_pyerr(py)?.as_ref()))
+        let mut bytes_entry = Vec::new();
+        self.inner(py).serialize(&mut bytes_entry).map_pyerr(py)?;
+        Ok(PyBytes::new(py, bytes_entry.as_ref()))
     }
 
     @property def timestamp(&self) -> PyResult<PyTuple> {
