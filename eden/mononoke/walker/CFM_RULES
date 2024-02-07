@@ -1,0 +1,6 @@
+publish(
+    wiki_root_path = "Source_Control/Mononoke/Design/Mononoke_Storage/Walker",
+    folder = "src/",
+    readme_as_root = True,
+    oncall = "scm_server_infra",
+)
