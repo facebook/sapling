@@ -231,7 +231,7 @@ TEST(ImmediateFuture, makeImmediateFutureWith) {
 
   auto [p, sf] = folly::makePromiseContract<int>();
   auto fut4 = makeImmediateFutureWith(
-      [sf = std::move(sf)]() mutable { return std::move(sf); });
+      [sf_2 = std::move(sf)]() mutable { return std::move(sf_2); });
   EXPECT_FALSE(fut4.isReady());
   p.setValue(42);
   EXPECT_NE(fut4.isReady(), detail::kImmediateFutureAlwaysDefer);
