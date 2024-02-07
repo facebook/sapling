@@ -27,6 +27,7 @@ buck_filegroup(
         "commitsync/current.toml",
         "commitsync/flipped_config.json",
         "commitsync/flipped_config.toml",
+        "fixtures/repo_with_newline_author_commit.tar.xz",
         "gitexport_library.sh",
         "just_knobs.json",
         "library.sh",
@@ -597,6 +598,7 @@ dott_test(
         "//eden/mononoke:blobimport",
         "//eden/mononoke:packer",
         "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
         "//eden/mononoke/walker:walker",
     ],
 )
