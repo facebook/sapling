@@ -477,6 +477,7 @@ impl Parser {
     ///
     /// parse_args will clean arguments such that they can be properly parsed by Parser#_parse
     pub fn parse_args(&self, args: &[impl AsRef<str>]) -> Result<ParseOutput, ParseError> {
+        let raw_args: Vec<String> = args.iter().map(|s| s.as_ref().to_owned()).collect();
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
 
         let mut first_arg_index = args.len();
@@ -537,6 +538,7 @@ impl Parser {
             args: positional_args.iter().map(|s| s.to_string()).collect(),
             first_arg_index,
             specified_opts: specified_opts.into_iter().collect(),
+            raw_args,
         })
     }
 
@@ -726,6 +728,9 @@ pub struct ParseOutput {
 
     // Long name of options actually specified (vs. default value).
     specified_opts: Vec<String>,
+
+    // The original args before parsing
+    pub raw_args: Vec<String>,
 }
 
 /// ParseOutput represents all of the information successfully parsed from the command-line
@@ -739,6 +744,7 @@ impl ParseOutput {
             args: Vec::new(),
             first_arg_index: 0,
             specified_opts: Vec::new(),
+            raw_args: Vec::new(),
         }
     }
 

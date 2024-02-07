@@ -41,7 +41,12 @@ where
             .with_quiet(global_opts.quiet)
             .with_verbose(global_opts.verbose);
         Ok(Self {
-            core: CoreContext { config, io, logger },
+            core: CoreContext {
+                config,
+                io,
+                logger,
+                raw_args: p.raw_args.clone(),
+            },
             opts: p.try_into()?,
             global_opts,
         })

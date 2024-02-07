@@ -17,4 +17,5 @@ pub struct CoreContext {
     pub config: Arc<dyn Config>,
     pub io: IO,
     pub logger: TermLogger,
+    pub raw_args: Vec<String>,
 }
