@@ -26,6 +26,14 @@ pub(crate) mod ffi {
     }
 
     #[repr(u8)]
+    pub enum FetchMode {
+        /// The fetch may hit remote servers.
+        AllowRemote,
+        /// The fetch is limited to RAM and disk.
+        LocalOnly,
+    }
+
+    #[repr(u8)]
     pub enum TreeEntryType {
         Tree,
         RegularFile,
@@ -113,39 +121,39 @@ pub(crate) mod ffi {
         pub fn sapling_backingstore_get_tree(
             store: &BackingStore,
             node: &[u8],
-            local: bool,
+            fetch_mode: FetchMode,
         ) -> Result<SharedPtr<Tree>>;
 
         pub fn sapling_backingstore_get_tree_batch(
             store: &BackingStore,
             requests: &[Request],
-            local: bool,
+            fetch_mode: FetchMode,
             resolver: SharedPtr<GetTreeBatchResolver>,
         );
 
         pub fn sapling_backingstore_get_blob(
             store: &BackingStore,
             node: &[u8],
-            local: bool,
+            fetch_mode: FetchMode,
         ) -> Result<Box<Blob>>;
 
         pub fn sapling_backingstore_get_blob_batch(
             store: &BackingStore,
             requests: &[Request],
-            local: bool,
+            fetch_mode: FetchMode,
             resolver: SharedPtr<GetBlobBatchResolver>,
         );
 
         pub fn sapling_backingstore_get_file_aux(
             store: &BackingStore,
             node: &[u8],
-            local: bool,
+            fetch_mode: FetchMode,
         ) -> Result<SharedPtr<FileAuxData>>;
 
         pub fn sapling_backingstore_get_file_aux_batch(
             store: &BackingStore,
             requests: &[Request],
-            local: bool,
+            fetch_mode: FetchMode,
             resolver: SharedPtr<GetFileAuxBatchResolver>,
         );
 
@@ -153,11 +161,13 @@ pub(crate) mod ffi {
     }
 }
 
-fn fetch_mode_from_local(local: bool) -> FetchMode {
-    if local {
-        FetchMode::LocalOnly
-    } else {
-        FetchMode::AllowRemote
+impl From<ffi::FetchMode> for FetchMode {
+    fn from(fetch_mode: ffi::FetchMode) -> Self {
+        match fetch_mode {
+            ffi::FetchMode::AllowRemote => FetchMode::AllowRemote,
+            ffi::FetchMode::LocalOnly => FetchMode::LocalOnly,
+            _ => panic!("unknown fetch mode"),
+        }
     }
 }
 
@@ -186,11 +196,11 @@ pub fn sapling_backingstore_get_manifest(
 pub fn sapling_backingstore_get_tree(
     store: &BackingStore,
     node: &[u8],
-    local: bool,
+    fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::Tree>> {
     Ok(SharedPtr::new(
         store
-            .get_tree(node, fetch_mode_from_local(local))
+            .get_tree(node, FetchMode::from(fetch_mode))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
             .and_then(|entry| entry.try_into())?,
     ))
@@ -199,12 +209,12 @@ pub fn sapling_backingstore_get_tree(
 pub fn sapling_backingstore_get_tree_batch(
     store: &BackingStore,
     requests: &[ffi::Request],
-    local: bool,
+    fetch_mode: ffi::FetchMode,
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
-    store.get_tree_batch(keys, fetch_mode_from_local(local), |idx, result| {
+    store.get_tree_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
         let result: Result<Box<dyn storemodel::TreeEntry>> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let resolver = resolver.clone();
@@ -219,10 +229,10 @@ pub fn sapling_backingstore_get_tree_batch(
 pub fn sapling_backingstore_get_blob(
     store: &BackingStore,
     node: &[u8],
-    local: bool,
+    fetch_mode: ffi::FetchMode,
 ) -> Result<Box<ffi::Blob>> {
     let bytes = store
-        .get_blob(node, fetch_mode_from_local(local))
+        .get_blob(node, FetchMode::from(fetch_mode))
         .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))?;
     Ok(Box::new(ffi::Blob { bytes }))
 }
@@ -230,11 +240,11 @@ pub fn sapling_backingstore_get_blob(
 pub fn sapling_backingstore_get_blob_batch(
     store: &BackingStore,
     requests: &[ffi::Request],
-    local: bool,
+    fetch_mode: ffi::FetchMode,
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    store.get_blob_batch(keys, fetch_mode_from_local(local), |idx, result| {
+    store.get_blob_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
         let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
         let resolver = resolver.clone();
         let (error, blob) = match result {
@@ -251,11 +261,11 @@ pub fn sapling_backingstore_get_blob_batch(
 pub fn sapling_backingstore_get_file_aux(
     store: &BackingStore,
     node: &[u8],
-    local: bool,
+    fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::FileAuxData>> {
     Ok(SharedPtr::new(
         store
-            .get_file_aux(node, fetch_mode_from_local(local))
+            .get_file_aux(node, FetchMode::from(fetch_mode))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))?
             .into(),
     ))
@@ -264,12 +274,12 @@ pub fn sapling_backingstore_get_file_aux(
 pub fn sapling_backingstore_get_file_aux_batch(
     store: &BackingStore,
     requests: &[ffi::Request],
-    local: bool,
+    fetch_mode: ffi::FetchMode,
     resolver: SharedPtr<ffi::GetFileAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
-    store.get_file_aux_batch(keys, fetch_mode_from_local(local), |idx, result| {
+    store.get_file_aux_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
         let result: Result<ScmStoreFileAuxData> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
         let resolver = resolver.clone();

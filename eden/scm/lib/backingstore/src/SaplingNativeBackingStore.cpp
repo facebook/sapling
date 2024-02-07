@@ -63,13 +63,18 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
     bool local) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
+
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
   return folly::makeTryWith([&] {
     auto tree = sapling_backingstore_get_tree(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
-        local);
+        fetch_mode);
     XCHECK(
         tree.get(),
         "sapling_backingstore_get_tree returned a nullptr, but did not throw an exception.");
@@ -82,6 +87,11 @@ void SaplingNativeBackingStore::getTreeBatch(
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
         resolve) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
+
   auto resolver = std::make_shared<GetTreeBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
@@ -98,20 +108,24 @@ void SaplingNativeBackingStore::getTreeBatch(
   sapling_backingstore_get_tree_batch(
       *store_.get(),
       rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
-      local,
+      fetch_mode,
       std::move(resolver));
 }
 
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
     bool local) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
   XLOG(DBG7) << "Importing blob node=" << folly::hexlify(node)
              << " from hgcache";
   return folly::makeTryWith([&] {
     auto blob = sapling_backingstore_get_blob(
                     *store_.get(),
                     rust::Slice<const uint8_t>{node.data(), node.size()},
-                    local)
+                    fetch_mode)
                     .into_raw();
     XCHECK(
         blob,
@@ -131,6 +145,10 @@ void SaplingNativeBackingStore::getBlobBatch(
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
         resolve) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
   auto resolver = std::make_shared<GetBlobBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
@@ -147,19 +165,23 @@ void SaplingNativeBackingStore::getBlobBatch(
   sapling_backingstore_get_blob_batch(
       *store_.get(),
       rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
-      local,
+      fetch_mode,
       std::move(resolver));
 }
 
 folly::Try<std::shared_ptr<FileAuxData>>
 SaplingNativeBackingStore::getBlobMetadata(NodeId node, bool local) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
   return folly::makeTryWith([&] {
     auto metadata = sapling_backingstore_get_file_aux(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
-        local);
+        fetch_mode);
     XCHECK(
         metadata.get(),
         "sapling_backingstore_get_file_aux returned a nullptr, but did not throw an exception.");
@@ -172,6 +194,10 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
         resolve) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
   auto resolver = std::make_shared<GetFileAuxBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
@@ -188,7 +214,7 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
   sapling_backingstore_get_file_aux_batch(
       *store_.get(),
       rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
-      local,
+      fetch_mode,
       std::move(resolver));
 }
 
