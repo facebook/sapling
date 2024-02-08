@@ -24,6 +24,7 @@ import {
 } from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {
   atomFamily,
   selectorFamily,
@@ -51,7 +52,7 @@ export function GenerateAICommitMessageButton({
   appendToTextArea: (toAdd: string) => unknown;
 }) {
   const currentCommit = useRecoilValue(commitInfoViewCurrentCommits)?.[0];
-  const mode = useRecoilValue(commitMode);
+  const mode = useAtomValue(commitMode);
   const featureEnabled = useFeatureFlagSync(Internal.featureFlags?.GeneratedAICommitMessages);
 
   const hashKey: HashKey | undefined =

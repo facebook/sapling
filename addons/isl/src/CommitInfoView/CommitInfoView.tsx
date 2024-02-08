@@ -80,7 +80,7 @@ import {
   VSCodeRadio,
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
@@ -208,7 +208,7 @@ function useDebounceFetchDiffDetails(diffId?: string) {
 }
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
-  const [mode, setMode] = useRecoilState(commitMode);
+  const [mode, setMode] = useAtom(commitMode);
   const isCommitMode = commit.isHead && mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
   const [editedMessage, setEditedCommitMessage] = useRecoilState(editedCommitMessages(hashOrHead));
@@ -227,7 +227,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   useDebounceFetchDiffDetails(commit.diffId);
 
-  const [forceEditAll, setForceEditAll] = useRecoilState(forceNextCommitToEditAllFields);
+  const [forceEditAll, setForceEditAll] = useAtom(forceNextCommitToEditAllFields);
 
   useEffect(() => {
     if (editedMessage.type === 'optimistic') {

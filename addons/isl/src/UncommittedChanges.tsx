@@ -423,11 +423,11 @@ export function UncommittedChanges({place}: {place: Place}) {
 
     // show head commit & set to correct mode
     writeAtom(selectedCommits, new Set());
-    set(commitMode, which);
+    writeAtom(commitMode, which);
 
     // Start editing fields when amending so you can go right into typing.
     if (which === 'amend') {
-      set(forceNextCommitToEditAllFields, true);
+      writeAtom(forceNextCommitToEditAllFields, true);
       if (headCommit != null) {
         const latestMessage = snapshot
           .getLoadable(latestCommitMessageFields(headCommit.hash))

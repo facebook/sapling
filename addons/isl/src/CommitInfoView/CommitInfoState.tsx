@@ -26,7 +26,8 @@ import {
   commitMessageFieldsSchemaRecoil,
   commitMessageFieldsSchema,
 } from './CommitMessageFields';
-import {atomFamily, selectorFamily, atom, selector} from 'recoil';
+import {atom} from 'jotai';
+import {atomFamily, selectorFamily, selector} from 'recoil';
 
 export type EditedMessage = {fields: Partial<CommitMessageFields>};
 
@@ -158,10 +159,7 @@ export const latestCommitMessageFieldsWithEdits = selectorFamily<
  * which allows all fields to be edited for example when clicking "amend...",
  * but without actually changing the underlying edited messages.
  */
-export const forceNextCommitToEditAllFields = atom({
-  key: 'forceNextCommitToEditAllFields',
-  default: false,
-});
+export const forceNextCommitToEditAllFields = atom<boolean>(false);
 
 export const unsavedFieldsBeingEdited = selectorFamily<FieldsBeingEdited, Hash | 'head'>({
   key: 'unsavedFieldsBeingEdited',
@@ -200,10 +198,7 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
     },
 });
 
-export const commitMode = atom<CommitInfoMode>({
-  key: 'commitMode',
-  default: 'amend',
-});
+export const commitMode = atom<CommitInfoMode>('amend');
 
 export const commitInfoViewCurrentCommits = selector<Array<CommitInfo> | null>({
   key: 'commitInfoViewCurrentCommits',

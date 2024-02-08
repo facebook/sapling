@@ -59,7 +59,7 @@ import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
-import React, {memo, useEffect, useState} from 'react';
+import React, {memo, useCallback, useEffect, useState} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -145,28 +145,24 @@ export const Commit = memo(
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
-    const onDoubleClickToShowDrawer = useRecoilCallback(
-      ({set}) =>
-        () => {
-          // Select the commit if it was deselected.
-          if (!isSelected) {
-            overrideSelection([commit.hash]);
-          }
-          // Show the drawer.
-          writeAtom(islDrawerState, state => ({
-            ...state,
-            right: {
-              ...state.right,
-              collapsed: false,
-            },
-          }));
-          if (commit.isHead) {
-            // if we happened to be in commit mode, swap to amend mode so you see the details instead
-            set(commitMode, 'amend');
-          }
+    const onDoubleClickToShowDrawer = useCallback(() => {
+      // Select the commit if it was deselected.
+      if (!isSelected) {
+        overrideSelection([commit.hash]);
+      }
+      // Show the drawer.
+      writeAtom(islDrawerState, state => ({
+        ...state,
+        right: {
+          ...state.right,
+          collapsed: false,
         },
-      [overrideSelection, isSelected, commit.hash, commit.isHead],
-    );
+      }));
+      if (commit.isHead) {
+        // if we happened to be in commit mode, swap to amend mode so you see the details instead
+        writeAtom(commitMode, 'amend');
+      }
+    }, [overrideSelection, isSelected, commit.hash, commit.isHead]);
 
     const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
 

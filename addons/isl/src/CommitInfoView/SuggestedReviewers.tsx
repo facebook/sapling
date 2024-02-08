@@ -14,6 +14,7 @@ import {T} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
+import {useAtomValue} from 'jotai';
 import {selectorFamily, useRecoilValue, useRecoilValueLoadable} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {tryJsonParse} from 'shared/utils';
@@ -132,7 +133,7 @@ export function SuggestedReviewers({
 }) {
   const provider = useRecoilValue(codeReviewProvider);
   const recent = recentReviewers.getRecent().filter(s => !existingReviewers.includes(s));
-  const mode = useRecoilValue(commitMode);
+  const mode = useAtomValue(commitMode);
   const currentCommitInfoViewCommit = useRecoilValue(commitInfoViewCurrentCommits);
   const currentCommit = currentCommitInfoViewCommit?.[0]; // assume we only have one commit
 
