@@ -15,6 +15,7 @@ import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {writeAtom} from './jotaiUtils';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
 import {CommitCloudCreateWorkspaceOperation} from './operations/CommitCloudCreateWorkspaceOperation';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
@@ -22,36 +23,35 @@ import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './p
 import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
+import {registerDisposable} from './utils';
 import {
   VSCodeButton,
   VSCodeDropdown,
   VSCodeOption,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
+import {atom, useAtom} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {atom, useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';
 
-const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>({
-  key: 'cloudSyncStateAtom',
-  default: null,
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('fetchedCommitCloudState', event => {
-        setSelf(event.state);
-      });
-      return () => disposable.dispose();
-    },
-  ],
-});
+const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>(null);
+
+registerDisposable(
+  cloudSyncStateAtom,
+  serverAPI.onMessageOfType('fetchedCommitCloudState', event => {
+    writeAtom(cloudSyncStateAtom, event.state);
+  }),
+  import.meta.hot,
+);
 
 const REFRESH_INTERVAL = 30 * 1000;
 
 export function CommitCloudInfo() {
-  const [cloudSyncState, setCloudSyncState] = useRecoilState(cloudSyncStateAtom);
+  const [cloudSyncState, setCloudSyncState] = useAtom(cloudSyncStateAtom);
   const runOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();
   const isRunningSync = pendingOperation?.trackEventName === 'CommitCloudSyncOperation';
