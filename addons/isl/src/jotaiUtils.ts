@@ -150,7 +150,7 @@ export function atomWithOnChange<T>(
  * `original` is an optioinal nullable atom to provide the value.
  */
 export function lazyAtom<T>(
-  load: () => Promise<T> | T,
+  load: (get: Getter) => Promise<T> | T,
   fallback: T,
   original?: MutAtom<T | undefined>,
 ): MutAtom<T> {
@@ -162,7 +162,7 @@ export function lazyAtom<T>(
       if (value !== undefined) {
         return value;
       }
-      const loaded = load();
+      const loaded = load(get);
       if (!isPromise(loaded)) {
         writeAtom(originalAtom, loaded);
         return loaded;
