@@ -22,8 +22,6 @@ import {leftPad} from '../utils';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../MessageBus');
-
 function makeFiles(n: number): Array<ChangedFile> {
   return new Array(n)
     .fill(null)

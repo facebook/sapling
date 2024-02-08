@@ -22,8 +22,6 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../MessageBus');
-
 describe('selection', () => {
   beforeEach(() => {
     resetTestMessages();

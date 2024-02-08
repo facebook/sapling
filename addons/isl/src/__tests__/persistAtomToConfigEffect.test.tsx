@@ -17,8 +17,6 @@ import {
 import {render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../MessageBus');
-
 describe('persistAtomToLocalStorageEffect', () => {
   const getTemporary = jest.fn();
   const setTemporary = jest.fn();

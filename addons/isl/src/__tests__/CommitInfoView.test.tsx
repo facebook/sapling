@@ -28,8 +28,6 @@ import {act} from 'react-dom/test-utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-jest.mock('../MessageBus');
-
 const {
   withinCommitInfo,
   clickAmendButton,

@@ -21,8 +21,6 @@ import {
 import {fireEvent, render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../MessageBus');
-
 describe('CommitTreeList', () => {
   beforeEach(() => {
     resetTestMessages();

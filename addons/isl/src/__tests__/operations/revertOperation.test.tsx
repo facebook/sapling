@@ -23,8 +23,6 @@ import {nextTick} from 'shared/testUtils';
 
 /* eslint-disable require-await */
 
-jest.mock('../../MessageBus');
-
 describe('RevertOperation', () => {
   beforeEach(() => {
     resetTestMessages();

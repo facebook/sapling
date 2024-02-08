@@ -16,8 +16,6 @@ import {
 import {screen, act, render, fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-jest.mock('../MessageBus');
-
 describe('Download Commits', () => {
   beforeEach(() => {
     resetTestMessages();

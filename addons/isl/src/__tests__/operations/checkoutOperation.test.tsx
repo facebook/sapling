@@ -19,8 +19,6 @@ import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../../MessageBus');
-
 describe('GotoOperation', () => {
   beforeEach(() => {
     resetTestMessages();

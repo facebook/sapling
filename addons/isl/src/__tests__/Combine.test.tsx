@@ -23,8 +23,6 @@ import {act} from 'react-dom/test-utils';
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
 
-jest.mock('../MessageBus');
-
 describe('combine', () => {
   beforeEach(() => {
     resetTestMessages();

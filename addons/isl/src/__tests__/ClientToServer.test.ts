@@ -13,8 +13,6 @@ import {
 } from '../testUtils';
 import {nextTick} from 'shared/testUtils';
 
-jest.mock('../MessageBus');
-
 describe('ClientToServer', () => {
   beforeEach(() => {
     resetTestMessages();

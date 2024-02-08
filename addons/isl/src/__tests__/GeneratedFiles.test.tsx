@@ -22,8 +22,6 @@ import {GeneratedStatus} from '../types';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../MessageBus');
-
 describe('Generated Files', () => {
   beforeEach(() => {
     resetTestMessages();

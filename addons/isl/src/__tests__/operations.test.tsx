@@ -23,8 +23,6 @@ import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 import * as utils from 'shared/utils';
 
-jest.mock('../MessageBus');
-
 const {clickGoto} = CommitTreeListTestUtils;
 
 const abortButton = () => screen.queryByTestId('abort-button');

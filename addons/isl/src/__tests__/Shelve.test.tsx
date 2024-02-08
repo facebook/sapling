@@ -23,8 +23,6 @@ import {act} from 'react-dom/test-utils';
 import {ComparisonType} from 'shared/Comparison';
 import {unwrap} from 'shared/utils';
 
-jest.mock('../MessageBus');
-
 describe('Shelve', () => {
   beforeEach(() => {
     resetTestMessages();

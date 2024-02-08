@@ -18,6 +18,9 @@ jest.mock('./logger');
 // jest doesn't have the stylex compilation step, let's just mock it
 jest.mock('@stylexjs/stylex');
 
+// Mock MessageBus before other logic which might have effects on it.
+jest.mock('./MessageBus');
+
 import {configure} from '@testing-library/react';
 
 if (process.env.HIDE_RTL_DOM_ERRORS) {

@@ -26,8 +26,6 @@ import {act} from 'react-dom/test-utils';
 import {nextTick} from 'shared/testUtils';
 import * as utils from 'shared/utils';
 
-jest.mock('../MessageBus');
-
 describe('Image upload inside TextArea ', () => {
   beforeEach(() => {
     resetTestMessages();

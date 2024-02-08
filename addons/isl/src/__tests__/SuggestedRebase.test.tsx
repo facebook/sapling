@@ -18,8 +18,6 @@ import {succeedableRevset} from '../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
-jest.mock('../MessageBus');
-
 describe('Suggested Rebase button', () => {
   beforeEach(() => {
     resetTestMessages();

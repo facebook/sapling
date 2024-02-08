@@ -26,7 +26,6 @@ import {unwrap} from 'shared/utils';
 
 afterEach(cleanup);
 
-jest.mock('../MessageBus');
 jest.mock('../platform');
 
 const UNCOMMITTED_CHANGES_DIFF = `\
