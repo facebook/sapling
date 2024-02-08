@@ -234,6 +234,16 @@ describe('cached()', () => {
       expect(fib.cache.stats).toMatchObject({hit: 18, miss: 21});
     });
 
+    it('caches async results', async () => {
+      let calledTimes = 0;
+      const fib = cached(async (n: number): Promise<number> => {
+        calledTimes += 1;
+        return n < 2 ? n : (await fib(n - 1)) + (await fib(n - 2));
+      });
+      expect(await fib(20)).toBe(6765);
+      expect(calledTimes).toBe(21);
+    });
+
     it('skips cache if an arg is non-cachable', () => {
       const max = cached((a: number, b: number, map?: (v: number) => number): number => {
         const pickA = map == null ? a > b : map(a) > map(b);

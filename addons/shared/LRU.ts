@@ -7,6 +7,7 @@
 
 import type {ValueObject} from 'immutable';
 
+import {isPromise} from './utils';
 import deepEqual from 'fast-deep-equal';
 import {isValueObject, is, List} from 'immutable';
 
@@ -253,6 +254,12 @@ function cachedFunction<T, F extends AnyFunction<T>>(func: F, opts?: CacheOpts<T
       stats.miss = (stats.miss ?? 0) + 1;
     }
     const result = func.apply(this, args) as ReturnType<F>;
+    if (isPromise(result)) {
+      return result.then((value: unknown) => {
+        cache.set(cacheKey, value);
+        return value;
+      });
+    }
     cache.set(cacheKey, result);
     return result;
   };
