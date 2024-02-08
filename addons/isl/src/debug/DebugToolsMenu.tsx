@@ -17,6 +17,7 @@ import {Tooltip} from '../Tooltip';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
+import {atomWithOnChange} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
@@ -28,8 +29,9 @@ import {
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
+import {atom, useAtom} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
-import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilCallback, useRecoilValue} from 'recoil';
 
 import './DebugToolsMenu.css';
 
@@ -88,22 +90,14 @@ function InternalState() {
   );
 }
 
-const logMessagesState = atom({
-  key: 'logMessagesState',
-  default: debugLogMessageTraffic.shoudlLog,
-  effects: [
-    ({onSet}) => {
-      onSet(newValue => {
-        debugLogMessageTraffic.shoudlLog = newValue;
-        // eslint-disable-next-line no-console
-        console.log(`----- ${newValue ? 'Enabled' : 'Disabled'} Logging Messages -----`);
-      });
-    },
-  ],
+const logMessagesState = atomWithOnChange(atom(debugLogMessageTraffic.shoudlLog), newValue => {
+  debugLogMessageTraffic.shoudlLog = newValue;
+  // eslint-disable-next-line no-console
+  console.log(`----- ${newValue ? 'Enabled' : 'Disabled'} Logging Messages -----`);
 });
 
 function ServerClientMessageLogging() {
-  const [shouldLog, setShouldLog] = useRecoilState(logMessagesState);
+  const [shouldLog, setShouldLog] = useAtom(logMessagesState);
   return (
     <div>
       <VSCodeCheckbox
