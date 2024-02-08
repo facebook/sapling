@@ -13,9 +13,10 @@ import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
-import {writeAtom} from './jotaiUtils';
+import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
+import {entangledAtoms} from './recoilUtils';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
@@ -25,13 +26,13 @@ import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 
  * Note: it is possible to be selecting a commit that stops being rendered, and thus has no associated commit info.
  * Prefer to use `selectedCommitInfos` to get the subset of the selection that is visible.
  */
-export const selectedCommits = atom<Set<Hash>>({
+export const [selectedCommits, selectedCommitsRecoil] = entangledAtoms<Set<Hash>>({
   key: 'selectedCommits',
   default: new Set(),
   effects: [
     ({setSelf, getLoadable}) => {
       return successionTracker.onSuccessions(successions => {
-        const value = new Set(getLoadable(selectedCommits).valueMaybe());
+        const value = new Set(getLoadable(selectedCommitsRecoil).valueMaybe());
         for (const [oldHash, newHash] of successions) {
           if (value?.has(oldHash)) {
             value.delete(oldHash);
@@ -49,7 +50,7 @@ export const isCommitSelected = selectorFamily({
   get:
     (hash: Hash) =>
     ({get}) =>
-      get(selectedCommits).has(hash),
+      get(selectedCommitsRecoil).has(hash),
 });
 
 const previouslySelectedCommit = atom<undefined | string>({
@@ -67,7 +68,7 @@ const previouslySelectedCommit = atom<undefined | string>({
 export const selectedCommitInfos = selector<Array<CommitInfo>>({
   key: 'selectedCommitInfos',
   get: ({get}) => {
-    const selected = get(selectedCommits);
+    const selected = get(selectedCommitsRecoil);
     const dag = get(dagWithPreviews);
     return [...selected].flatMap(h => {
       const info = dag.get(h);
@@ -94,7 +95,7 @@ export function useCommitSelection(hash: string): {
           // don't bother selecting public commits
           return;
         }
-        set(selectedCommits, last => {
+        writeAtom(selectedCommits, last => {
           if (e.shiftKey) {
             const previouslySelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
             const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
@@ -147,7 +148,7 @@ export function useCommitSelection(hash: string): {
   );
 
   const overrideSelection = useRecoilCallback(
-    ({set, snapshot}) =>
+    ({snapshot}) =>
       (newSelected: Array<Hash>) => {
         // previews won't change a commit from draft -> public, so we don't need
         // to use previews here
@@ -159,7 +160,7 @@ export function useCommitSelection(hash: string): {
         const nonPublicToSelect = newSelected.filter(
           hash => loadable.getValue().get(hash)?.phase !== 'public',
         );
-        set(selectedCommits, new Set(nonPublicToSelect));
+        writeAtom(selectedCommits, new Set(nonPublicToSelect));
       },
     [hash],
   );
@@ -206,12 +207,12 @@ export function useArrowKeysToChangeSelection() {
 
     const linearNonPublicHistory = linearHistory.filter(commit => commit.phase !== 'public');
 
-    const existingSelection = snapshot.getLoadable(selectedCommits).valueMaybe();
-    if (existingSelection == null || existingSelection.size === 0) {
+    const existingSelection = readAtom(selectedCommits);
+    if (existingSelection.size === 0) {
       if (which === 'SelectDownwards' || which === 'ContinueSelectionDownwards') {
         const top = linearNonPublicHistory.at(-1)?.hash;
         if (top != null) {
-          set(selectedCommits, new Set([top]));
+          writeAtom(selectedCommits, new Set([top]));
           set(previouslySelectedCommit, top);
         }
       }
@@ -260,7 +261,7 @@ export function useArrowKeysToChangeSelection() {
     }
 
     const newSelected = linearNonPublicHistory[currentIndex];
-    set(selectedCommits, last =>
+    writeAtom(selectedCommits, last =>
       extendSelection ? new Set([...last, newSelected.hash]) : new Set([newSelected.hash]),
     );
     set(previouslySelectedCommit, newSelected.hash);
@@ -283,7 +284,7 @@ export function useBackspaceToHideSelected(): void {
     const mostRecent = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
     let hashToHide = mostRecent;
     if (hashToHide == null) {
-      const selection = snapshot.getLoadable(selectedCommits).valueMaybe();
+      const selection = readAtom(selectedCommits);
       if (selection != null) {
         hashToHide = firstOfIterable(selection.values());
       }

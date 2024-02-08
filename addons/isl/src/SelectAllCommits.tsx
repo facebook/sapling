@@ -37,9 +37,9 @@ export function useSelectAllCommitsShortcut() {
 }
 
 export function useSelectAllCommits() {
-  return useRecoilCallback(({set, snapshot}) => () => {
+  return useRecoilCallback(({snapshot}) => () => {
     const draftCommits = getAllDraftCommits(snapshot);
-    set(selectedCommits, new Set(draftCommits));
+    writeAtom(selectedCommits, new Set(draftCommits));
     // pop open sidebar so you can act on the bulk selection
     writeAtom(islDrawerState, last => ({
       ...last,

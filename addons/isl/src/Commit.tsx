@@ -10,7 +10,6 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import type {Snapshot} from 'recoil';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
-import {globalRecoil} from './AccessGlobalRecoil';
 import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
@@ -339,7 +338,7 @@ export const Commit = memo(
                 event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
                 // Instead, ensure we remove the selection, so we view the new head commit by default
                 // (since the head commit is the default thing shown in the sidebar)
-                globalRecoil().reset(selectedCommits);
+                writeAtom(selectedCommits, new Set());
               }}>
               <T>Goto</T> <Icon icon="newline" />
             </VSCodeButton>

@@ -417,42 +417,39 @@ export function UncommittedChanges({place}: {place: Place}) {
 
   const runOperation = useRunOperation();
 
-  const openCommitForm = useRecoilCallback(
-    ({set, reset, snapshot}) =>
-      (which: 'commit' | 'amend') => {
-        // make sure view is expanded
-        writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
+  const openCommitForm = useRecoilCallback(({set, snapshot}) => (which: 'commit' | 'amend') => {
+    // make sure view is expanded
+    writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
 
-        // show head commit & set to correct mode
-        reset(selectedCommits);
-        set(commitMode, which);
+    // show head commit & set to correct mode
+    writeAtom(selectedCommits, new Set());
+    set(commitMode, which);
 
-        // Start editing fields when amending so you can go right into typing.
-        if (which === 'amend') {
-          set(forceNextCommitToEditAllFields, true);
-          if (headCommit != null) {
-            const latestMessage = snapshot
-              .getLoadable(latestCommitMessageFields(headCommit.hash))
-              .valueMaybe();
-            if (latestMessage) {
-              set(editedCommitMessages(headCommit.hash), {
-                fields: {...latestMessage},
-              });
-            }
-          }
+    // Start editing fields when amending so you can go right into typing.
+    if (which === 'amend') {
+      set(forceNextCommitToEditAllFields, true);
+      if (headCommit != null) {
+        const latestMessage = snapshot
+          .getLoadable(latestCommitMessageFields(headCommit.hash))
+          .valueMaybe();
+        if (latestMessage) {
+          set(editedCommitMessages(headCommit.hash), {
+            fields: {...latestMessage},
+          });
         }
+      }
+    }
 
-        const quickCommitTyped = commitTitleRef.current?.value;
-        if (which === 'commit' && quickCommitTyped != null && quickCommitTyped != '') {
-          set(editedCommitMessages('head'), value => ({
-            ...value,
-            fields: {...value.fields, Title: quickCommitTyped},
-          }));
-          // delete what was written in the quick commit form
-          commitTitleRef.current != null && (commitTitleRef.current.value = '');
-        }
-      },
-  );
+    const quickCommitTyped = commitTitleRef.current?.value;
+    if (which === 'commit' && quickCommitTyped != null && quickCommitTyped != '') {
+      set(editedCommitMessages('head'), value => ({
+        ...value,
+        fields: {...value.fields, Title: quickCommitTyped},
+      }));
+      // delete what was written in the quick commit form
+      commitTitleRef.current != null && (commitTitleRef.current.value = '');
+    }
+  });
 
   const onConfirmQuickCommit = () => {
     const title =

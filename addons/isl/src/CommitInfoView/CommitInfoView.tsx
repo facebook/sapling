@@ -81,6 +81,7 @@ import {
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
+import {useAtomCallback} from 'jotai/utils';
 import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
@@ -582,14 +583,14 @@ function ActionsBar({
 
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
-  const deselectIfHeadIsSelected = useRecoilCallback(({snapshot, reset}) => () => {
+  const deselectIfHeadIsSelected = useAtomCallback((get, set) => {
     if (!commit.isHead) {
       return;
     }
-    const selected = snapshot.getLoadable(selectedCommits).valueMaybe();
+    const selected = get(selectedCommits);
     // only reset if selection exactly matches our expectation
     if (selected && selected.size === 1 && firstOfIterable(selected.values()) === commit.hash) {
-      reset(selectedCommits);
+      set(selectedCommits, new Set());
     }
   });
 
