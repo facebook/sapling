@@ -12,7 +12,7 @@ import {T, t} from '../i18n';
 import {short} from '../utils';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useSetRecoilState} from 'recoil';
+import {useSetAtom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 
@@ -27,7 +27,7 @@ export function OpenComparisonViewButton({
 }) {
   const isFake =
     comparison.type === ComparisonType.Committed && comparison.hash.startsWith('OPTIMISTIC');
-  const setComparisonMode = useSetRecoilState(currentComparisonMode);
+  const setComparisonMode = useSetAtom(currentComparisonMode);
   return (
     <VSCodeButton
       data-testid={`open-comparison-view-button-${comparison.type}`}

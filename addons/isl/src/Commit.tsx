@@ -59,6 +59,7 @@ import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
+import {useAtomCallback} from 'jotai/utils';
 import React, {memo, useEffect, useState} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
@@ -170,7 +171,7 @@ export const Commit = memo(
 
     const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
 
-    const viewChangesCallback = useRecoilCallback(({set}) => () => {
+    const viewChangesCallback = useAtomCallback((_get, set) => {
       set(currentComparisonMode, {
         comparison: {type: ComparisonType.Committed, hash: commit.hash},
         visible: true,
@@ -186,7 +187,7 @@ export const Commit = memo(
       tracker.track('SplitOpenFromCommitContextMenu');
     }
 
-    const makeContextMenuOptions = useRecoilCallback(({snapshot, set}) => () => {
+    const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
       const hasUncommittedChanges =
         (snapshot.getLoadable(uncommittedChangesWithPreviews).valueMaybe()?.length ?? 0) > 0;
       const syncStatus = snapshot.getLoadable(syncStatusAtom).valueMaybe()?.get(commit.hash);
@@ -218,7 +219,7 @@ export const Commit = memo(
           items.push({
             label: <T replace={{$provider: provider?.label ?? 'remote'}}>Compare with $provider</T>,
             onClick: () => {
-              set(currentComparisonMode, {
+              writeAtom(currentComparisonMode, {
                 comparison: {type: ComparisonType.SinceLastCodeReviewSubmit, hash: commit.hash},
                 visible: true,
               });

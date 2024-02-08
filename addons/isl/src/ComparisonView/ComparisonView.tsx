@@ -23,8 +23,9 @@ import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
+import {useSetAtom} from 'jotai';
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {atomFamily, selectorFamily, useRecoilState, useSetRecoilState} from 'recoil';
+import {atomFamily, selectorFamily, useRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {parsePatch} from 'shared/patch/parse';
@@ -219,7 +220,7 @@ function ComparisonViewHeader({
   collapsedFiles: Map<string, boolean>;
   setCollapsedFile: (path: string, collapsed: boolean) => unknown;
 }) {
-  const setComparisonMode = useSetRecoilState(currentComparisonMode);
+  const setComparisonMode = useSetAtom(currentComparisonMode);
   const [compared, reloadComparison] = useComparisonData(comparison);
 
   const allFilesExpanded =

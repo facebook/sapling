@@ -7,11 +7,11 @@
 
 import type {Comparison} from 'shared/Comparison';
 
-import {atom} from 'recoil';
+import {atom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 
 export type ComparisonMode = {comparison: Comparison; visible: boolean};
 export const currentComparisonMode = atom<ComparisonMode>({
-  key: 'currentComparisonMode',
-  default: {comparison: {type: ComparisonType.UncommittedChanges}, visible: false},
+  comparison: {type: ComparisonType.UncommittedChanges},
+  visible: false,
 });
