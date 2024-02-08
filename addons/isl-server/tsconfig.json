@@ -26,5 +26,5 @@
       "module": "commonjs"
     }
   },
-  "include": ["src", "jest.config.js", "rollup.config.mjs", "proxy"]
+  "include": ["src", "rollup.config.mjs", "proxy"]
 }
