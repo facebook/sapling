@@ -18,7 +18,7 @@ import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {entangledAtoms} from './recoilUtils';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
-import {firstOfIterable} from './utils';
+import {firstOfIterable, registerCleanup} from './utils';
 import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
 
 /**
@@ -29,21 +29,29 @@ import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 
 export const [selectedCommits, selectedCommitsRecoil] = entangledAtoms<Set<Hash>>({
   key: 'selectedCommits',
   default: new Set(),
-  effects: [
-    ({setSelf, getLoadable}) => {
-      return successionTracker.onSuccessions(successions => {
-        const value = new Set(getLoadable(selectedCommitsRecoil).valueMaybe());
-        for (const [oldHash, newHash] of successions) {
-          if (value?.has(oldHash)) {
-            value.delete(oldHash);
-            value.add(newHash);
-          }
-        }
-        setSelf(value);
-      });
-    },
-  ],
 });
+registerCleanup(
+  selectedCommits,
+  successionTracker.onSuccessions(successions => {
+    let value = readAtom(selectedCommits);
+    let changed = false;
+
+    for (const [oldHash, newHash] of successions) {
+      if (value?.has(oldHash)) {
+        if (!changed) {
+          changed = true;
+          value = new Set(value);
+        }
+        value.delete(oldHash);
+        value.add(newHash);
+      }
+    }
+    if (changed) {
+      writeAtom(selectedCommits, value);
+    }
+  }),
+  import.meta.hot,
+);
 
 export const isCommitSelected = selectorFamily({
   key: 'isCommitSelected',

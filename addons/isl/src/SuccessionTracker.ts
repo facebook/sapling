@@ -87,10 +87,9 @@ export class SuccessionTracker {
     }
   }
 
-  /** Clear all known hashes and remove all listeners, useful for resetting between tests */
+  /** Clear all known hashes, useful for resetting between tests */
   public clear() {
     this.seenHashes.clear();
-    this.callbacks.clear();
   }
 }
 
