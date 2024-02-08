@@ -44,6 +44,9 @@ export class TestingEventBus implements MessageBus {
 
   resetTestMessages() {
     this.sent = [];
+    // Emulate reconnect to trigger serverAPI.onSetup callbacks.
+    this.simulateServerStatusChange({type: 'reconnecting'});
+    this.simulateServerStatusChange({type: 'open'});
   }
 
   simulateServerStatusChange(newStatus: MessageBusStatus) {
