@@ -55,9 +55,9 @@ export default function App() {
     <React.StrictMode>
       <ResetStyle />
       <I18nSupport>
-        <RecoilRoot initializeState={getEntangledAtomsInitializedState}>
-          <AccessGlobalRecoil />
-          <MaybeWithJotaiRoot>
+        <MaybeWithJotaiRoot>
+          <RecoilRoot initializeState={getEntangledAtomsInitializedState}>
+            <AccessGlobalRecoil />
             <ISLRoot>
               <ISLCommandContext>
                 <ErrorBoundary>
@@ -71,8 +71,8 @@ export default function App() {
                 </ErrorBoundary>
               </ISLCommandContext>
             </ISLRoot>
-          </MaybeWithJotaiRoot>
-        </RecoilRoot>
+          </RecoilRoot>
+        </MaybeWithJotaiRoot>
       </I18nSupport>
     </React.StrictMode>
   );
