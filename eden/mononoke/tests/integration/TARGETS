@@ -147,7 +147,10 @@ dott_test(
     # TODO(rajshar): Investigate root cause for network calls from SM Client.
     # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
     disable_all_network_access_target = False,
-    dott_files = ["test-backfill-derived-data.t"],
+    dott_files = [
+        "test-backfill-derived-data.t",
+        "test-backfill-derived-data-dependent-types.t",
+    ],
     deps = [
         "//eden/mononoke:backfill_derived_data",
         "//eden/mononoke:blobimport",
@@ -163,6 +166,7 @@ dott_test(
         ["test-backfill-*.t"],
         exclude = [
             "test-backfill-derived-data.t",
+            "test-backfill-derived-data-dependent-types.t",
         ],
     ),
     deps = [
