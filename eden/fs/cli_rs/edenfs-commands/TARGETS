@@ -29,6 +29,9 @@ rust_library(
             ],
         ),
     ],
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

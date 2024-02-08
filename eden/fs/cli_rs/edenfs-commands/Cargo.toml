@@ -33,6 +33,9 @@ tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 toml = "0.8.4"
 tracing = "0.1.40"
 
+[dev-dependencies]
+tempfile = "3.8"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 shlex = "1.3"
 

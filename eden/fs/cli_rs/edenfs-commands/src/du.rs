@@ -80,7 +80,7 @@ pub struct DiskUsageCmd {
     json: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct AggregatedUsageCounts {
     materialized: u64,
     ignored: u64,
@@ -101,6 +101,23 @@ impl AggregatedUsageCounts {
             backing: 0,
             shared: 0,
             fsck: 0,
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+struct RedirectUsageCounts {
+    path_usage: Vec<(u64, PathBuf)>,
+    total: u64,
+    failed_file_checks: HashSet<PathBuf>,
+}
+
+impl RedirectUsageCounts {
+    fn new() -> RedirectUsageCounts {
+        RedirectUsageCounts {
+            path_usage: Vec::new(),
+            total: 0,
+            failed_file_checks: HashSet::new(),
         }
     }
 }
@@ -358,7 +375,9 @@ fn get_backing_repos(checkouts: &[EdenFsCheckout]) -> HashSet<PathBuf> {
 /// Get the target folder for all the redirections.
 ///
 /// This returns 2 sets: the target of all redirections, and all the Buck redirections.
-fn get_redirections(checkouts: &[EdenFsCheckout]) -> Result<(BTreeSet<PathBuf>, HashSet<PathBuf>)> {
+fn get_redirections(
+    checkouts: &[EdenFsCheckout],
+) -> Result<(BTreeSet<(PathBuf, PathBuf)>, HashSet<PathBuf>)> {
     let mut redirections = BTreeSet::new();
     let mut buck_redirections = HashSet::new();
 
@@ -375,7 +394,7 @@ fn get_redirections(checkouts: &[EdenFsCheckout]) -> Result<(BTreeSet<PathBuf>, 
                     redir.repo_path.display()
                 )
             })? {
-                redirections.insert(target);
+                redirections.insert((redir.repo_path(), target));
             }
 
             let repo_path = redir.repo_path();
@@ -474,6 +493,32 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+// Calulate the real storage used in each redirect directory.
+fn get_redirect_usage_count(
+    redirections: BTreeSet<(PathBuf, PathBuf)>,
+) -> Result<RedirectUsageCounts> {
+    let mut redirect_usage_count = RedirectUsageCounts::new();
+    for (source, target) in redirections {
+        // GET SUMMARY INFO for redirections
+        let (usage_count, failed_file_checks) =
+            usage_for_dir(&target, None).with_context(|| {
+                format!(
+                    "Failed to measure disk space usage for redirection {}",
+                    target.display()
+                )
+            })?;
+        redirect_usage_count.total += usage_count;
+        redirect_usage_count
+            .failed_file_checks
+            .extend(failed_file_checks);
+        redirect_usage_count.path_usage.push((usage_count, source));
+    }
+    // Sort by largest usage first
+    redirect_usage_count.path_usage.sort_by_key(|x| x.0);
+    redirect_usage_count.path_usage.reverse();
+    Ok(redirect_usage_count)
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self) -> Result<ExitCode> {
@@ -488,8 +533,10 @@ impl crate::Subcommand for DiskUsageCmd {
         let backing_repos = get_backing_repos(&checkouts);
         let (redirections, buck_redirections) =
             get_redirections(&checkouts).context("Failed to get EdenFS redirections")?;
+        let (_redirect_sources, redirect_targets): (BTreeSet<PathBuf>, BTreeSet<PathBuf>) =
+            redirections.iter().cloned().unzip();
         let orphaned_redirections =
-            redirect::scratch::get_orphaned_redirection_targets(&redirections)
+            redirect::scratch::get_orphaned_redirection_targets(&redirect_targets)
                 .unwrap_or_else(|_| Vec::new());
         let fsck_dirs = get_fsck_dirs(&checkouts);
 
@@ -539,19 +586,8 @@ impl crate::Subcommand for DiskUsageCmd {
             mount_failed_file_checks.extend(failed_file_checks);
         }
 
-        let mut redirection_failed_file_checks = HashSet::new();
-        for target in redirections {
-            // GET SUMMARY INFO for redirections
-            let (usage_count, failed_file_checks) =
-                usage_for_dir(&target, None).with_context(|| {
-                    format!(
-                        "Failed to measure disk space usage for redirection {}",
-                        target.display()
-                    )
-                })?;
-            aggregated_usage_counts.redirection += usage_count;
-            redirection_failed_file_checks.extend(failed_file_checks);
-        }
+        let redirect_usage_count = get_redirect_usage_count(redirections)?;
+        aggregated_usage_counts.redirection = redirect_usage_count.total;
 
         let mut orphaned_redirection_failed_file_checks = HashSet::new();
         for orphaned in orphaned_redirections.iter() {
@@ -569,7 +605,8 @@ impl crate::Subcommand for DiskUsageCmd {
         // Make immutable
         let backing_failed_file_checks = backing_failed_file_checks;
         let mount_failed_file_checks = mount_failed_file_checks;
-        let redirection_failed_file_checks = redirection_failed_file_checks;
+        let redirection_failed_file_checks = redirect_usage_count.failed_file_checks;
+        let redirection_path_usage_count = redirect_usage_count.path_usage;
         let buck_redirections = buck_redirections;
 
         // GET SUMMARY INFO for shared usage
@@ -746,6 +783,14 @@ impl crate::Subcommand for DiskUsageCmd {
                 println!("{}", aggregated_usage_counts);
             }
 
+            // PRINT DETAILS
+            if !redirection_path_usage_count.is_empty() {
+                write_title("Redirections Details");
+                for (usage_count, redirect) in redirection_path_usage_count {
+                    println!("{: >10}: {}", format_size(usage_count), redirect.display());
+                }
+            }
+
             if !self.should_clean() {
                 println!(
                     "{}",
@@ -755,4 +800,135 @@ impl crate::Subcommand for DiskUsageCmd {
         }
         Ok(0)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
+    use std::io::Seek;
+    use std::io::Write;
+
+    use anyhow::Context;
+    use edenfs_error::Result;
+    use edenfs_error::ResultExt;
+    use edenfs_utils::remove_symlink;
+    use hg_util::path::symlink_dir;
+    use tempfile::tempdir;
+    use tempfile::TempDir;
+
+    use super::*;
+
+    const TEST_FILESIZE_BYTES: u64 = 500;
+
+    // Creates a test redirection. A redirection consists of a symlink pointing to
+    // a temporary directory with two files of size `filesize`. Returns the temporary
+    // directory as TempDir and the symlink as PathBuf. The symlink will need to be manually
+    // deleted after the test is done. The total size of the directory is 2x the filesize.
+    fn create_test_redirection(filesize: u64) -> Result<(TempDir, PathBuf)> {
+        let temp_dir = tempdir().context("couldn't create temp dir").unwrap();
+
+        let mut temp_file = File::create(temp_dir.path().join("temporary-file.txt")).unwrap();
+        temp_file.set_len(filesize).expect("Set length");
+        // Write one byte at the end so that we have a valid file
+        temp_file
+            .seek(std::io::SeekFrom::Start(filesize - 1))
+            .expect("Seek to file size");
+        temp_file
+            .write_all(b"0")
+            .from_err()
+            .expect("Write last byte");
+        let mut temp_file2 = File::create(temp_dir.path().join("temporary-file2.txt")).unwrap();
+        temp_file2.set_len(filesize).expect("Set length");
+        temp_file2
+            .seek(std::io::SeekFrom::Start(filesize - 1))
+            .expect("Seek to file size");
+        temp_file2.write_all(b"0").expect("write last byte");
+
+        let temp_symlink = temp_dir.path().with_extension("symlink");
+        symlink_dir(temp_dir.path(), temp_symlink.as_path()).expect("Create symlink");
+        Ok((temp_dir, temp_symlink))
+    }
+
+    fn setup_redirections(
+        num_redirects: u64,
+    ) -> Result<(BTreeSet<(PathBuf, PathBuf)>, Vec<PathBuf>, Vec<TempDir>)> {
+        let mut redirections = BTreeSet::new();
+        let mut symlinks = Vec::new();
+        let mut paths = Vec::new();
+
+        for _ in 0..num_redirects {
+            let (path, syl) = create_test_redirection(TEST_FILESIZE_BYTES).unwrap();
+            redirections.insert((path.path().to_path_buf(), syl.clone()));
+            // Keep reference so they're not cleaned up
+            paths.push(path);
+            symlinks.push(syl);
+        }
+        Ok((redirections, symlinks, paths))
+    }
+
+    #[test]
+    fn test_detail_no_redirects() {
+        let redirections = BTreeSet::new();
+        let usage_counts = get_redirect_usage_count(redirections);
+        let unwrapped_usage_counts = usage_counts.unwrap();
+        assert_eq!(unwrapped_usage_counts.path_usage.len(), 0);
+        assert_eq!(unwrapped_usage_counts.total, 0);
+        assert_eq!(unwrapped_usage_counts.failed_file_checks.len(), 0);
+    }
+
+    #[test]
+    fn test_detail_one_redirect() {
+        let (redirections, symlinks, _paths) = setup_redirections(1).unwrap();
+        let usage_counts = get_redirect_usage_count(redirections);
+        let unwrapped_usage_counts = usage_counts.unwrap();
+        assert_eq!(unwrapped_usage_counts.path_usage.len(), 1);
+        // Match behavior for file size calculation, which is 512*numBlocks on *NIX and the size on windows
+        if cfg!(windows) {
+            assert_eq!(unwrapped_usage_counts.total, 1000);
+        } else {
+            assert_eq!(unwrapped_usage_counts.total, 512 * 16);
+        }
+        assert_eq!(unwrapped_usage_counts.failed_file_checks.len(), 0);
+
+        for syl in symlinks {
+            remove_symlink(syl.as_path()).expect("removing symlink");
+        }
+    }
+
+    #[test]
+    fn test_detail_multiple_redirects() {
+        let (redirections, symlinks, _paths) = setup_redirections(5).unwrap();
+
+        let usage_counts = get_redirect_usage_count(redirections);
+        let unwrapped_usage_counts = usage_counts.unwrap();
+        assert_eq!(unwrapped_usage_counts.path_usage.len(), 5);
+        // Match behavior for file size calculation, which is 512*numBlocks on *NIX and the size on windows
+        if cfg!(windows) {
+            assert_eq!(unwrapped_usage_counts.total, 1000 * 5);
+        } else {
+            assert_eq!(unwrapped_usage_counts.total, 512 * 16 * 5);
+        }
+        assert_eq!(unwrapped_usage_counts.failed_file_checks.len(), 0);
+
+        for syl in symlinks {
+            remove_symlink(syl.as_path()).expect("removing symlink");
+        }
+    }
+
+    #[test]
+    fn test_detail_error_redirect() {
+        let path = PathBuf::from("/tmp/doesnotexist");
+        let syl = PathBuf::from("/tmp/doesnotexist");
+        let mut redirections = BTreeSet::new();
+        redirections.insert((path, syl));
+        let usage_counts = get_redirect_usage_count(redirections);
+        let unwrapped_usage_counts = usage_counts.unwrap();
+        assert_eq!(unwrapped_usage_counts.path_usage.len(), 1);
+        assert_eq!(unwrapped_usage_counts.total, 0);
+        assert_eq!(unwrapped_usage_counts.failed_file_checks.len(), 1);
+    }
+
+    // TODO: Test Legacy Redirects
+    // TODO: Test Spareimage on MacOS
+    // TODO: Test Bind Mounts on Linux
 }
