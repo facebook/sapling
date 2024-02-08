@@ -7,20 +7,18 @@
 
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
+import {atomWithRefresh, refreshAtom} from './jotaiUtils';
 import platform from './platform';
-import {latestCommits} from './serverAPIState';
-import {selector, useRecoilValueLoadable} from 'recoil';
+import {latestCommitsJotai} from './serverAPIState';
+import {atom, useAtomValue} from 'jotai';
+import {atomFamily} from 'jotai/utils';
+import {isPromise} from 'shared/utils';
 
-const uniqueAuthors = selector<Array<string>>({
-  key: 'uniqueAuthors',
-  get: ({get}): Array<string> => {
-    const commits = get(latestCommits);
-    const authors = commits
-      .filter(commit => commit.phase !== 'public')
-      .map(commit => commit.author);
-    const unique = new Set(authors);
-    return Array.from(unique);
-  },
+const uniqueAuthors = atom<Array<string>>(get => {
+  const commits = get(latestCommitsJotai);
+  const authors = commits.filter(commit => commit.phase !== 'public').map(commit => commit.author);
+  const unique = new Set(authors);
+  return Array.from(unique);
 });
 
 type StoredAvatarData = {
@@ -57,34 +55,43 @@ function storeCachedAvatars(avatars: Map<string, string>) {
   } as StoredAvatarData);
 }
 
-const avatars = selector<Map<string, string>>({
-  key: 'avatars',
-  get: ({get}) => {
-    const authors = get(uniqueAuthors);
+const avatars = atomWithRefresh<Map<string, string> | Promise<Map<string, string>>>(get => {
+  const authors = get(uniqueAuthors);
 
-    const found = getCachedAvatars(authors);
-    if (found != null) {
-      return found;
-    }
+  const found = getCachedAvatars(authors);
+  if (found != null) {
+    return found;
+  }
 
-    serverAPI.postMessage({
-      type: 'fetchAvatars',
-      authors,
-    });
+  // PERF: This might be O(N^2) if we see new authors over time (ex. infinite scroll).
+  // Consider avoiding fetching "known" authors.
+  serverAPI.postMessage({
+    type: 'fetchAvatars',
+    authors,
+  });
 
-    return (async () => {
-      const result = await serverAPI.nextMessageMatching('fetchedAvatars', () => true);
+  return (async () => {
+    const result = await serverAPI.nextMessageMatching('fetchedAvatars', () => true);
 
-      storeCachedAvatars(result.avatars);
-
-      return result.avatars;
-    })();
-  },
+    storeCachedAvatars(result.avatars);
+    refreshAtom(avatars);
+    return result.avatars;
+  })();
 });
 
+const avatarUrl = atomFamily((username: string) =>
+  atom(get => {
+    const storage = get(avatars);
+    if (isPromise(storage)) {
+      // TODO: Consider loading from cache here.
+      return undefined;
+    }
+    return storage.get(username);
+  }),
+);
+
 export function Avatar({username}: {username: string}) {
-  const storage = useRecoilValueLoadable(avatars);
-  const img = storage.valueMaybe()?.get(username);
+  const img = useAtomValue(avatarUrl(username));
 
   return (
     <div className="commit-avatar">
@@ -107,8 +114,7 @@ export function AvatarPattern({
   id: string;
   fallbackFill: string;
 }) {
-  const storage = useRecoilValueLoadable(avatars);
-  const img = storage.valueMaybe()?.get(username);
+  const img = useAtomValue(avatarUrl(username));
   return (
     <pattern
       id={id}
