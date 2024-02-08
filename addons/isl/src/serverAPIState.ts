@@ -28,7 +28,7 @@ import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {configBackedAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
-import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
+import {clearOnCwdChange, entangledAtoms, jotaiMirrorFromRecoil} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
@@ -236,6 +236,8 @@ export const latestCommits = selector<Array<CommitInfo>>({
     return get(latestCommitsData).commits;
   },
 });
+
+export const latestCommitsJotai = jotaiMirrorFromRecoil(latestCommits);
 
 /** The dag also includes a mutationDag to answer successor queries. */
 export const latestDag = selector<Dag>({
