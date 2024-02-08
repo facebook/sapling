@@ -19,8 +19,9 @@ import {dagWithPreviews} from './previews';
 import {entangledAtoms} from './recoilUtils';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
-import {atom} from 'jotai';
-import {selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
+import {atom, useAtomValue} from 'jotai';
+import {atomFamily} from 'jotai/utils';
+import {selector, useRecoilCallback} from 'recoil';
 
 /**
  * See {@link selectedCommitInfos}
@@ -54,13 +55,9 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const isCommitSelected = selectorFamily({
-  key: 'isCommitSelected',
-  get:
-    (hash: Hash) =>
-    ({get}) =>
-      get(selectedCommitsRecoil).has(hash),
-});
+export const isCommitSelected = atomFamily((hash: Hash) =>
+  atom<boolean>(get => get(selectedCommits).has(hash)),
+);
 
 const previouslySelectedCommit = atom<undefined | string>(undefined);
 
@@ -90,7 +87,7 @@ export function useCommitSelection(hash: string): {
   ) => unknown;
   overrideSelection: (newSelected: Array<Hash>) => void;
 } {
-  const isSelected = useRecoilValue(isCommitSelected(hash));
+  const isSelected = useAtomValue(isCommitSelected(hash));
   const onClickToSelect = useRecoilCallback(
     ({snapshot}) =>
       (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
