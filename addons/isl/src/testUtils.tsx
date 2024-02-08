@@ -330,3 +330,15 @@ const clearSelectorCachesState = selector({
 export const clearAllRecoilSelectorCaches = () => {
   snapshot_UNSTABLE().getLoadable(clearSelectorCachesState).getValue();
 };
+
+/**
+ * Print test name beforeEach. This can be useful to figure out which test prints
+ * React or testing-library warnings, if the stack trace does not include the test
+ * code.
+ */
+export function beforeEachPrintTestName() {
+  beforeEach(() => {
+    // eslint-disable-next-line no-console
+    console.log(`Starting test: ${expect.getState().currentTestName}`);
+  });
+}
