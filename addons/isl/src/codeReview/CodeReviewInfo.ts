@@ -22,11 +22,13 @@ import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
+import {entangledAtoms} from '../recoilUtils';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
-import {firstLine, registerCleanup} from '../utils';
+import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
-import {atom as RecoilAtom, DefaultValue, selector, selectorFamily} from 'recoil';
+import {atomFamily} from 'jotai/utils';
+import {DefaultValue, selector, selectorFamily} from 'recoil';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
@@ -55,15 +57,34 @@ export const codeReviewProvider = selector<UICodeReviewProvider | null>({
   },
 });
 
-export const diffSummary = selectorFamily<Result<DiffSummary | undefined>, DiffId | undefined>({
-  key: 'diffSummary',
+export const diffSummary = atomFamily((diffId: DiffId | undefined) =>
+  atom<Result<DiffSummary | undefined>>(get => {
+    if (diffId == null) {
+      return {value: undefined};
+    }
+    const all = get(allDiffSummaries);
+    if (all == null) {
+      return {value: undefined};
+    }
+    if (all.error) {
+      return {error: all.error};
+    }
+    return {value: all.value?.get(diffId)};
+  }),
+);
+
+export const diffSummaryRecoil = selectorFamily<
+  Result<DiffSummary | undefined>,
+  DiffId | undefined
+>({
+  key: 'diffSummaryRecoil',
   get:
     diffId =>
     ({get}) => {
       if (diffId == null) {
         return {value: undefined};
       }
-      const all = get(allDiffSummaries);
+      const all = get(allDiffSummariesRecoil);
       if (all == null) {
         return {value: undefined};
       }
@@ -74,46 +95,46 @@ export const diffSummary = selectorFamily<Result<DiffSummary | undefined>, DiffI
     },
 });
 
-export const allDiffSummaries = RecoilAtom<Result<Map<DiffId, DiffSummary> | null>>({
-  key: 'allDiffSummaries',
-  default: {value: null},
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
-        setSelf(existing => {
-          if (existing instanceof DefaultValue) {
-            return event.summaries;
-          }
-          if (existing.error) {
-            // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?
-            // Right now, this will reset all other diffs to "loading" instead of error
-            // Probably, if all diffs fail to fetch, so will individual diffs.
-            return event.summaries;
-          }
+export const [allDiffSummaries, allDiffSummariesRecoil] = entangledAtoms<
+  Result<Map<DiffId, DiffSummary> | null>
+>({default: {value: null}, key: 'allDiffSummaries'});
 
-          if (event.summaries.error || existing.value == null) {
-            return event.summaries;
-          }
+registerDisposable(
+  allDiffSummaries,
+  serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
+    writeAtom(allDiffSummaries, existing => {
+      if (existing instanceof DefaultValue) {
+        return event.summaries;
+      }
+      if (existing.error) {
+        // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?
+        // Right now, this will reset all other diffs to "loading" instead of error
+        // Probably, if all diffs fail to fetch, so will individual diffs.
+        return event.summaries;
+      }
 
-          // merge old values with newly fetched ones
-          return {
-            value: new Map([
-              ...unwrap(existing.value).entries(),
-              ...event.summaries.value.entries(),
-            ]),
-          };
-        });
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onSetup(() =>
-        serverAPI.postMessage({
-          type: 'fetchDiffSummaries',
-        }),
-      ),
-  ],
-});
+      if (event.summaries.error || existing.value == null) {
+        return event.summaries;
+      }
+
+      // merge old values with newly fetched ones
+      return {
+        value: new Map([...unwrap(existing.value).entries(), ...event.summaries.value.entries()]),
+      };
+    });
+  }),
+  import.meta.hot,
+);
+
+registerCleanup(
+  allDiffSummaries,
+  serverAPI.onSetup(() =>
+    serverAPI.postMessage({
+      type: 'fetchDiffSummaries',
+    }),
+  ),
+  import.meta.hot,
+);
 
 /**
  * Latest commit message (title,description) for a hash.
@@ -172,7 +193,7 @@ export const latestCommitMessage = selectorFamily<
       let remoteDescription = commit.description;
       if (syncEnabled && commit.diffId) {
         // use the diff's commit message instead of the local one, if available
-        const summary = get(diffSummary(commit.diffId));
+        const summary = get(diffSummaryRecoil(commit.diffId));
         if (summary?.value) {
           remoteTitle = summary.value.title;
           remoteDescription = summary.value.commitMessage;

@@ -114,7 +114,7 @@ export function CommitInfoSidebar() {
 
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
   const provider = useRecoilValue(codeReviewProvider);
-  const diffSummaries = useRecoilValue(allDiffSummaries);
+  const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
   const [updateMessage, setUpdateMessage] = useRecoilState(
@@ -568,7 +568,7 @@ function ActionsBar({
 
   const provider = useRecoilValue(codeReviewProvider);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
-  const diffSummaries = useRecoilValue(allDiffSummaries);
+  const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const schema = useRecoilValue(commitMessageFieldsSchema);
   const headCommit = useRecoilValue(latestHeadCommit);

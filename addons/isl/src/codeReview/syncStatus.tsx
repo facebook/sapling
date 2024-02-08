@@ -8,7 +8,7 @@
 import type {Hash} from '../types';
 
 import {latestCommits} from '../serverAPIState';
-import {allDiffSummaries, codeReviewProvider} from './CodeReviewInfo';
+import {allDiffSummariesRecoil, codeReviewProvider} from './CodeReviewInfo';
 import {selector, selectorFamily} from 'recoil';
 
 export enum SyncStatus {
@@ -25,7 +25,7 @@ export const syncStatusAtom = selector<undefined | Map<Hash, SyncStatus>>({
       return undefined;
     }
     const commits = get(latestCommits);
-    const summaries = get(allDiffSummaries);
+    const summaries = get(allDiffSummariesRecoil);
     if (summaries.value == null) {
       return undefined;
     }

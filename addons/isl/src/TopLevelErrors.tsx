@@ -18,6 +18,7 @@ import {t, T} from './i18n';
 import platform from './platform';
 import {reconnectingStatus, repositoryInfo} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useRecoilValue} from 'recoil';
 import {useThrottledEffect} from 'shared/hooks';
 
@@ -113,7 +114,7 @@ function computeTopLevelError(
 export function TopLevelErrors() {
   const reconnectStatus = useRecoilValue(reconnectingStatus);
   const repoInfo = useRecoilValue(repositoryInfo);
-  const diffFetchError = useRecoilValue(allDiffSummaries).error;
+  const diffFetchError = useAtomValue(allDiffSummaries).error;
 
   const info = computeTopLevelError(repoInfo, reconnectStatus, diffFetchError);
 

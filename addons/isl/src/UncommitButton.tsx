@@ -13,6 +13,7 @@ import foundPlatform from './platform';
 import {dagWithPreviews} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
@@ -21,7 +22,7 @@ export function UncommitButton() {
   const headCommit = dag.resolve('.');
 
   const provider = useRecoilValue(codeReviewProvider);
-  const diff = useRecoilValue(diffSummary(headCommit?.diffId));
+  const diff = useAtomValue(diffSummary(headCommit?.diffId));
   const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
 
   const runOperation = useRunOperation();

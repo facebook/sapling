@@ -103,7 +103,7 @@ function DiffInfoInner({
   provider: UICodeReviewProvider;
   hideActions: boolean;
 }) {
-  const diffInfoResult = useRecoilValue(diffSummary(diffId));
+  const diffInfoResult = useAtomValue(diffSummary(diffId));
   const syncStatus = useRecoilValue(syncStatusByHash(commit.hash));
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;

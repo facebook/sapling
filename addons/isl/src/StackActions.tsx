@@ -40,7 +40,7 @@ import './StackActions.css';
  */
 export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const reviewProvider = useRecoilValue(codeReviewProvider);
-  const diffMap = useRecoilValue(allDiffSummaries);
+  const diffMap = useAtomValue(allDiffSummaries);
   const stackHashes = useAtomValue(editingStackIntentionHashes)[1];
   const loadingState = useAtomValue(loadingStackState);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(hash));
