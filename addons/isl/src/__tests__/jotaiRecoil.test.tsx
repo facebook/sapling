@@ -7,12 +7,20 @@
 
 import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
 import {lazyAtom, readAtom, writeAtom} from '../jotaiUtils';
-import {entangledAtoms} from '../recoilUtils';
+import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useRef, useState, useEffect} from 'react';
-import {RecoilRoot, atom as recoilAtom, useRecoilState, useRecoilValue} from 'recoil';
+import {act} from 'react-dom/test-utils';
+import {
+  RecoilRoot,
+  atom as recoilAtom,
+  selector,
+  useRecoilState,
+  useRecoilValue,
+  useSetRecoilState,
+} from 'recoil';
 import {SelfUpdate} from 'shared/immutableExt';
 import {nextTick} from 'shared/testUtils';
 
@@ -143,5 +151,41 @@ describe('lazyAtom', () => {
     // If `a` is updated to be `undefined`, `b` will be the fallback value.
     writeAtom(a, undefined);
     expect(readAtom(b)).toBe(2);
+  });
+});
+
+describe('jotaiMirrorFromRecoil', () => {
+  it('mirrors Recoil atom value to Jotai atom', () => {
+    const testRecoilMirrorAtom = recoilAtom<number>({
+      key: 'testRecoilMirrorAtom',
+      default: 10,
+    });
+    const testRecoilMirrorSelector = selector({
+      key: 'testRecoilMirrorSelector',
+      get: ({get}) => get(testRecoilMirrorAtom) * 2,
+    });
+    const jotaiAtom = jotaiMirrorFromRecoil(testRecoilMirrorSelector);
+
+    let value = 0;
+
+    function TestApp() {
+      const setValue = useSetRecoilState(testRecoilMirrorAtom);
+      value = useAtomValue(jotaiAtom);
+      return <button onClick={() => setValue(v => v + 1)} className="inc" />;
+    }
+
+    render(
+      <RecoilRoot>
+        <AccessGlobalRecoil />
+        <TestApp />
+      </RecoilRoot>,
+    );
+    expect(value).toBe(20);
+
+    act(() => {
+      const button = document.querySelector('.inc') as HTMLButtonElement;
+      button.click();
+    });
+    expect(value).toBe(22);
   });
 });

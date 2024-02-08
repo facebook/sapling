@@ -6,9 +6,9 @@
  */
 
 import type {MutAtom} from './jotaiUtils';
-import type {AtomEffect, MutableSnapshot, RecoilState} from 'recoil';
+import type {AtomEffect, MutableSnapshot, RecoilState, RecoilValueReadOnly} from 'recoil';
 
-import {globalRecoil} from './AccessGlobalRecoil';
+import {recoilRootGen, globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
 import {atomWithOnChange, writeAtom} from './jotaiUtils';
 import {atom} from 'jotai';
@@ -82,4 +82,23 @@ export function entangledAtoms<T>(props: {
   jotaiAtom.debugLabel = key;
 
   return [jotaiAtom, recoilAtom];
+}
+
+/**
+ * Creates a read-only Jotai atom from a Recoil value (e.g. a selector).
+ * For simplicity, the Recoil state should not be async.
+ */
+export function jotaiMirrorFromRecoil<T>(recoilState: RecoilValueReadOnly<T>) {
+  return atom(get => {
+    get(recoilRootGen);
+    const {key} = recoilState;
+    const loadable = globalRecoil().getLoadable(recoilState);
+    if (loadable.state === 'hasValue') {
+      return loadable.contents;
+    } else if (loadable.state === 'loading') {
+      throw new Error(`jotaiFromRecoil: Recoil value ${key} is still loading`);
+    } else {
+      throw loadable.contents;
+    }
+  });
 }

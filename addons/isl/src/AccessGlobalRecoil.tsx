@@ -19,10 +19,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 import type {Loadable, RecoilState, RecoilValue, Snapshot} from 'recoil';
 
+import {writeAtom} from './jotaiUtils';
+import {atom} from 'jotai';
+import {useEffect} from 'react';
 import {
   useGetRecoilValueInfo_UNSTABLE,
   useRecoilTransaction_UNSTABLE,
   useRecoilCallback,
+  useRecoilSnapshot,
 } from 'recoil';
 
 export type GlobalRecoilAccess = {
@@ -48,12 +52,24 @@ export function globalRecoil(name?: string): GlobalRecoilAccess {
 }
 
 /**
+ * Generation number. Used to notify Jotai about Recoil state changes.
+ */
+export const recoilRootGen = atom<number>(0);
+
+/**
  * Expose accessors to get/set recoil state, even outside of the recoil context.
  * This is useful to allow atoms to get/set each other, or to manipulate recoil state
  * from some subscription outside of recoil.
  */
 export function AccessGlobalRecoil({name}: {name?: string}) {
   const recoil: Partial<GlobalRecoilAccess> = {};
+
+  // Note this triggers re-render for any Recoil state changes.
+  // So `AccessGlobalRecoil` should not have children.
+  const snapshot = useRecoilSnapshot();
+  useEffect(() => {
+    writeAtom(recoilRootGen, v => v + 1);
+  }, [snapshot]);
 
   const getInfo = useGetRecoilValueInfo_UNSTABLE();
   const transact = useRecoilTransaction_UNSTABLE(({set}) => set);
