@@ -73,6 +73,8 @@ export const repositoryInfo = selector<RepoInfo | undefined>({
   },
 });
 
+export const repositoryInfoJotai = jotaiMirrorFromRecoil(repositoryInfo);
+
 export const applicationinfo = jotaiAtom<ApplicationInfo | undefined>(undefined);
 registerDisposable(
   applicationinfo,

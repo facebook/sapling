@@ -72,7 +72,7 @@ export function DiffBadge({
   provider: UICodeReviewProvider;
   syncStatus?: SyncStatus;
 }) {
-  const openerUrl = useRecoilValue(openerUrlForDiffUrl(url));
+  const openerUrl = useAtomValue(openerUrlForDiffUrl(url));
 
   return (
     <ExternalLink href={openerUrl} className={`diff-badge ${provider.name}-diff-badge`}>

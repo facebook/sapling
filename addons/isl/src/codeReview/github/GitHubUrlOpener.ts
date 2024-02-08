@@ -5,35 +5,30 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {repositoryInfo} from '../../serverAPIState';
-import {selector, selectorFamily} from 'recoil';
+import {repositoryInfoJotai} from '../../serverAPIState';
+import {atom} from 'jotai';
+import {atomFamily} from 'jotai/utils';
 
 /**
  * Configured pull request domain to view associated pull requests, such as reviewstack.dev.
  */
-export const pullRequestDomain = selector<string | undefined>({
-  key: 'pullRequestDomain',
-  get: ({get}) => {
-    const info = get(repositoryInfo);
-    return info?.type !== 'success' ? undefined : info.pullRequestDomain;
-  },
+export const pullRequestDomain = atom<string | undefined>(get => {
+  const info = get(repositoryInfoJotai);
+  return info?.type !== 'success' ? undefined : info.pullRequestDomain;
 });
 
-export const openerUrlForDiffUrl = selectorFamily<string | undefined, string | undefined>({
-  key: 'openerUrlForDiffUrl',
-  get:
-    (url?: string) =>
-    ({get}) => {
-      if (!url) {
-        return url;
-      }
-      const newDomain = get(pullRequestDomain);
-      if (newDomain) {
-        return url.replace(
-          /^https:\/\/[^/]+/,
-          newDomain.startsWith('https://') ? newDomain : `https://${newDomain}`,
-        );
-      }
+export const openerUrlForDiffUrl = atomFamily((url?: string) => {
+  return atom(get => {
+    if (!url) {
       return url;
-    },
+    }
+    const newDomain = get(pullRequestDomain);
+    if (newDomain) {
+      return url.replace(
+        /^https:\/\/[^/]+/,
+        newDomain.startsWith('https://') ? newDomain : `https://${newDomain}`,
+      );
+    }
+    return url;
+  });
 });
