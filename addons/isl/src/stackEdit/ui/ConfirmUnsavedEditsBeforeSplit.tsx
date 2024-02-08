@@ -17,7 +17,8 @@ import {T, t} from '../../i18n';
 import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
+import {useRecoilCallback} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {useAutofocusRef} from 'shared/hooks';
 
@@ -74,7 +75,7 @@ function PreSplitUnsavedEditsConfirmationModal({
   editedCommits: Array<[CommitInfo, FieldsBeingEdited]>;
   returnResultAndDismiss: (continueWithSplit: boolean) => unknown;
 }) {
-  const schema = useRecoilValue(commitMessageFieldsSchema);
+  const schema = useAtomValue(commitMessageFieldsSchema);
 
   const resetEditedCommitMessage = useRecoilCallback(({reset}) => (commit: CommitInfo) => {
     reset(editedCommitMessages(commit.hash));

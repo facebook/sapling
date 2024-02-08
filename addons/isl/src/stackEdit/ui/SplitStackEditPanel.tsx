@@ -32,6 +32,7 @@ import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
+import {useAtomValue} from 'jotai';
 import {useRef, useState, useEffect, useMemo} from 'react';
 import {useRecoilValue} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -48,7 +49,7 @@ export function SplitStackEditPanel() {
   const {commitStack} = stackEdit;
 
   const messageTemplate = useRecoilValue(commitMessageTemplate);
-  const schema = useRecoilValue(commitMessageFieldsSchema);
+  const schema = useAtomValue(commitMessageFieldsSchema);
 
   // Find the commits being split.
   const [startRev, endRev] = findStartEndRevs(stackEdit);

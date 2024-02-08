@@ -17,6 +17,7 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {readAtom} from './jotaiUtils';
 import {
   FOLD_COMMIT_PREVIEW_HASH_PREFIX,
   FoldOperation,
@@ -75,11 +76,11 @@ export function getFoldableRange(selection: Set<Hash>, dag: Dag): Array<CommitIn
 
 export function FoldButton({commit}: {commit?: CommitInfo}) {
   const foldable = useRecoilValue(foldableSelection);
-  const onClick = useRecoilCallback(({set, snapshot}) => () => {
+  const onClick = useRecoilCallback(({set}) => () => {
     if (foldable == null) {
       return;
     }
-    const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueMaybe();
+    const schema = readAtom(commitMessageFieldsSchema);
     if (schema == null) {
       return;
     }
@@ -118,7 +119,7 @@ export function updateFoldedMessageWithEditedMessage(
     const [existingTitle, existingMessage] = beingPreviewed.getFoldedMessage();
     const editedMessage = snapshot.getLoadable(editedCommitMessages(combinedHash)).valueMaybe();
 
-    const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueMaybe();
+    const schema = readAtom(commitMessageFieldsSchema);
     if (schema == null) {
       return undefined;
     }

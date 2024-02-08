@@ -19,7 +19,7 @@ import {
   commitMessageFieldsToString,
 } from '../../CommitInfoView/CommitMessageFields';
 import {getTracker} from '../../analytics/globalTracker';
-import {writeAtom} from '../../jotaiUtils';
+import {readAtom, writeAtom} from '../../jotaiUtils';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
 import {List, Record} from 'immutable';
@@ -243,7 +243,7 @@ registerDisposable(
  * 2. Any remote message changes from the server (which allows the titles in the edit stack UI to be up to date)
  */
 function rewriteCommitMessagesInStack(stack: ExportStack): ExportStack {
-  const schema = globalRecoil().getLoadable(commitMessageFieldsSchema).valueMaybe();
+  const schema = readAtom(commitMessageFieldsSchema);
   return stack.map(c => {
     let text = c.text;
     if (schema) {

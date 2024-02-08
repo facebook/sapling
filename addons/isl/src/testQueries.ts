@@ -11,9 +11,9 @@ import {
   commitMessageFieldsSchema,
   OSSDefaultFieldSchema,
 } from './CommitInfoView/CommitMessageFields';
+import {readAtom} from './jotaiUtils';
 import {screen, within, fireEvent, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
-import {snapshot_UNSTABLE} from 'recoil';
 import {unwrap} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {
@@ -222,8 +222,7 @@ export const MergeConflictTestUtils = {
 };
 
 function isInternalMessageFields(): boolean {
-  const snapshot = snapshot_UNSTABLE();
-  const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueOrThrow();
+  const schema = readAtom(commitMessageFieldsSchema);
   return schema !== OSSDefaultFieldSchema;
 }
 

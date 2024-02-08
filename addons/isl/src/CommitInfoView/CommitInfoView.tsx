@@ -197,6 +197,9 @@ function useDebounceFetchDiffDetails(diffId?: string) {
   useEffect(() => {
     // reset debouncing any time the current diff changes
     debouncedDiffFetch.reset();
+    if (diffId != null) {
+      debouncedDiffFetch(diffId);
+    }
   }, [diffId]);
   if (diffId != null) {
     debouncedDiffFetch(diffId);
@@ -209,7 +212,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
   const [editedMessage, setEditedCommitMessage] = useRecoilState(editedCommitMessages(hashOrHead));
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
-  const schema = useRecoilValue(commitMessageFieldsSchema);
+  const schema = useAtomValue(commitMessageFieldsSchema);
 
   const isFoldPreview = commit.hash.startsWith(FOLD_COMMIT_PREVIEW_HASH_PREFIX);
   const isOptimistic =
@@ -459,7 +462,7 @@ function ShowingRemoteMessageBanner({
   editedCommitMessageKey: string;
 }) {
   const provider = useRecoilValue(codeReviewProvider);
-  const schema = useRecoilValue(commitMessageFieldsSchema);
+  const schema = useAtomValue(commitMessageFieldsSchema);
   const runOperation = useRunOperation();
   const syncingEnabled = useRecoilValue(messageSyncingEnabledState);
 
@@ -570,7 +573,7 @@ function ActionsBar({
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
-  const schema = useRecoilValue(commitMessageFieldsSchema);
+  const schema = useAtomValue(commitMessageFieldsSchema);
   const headCommit = useRecoilValue(latestHeadCommit);
 
   const [updateMessage, setUpdateMessage] = useRecoilState(diffUpdateMessagesState(commit.hash));

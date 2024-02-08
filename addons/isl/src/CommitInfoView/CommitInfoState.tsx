@@ -16,12 +16,12 @@ import {dagWithPreviews} from '../previews';
 import {selectedCommitInfos} from '../selection';
 import {firstLine} from '../utils';
 import {
-  commitMessageFieldsSchema,
   parseCommitMessageFields,
   allFieldsBeingEdited,
   noFieldsBeingEdited,
   anyEditsMade,
   applyEditedFields,
+  commitMessageFieldsSchemaRecoil,
 } from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom, selector} from 'recoil';
 
@@ -54,7 +54,7 @@ export const commitMessageTemplate = atom<EditedMessage | undefined>({
       const disposable = serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
         const title = firstLine(event.template);
         const description = event.template.slice(title.length + 1);
-        const schema = getLoadable(commitMessageFieldsSchema).valueOrThrow();
+        const schema = getLoadable(commitMessageFieldsSchemaRecoil).valueOrThrow();
         const fields = parseCommitMessageFields(schema, title, description);
         setSelf({fields});
       });
@@ -162,7 +162,7 @@ export const unsavedFieldsBeingEdited = selectorFamily<FieldsBeingEdited, Hash |
     hash =>
     ({get}) => {
       const edited = get(editedCommitMessages(hash));
-      const schema = get(commitMessageFieldsSchema);
+      const schema = get(commitMessageFieldsSchemaRecoil);
       if (edited.type === 'optimistic') {
         return noFieldsBeingEdited(schema);
       }
@@ -186,7 +186,7 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
           return false;
         }
         const latest = get(latestCommitMessageFields(hash));
-        const schema = get(commitMessageFieldsSchema);
+        const schema = get(commitMessageFieldsSchemaRecoil);
         return anyEditsMade(schema, latest, assertNonOptimistic(edited).fields);
       }
       return false;

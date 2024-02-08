@@ -14,6 +14,7 @@ import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {LinkButton} from '../components/LinkButton';
 import {T, t} from '../i18n';
+import {readAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {layout} from '../stylexUtils';
 import {font, spacing} from '../tokens.stylex';
@@ -42,7 +43,7 @@ const fillCommitMessageMethods: Array<{
     label: t('last commit'),
     tooltip: t("Fill in the previous commit's message here."),
     getMessage: (commit: CommitInfo, mode: CommitInfoMode) => {
-      const schema = globalRecoil().getLoadable(commitMessageFieldsSchema).valueMaybe();
+      const schema = readAtom(commitMessageFieldsSchema);
       const dag = globalRecoil().getLoadable(dagWithPreviews).valueMaybe();
       if (!dag || !schema) {
         return undefined;
@@ -76,7 +77,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
         const hashOrHead = mode === 'commit' ? 'head' : commit.hash;
         // TODO: support amending a message
 
-        const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueMaybe();
+        const schema = readAtom(commitMessageFieldsSchema);
         const existing = snapshot.getLoadable(editedCommitMessages(hashOrHead)).valueMaybe();
         if (existing?.type === 'optimistic' || schema == null) {
           return;

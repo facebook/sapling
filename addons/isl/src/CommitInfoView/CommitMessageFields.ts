@@ -10,8 +10,9 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 
 import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
-import {clearOnCwdChange} from '../recoilUtils';
-import {atom} from 'recoil';
+import {resetOnCwdChange} from '../jotaiUtils';
+import {entangledAtoms} from '../recoilUtils';
+import {registerCleanup} from '../utils';
 import {notEmpty} from 'shared/utils';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
@@ -313,11 +314,17 @@ function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
  * and some information about those fields.
  * This is determined by an sl config on the server, hence it lives as an atom.
  */
-export const commitMessageFieldsSchema = atom<Array<FieldConfig>>({
+export const [commitMessageFieldsSchema, commitMessageFieldsSchemaRecoil] = entangledAtoms<
+  Array<FieldConfig>
+>({
   key: 'commitMessageFieldsSchema',
   default: getDefaultCommitMessageSchema(),
-  effects: [clearOnCwdChange()],
 });
+registerCleanup(
+  commitMessageFieldsSchema,
+  resetOnCwdChange(commitMessageFieldsSchema, getDefaultCommitMessageSchema()),
+  import.meta.hot,
+);
 
 export function getDefaultCommitMessageSchema() {
   return Internal.CommitMessageFieldSchema ?? OSSDefaultFieldSchema;

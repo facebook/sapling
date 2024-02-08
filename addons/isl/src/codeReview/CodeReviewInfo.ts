@@ -13,7 +13,7 @@ import serverAPI from '../ClientToServerAPI';
 import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
 import {
   applyEditedFields,
-  commitMessageFieldsSchema,
+  commitMessageFieldsSchemaRecoil,
   commitMessageFieldsToString,
   emptyCommitMessageFields,
   parseCommitMessageFields,
@@ -160,7 +160,7 @@ export const latestCommitMessage = selectorFamily<
       if (hash === 'head') {
         const template = get(commitMessageTemplate);
         if (template) {
-          const schema = get(commitMessageFieldsSchema);
+          const schema = get(commitMessageFieldsSchemaRecoil);
           const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
           const templateString = commitMessageFieldsToString(
             schema,
@@ -220,7 +220,7 @@ export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Has
     (hash: string) =>
     ({get}) => {
       const [title, description] = get(latestCommitMessage(hash));
-      const schema = get(commitMessageFieldsSchema);
+      const schema = get(commitMessageFieldsSchemaRecoil);
       return parseCommitMessageFields(schema, title, description);
     },
 });
