@@ -27,7 +27,8 @@ import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {succeedableRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilValue, useRecoilState} from 'recoil';
+import {useAtom, useAtomValue} from 'jotai';
+import {useRecoilValue} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
@@ -40,8 +41,8 @@ import './StackActions.css';
 export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
-  const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
-  const loadingState = useRecoilValue(loadingStackState);
+  const stackHashes = useAtomValue(editingStackIntentionHashes)[1];
+  const loadingState = useAtomValue(loadingStackState);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(hash));
   const dag = useRecoilValue(dagWithPreviews);
   const runOperation = useRunOperation();
@@ -254,8 +255,8 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
 function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | null {
   const uncommitted = useRecoilValue(latestUncommittedChangesData);
   const dag = useRecoilValue(dagWithPreviews);
-  const [[, stackHashes], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
-  const loadingState = useRecoilValue(loadingStackState);
+  const [[, stackHashes], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
+  const loadingState = useAtomValue(loadingStackState);
 
   const set = dag.descendants(info.hash);
   const stackCommits = dag.getBatch(set.toArray());

@@ -58,7 +58,7 @@ import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import React, {memo, useEffect, useState} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
@@ -127,7 +127,7 @@ export const Commit = memo(
 
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
-    const setEditStackIntentionHashes = useSetRecoilState(editingStackIntentionHashes);
+    const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
 
     const isHighlighted = useAtomValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
 

@@ -22,11 +22,12 @@ import {
   useStackEditState,
 } from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useAtom} from 'jotai';
+import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 export function StackEditConfirmButtons(): React.ReactElement {
-  const [[stackIntention], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
+  const [[stackIntention], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
   const dag = useRecoilValue(latestDag);
   const runOperation = useRunOperation();

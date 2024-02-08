@@ -14,15 +14,15 @@ import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
 import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useState} from 'react';
-import {useRecoilValue} from 'recoil';
 
 import './EditStackModal.css';
 
 /// Show a <Modal /> when editing a stack.
 export function MaybeEditStackModal() {
-  const loadingState = useRecoilValue(loadingStackState);
-  const [stackIntention, stackHashes] = useRecoilValue(editingStackIntentionHashes);
+  const loadingState = useAtomValue(loadingStackState);
+  const [stackIntention, stackHashes] = useAtomValue(editingStackIntentionHashes);
 
   const isEditing = stackHashes.size > 0;
   const isLoaded = isEditing && loadingState.state === 'hasValue';

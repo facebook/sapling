@@ -21,20 +21,17 @@ import {
   VSCodeRadio,
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
+import {atom, useAtom} from 'jotai';
 import {useState} from 'react';
-import {atom, useRecoilState} from 'recoil';
 import {unwrap} from 'shared/utils';
 
 import './VSCodeDropdown.css';
 
-const editModeAtom = atom<Mode>({
-  key: 'editModeAtom',
-  default: 'unified-diff',
-});
+const editModeAtom = atom<Mode>('unified-diff');
 
 export default function FileStackEditPanel() {
   const [fileIdx, setFileIdx] = useState<null | number>(null);
-  const [mode, setMode] = useRecoilState(editModeAtom);
+  const [mode, setMode] = useAtom(editModeAtom);
   const [textEdit, setTextEdit] = useState(false);
   const stackEdit = useStackEditState();
 
