@@ -21,7 +21,6 @@ import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
-import {pageVisibility} from './codeReview/CodeReviewInfo';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
@@ -194,7 +193,6 @@ export function CommitTreeList() {
   // TODO: This is a little ugly, is there a better way to tell recoil to start the subscription immediately?
   // Or should we queue/cache messages?
   useRecoilState(latestUncommittedChangesData);
-  useRecoilState(pageVisibility);
   const renderer = useAtomValue(configGraphRenderer);
 
   useMarkOperationsCompleted();

@@ -19,12 +19,14 @@ import {
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
+import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
-import {firstLine} from '../utils';
+import {firstLine, registerCleanup} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
-import {atom, DefaultValue, selector, selectorFamily} from 'recoil';
+import {atom} from 'jotai';
+import {atom as RecoilAtom, DefaultValue, selector, selectorFamily} from 'recoil';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
@@ -72,7 +74,7 @@ export const diffSummary = selectorFamily<Result<DiffSummary | undefined>, DiffI
     },
 });
 
-export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({
+export const allDiffSummaries = RecoilAtom<Result<Map<DiffId, DiffSummary> | null>>({
   key: 'allDiffSummaries',
   default: {value: null},
   effects: [
@@ -202,39 +204,35 @@ export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Has
     },
 });
 
-export const pageVisibility = atom<PageVisibility>({
-  key: 'pageVisibility',
-  default: document.hasFocus() ? 'focused' : document.visibilityState,
-  effects: [
-    ({setSelf}) => {
-      const handleVisibilityChange = () => {
-        const newValue = document.hasFocus() ? 'focused' : document.visibilityState;
-        setSelf(oldValue => {
-          if (oldValue !== newValue && newValue === 'hidden') {
-            clearTrackedCache();
-          }
-          return newValue;
-        });
-      };
+export const pageVisibility = atomWithOnChange(
+  atom<PageVisibility>(document.hasFocus() ? 'focused' : document.visibilityState),
+  debounce(state => {
+    serverAPI.postMessage({
+      type: 'pageVisibility',
+      state,
+    });
+  }, 50),
+);
 
-      window.addEventListener('focus', handleVisibilityChange);
-      window.addEventListener('blur', handleVisibilityChange);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('focus', handleVisibilityChange);
-        window.removeEventListener('blur', handleVisibilityChange);
-      };
-    },
-    ({onSet}) => {
-      onSet(
-        debounce(state => {
-          serverAPI.postMessage({
-            type: 'pageVisibility',
-            state,
-          });
-        }, 50),
-      );
-    },
-  ],
-});
+const handleVisibilityChange = () => {
+  const newValue = document.hasFocus() ? 'focused' : document.visibilityState;
+  writeAtom(pageVisibility, oldValue => {
+    if (oldValue !== newValue && newValue === 'hidden') {
+      clearTrackedCache();
+    }
+    return newValue;
+  });
+};
+
+window.addEventListener('focus', handleVisibilityChange);
+window.addEventListener('blur', handleVisibilityChange);
+document.addEventListener('visibilitychange', handleVisibilityChange);
+registerCleanup(
+  pageVisibility,
+  () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleVisibilityChange);
+    window.removeEventListener('blur', handleVisibilityChange);
+  },
+  import.meta.hot,
+);
