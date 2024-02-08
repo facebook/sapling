@@ -64,7 +64,7 @@ pub enum BatchDeriveStats {
 }
 
 impl BatchDeriveStats {
-    fn append(self, other: Self) -> anyhow::Result<Self> {
+    pub fn append(self, other: Self) -> anyhow::Result<Self> {
         use BatchDeriveStats::*;
         Ok(match (self, other) {
             (Parallel(d1), Parallel(d2)) => Parallel(d1 + d2),

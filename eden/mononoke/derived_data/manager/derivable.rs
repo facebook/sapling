@@ -9,6 +9,7 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -26,6 +27,11 @@ use strum::Display;
 use strum::EnumString;
 
 use crate::context::DerivationContext;
+use crate::BatchDeriveOptions;
+use crate::BatchDeriveStats;
+use crate::DerivationError;
+use crate::DerivedDataManager;
+use crate::Rederivation;
 
 /// Enum which consolidates all available derived data types
 /// It provides access to `const &'static str` representation to
@@ -240,6 +246,16 @@ pub trait DerivationDependencies {
         csid: ChangesetId,
         visited: &mut HashSet<TypeId>,
     ) -> Result<()>;
+    /// Derive all dependent data types for this batch of commits.
+    /// The same pre-conditions apply as in derive.rs
+    async fn derive_exactly_batch_dependencies(
+        ddm: &DerivedDataManager,
+        ctx: &CoreContext,
+        csid: Vec<ChangesetId>,
+        batch_options: BatchDeriveOptions,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        visited: &mut HashSet<TypeId>,
+    ) -> Result<BatchDeriveStats, DerivationError>;
 }
 
 #[async_trait]
@@ -251,6 +267,16 @@ impl DerivationDependencies for () {
         _visited: &mut HashSet<TypeId>,
     ) -> Result<()> {
         Ok(())
+    }
+    async fn derive_exactly_batch_dependencies(
+        _ddm: &DerivedDataManager,
+        _ctx: &CoreContext,
+        _csid: Vec<ChangesetId>,
+        batch_options: BatchDeriveOptions,
+        _rederivation: Option<Arc<dyn Rederivation>>,
+        _visited: &mut HashSet<TypeId>,
+    ) -> Result<BatchDeriveStats, DerivationError> {
+        Ok(batch_options.into())
     }
 }
 
@@ -276,6 +302,46 @@ where
             Ok(())
         } else {
             Rest::check_dependencies(ctx, derivation_ctx, csid, visited).await
+        }
+    }
+    async fn derive_exactly_batch_dependencies(
+        ddm: &DerivedDataManager,
+        ctx: &CoreContext,
+        csid: Vec<ChangesetId>,
+        batch_options: BatchDeriveOptions,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        visited: &mut HashSet<TypeId>,
+    ) -> Result<BatchDeriveStats, DerivationError> {
+        let type_id = TypeId::of::<Derivable>();
+        if visited.insert(type_id) {
+            let res = try_join(
+                ddm.derive_exactly_batch::<Derivable>(
+                    ctx,
+                    csid.clone(),
+                    batch_options,
+                    rederivation.clone(),
+                ),
+                Rest::derive_exactly_batch_dependencies(
+                    ddm,
+                    ctx,
+                    csid,
+                    batch_options,
+                    rederivation,
+                    visited,
+                ),
+            )
+            .await?;
+            Ok(res.0.append(res.1)?)
+        } else {
+            Rest::derive_exactly_batch_dependencies(
+                ddm,
+                ctx,
+                csid,
+                batch_options,
+                rederivation,
+                visited,
+            )
+            .await
         }
     }
 }
