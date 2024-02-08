@@ -77,6 +77,15 @@ impl BatchDeriveStats {
     }
 }
 
+impl From<BatchDeriveOptions> for BatchDeriveStats {
+    fn from(batch_options: BatchDeriveOptions) -> Self {
+        match batch_options {
+            BatchDeriveOptions::Serial => BatchDeriveStats::Serial(vec![]),
+            BatchDeriveOptions::Parallel { .. } => BatchDeriveStats::Parallel(Duration::ZERO),
+        }
+    }
+}
+
 /// Trait to allow determination of rederivation.
 pub trait Rederivation: Send + Sync + 'static {
     /// Determine whether a changeset needs rederivation of
@@ -806,13 +815,7 @@ impl DerivedDataManager {
         } else {
             (
                 csids,
-                future::ready(Ok(match batch_options {
-                    BatchDeriveOptions::Serial => BatchDeriveStats::Serial(vec![]),
-                    BatchDeriveOptions::Parallel { .. } => {
-                        BatchDeriveStats::Parallel(Duration::ZERO)
-                    }
-                }))
-                .right_future(),
+                future::ready(Ok(batch_options.into())).right_future(),
             )
         };
         self.check_enabled::<Derivable>()?;
