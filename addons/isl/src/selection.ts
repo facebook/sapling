@@ -19,7 +19,8 @@ import {dagWithPreviews} from './previews';
 import {entangledAtoms} from './recoilUtils';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
-import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
+import {atom} from 'jotai';
+import {selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
 
 /**
  * See {@link selectedCommitInfos}
@@ -61,10 +62,7 @@ export const isCommitSelected = selectorFamily({
       get(selectedCommitsRecoil).has(hash),
 });
 
-const previouslySelectedCommit = atom<undefined | string>({
-  key: 'previouslySelectedCommit',
-  default: undefined,
-});
+const previouslySelectedCommit = atom<undefined | string>(undefined);
 
 /**
  * Clicking on commits will select them in the UI.
@@ -94,7 +92,7 @@ export function useCommitSelection(hash: string): {
 } {
   const isSelected = useRecoilValue(isCommitSelected(hash));
   const onClickToSelect = useRecoilCallback(
-    ({set, snapshot}) =>
+    ({snapshot}) =>
       (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
         // previews won't change a commit from draft -> public, so we don't need
         // to use previews here
@@ -105,7 +103,7 @@ export function useCommitSelection(hash: string): {
         }
         writeAtom(selectedCommits, last => {
           if (e.shiftKey) {
-            const previouslySelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+            const previouslySelected = readAtom(previouslySelectedCommit);
             const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
             if (linearHistory != null && previouslySelected != null) {
               const prevIdx = linearHistory.findIndex(val => val.hash === previouslySelected);
@@ -139,7 +137,7 @@ export function useCommitSelection(hash: string): {
             } else {
               // unselect
               selected.delete(hash);
-              set(previouslySelectedCommit, undefined);
+              writeAtom(previouslySelectedCommit, undefined);
             }
           } else {
             if (!e.metaKey) {
@@ -150,7 +148,7 @@ export function useCommitSelection(hash: string): {
           }
           return selected;
         });
-        set(previouslySelectedCommit, hash);
+        writeAtom(previouslySelectedCommit, hash);
       },
     [hash],
   );
@@ -197,7 +195,7 @@ export const linearizedCommitHistory = selector({
 });
 
 export function useArrowKeysToChangeSelection() {
-  const cb = useRecoilCallback(({snapshot, set}) => (which: ISLCommandName) => {
+  const cb = useRecoilCallback(({snapshot}) => (which: ISLCommandName) => {
     if (which === 'OpenDetails') {
       writeAtom(islDrawerState, previous => ({
         ...previous,
@@ -221,13 +219,13 @@ export function useArrowKeysToChangeSelection() {
         const top = linearNonPublicHistory.at(-1)?.hash;
         if (top != null) {
           writeAtom(selectedCommits, new Set([top]));
-          set(previouslySelectedCommit, top);
+          writeAtom(previouslySelectedCommit, top);
         }
       }
       return;
     }
 
-    const lastSelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    const lastSelected = readAtom(previouslySelectedCommit);
     if (lastSelected == null) {
       return;
     }
@@ -272,7 +270,7 @@ export function useArrowKeysToChangeSelection() {
     writeAtom(selectedCommits, last =>
       extendSelection ? new Set([...last, newSelected.hash]) : new Set([newSelected.hash]),
     );
-    set(previouslySelectedCommit, newSelected.hash);
+    writeAtom(previouslySelectedCommit, newSelected.hash);
   });
 
   useCommand('OpenDetails', () => cb('OpenDetails'));
@@ -289,7 +287,7 @@ export function useBackspaceToHideSelected(): void {
     // Just preview hiding the most recently selected commit.
     // Another sensible behavior would be to inspect the tree of commits selected
     // and find if there's a single common ancestor to hide. That won't work in all cases though.
-    const mostRecent = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    const mostRecent = readAtom(previouslySelectedCommit);
     let hashToHide = mostRecent;
     if (hashToHide == null) {
       const selection = readAtom(selectedCommits);
