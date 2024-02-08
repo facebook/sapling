@@ -14,7 +14,9 @@ import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
+import {lazyAtom, writeAtom} from './jotaiUtils';
 import {repositoryInfo, serverCwd} from './serverAPIState';
+import {registerCleanup, registerDisposable} from './utils';
 import {
   VSCodeBadge,
   VSCodeButton,
@@ -22,31 +24,34 @@ import {
   VSCodeRadio,
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename} from 'shared/utils';
 
-export const availableCwds = atom<Array<AbsolutePath>>({
-  key: 'availableCwds',
-  default: [],
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('platform/availableCwds', event => {
-        setSelf(event.options);
+export const availableCwds = lazyAtom<Array<AbsolutePath>>(() => {
+  // Only request `subscribeToAvailableCwds` when first read the atom.
+  registerCleanup(
+    availableCwds,
+    serverAPI.onConnectOrReconnect(() => {
+      serverAPI.postMessage({
+        type: 'platform/subscribeToAvailableCwds',
       });
-      return () => disposable.dispose();
-    },
+    }),
+    import.meta.hot,
+  );
+  return [];
+}, []);
 
-    () =>
-      serverAPI.onConnectOrReconnect(() =>
-        serverAPI.postMessage({
-          type: 'platform/subscribeToAvailableCwds',
-        }),
-      ),
-  ],
-});
+registerDisposable(
+  availableCwds,
+  serverAPI.onMessageOfType('platform/availableCwds', event =>
+    writeAtom(availableCwds, event.options),
+  ),
+  import.meta.hot,
+);
 
 export function CwdSelector() {
   const info = useRecoilValue(repositoryInfo);
@@ -102,7 +107,7 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
 
 export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divider?: boolean}) {
   const currentCwd = useRecoilValue(serverCwd);
-  const cwdOptions = useRecoilValue(availableCwds);
+  const cwdOptions = useAtomValue(availableCwds);
   if (cwdOptions.length < 2) {
     return null;
   }
