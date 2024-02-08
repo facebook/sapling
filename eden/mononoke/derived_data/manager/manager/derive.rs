@@ -29,7 +29,6 @@ use derived_data_service_if::DerivedDataType;
 use derived_data_service_if::RequestError;
 use derived_data_service_if::RequestErrorReason;
 use derived_data_service_if::RequestStatus;
-use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::join;
@@ -784,6 +783,9 @@ impl DerivedDataManager {
     /// and ancestors of the batch to have already been derived.  If
     /// any dependency or ancestor is not already derived, an error
     /// will be returned.
+    /// If a dependent derived data type has not been derived for the batch of changesets prior to
+    /// this, it will be derived first. The same pre-conditions apply on the dependent derived data
+    /// type.
     pub async fn derive_exactly_batch<Derivable>(
         &self,
         ctx: &CoreContext,
@@ -837,7 +839,7 @@ impl DerivedDataManager {
         }
 
         // Load all of the bonsais for this batch.
-        let bonsais = stream::iter(csids.into_iter().map(|csid| async move {
+        let bonsais = stream::iter(csids.iter().cloned().map(|csid| async move {
             let bonsai = csid.load(ctx, derivation_ctx_ref.blobstore()).await?;
             Ok::<_, Error>(bonsai)
         }))
@@ -867,22 +869,24 @@ impl DerivedDataManager {
 
         // Dependency checks: all ancestors should have this derived
         // data type derived
-        let ancestor_checks = async move {
-            stream::iter(ancestors)
-                .map(|csid| derivation_ctx_ref.fetch_dependency::<Derivable>(ctx, csid))
-                .buffered(100)
-                .try_for_each(|_| async { Ok(()) })
-                .await
-                .with_context(|| {
-                    format!(
-                        "a batch ancestor does not have '{}' derived",
-                        Derivable::NAME
-                    )
-                })
-        };
+        stream::iter(ancestors)
+            .map(|csid| derivation_ctx_ref.fetch_dependency::<Derivable>(ctx, csid))
+            .buffered(100)
+            .try_for_each(|_| async { Ok(()) })
+            .await
+            .with_context(|| {
+                format!(
+                    "a batch ancestor does not have '{}' derived",
+                    Derivable::NAME
+                )
+            })
+            .context(concat!(
+                "derive exactly batch pre-condition not satisfied: ",
+                "all ancestors' and dependencies' data must already have been derived",
+            ))?;
 
-        // Dependency checks: all heads should have their dependent
-        // data types derived.
+        // All heads should have their dependent data types derived.
+        // Let's check if that's the case
         let dependency_checks = async move {
             stream::iter(heads)
                 .map(|csid| async move {
@@ -899,13 +903,23 @@ impl DerivedDataManager {
                 .await
                 .context("a batch dependency has not been derived")
         };
-
-        try_join(ancestor_checks, dependency_checks)
+        // If dependent derived data types are not derived yet, let's derive them
+        let dependent_types_stats = if let Err(e) = dependency_checks.await {
+            // We will derive batch for ourselves and all of our dependencies
+            Derivable::Dependencies::derive_exactly_batch_dependencies(
+                self,
+                ctx,
+                csids,
+                batch_options,
+                rederivation.clone(),
+                &mut HashSet::new(),
+            )
             .await
-            .context(concat!(
-                "derive exactly batch pre-condition not satisfied: ",
-                "all ancestors' and dependencies' data must already have been derived",
-            ))?;
+            .context("failed to derive batch dependencies")
+            .context(e)?
+        } else {
+            batch_options.into()
+        };
 
         let ctx = ctx.clone_and_reset();
         let ctx = self.set_derivation_session_class(ctx.clone());
@@ -1034,7 +1048,9 @@ impl DerivedDataManager {
 
         let batch_stats = result?;
 
-        Ok(batch_stats.append(secondary_derivation.await?)?)
+        Ok(batch_stats
+            .append(secondary_derivation.await?)?
+            .append(dependent_types_stats)?)
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.

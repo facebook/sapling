@@ -42,14 +42,10 @@ backfill derived data
   * starting deriving data for 13 changesets* (glob)
   * starting batch of 13 from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec* (glob)
   * warmup of 13 changesets complete* (glob)
-  * Execution error: Error during derived data command execution for repo repo (glob)
-  
-  Caused by:
-      0: derive exactly batch pre-condition not satisfied: all ancestors' and dependencies' data must already have been derived
-      1: a batch dependency has not been derived
-      2: dependency 'unodes' of 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7 was not already derived
-  Error: Execution failed
-  [1]
+  * derive exactly unodes batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7, repo: repo (glob)
+  * derive exactly blame batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7, repo: repo (glob)
+  * 13/13 (13 in *) estimate:* speed:*s overall_speed:*, repo: repo (glob)
+  * Finished derived data command execution for repo repo, repo: repo (glob)
 
   $ mononoke_newadmin derived-data -R repo exists -T blame -B main
-  Not Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
+  Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
