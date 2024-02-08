@@ -10,7 +10,7 @@ import type {DiffId, DiffSummary, Hash, PageVisibility, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
-import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
+import {commitMessageTemplateRecoil} from '../CommitInfoView/CommitInfoState';
 import {
   applyEditedFields,
   commitMessageFieldsSchemaRecoil,
@@ -160,7 +160,7 @@ export const latestCommitMessage = selectorFamily<
     (hash: string) =>
     ({get}) => {
       if (hash === 'head') {
-        const template = get(commitMessageTemplate);
+        const template = get(commitMessageTemplateRecoil);
         if (template) {
           const schema = get(commitMessageFieldsSchemaRecoil);
           const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);

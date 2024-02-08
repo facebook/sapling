@@ -12,9 +12,11 @@ import {globalRecoil} from '../AccessGlobalRecoil';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
+import {readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
+import {entangledAtoms} from '../recoilUtils';
 import {selectedCommitInfos} from '../selection';
-import {firstLine} from '../utils';
+import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {
   parseCommitMessageFields,
   allFieldsBeingEdited,
@@ -22,6 +24,7 @@ import {
   anyEditsMade,
   applyEditedFields,
   commitMessageFieldsSchemaRecoil,
+  commitMessageFieldsSchema,
 } from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom, selector} from 'recoil';
 
@@ -46,28 +49,32 @@ export function assertNonOptimistic(editedMessage: EditedMessageUnlessOptimistic
   return editedMessage;
 }
 
-export const commitMessageTemplate = atom<EditedMessage | undefined>({
+export const [commitMessageTemplate, commitMessageTemplateRecoil] = entangledAtoms<
+  EditedMessage | undefined
+>({
   key: 'commitMessageTemplate',
   default: undefined,
-  effects: [
-    ({setSelf, getLoadable}) => {
-      const disposable = serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
-        const title = firstLine(event.template);
-        const description = event.template.slice(title.length + 1);
-        const schema = getLoadable(commitMessageFieldsSchemaRecoil).valueOrThrow();
-        const fields = parseCommitMessageFields(schema, title, description);
-        setSelf({fields});
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onSetup(() =>
-        serverAPI.postMessage({
-          type: 'fetchCommitMessageTemplate',
-        }),
-      ),
-  ],
 });
+registerDisposable(
+  commitMessageTemplate,
+  serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
+    const title = firstLine(event.template);
+    const description = event.template.slice(title.length + 1);
+    const schema = readAtom(commitMessageFieldsSchema);
+    const fields = parseCommitMessageFields(schema, title, description);
+    writeAtom(commitMessageTemplate, {fields});
+  }),
+  import.meta.hot,
+);
+registerCleanup(
+  commitMessageTemplate,
+  serverAPI.onSetup(() =>
+    serverAPI.postMessage({
+      type: 'fetchCommitMessageTemplate',
+    }),
+  ),
+  import.meta.hot,
+);
 
 /** Typed update messages when submitting a commit or set of commits.
  * Unlike editedCommitMessages, you can't provide an update message when committing the first time,

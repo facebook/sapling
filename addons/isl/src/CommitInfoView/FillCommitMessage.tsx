@@ -63,7 +63,7 @@ const fillCommitMessageMethods: Array<{
       'Fill in your configured commit message template.\nSee `sl help config` for more information.',
     ),
     getMessage: (_commit: CommitInfo, _mode: CommitInfoMode) => {
-      const template = globalRecoil().getLoadable(commitMessageTemplate).valueMaybe();
+      const template = readAtom(commitMessageTemplate);
       return template?.fields as CommitMessageFields | undefined;
     },
   },

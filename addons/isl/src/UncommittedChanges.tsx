@@ -408,7 +408,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   // TODO: use dagWithPreviews instead, and update CommitOperation
   const headCommit = useRecoilValue(latestHeadCommit);
   const schema = useAtomValue(commitMessageFieldsSchema);
-  const template = useRecoilValue(commitMessageTemplate);
+  const template = useAtomValue(commitMessageTemplate);
 
   const conflicts = useRecoilValue(optimisticMergeConflicts);
 
