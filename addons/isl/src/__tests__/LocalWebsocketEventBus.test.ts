@@ -11,7 +11,7 @@
 
 import type {Writable} from 'shared/typeUtils';
 
-import {LocalWebSocketEventBus} from '../MessageBus';
+import {LocalWebSocketEventBus} from '../LocalWebSocketEventBus';
 
 jest.mock('../urlParams', () => ({
   initialParams: new Map([['token', '1234']]),
@@ -35,10 +35,10 @@ class MockWebSocketImpl extends EventTarget implements WebSocket {
   protocol = '';
   readyState = 0;
 
-  readonly OPEN = 0 as const;
-  readonly CONNECTING = 1 as const;
-  readonly CLOSED = 2 as const;
-  readonly CLOSING = 3 as const;
+  readonly OPEN = 1 as const;
+  readonly CONNECTING = 0 as const;
+  readonly CLOSED = 3 as const;
+  readonly CLOSING = 2 as const;
 
   send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
     this.sentMessages.push(data as string);

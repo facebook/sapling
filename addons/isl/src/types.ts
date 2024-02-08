@@ -633,3 +633,9 @@ export type Disposable = {
 export type ComparisonData = {
   diff: Result<string>;
 };
+
+export type MessageBusStatus =
+  | {type: 'initializing'}
+  | {type: 'open'}
+  | {type: 'reconnecting'}
+  | {type: 'error'; error?: string};
