@@ -22,7 +22,7 @@ import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
-import {entangledAtoms} from '../recoilUtils';
+import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
@@ -56,6 +56,8 @@ export const codeReviewProvider = selector<UICodeReviewProvider | null>({
     return null;
   },
 });
+
+export const codeReviewProviderJotai = jotaiMirrorFromRecoil(codeReviewProvider);
 
 export const diffSummary = atomFamily((diffId: DiffId | undefined) =>
   atom<Result<DiffSummary | undefined>>(get => {
