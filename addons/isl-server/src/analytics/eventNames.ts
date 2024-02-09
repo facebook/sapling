@@ -39,6 +39,8 @@ export type TrackEventName =
   | 'CreateEmptyInitialCommit'
   | 'ClickSuggestedRebase'
   | 'DiscardOperation'
+  | 'EnterMergeConflicts'
+  | 'ExitMergeConflicts'
   | 'ForgetOperation'
   | 'FoldOperation'
   | 'FillCommitMessage'

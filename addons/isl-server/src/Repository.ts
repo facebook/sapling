@@ -446,6 +446,14 @@ export class Repository {
       this.logger.info('remaining files with conflicts: ', remainingConflicts);
     }
     this.mergeConflictsEmitter.emit('change', this.mergeConflicts);
+
+    if (!wasAlreadyInConflicts && this.mergeConflicts) {
+      this.trackerBestEffort.track('EnterMergeConflicts', {
+        extras: {numConflicts: this.mergeConflicts.files?.length ?? 0},
+      });
+    } else if (wasAlreadyInConflicts && !this.mergeConflicts) {
+      this.trackerBestEffort.track('ExitMergeConflicts', {extras: {}});
+    }
   });
 
   public getMergeConflicts(): MergeConflicts | undefined {
