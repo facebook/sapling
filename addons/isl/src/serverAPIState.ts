@@ -418,12 +418,9 @@ export const latestHeadCommit = selector<CommitInfo | undefined>({
  * - Either the list of commits has successfully loaded
  * - or there was an error during the fetch
  */
-export const haveCommitsLoadedYet = selector<boolean>({
-  key: 'haveCommitsLoadedYet',
-  get: ({get}) => {
-    const data = get(latestCommitsDataRecoil);
-    return data.commits.length > 0 || data.error != null;
-  },
+export const haveCommitsLoadedYet = jotaiAtom(get => {
+  const data = get(latestCommitsDataJotai);
+  return data.commits.length > 0 || data.error != null;
 });
 
 export const operationBeingPreviewed = atom<Operation | undefined>({

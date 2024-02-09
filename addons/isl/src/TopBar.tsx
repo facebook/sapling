@@ -32,7 +32,7 @@ import {clearTrackedCache} from 'shared/LRU';
 import './TopBar.css';
 
 export function TopBar() {
-  const loaded = useRecoilValue(haveCommitsLoadedYet);
+  const loaded = useAtomValue(haveCommitsLoadedYet);
   const canPush = useAtomValue(haveRemotePath);
   if (!loaded) {
     return null;
