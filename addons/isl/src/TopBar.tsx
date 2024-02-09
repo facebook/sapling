@@ -25,7 +25,6 @@ import {
 } from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {clearTrackedCache} from 'shared/LRU';
 
@@ -58,7 +57,7 @@ export function TopBar() {
 }
 
 function FetchingDataIndicator() {
-  const isFetching = useRecoilValue(isFetchingCommits);
+  const isFetching = useAtomValue(isFetchingCommits);
   return isFetching ? <Icon icon="loading" /> : null;
 }
 

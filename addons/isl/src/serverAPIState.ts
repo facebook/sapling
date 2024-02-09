@@ -322,25 +322,21 @@ export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
   true /* read-only */,
 );
 
-export const isFetchingCommits = atom<boolean>({
-  key: 'isFetchingCommits',
-  default: false,
-  effects: [
-    ({setSelf}) => {
-      const disposables = [
-        serverAPI.onMessageOfType('subscriptionResult', () => {
-          setSelf(false); // new commits OR error means the fetch is not running anymore
-        }),
-        serverAPI.onMessageOfType('beganFetchingSmartlogCommitsEvent', () => {
-          setSelf(true);
-        }),
-      ];
-      return () => {
-        disposables.forEach(d => d.dispose());
-      };
-    },
-  ],
-});
+export const isFetchingCommits = jotaiAtom(false);
+registerDisposable(
+  isFetchingCommits,
+  serverAPI.onMessageOfType('subscriptionResult', () => {
+    writeAtom(isFetchingCommits, false); // new commits OR error means the fetch is not running anymore
+  }),
+  import.meta.hot,
+);
+registerDisposable(
+  isFetchingCommits,
+  serverAPI.onMessageOfType('beganFetchingSmartlogCommitsEvent', () => {
+    writeAtom(isFetchingCommits, true);
+  }),
+  import.meta.hot,
+);
 
 export const isFetchingAdditionalCommits = atom<boolean>({
   key: 'isFetchingAdditionalCommits',
