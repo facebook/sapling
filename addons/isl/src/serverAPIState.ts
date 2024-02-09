@@ -300,11 +300,8 @@ export const latestDag = selector<Dag>({
   },
 });
 
-export const commitFetchError = selector<Error | undefined>({
-  key: 'commitFetchError',
-  get: ({get}) => {
-    return get(latestCommitsDataRecoil).error;
-  },
+export const commitFetchError = jotaiAtom(get => {
+  return get(latestCommitsDataJotai).error;
 });
 
 export const hasExperimentalFeatures = configBackedAtom<boolean | null>(

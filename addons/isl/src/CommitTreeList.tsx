@@ -203,7 +203,7 @@ export function CommitTreeList() {
   const isNarrow = useAtomValue(isNarrowCommitTree);
 
   const {trees} = useRecoilValue(treeWithPreviews);
-  const fetchError = useRecoilValue(commitFetchError);
+  const fetchError = useAtomValue(commitFetchError);
   return fetchError == null && trees.length === 0 ? (
     <Center>
       <LargeSpinner />
