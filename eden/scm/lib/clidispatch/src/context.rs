@@ -37,16 +37,8 @@ where
 {
     pub(crate) fn new(config: Arc<dyn Config>, p: ParseOutput, io: IO) -> Result<Self> {
         let global_opts: HgGlobalOpts = p.clone().try_into()?;
-        let logger = TermLogger::new(&io)
-            .with_quiet(global_opts.quiet)
-            .with_verbose(global_opts.verbose);
         Ok(Self {
-            core: CoreContext {
-                config,
-                io,
-                logger,
-                raw_args: p.raw_args.clone(),
-            },
+            core: CoreContext::new(config, io, p.raw_args.clone()),
             opts: p.try_into()?,
             global_opts,
         })
