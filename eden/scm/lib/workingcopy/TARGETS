@@ -33,6 +33,7 @@ rust_library(
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",

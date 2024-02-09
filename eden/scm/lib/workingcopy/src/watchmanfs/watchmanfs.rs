@@ -49,6 +49,7 @@ use crate::physicalfs::PhysicalFileSystem;
 use crate::util::dirstate_write_time_override;
 use crate::util::maybe_flush_treestate;
 use crate::util::walk_treestate;
+use crate::watchman_client::DeferredWatchmanClient;
 use crate::watchmanfs::treestate::get_clock;
 use crate::watchmanfs::treestate::list_needs_check;
 use crate::workingcopy::WorkingCopy;
@@ -56,6 +57,7 @@ use crate::workingcopy::WorkingCopy;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 pub struct WatchmanFileSystem {
+    client: Arc<DeferredWatchmanClient>,
     inner: PhysicalFileSystem,
 }
 
@@ -99,21 +101,21 @@ impl WatchmanFileSystem {
         store: ArcFileStore,
         treestate: Arc<Mutex<TreeState>>,
         locker: Arc<RepoLocker>,
+        client: Arc<DeferredWatchmanClient>,
     ) -> Result<Self> {
         Ok(WatchmanFileSystem {
+            client,
             inner: PhysicalFileSystem::new(vfs, tree_resolver, store, treestate, locker)?,
         })
     }
 
     async fn query_files(
         &self,
+        client: Arc<Client>,
         config: WatchmanConfig,
         ignore_dirs: Vec<PathBuf>,
     ) -> Result<QueryResult<StatusQuery>> {
         let start = std::time::Instant::now();
-
-        // This starts watchman if it isn't already started.
-        let client = Connector::new().connect().await?;
 
         // This blocks until the recrawl (if required) is done. Progress is
         // shown by the crawl_progress task.
@@ -209,11 +211,14 @@ impl WatchmanFileSystem {
             ts.len() as u64,
         ));
 
+        let client = self.client.get()?;
+
         let result = {
             // Instrument query_files() from outside to avoid async weirdness.
             let _span = tracing::info_span!("query_files").entered();
 
             async_runtime::block_on(self.query_files(
+                client,
                 WatchmanConfig {
                     clock: prev_clock.clone(),
                     sync_timeout:
@@ -366,7 +371,7 @@ async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
         // query_files), this connect gets stuck indefinitely. Work around by
         // timing out and retrying until we get through.
         loop {
-            match tokio::time::timeout(Duration::from_secs(1), Connector::new().connect()).await {
+            match tokio::time::timeout(Duration::from_secs(1), connect_watchman()).await {
                 Ok(client) => break client?,
                 Err(_) => {}
             };
@@ -399,6 +404,10 @@ async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
 
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
+}
+
+pub(crate) async fn connect_watchman() -> Result<watchman_client::Client> {
+    Ok(watchman_client::Connector::new().connect().await?)
 }
 
 impl FileSystem for WatchmanFileSystem {

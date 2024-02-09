@@ -23,6 +23,7 @@ use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
@@ -65,6 +66,7 @@ use crate::git::parse_submodules;
 use crate::physicalfs::PhysicalFileSystem;
 use crate::status::compute_status;
 use crate::util::walk_treestate;
+use crate::watchman_client::DeferredWatchmanClient;
 use crate::watchmanfs::WatchmanFileSystem;
 
 #[cfg(not(feature = "eden"))]
@@ -94,6 +96,7 @@ pub struct WorkingCopy {
     pub(crate) dot_hg_path: PathBuf,
     eden_client: Option<Arc<EdenFsClient>>,
     pub journal: Journal,
+    watchman_client: Arc<DeferredWatchmanClient>,
 }
 
 const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
@@ -206,6 +209,8 @@ impl WorkingCopy {
             vfs.case_sensitive(),
         ));
 
+        let watchman_client = Arc::new(DeferredWatchmanClient::new());
+
         let (filesystem, eden_client) = Self::construct_file_system(
             vfs.clone(),
             file_system_type,
@@ -213,6 +218,7 @@ impl WorkingCopy {
             tree_resolver.clone(),
             filestore.clone(),
             locker.clone(),
+            watchman_client.clone(),
         )?;
         let filesystem = Mutex::new(filesystem);
 
@@ -239,6 +245,7 @@ impl WorkingCopy {
             dot_hg_path,
             eden_client,
             journal,
+            watchman_client,
         })
     }
 
@@ -320,6 +327,7 @@ impl WorkingCopy {
         tree_resolver: ArcReadTreeManifest,
         store: ArcFileStore,
         locker: Arc<RepoLocker>,
+        watchman_client: Arc<DeferredWatchmanClient>,
     ) -> Result<(BoxFileSystem, Option<Arc<EdenFsClient>>)> {
         Ok(match file_system_type {
             FileSystemType::Normal => (
@@ -339,6 +347,7 @@ impl WorkingCopy {
                     store.clone(),
                     treestate,
                     locker,
+                    watchman_client,
                 )?),
                 None,
             ),
@@ -615,6 +624,10 @@ impl WorkingCopy {
         Ok(read_to_string_if_exists(
             self.dot_hg_path.join(ACTIVE_BOOKMARK_FILE),
         )?)
+    }
+
+    pub fn watchman_client(&self) -> Result<Arc<watchman_client::Client>> {
+        self.watchman_client.get()
     }
 }
 

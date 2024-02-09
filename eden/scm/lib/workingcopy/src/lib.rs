@@ -19,5 +19,6 @@ pub mod status;
 pub mod util;
 pub mod wait;
 pub mod walker;
+mod watchman_client;
 pub mod watchmanfs;
 pub mod workingcopy;
