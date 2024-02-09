@@ -51,7 +51,7 @@ from .i18n import _, _x
 
 
 cliparser = bindings.cliparser
-rsconfig = bindings.configloader.config
+rscontext = bindings.context.context
 
 
 unrecoverablewrite = registrar.command.unrecoverablewrite
@@ -140,11 +140,11 @@ class request:
                 raise exc
 
 
-def run(args, fin, fout, ferr, rcfg: rsconfig, skipprehooks: bool):
+def run(args, fin, fout, ferr, rctx: rscontext, skipprehooks: bool):
     "run the command in sys.argv"
     _initstdio()
 
-    ui = uimod.ui(rcfg=rcfg)
+    ui = uimod.ui(rctx=rctx)
 
     if not ui or ui.configbool("experimental", "mercurial-shim", True):
         from . import mercurialshim

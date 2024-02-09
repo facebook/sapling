@@ -21,6 +21,7 @@ pyclientinfo = { version = "0.1.0", path = "modules/pyclientinfo" }
 pycliparser = { version = "0.1.0", path = "modules/pycliparser" }
 pyconchparser = { version = "0.1.0", path = "modules/pyconchparser" }
 pyconfigloader = { version = "0.1.0", path = "modules/pyconfigloader" }
+pycontext = { version = "0.1.0", path = "modules/pycontext" }
 pycopytrace = { version = "0.1.0", path = "modules/pycopytrace" }
 pydag = { version = "0.1.0", path = "modules/pydag" }
 pydiffhelpers = { version = "0.1.0", path = "modules/pydiffhelpers" }

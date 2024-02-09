@@ -153,7 +153,7 @@ class deprecationlevel(IntEnum):
 
 
 class ui:
-    def __init__(self, src=None, rcfg=None):
+    def __init__(self, src=None, rctx=None):
         """Create a fresh new ui object if no src given
 
         Use uimod.ui.load() to create a ui which knows global and user configs.
@@ -218,7 +218,7 @@ class ui:
 
             self.identity = src.identity
         else:
-            self._uiconfig = uiconfig.uiconfig(rcfg=rcfg)
+            self._uiconfig = uiconfig.uiconfig(rctx=rctx)
 
             io = util.get_main_io()
             self.fout = util.refcell(io.output())
@@ -1789,6 +1789,9 @@ class ui:
     @property
     def _rcfg(self):
         return self._uiconfig._rcfg
+
+    def rustcontext(self) -> bindings.context.context:
+        return self._uiconfig._rctx.withconfig(self._rcfg)
 
     @property
     def quiet(self):

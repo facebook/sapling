@@ -41,6 +41,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pycliparser:pycliparser",
         "//eden/scm/saplingnative/bindings/modules/pyconchparser:pyconchparser",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pycontext:pycontext",
         "//eden/scm/saplingnative/bindings/modules/pycopytrace:pycopytrace",
         "//eden/scm/saplingnative/bindings/modules/pydag:pydag",
         "//eden/scm/saplingnative/bindings/modules/pydiffhelpers:pydiffhelpers",

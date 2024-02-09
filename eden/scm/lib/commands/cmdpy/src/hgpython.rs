@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::env;
 use std::path::Path;
 use std::sync::Arc;
@@ -19,7 +18,6 @@ use commandserver::ipc::ClientIpc;
 use commandserver::ipc::CommandEnv;
 use commandserver::ipc::Server;
 use configmodel::Config;
-use configset::config::ConfigSet;
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
@@ -174,7 +172,7 @@ impl HgPython {
         py: Python<'_>,
         args: Vec<String>,
         io: &clidispatch::io::IO,
-        config: ConfigSet,
+        config: &Arc<dyn Config>,
         skip_pre_hooks: bool,
     ) -> PyResult<()> {
         let entry_point_mod =
@@ -186,8 +184,9 @@ impl HgPython {
                 None => fout.clone_ref(py),
                 Some(error) => write_to_py_object(py, error),
             });
-            let config = pyconfigloader::config::create_instance(py, RefCell::new(config)).unwrap();
-            (args, fin, fout, ferr, config, skip_pre_hooks).to_py_object(py)
+            let context = context::CoreContext::new(config.clone(), io.clone(), args.clone());
+            let context = pycontext::context::create_instance(py, context).unwrap();
+            (args, fin, fout, ferr, context, skip_pre_hooks).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
         Ok(())
@@ -203,13 +202,7 @@ impl HgPython {
     ) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_hg_py(
-            py,
-            args,
-            io,
-            ConfigSet::wrap(config.clone()),
-            skip_pre_hooks,
-        ) {
+        match self.run_hg_py(py, args, io, config, skip_pre_hooks) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an

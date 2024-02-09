@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import contextlib
 import os
 
-from bindings import configloader
+from bindings import configloader, context
 
 from . import configitems, error, pycompat, util
 from .encoding import unifromlocal, unitolocal
@@ -35,7 +35,7 @@ def optional(func, s):
 class uiconfig:
     """Config portion of the ui object"""
 
-    def __init__(self, src=None, rcfg=None):
+    def __init__(self, src=None, rctx=None):
         """Create a fresh new uiconfig object.
 
         Or copy from an existing uiconfig object.
@@ -45,11 +45,13 @@ class uiconfig:
         self.logmeasuredtimes = False
 
         if src:
+            self._rctx = src._rctx
             self._rcfg = src._rcfg.clone()
             self._unserializable = src._unserializable.copy()
             self._knownconfig = src._knownconfig
         else:
-            self._rcfg = rcfg or configloader.config()
+            self._rctx = rctx or context.context()
+            self._rcfg = self._rctx.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
             self._knownconfig = configitems.coreitems
