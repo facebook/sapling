@@ -16,9 +16,9 @@ import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
+  latestCommitsDataJotai,
   operationBeingPreviewed,
   latestCommits,
-  latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
   latestDag,
@@ -27,6 +27,7 @@ import {
   operationList,
   queuedOperations,
 } from './serverAPIState';
+import {useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {selector, useRecoilState, useRecoilValue} from 'recoil';
 import {notEmpty, unwrap} from 'shared/utils';
@@ -332,7 +333,7 @@ function* optimisticOperations(props: {
  * when ongoingOperation is used elsewhere in the tree
  */
 export function useMarkOperationsCompleted(): void {
-  const fetchedCommits = useRecoilValue(latestCommitsData);
+  const fetchedCommits = useAtomValue(latestCommitsDataJotai);
   const commits = useRecoilValue(latestCommits);
   const uncommittedChanges = useRecoilValue(latestUncommittedChangesData);
   const conflicts = useRecoilValue(mergeConflicts);

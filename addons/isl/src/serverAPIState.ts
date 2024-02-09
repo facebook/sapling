@@ -182,7 +182,7 @@ export const mergeConflicts = atom<MergeConflicts | undefined>({
   ],
 });
 
-export const latestCommitsData = atom<{
+export const [latestCommitsDataJotai, latestCommitsDataRecoil] = entangledAtoms<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
   commits: SmartlogCommits;
@@ -235,7 +235,7 @@ export const commitByHash = selectorFamily<CommitInfo | undefined, string>({
 export const latestCommits = selector<Array<CommitInfo>>({
   key: 'latestCommits',
   get: ({get}) => {
-    return get(latestCommitsData).commits;
+    return get(latestCommitsDataRecoil).commits;
   },
 });
 
@@ -258,7 +258,7 @@ export const latestDag = selector<Dag>({
 export const commitFetchError = selector<Error | undefined>({
   key: 'commitFetchError',
   get: ({get}) => {
-    return get(latestCommitsData).error;
+    return get(latestCommitsDataRecoil).error;
   },
 });
 
@@ -414,7 +414,7 @@ export const latestHeadCommit = selector<CommitInfo | undefined>({
 export const haveCommitsLoadedYet = selector<boolean>({
   key: 'haveCommitsLoadedYet',
   get: ({get}) => {
-    const data = get(latestCommitsData);
+    const data = get(latestCommitsDataRecoil);
     return data.commits.length > 0 || data.error != null;
   },
 });

@@ -21,7 +21,7 @@ import {atomWithOnChange} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
-  latestCommitsData,
+  latestCommitsDataJotai,
   latestUncommittedChangesData,
   mergeConflicts,
   repositoryInfo,
@@ -29,7 +29,7 @@ import {
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import {atom, useAtom} from 'jotai';
+import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 
@@ -111,7 +111,7 @@ function ServerClientMessageLogging() {
 
 function DebugPerfInfo() {
   const latestStatus = useRecoilValue(latestUncommittedChangesData);
-  const latestLog = useRecoilValue(latestCommitsData);
+  const latestLog = useAtomValue(latestCommitsDataJotai);
   const latestConflicts = useRecoilValue(mergeConflicts);
   const heartbeat = useHeartbeat();
   const repoInfo = useRecoilValue(repositoryInfo);
