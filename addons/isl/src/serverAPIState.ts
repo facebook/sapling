@@ -27,7 +27,7 @@ import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
-import {configBackedAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
+import {configBackedAtom, readAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
 import {clearOnCwdChange, entangledAtoms, jotaiMirrorFromRecoil} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
@@ -408,7 +408,9 @@ export const haveCommitsLoadedYet = jotaiAtom(get => {
   return data.commits.length > 0 || data.error != null;
 });
 
-export const operationBeingPreviewed = atom<Operation | undefined>({
+export const [operationBeingPreviewedJotai, operationBeingPreviewedRecoil] = entangledAtoms<
+  Operation | undefined
+>({
   key: 'operationBeingPreviewed',
   default: undefined,
   effects: [clearOnCwdChange()],
@@ -767,13 +769,12 @@ export function useRunPreviewedOperation() {
     ({snapshot, set}) =>
       (isCancel: boolean, operation?: Operation) => {
         if (isCancel) {
-          set(operationBeingPreviewed, undefined);
+          writeAtom(operationBeingPreviewedJotai, undefined);
           return;
         }
 
-        const operationToRun =
-          operation ?? snapshot.getLoadable(operationBeingPreviewed).valueMaybe();
-        set(operationBeingPreviewed, undefined);
+        const operationToRun = operation ?? readAtom(operationBeingPreviewedJotai);
+        writeAtom(operationBeingPreviewedJotai, undefined);
         if (operationToRun) {
           runOperationImpl(snapshot, set, operationToRun);
         }

@@ -17,7 +17,7 @@ import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {entangledAtoms} from './recoilUtils';
-import {latestDag, operationBeingPreviewed} from './serverAPIState';
+import {latestDag, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
@@ -279,7 +279,7 @@ export function useArrowKeysToChangeSelection() {
 }
 
 export function useBackspaceToHideSelected(): void {
-  const cb = useRecoilCallback(({snapshot, set}) => () => {
+  const cb = useRecoilCallback(({snapshot}) => () => {
     // Though you can select multiple commits, our preview system doens't handle that very well.
     // Just preview hiding the most recently selected commit.
     // Another sensible behavior would be to inspect the tree of commits selected
@@ -302,8 +302,8 @@ export function useBackspaceToHideSelected(): void {
       return;
     }
 
-    set(
-      operationBeingPreviewed,
+    writeAtom(
+      operationBeingPreviewedJotai,
       new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commitToHide)),
     );
   });

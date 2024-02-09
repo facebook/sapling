@@ -20,7 +20,7 @@ import {
   mergeConflictsRecoil,
   latestUncommittedChangesDataJotai,
   latestCommitsDataJotai,
-  operationBeingPreviewed,
+  operationBeingPreviewedRecoil,
   latestCommits,
   latestDag,
   latestHeadCommit,
@@ -260,7 +260,7 @@ export const dagWithPreviews = selector<Dag>({
     const queued = get(queuedOperations);
     const currentOperation = list.currentOperation;
     const history = list.operationHistory;
-    const currentPreview = get(operationBeingPreviewed);
+    const currentPreview = get(operationBeingPreviewedRecoil);
     let dag = originalDag;
     for (const op of optimisticOperations({history, queued, currentOperation})) {
       dag = op.optimisticDag(dag);

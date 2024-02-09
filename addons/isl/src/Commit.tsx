@@ -46,7 +46,7 @@ import {
   isFetchingUncommittedChanges,
   latestDag,
   latestUncommittedChanges,
-  operationBeingPreviewed,
+  operationBeingPreviewedJotai,
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
@@ -60,7 +60,7 @@ import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo, useCallback, useEffect, useState} from 'react';
-import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
+import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -164,8 +164,6 @@ export const Commit = memo(
       }
     }, [overrideSelection, isSelected, commit.hash, commit.isHead]);
 
-    const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
-
     const viewChangesCallback = useAtomCallback((_get, set) => {
       set(currentComparisonMode, {
         comparison: {type: ComparisonType.Committed, hash: commit.hash},
@@ -264,7 +262,8 @@ export const Commit = memo(
         items.push({
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
           onClick: () =>
-            setOperationBeingPreviewed(
+            writeAtom(
+              operationBeingPreviewedJotai,
               new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
             ),
         });
@@ -650,7 +649,7 @@ function DraggableCommit({
 }) {
   const [dragDisabledMessage, setDragDisabledMessage] = useState<string | null>(null);
   const handleDragEnter = useRecoilCallback(
-    ({snapshot, set}) =>
+    ({snapshot}) =>
       () => {
         // Capture the environment.
         const currentBeingDragged = commitBeingDragged;
@@ -683,7 +682,7 @@ function DraggableCommit({
                   commit.remoteBookmarks.length > 0
                     ? succeedableRevset(commit.remoteBookmarks[0])
                     : latestSuccessorUnlessExplicitlyObsolete(commit);
-                set(operationBeingPreviewed, op => {
+                writeAtom(operationBeingPreviewedJotai, op => {
                   const newRebase = new RebaseOperation(
                     latestSuccessorUnlessExplicitlyObsolete(beingDragged),
                     destination,

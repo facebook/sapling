@@ -25,7 +25,7 @@ import {
 } from './operations/FoldOperation';
 import {type Dag, dagWithPreviews} from './previews';
 import {selectedCommits, selectedCommitsRecoil} from './selection';
-import {operationBeingPreviewed, useRunPreviewedOperation} from './serverAPIState';
+import {operationBeingPreviewedJotai, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {type Snapshot, selector, useRecoilCallback, useRecoilValue} from 'recoil';
@@ -89,7 +89,7 @@ export function FoldButton({commit}: {commit?: CommitInfo}) {
       foldable.map(commit => parseCommitMessageFields(schema, commit.title, commit.description)),
     );
     const message = commitMessageFieldsToString(schema, messageFields);
-    set(operationBeingPreviewed, new FoldOperation(foldable, message));
+    writeAtom(operationBeingPreviewedJotai, new FoldOperation(foldable, message));
     writeAtom(selectedCommits, new Set([getFoldRangeCommitHash(foldable, /* isPreview */ true)]));
   });
   if (foldable == null || (commit != null && foldable?.[0]?.hash !== commit.hash)) {
@@ -112,7 +112,7 @@ export function FoldButton({commit}: {commit?: CommitInfo}) {
 export function updateFoldedMessageWithEditedMessage(
   snapshot: Snapshot,
 ): FoldOperation | undefined {
-  const beingPreviewed = snapshot.getLoadable(operationBeingPreviewed).valueMaybe();
+  const beingPreviewed = readAtom(operationBeingPreviewedJotai);
   if (beingPreviewed != null && beingPreviewed instanceof FoldOperation) {
     const range = beingPreviewed.getFoldRange();
     const combinedHash = getFoldRangeCommitHash(range, /* isPreview */ true);
