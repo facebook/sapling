@@ -14,7 +14,7 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {
-  operationList,
+  operationListJotai,
   queuedOperations,
   repositoryInfo,
   useAbortRunningOperation,
@@ -22,6 +22,7 @@ import {
 import {CommandRunner} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
@@ -87,7 +88,7 @@ function OperationDescription(props: {
 }
 
 export function CommandHistoryAndProgress() {
-  const list = useRecoilValue(operationList);
+  const list = useAtomValue(operationListJotai);
   const queued = useRecoilValue(queuedOperations);
   const abortRunningOperation = useAbortRunningOperation();
 

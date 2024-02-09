@@ -33,6 +33,8 @@ import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
+import {useAtomCallback} from 'jotai/utils';
+import {useCallback} from 'react';
 import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
@@ -476,7 +478,7 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
   }
 }
 
-export const operationList = atom<OperationList>({
+export const [operationListJotai, operationListRecoil] = entangledAtoms<OperationList>({
   key: 'operationList',
   default: defaultOperationList(),
   effects: [
@@ -622,7 +624,7 @@ export const inlineProgressByHash = selectorFamily<string | undefined, string>({
   get:
     (hash: string) =>
     ({get}) => {
-      const info = get(operationList);
+      const info = get(operationListRecoil);
       const inlineProgress = info.currentOperation?.inlineProgress;
       if (inlineProgress == null) {
         return undefined;
@@ -700,7 +702,7 @@ function runOperationImpl(
   });
 
   operationsById.set(operation.id, operation);
-  const ongoing = snapshot.getLoadable(operationList).valueMaybe();
+  const ongoing = readAtom(operationListJotai);
 
   if (ongoing?.currentOperation != null && ongoing.currentOperation.exitCode == null) {
     const queue = snapshot.getLoadable(queuedOperations).valueMaybe();
@@ -708,7 +710,7 @@ function runOperationImpl(
     set(queuedOperations, [...(queue || []), operation]);
   } else {
     // start a new operation. We need to manage the previous operations
-    set(operationList, list => startNewOperation(operation, list));
+    writeAtom(operationListJotai, list => startNewOperation(operation, list));
   }
 
   return defered.promise;
@@ -741,15 +743,15 @@ export function useRunOperation() {
  * Returns callback to abort the running operation.
  */
 export function useAbortRunningOperation() {
-  return useRecoilCallback(({snapshot, set}) => (operationId: string) => {
+  return useCallback((operationId: string) => {
     serverAPI.postMessage({
       type: 'abortRunningOperation',
       operationId,
     });
-    const ongoing = snapshot.getLoadable(operationList).valueMaybe();
+    const ongoing = readAtom(operationListJotai);
     if (ongoing?.currentOperation?.operation?.id === operationId) {
       // Mark 'aborting' as true.
-      set(operationList, list => {
+      writeAtom(operationListJotai, list => {
         const currentOperation = list.currentOperation;
         if (currentOperation != null) {
           return {...list, currentOperation: {aborting: true, ...currentOperation}};
@@ -757,7 +759,7 @@ export function useAbortRunningOperation() {
         return list;
       });
     }
-  });
+  }, []);
 }
 
 /**
@@ -789,40 +791,36 @@ export function useRunPreviewedOperation() {
  * Queued commands and the currently running command will not be affected.
  */
 export function useClearAllOptimisticState() {
-  return useRecoilCallback(
-    ({set}) =>
-      () => {
-        set(operationList, list => {
-          const operationHistory = [...list.operationHistory];
-          for (let i = 0; i < operationHistory.length; i++) {
-            if (operationHistory[i].exitCode != null) {
-              if (!operationHistory[i].hasCompletedOptimisticState) {
-                operationHistory[i] = {...operationHistory[i], hasCompletedOptimisticState: true};
-              }
-              if (!operationHistory[i].hasCompletedUncommittedChangesOptimisticState) {
-                operationHistory[i] = {
-                  ...operationHistory[i],
-                  hasCompletedUncommittedChangesOptimisticState: true,
-                };
-              }
-              if (!operationHistory[i].hasCompletedMergeConflictsOptimisticState) {
-                operationHistory[i] = {
-                  ...operationHistory[i],
-                  hasCompletedMergeConflictsOptimisticState: true,
-                };
-              }
-            }
+  return useCallback(() => {
+    writeAtom(operationListJotai, list => {
+      const operationHistory = [...list.operationHistory];
+      for (let i = 0; i < operationHistory.length; i++) {
+        if (operationHistory[i].exitCode != null) {
+          if (!operationHistory[i].hasCompletedOptimisticState) {
+            operationHistory[i] = {...operationHistory[i], hasCompletedOptimisticState: true};
           }
-          const currentOperation =
-            list.currentOperation == null ? undefined : {...list.currentOperation};
-          if (currentOperation?.exitCode != null) {
-            currentOperation.hasCompletedOptimisticState = true;
-            currentOperation.hasCompletedUncommittedChangesOptimisticState = true;
-            currentOperation.hasCompletedMergeConflictsOptimisticState = true;
+          if (!operationHistory[i].hasCompletedUncommittedChangesOptimisticState) {
+            operationHistory[i] = {
+              ...operationHistory[i],
+              hasCompletedUncommittedChangesOptimisticState: true,
+            };
           }
-          return {currentOperation, operationHistory};
-        });
-      },
-    [],
-  );
+          if (!operationHistory[i].hasCompletedMergeConflictsOptimisticState) {
+            operationHistory[i] = {
+              ...operationHistory[i],
+              hasCompletedMergeConflictsOptimisticState: true,
+            };
+          }
+        }
+      }
+      const currentOperation =
+        list.currentOperation == null ? undefined : {...list.currentOperation};
+      if (currentOperation?.exitCode != null) {
+        currentOperation.hasCompletedOptimisticState = true;
+        currentOperation.hasCompletedUncommittedChangesOptimisticState = true;
+        currentOperation.hasCompletedMergeConflictsOptimisticState = true;
+      }
+      return {currentOperation, operationHistory};
+    });
+  }, []);
 }

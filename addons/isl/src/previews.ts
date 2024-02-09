@@ -16,6 +16,8 @@ import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
+  operationListJotai,
+  operationListRecoil,
   mergeConflictsJotai,
   mergeConflictsRecoil,
   latestUncommittedChangesDataJotai,
@@ -25,12 +27,11 @@ import {
   latestDag,
   latestHeadCommit,
   latestUncommittedChanges,
-  operationList,
   queuedOperations,
 } from './serverAPIState';
-import {useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
-import {selector, useRecoilState, useRecoilValue} from 'recoil';
+import {selector, useRecoilValue} from 'recoil';
 import {notEmpty, unwrap} from 'shared/utils';
 
 export enum CommitPreview {
@@ -211,7 +212,7 @@ function applyPreviewsToMergeConflicts(
 export const uncommittedChangesWithPreviews = selector({
   key: 'uncommittedChangesWithPreviews',
   get: ({get}): Array<ChangedFile> => {
-    const list = get(operationList);
+    const list = get(operationListRecoil);
     const queued = get(queuedOperations);
     const uncommittedChanges = get(latestUncommittedChanges);
 
@@ -222,7 +223,7 @@ export const uncommittedChangesWithPreviews = selector({
 export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
   key: 'optimisticMergeConflicts',
   get: ({get}) => {
-    const list = get(operationList);
+    const list = get(operationListRecoil);
     const queued = get(queuedOperations);
     const conflicts = get(mergeConflictsRecoil);
     if (conflicts?.files == null) {
@@ -256,7 +257,7 @@ export const dagWithPreviews = selector<Dag>({
   key: 'dagWithPreviews',
   get: ({get}) => {
     const originalDag = get(latestDag);
-    const list = get(operationList);
+    const list = get(operationListRecoil);
     const queued = get(queuedOperations);
     const currentOperation = list.currentOperation;
     const history = list.operationHistory;
@@ -340,7 +341,7 @@ export function useMarkOperationsCompleted(): void {
   const conflicts = useAtomValue(mergeConflictsJotai);
   const successorMap = useRecoilValue(latestSuccessorsMap);
 
-  const [list, setOperationList] = useRecoilState(operationList);
+  const [list, setOperationList] = useAtom(operationListJotai);
 
   // Mark operations as completed when their optimistic applier is no longer needed
   // n.b. this must be a useEffect since React doesn't like setCurrentOperation getting called during render
@@ -494,7 +495,7 @@ type Class<T> = new (...args: any[]) => T;
 export function useIsOperationRunningOrQueued(
   cls: Class<Operation>,
 ): 'running' | 'queued' | undefined {
-  const list = useRecoilValue(operationList);
+  const list = useAtomValue(operationListJotai);
   const queued = useRecoilValue(queuedOperations);
   if (list.currentOperation?.operation instanceof cls && list.currentOperation?.exitCode == null) {
     return 'running';
@@ -505,7 +506,7 @@ export function useIsOperationRunningOrQueued(
 }
 
 export function useMostRecentPendingOperation(): Operation | undefined {
-  const list = useRecoilValue(operationList);
+  const list = useAtomValue(operationListJotai);
   const queued = useRecoilValue(queuedOperations);
   if (queued.length > 0) {
     return queued.at(-1);
