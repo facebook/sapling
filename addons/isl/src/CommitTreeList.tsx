@@ -32,14 +32,14 @@ import {
   commitFetchError,
   commitsShownRange,
   isFetchingAdditionalCommits,
-  latestUncommittedChangesData,
+  latestUncommittedChangesDataJotai,
   useRunOperation,
 } from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useAtomValue} from 'jotai';
-import {selector, selectorFamily, useRecoilState, useRecoilValue} from 'recoil';
+import {selector, selectorFamily, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -192,7 +192,7 @@ export function CommitTreeList() {
   // so we don't miss the first returned uncommitted changes message.
   // TODO: This is a little ugly, is there a better way to tell recoil to start the subscription immediately?
   // Or should we queue/cache messages?
-  useRecoilState(latestUncommittedChangesData);
+  useAtomValue(latestUncommittedChangesDataJotai);
   const renderer = useAtomValue(configGraphRenderer);
 
   useMarkOperationsCompleted();

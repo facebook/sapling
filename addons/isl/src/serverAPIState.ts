@@ -130,28 +130,29 @@ export async function forceFetchCommit(revset: string): Promise<CommitInfo> {
   return response.info.value;
 }
 
-export const latestUncommittedChangesData = atom<{
-  fetchStartTimestamp: number;
-  fetchCompletedTimestamp: number;
-  files: UncommittedChanges;
-  error?: Error;
-}>({
-  key: 'latestUncommittedChangesData',
-  default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []},
-  effects: [
-    subscriptionEffect('uncommittedChanges', (data, {setSelf}) => {
-      setSelf(last => ({
-        ...data,
-        files:
-          data.files.value ??
-          // leave existing files in place if there was no error
-          (last instanceof DefaultValue ? [] : last.files) ??
-          [],
-        error: data.files.error,
-      }));
-    }),
-  ],
-});
+export const [latestUncommittedChangesDataJotai, latestUncommittedChangesDataRecoil] =
+  entangledAtoms<{
+    fetchStartTimestamp: number;
+    fetchCompletedTimestamp: number;
+    files: UncommittedChanges;
+    error?: Error;
+  }>({
+    key: 'latestUncommittedChangesData',
+    default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []},
+    effects: [
+      subscriptionEffect('uncommittedChanges', (data, {setSelf}) => {
+        setSelf(last => ({
+          ...data,
+          files:
+            data.files.value ??
+            // leave existing files in place if there was no error
+            (last instanceof DefaultValue ? [] : last.files) ??
+            [],
+          error: data.files.error,
+        }));
+      }),
+    ],
+  });
 
 /**
  * Latest fetched uncommitted file changes from the server, without any previews.
@@ -161,14 +162,14 @@ export const latestUncommittedChangesData = atom<{
 export const latestUncommittedChanges = selector<Array<ChangedFile>>({
   key: 'latestUncommittedChanges',
   get: ({get}) => {
-    return get(latestUncommittedChangesData).files;
+    return get(latestUncommittedChangesDataRecoil).files;
   },
 });
 
 export const uncommittedChangesFetchError = selector<Error | undefined>({
   key: 'uncommittedChangesFetchError',
   get: ({get}) => {
-    return get(latestUncommittedChangesData).error;
+    return get(latestUncommittedChangesDataRecoil).error;
   },
 });
 
@@ -215,7 +216,7 @@ export const [latestCommitsDataJotai, latestCommitsDataRecoil] = entangledAtoms<
 export const latestUncommittedChangesTimestamp = selector<number>({
   key: 'latestUncommittedChangesTimestamp',
   get: ({get}) => {
-    return get(latestUncommittedChangesData).fetchCompletedTimestamp;
+    return get(latestUncommittedChangesDataRecoil).fetchCompletedTimestamp;
   },
 });
 

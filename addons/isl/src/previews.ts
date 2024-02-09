@@ -16,10 +16,10 @@ import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
+  latestUncommittedChangesDataJotai,
   latestCommitsDataJotai,
   operationBeingPreviewed,
   latestCommits,
-  latestUncommittedChangesData,
   mergeConflicts,
   latestDag,
   latestHeadCommit,
@@ -335,7 +335,7 @@ function* optimisticOperations(props: {
 export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useAtomValue(latestCommitsDataJotai);
   const commits = useRecoilValue(latestCommits);
-  const uncommittedChanges = useRecoilValue(latestUncommittedChangesData);
+  const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
   const conflicts = useRecoilValue(mergeConflicts);
   const successorMap = useRecoilValue(latestSuccessorsMap);
 

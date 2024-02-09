@@ -21,7 +21,7 @@ import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {dagWithPreviews} from './previews';
-import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
+import {useRunOperation, latestUncommittedChangesDataJotai} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
@@ -253,7 +253,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
 }
 
 function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | null {
-  const uncommitted = useRecoilValue(latestUncommittedChangesData);
+  const uncommitted = useAtomValue(latestUncommittedChangesDataJotai);
   const dag = useRecoilValue(dagWithPreviews);
   const [[, stackHashes], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
   const loadingState = useAtomValue(loadingStackState);

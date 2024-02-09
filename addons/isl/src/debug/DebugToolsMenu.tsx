@@ -22,7 +22,7 @@ import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
   latestCommitsDataJotai,
-  latestUncommittedChangesData,
+  latestUncommittedChangesDataJotai,
   mergeConflicts,
   repositoryInfo,
 } from '../serverAPIState';
@@ -110,7 +110,7 @@ function ServerClientMessageLogging() {
 }
 
 function DebugPerfInfo() {
-  const latestStatus = useRecoilValue(latestUncommittedChangesData);
+  const latestStatus = useAtomValue(latestUncommittedChangesDataJotai);
   const latestLog = useAtomValue(latestCommitsDataJotai);
   const latestConflicts = useRecoilValue(mergeConflicts);
   const heartbeat = useHeartbeat();
