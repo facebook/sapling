@@ -457,7 +457,10 @@ export type PageVisibility = 'focused' | 'visible' | 'hidden';
 export type FileABugFields = {title: string; description: string; repro: string};
 export type FileABugProgress =
   | {status: 'starting'}
-  | {status: 'inProgress'; message: string}
+  | {
+      status: 'inProgress';
+      currentSteps: Record<string, 'blocked' | 'loading' | 'finished'>;
+    }
   | {status: 'success'; taskNumber: string; taskLink: string}
   | {status: 'error'; error: Error};
 export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABugProgress;
