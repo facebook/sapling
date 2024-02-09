@@ -22,10 +22,12 @@ import type {
 } from './types';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
+import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
+import {getAllRecoilStateJson} from './debug/getAllRecoilStateJson';
 import {configBackedAtom, readAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
 import {clearOnCwdChange, entangledAtoms, jotaiMirrorFromRecoil} from './recoilUtils';
 import {initialParams} from './urlParams';
@@ -806,3 +808,15 @@ export function useClearAllOptimisticState() {
     });
   }, []);
 }
+
+registerDisposable(
+  serverAPI,
+  serverAPI.onMessageOfType('getUiState', () => {
+    const state = getAllRecoilStateJson(globalRecoil().getSnapshot());
+    window.clientToServerAPI?.postMessage({
+      type: 'gotUiState',
+      state: JSON.stringify(state, undefined, 2),
+    });
+  }),
+  import.meta.hot,
+);

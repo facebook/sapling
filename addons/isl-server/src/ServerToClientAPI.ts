@@ -813,6 +813,9 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'gotUiState': {
+        break;
+      }
       default: {
         if (repo.codeReviewProvider?.handleClientToServerMessage?.(data) === true) {
           break;

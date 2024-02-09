@@ -219,7 +219,7 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
       (m: string) => {
         try {
           const data = deserializeFromString(m) as ClientToServerMessage;
-          if (data.type === 'platform/gotUiState') {
+          if (data.type === 'gotUiState') {
             dispose?.dispose();
             dispose = undefined;
             resolve({state: data.state});
@@ -229,7 +229,7 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
     );
 
     islPanelOrView?.webview.postMessage(
-      serializeToString({type: 'platform/getUiState'} as ServerToClientMessage),
+      serializeToString({type: 'getUiState'} as ServerToClientMessage),
     );
   });
 }

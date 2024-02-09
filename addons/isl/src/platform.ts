@@ -46,11 +46,6 @@ export interface Platform {
 
   handleServerMessage?: (message: ServerToClientMessage) => void;
 
-  /** Called once (if provided) when the ClientToServerAPI is initialized,
-   * so platform-specific server events can be listened to.
-   */
-  registerServerListeners?: (api: ClientToServerAPI) => Disposable;
-
   /**
    * Component representing additional buttons/info in the help menu.
    * Note: This should be lazy-loaded via `React.lazy()` so that implementations
