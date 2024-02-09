@@ -242,6 +242,8 @@ async fn ignored_usage_counts_for_mount(
     let mut aggregated_usage_counts_ignored = 0;
     for (rel_path, _file_status) in scm_status.entries {
         let path = checkout.path().join(path_from_bytes(&rel_path)?);
+        // Calculate the size of the file by reading its metadata.
+        // metadata.len returns the size of the file that the metadata represents.
         aggregated_usage_counts_ignored += match fs::symlink_metadata(path) {
             Ok(metadata) => Ok(metadata.len()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
