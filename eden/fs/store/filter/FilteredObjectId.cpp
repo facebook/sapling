@@ -19,6 +19,18 @@ using std::string;
 
 namespace facebook::eden {
 
+std::string foidTypeToString(FilteredObjectIdType foidType) {
+  switch (foidType) {
+    case FilteredObjectIdType::OBJECT_TYPE_BLOB:
+      return "blob";
+    case FilteredObjectIdType::OBJECT_TYPE_TREE:
+      return "tree";
+    case FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE:
+      return "unfiltered_tree";
+  }
+  XLOGF(FATAL, "Invalid FilteredObjectIdType: {}", foidType);
+}
+
 namespace {
 std::string serializeBlobOrUnfilteredTree(
     const ObjectId& object,

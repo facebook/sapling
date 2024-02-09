@@ -33,6 +33,8 @@ enum FilteredObjectIdType : uint8_t {
   OBJECT_TYPE_UNFILTERED_TREE = 0x12,
 };
 
+std::string foidTypeToString(FilteredObjectIdType foidType);
+
 /**
  * FilteredBackingStores need to keep track of a few extra pieces of state with
  * each ObjectId in order to properly filter objects across their lifetime.

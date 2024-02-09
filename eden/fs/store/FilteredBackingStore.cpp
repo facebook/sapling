@@ -84,23 +84,16 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
   FilteredObjectId filteredTwo = FilteredObjectId::fromObjectId(two);
   auto typeTwo = filteredTwo.objectType();
 
-  // Comparing blob vs tree objects is not valid. However, comparing a normal
-  // tree vs a filtered tree is valid.
+  // We're comparing ObjectIDs of different types. The objects are not equal.
   if (typeOne != typeTwo) {
-    // It doesn't make sense to compare trees and blobs. If this
-    // happens, then the caller must be confused. Throw instead of returning the
-    // obvious answer.
-    if (typeOne == FilteredObjectIdType::OBJECT_TYPE_BLOB ||
-        typeTwo == FilteredObjectIdType::OBJECT_TYPE_BLOB) {
-      throwf<std::invalid_argument>(
-          "Must compare objects of same type. Attempted to compare: {} vs {}",
-          typeOne,
-          typeTwo);
-    } else {
-      // We're comparing a partially filtered tree to a completely filtered
-      // tree. The trees must be different.
-      return ObjectComparison::Different;
-    }
+    XLOGF(
+        DBG2,
+        "Attempted to compare: {} vs {} (types: {} vs {})",
+        filteredOne.getValue(),
+        filteredTwo.getValue(),
+        foidTypeToString(typeOne),
+        foidTypeToString(typeTwo));
+    return ObjectComparison::Different;
   }
 
   // ======= Blob Object Handling =======
