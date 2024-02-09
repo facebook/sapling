@@ -260,11 +260,8 @@ registerCleanup(
   }),
 );
 
-export const latestUncommittedChangesTimestamp = selector<number>({
-  key: 'latestUncommittedChangesTimestamp',
-  get: ({get}) => {
-    return get(latestUncommittedChangesDataRecoil).fetchCompletedTimestamp;
-  },
+export const latestUncommittedChangesTimestamp = jotaiAtom(get => {
+  return get(latestUncommittedChangesDataJotai).fetchCompletedTimestamp;
 });
 
 /**

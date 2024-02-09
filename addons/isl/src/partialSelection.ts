@@ -19,7 +19,7 @@ import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
 import Immutable from 'immutable';
-import {useAtom} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {selector, useRecoilValue} from 'recoil';
 import {RateLimiter} from 'shared/RateLimiter';
 import {SelfUpdate} from 'shared/immutableExt';
@@ -531,7 +531,7 @@ type ReadonlyPartialSelection = OmitNotMatching<
 export function useUncommittedSelection() {
   const [selection, setSelection] = useAtom(uncommittedSelection);
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
-  const epoch = useRecoilValue(latestUncommittedChangesTimestamp);
+  const epoch = useAtomValue(latestUncommittedChangesTimestamp);
   const dag = useRecoilValue(dagWithPreviews);
   const wdirHash = dag.resolve('.')?.hash ?? '';
   const getPaths = () => uncommittedChanges.map(c => c.path);
