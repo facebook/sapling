@@ -1,6 +1,17 @@
 # Changelog
 
+## 0.1.37
+
+### Feb 7 2024
+
+- Fill blank commit messages from previous commits
+- Context menu option to rebase a commit
+- Close other dropdowns when opening a menu from the top bar
+- Fix opening non-text files like images
+
 ## 0.1.36
+
+### Jan 30 2024
 
 - Fixed an issue where Pull button and cwd selector didn't appear in some cases
 - Updated tooltips for download menu and commit mode selector
