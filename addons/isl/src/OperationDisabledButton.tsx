@@ -6,11 +6,13 @@
  */
 
 import type {Operation} from './operations/Operation';
+import type {PrimitiveAtom} from 'jotai';
 
 import {useMostRecentPendingOperation} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atomFamily, useRecoilState} from 'recoil';
+import {atom, useAtom} from 'jotai';
+import {atomFamily} from 'jotai/utils';
 import {Icon} from 'shared/Icon';
 import {isPromise} from 'shared/utils';
 
@@ -52,7 +54,7 @@ export function OperationDisabledButton({
 }) {
   const actuallyRunOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();
-  const [triggeredOperationId, setTriggeredOperationId] = useRecoilState(
+  const [triggeredOperationId, setTriggeredOperationId] = useAtom(
     operationButtonDisableState(contextKey),
   );
   const isRunningThisOperation =
@@ -85,7 +87,12 @@ export function OperationDisabledButton({
   );
 }
 
-const operationButtonDisableState = atomFamily<Array<string>, string | undefined>({
-  key: 'operationButtonDisableState',
-  default: undefined,
-});
+/**
+ * Note: Technically, this has a memory leak, since some <OperationDisabledButton>s provide unique contextKeys
+ * with commit hashes. Such keys would never get reused after that hash disappears or changes.
+ * Ideally, we'd use `operationButtonDisableState.remove` or `operationButtonDisableState.setShouldRemove`
+ * to clear out values, but we don't really know when an arbitrary context key will no longer be needed.
+ */
+const operationButtonDisableState = atomFamily<string, PrimitiveAtom<Array<string> | undefined>>(
+  (_param: string | undefined) => atom<Array<string> | undefined>(undefined),
+);
