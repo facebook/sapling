@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.38
+
+### Feb 9 2024
+
+- Fix vscode extension not properly loading
+
 ## 0.1.37
 
 ### Feb 7 2024
