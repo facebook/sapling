@@ -104,15 +104,12 @@ export const reconnectingStatus = atom<MessageBusStatus>({
   ],
 });
 
-export const serverCwd = selector<string>({
-  key: 'serverCwd',
-  get: ({get}) => {
-    const data = get(repositoryData);
-    if (data.info?.type === 'cwdNotARepository') {
-      return data.info.cwd;
-    }
-    return data?.cwd ?? initialParams.get('cwd') ?? '';
-  },
+export const serverCwd = jotaiAtom(get => {
+  const data = get(jotaiRepositoryData);
+  if (data.info?.type === 'cwdNotARepository') {
+    return data.info.cwd;
+  }
+  return data?.cwd ?? initialParams.get('cwd') ?? '';
 });
 
 export async function forceFetchCommit(revset: string): Promise<CommitInfo> {
