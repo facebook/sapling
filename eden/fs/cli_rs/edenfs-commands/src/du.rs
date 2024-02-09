@@ -39,6 +39,7 @@ use edenfs_utils::path_from_bytes;
 use serde::Serialize;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
+use thrift_types::edenfs::GetScmStatusParams;
 
 use crate::ExitCode;
 
@@ -225,16 +226,18 @@ async fn ignored_usage_counts_for_mount(
     client: &EdenFsClient,
 ) -> Result<u64> {
     let scm_status = client
-        .getScmStatus(
-            &bytes_from_path(checkout.path())?,
-            true,
-            &checkout
+        .getScmStatusV2(&GetScmStatusParams {
+            mountPoint: bytes_from_path(checkout.path())?,
+            commit: checkout
                 .get_snapshot()?
                 .working_copy_parent
                 .as_bytes()
                 .to_vec(),
-        )
-        .await?;
+            listIgnored: true,
+            ..Default::default()
+        })
+        .await?
+        .status;
 
     let mut aggregated_usage_counts_ignored = 0;
     for (rel_path, _file_status) in scm_status.entries {
@@ -571,7 +574,7 @@ impl crate::Subcommand for DiskUsageCmd {
 
             // GET SUMMARY INFO for ignored counts
             aggregated_usage_counts.ignored +=
-                ignored_usage_counts_for_mount(&checkout, &client).await?;
+                ignored_usage_counts_for_mount(checkout, &client).await?;
         }
 
         for fsck_dir in fsck_dirs.iter() {
@@ -931,4 +934,5 @@ mod tests {
     // TODO: Test Legacy Redirects
     // TODO: Test Spareimage on MacOS
     // TODO: Test Bind Mounts on Linux
+    // TODO: Integ Test for ignored_usage_counts
 }
