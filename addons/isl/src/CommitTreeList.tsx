@@ -353,13 +353,13 @@ function FetchingAdditionalCommitsRow() {
 }
 
 function FetchingAdditionalCommitsIndicator() {
-  const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  const isFetching = useAtomValue(isFetchingAdditionalCommits);
   return isFetching ? <Icon icon="loading" /> : null;
 }
 
 function FetchingAdditionalCommitsButton() {
   const shownRange = useAtomValue(commitsShownRange);
-  const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  const isFetching = useAtomValue(isFetchingAdditionalCommits);
   if (shownRange === undefined) {
     return null;
   }

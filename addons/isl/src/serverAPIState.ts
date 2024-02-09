@@ -338,27 +338,32 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const isFetchingAdditionalCommits = atom<boolean>({
-  key: 'isFetchingAdditionalCommits',
-  default: false,
-  effects: [
-    ({setSelf}) => {
-      const disposables = [
-        serverAPI.onMessageOfType('subscriptionResult', e => {
-          if (e.kind === 'smartlogCommits') {
-            setSelf(false);
-          }
-        }),
-        serverAPI.onMessageOfType('beganLoadingMoreCommits', () => {
-          setSelf(true);
-        }),
-      ];
-      return () => {
-        disposables.forEach(d => d.dispose());
-      };
-    },
-  ],
-});
+export const isFetchingAdditionalCommits = jotaiAtom(false);
+registerDisposable(
+  isFetchingAdditionalCommits,
+  serverAPI.onMessageOfType('subscriptionResult', e => {
+    if (e.kind === 'smartlogCommits') {
+      writeAtom(isFetchingAdditionalCommits, false);
+    }
+  }),
+  import.meta.hot,
+);
+registerDisposable(
+  isFetchingAdditionalCommits,
+  serverAPI.onMessageOfType('subscriptionResult', e => {
+    if (e.kind === 'smartlogCommits') {
+      writeAtom(isFetchingAdditionalCommits, false);
+    }
+  }),
+  import.meta.hot,
+);
+registerDisposable(
+  isFetchingAdditionalCommits,
+  serverAPI.onMessageOfType('beganLoadingMoreCommits', () => {
+    writeAtom(isFetchingAdditionalCommits, true);
+  }),
+  import.meta.hot,
+);
 
 export const isFetchingUncommittedChanges = atom<boolean>({
   key: 'isFetchingUncommittedChanges',
