@@ -21,8 +21,9 @@ import type {Writable} from 'shared/typeUtils';
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
 import {mostRecentSubscriptionIds} from './serverAPIState';
-import {screen, act, within} from '@testing-library/react';
+import {screen, act, within, waitFor} from '@testing-library/react';
 import {selector, snapshot_UNSTABLE} from 'recoil';
+import {nextTick} from 'shared/testUtils';
 
 const testMessageBus = messageBus as TestingEventBus;
 
@@ -340,5 +341,16 @@ export function beforeEachPrintTestName() {
   beforeEach(() => {
     // eslint-disable-next-line no-console
     console.log(`Starting test: ${expect.getState().currentTestName}`);
+  });
+}
+
+/**
+ * Drop-in replacement of `waitFor` that includes a `nextTick` to workaround
+ * some `act()` warnings.
+ */
+export function waitForWithTick<T>(callback: () => Promise<T> | T): Promise<T> {
+  return waitFor(async () => {
+    await nextTick();
+    return callback();
   });
 }

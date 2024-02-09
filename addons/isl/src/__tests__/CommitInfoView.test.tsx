@@ -20,6 +20,7 @@ import {
   simulateUncommittedChangedFiles,
   simulateMessageFromServer,
   openCommitInfoSidebar,
+  waitForWithTick,
 } from '../testUtils';
 import {CommandRunner, succeedableRevset} from '../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
@@ -586,7 +587,9 @@ describe('CommitInfoView', () => {
               fireEvent.click(amendMessageButton!);
             });
 
-            await waitFor(() => expect(amendMessageButton).toBeDisabled());
+            await waitForWithTick(() => {
+              expect(amendMessageButton).toBeDisabled();
+            });
           });
         });
 
@@ -1120,7 +1123,7 @@ describe('CommitInfoView', () => {
 
           clickAmendButton();
 
-          await waitFor(() => {
+          await waitForWithTick(() => {
             expectIsNOTEditingTitle();
             expectIsNOTEditingDescription();
             expect(confirmSpy).not.toHaveBeenCalled();
