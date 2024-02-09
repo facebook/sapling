@@ -24,6 +24,7 @@ import {
   useClearAllOptimisticState,
 } from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {clearTrackedCache} from 'shared/LRU';
@@ -32,7 +33,7 @@ import './TopBar.css';
 
 export function TopBar() {
   const loaded = useRecoilValue(haveCommitsLoadedYet);
-  const canPush = useRecoilValue(haveRemotePath);
+  const canPush = useAtomValue(haveRemotePath);
   if (!loaded) {
     return null;
   }

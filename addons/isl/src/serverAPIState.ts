@@ -432,13 +432,10 @@ export const operationBeingPreviewed = atom<Operation | undefined>({
   effects: [clearOnCwdChange()],
 });
 
-export const haveRemotePath = selector({
-  key: 'haveRemotePath',
-  get: ({get}) => {
-    const info = get(repositoryInfo);
-    // codeReviewSystem.type is 'unknown' or other values if paths.default is present.
-    return info?.type === 'success' && info.codeReviewSystem.type !== 'none';
-  },
+export const haveRemotePath = jotaiAtom(get => {
+  const info = get(repositoryInfoJotai);
+  // codeReviewSystem.type is 'unknown' or other values if paths.default is present.
+  return info?.type === 'success' && info.codeReviewSystem.type !== 'none';
 });
 
 export type OperationInfo = {
