@@ -16,6 +16,8 @@ import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
+  queuedOperationsJotai,
+  queuedOperationsRecoil,
   operationListJotai,
   operationListRecoil,
   mergeConflictsJotai,
@@ -27,7 +29,6 @@ import {
   latestDag,
   latestHeadCommit,
   latestUncommittedChanges,
-  queuedOperations,
 } from './serverAPIState';
 import {useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
@@ -213,7 +214,7 @@ export const uncommittedChangesWithPreviews = selector({
   key: 'uncommittedChangesWithPreviews',
   get: ({get}): Array<ChangedFile> => {
     const list = get(operationListRecoil);
-    const queued = get(queuedOperations);
+    const queued = get(queuedOperationsRecoil);
     const uncommittedChanges = get(latestUncommittedChanges);
 
     return applyPreviewsToChangedFiles(uncommittedChanges, list, queued);
@@ -224,7 +225,7 @@ export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
   key: 'optimisticMergeConflicts',
   get: ({get}) => {
     const list = get(operationListRecoil);
-    const queued = get(queuedOperations);
+    const queued = get(queuedOperationsRecoil);
     const conflicts = get(mergeConflictsRecoil);
     if (conflicts?.files == null) {
       return conflicts;
@@ -258,7 +259,7 @@ export const dagWithPreviews = selector<Dag>({
   get: ({get}) => {
     const originalDag = get(latestDag);
     const list = get(operationListRecoil);
-    const queued = get(queuedOperations);
+    const queued = get(queuedOperationsRecoil);
     const currentOperation = list.currentOperation;
     const history = list.operationHistory;
     const currentPreview = get(operationBeingPreviewedRecoil);
@@ -496,7 +497,7 @@ export function useIsOperationRunningOrQueued(
   cls: Class<Operation>,
 ): 'running' | 'queued' | undefined {
   const list = useAtomValue(operationListJotai);
-  const queued = useRecoilValue(queuedOperations);
+  const queued = useAtomValue(queuedOperationsJotai);
   if (list.currentOperation?.operation instanceof cls && list.currentOperation?.exitCode == null) {
     return 'running';
   } else if (queued.some(op => op instanceof cls)) {
@@ -507,7 +508,7 @@ export function useIsOperationRunningOrQueued(
 
 export function useMostRecentPendingOperation(): Operation | undefined {
   const list = useAtomValue(operationListJotai);
-  const queued = useRecoilValue(queuedOperations);
+  const queued = useAtomValue(queuedOperationsJotai);
   if (queued.length > 0) {
     return queued.at(-1);
   }

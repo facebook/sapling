@@ -20,7 +20,6 @@ import type {
   SubscriptionResultsData,
   UncommittedChanges,
 } from './types';
-import type {CallbackInterface} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
@@ -33,9 +32,8 @@ import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
-import {useAtomCallback} from 'jotai/utils';
 import {useCallback} from 'react';
-import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
+import {selectorFamily, atom, DefaultValue, selector} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
@@ -642,7 +640,7 @@ const operationsById = new Map<string, Operation>();
 /** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
 const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 
-export const queuedOperations = atom<Array<Operation>>({
+export const [queuedOperationsJotai, queuedOperationsRecoil] = entangledAtoms<Array<Operation>>({
   key: 'queuedOperations',
   default: [],
   effects: [
@@ -679,11 +677,7 @@ export const queuedOperations = atom<Array<Operation>>({
   ],
 });
 
-function runOperationImpl(
-  snapshot: CallbackInterface['snapshot'],
-  set: CallbackInterface['set'],
-  operation: Operation,
-): Promise<undefined | Error> {
+function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   // TODO: check for hashes in arguments that are known to be obsolete already,
   // and mark those to not be rewritten.
   serverAPI.postMessage({
@@ -705,9 +699,9 @@ function runOperationImpl(
   const ongoing = readAtom(operationListJotai);
 
   if (ongoing?.currentOperation != null && ongoing.currentOperation.exitCode == null) {
-    const queue = snapshot.getLoadable(queuedOperations).valueMaybe();
+    const queue = readAtom(queuedOperationsJotai);
     // Add to the queue optimistically. The server will tell us the real state of the queue when it gets our run request.
-    set(queuedOperations, [...(queue || []), operation]);
+    writeAtom(queuedOperationsJotai, [...(queue || []), operation]);
   } else {
     // start a new operation. We need to manage the previous operations
     writeAtom(operationListJotai, list => startNewOperation(operation, list));
@@ -727,16 +721,12 @@ function runOperationImpl(
  * successive operations will queue up with a nicer UX than if you awaited each one.
  */
 export function useRunOperation() {
-  return useRecoilCallback(
-    ({snapshot, set}) =>
-      async (operation: Operation, throwOnError?: boolean): Promise<void> => {
-        const result = await runOperationImpl(snapshot, set, operation);
-        if (result != null && throwOnError) {
-          throw result;
-        }
-      },
-    [],
-  );
+  return useCallback(async (operation: Operation, throwOnError?: boolean): Promise<void> => {
+    const result = await runOperationImpl(operation);
+    if (result != null && throwOnError) {
+      throw result;
+    }
+  }, []);
 }
 
 /**
@@ -767,22 +757,18 @@ export function useAbortRunningOperation() {
  * Set operationBeingPreviewed to start a preview.
  */
 export function useRunPreviewedOperation() {
-  return useRecoilCallback(
-    ({snapshot, set}) =>
-      (isCancel: boolean, operation?: Operation) => {
-        if (isCancel) {
-          writeAtom(operationBeingPreviewedJotai, undefined);
-          return;
-        }
+  return useCallback((isCancel: boolean, operation?: Operation) => {
+    if (isCancel) {
+      writeAtom(operationBeingPreviewedJotai, undefined);
+      return;
+    }
 
-        const operationToRun = operation ?? readAtom(operationBeingPreviewedJotai);
-        writeAtom(operationBeingPreviewedJotai, undefined);
-        if (operationToRun) {
-          runOperationImpl(snapshot, set, operationToRun);
-        }
-      },
-    [],
-  );
+    const operationToRun = operation ?? readAtom(operationBeingPreviewedJotai);
+    writeAtom(operationBeingPreviewedJotai, undefined);
+    if (operationToRun) {
+      runOperationImpl(operationToRun);
+    }
+  }, []);
 }
 
 /**

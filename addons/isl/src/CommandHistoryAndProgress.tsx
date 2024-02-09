@@ -15,7 +15,7 @@ import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {
   operationListJotai,
-  queuedOperations,
+  queuedOperationsJotai,
   repositoryInfo,
   useAbortRunningOperation,
 } from './serverAPIState';
@@ -89,7 +89,7 @@ function OperationDescription(props: {
 
 export function CommandHistoryAndProgress() {
   const list = useAtomValue(operationListJotai);
-  const queued = useRecoilValue(queuedOperations);
+  const queued = useAtomValue(queuedOperationsJotai);
   const abortRunningOperation = useAbortRunningOperation();
 
   const info = useRecoilValue(repositoryInfo);
