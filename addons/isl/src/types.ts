@@ -514,7 +514,7 @@ export type ClientToServerMessage =
   | {type: 'setConfig'; name: ConfigName; value: string}
   | {type: 'changeCwd'; cwd: string}
   | {type: 'track'; data: TrackDataWithEventName}
-  | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
+  | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json; collectRage: boolean}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'fetchActiveAlerts'}
