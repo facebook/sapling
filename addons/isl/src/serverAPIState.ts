@@ -20,7 +20,7 @@ import type {
   SubscriptionResultsData,
   UncommittedChanges,
 } from './types';
-import type {AtomEffect, CallbackInterface} from 'recoil';
+import type {CallbackInterface} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
@@ -130,6 +130,51 @@ export async function forceFetchCommit(revset: string): Promise<CommitInfo> {
   return response.info.value;
 }
 
+export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
+  smartlogCommits: '',
+  uncommittedChanges: '',
+  mergeConflicts: '',
+};
+
+/**
+ * Send a subscribeFoo message to the server on initialization,
+ * and send an unsubscribe message on dispose.
+ * Extract subscription response messages via a unique subscriptionID per effect call.
+ */
+function subscriptionEffect<K extends SubscriptionKind, T>(
+  kind: K,
+  onData: (data: SubscriptionResultsData[K]) => unknown,
+): () => void {
+  const subscriptionID = randomId();
+  mostRecentSubscriptionIds[kind] = subscriptionID;
+  const disposable = serverAPI.onMessageOfType('subscriptionResult', event => {
+    if (event.subscriptionID !== subscriptionID || event.kind !== kind) {
+      return;
+    }
+    onData(event.data as SubscriptionResultsData[K]);
+  });
+
+  const disposeSubscription = serverAPI.onSetup(() => {
+    serverAPI.postMessage({
+      type: 'subscribe',
+      kind,
+      subscriptionID,
+    });
+
+    return () =>
+      serverAPI.postMessage({
+        type: 'unsubscribe',
+        kind,
+        subscriptionID,
+      });
+  });
+
+  return () => {
+    disposable.dispose();
+    disposeSubscription();
+  };
+}
+
 export const [latestUncommittedChangesDataJotai, latestUncommittedChangesDataRecoil] =
   entangledAtoms<{
     fetchStartTimestamp: number;
@@ -139,20 +184,23 @@ export const [latestUncommittedChangesDataJotai, latestUncommittedChangesDataRec
   }>({
     key: 'latestUncommittedChangesData',
     default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []},
-    effects: [
-      subscriptionEffect('uncommittedChanges', (data, {setSelf}) => {
-        setSelf(last => ({
-          ...data,
-          files:
-            data.files.value ??
-            // leave existing files in place if there was no error
-            (last instanceof DefaultValue ? [] : last.files) ??
-            [],
-          error: data.files.error,
-        }));
-      }),
-    ],
   });
+
+registerCleanup(
+  latestUncommittedChangesDataJotai,
+  subscriptionEffect('uncommittedChanges', data => {
+    writeAtom(latestUncommittedChangesDataJotai, last => ({
+      ...data,
+      files:
+        data.files.value ??
+        // leave existing files in place if there was no error
+        (last.error == null ? [] : last.files) ??
+        [],
+      error: data.files.error,
+    }));
+  }),
+  import.meta.hot,
+);
 
 /**
  * Latest fetched uncommitted file changes from the server, without any previews.
@@ -178,12 +226,13 @@ export const [mergeConflictsJotai, mergeConflictsRecoil] = entangledAtoms<
 >({
   key: 'mergeConflicts',
   default: undefined,
-  effects: [
-    subscriptionEffect('mergeConflicts', (data, {setSelf}) => {
-      setSelf(data);
-    }),
-  ],
 });
+registerCleanup(
+  mergeConflictsJotai,
+  subscriptionEffect('mergeConflicts', data => {
+    writeAtom(mergeConflictsJotai, data);
+  }),
+);
 
 export const [latestCommitsDataJotai, latestCommitsDataRecoil] = entangledAtoms<{
   fetchStartTimestamp: number;
@@ -193,27 +242,29 @@ export const [latestCommitsDataJotai, latestCommitsDataRecoil] = entangledAtoms<
 }>({
   key: 'latestCommitsData',
   default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, commits: []},
-  effects: [
-    subscriptionEffect('smartlogCommits', (data, {setSelf}) => {
-      setSelf(last => {
-        let commits = last instanceof DefaultValue ? [] : last.commits;
-        const newCommits = data.commits.value;
-        if (newCommits != null) {
-          // leave existing commits in place if there was no erro
-          commits = reuseEqualObjects(commits, newCommits, c => c.hash);
-        }
-        return {
-          ...data,
-          commits,
-          error: data.commits.error,
-        };
-      });
-      if (data.commits.value) {
-        successionTracker.findNewSuccessionsFromCommits(data.commits.value);
-      }
-    }),
-  ],
 });
+
+registerCleanup(
+  latestCommitsDataJotai,
+  subscriptionEffect('smartlogCommits', data => {
+    writeAtom(latestCommitsDataJotai, last => {
+      let commits = last instanceof DefaultValue ? [] : last.commits;
+      const newCommits = data.commits.value;
+      if (newCommits != null) {
+        // leave existing commits in place if there was no erro
+        commits = reuseEqualObjects(commits, newCommits, c => c.hash);
+      }
+      return {
+        ...data,
+        commits,
+        error: data.commits.error,
+      };
+    });
+    if (data.commits.value) {
+      successionTracker.findNewSuccessionsFromCommits(data.commits.value);
+    }
+  }),
+);
 
 export const latestUncommittedChangesTimestamp = selector<number>({
   key: 'latestUncommittedChangesTimestamp',
@@ -265,58 +316,11 @@ export const commitFetchError = selector<Error | undefined>({
   },
 });
 
-export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
-  smartlogCommits: '',
-  uncommittedChanges: '',
-  mergeConflicts: '',
-};
-
 export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
   'isl.experimental-features',
   false,
   true /* read-only */,
 );
-
-/**
- * Send a subscribeFoo message to the server on initialization,
- * and send an unsubscribe message on dispose.
- * Extract subscription response messages via a unique subscriptionID per effect call.
- */
-function subscriptionEffect<K extends SubscriptionKind, T>(
-  kind: K,
-  onData: (data: SubscriptionResultsData[K], params: Parameters<AtomEffect<T>>[0]) => unknown,
-): AtomEffect<T> {
-  return effectParams => {
-    const subscriptionID = randomId();
-    mostRecentSubscriptionIds[kind] = subscriptionID;
-    const disposable = serverAPI.onMessageOfType('subscriptionResult', event => {
-      if (event.subscriptionID !== subscriptionID || event.kind !== kind) {
-        return;
-      }
-      onData(event.data as SubscriptionResultsData[K], effectParams);
-    });
-
-    const disposeSubscription = serverAPI.onSetup(() => {
-      serverAPI.postMessage({
-        type: 'subscribe',
-        kind,
-        subscriptionID,
-      });
-
-      return () =>
-        serverAPI.postMessage({
-          type: 'unsubscribe',
-          kind,
-          subscriptionID,
-        });
-    });
-
-    return () => {
-      disposable.dispose();
-      disposeSubscription();
-    };
-  };
-}
 
 export const isFetchingCommits = atom<boolean>({
   key: 'isFetchingCommits',
