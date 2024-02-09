@@ -479,143 +479,142 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
 export const [operationListJotai, operationListRecoil] = entangledAtoms<OperationList>({
   key: 'operationList',
   default: defaultOperationList(),
-  effects: [
-    clearOnCwdChange(),
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('operationProgress', progress => {
-        switch (progress.kind) {
-          case 'spawn':
-            setSelf(current => {
-              const list = current instanceof DefaultValue ? defaultOperationList() : current;
-              const operation = operationsById.get(progress.id);
-              if (operation == null) {
-                return current;
-              }
-
-              return startNewOperation(operation, list);
-            });
-            break;
-          case 'stdout':
-          case 'stderr':
-            setSelf(current => {
-              if (current == null || current instanceof DefaultValue) {
-                return current;
-              }
-              const currentOperation = current.currentOperation;
-              if (currentOperation == null) {
-                return current;
-              }
-
-              return {
-                ...current,
-                currentOperation: {
-                  ...currentOperation,
-                  commandOutput: [...(currentOperation?.commandOutput ?? []), progress.message],
-                  currentProgress: undefined, // hide progress on new stdout, so it doesn't appear stuck
-                },
-              };
-            });
-            break;
-          case 'inlineProgress':
-            setSelf(current => {
-              if (current == null || current instanceof DefaultValue) {
-                return current;
-              }
-              const currentOperation = current.currentOperation;
-              if (currentOperation == null) {
-                return current;
-              }
-
-              let inlineProgress: undefined | Map<string, string> =
-                current.currentOperation?.inlineProgress ?? new Map();
-              if (progress.hash) {
-                if (progress.message) {
-                  inlineProgress.set(progress.hash, progress.message);
-                } else {
-                  inlineProgress.delete(progress.hash);
-                }
-              } else {
-                inlineProgress = undefined;
-              }
-
-              const newCommandOutput = [...(currentOperation?.commandOutput ?? [])];
-              if (progress.hash && progress.message) {
-                // also add inline progress message as if it was on stdout,
-                // so you can see it when reading back the final output
-                newCommandOutput.push(`${progress.hash} - ${progress.message}\n`);
-              }
-
-              return {
-                ...current,
-                currentOperation: {
-                  ...currentOperation,
-                  inlineProgress,
-                },
-              };
-            });
-            break;
-          case 'progress':
-            setSelf(current => {
-              if (current == null || current instanceof DefaultValue) {
-                return current;
-              }
-              const currentOperation = current.currentOperation;
-              if (currentOperation == null) {
-                return current;
-              }
-
-              const newCommandOutput = [...(currentOperation?.commandOutput ?? [])];
-              if (newCommandOutput.at(-1) !== progress.progress.message) {
-                // also add progress message as if it was on stdout,
-                // so you can see it when reading back the final output,
-                // but only if it's a different progress message than we've seen.
-                newCommandOutput.push(progress.progress.message + '\n');
-              }
-
-              return {
-                ...current,
-                currentOperation: {
-                  ...currentOperation,
-                  commandOutput: newCommandOutput,
-                  currentProgress: progress.progress,
-                },
-              };
-            });
-            break;
-          case 'exit':
-            setSelf(current => {
-              if (current == null || current instanceof DefaultValue) {
-                return current;
-              }
-              const currentOperation = current.currentOperation;
-              if (currentOperation == null) {
-                return current;
-              }
-
-              const exitCode = progress.exitCode;
-              const complete = operationCompletionCallbacks.get(currentOperation.operation.id);
-              complete?.(
-                exitCode === 0 ? undefined : new Error(`Process exited with code ${exitCode}`),
-              );
-              operationCompletionCallbacks.delete(currentOperation.operation.id);
-
-              return {
-                ...current,
-                currentOperation: {
-                  ...currentOperation,
-                  exitCode,
-                  endTime: new Date(progress.timestamp),
-                  inlineProgress: undefined, // inline progress never lasts after exiting
-                },
-              };
-            });
-            break;
-        }
-      });
-      return () => disposable.dispose();
-    },
-  ],
 });
+resetOnCwdChange(operationListJotai, defaultOperationList());
+registerDisposable(
+  operationListJotai,
+  serverAPI.onMessageOfType('operationProgress', progress => {
+    switch (progress.kind) {
+      case 'spawn':
+        writeAtom(operationListJotai, current => {
+          const list = current instanceof DefaultValue ? defaultOperationList() : current;
+          const operation = operationsById.get(progress.id);
+          if (operation == null) {
+            return current;
+          }
+
+          return startNewOperation(operation, list);
+        });
+        break;
+      case 'stdout':
+      case 'stderr':
+        writeAtom(operationListJotai, current => {
+          if (current == null || current instanceof DefaultValue) {
+            return current;
+          }
+          const currentOperation = current.currentOperation;
+          if (currentOperation == null) {
+            return current;
+          }
+
+          return {
+            ...current,
+            currentOperation: {
+              ...currentOperation,
+              commandOutput: [...(currentOperation?.commandOutput ?? []), progress.message],
+              currentProgress: undefined, // hide progress on new stdout, so it doesn't appear stuck
+            },
+          };
+        });
+        break;
+      case 'inlineProgress':
+        writeAtom(operationListJotai, current => {
+          if (current == null || current instanceof DefaultValue) {
+            return current;
+          }
+          const currentOperation = current.currentOperation;
+          if (currentOperation == null) {
+            return current;
+          }
+
+          let inlineProgress: undefined | Map<string, string> =
+            current.currentOperation?.inlineProgress ?? new Map();
+          if (progress.hash) {
+            if (progress.message) {
+              inlineProgress.set(progress.hash, progress.message);
+            } else {
+              inlineProgress.delete(progress.hash);
+            }
+          } else {
+            inlineProgress = undefined;
+          }
+
+          const newCommandOutput = [...(currentOperation?.commandOutput ?? [])];
+          if (progress.hash && progress.message) {
+            // also add inline progress message as if it was on stdout,
+            // so you can see it when reading back the final output
+            newCommandOutput.push(`${progress.hash} - ${progress.message}\n`);
+          }
+
+          return {
+            ...current,
+            currentOperation: {
+              ...currentOperation,
+              inlineProgress,
+            },
+          };
+        });
+        break;
+      case 'progress':
+        writeAtom(operationListJotai, current => {
+          if (current == null || current instanceof DefaultValue) {
+            return current;
+          }
+          const currentOperation = current.currentOperation;
+          if (currentOperation == null) {
+            return current;
+          }
+
+          const newCommandOutput = [...(currentOperation?.commandOutput ?? [])];
+          if (newCommandOutput.at(-1) !== progress.progress.message) {
+            // also add progress message as if it was on stdout,
+            // so you can see it when reading back the final output,
+            // but only if it's a different progress message than we've seen.
+            newCommandOutput.push(progress.progress.message + '\n');
+          }
+
+          return {
+            ...current,
+            currentOperation: {
+              ...currentOperation,
+              commandOutput: newCommandOutput,
+              currentProgress: progress.progress,
+            },
+          };
+        });
+        break;
+      case 'exit':
+        writeAtom(operationListJotai, current => {
+          if (current == null || current instanceof DefaultValue) {
+            return current;
+          }
+          const currentOperation = current.currentOperation;
+          if (currentOperation == null) {
+            return current;
+          }
+
+          const exitCode = progress.exitCode;
+          const complete = operationCompletionCallbacks.get(currentOperation.operation.id);
+          complete?.(
+            exitCode === 0 ? undefined : new Error(`Process exited with code ${exitCode}`),
+          );
+          operationCompletionCallbacks.delete(currentOperation.operation.id);
+
+          return {
+            ...current,
+            currentOperation: {
+              ...currentOperation,
+              exitCode,
+              endTime: new Date(progress.timestamp),
+              inlineProgress: undefined, // inline progress never lasts after exiting
+            },
+          };
+        });
+        break;
+    }
+  }),
+  import.meta.hot,
+);
 
 export const inlineProgressByHash = selectorFamily<string | undefined, string>({
   key: 'inlineProgressByHash',
@@ -643,39 +642,38 @@ const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 export const [queuedOperationsJotai, queuedOperationsRecoil] = entangledAtoms<Array<Operation>>({
   key: 'queuedOperations',
   default: [],
-  effects: [
-    clearOnCwdChange(),
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('operationProgress', progress => {
-        switch (progress.kind) {
-          case 'queue':
-          case 'spawn': // spawning doubles as our notification to dequeue the next operation, and includes the new queue state.
-            // Update with the latest queue state. We expect this to be sent whenever we try to run a command but it gets queued.
-            setSelf(() => {
-              return progress.queue
-                .map(opId => operationsById.get(opId))
-                .filter((op): op is Operation => op != null);
-            });
-            break;
-          case 'error':
-            setSelf(() => []); // empty queue when a command hits an error
-            break;
-          case 'exit':
-            setSelf(current => {
-              operationsById.delete(progress.id); // we don't need to care about this operation anymore
-              if (progress.exitCode != null && progress.exitCode !== 0) {
-                // if any process in the queue exits with an error, the entire queue is cleared.
-                return [];
-              }
-              return current;
-            });
-            break;
-        }
-      });
-      return () => disposable.dispose();
-    },
-  ],
 });
+resetOnCwdChange(queuedOperationsJotai, []);
+registerDisposable(
+  queuedOperationsJotai,
+  serverAPI.onMessageOfType('operationProgress', progress => {
+    switch (progress.kind) {
+      case 'queue':
+      case 'spawn': // spawning doubles as our notification to dequeue the next operation, and includes the new queue state.
+        // Update with the latest queue state. We expect this to be sent whenever we try to run a command but it gets queued.
+        writeAtom(queuedOperationsJotai, () => {
+          return progress.queue
+            .map(opId => operationsById.get(opId))
+            .filter((op): op is Operation => op != null);
+        });
+        break;
+      case 'error':
+        writeAtom(queuedOperationsJotai, () => []); // empty queue when a command hits an error
+        break;
+      case 'exit':
+        writeAtom(queuedOperationsJotai, current => {
+          operationsById.delete(progress.id); // we don't need to care about this operation anymore
+          if (progress.exitCode != null && progress.exitCode !== 0) {
+            // if any process in the queue exits with an error, the entire queue is cleared.
+            return [];
+          }
+          return current;
+        });
+        break;
+    }
+  }),
+  import.meta.hot,
+);
 
 function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   // TODO: check for hashes in arguments that are known to be obsolete already,
