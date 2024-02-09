@@ -72,7 +72,7 @@
 
 mod builtin;
 pub mod config;
-
+pub use config::ConfigSet;
 pub use configmodel;
 pub use configmodel::convert;
 pub use configmodel::error;

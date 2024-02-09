@@ -200,6 +200,7 @@ members = [
   "saplingnative/bindings/modules/pycliparser",
   "saplingnative/bindings/modules/pyconchparser",
   "saplingnative/bindings/modules/pyconfigloader",
+  "saplingnative/bindings/modules/pycontext",
   "saplingnative/bindings/modules/pycopytrace",
   "saplingnative/bindings/modules/pydag",
   "saplingnative/bindings/modules/pydiffhelpers",
