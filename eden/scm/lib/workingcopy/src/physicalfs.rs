@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
@@ -19,7 +19,6 @@ use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use storemodel::FileStore;
-use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
@@ -76,12 +75,11 @@ impl PhysicalFileSystem {
 impl FileSystem for PhysicalFileSystem {
     fn pending_changes(
         &self,
+        ctx: &CoreContext,
         matcher: DynMatcher,
         ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        config: &dyn Config,
-        _lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let walker = Walker::new(
             self.vfs.root().to_path_buf(),
@@ -96,7 +94,7 @@ impl FileSystem for PhysicalFileSystem {
             self.vfs.clone(),
             manifests[0].clone(),
             self.store.clone(),
-            config.get_opt("workingcopy", "worker-count")?,
+            ctx.config.get_opt("workingcopy", "worker-count")?,
         );
         let pending_changes = PendingChanges {
             walker,
@@ -111,7 +109,7 @@ impl FileSystem for PhysicalFileSystem {
             file_change_detector: Some(file_change_detector),
             update_ts: Vec::new(),
             locker: self.locker.clone(),
-            dirstate_write_time: dirstate_write_time_override(config),
+            dirstate_write_time: dirstate_write_time_override(&ctx.config),
             vfs: self.vfs.clone(),
         };
         Ok(Box::new(pending_changes))

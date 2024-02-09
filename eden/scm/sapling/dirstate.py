@@ -856,7 +856,9 @@ class dirstate:
             self._map._tree.invalidatemtime(self._lastnormaltime)
 
         status = self._repo._rsrepo.workingcopy().status(
-            match, bool(ignored), self._ui._rcfg
+            self._ui.rustcontext(),
+            match,
+            bool(ignored),
         )
 
         if not unknown:

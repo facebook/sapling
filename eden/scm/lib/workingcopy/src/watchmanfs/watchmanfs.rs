@@ -13,8 +13,8 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
@@ -165,12 +165,11 @@ impl WatchmanFileSystem {
     #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
+        ctx: &CoreContext,
         matcher: DynMatcher,
         ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        config: &dyn Config,
-        lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let ts = &mut *self.inner.treestate.lock();
 
@@ -178,6 +177,8 @@ impl WatchmanFileSystem {
 
         let ts_metadata = ts.metadata()?;
         let mut prev_clock = get_clock(&ts_metadata)?;
+
+        let config = ctx.config.clone();
 
         let track_ignored = config.get_or_default::<bool>("fsmonitor", "track-ignore-files")?;
         let ts_track_ignored = ts_metadata.get("track-ignored").map(|v| v.as_ref()) == Some("1");
@@ -244,7 +245,7 @@ impl WatchmanFileSystem {
         let should_warn = config.get_or_default("fsmonitor", "warn-fresh-instance")?;
         if result.is_fresh_instance && should_warn {
             let _ = warn_about_fresh_instance(
-                lgr,
+                &ctx.logger,
                 parse_watchman_pid(prev_clock.as_ref()),
                 parse_watchman_pid(Some(&result.clock)),
             );
@@ -355,7 +356,7 @@ impl WatchmanFileSystem {
                 self.inner.vfs.root(),
                 ts,
                 &self.inner.locker,
-                dirstate_write_time_override(config),
+                dirstate_write_time_override(&config),
             )?;
         }
 
@@ -413,26 +414,27 @@ pub(crate) async fn connect_watchman() -> Result<watchman_client::Client> {
 impl FileSystem for WatchmanFileSystem {
     fn pending_changes(
         &self,
+        ctx: &CoreContext,
         matcher: DynMatcher,
         ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        config: &dyn Config,
-        lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let result = self.pending_changes(
+            ctx,
             matcher.clone(),
             ignore_matcher.clone(),
             ignore_dirs.clone(),
             include_ignored,
-            config,
-            lgr,
         );
 
         match result {
             Ok(result) => Ok(result),
             Err(err) if err.is::<watchman_client::Error>() => {
-                if !config.get_or("fsmonitor", "fallback-on-watchman-exception", || true)? {
+                if !ctx
+                    .config
+                    .get_or("fsmonitor", "fallback-on-watchman-exception", || true)?
+                {
                     return Err(err);
                 }
 
@@ -447,12 +449,11 @@ impl FileSystem for WatchmanFileSystem {
                 tracing::debug!(target: "watchman_info", watchmanfallback=1);
                 tracing::warn!(?err, "watchman error - falling back to slow crawl");
                 self.inner.pending_changes(
+                    ctx,
                     matcher,
                     ignore_matcher,
                     ignore_dirs,
                     include_ignored,
-                    config,
-                    lgr,
                 )
             }
             Err(err) => Err(err),

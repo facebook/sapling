@@ -7,7 +7,6 @@
 
 use std::borrow::Cow;
 
-use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use thiserror::Error;

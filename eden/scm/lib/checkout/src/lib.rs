@@ -42,7 +42,6 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
 use storemodel::FileStore;
-use termlogger::TermLogger;
 use tracing::debug;
 use tracing::instrument;
 use tracing::warn;
@@ -962,7 +961,7 @@ pub fn filesystem_checkout(
         create_sparse_matchers(repo, wc.vfs(), &current_mf, &target_mf)?;
 
     // Overlay manifest with "status" info to include outstanding working copy changes.
-    let status = wc.status(sparse_matcher.clone(), false, repo.config(), &ctx.logger)?;
+    let status = wc.status(ctx, sparse_matcher.clone(), false)?;
 
     if update_mode == CheckoutMode::Force {
         // With --clean, mix on our working copy changes so they are "undone" by
@@ -992,7 +991,7 @@ pub fn filesystem_checkout(
 
     if update_mode != CheckoutMode::Force {
         // 2. Check if status is dirty
-        check_conflicts(&ctx.logger, repo, wc, &plan, &target_mf, &status)?;
+        check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
     }
 
     // 3. Signal that an update is being performed
@@ -1056,7 +1055,7 @@ fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) ->
 }
 
 pub(crate) fn check_conflicts(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     plan: &CheckoutPlan,
@@ -1071,7 +1070,8 @@ pub(crate) fn check_conflicts(
     )?;
     if !unknown_conflicts.is_empty() {
         for unknown in unknown_conflicts {
-            lgr.warn(format!("{unknown}: untracked file differs"));
+            ctx.logger
+                .warn(format!("{unknown}: untracked file differs"));
         }
         bail!("untracked files in working directory differ from files in requested revision");
     }

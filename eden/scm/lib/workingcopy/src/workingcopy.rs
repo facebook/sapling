@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 #[cfg(feature = "eden")]
 use edenfs_client::EdenFsClient;
 use identity::Identity;
@@ -39,7 +40,6 @@ use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
 use storemodel::FileStore;
-use termlogger::TermLogger;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
@@ -402,10 +402,9 @@ impl WorkingCopy {
 
     pub fn status(
         &self,
+        ctx: &CoreContext,
         mut matcher: DynMatcher,
         include_ignored: bool,
-        config: &dyn Config,
-        lgr: &TermLogger,
     ) -> Result<Status> {
         let span = tracing::info_span!("status", status_len = tracing::field::Empty);
         let _enter = span.enter();
@@ -472,12 +471,11 @@ impl WorkingCopy {
             .filesystem
             .lock()
             .pending_changes(
+                ctx,
                 matcher.clone(),
                 ignore_matcher,
                 ignore_dirs,
                 include_ignored,
-                config,
-                lgr,
             )?
             .filter_map(|result| match result {
                 Ok(change_type) => match matcher.matches_file(change_type.get_path()) {
@@ -523,7 +521,8 @@ impl WorkingCopy {
         )?;
 
         if !self.vfs.supports_symlinks()
-            && config
+            && ctx
+                .config
                 .get_or_default("unsafe", "filtersuspectsymlink")
                 .unwrap_or_default()
         {

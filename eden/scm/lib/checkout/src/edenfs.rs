@@ -102,13 +102,9 @@ pub fn edenfs_checkout(
         CheckoutMode::Force => {
             edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
         }
-        CheckoutMode::NoConflict => edenfs_noconflict_checkout(
-            &ctx.logger,
-            repo,
-            wc,
-            target_commit,
-            target_commit_tree_hash,
-        )?,
+        CheckoutMode::NoConflict => {
+            edenfs_noconflict_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
+        }
         CheckoutMode::Merge => bail!("native merge checkout not yet supported for EdenFS"),
     };
 
@@ -138,7 +134,7 @@ fn create_edenfs_plan(
 }
 
 fn edenfs_noconflict_checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -157,9 +153,9 @@ fn edenfs_noconflict_checkout(
     )?;
     let plan = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
-    let status = wc.status(Arc::new(AlwaysMatcher::new()), false, repo.config(), lgr)?;
+    let status = wc.status(ctx, Arc::new(AlwaysMatcher::new()), false)?;
 
-    check_conflicts(lgr, repo, wc, &plan, &target_mf, &status)?;
+    check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
 
     // Signal that an update is being performed
     let updatestate_path = wc.dot_hg_path().join("updatestate");
@@ -178,7 +174,8 @@ fn edenfs_noconflict_checkout(
     // Execute the plan, applying changes to conflicting-ish files
     let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
     for (path, err) in apply_result.remove_failed {
-        lgr.warn(format!("update failed to remove {}: {:#}!\n", path, err));
+        ctx.logger
+            .warn(format!("update failed to remove {}: {:#}!\n", path, err));
     }
 
     Ok(())

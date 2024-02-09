@@ -11,6 +11,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 bitflags = "2.4"
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+context = { version = "0.1.0", path = "../context" }
 crossbeam = "0.8"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fs-err = { version = "2.6.0", features = ["tokio"] }

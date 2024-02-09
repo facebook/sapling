@@ -34,4 +34,10 @@ impl CoreContext {
             raw_args,
         }
     }
+
+    pub fn with_null_logger(&self) -> Self {
+        let mut ctx = self.clone();
+        ctx.logger = TermLogger::null();
+        ctx
+    }
 }

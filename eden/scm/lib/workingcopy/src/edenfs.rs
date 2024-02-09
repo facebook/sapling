@@ -14,6 +14,7 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use edenfs_client::EdenFsClient;
 use edenfs_client::FileStatus;
 use manifest_tree::TreeManifest;
@@ -60,12 +61,11 @@ impl EdenFileSystem {
 impl FileSystem for EdenFileSystem {
     fn pending_changes(
         &self,
+        _ctx: &CoreContext,
         matcher: DynMatcher,
         _ignore_matcher: DynMatcher,
         _ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        _config: &dyn Config,
-        _lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let p1 = self
             .treestate

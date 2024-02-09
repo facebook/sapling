@@ -15,15 +15,15 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Error;
+use context::CoreContext;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyPathBuf;
-use io::IO;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
-use pyconfigloader::config;
 #[cfg(feature = "eden")]
 use pyedenclient::feature_eden::EdenFsClient as PyEdenClient;
 use pypathmatcher::extract_matcher;
@@ -34,7 +34,6 @@ use repostate::command_state::Operation;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
-use termlogger::TermLogger;
 use types::HgId;
 
 #[cfg(not(feature = "eden"))]
@@ -116,17 +115,16 @@ py_class!(pub class workingcopy |py| {
 
     def status(
         &self,
+        ctx: ImplInto<CoreContext>,
         pymatcher: Option<PyObject>,
         include_ignored: bool,
-        config: &config,
     ) -> PyResult<PyObject> {
         let wc = self.inner(py).write();
         let matcher = extract_option_matcher(py, pymatcher)?;
-        let io = IO::main().map_pyerr(py)?;
-        let config = config.get_cfg(py);
+
         pystatus::to_python_status(py,
             &py.allow_threads(|| {
-                wc.status(matcher, include_ignored, &config, &TermLogger::new(&io))
+                wc.status(&ctx.into(), matcher, include_ignored)
             }).map_pyerr(py)?
         )
     }

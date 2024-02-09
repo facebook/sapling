@@ -11,9 +11,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use configmodel::Config;
+use context::CoreContext;
 use status::FileStatus;
-use termlogger::TermLogger;
 use types::RepoPathBuf;
 
 use crate::metadata::Metadata;
@@ -40,12 +39,13 @@ pub enum WaitOutput {
 impl Wait {
     /// Construct a `Wait` to detect changes.
     /// Under the hood, stat all files in `status` output.
-    pub fn new(wc: &WorkingCopy, dot_dir: &Path, config: &dyn Config) -> anyhow::Result<Self> {
+    pub fn new(ctx: &CoreContext, wc: &WorkingCopy, dot_dir: &Path) -> anyhow::Result<Self> {
         let treestate_wait = treestate::Wait::from_dot_dir(dot_dir);
         let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
         let list_ignored = false;
 
-        let status = wc.status(matcher, list_ignored, config, &TermLogger::null())?;
+        let ctx = ctx.with_null_logger();
+        let status = wc.status(&ctx, matcher, list_ignored)?;
 
         // Collect metadata of all changed files.
         let vfs = wc.vfs();
@@ -74,8 +74,8 @@ impl Wait {
     /// preserve the `Wait` state.
     pub fn wait_for_change(
         &mut self,
+        ctx: &CoreContext,
         wc: &WorkingCopy,
-        config: &dyn Config,
     ) -> anyhow::Result<WaitOutput> {
         // Note: this check updates `treestate_wait` so the notification is sent
         // out only once.
@@ -110,10 +110,12 @@ impl Wait {
                 }
             }
 
-            let new_wait = Self::new(wc, &self.dot_dir, config)?;
+            let new_wait = Self::new(ctx, wc, &self.dot_dir)?;
             if new_wait.metadata_map == self.metadata_map {
                 // Not changed.
-                wc.filesystem.lock().wait_for_potential_change(config)?;
+                wc.filesystem
+                    .lock()
+                    .wait_for_potential_change(&ctx.config)?;
             } else {
                 *self = new_wait;
                 break;

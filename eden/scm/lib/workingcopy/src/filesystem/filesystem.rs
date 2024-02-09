@@ -12,10 +12,10 @@ use std::time::Duration;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use manifest_tree::TreeManifest;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
-use termlogger::TermLogger;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -43,6 +43,7 @@ impl PendingChange {
 pub trait FileSystem {
     fn pending_changes(
         &self,
+        context: &CoreContext,
         // The full matcher including user specified filters.
         matcher: DynMatcher,
         // Git ignore matcher, except won't match committed files.
@@ -51,8 +52,6 @@ pub trait FileSystem {
         ignore_dirs: Vec<PathBuf>,
         // include ignored files
         include_ignored: bool,
-        config: &dyn Config,
-        io: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>>;
 
     /// Block until potential "status" or "diff" change.

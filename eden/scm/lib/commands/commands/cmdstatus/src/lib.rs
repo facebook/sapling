@@ -198,7 +198,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     tracing::debug!(target: "status_info", status_mode="rust");
 
-    let status = wc.status(matcher.clone(), ignored, repo.config(), &ctx.logger())?;
+    let status = wc.status(&ctx.core, matcher.clone(), ignored)?;
 
     // This should be passed the "full" matcher including
     // ignores, sparse, etc., but in practice probably doesn't
