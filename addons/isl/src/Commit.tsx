@@ -581,7 +581,7 @@ export function YouAreHere({
   previewType?: CommitPreview;
   hideSpinner?: boolean;
 }) {
-  const isFetching = useRecoilValue(isFetchingUncommittedChanges) && !hideSpinner;
+  const isFetching = useAtomValue(isFetchingUncommittedChanges) && !hideSpinner;
 
   let text;
   let spinner = false;

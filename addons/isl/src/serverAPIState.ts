@@ -365,27 +365,23 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const isFetchingUncommittedChanges = atom<boolean>({
-  key: 'isFetchingUncommittedChanges',
-  default: false,
-  effects: [
-    ({setSelf}) => {
-      const disposables = [
-        serverAPI.onMessageOfType('subscriptionResult', e => {
-          if (e.kind === 'uncommittedChanges') {
-            setSelf(false); // new files OR error means the fetch is not running anymore
-          }
-        }),
-        serverAPI.onMessageOfType('beganFetchingUncommittedChangesEvent', () => {
-          setSelf(true);
-        }),
-      ];
-      return () => {
-        disposables.forEach(d => d.dispose());
-      };
-    },
-  ],
-});
+export const isFetchingUncommittedChanges = jotaiAtom(false);
+registerDisposable(
+  isFetchingUncommittedChanges,
+  serverAPI.onMessageOfType('subscriptionResult', e => {
+    if (e.kind === 'uncommittedChanges') {
+      writeAtom(isFetchingUncommittedChanges, false); // new files OR error means the fetch is not running anymore
+    }
+  }),
+  import.meta.hot,
+);
+registerDisposable(
+  isFetchingUncommittedChanges,
+  serverAPI.onMessageOfType('beganFetchingUncommittedChangesEvent', () => {
+    writeAtom(isFetchingUncommittedChanges, true);
+  }),
+  import.meta.hot,
+);
 
 export const commitsShownRange = jotaiAtom<number | undefined>(DEFAULT_DAYS_OF_COMMITS_TO_LOAD);
 registerCleanup(
