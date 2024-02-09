@@ -170,6 +170,24 @@ async def update_commits_in_stack(
         params = await create_serial_strategy_params(
             ui, partitions, github_repo, origin
         )
+
+    max_pull_requests_to_create = ui.configint("github", "max-prs-to-create", "5")
+    if (
+        max_pull_requests_to_create >= 0
+        and params.pull_requests_to_create
+        and len(params.pull_requests_to_create) > max_pull_requests_to_create
+    ):
+        raise error.Abort(
+            _(
+                "refused to create %d pull requests, max is %d\nif you want to create %d pull requests at once, run again with `--config github.max-prs-to-create=-1`"
+            )
+            % (
+                len(params.pull_requests_to_create),
+                max_pull_requests_to_create,
+                len(params.pull_requests_to_create),
+            )
+        )
+
     refs_to_update = params.refs_to_update
 
     gitdir = None
