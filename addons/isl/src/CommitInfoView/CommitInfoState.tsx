@@ -95,7 +95,7 @@ function updateEditedCommitMessagesFromSuccessions() {
       const existingUpdateMessage = globalRecoil().getLoadable(diffUpdateMessagesState(oldHash));
       if (existingUpdateMessage.state === 'hasValue') {
         // TODO: this doesn't work if you have multiple commits selected...
-        globalRecoil().set(diffUpdateMessagesState(oldHash), existingUpdateMessage.valueOrThrow());
+        globalRecoil().set(diffUpdateMessagesState(newHash), existingUpdateMessage.valueOrThrow());
       }
     }
   });
