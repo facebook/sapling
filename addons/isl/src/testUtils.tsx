@@ -110,7 +110,9 @@ export function simulateRepoConnected() {
 }
 
 export function resetTestMessages() {
-  testMessageBus.resetTestMessages();
+  act(() => {
+    testMessageBus.resetTestMessages();
+  });
 }
 
 export function commitInfoIsOpen(): boolean {
