@@ -339,6 +339,8 @@ export default class ServerToClientAPI {
           data.data,
           data.uiState,
           this.tracker,
+          // Use repo for rage, if available.
+          this.currentState.type === 'repo' ? this.currentState.repo : undefined,
           this.logger,
           (progress: FileABugProgress) => {
             this.connection.logger?.info('file a bug progress: ', JSON.stringify(progress));

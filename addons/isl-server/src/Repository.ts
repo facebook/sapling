@@ -1042,6 +1042,15 @@ export class Repository {
     }
   }
 
+  public async getRagePaste(): Promise<string> {
+    const output = await this.runCommand(['rage'], 'RageCommand', undefined, undefined, 90_000);
+    const match = /P\d{9,}/.exec(output.stdout);
+    if (match) {
+      return match[0];
+    }
+    throw new Error('No paste found in rage output: ' + output.stdout);
+  }
+
   public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {
     const output = await this.runCommand(
       [

@@ -118,6 +118,7 @@ export type TrackEventName =
   | 'QueueOperation'
   | 'UploadImage'
   | 'RunVSCodeCommand'
+  | 'RageCommand'
   | 'UnsubmittedStarRating'
   | 'BlameLoaded'
   | 'VSCodeExtensionActivated'
