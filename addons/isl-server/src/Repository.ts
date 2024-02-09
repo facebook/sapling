@@ -829,7 +829,7 @@ export class Repository {
     const lastChecked = new Date();
 
     const [extension, backupStatuses, cloudStatus] = await Promise.allSettled([
-      this.getConfig('extensions.commitcloud'),
+      this.forceGetConfig('extensions.commitcloud', cwd),
       this.fetchCommitCloudBackupStatuses(cwd),
       this.fetchCommitCloudStatus(cwd),
     ]);
@@ -1091,6 +1091,17 @@ export class Repository {
   /** Read a config. The config name must be part of `allConfigNames`. */
   public async getConfig(configName: ConfigName): Promise<string | undefined> {
     return (await this.getKnownConfigs()).get(configName);
+  }
+
+  /**
+   * Read a single config, forcing a new dedicated call to `sl config`.
+   * Prefer `getConfig` to batch fetches when possible.
+   */
+  public async forceGetConfig(configName: string, cwd: string): Promise<string | undefined> {
+    const result = (await runCommand(this.info.command, ['config', configName], this.logger, cwd))
+      .stdout;
+    this.logger.info(`loaded configs from ${cwd}: ${configName} => ${result}`);
+    return result;
   }
 
   /** Load all "known" configs. Cached on `this`. */

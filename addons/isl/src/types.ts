@@ -488,7 +488,6 @@ export const allConfigNames = [
   'isl.download-commit-rebase-type',
   'isl.experimental-features',
   'isl.hold-off-refresh-ms',
-  'extensions.commitcloud',
   // which graph renderer to use (0: tree; 1: dag; 2: show both).
   'isl.experimental-graph-renderer',
 ] as const;
