@@ -16,11 +16,12 @@ import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
+  mergeConflictsJotai,
+  mergeConflictsRecoil,
   latestUncommittedChangesDataJotai,
   latestCommitsDataJotai,
   operationBeingPreviewed,
   latestCommits,
-  mergeConflicts,
   latestDag,
   latestHeadCommit,
   latestUncommittedChanges,
@@ -223,7 +224,7 @@ export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
   get: ({get}) => {
     const list = get(operationList);
     const queued = get(queuedOperations);
-    const conflicts = get(mergeConflicts);
+    const conflicts = get(mergeConflictsRecoil);
     if (conflicts?.files == null) {
       return conflicts;
     }
@@ -336,7 +337,7 @@ export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useAtomValue(latestCommitsDataJotai);
   const commits = useRecoilValue(latestCommits);
   const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
-  const conflicts = useRecoilValue(mergeConflicts);
+  const conflicts = useAtomValue(mergeConflictsJotai);
   const successorMap = useRecoilValue(latestSuccessorsMap);
 
   const [list, setOperationList] = useRecoilState(operationList);

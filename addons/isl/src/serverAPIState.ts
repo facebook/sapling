@@ -173,7 +173,9 @@ export const uncommittedChangesFetchError = selector<Error | undefined>({
   },
 });
 
-export const mergeConflicts = atom<MergeConflicts | undefined>({
+export const [mergeConflictsJotai, mergeConflictsRecoil] = entangledAtoms<
+  MergeConflicts | undefined
+>({
   key: 'mergeConflicts',
   default: undefined,
   effects: [

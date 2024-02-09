@@ -23,7 +23,7 @@ import {RelativeDate} from '../relativeDate';
 import {
   latestCommitsDataJotai,
   latestUncommittedChangesDataJotai,
-  mergeConflicts,
+  mergeConflictsJotai,
   repositoryInfo,
 } from '../serverAPIState';
 import {ComponentExplorerButton} from './ComponentExplorer';
@@ -112,7 +112,7 @@ function ServerClientMessageLogging() {
 function DebugPerfInfo() {
   const latestStatus = useAtomValue(latestUncommittedChangesDataJotai);
   const latestLog = useAtomValue(latestCommitsDataJotai);
-  const latestConflicts = useRecoilValue(mergeConflicts);
+  const latestConflicts = useAtomValue(mergeConflictsJotai);
   const heartbeat = useHeartbeat();
   const repoInfo = useRecoilValue(repositoryInfo);
   let commandName = 'sl';
