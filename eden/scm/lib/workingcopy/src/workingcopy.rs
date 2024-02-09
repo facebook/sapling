@@ -85,6 +85,7 @@ type BoxFileSystem = Box<dyn FileSystem + Send>;
 
 pub struct WorkingCopy {
     vfs: VFS,
+    config: Arc<dyn Config>,
     ident: Identity,
     format: StorageFormat,
     treestate: Arc<Mutex<TreeState>>,
@@ -104,7 +105,7 @@ const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
 impl WorkingCopy {
     pub fn new(
         path: &Path,
-        config: &dyn Config,
+        config: &Arc<dyn Config>,
         format: StorageFormat,
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcFileStore,
@@ -209,10 +210,11 @@ impl WorkingCopy {
             vfs.case_sensitive(),
         ));
 
-        let watchman_client = Arc::new(DeferredWatchmanClient::new());
+        let watchman_client = Arc::new(DeferredWatchmanClient::new(config.clone()));
 
         let (filesystem, eden_client) = Self::construct_file_system(
             vfs.clone(),
+            config,
             file_system_type,
             treestate.clone(),
             tree_resolver.clone(),
@@ -234,6 +236,7 @@ impl WorkingCopy {
 
         Ok(WorkingCopy {
             vfs,
+            config: config.clone(),
             format,
             ident,
             treestate,
@@ -322,6 +325,7 @@ impl WorkingCopy {
 
     fn construct_file_system(
         vfs: VFS,
+        config: &dyn Config,
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,

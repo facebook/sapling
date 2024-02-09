@@ -7,12 +7,15 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::ffi::OsString;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use configmodel::Config;
 use configmodel::ConfigExt;
 use context::CoreContext;
 use manifest_tree::ReadTreeManifest;
@@ -208,6 +211,7 @@ impl WatchmanFileSystem {
         }
 
         let progress_handle = async_runtime::spawn(crawl_progress(
+            config.clone(),
             self.inner.vfs.root().to_path_buf(),
             ts.len() as u64,
         ));
@@ -364,7 +368,11 @@ impl WatchmanFileSystem {
     }
 }
 
-async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
+async fn crawl_progress(
+    config: Arc<dyn Config>,
+    root: PathBuf,
+    approx_file_count: u64,
+) -> Result<()> {
     let client = {
         let _bar = ProgressBar::new_detached("connecting watchman", 0, "");
 
@@ -372,7 +380,7 @@ async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
         // query_files), this connect gets stuck indefinitely. Work around by
         // timing out and retrying until we get through.
         loop {
-            match tokio::time::timeout(Duration::from_secs(1), connect_watchman()).await {
+            match tokio::time::timeout(Duration::from_secs(1), connect_watchman(&config)).await {
                 Ok(client) => break client?,
                 Err(_) => {}
             };
@@ -407,8 +415,24 @@ async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
     }
 }
 
-pub(crate) async fn connect_watchman() -> Result<watchman_client::Client> {
-    Ok(watchman_client::Connector::new().connect().await?)
+pub(crate) async fn connect_watchman(config: &dyn Config) -> Result<watchman_client::Client> {
+    let sockpath: Option<OsString> = std::env::var_os("WATCHMAN_SOCK").or_else(|| {
+        config
+            .get_nonempty("fsmonitor", "sockpath")
+            .map(|p| p.replace("%i", &whoami::username()).into())
+    });
+
+    let mut connector = watchman_client::Connector::new();
+
+    if let Some(sockpath) = sockpath {
+        let sockpath: &Path = sockpath.as_ref();
+        if sockpath.exists() {
+            tracing::debug!(?sockpath);
+            connector = connector.unix_domain_socket(sockpath);
+        }
+    }
+
+    Ok(connector.connect().await?)
 }
 
 impl FileSystem for WatchmanFileSystem {
