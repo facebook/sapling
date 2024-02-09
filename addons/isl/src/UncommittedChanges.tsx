@@ -404,7 +404,7 @@ export type Place = 'main' | 'amend sidebar' | 'commit sidebar';
 
 export function UncommittedChanges({place}: {place: Place}) {
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
-  const error = useRecoilValue(uncommittedChangesFetchError);
+  const error = useAtomValue(uncommittedChangesFetchError);
   // TODO: use dagWithPreviews instead, and update CommitOperation
   const headCommit = useRecoilValue(latestHeadCommit);
   const schema = useAtomValue(commitMessageFieldsSchema);

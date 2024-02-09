@@ -211,11 +211,8 @@ export const latestUncommittedChanges = selector<Array<ChangedFile>>({
   },
 });
 
-export const uncommittedChangesFetchError = selector<Error | undefined>({
-  key: 'uncommittedChangesFetchError',
-  get: ({get}) => {
-    return get(latestUncommittedChangesDataRecoil).error;
-  },
+export const uncommittedChangesFetchError = jotaiAtom(get => {
+  return get(latestUncommittedChangesDataJotai).error;
 });
 
 export const [mergeConflictsJotai, mergeConflictsRecoil] = entangledAtoms<
