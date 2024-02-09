@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
 import platform from '../platform';
 import {
   clearAllRecoilSelectorCaches,
@@ -474,6 +475,7 @@ ${content}
         'split-diff-view-file-header-expand-button',
         'split-diff-view-file-header-expand-button',
       ]);
+      cancelAllHighlightingTasks();
     });
 
     it('a single large file is expanded so you always see something', async () => {
@@ -489,6 +491,7 @@ ${content}
       expect(inComparisonView().getAllByText('big_file_contents').length).toBeGreaterThan(0);
       // the small file starts collapsed
       expect(inComparisonView().queryByText('small_file_contents')).not.toBeInTheDocument();
+      cancelAllHighlightingTasks();
     });
   });
 
@@ -521,6 +524,7 @@ ${content}
       });
       expect(inComparisonView().getByText('This file is generated')).toBeInTheDocument();
       expect(inComparisonView().getByText('This file is partially generated')).toBeInTheDocument();
+      cancelAllHighlightingTasks();
     });
 
     it('generated files are collapsed by default', async () => {

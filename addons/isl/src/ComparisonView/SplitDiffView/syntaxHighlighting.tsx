@@ -47,11 +47,13 @@ export function useTokenizedHunks(
   const [tokenized, setTokenized] = useState<TokenizedDiffHunks | undefined>(undefined);
 
   useEffect(() => {
-    const token = new CancellationToken();
+    const token = newTrackedCancellationToken();
     // TODO: run this in a web worker so we don't block the UI?
     // May only be a problem for very large files.
     tokenizeHunks(theme, path, hunks, token).then(result => {
-      setTokenized(result);
+      if (!token.isCancelled) {
+        setTokenized(result);
+      }
     });
     return () => token.cancel();
   }, [theme, path, hunks]);
@@ -73,11 +75,13 @@ export function useTokenizedContents(
     if (content == null) {
       return;
     }
-    const token = new CancellationToken();
+    const token = newTrackedCancellationToken();
     // TODO: run this in a web worker so we don't block the UI?
     // May only be a problem for very large files.
     tokenizeContent(theme, path, content, token).then(result => {
-      setTokenized(result);
+      if (!token.isCancelled) {
+        setTokenized(result);
+      }
     });
     return () => token.cancel();
   }, [theme, path, content]);
@@ -123,7 +127,7 @@ export function useTokenizedContentsOnceVisible(
     if (!hasBeenVisible || contentBefore == null || contentAfter == null) {
       return;
     }
-    const token = new CancellationToken();
+    const token = newTrackedCancellationToken();
     Promise.all([
       tokenizeContent(theme, path, contentBefore, token),
       tokenizeContent(theme, path, contentAfter, token),
@@ -131,7 +135,9 @@ export function useTokenizedContentsOnceVisible(
       if (a == null || b == null) {
         return;
       }
-      setTokenized([a, b]);
+      if (!token.isCancelled) {
+        setTokenized([a, b]);
+      }
     });
     return () => token.cancel();
   }, [hasBeenVisible, theme, path, contentBefore, contentAfter]);
@@ -284,4 +290,24 @@ function getFilepathClassifier(): FilepathClassifier {
     _classifier = new FilepathClassifier(grammars, languages);
   }
   return _classifier;
+}
+
+/** Track the `CancellationToken`s so they can be cancelled immediately in tests. */
+const cancellationTokens: Set<CancellationToken> = new Set();
+
+/**
+ * Cancel all syntax highlighting tasks immediately. This is useful in tests
+ * that do not wait for the highlighting to complete and want to avoid the
+ * React "act" warning.
+ */
+export function cancelAllHighlightingTasks() {
+  cancellationTokens.forEach(token => token.cancel());
+  cancellationTokens.clear();
+}
+
+function newTrackedCancellationToken(): CancellationToken {
+  const token = new CancellationToken();
+  cancellationTokens.add(token);
+  token.onCancel(() => cancellationTokens.delete(token));
+  return token;
 }
