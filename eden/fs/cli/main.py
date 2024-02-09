@@ -1509,6 +1509,19 @@ class RemoveCmd(Subcmd):
         except Exception:
             return False
 
+    def delete_file_with_confirmation(self, path: str) -> int:
+        prompt = f"""\
+Warning: the following is a file, not a directory or an EdenFS mount: {path}
+Do you still want to delete {path}?"""
+        if not prompt_confirmation(prompt):
+            return 2
+        try:
+            os.unlink(path)
+        except Exception as ex:
+            print(f"error: cannot remove contents of {path}: {ex}")
+            return 1
+        return 0
+
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         configured_mounts = list(instance.get_mount_paths())
@@ -1517,6 +1530,16 @@ class RemoveCmd(Subcmd):
         # We also track a bool indicating if this checkout is currently mounted
         mounts: List[Tuple[str, RemoveType]] = []
         for path in args.paths:
+            if os.path.isfile(path):
+                if args.prompt and sys.stdin.isatty():
+                    return self.delete_file_with_confirmation(path)
+                else:
+                    print(
+                        f"error: {path} exists but it's a file; remove it manually.",
+                        file=sys.stderr,
+                    )
+                    return 1
+
             if not os.path.exists(path):
                 print(
                     f"error: {path} is neither an EdenFS mount nor an existing directory",
