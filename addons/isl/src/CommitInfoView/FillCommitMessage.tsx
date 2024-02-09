@@ -79,7 +79,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
 
         const schema = readAtom(commitMessageFieldsSchema);
         const existing = snapshot.getLoadable(editedCommitMessages(hashOrHead)).valueMaybe();
-        if (existing?.type === 'optimistic' || schema == null) {
+        if (schema == null) {
           return;
         }
         if (existing == null) {

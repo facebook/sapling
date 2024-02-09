@@ -125,10 +125,7 @@ export function updateFoldedMessageWithEditedMessage(
     }
 
     const old = parseCommitMessageFields(schema, existingTitle, existingMessage);
-    const message =
-      editedMessage == null || editedMessage.type === 'optimistic'
-        ? old
-        : applyEditedFields(old, editedMessage.fields);
+    const message = editedMessage == null ? old : applyEditedFields(old, editedMessage.fields);
 
     const newMessage = commitMessageFieldsToString(schema, message);
 

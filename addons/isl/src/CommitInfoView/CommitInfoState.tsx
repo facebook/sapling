@@ -20,7 +20,6 @@ import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {
   parseCommitMessageFields,
   allFieldsBeingEdited,
-  noFieldsBeingEdited,
   anyEditsMade,
   applyEditedFields,
   commitMessageFieldsSchemaRecoil,
@@ -32,23 +31,6 @@ import {atomFamily, selectorFamily, selector} from 'recoil';
 export type EditedMessage = {fields: Partial<CommitMessageFields>};
 
 export type CommitInfoMode = 'commit' | 'amend';
-export type EditedMessageUnlessOptimistic =
-  | (EditedMessage & {type?: undefined})
-  | {type: 'optimistic'; fields?: CommitMessageFields};
-
-/**
- * Throw if the edited message is of optimistic type.
- * We expect:
- *  - editedCommitMessage('head') should never be optimistic
- *  - editedCommitMessage(hashForCommitInTheTree) should not be optimistic
- *  - editedCommitMessage(hashForCommitNotInTheTree) should be optimistic
- */
-export function assertNonOptimistic(editedMessage: EditedMessageUnlessOptimistic): EditedMessage {
-  if (editedMessage.type === 'optimistic') {
-    throw new Error('Expected edited message to not be for optimistic commit');
-  }
-  return editedMessage;
-}
 
 export const [commitMessageTemplate, commitMessageTemplateRecoil] = entangledAtoms<
   EditedMessage | undefined
@@ -96,10 +78,8 @@ export const diffUpdateMessagesState = atomFamily<string, Hash>({
  * When you begin editing a field, that field must be initialized in the EditedMessage with the latest value.
  * This also stores the state of new commit messages being written, keyed by "head" instead of a commit hash.
  * Note: this state should be cleared when amending / committing / meta-editing.
- *
- * TODO: This state has a separate field for if it's optimistic, but this is no longer really needed. Remove this.
  */
-export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Hash | 'head'>({
+export const editedCommitMessages = atomFamily<EditedMessage, Hash | 'head'>({
   key: 'editedCommitMessages',
   default: () => ({fields: {}}),
 });
@@ -108,14 +88,7 @@ function updateEditedCommitMessagesFromSuccessions() {
   return successionTracker.onSuccessions(successions => {
     for (const [oldHash, newHash] of successions) {
       const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
-      if (
-        existing.state === 'hasValue' &&
-        // Never copy an "optimistic" message during succession, we have no way to clear it out.
-        // "optimistic" may also correspond to a message which was not edited,
-        // for which the hash no longer exists in the tree.
-        // We should just use the atom's default, which lets it populate correctly.
-        existing.valueOrThrow().type !== 'optimistic'
-      ) {
+      if (existing.state === 'hasValue') {
         globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
       }
 
@@ -145,9 +118,6 @@ export const latestCommitMessageFieldsWithEdits = selectorFamily<
     ({get}) => {
       const edited = get(editedCommitMessages(hash));
       const latest = get(latestCommitMessageFields(hash));
-      if (edited.type === 'optimistic') {
-        return latest;
-      }
       return applyEditedFields(latest, edited.fields);
     },
 });
@@ -168,9 +138,6 @@ export const unsavedFieldsBeingEdited = selectorFamily<FieldsBeingEdited, Hash |
     ({get}) => {
       const edited = get(editedCommitMessages(hash));
       const schema = get(commitMessageFieldsSchemaRecoil);
-      if (edited.type === 'optimistic') {
-        return noFieldsBeingEdited(schema);
-      }
       if (hash === 'head') {
         return allFieldsBeingEdited(schema);
       }
@@ -187,12 +154,9 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
       if (Object.values(beingEdited).some(Boolean)) {
         // Some fields are being edited, let's look more closely to see if anything is actually different.
         const edited = get(editedCommitMessages(hash));
-        if (edited.type === 'optimistic') {
-          return false;
-        }
         const latest = get(latestCommitMessageFields(hash));
         const schema = get(commitMessageFieldsSchemaRecoil);
-        return anyEditsMade(schema, latest, assertNonOptimistic(edited).fields);
+        return anyEditsMade(schema, latest, edited.fields);
       }
       return false;
     },

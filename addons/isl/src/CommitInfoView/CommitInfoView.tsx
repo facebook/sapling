@@ -6,7 +6,7 @@
  */
 
 import type {CommitInfo, DiffId} from '../types';
-import type {CommitInfoMode, EditedMessageUnlessOptimistic} from './CommitInfoState';
+import type {CommitInfoMode, EditedMessage} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
 import {Banner, BannerKind} from '../Banner';
@@ -48,14 +48,13 @@ import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {succeedableRevset} from '../types';
 import {useModal} from '../useModal';
-import {assert, firstLine, firstOfIterable} from '../utils';
+import {firstLine, firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
   forceNextCommitToEditAllFields,
   unsavedFieldsBeingEdited,
   diffUpdateMessagesState,
   commitInfoViewCurrentCommits,
-  assertNonOptimistic,
   commitMode,
   editedCommitMessages,
   hasUnsavedEditedCommitMessage,
@@ -230,11 +229,6 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [forceEditAll, setForceEditAll] = useAtom(forceNextCommitToEditAllFields);
 
   useEffect(() => {
-    if (editedMessage.type === 'optimistic') {
-      // invariant: if mode === 'commit', editedMessage.type !== 'optimistic'.
-      assert(!isCommitMode, 'Should not be in commit mode while editedMessage.type is optimistic');
-      return;
-    }
     if (isCommitMode && commit.isHead) {
       // no use resetting edited state for commit mode, where it's always being edited.
       return;
@@ -260,22 +254,14 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const parsedFields = useRecoilValue(latestCommitMessageFields(hashOrHead));
 
   const startEditingField = (field: string) => {
-    assert(
-      editedMessage.type !== 'optimistic',
-      'Cannot start editing fields when viewing optimistic commit',
-    );
     // Set the latest message value for the edited message of this field.
     // fieldsBeingEdited is derived from this.
-    setEditedCommitMessage(last =>
-      last.type === 'optimistic'
-        ? last
-        : {
-            fields: {
-              ...last.fields,
-              [field]: parsedFields[field],
-            },
-          },
-    );
+    setEditedCommitMessage(last => ({
+      fields: {
+        ...last.fields,
+        [field]: parsedFields[field],
+      },
+    }));
   };
 
   const topmostEditedField = getTopmostEditedField(schema, fieldsBeingEdited);
@@ -311,16 +297,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           .filter(field => mode !== 'commit' || field.type !== 'read-only')
           .map(field => {
             const setField = (newVal: string) =>
-              setEditedCommitMessage(val =>
-                val.type === 'optimistic'
-                  ? val
-                  : {
-                      fields: {
-                        ...val.fields,
-                        [field.key]: field.type === 'field' ? [newVal] : newVal,
-                      },
-                    },
-              );
+              setEditedCommitMessage(val => ({
+                fields: {
+                  ...val.fields,
+                  [field.key]: field.type === 'field' ? [newVal] : newVal,
+                },
+              }));
 
             let editedFieldValue = editedMessage.fields?.[field.key];
             if (editedFieldValue == null && mode === 'commit' && commit.isHead) {
@@ -471,12 +453,9 @@ function ShowingRemoteMessageBanner({
     const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
     const beingEdited = findFieldsBeingEdited(schema, originalFields, latestFields);
 
-    set(editedCommitMessages(editedCommitMessageKey), previous => {
-      if (previous.type === 'optimistic') {
-        return previous;
-      }
-      return editedMessageSubset(originalFields, beingEdited);
-    });
+    set(editedCommitMessages(editedCommitMessageKey), () =>
+      editedMessageSubset(originalFields, beingEdited),
+    );
   });
 
   const contextMenu = useContextMenu(() => {
@@ -558,7 +537,7 @@ function ActionsBar({
 }: {
   commit: CommitInfo;
   latestMessage: CommitMessageFields;
-  editedMessage: EditedMessageUnlessOptimistic;
+  editedMessage: EditedMessage;
   fieldsBeingEdited: FieldsBeingEdited;
   isCommitMode: boolean;
   setMode: (mode: CommitInfoMode) => unknown;
@@ -616,10 +595,7 @@ function ActionsBar({
       },
   );
   const doAmendOrCommit = () => {
-    const updatedMessage = applyEditedFields(
-      latestMessage,
-      assertNonOptimistic(editedMessage).fields,
-    );
+    const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);
     const message = commitMessageFieldsToString(schema, updatedMessage);
     const headHash = headCommit?.hash ?? '.';
     const allFiles = uncommittedChanges.map(file => file.path);
@@ -693,10 +669,7 @@ function ActionsBar({
               disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
               runOperation={async () => {
                 if (!isCommitMode) {
-                  const updatedMessage = applyEditedFields(
-                    latestMessage,
-                    assertNonOptimistic(editedMessage).fields,
-                  );
+                  const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);
                   const stringifiedMessage = commitMessageFieldsToString(schema, updatedMessage);
                   const diffId = findEditedDiffNumber(updatedMessage) ?? commit.diffId;
                   // if there's a diff attached, we should also update the remote message
@@ -739,10 +712,7 @@ function ActionsBar({
               data-testid="amend-message-button"
               disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
               runOperation={async () => {
-                const updatedMessage = applyEditedFields(
-                  latestMessage,
-                  assertNonOptimistic(editedMessage).fields,
-                );
+                const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);
                 const stringifiedMessage = commitMessageFieldsToString(schema, updatedMessage);
                 const diffId = findEditedDiffNumber(updatedMessage) ?? commit.diffId;
                 // if there's a diff attached, we should also update the remote message
