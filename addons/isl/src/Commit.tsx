@@ -131,7 +131,7 @@ export const Commit = memo(
 
     const isHighlighted = useAtomValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
 
-    const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
+    const inlineProgress = useAtomValue(inlineProgressByHash(commit.hash));
 
     const {isSelected, onClickToSelect, overrideSelection} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);

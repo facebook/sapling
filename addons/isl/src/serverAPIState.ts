@@ -32,6 +32,7 @@ import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
+import {atomFamily as jotaiAtomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
 import {selectorFamily, atom, DefaultValue, selector} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
@@ -616,20 +617,17 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const inlineProgressByHash = selectorFamily<string | undefined, string>({
-  key: 'inlineProgressByHash',
-  get:
-    (hash: string) =>
-    ({get}) => {
-      const info = get(operationListRecoil);
-      const inlineProgress = info.currentOperation?.inlineProgress;
-      if (inlineProgress == null) {
-        return undefined;
-      }
-      const shortHash = short(hash); // progress messages come indexed by short hash
-      return inlineProgress.get(shortHash);
-    },
-});
+export const inlineProgressByHash = jotaiAtomFamily((hash: Hash) =>
+  jotaiAtom(get => {
+    const info = get(operationListJotai);
+    const inlineProgress = info.currentOperation?.inlineProgress;
+    if (inlineProgress == null) {
+      return undefined;
+    }
+    const shortHash = short(hash); // progress messages come indexed by short hash
+    return inlineProgress.get(shortHash);
+  }),
+);
 
 /** We don't send entire operations to the server, since not all fields are serializable.
  * Thus, when the server tells us about the queue of operations, we need to know which operation it's talking about.
