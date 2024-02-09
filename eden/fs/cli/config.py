@@ -870,7 +870,9 @@ Do you want to run `eden mount %s` instead?"""
         print(f"Checking handle.exe for processes using '{mount}'...")
         print("Press ctrl+c to skip.")
         try:
-            output = subprocess.check_output([handle, "-nobanner", mount])
+            output = subprocess.check_output(
+                [handle, "-nobanner", "-accepteula", mount]
+            )
         except KeyboardInterrupt:
             print("Handle check interrupted.\n")
             print("If you want to find out which process is still using the repo, run:")
