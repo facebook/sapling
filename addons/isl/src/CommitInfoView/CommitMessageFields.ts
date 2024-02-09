@@ -12,7 +12,7 @@ import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
 import {resetOnCwdChange} from '../jotaiUtils';
 import {entangledAtoms} from '../recoilUtils';
-import {registerCleanup} from '../utils';
+import {arraysEqual, registerCleanup} from '../utils';
 import {notEmpty} from 'shared/utils';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
@@ -301,13 +301,6 @@ export const OSSDefaultFieldSchema: Array<FieldConfig> = [
   {key: 'Title', type: 'title', icon: 'milestone'},
   {key: 'Description', type: 'textarea', icon: 'note'},
 ];
-
-function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  return a.every((val, i) => b[i] === val);
-}
 
 /**
  * Schema defining what fields we expect to be in a CommitMessageFields object,

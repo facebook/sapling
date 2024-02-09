@@ -31,6 +31,13 @@ export function assert(shouldBeTrue: boolean, error: string): asserts shouldBeTr
   }
 }
 
+export function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((val, i) => b[i] === val);
+}
+
 export type NonNullReactElement = React.ReactElement | React.ReactFragment;
 
 /**
