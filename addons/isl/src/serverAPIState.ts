@@ -34,7 +34,7 @@ import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
-import {atomFamily as jotaiAtomFamily} from 'jotai/utils';
+import {atomFamily, atomFamily as jotaiAtomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
 import {selectorFamily, atom, DefaultValue, selector} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
@@ -279,6 +279,16 @@ export const commitByHash = selectorFamily<CommitInfo | undefined, string>({
       return get(latestCommits).find(commit => commit.hash === hash);
     },
 });
+
+/**
+ * Like commitByHash, but using jotai. Note that this is not mirrored, but a separate cache.
+ * TODO: consolidate by migrating everything to jotai.
+ */
+export const commitByHashJotai = atomFamily((hash: Hash) =>
+  jotaiAtom(get => {
+    return get(latestCommitsJotai).find(commit => commit.hash === hash);
+  }),
+);
 
 export const latestCommits = selector<Array<CommitInfo>>({
   key: 'latestCommits',

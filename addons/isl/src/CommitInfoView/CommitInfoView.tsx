@@ -46,7 +46,12 @@ import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
 import {CommitPreview, uncommittedChangesWithPreviewsJotai} from '../previews';
 import {selectedCommits} from '../selection';
-import {commitByHash, latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
+import {
+  commitByHashJotai,
+  latestHeadCommit,
+  repositoryInfo,
+  useRunOperation,
+} from '../serverAPIState';
 import {succeedableRevset} from '../types';
 import {useModal} from '../useModal';
 import {firstLine, firstOfIterable} from '../utils';
@@ -217,7 +222,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const isFoldPreview = commit.hash.startsWith(FOLD_COMMIT_PREVIEW_HASH_PREFIX);
   const isOptimistic =
-    useRecoilValue(commitByHash(commit.hash)) == null && !isCommitMode && !isFoldPreview;
+    useAtomValue(commitByHashJotai(commit.hash)) == null && !isCommitMode && !isFoldPreview;
 
   const isPublic = commit.phase === 'public';
   const isObsoleted = commit.successorInfo != null;
