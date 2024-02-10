@@ -13,6 +13,7 @@ import serverAPI from '../ClientToServerAPI';
 import {commitMessageTemplateRecoil} from '../CommitInfoView/CommitInfoState';
 import {
   applyEditedFields,
+  commitMessageFieldsSchema,
   commitMessageFieldsSchemaRecoil,
   commitMessageFieldsToString,
   emptyCommitMessageFields,
@@ -217,19 +218,12 @@ export const latestCommitMessageTitle = atomFamily((hashOrHead: Hash | 'head') =
   }),
 );
 
-export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Hash | 'head'>({
-  key: 'latestCommitMessageFields',
-  get:
-    (hash: string) =>
-    ({get}) => {
-      const [title, description] = get(latestCommitMessage(hash));
-      const schema = get(commitMessageFieldsSchemaRecoil);
-      return parseCommitMessageFields(schema, title, description);
-    },
-});
-
-export const latestCommitMessageFieldsJotai = atomFamily((hashOrHead: Hash | 'head') =>
-  jotaiMirrorFromRecoil(latestCommitMessageFields(hashOrHead)),
+export const latestCommitMessageFields = atomFamily((hashOrHead: Hash | 'head') =>
+  atom(get => {
+    const [title, description] = get(latestCommitMessageJotai(hashOrHead));
+    const schema = get(commitMessageFieldsSchema);
+    return parseCommitMessageFields(schema, title, description);
+  }),
 );
 
 export const pageVisibility = atomWithOnChange(

@@ -11,7 +11,7 @@ import type {CommitMessageFields} from './types';
 import {globalRecoil} from '../AccessGlobalRecoil';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
-import {latestCommitMessageFieldsJotai} from '../codeReview/CodeReviewInfo';
+import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {entangledAtoms} from '../recoilUtils';
@@ -110,7 +110,7 @@ export const __TEST__ = {
 export const latestCommitMessageFieldsWithEdits = jotaiAtomFamily((hashOrHead: Hash | 'head') => {
   return atom(get => {
     const edited = get(editedCommitMessages(hashOrHead));
-    const latest = get(latestCommitMessageFieldsJotai(hashOrHead));
+    const latest = get(latestCommitMessageFields(hashOrHead));
     return applyEditedFields(latest, edited.fields);
   });
 });
@@ -141,7 +141,7 @@ export const hasUnsavedEditedCommitMessage = jotaiAtomFamily((hashOrHead: Hash |
     if (Object.values(beingEdited).some(Boolean)) {
       // Some fields are being edited, let's look more closely to see if anything is actually different.
       const edited = get(editedCommitMessages(hashOrHead));
-      const latest = get(latestCommitMessageFieldsJotai(hashOrHead));
+      const latest = get(latestCommitMessageFields(hashOrHead));
       const schema = get(commitMessageFieldsSchema);
       return anyEditsMade(schema, latest, edited.fields);
     }

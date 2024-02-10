@@ -36,7 +36,7 @@ import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
-import {latestCommitMessageFieldsJotai} from './codeReview/CodeReviewInfo';
+import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
@@ -430,7 +430,7 @@ export function UncommittedChanges({place}: {place: Place}) {
       if (which === 'amend') {
         writeAtom(forceNextCommitToEditAllFields, true);
         if (headCommit != null) {
-          const latestMessage = readAtom(latestCommitMessageFieldsJotai(headCommit.hash));
+          const latestMessage = readAtom(latestCommitMessageFields(headCommit.hash));
           if (latestMessage) {
             writeAtom(editedCommitMessages(headCommit.hash), {
               fields: {...latestMessage},
