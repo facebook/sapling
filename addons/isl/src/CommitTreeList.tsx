@@ -25,7 +25,12 @@ import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {
+  dagWithPreviews,
+  dagWithPreviewsJotai,
+  treeWithPreviews,
+  useMarkOperationsCompleted,
+} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
 import {
@@ -38,8 +43,9 @@ import {
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {useAtomValue} from 'jotai';
-import {selector, selectorFamily, useRecoilValue} from 'recoil';
+import {atom, useAtomValue} from 'jotai';
+import {atomFamily} from 'jotai/utils';
+import {selector, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -115,18 +121,15 @@ function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
   }
 }
 
-const dagHasChildren = selectorFamily({
-  key: 'dagHasChildren',
-  get:
-    (key: string) =>
-    ({get}) => {
-      const dag = get(dagWithPreviews);
-      return dag.children(key).size > 0;
-    },
+const dagHasChildren = atomFamily((key: string) => {
+  return atom(get => {
+    const dag = get(dagWithPreviewsJotai);
+    return dag.children(key).size > 0;
+  });
 });
 
 function DagCommitBody({info}: {info: DagCommitInfo}) {
-  const hasChildren = useRecoilValue(dagHasChildren(info.hash));
+  const hasChildren = useAtomValue(dagHasChildren(info.hash));
   return (
     <Commit
       commit={info}
@@ -138,33 +141,27 @@ function DagCommitBody({info}: {info: DagCommitInfo}) {
   );
 }
 
-const dagHasParents = selectorFamily({
-  key: 'dagHasParents',
-  get:
-    (key: string) =>
-    ({get}) => {
-      const dag = get(dagWithPreviews);
-      return dag.parents(key).size > 0;
-    },
+const dagHasParents = atomFamily((key: string) => {
+  return atom(get => {
+    const dag = get(dagWithPreviewsJotai);
+    return dag.parents(key).size > 0;
+  });
 });
 
-const dagIsDraftStackRoot = selectorFamily({
-  key: 'dagIsDraftStackRoot',
-  get:
-    (key: string) =>
-    ({get}) => {
-      const dag = get(dagWithPreviews);
-      return dag.draft(dag.parents(key)).size === 0;
-    },
+const dagIsDraftStackRoot = atomFamily((key: string) => {
+  return atom(get => {
+    const dag = get(dagWithPreviewsJotai);
+    return dag.draft(dag.parents(key)).size === 0;
+  });
 });
 
 function MaybeFetchingAdditionalCommitsRow({hash}: {hash: Hash}) {
-  const hasParents = useRecoilValue(dagHasParents(hash));
+  const hasParents = useAtomValue(dagHasParents(hash));
   return hasParents ? null : <FetchingAdditionalCommitsRow />;
 }
 
 function MaybeStackActions({hash}: {hash: Hash}) {
-  const isDraftStackRoot = useRecoilValue(dagIsDraftStackRoot(hash));
+  const isDraftStackRoot = useAtomValue(dagIsDraftStackRoot(hash));
   return isDraftStackRoot ? <StackActions hash={hash} /> : null;
 }
 
