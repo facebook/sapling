@@ -9,6 +9,7 @@ import type {DiffId} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {selector} from 'recoil';
 
 export const messageSyncingEnabledState = selector({
@@ -18,6 +19,7 @@ export const messageSyncingEnabledState = selector({
     return provider?.enableMessageSyncing ?? false;
   },
 });
+export const messageSyncingEnabledStateJotai = jotaiMirrorFromRecoil(messageSyncingEnabledState);
 
 export async function updateRemoteMessage(
   diffId: DiffId,

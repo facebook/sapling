@@ -5,26 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitMessageFields} from '../CommitInfoView/types';
 import type {DiffId, DiffSummary, Hash, PageVisibility, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
-import {commitMessageTemplateRecoil} from '../CommitInfoView/CommitInfoState';
+import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
 import {
   applyEditedFields,
   commitMessageFieldsSchema,
-  commitMessageFieldsSchemaRecoil,
   commitMessageFieldsToString,
   emptyCommitMessageFields,
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
-import {messageSyncingEnabledState} from '../messageSyncing';
-import {dagWithPreviews} from '../previews';
+import {messageSyncingEnabledStateJotai} from '../messageSyncing';
+import {dagWithPreviewsJotai} from '../previews';
 import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
-import {commitByHash, repositoryInfo} from '../serverAPIState';
+import {commitByHashJotai, repositoryInfo} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
@@ -152,75 +150,65 @@ registerCleanup(
  * be smoother if we use the optimistic one before the remote has gotten the update propagated.
  * This is only necessary if the optimistic message is different than the local message.
  */
-export const latestCommitMessage = selectorFamily<
-  [title: string, description: string],
-  Hash | 'head'
->({
-  key: 'latestCommitMessage',
-  get:
-    (hash: string) =>
-    ({get}) => {
-      if (hash === 'head') {
-        const template = get(commitMessageTemplateRecoil);
-        if (template) {
-          const schema = get(commitMessageFieldsSchemaRecoil);
-          const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
-          const templateString = commitMessageFieldsToString(
-            schema,
-            result,
-            /* allowEmptyTitle */ true,
-          );
-          const title = firstLine(templateString);
-          const description = templateString.slice(title.length);
-          return [title, description];
-        }
-        return ['', ''];
+export const latestCommitMessage = atomFamily((hash: Hash | 'head') =>
+  atom((get): [title: string, description: string] => {
+    if (hash === 'head') {
+      const template = get(commitMessageTemplate);
+      if (template) {
+        const schema = get(commitMessageFieldsSchema);
+        const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
+        const templateString = commitMessageFieldsToString(
+          schema,
+          result,
+          /* allowEmptyTitle */ true,
+        );
+        const title = firstLine(templateString);
+        const description = templateString.slice(title.length);
+        return [title, description];
       }
-      const commit = get(commitByHash(hash));
-      const preview = get(dagWithPreviews).get(hash);
+      return ['', ''];
+    }
+    const commit = get(commitByHashJotai(hash));
+    const preview = get(dagWithPreviewsJotai).get(hash);
 
-      if (
-        preview != null &&
-        (preview.title !== commit?.title || preview.description !== commit?.description)
-      ) {
-        return [preview.title, preview.description];
+    if (
+      preview != null &&
+      (preview.title !== commit?.title || preview.description !== commit?.description)
+    ) {
+      return [preview.title, preview.description];
+    }
+
+    if (!commit) {
+      return ['', ''];
+    }
+
+    const syncEnabled = get(messageSyncingEnabledStateJotai);
+
+    let remoteTitle = commit.title;
+    let remoteDescription = commit.description;
+    if (syncEnabled && commit.diffId) {
+      // use the diff's commit message instead of the local one, if available
+      const summary = get(diffSummary(commit.diffId));
+      if (summary?.value) {
+        remoteTitle = summary.value.title;
+        remoteDescription = summary.value.commitMessage;
       }
+    }
 
-      if (!commit) {
-        return ['', ''];
-      }
-
-      const syncEnabled = get(messageSyncingEnabledState);
-
-      let remoteTitle = commit.title;
-      let remoteDescription = commit.description;
-      if (syncEnabled && commit.diffId) {
-        // use the diff's commit message instead of the local one, if available
-        const summary = get(diffSummaryRecoil(commit.diffId));
-        if (summary?.value) {
-          remoteTitle = summary.value.title;
-          remoteDescription = summary.value.commitMessage;
-        }
-      }
-
-      return [remoteTitle, remoteDescription];
-    },
-});
-
-export const latestCommitMessageJotai = atomFamily((hashOrHead: Hash | 'head') =>
-  jotaiMirrorFromRecoil(latestCommitMessage(hashOrHead)),
+    return [remoteTitle, remoteDescription];
+  }),
 );
 
 export const latestCommitMessageTitle = atomFamily((hashOrHead: Hash | 'head') =>
   atom(get => {
-    const [title] = get(latestCommitMessageJotai(hashOrHead));
+    const [title] = get(latestCommitMessage(hashOrHead));
     return title;
   }),
 );
 
 export const latestCommitMessageFields = atomFamily((hashOrHead: Hash | 'head') =>
   atom(get => {
-    const [title, description] = get(latestCommitMessageJotai(hashOrHead));
+    const [title, description] = get(latestCommitMessage(hashOrHead));
     const schema = get(commitMessageFieldsSchema);
     return parseCommitMessageFields(schema, title, description);
   }),
