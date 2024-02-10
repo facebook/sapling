@@ -23,13 +23,13 @@ import {
   FoldOperation,
   getFoldRangeCommitHash,
 } from './operations/FoldOperation';
-import {type Dag, dagWithPreviews} from './previews';
-import {selectedCommits, selectedCommitsRecoil} from './selection';
+import {type Dag, dagWithPreviewsJotai} from './previews';
+import {selectedCommits} from './selection';
 import {operationBeingPreviewedJotai, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {atom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
-import {type Snapshot, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 /**
@@ -37,17 +37,14 @@ import {Icon} from 'shared/Icon';
  * This selector gives the range of commits that can be folded, if any,
  * so a button may be shown to do the fold.
  */
-export const foldableSelection = selector<Array<CommitInfo> | undefined>({
-  key: 'foldableSelection',
-  get: ({get}) => {
-    const selection = get(selectedCommitsRecoil);
-    if (selection.size < 2) {
-      return undefined;
-    }
-    const dag = get(dagWithPreviews);
-    const foldable = getFoldableRange(selection, dag);
-    return foldable;
-  },
+export const foldableSelection = atom(get => {
+  const selection = get(selectedCommits);
+  if (selection.size < 2) {
+    return undefined;
+  }
+  const dag = get(dagWithPreviewsJotai);
+  const foldable = getFoldableRange(selection, dag);
+  return foldable;
 });
 
 /**
@@ -76,8 +73,8 @@ export function getFoldableRange(selection: Set<Hash>, dag: Dag): Array<CommitIn
 }
 
 export function FoldButton({commit}: {commit?: CommitInfo}) {
-  const foldable = useRecoilValue(foldableSelection);
-  const onClick = useRecoilCallback(({set}) => () => {
+  const foldable = useAtomValue(foldableSelection);
+  const onClick = useCallback(() => {
     if (foldable == null) {
       return;
     }
@@ -92,7 +89,7 @@ export function FoldButton({commit}: {commit?: CommitInfo}) {
     const message = commitMessageFieldsToString(schema, messageFields);
     writeAtom(operationBeingPreviewedJotai, new FoldOperation(foldable, message));
     writeAtom(selectedCommits, new Set([getFoldRangeCommitHash(foldable, /* isPreview */ true)]));
-  });
+  }, [foldable]);
   if (foldable == null || (commit != null && foldable?.[0]?.hash !== commit.hash)) {
     return null;
   }
