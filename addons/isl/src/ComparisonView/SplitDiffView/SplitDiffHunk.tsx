@@ -10,12 +10,13 @@ import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
+import {lineRange} from '../ComparisonView';
 import SplitDiffRow from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
+import {useAtomValue} from 'jotai';
 import React, {useCallback, useState} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
 import {Icon} from 'shared/Icon';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {
@@ -399,13 +400,16 @@ function ExpandingSeparator({
   afterLineStart,
   t,
 }: ExpandingSeparatorProps): React.ReactElement {
-  const loadable = useRecoilValueLoadable(ctx.atoms.lineRange(range));
+  const loadable = useAtomValue(lineRange(range));
 
-  const tokenization = useTokenizedContents(path, loadable.valueMaybe());
+  const tokenization = useTokenizedContents(
+    path,
+    loadable.state === 'hasData' ? loadable.data : undefined,
+  );
   switch (loadable.state) {
-    case 'hasValue': {
+    case 'hasData': {
       const rows: React.ReactElement[] = [];
-      const lines = loadable.contents;
+      const lines = loadable.data;
       addUnmodifiedRows(
         lines,
         path,
@@ -433,7 +437,7 @@ function ExpandingSeparator({
       return (
         <SeparatorRow>
           <div className="split-diff-view-error-row">
-            {t('Error:')} {loadable.contents.message}
+            {t('Error:')} {(loadable.error as Error).message}
           </div>
         </SeparatorRow>
       );

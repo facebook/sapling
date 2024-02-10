@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RecoilValueReadOnly} from 'recoil';
 import type {Comparison} from 'shared/Comparison';
 
 export type LineRangeParams<Id> = {
@@ -24,11 +23,6 @@ export type Context = {
    * information like a hash or revset + path.
    */
   id: {path: string; comparison: Comparison};
-  atoms: {
-    lineRange: (
-      params: LineRangeParams<{path: string; comparison: Comparison}>,
-    ) => RecoilValueReadOnly<Array<string>>;
-  };
   translate?: (s: string) => string;
   copy?: (s: string) => void;
   openFile?: () => unknown;

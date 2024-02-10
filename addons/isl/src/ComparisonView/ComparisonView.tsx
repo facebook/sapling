@@ -18,14 +18,15 @@ import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
-import {latestHeadCommit} from '../serverAPIState';
+import {latestHeadCommitJotai} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {useSetAtom} from 'jotai';
+import {atom, useSetAtom} from 'jotai';
+import {atomFamily as atomFamilyJotai, loadable} from 'jotai/utils';
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {atomFamily, selectorFamily, useRecoilState} from 'recoil';
+import {atomFamily, useRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {parsePatch} from 'shared/patch/parse';
@@ -75,37 +76,30 @@ const currentComparisonData = atomFamily<
   ],
 });
 
-export const lineRange = selectorFamily<
-  string[],
-  LineRangeParams<{path: string; comparison: Comparison}>
->({
-  key: 'lineRange',
-  get:
-    params =>
-    ({get}) => {
-      // We must ensure this lineRange gets invalidated when the underlying file's context lines
-      // have changed.
-      // This depends on the comparison:
-      // for Committed: the commit hash is included in the Comparison, thus the cached data will always be accurate.
-      // for Uncommitted, Head, and Stack:
-      // by referencing the latest head commit atom, we ensure this selector reloads when the head commit changes.
-      // These comparisons are all against the working copy (not exactly head),
-      // but there's no change that could be made that would affect the context lines without
-      // also changing the head commit's hash.
-      // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
-      // AGAIN on the same data while waiting for some new operation to finish.
-      get(latestHeadCommit);
+export const lineRange = atomFamilyJotai(
+  (params: LineRangeParams<{path: string; comparison: Comparison}>) =>
+    loadable(
+      atom(async (get): Promise<Array<string>> => {
+        // We must ensure this lineRange gets invalidated when the underlying file's context lines
+        // have changed.
+        // This depends on the comparison:
+        // for Committed: the commit hash is included in the Comparison, thus the cached data will always be accurate.
+        // for Uncommitted, Head, and Stack:
+        // by referencing the latest head commit atom, we ensure this selector reloads when the head commit changes.
+        // These comparisons are all against the working copy (not exactly head),
+        // but there's no change that could be made that would affect the context lines without
+        // also changing the head commit's hash.
+        // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
+        // AGAIN on the same data while waiting for some new operation to finish.
+        get(latestHeadCommitJotai);
 
-      serverAPI.postMessage({type: 'requestComparisonContextLines', ...params});
+        serverAPI.postMessage({type: 'requestComparisonContextLines', ...params});
 
-      return new Promise(res => {
-        const disposable = serverAPI.onMessageOfType('comparisonContextLines', event => {
-          res(event.lines);
-          disposable.dispose();
-        });
-      });
-    },
-});
+        const result = await serverAPI.nextMessageMatching('comparisonContextLines', () => true);
+        return result.lines;
+      }),
+    ),
+);
 
 function useComparisonData(comparison: Comparison) {
   const [compared, setCompared] = useRecoilState(currentComparisonData(comparison));
@@ -382,7 +376,6 @@ function ComparisonViewFile({
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context: Context = {
     id: {path, comparison},
-    atoms: {lineRange},
     translate: t,
     copy: platform.clipboardCopy,
     openFile: () => platform.openFile(path),
