@@ -15,7 +15,7 @@ import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './Succ
 import {islDrawerState} from './drawerState';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
-import {dagWithPreviews} from './previews';
+import {dagWithPreviews, dagWithPreviewsJotai} from './previews';
 import {entangledAtoms} from './recoilUtils';
 import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
@@ -89,65 +89,64 @@ export function useCommitSelection(hash: string): {
   overrideSelection: (newSelected: Array<Hash>) => void;
 } {
   const isSelected = useAtomValue(isCommitSelected(hash));
-  const onClickToSelect = useRecoilCallback(
-    ({snapshot}) =>
-      (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
-        // previews won't change a commit from draft -> public, so we don't need
-        // to use previews here
-        const dag = readAtom(latestDagJotai);
-        if (dag.get(hash)?.phase === 'public') {
-          // don't bother selecting public commits
-          return;
-        }
-        writeAtom(selectedCommits, last => {
-          if (e.shiftKey) {
-            const previouslySelected = readAtom(previouslySelectedCommit);
-            const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
-            if (linearHistory != null && previouslySelected != null) {
-              const prevIdx = linearHistory.findIndex(val => val.hash === previouslySelected);
-              const nextIdx = linearHistory.findIndex(val => val.hash === hash);
+  const onClickToSelect = useCallback(
+    (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+      // previews won't change a commit from draft -> public, so we don't need
+      // to use previews here
+      const dag = readAtom(latestDagJotai);
+      if (dag.get(hash)?.phase === 'public') {
+        // don't bother selecting public commits
+        return;
+      }
+      writeAtom(selectedCommits, last => {
+        if (e.shiftKey) {
+          const previouslySelected = readAtom(previouslySelectedCommit);
+          const linearHistory = readAtom(linearizedCommitHistory);
+          if (linearHistory != null && previouslySelected != null) {
+            const prevIdx = linearHistory.findIndex(val => val.hash === previouslySelected);
+            const nextIdx = linearHistory.findIndex(val => val.hash === hash);
 
-              const [fromIdx, toIdx] = prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
-              const slice = linearHistory.slice(fromIdx, toIdx + 1);
+            const [fromIdx, toIdx] = prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
+            const slice = linearHistory.slice(fromIdx, toIdx + 1);
 
-              return new Set([
-                ...last,
-                ...slice.filter(commit => commit.phase !== 'public').map(commit => commit.hash),
-              ]);
-            } else {
-              // Holding shift, but we don't have a previous selected commit.
-              // Fall through to treat it like a normal click.
-            }
-          }
-
-          const selected = new Set(last);
-          if (selected.has(hash)) {
-            // multiple selected, then click an existing selected:
-            //   if cmd, unselect just that one commit
-            //   if not cmd, reset selection to just that one commit
-            // only one selected, then click on it
-            //   if cmd, unselect it
-            //   it not cmd, unselect it
-            if (!e.metaKey && selected.size > 1) {
-              // only select this commit
-              selected.clear();
-              selected.add(hash);
-            } else {
-              // unselect
-              selected.delete(hash);
-              writeAtom(previouslySelectedCommit, undefined);
-            }
+            return new Set([
+              ...last,
+              ...slice.filter(commit => commit.phase !== 'public').map(commit => commit.hash),
+            ]);
           } else {
-            if (!e.metaKey) {
-              // clear if not holding cmd key
-              selected.clear();
-            }
-            selected.add(hash);
+            // Holding shift, but we don't have a previous selected commit.
+            // Fall through to treat it like a normal click.
           }
-          return selected;
-        });
-        writeAtom(previouslySelectedCommit, hash);
-      },
+        }
+
+        const selected = new Set(last);
+        if (selected.has(hash)) {
+          // multiple selected, then click an existing selected:
+          //   if cmd, unselect just that one commit
+          //   if not cmd, reset selection to just that one commit
+          // only one selected, then click on it
+          //   if cmd, unselect it
+          //   it not cmd, unselect it
+          if (!e.metaKey && selected.size > 1) {
+            // only select this commit
+            selected.clear();
+            selected.add(hash);
+          } else {
+            // unselect
+            selected.delete(hash);
+            writeAtom(previouslySelectedCommit, undefined);
+          }
+        } else {
+          if (!e.metaKey) {
+            // clear if not holding cmd key
+            selected.clear();
+          }
+          selected.add(hash);
+        }
+        return selected;
+      });
+      writeAtom(previouslySelectedCommit, hash);
+    },
     [hash],
   );
 
@@ -180,17 +179,14 @@ export function useCommitSelection(hash: string): {
  * a
  * in bottom to top order: [a,d,e,b,c]
  */
-export const linearizedCommitHistory = selector({
-  key: 'linearizedCommitHistory',
-  get: ({get}) => {
-    const dag = get(dagWithPreviews);
-    const sorted: Hash[] = dag.sortAsc(dag, {gap: false});
-    return dag.getBatch(sorted);
-  },
+export const linearizedCommitHistory = atom(get => {
+  const dag = get(dagWithPreviewsJotai);
+  const sorted: Hash[] = dag.sortAsc(dag, {gap: false});
+  return dag.getBatch(sorted);
 });
 
 export function useArrowKeysToChangeSelection() {
-  const cb = useRecoilCallback(({snapshot}) => (which: ISLCommandName) => {
+  const cb = useCallback((which: ISLCommandName) => {
     if (which === 'OpenDetails') {
       writeAtom(islDrawerState, previous => ({
         ...previous,
@@ -201,7 +197,7 @@ export function useArrowKeysToChangeSelection() {
       }));
     }
 
-    const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
+    const linearHistory = readAtom(linearizedCommitHistory);
     if (linearHistory == null || linearHistory.length === 0) {
       return;
     }
@@ -266,7 +262,7 @@ export function useArrowKeysToChangeSelection() {
       extendSelection ? new Set([...last, newSelected.hash]) : new Set([newSelected.hash]),
     );
     writeAtom(previouslySelectedCommit, newSelected.hash);
-  });
+  }, []);
 
   useCommand('OpenDetails', () => cb('OpenDetails'));
   useCommand('SelectUpwards', () => cb('SelectUpwards'));

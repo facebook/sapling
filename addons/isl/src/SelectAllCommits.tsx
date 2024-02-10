@@ -5,22 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Snapshot} from 'recoil';
-
 import {useCommand} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {islDrawerState} from './drawerState';
 import {t, T} from './i18n';
-import {writeAtom} from './jotaiUtils';
+import {readAtom, writeAtom} from './jotaiUtils';
 import {linearizedCommitHistory, selectedCommits} from './selection';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilCallback} from 'recoil';
+import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
-export function getAllDraftCommits(snapshot: Snapshot): Array<string> {
-  const commits = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
+export function getAllDraftCommits(): Array<string> {
+  const commits = readAtom(linearizedCommitHistory);
   if (commits == null) {
     return [];
   }
@@ -37,8 +35,8 @@ export function useSelectAllCommitsShortcut() {
 }
 
 export function useSelectAllCommits() {
-  return useRecoilCallback(({snapshot}) => () => {
-    const draftCommits = getAllDraftCommits(snapshot);
+  return useCallback(() => {
+    const draftCommits = getAllDraftCommits();
     writeAtom(selectedCommits, new Set(draftCommits));
     // pop open sidebar so you can act on the bulk selection
     writeAtom(islDrawerState, last => ({
@@ -48,7 +46,7 @@ export function useSelectAllCommits() {
         collapsed: false,
       },
     }));
-  });
+  }, []);
 }
 
 export function SelectAllButton({dismiss}: {dismiss: () => unknown}) {
