@@ -25,7 +25,7 @@ import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {dagWithPreviewsJotai, treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
 import {
@@ -62,7 +62,7 @@ type DagCommitListProps = {
 };
 
 const dagWithYouAreHere = atom(get => {
-  let dag = get(dagWithPreviewsJotai);
+  let dag = get(dagWithPreviews);
   // Insert a virtual "You are here" as a child of ".".
   const dot = dag.resolve('.');
   if (dot != null) {
@@ -114,7 +114,7 @@ function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
 
 const dagHasChildren = atomFamily((key: string) => {
   return atom(get => {
-    const dag = get(dagWithPreviewsJotai);
+    const dag = get(dagWithPreviews);
     return dag.children(key).size > 0;
   });
 });
@@ -134,14 +134,14 @@ function DagCommitBody({info}: {info: DagCommitInfo}) {
 
 const dagHasParents = atomFamily((key: string) => {
   return atom(get => {
-    const dag = get(dagWithPreviewsJotai);
+    const dag = get(dagWithPreviews);
     return dag.parents(key).size > 0;
   });
 });
 
 const dagIsDraftStackRoot = atomFamily((key: string) => {
   return atom(get => {
-    const dag = get(dagWithPreviewsJotai);
+    const dag = get(dagWithPreviews);
     return dag.draft(dag.parents(key)).size === 0;
   });
 });

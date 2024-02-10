@@ -12,7 +12,7 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {readAtom} from './jotaiUtils';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelectionReadonly} from './partialSelection';
-import {dagWithPreviewsJotai, uncommittedChangesWithPreviewsJotai} from './previews';
+import {dagWithPreviews, uncommittedChangesWithPreviewsJotai} from './previews';
 
 /**
  * Amend --to allows amending to a parent commit other than head.
@@ -39,7 +39,7 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
     return false;
   }
 
-  const dag = readAtom(dagWithPreviewsJotai);
+  const dag = readAtom(dagWithPreviews);
   const head = dag?.resolve('.');
   if (dag == null || head == null || !dag.has(commit.hash)) {
     return false;

@@ -13,7 +13,7 @@ import type {ExportFile, ImportCommit} from 'shared/types/stack';
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {resetOnCwdChange} from './jotaiUtils';
-import {dagWithPreviewsJotai, uncommittedChangesWithPreviewsJotai} from './previews';
+import {dagWithPreviews, uncommittedChangesWithPreviewsJotai} from './previews';
 import {entangledAtoms} from './recoilUtils';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
@@ -532,7 +532,7 @@ export function useUncommittedSelection() {
   const [selection, setSelection] = useAtom(uncommittedSelection);
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
   const epoch = useAtomValue(latestUncommittedChangesTimestamp);
-  const dag = useAtomValue(dagWithPreviewsJotai);
+  const dag = useAtomValue(dagWithPreviews);
   const wdirHash = dag.resolve('.')?.hash ?? '';
   const getPaths = () => uncommittedChanges.map(c => c.path);
 

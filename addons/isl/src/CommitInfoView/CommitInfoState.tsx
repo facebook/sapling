@@ -13,7 +13,7 @@ import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {readAtom, writeAtom} from '../jotaiUtils';
-import {dagWithPreviewsJotai} from '../previews';
+import {dagWithPreviews} from '../previews';
 import {entangledAtoms} from '../recoilUtils';
 import {selectedCommitInfos} from '../selection';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
@@ -156,7 +156,7 @@ export const commitInfoViewCurrentCommits = atom(get => {
 
   // show selected commit, if there's exactly 1
   const selectedCommit = selected.length === 1 ? selected[0] : undefined;
-  const commit = selectedCommit ?? get(dagWithPreviewsJotai).resolve('.');
+  const commit = selectedCommit ?? get(dagWithPreviews).resolve('.');
 
   if (commit == null) {
     return null;

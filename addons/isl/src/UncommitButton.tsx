@@ -10,7 +10,7 @@ import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import foundPlatform from './platform';
-import {dagWithPreviewsJotai} from './previews';
+import {dagWithPreviews} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
@@ -18,7 +18,7 @@ import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 export function UncommitButton() {
-  const dag = useAtomValue(dagWithPreviewsJotai);
+  const dag = useAtomValue(dagWithPreviews);
   const headCommit = dag.resolve('.');
 
   const provider = useRecoilValue(codeReviewProvider);

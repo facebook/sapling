@@ -17,19 +17,17 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
+  latestDagJotai,
+  operationBeingPreviewedJotai,
   latestHeadCommitJotai,
   queuedOperationsJotai,
   queuedOperationsRecoil,
   operationListJotai,
   operationListRecoil,
   mergeConflictsJotai,
-  mergeConflictsRecoil,
   latestUncommittedChangesDataJotai,
   latestCommitsDataJotai,
-  operationBeingPreviewedRecoil,
   latestCommits,
-  latestDag,
-  latestHeadCommit,
   latestUncommittedChanges,
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
@@ -256,30 +254,25 @@ export type WithPreviewType = {
 
 export type {Dag};
 
-export const dagWithPreviews = selector<Dag>({
-  key: 'dagWithPreviews',
-  get: ({get}) => {
-    const originalDag = get(latestDag);
-    const list = get(operationListRecoil);
-    const queued = get(queuedOperationsRecoil);
-    const currentOperation = list.currentOperation;
-    const history = list.operationHistory;
-    const currentPreview = get(operationBeingPreviewedRecoil);
-    let dag = originalDag;
-    for (const op of optimisticOperations({history, queued, currentOperation})) {
-      dag = op.optimisticDag(dag);
-    }
-    if (currentPreview) {
-      dag = currentPreview.previewDag(dag);
-    }
-    return dag;
-  },
+export const dagWithPreviews = atom(get => {
+  const originalDag = get(latestDagJotai);
+  const list = get(operationListJotai);
+  const queued = get(queuedOperationsJotai);
+  const currentOperation = list.currentOperation;
+  const history = list.operationHistory;
+  const currentPreview = get(operationBeingPreviewedJotai);
+  let dag = originalDag;
+  for (const op of optimisticOperations({history, queued, currentOperation})) {
+    dag = op.optimisticDag(dag);
+  }
+  if (currentPreview) {
+    dag = currentPreview.previewDag(dag);
+  }
+  return dag;
 });
 
-export const dagWithPreviewsJotai = jotaiMirrorFromRecoil(dagWithPreviews);
-
 export const treeWithPreviews = atom(get => {
-  const dag = get(dagWithPreviewsJotai);
+  const dag = get(dagWithPreviews);
   const commits = [...dag.values()];
   const trees = getCommitTree(commits);
 

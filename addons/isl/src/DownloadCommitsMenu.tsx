@@ -20,7 +20,7 @@ import {GraftOperation} from './operations/GraftOperation';
 import {PullRevOperation} from './operations/PullRevOperation';
 import {RebaseKeepOperation} from './operations/RebaseKeepOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {dagWithPreviewsJotai} from './previews';
+import {dagWithPreviews} from './previews';
 import {forceFetchCommit, useRunOperation} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
 import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
@@ -127,7 +127,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       const dest =
         rebaseType === 'rebase_ontop'
           ? '.'
-          : unwrap(findCurrentPublicBase(readAtom(dagWithPreviewsJotai))?.hash);
+          : unwrap(findCurrentPublicBase(readAtom(dagWithPreviews))?.hash);
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
       runOperation(new Op(exactRevset(enteredDiffNum), succeedableRevset(dest)));

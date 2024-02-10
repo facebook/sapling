@@ -15,7 +15,7 @@ import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './Succ
 import {islDrawerState} from './drawerState';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
-import {dagWithPreviewsJotai} from './previews';
+import {dagWithPreviews} from './previews';
 import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
@@ -67,7 +67,7 @@ const previouslySelectedCommit = atom<undefined | string>(undefined);
  */
 export const selectedCommitInfos = atom(get => {
   const selected = get(selectedCommits);
-  const dag = get(dagWithPreviewsJotai);
+  const dag = get(dagWithPreviews);
   return [...selected].flatMap(h => {
     const info = dag.get(h);
     return info === undefined ? [] : [info];
@@ -173,7 +173,7 @@ export function useCommitSelection(hash: string): {
  * in bottom to top order: [a,d,e,b,c]
  */
 export const linearizedCommitHistory = atom(get => {
-  const dag = get(dagWithPreviewsJotai);
+  const dag = get(dagWithPreviews);
   const sorted: Hash[] = dag.sortAsc(dag, {gap: false});
   return dag.getBatch(sorted);
 });

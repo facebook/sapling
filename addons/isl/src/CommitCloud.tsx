@@ -19,7 +19,7 @@ import {writeAtom} from './jotaiUtils';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
 import {CommitCloudCreateWorkspaceOperation} from './operations/CommitCloudCreateWorkspaceOperation';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
-import {CommitPreview, dagWithPreviewsJotai, useMostRecentPendingOperation} from './previews';
+import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './previews';
 import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
@@ -310,7 +310,7 @@ function CommitCloudSyncStatusBadge({statuses}: {statuses: Map<Hash, CommitCloud
 }
 
 function BackupList({commits}: {commits: Array<Hash>}) {
-  const dag = useAtomValue(dagWithPreviewsJotai);
+  const dag = useAtomValue(dagWithPreviews);
   const infos = commits.map(hash => dag.get(hash)).filter(notEmpty);
   return (
     <div className="commit-cloud-backup-list">

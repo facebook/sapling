@@ -20,7 +20,7 @@ import {
 import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledStateJotai} from '../messageSyncing';
-import {dagWithPreviewsJotai} from '../previews';
+import {dagWithPreviews} from '../previews';
 import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
@@ -169,7 +169,7 @@ export const latestCommitMessage = atomFamily((hash: Hash | 'head') =>
       return ['', ''];
     }
     const commit = get(commitByHash(hash));
-    const preview = get(dagWithPreviewsJotai).get(hash);
+    const preview = get(dagWithPreviews).get(hash);
 
     if (
       preview != null &&

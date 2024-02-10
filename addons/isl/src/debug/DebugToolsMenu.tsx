@@ -18,7 +18,7 @@ import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
 import {atomWithOnChange} from '../jotaiUtils';
-import {dagWithPreviewsJotai} from '../previews';
+import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
   latestCommitsDataJotai,
@@ -187,7 +187,7 @@ function useMeasureDuration(slowOperation: () => void): number | null {
 }
 
 function DebugDagInfo() {
-  const dag = useAtomValue(dagWithPreviewsJotai);
+  const dag = useAtomValue(dagWithPreviews);
   const dagRenderBenchmark = useCallback(() => {
     // Slightly change the dag to invalidate its caches.
     const noise = performance.now();

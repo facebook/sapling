@@ -16,7 +16,7 @@ import {readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {dagWithPreviewsJotai} from './previews';
+import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestCommitsJotai, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
@@ -35,7 +35,7 @@ import './SuggestedRebase.css';
  */
 export const showSuggestedRebaseForStack = atomFamily((hash: Hash) =>
   atom(get => {
-    const dag = get(dagWithPreviewsJotai);
+    const dag = get(dagWithPreviews);
     const commit = dag.get(hash);
     if (commit == null) {
       return false;
@@ -57,7 +57,7 @@ export const showSuggestedRebaseForStack = atomFamily((hash: Hash) =>
 
 export const suggestedRebaseDestinations = atom(get => {
   const commits = get(latestCommitsJotai);
-  const publicBase = findCurrentPublicBase(get(dagWithPreviewsJotai));
+  const publicBase = findCurrentPublicBase(get(dagWithPreviews));
   const destinations = commits
     .filter(
       commit => commit.remoteBookmarks.length > 0 || (commit.stableCommitMetadata?.length ?? 0) > 0,

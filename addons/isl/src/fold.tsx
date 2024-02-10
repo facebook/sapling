@@ -23,7 +23,7 @@ import {
   FoldOperation,
   getFoldRangeCommitHash,
 } from './operations/FoldOperation';
-import {type Dag, dagWithPreviewsJotai} from './previews';
+import {type Dag, dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {operationBeingPreviewedJotai, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
@@ -42,7 +42,7 @@ export const foldableSelection = atom(get => {
   if (selection.size < 2) {
     return undefined;
   }
-  const dag = get(dagWithPreviewsJotai);
+  const dag = get(dagWithPreviews);
   const foldable = getFoldableRange(selection, dag);
   return foldable;
 });
