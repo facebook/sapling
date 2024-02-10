@@ -17,6 +17,7 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
+  latestHeadCommitJotai,
   queuedOperationsJotai,
   queuedOperationsRecoil,
   operationListJotai,
@@ -31,7 +32,7 @@ import {
   latestHeadCommit,
   latestUncommittedChanges,
 } from './serverAPIState';
-import {useAtom, useAtomValue} from 'jotai';
+import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {selector, useRecoilValue} from 'recoil';
 import {notEmpty, unwrap} from 'shared/utils';
@@ -277,26 +278,23 @@ export const dagWithPreviews = selector<Dag>({
 
 export const dagWithPreviewsJotai = jotaiMirrorFromRecoil(dagWithPreviews);
 
-export const treeWithPreviews = selector({
-  key: 'treeWithPreviews',
-  get: ({get}): TreeWithPreviews => {
-    const dag = get(dagWithPreviews);
-    const commits = [...dag.values()];
-    const trees = getCommitTree(commits);
+export const treeWithPreviews = atom(get => {
+  const dag = get(dagWithPreviewsJotai);
+  const commits = [...dag.values()];
+  const trees = getCommitTree(commits);
 
-    let headCommit = get(latestHeadCommit);
-    // The headCommit might be changed by dag previews. Double check.
-    if (headCommit && !dag.get(headCommit.hash)?.isHead) {
-      headCommit = dag.resolve('.');
-    }
-    // Open-code latestCommitTreeMap to pick up tree changes done by `dag`.
-    const treeMap = new Map<Hash, CommitTreeWithPreviews>();
-    for (const tree of walkTreePostorder(trees)) {
-      treeMap.set(tree.info.hash, tree);
-    }
+  let headCommit = get(latestHeadCommitJotai);
+  // The headCommit might be changed by dag previews. Double check.
+  if (headCommit && !dag.get(headCommit.hash)?.isHead) {
+    headCommit = dag.resolve('.');
+  }
+  // Open-code latestCommitTreeMap to pick up tree changes done by `dag`.
+  const treeMap = new Map<Hash, CommitTreeWithPreviews>();
+  for (const tree of walkTreePostorder(trees)) {
+    treeMap.set(tree.info.hash, tree);
+  }
 
-    return {trees, treeMap, headCommit};
-  },
+  return {trees, treeMap, headCommit};
 });
 
 /** Yield operations that might need optimistic state. */

@@ -40,7 +40,6 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -191,7 +190,7 @@ export function CommitTreeList() {
 
   const isNarrow = useAtomValue(isNarrowCommitTree);
 
-  const {trees} = useRecoilValue(treeWithPreviews);
+  const {trees} = useAtomValue(treeWithPreviews);
   const fetchError = useAtomValue(commitFetchError);
   return fetchError == null && trees.length === 0 ? (
     <Center>
