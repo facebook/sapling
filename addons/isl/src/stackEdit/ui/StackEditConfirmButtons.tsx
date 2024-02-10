@@ -16,7 +16,7 @@ import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
 import {RebaseOperation} from '../../operations/RebaseOperation';
-import {latestDag, latestHeadCommit, useRunOperation} from '../../serverAPIState';
+import {latestDagJotai, latestHeadCommit, useRunOperation} from '../../serverAPIState';
 import {exactRevset, succeedableRevset} from '../../types';
 import {UndoDescription} from './StackEditSubTree';
 import {
@@ -26,7 +26,7 @@ import {
   useStackEditState,
 } from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useAtom} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -34,7 +34,7 @@ import {Icon} from 'shared/Icon';
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
-  const dag = useRecoilValue(latestDag);
+  const dag = useAtomValue(latestDagJotai);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
 

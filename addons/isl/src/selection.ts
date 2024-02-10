@@ -17,10 +17,11 @@ import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {entangledAtoms} from './recoilUtils';
-import {latestDag, operationBeingPreviewedJotai} from './serverAPIState';
+import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
+import {useCallback} from 'react';
 import {selector, useRecoilCallback} from 'recoil';
 
 /**
@@ -93,8 +94,8 @@ export function useCommitSelection(hash: string): {
       (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
         // previews won't change a commit from draft -> public, so we don't need
         // to use previews here
-        const loadable = snapshot.getLoadable(latestDag);
-        if (loadable.getValue().get(hash)?.phase === 'public') {
+        const dag = readAtom(latestDagJotai);
+        if (dag.get(hash)?.phase === 'public') {
           // don't bother selecting public commits
           return;
         }
@@ -151,20 +152,17 @@ export function useCommitSelection(hash: string): {
   );
 
   const overrideSelection = useRecoilCallback(
-    ({snapshot}) =>
-      (newSelected: Array<Hash>) => {
-        // previews won't change a commit from draft -> public, so we don't need
-        // to use previews here
-        const loadable = snapshot.getLoadable(latestDag);
-        if (loadable.getValue().get(hash)?.phase === 'public') {
-          // don't bother selecting public commits
-          return;
-        }
-        const nonPublicToSelect = newSelected.filter(
-          hash => loadable.getValue().get(hash)?.phase !== 'public',
-        );
-        writeAtom(selectedCommits, new Set(nonPublicToSelect));
-      },
+    () => (newSelected: Array<Hash>) => {
+      // previews won't change a commit from draft -> public, so we don't need
+      // to use previews here
+      const dag = readAtom(latestDagJotai);
+      if (dag.get(hash)?.phase === 'public') {
+        // don't bother selecting public commits
+        return;
+      }
+      const nonPublicToSelect = newSelected.filter(hash => dag.get(hash)?.phase !== 'public');
+      writeAtom(selectedCommits, new Set(nonPublicToSelect));
+    },
     [hash],
   );
 
@@ -279,7 +277,7 @@ export function useArrowKeysToChangeSelection() {
 }
 
 export function useBackspaceToHideSelected(): void {
-  const cb = useRecoilCallback(({snapshot}) => () => {
+  const cb = useCallback(() => {
     // Though you can select multiple commits, our preview system doens't handle that very well.
     // Just preview hiding the most recently selected commit.
     // Another sensible behavior would be to inspect the tree of commits selected
@@ -296,8 +294,7 @@ export function useBackspaceToHideSelected(): void {
       return;
     }
 
-    const loadable = snapshot.getLoadable(latestDag);
-    const commitToHide = loadable.getValue().get(hashToHide);
+    const commitToHide = readAtom(latestDagJotai).get(hashToHide);
     if (commitToHide == null) {
       return;
     }
@@ -306,7 +303,7 @@ export function useBackspaceToHideSelected(): void {
       operationBeingPreviewedJotai,
       new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commitToHide)),
     );
-  });
+  }, []);
 
   useCommand('HideSelectedCommits', () => cb());
 }

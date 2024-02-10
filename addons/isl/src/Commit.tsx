@@ -32,7 +32,7 @@ import {islDrawerState} from './drawerState';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
-import {writeAtom} from './jotaiUtils';
+import {readAtom, writeAtom} from './jotaiUtils';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
@@ -44,7 +44,7 @@ import {selectedCommits, useCommitSelection} from './selection';
 import {
   inlineProgressByHash,
   isFetchingUncommittedChanges,
-  latestDag,
+  latestDagJotai,
   latestUncommittedChanges,
   operationBeingPreviewedJotai,
   useRunOperation,
@@ -661,11 +661,7 @@ function DraggableCommit({
           if (lastDndId != currentDndId) {
             return;
           }
-          const loadable = snapshot.getLoadable(latestDag);
-          if (loadable.state !== 'hasValue') {
-            return;
-          }
-          const dag = loadable.contents;
+          const dag = readAtom(latestDagJotai);
 
           if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
             const beingDragged = currentBeingDragged;

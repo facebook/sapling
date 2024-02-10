@@ -303,6 +303,8 @@ export const latestDag = selector<Dag>({
   },
 });
 
+export const latestDagJotai = jotaiMirrorFromRecoil(latestDag);
+
 export const commitFetchError = jotaiAtom(get => {
   return get(latestCommitsDataJotai).error;
 });
