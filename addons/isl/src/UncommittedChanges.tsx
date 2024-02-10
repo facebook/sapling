@@ -67,7 +67,6 @@ import {GeneratedStatus} from './types';
 import {VSCodeBadge, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useDeepMemo} from 'shared/hooks';
@@ -406,7 +405,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
   const error = useAtomValue(uncommittedChangesFetchError);
   // TODO: use dagWithPreviews instead, and update CommitOperation
-  const headCommit = useRecoilValue(latestHeadCommit);
+  const headCommit = useAtomValue(latestHeadCommit);
   const schema = useAtomValue(commitMessageFieldsSchema);
   const template = useAtomValue(commitMessageTemplate);
 

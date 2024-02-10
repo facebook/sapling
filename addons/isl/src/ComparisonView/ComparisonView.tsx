@@ -18,7 +18,7 @@ import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
-import {latestHeadCommitJotai} from '../serverAPIState';
+import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
@@ -91,7 +91,7 @@ export const lineRange = atomFamilyJotai(
         // also changing the head commit's hash.
         // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
         // AGAIN on the same data while waiting for some new operation to finish.
-        get(latestHeadCommitJotai);
+        get(latestHeadCommit);
 
         serverAPI.postMessage({type: 'requestComparisonContextLines', ...params});
 

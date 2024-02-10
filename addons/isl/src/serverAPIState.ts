@@ -387,15 +387,10 @@ registerDisposable(
  * Prefer using `dagWithPreviews.resolve('.')`, since it includes optimistic state
  * and previews.
  */
-export const latestHeadCommit = selector<CommitInfo | undefined>({
-  key: 'latestHeadCommit',
-  get: ({get}) => {
-    const commits = get(latestCommits);
-    return commits.find(commit => commit.isHead);
-  },
+export const latestHeadCommit = jotaiAtom(get => {
+  const commits = get(latestCommitsJotai);
+  return commits.find(commit => commit.isHead);
 });
-
-export const latestHeadCommitJotai = jotaiMirrorFromRecoil(latestHeadCommit);
 
 /**
  * No longer in the "loading" state:

@@ -17,9 +17,10 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
+  latestCommitsJotai,
   latestDag,
   operationBeingPreviewedJotai,
-  latestHeadCommitJotai,
+  latestHeadCommit,
   queuedOperationsJotai,
   queuedOperationsRecoil,
   operationListJotai,
@@ -27,7 +28,6 @@ import {
   mergeConflictsJotai,
   latestUncommittedChangesDataJotai,
   latestCommitsDataJotai,
-  latestCommits,
   latestUncommittedChanges,
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
@@ -276,7 +276,7 @@ export const treeWithPreviews = atom(get => {
   const commits = [...dag.values()];
   const trees = getCommitTree(commits);
 
-  let headCommit = get(latestHeadCommitJotai);
+  let headCommit = get(latestHeadCommit);
   // The headCommit might be changed by dag previews. Double check.
   if (headCommit && !dag.get(headCommit.hash)?.isHead) {
     headCommit = dag.resolve('.');
@@ -331,7 +331,7 @@ function* optimisticOperations(props: {
  */
 export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useAtomValue(latestCommitsDataJotai);
-  const commits = useRecoilValue(latestCommits);
+  const commits = useAtomValue(latestCommitsJotai);
   const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
   const conflicts = useAtomValue(mergeConflictsJotai);
   const successorMap = useRecoilValue(latestSuccessorsMap);

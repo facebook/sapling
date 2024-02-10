@@ -555,7 +555,7 @@ function ActionsBar({
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const schema = useAtomValue(commitMessageFieldsSchema);
-  const headCommit = useRecoilValue(latestHeadCommit);
+  const headCommit = useAtomValue(latestHeadCommit);
 
   const [updateMessage, setUpdateMessage] = useRecoilState(diffUpdateMessagesState(commit.hash));
 
