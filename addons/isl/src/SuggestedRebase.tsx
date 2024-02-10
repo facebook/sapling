@@ -18,7 +18,7 @@ import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommits
 import {RebaseOperation} from './operations/RebaseOperation';
 import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
-import {commitsShownRange, latestCommitsJotai, useRunOperation} from './serverAPIState';
+import {commitsShownRange, latestCommits, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -56,7 +56,7 @@ export const showSuggestedRebaseForStack = atomFamily((hash: Hash) =>
 );
 
 export const suggestedRebaseDestinations = atom(get => {
-  const commits = get(latestCommitsJotai);
+  const commits = get(latestCommits);
   const publicBase = findCurrentPublicBase(get(dagWithPreviews));
   const destinations = commits
     .filter(

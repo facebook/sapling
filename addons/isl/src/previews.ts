@@ -17,7 +17,7 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
-  latestCommitsJotai,
+  latestCommits,
   latestDag,
   operationBeingPreviewedJotai,
   latestHeadCommit,
@@ -331,7 +331,7 @@ function* optimisticOperations(props: {
  */
 export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useAtomValue(latestCommitsDataJotai);
-  const commits = useAtomValue(latestCommitsJotai);
+  const commits = useAtomValue(latestCommits);
   const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
   const conflicts = useAtomValue(mergeConflictsJotai);
   const successorMap = useRecoilValue(latestSuccessorsMap);

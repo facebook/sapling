@@ -7,7 +7,7 @@
 
 import type {Hash} from '../types';
 
-import {latestCommitsJotai} from '../serverAPIState';
+import {latestCommits} from '../serverAPIState';
 import {allDiffSummaries, codeReviewProviderJotai} from './CodeReviewInfo';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
@@ -23,7 +23,7 @@ export const syncStatusAtom = atom(get => {
   if (provider == null) {
     return undefined;
   }
-  const commits = get(latestCommitsJotai);
+  const commits = get(latestCommits);
   const summaries = get(allDiffSummaries);
   if (summaries.value == null) {
     return undefined;

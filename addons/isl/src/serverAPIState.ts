@@ -273,22 +273,17 @@ export const latestUncommittedChangesTimestamp = jotaiAtom(get => {
  */
 export const commitByHash = atomFamily((hash: string) =>
   jotaiAtom(get => {
-    return get(latestCommitsJotai).find(commit => commit.hash === hash);
+    return get(latestCommits).find(commit => commit.hash === hash);
   }),
 );
 
-export const latestCommits = selector<Array<CommitInfo>>({
-  key: 'latestCommits',
-  get: ({get}) => {
-    return get(latestCommitsDataRecoil).commits;
-  },
+export const latestCommits = jotaiAtom(get => {
+  return get(latestCommitsDataJotai).commits;
 });
-
-export const latestCommitsJotai = jotaiMirrorFromRecoil(latestCommits);
 
 /** The dag also includes a mutationDag to answer successor queries. */
 export const latestDag = jotaiAtom(get => {
-  const commits = get(latestCommitsJotai);
+  const commits = get(latestCommits);
   const successorMap = get(latestSuccessorsMapAtom);
   const commitDag = undefined; // will be populated from `commits`
   const dag = Dag.fromDag(commitDag, successorMap)
@@ -388,7 +383,7 @@ registerDisposable(
  * and previews.
  */
 export const latestHeadCommit = jotaiAtom(get => {
-  const commits = get(latestCommitsJotai);
+  const commits = get(latestCommits);
   return commits.find(commit => commit.isHead);
 });
 

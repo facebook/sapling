@@ -9,13 +9,13 @@ import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {atomWithRefresh, refreshAtom} from './jotaiUtils';
 import platform from './platform';
-import {latestCommitsJotai} from './serverAPIState';
+import {latestCommits} from './serverAPIState';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
 import {isPromise} from 'shared/utils';
 
 const uniqueAuthors = atom<Array<string>>(get => {
-  const commits = get(latestCommitsJotai);
+  const commits = get(latestCommits);
   const authors = commits.filter(commit => commit.phase !== 'public').map(commit => commit.author);
   const unique = new Set(authors);
   return Array.from(unique);
