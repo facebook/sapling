@@ -43,7 +43,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const diffMap = useAtomValue(allDiffSummaries);
   const stackHashes = useAtomValue(editingStackIntentionHashes)[1];
   const loadingState = useAtomValue(loadingStackState);
-  const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(hash));
+  const suggestedRebase = useAtomValue(showSuggestedRebaseForStack(hash));
   const dag = useAtomValue(dagWithPreviewsJotai);
   const runOperation = useRunOperation();
   const syncStatusMap = useRecoilValue(syncStatusAtom);

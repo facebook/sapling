@@ -16,13 +16,15 @@ import {readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {dagWithPreviews} from './previews';
+import {dagWithPreviews, dagWithPreviewsJotai} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestCommits, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {selector, selectorFamily, useRecoilCallback} from 'recoil';
+import {atom} from 'jotai';
+import {atomFamily} from 'jotai/utils';
+import {selector, useRecoilCallback} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
@@ -32,30 +34,27 @@ import './SuggestedRebase.css';
  * Whether a given stack (from its base hash) is eligible for currently suggested rebase.
  * Determined by if the stack is old enough and worth rebasing (i.e. not obsolete or closed)
  */
-export const showSuggestedRebaseForStack = selectorFamily<boolean, Hash>({
-  key: 'showSuggestedRebaseForStack',
-  get:
-    (hash: Hash) =>
-    ({get}) => {
-      const dag = get(dagWithPreviews);
-      const commit = dag.get(hash);
-      if (commit == null) {
-        return false;
-      }
-      const parentHash = commit.parents.at(0);
-      const stackBase = dag.get(parentHash);
-      if (stackBase == null) {
-        return false;
-      }
+export const showSuggestedRebaseForStack = atomFamily((hash: Hash) =>
+  atom(get => {
+    const dag = get(dagWithPreviewsJotai);
+    const commit = dag.get(hash);
+    if (commit == null) {
+      return false;
+    }
+    const parentHash = commit.parents.at(0);
+    const stackBase = dag.get(parentHash);
+    if (stackBase == null) {
+      return false;
+    }
 
-      // If the public base is already on a remote bookmark or a stable commit, don't suggest rebasing it.
-      return (
-        stackBase.remoteBookmarks.length === 0 &&
-        stackBase.bookmarks.length === 0 &&
-        (stackBase.stableCommitMetadata?.length ?? 0) === 0
-      );
-    },
-});
+    // If the public base is already on a remote bookmark or a stable commit, don't suggest rebasing it.
+    return (
+      stackBase.remoteBookmarks.length === 0 &&
+      stackBase.bookmarks.length === 0 &&
+      (stackBase.stableCommitMetadata?.length ?? 0) === 0
+    );
+  }),
+);
 
 export const suggestedRebaseDestinations = selector<Array<[CommitInfo, string]>>({
   key: 'suggestedRebaseDestinations',
