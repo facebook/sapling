@@ -16,7 +16,7 @@ import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
 import {RebaseOperation} from '../../operations/RebaseOperation';
-import {latestDagJotai, latestHeadCommit, useRunOperation} from '../../serverAPIState';
+import {latestDag, latestHeadCommit, useRunOperation} from '../../serverAPIState';
 import {exactRevset, succeedableRevset} from '../../types';
 import {UndoDescription} from './StackEditSubTree';
 import {
@@ -34,7 +34,7 @@ import {Icon} from 'shared/Icon';
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
-  const dag = useAtomValue(latestDagJotai);
+  const dag = useAtomValue(latestDag);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
 

@@ -17,7 +17,7 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
-  latestDagJotai,
+  latestDag,
   operationBeingPreviewedJotai,
   latestHeadCommitJotai,
   queuedOperationsJotai,
@@ -255,7 +255,7 @@ export type WithPreviewType = {
 export type {Dag};
 
 export const dagWithPreviews = atom(get => {
-  const originalDag = get(latestDagJotai);
+  const originalDag = get(latestDag);
   const list = get(operationListJotai);
   const queued = get(queuedOperationsJotai);
   const currentOperation = list.currentOperation;

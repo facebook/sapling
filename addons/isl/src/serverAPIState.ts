@@ -25,7 +25,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
-import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
+import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {getAllRecoilStateJson} from './debug/getAllRecoilStateJson';
 import {configBackedAtom, readAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
@@ -36,7 +36,7 @@ import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
 import {atomFamily, atomFamily as jotaiAtomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
-import {selectorFamily, atom, DefaultValue, selector} from 'recoil';
+import {atom, DefaultValue, selector} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
@@ -287,20 +287,15 @@ export const latestCommits = selector<Array<CommitInfo>>({
 export const latestCommitsJotai = jotaiMirrorFromRecoil(latestCommits);
 
 /** The dag also includes a mutationDag to answer successor queries. */
-export const latestDag = selector<Dag>({
-  key: 'latestDag',
-  get: ({get}) => {
-    const commits = get(latestCommits);
-    const successorMap = get(latestSuccessorsMap);
-    const commitDag = undefined; // will be populated from `commits`
-    const dag = Dag.fromDag(commitDag, successorMap)
-      .add(commits.map(c => DagCommitInfo.fromCommitInfo(c)))
-      .forceConnectPublic();
-    return dag;
-  },
+export const latestDag = jotaiAtom(get => {
+  const commits = get(latestCommitsJotai);
+  const successorMap = get(latestSuccessorsMapAtom);
+  const commitDag = undefined; // will be populated from `commits`
+  const dag = Dag.fromDag(commitDag, successorMap)
+    .add(commits.map(c => DagCommitInfo.fromCommitInfo(c)))
+    .forceConnectPublic();
+  return dag;
 });
-
-export const latestDagJotai = jotaiMirrorFromRecoil(latestDag);
 
 export const commitFetchError = jotaiAtom(get => {
   return get(latestCommitsDataJotai).error;

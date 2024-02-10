@@ -43,7 +43,7 @@ import {selectedCommits, useCommitSelection} from './selection';
 import {
   inlineProgressByHash,
   isFetchingUncommittedChanges,
-  latestDagJotai,
+  latestDag,
   latestUncommittedChanges,
   operationBeingPreviewedJotai,
   useRunOperation,
@@ -659,7 +659,7 @@ function DraggableCommit({
           if (lastDndId != currentDndId) {
             return;
           }
-          const dag = readAtom(latestDagJotai);
+          const dag = readAtom(latestDag);
 
           if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
             const beingDragged = currentBeingDragged;

@@ -16,7 +16,7 @@ import {islDrawerState} from './drawerState';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
-import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
+import {latestDag, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
@@ -86,7 +86,7 @@ export function useCommitSelection(hash: string): {
     (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
       // previews won't change a commit from draft -> public, so we don't need
       // to use previews here
-      const dag = readAtom(latestDagJotai);
+      const dag = readAtom(latestDag);
       if (dag.get(hash)?.phase === 'public') {
         // don't bother selecting public commits
         return;
@@ -147,7 +147,7 @@ export function useCommitSelection(hash: string): {
     () => (newSelected: Array<Hash>) => {
       // previews won't change a commit from draft -> public, so we don't need
       // to use previews here
-      const dag = readAtom(latestDagJotai);
+      const dag = readAtom(latestDag);
       if (dag.get(hash)?.phase === 'public') {
         // don't bother selecting public commits
         return;
@@ -283,7 +283,7 @@ export function useBackspaceToHideSelected(): void {
       return;
     }
 
-    const commitToHide = readAtom(latestDagJotai).get(hashToHide);
+    const commitToHide = readAtom(latestDag).get(hashToHide);
     if (commitToHide == null) {
       return;
     }
