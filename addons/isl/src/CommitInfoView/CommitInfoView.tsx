@@ -28,7 +28,7 @@ import {tracker} from '../analytics';
 import {
   allDiffSummaries,
   codeReviewProvider,
-  latestCommitMessageFields,
+  latestCommitMessageFieldsJotai,
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {FoldButton, useRunFoldPreview} from '../fold';
@@ -251,7 +251,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commit.hash, isCommitMode]);
 
-  const parsedFields = useRecoilValue(latestCommitMessageFields(hashOrHead));
+  const parsedFields = useAtomValue(latestCommitMessageFieldsJotai(hashOrHead));
 
   const startEditingField = (field: string) => {
     // Set the latest message value for the edited message of this field.

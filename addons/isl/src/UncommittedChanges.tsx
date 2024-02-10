@@ -36,10 +36,10 @@ import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
-import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
+import {latestCommitMessageFieldsJotai} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
-import {writeAtom} from './jotaiUtils';
+import {readAtom, writeAtom} from './jotaiUtils';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
 import {getAmendOperation} from './operations/AmendOperation';
@@ -417,7 +417,7 @@ export function UncommittedChanges({place}: {place: Place}) {
 
   const runOperation = useRunOperation();
 
-  const openCommitForm = useRecoilCallback(({set, snapshot}) => (which: 'commit' | 'amend') => {
+  const openCommitForm = useRecoilCallback(({set}) => (which: 'commit' | 'amend') => {
     // make sure view is expanded
     writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
 
@@ -429,9 +429,7 @@ export function UncommittedChanges({place}: {place: Place}) {
     if (which === 'amend') {
       writeAtom(forceNextCommitToEditAllFields, true);
       if (headCommit != null) {
-        const latestMessage = snapshot
-          .getLoadable(latestCommitMessageFields(headCommit.hash))
-          .valueMaybe();
+        const latestMessage = readAtom(latestCommitMessageFieldsJotai(headCommit.hash));
         if (latestMessage) {
           set(editedCommitMessages(headCommit.hash), {
             fields: {...latestMessage},

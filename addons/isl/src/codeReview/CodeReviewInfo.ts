@@ -228,6 +228,10 @@ export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Has
     },
 });
 
+export const latestCommitMessageFieldsJotai = atomFamily((hashOrHead: Hash | 'head') =>
+  jotaiMirrorFromRecoil(latestCommitMessageFields(hashOrHead)),
+);
+
 export const pageVisibility = atomWithOnChange(
   atom<PageVisibility>(document.hasFocus() ? 'focused' : document.visibilityState),
   debounce(state => {
