@@ -22,7 +22,7 @@ import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledStateJotai} from '../messageSyncing';
 import {dagWithPreviewsJotai} from '../previews';
 import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
-import {commitByHashJotai, repositoryInfo} from '../serverAPIState';
+import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
@@ -168,7 +168,7 @@ export const latestCommitMessage = atomFamily((hash: Hash | 'head') =>
       }
       return ['', ''];
     }
-    const commit = get(commitByHashJotai(hash));
+    const commit = get(commitByHash(hash));
     const preview = get(dagWithPreviewsJotai).get(hash);
 
     if (

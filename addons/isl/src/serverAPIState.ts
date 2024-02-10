@@ -271,20 +271,7 @@ export const latestUncommittedChangesTimestamp = jotaiAtom(get => {
  * Lookup a commit by hash, *WITHOUT PREVIEWS*.
  * Generally, you'd want to look up WITH previews, which you can use dagWithPreviews for.
  */
-export const commitByHash = selectorFamily<CommitInfo | undefined, string>({
-  key: 'commitByHash',
-  get:
-    (hash: string) =>
-    ({get}) => {
-      return get(latestCommits).find(commit => commit.hash === hash);
-    },
-});
-
-/**
- * Like commitByHash, but using jotai. Note that this is not mirrored, but a separate cache.
- * TODO: consolidate by migrating everything to jotai.
- */
-export const commitByHashJotai = atomFamily((hash: Hash) =>
+export const commitByHash = atomFamily((hash: string) =>
   jotaiAtom(get => {
     return get(latestCommitsJotai).find(commit => commit.hash === hash);
   }),
