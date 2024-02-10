@@ -21,7 +21,7 @@ import {atomWithOnChange} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
-  latestCommitsDataJotai,
+  latestCommitsData,
   latestUncommittedChangesDataJotai,
   mergeConflictsJotai,
   repositoryInfo,
@@ -111,7 +111,7 @@ function ServerClientMessageLogging() {
 
 function DebugPerfInfo() {
   const latestStatus = useAtomValue(latestUncommittedChangesDataJotai);
-  const latestLog = useAtomValue(latestCommitsDataJotai);
+  const latestLog = useAtomValue(latestCommitsData);
   const latestConflicts = useAtomValue(mergeConflictsJotai);
   const heartbeat = useHeartbeat();
   const repoInfo = useRecoilValue(repositoryInfo);

@@ -27,7 +27,7 @@ import {
   operationListRecoil,
   mergeConflictsJotai,
   latestUncommittedChangesDataJotai,
-  latestCommitsDataJotai,
+  latestCommitsData,
   latestUncommittedChanges,
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
@@ -330,7 +330,7 @@ function* optimisticOperations(props: {
  * when ongoingOperation is used elsewhere in the tree
  */
 export function useMarkOperationsCompleted(): void {
-  const fetchedCommits = useAtomValue(latestCommitsDataJotai);
+  const fetchedCommits = useAtomValue(latestCommitsData);
   const commits = useAtomValue(latestCommits);
   const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
   const conflicts = useAtomValue(mergeConflictsJotai);

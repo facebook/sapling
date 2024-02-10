@@ -231,20 +231,17 @@ registerCleanup(
   }),
 );
 
-export const [latestCommitsDataJotai, latestCommitsDataRecoil] = entangledAtoms<{
+export const latestCommitsData = jotaiAtom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
   commits: SmartlogCommits;
   error?: Error;
-}>({
-  key: 'latestCommitsData',
-  default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, commits: []},
-});
+}>({fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, commits: []});
 
 registerCleanup(
-  latestCommitsDataJotai,
+  latestCommitsData,
   subscriptionEffect('smartlogCommits', data => {
-    writeAtom(latestCommitsDataJotai, last => {
+    writeAtom(latestCommitsData, last => {
       let commits = last instanceof DefaultValue ? [] : last.commits;
       const newCommits = data.commits.value;
       if (newCommits != null) {
@@ -278,7 +275,7 @@ export const commitByHash = atomFamily((hash: string) =>
 );
 
 export const latestCommits = jotaiAtom(get => {
-  return get(latestCommitsDataJotai).commits;
+  return get(latestCommitsData).commits;
 });
 
 /** The dag also includes a mutationDag to answer successor queries. */
@@ -293,7 +290,7 @@ export const latestDag = jotaiAtom(get => {
 });
 
 export const commitFetchError = jotaiAtom(get => {
-  return get(latestCommitsDataJotai).error;
+  return get(latestCommitsData).error;
 });
 
 export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
@@ -393,7 +390,7 @@ export const latestHeadCommit = jotaiAtom(get => {
  * - or there was an error during the fetch
  */
 export const haveCommitsLoadedYet = jotaiAtom(get => {
-  const data = get(latestCommitsDataJotai);
+  const data = get(latestCommitsData);
   return data.commits.length > 0 || data.error != null;
 });
 
