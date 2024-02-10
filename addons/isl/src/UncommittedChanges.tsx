@@ -53,7 +53,7 @@ import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {
   optimisticMergeConflicts,
-  uncommittedChangesWithPreviews,
+  uncommittedChangesWithPreviewsJotai,
   useIsOperationRunningOrQueued,
 } from './previews';
 import {selectedCommits} from './selection';
@@ -67,7 +67,7 @@ import {GeneratedStatus} from './types';
 import {VSCodeBadge, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useDeepMemo} from 'shared/hooks';
@@ -403,7 +403,7 @@ function LinearFileList(props: {
 export type Place = 'main' | 'amend sidebar' | 'commit sidebar';
 
 export function UncommittedChanges({place}: {place: Place}) {
-  const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
+  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
   const error = useAtomValue(uncommittedChangesFetchError);
   // TODO: use dagWithPreviews instead, and update CommitOperation
   const headCommit = useRecoilValue(latestHeadCommit);

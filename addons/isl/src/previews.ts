@@ -222,6 +222,9 @@ export const uncommittedChangesWithPreviews = selector({
     return applyPreviewsToChangedFiles(uncommittedChanges, list, queued);
   },
 });
+export const uncommittedChangesWithPreviewsJotai = jotaiMirrorFromRecoil(
+  uncommittedChangesWithPreviews,
+);
 
 export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
   key: 'optimisticMergeConflicts',
@@ -236,6 +239,7 @@ export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
     return applyPreviewsToMergeConflicts(conflicts, list, queued);
   },
 });
+export const optimisticMergeConflictsJotai = jotaiMirrorFromRecoil(optimisticMergeConflicts);
 
 export type TreeWithPreviews = {
   trees: Array<CommitTreeWithPreviews>;

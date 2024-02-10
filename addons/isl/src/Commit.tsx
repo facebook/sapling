@@ -7,7 +7,6 @@
 
 import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
-import type {Snapshot} from 'recoil';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {Avatar} from './Avatar';
@@ -37,7 +36,7 @@ import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
+import {CommitPreview, uncommittedChangesWithPreviewsJotai} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitSelection} from './selection';
@@ -181,8 +180,7 @@ export const Commit = memo(
     }
 
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
-      const hasUncommittedChanges =
-        (snapshot.getLoadable(uncommittedChangesWithPreviews).valueMaybe()?.length ?? 0) > 0;
+      const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviewsJotai).length ?? 0) > 0;
       const syncStatus = snapshot.getLoadable(syncStatusAtom).valueMaybe()?.get(commit.hash);
 
       const items: Array<ContextMenuItem> = [
@@ -705,28 +703,27 @@ function DraggableCommit({
     [commit],
   );
 
-  const handleDragStart = useRecoilCallback(
-    ({snapshot}) =>
-      (event: React.DragEvent<HTMLDivElement>) => {
-        // can't rebase with uncommitted changes
-        if (hasUncommittedChanges(snapshot)) {
-          setDragDisabledMessage(t('Cannot drag to rebase with uncommitted changes.'));
-          event.preventDefault();
-        }
-        if (commit.successorInfo != null) {
-          setDragDisabledMessage(t('Cannot rebase obsoleted commits.'));
-          event.preventDefault();
-        }
+  const handleDragStart = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      // can't rebase with uncommitted changes
+      if (hasUncommittedChanges()) {
+        setDragDisabledMessage(t('Cannot drag to rebase with uncommitted changes.'));
+        event.preventDefault();
+      }
+      if (commit.successorInfo != null) {
+        setDragDisabledMessage(t('Cannot rebase obsoleted commits.'));
+        event.preventDefault();
+      }
 
-        commitBeingDragged = commit;
-        event.dataTransfer.dropEffect = 'none';
+      commitBeingDragged = commit;
+      event.dataTransfer.dropEffect = 'none';
 
-        const draggedDOMNode = event.target;
-        // prevent animation of commit returning to drag start location on drop
-        draggedDOMNode.addEventListener('dragend', handleDragEnd);
-        document.addEventListener('drop', preventDefault);
-        document.addEventListener('dragover', preventDefault);
-      },
+      const draggedDOMNode = event.target;
+      // prevent animation of commit returning to drag start location on drop
+      draggedDOMNode.addEventListener('dragend', handleDragEnd);
+      document.addEventListener('drop', preventDefault);
+      document.addEventListener('dragover', preventDefault);
+    },
     [commit],
   );
 
@@ -764,11 +761,10 @@ function DraggableCommit({
   );
 }
 
-function hasUncommittedChanges(snapshot: Snapshot): boolean {
-  const loadable = snapshot.getLoadable(uncommittedChangesWithPreviews);
+function hasUncommittedChanges(): boolean {
+  const changes = readAtom(uncommittedChangesWithPreviewsJotai);
   return (
-    loadable.state === 'hasValue' &&
-    loadable.contents.filter(
+    changes.filter(
       commit => commit.status !== '?', // untracked files are ok
     ).length > 0
   );

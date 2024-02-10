@@ -14,10 +14,10 @@ import type {
 import type {ChangedFile, CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 import type {ImportStack} from 'shared/types/stack';
 
-import {globalRecoil} from '../AccessGlobalRecoil';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {t} from '../i18n';
-import {uncommittedChangesWithPreviews} from '../previews';
+import {readAtom} from '../jotaiUtils';
+import {uncommittedChangesWithPreviewsJotai} from '../previews';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -42,13 +42,13 @@ export class CommitOperation extends Operation {
     // This is not necessarily the same as filePathsToCommit, since it may be undefined to represent "all files".
     // This is done once at Operation creation time, not on each call to optimisticDag, since we
     // only care about the list of changed files when the CommitOperation was enqueued.
-    this.optimisticChangedFiles = (
-      globalRecoil().getLoadable(uncommittedChangesWithPreviews).valueMaybe() ?? []
-    ).filter(changedFile => {
-      return filesPathsToCommit == null
-        ? true
-        : filesPathsToCommit.some(f => f === changedFile.path);
-    });
+    this.optimisticChangedFiles = readAtom(uncommittedChangesWithPreviewsJotai).filter(
+      changedFile => {
+        return filesPathsToCommit == null
+          ? true
+          : filesPathsToCommit.some(f => f === changedFile.path);
+      },
+    );
   }
 
   private optimisticChangedFiles: Array<ChangedFile>;

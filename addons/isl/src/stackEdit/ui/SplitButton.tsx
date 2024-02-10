@@ -11,12 +11,11 @@ import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
 import {T, t} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
-import {uncommittedChangesWithPreviews} from '../../previews';
+import {uncommittedChangesWithPreviewsJotai} from '../../previews';
 import {useConfirmUnsavedEditsBeforeSplit} from './ConfirmUnsavedEditsBeforeSplit';
 import {editingStackIntentionHashes} from './stackEditState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useSetAtom} from 'jotai';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue, useSetAtom} from 'jotai';
 
 /** Button to open split UI for the current commit. Expected to be shown on the head commit.
  * Loads that one commit in the split UI. */
@@ -24,7 +23,7 @@ export function SplitButton({commit}: {commit: CommitInfo}) {
   const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
   const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
 
-  const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
+  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
   const hasUncommittedChanges = uncommittedChanges.length > 0;
 
   const onClick = async () => {
