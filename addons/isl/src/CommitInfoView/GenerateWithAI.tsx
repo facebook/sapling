@@ -16,7 +16,7 @@ import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {atomLoadableWithRefresh, readAtom} from '../jotaiUtils';
-import {uncommittedChangesWithPreviewsJotai} from '../previews';
+import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {
   commitInfoViewCurrentCommits,
@@ -125,12 +125,12 @@ const generatedCommitMessages = atomFamilyJotai((hashKey: string | undefined) =>
 
     const fileChanges = [];
     if (hashKey === 'head') {
-      const uncommittedChanges = get(uncommittedChangesWithPreviewsJotai);
+      const uncommittedChanges = get(uncommittedChangesWithPreviews);
       fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
     } else {
       const commit = get(commitByHash(hashKey));
       if (commit?.isHead) {
-        const uncommittedChanges = get(uncommittedChangesWithPreviewsJotai);
+        const uncommittedChanges = get(uncommittedChangesWithPreviews);
         fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
       }
       fileChanges.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));

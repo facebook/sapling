@@ -13,7 +13,7 @@ import type {ExportFile, ImportCommit} from 'shared/types/stack';
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {resetOnCwdChange} from './jotaiUtils';
-import {dagWithPreviews, uncommittedChangesWithPreviewsJotai} from './previews';
+import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {entangledAtoms} from './recoilUtils';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
@@ -530,7 +530,7 @@ type ReadonlyPartialSelection = OmitNotMatching<
 /** Get the uncommitted selection state. */
 export function useUncommittedSelection() {
   const [selection, setSelection] = useAtom(uncommittedSelection);
-  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
+  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
   const epoch = useAtomValue(latestUncommittedChangesTimestamp);
   const dag = useAtomValue(dagWithPreviews);
   const wdirHash = dag.resolve('.')?.hash ?? '';

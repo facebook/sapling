@@ -53,7 +53,7 @@ import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {
   optimisticMergeConflicts,
-  uncommittedChangesWithPreviewsJotai,
+  uncommittedChangesWithPreviews,
   useIsOperationRunningOrQueued,
 } from './previews';
 import {selectedCommits} from './selection';
@@ -402,7 +402,7 @@ function LinearFileList(props: {
 export type Place = 'main' | 'amend sidebar' | 'commit sidebar';
 
 export function UncommittedChanges({place}: {place: Place}) {
-  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
+  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
   const error = useAtomValue(uncommittedChangesFetchError);
   // TODO: use dagWithPreviews instead, and update CommitOperation
   const headCommit = useAtomValue(latestHeadCommit);

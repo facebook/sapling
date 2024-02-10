@@ -44,7 +44,7 @@ import {PrSubmitOperation} from '../operations/PrSubmitOperation';
 import {SetConfigOperation} from '../operations/SetConfigOperation';
 import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
-import {CommitPreview, uncommittedChangesWithPreviewsJotai} from '../previews';
+import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {succeedableRevset} from '../types';
@@ -212,7 +212,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const isCommitMode = commit.isHead && mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
   const [editedMessage, setEditedCommitMessage] = useAtom(editedCommitMessages(hashOrHead));
-  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
+  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
   const schema = useAtomValue(commitMessageFieldsSchema);
 
   const isFoldPreview = commit.hash.startsWith(FOLD_COMMIT_PREVIEW_HASH_PREFIX);
@@ -544,7 +544,7 @@ function ActionsBar({
   setMode: (mode: CommitInfoMode) => unknown;
 }) {
   const isAnythingBeingEdited = Object.values(fieldsBeingEdited).some(Boolean);
-  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai);
+  const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
   const selection = useUncommittedSelection();
   const anythingToCommit =
     !selection.isNothingSelected() &&

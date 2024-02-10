@@ -12,7 +12,7 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {readAtom} from './jotaiUtils';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelectionReadonly} from './partialSelection';
-import {dagWithPreviews, uncommittedChangesWithPreviewsJotai} from './previews';
+import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 
 /**
  * Amend --to allows amending to a parent commit other than head.
@@ -25,7 +25,7 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
     return false;
   }
 
-  const uncommittedChanges = readAtom(uncommittedChangesWithPreviewsJotai);
+  const uncommittedChanges = readAtom(uncommittedChangesWithPreviews);
   if (uncommittedChanges == null || uncommittedChanges.length === 0) {
     // nothing to amend
     return false;
@@ -50,7 +50,7 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
 
 export function getAmendToOperation(commit: CommitInfo, snapshot: Snapshot): AmendToOperation {
   const selection = snapshot.getLoadable(uncommittedSelectionReadonly).valueOrThrow();
-  const uncommittedChanges = readAtom(uncommittedChangesWithPreviewsJotai);
+  const uncommittedChanges = readAtom(uncommittedChangesWithPreviews);
 
   const paths = uncommittedChanges
     .filter(change => selection.isFullySelected(change.path))

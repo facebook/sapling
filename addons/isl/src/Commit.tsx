@@ -36,7 +36,7 @@ import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {CommitPreview, uncommittedChangesWithPreviewsJotai} from './previews';
+import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitSelection} from './selection';
@@ -180,7 +180,7 @@ export const Commit = memo(
     }
 
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
-      const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviewsJotai).length ?? 0) > 0;
+      const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviews).length ?? 0) > 0;
       const syncStatus = readAtom(syncStatusAtom)?.get(commit.hash);
 
       const items: Array<ContextMenuItem> = [
@@ -762,7 +762,7 @@ function DraggableCommit({
 }
 
 function hasUncommittedChanges(): boolean {
-  const changes = readAtom(uncommittedChangesWithPreviewsJotai);
+  const changes = readAtom(uncommittedChangesWithPreviews);
   return (
     changes.filter(
       commit => commit.status !== '?', // untracked files are ok

@@ -15,24 +15,21 @@ import {latestSuccessorsMap} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
-import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
+  latestUncommittedChangesJotai,
   latestCommits,
   latestDag,
   operationBeingPreviewedJotai,
   latestHeadCommit,
   queuedOperationsJotai,
-  queuedOperationsRecoil,
   operationListJotai,
-  operationListRecoil,
   mergeConflictsJotai,
   latestUncommittedChangesDataJotai,
   latestCommitsData,
-  latestUncommittedChanges,
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
-import {selector, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 import {notEmpty, unwrap} from 'shared/utils';
 
 export enum CommitPreview {
@@ -210,19 +207,13 @@ function applyPreviewsToMergeConflicts(
   return conflicts;
 }
 
-export const uncommittedChangesWithPreviews = selector({
-  key: 'uncommittedChangesWithPreviews',
-  get: ({get}): Array<ChangedFile> => {
-    const list = get(operationListRecoil);
-    const queued = get(queuedOperationsRecoil);
-    const uncommittedChanges = get(latestUncommittedChanges);
+export const uncommittedChangesWithPreviews = atom(get => {
+  const list = get(operationListJotai);
+  const queued = get(queuedOperationsJotai);
+  const uncommittedChanges = get(latestUncommittedChangesJotai);
 
-    return applyPreviewsToChangedFiles(uncommittedChanges, list, queued);
-  },
+  return applyPreviewsToChangedFiles(uncommittedChanges, list, queued);
 });
-export const uncommittedChangesWithPreviewsJotai = jotaiMirrorFromRecoil(
-  uncommittedChangesWithPreviews,
-);
 
 export const optimisticMergeConflicts = atom(get => {
   const list = get(operationListJotai);

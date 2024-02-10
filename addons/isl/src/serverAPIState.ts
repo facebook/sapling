@@ -213,6 +213,7 @@ export const latestUncommittedChanges = selector<Array<ChangedFile>>({
     return get(latestUncommittedChangesDataRecoil).files;
   },
 });
+export const latestUncommittedChangesJotai = jotaiMirrorFromRecoil(latestUncommittedChanges);
 
 export const uncommittedChangesFetchError = jotaiAtom(get => {
   return get(latestUncommittedChangesDataJotai).error;

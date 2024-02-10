@@ -11,7 +11,7 @@ import serverAPI from '../ClientToServerAPI';
 import {tracker} from '../analytics';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {T} from '../i18n';
-import {uncommittedChangesWithPreviewsJotai} from '../previews';
+import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
 import {atom, useAtomValue} from 'jotai';
@@ -95,12 +95,12 @@ const suggestedReviewersForCommit = atomFamily((hashOrHead: string | 'head' | un
       }
 
       if (hashOrHead === 'head') {
-        const uncommittedChanges = get(uncommittedChangesWithPreviewsJotai);
+        const uncommittedChanges = get(uncommittedChangesWithPreviews);
         context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
       } else {
         const commit = get(commitByHash(hashOrHead));
         if (commit?.isHead) {
-          const uncommittedChanges = get(uncommittedChangesWithPreviewsJotai);
+          const uncommittedChanges = get(uncommittedChangesWithPreviews);
           context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
         }
         context.paths.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));

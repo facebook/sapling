@@ -13,7 +13,7 @@ import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {PullOperation} from './operations/PullOperation';
-import {uncommittedChangesWithPreviewsJotai, useMostRecentPendingOperation} from './previews';
+import {uncommittedChangesWithPreviews, useMostRecentPendingOperation} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
@@ -53,7 +53,7 @@ export function PullButton() {
   const currentChoice =
     pullButtonOptions.find(option => option.id === dropdownChoiceKey) ?? pullButtonOptions[0];
 
-  const trackedChanges = useAtomValue(uncommittedChangesWithPreviewsJotai).filter(
+  const trackedChanges = useAtomValue(uncommittedChangesWithPreviews).filter(
     change => change.status !== '?',
   );
   const hasUncommittedChnages = trackedChanges.length > 0;
