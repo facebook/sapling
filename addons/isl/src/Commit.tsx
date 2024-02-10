@@ -222,7 +222,7 @@ export const Commit = memo(
       }
       if (!isPublic && !actionsPrevented) {
         bodyOnly || items.push({type: 'divider'});
-        const suggestedRebases = snapshot.getLoadable(suggestedRebaseDestinations).valueMaybe();
+        const suggestedRebases = readAtom(suggestedRebaseDestinations);
         items.push({
           label: 'Rebase onto',
           type: 'submenu',

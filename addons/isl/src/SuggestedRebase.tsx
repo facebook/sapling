@@ -16,15 +16,14 @@ import {readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {dagWithPreviews, dagWithPreviewsJotai} from './previews';
+import {dagWithPreviewsJotai} from './previews';
 import {RelativeDate} from './relativeDate';
-import {commitsShownRange, latestCommits, useRunOperation} from './serverAPIState';
+import {commitsShownRange, latestCommitsJotai, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
-import {selector, useRecoilCallback} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
@@ -56,37 +55,33 @@ export const showSuggestedRebaseForStack = atomFamily((hash: Hash) =>
   }),
 );
 
-export const suggestedRebaseDestinations = selector<Array<[CommitInfo, string]>>({
-  key: 'suggestedRebaseDestinations',
-  get: ({get}) => {
-    const commits = get(latestCommits);
-    const publicBase = findCurrentPublicBase(get(dagWithPreviews));
-    const destinations = commits
-      .filter(
-        commit =>
-          commit.remoteBookmarks.length > 0 || (commit.stableCommitMetadata?.length ?? 0) > 0,
-      )
-      .map((commit): [CommitInfo, string] => [
-        commit,
-        firstNonEmptySublist(
-          commit.remoteBookmarks,
-          commit.stableCommitMetadata?.map(s => s.value),
-          commit.bookmarks,
-        ) || short(commit.hash),
-      ]);
-    if (publicBase) {
-      const publicBaseLabel = t('Current Stack Base');
-      const existing = destinations.find(dest => dest[0].hash === publicBase.hash);
-      if (existing != null) {
-        existing[1] = [publicBaseLabel, existing[1]].join(', ');
-      } else {
-        destinations.push([publicBase, publicBaseLabel]);
-      }
+export const suggestedRebaseDestinations = atom(get => {
+  const commits = get(latestCommitsJotai);
+  const publicBase = findCurrentPublicBase(get(dagWithPreviewsJotai));
+  const destinations = commits
+    .filter(
+      commit => commit.remoteBookmarks.length > 0 || (commit.stableCommitMetadata?.length ?? 0) > 0,
+    )
+    .map((commit): [CommitInfo, string] => [
+      commit,
+      firstNonEmptySublist(
+        commit.remoteBookmarks,
+        commit.stableCommitMetadata?.map(s => s.value),
+        commit.bookmarks,
+      ) || short(commit.hash),
+    ]);
+  if (publicBase) {
+    const publicBaseLabel = t('Current Stack Base');
+    const existing = destinations.find(dest => dest[0].hash === publicBase.hash);
+    if (existing != null) {
+      existing[1] = [publicBaseLabel, existing[1]].join(', ');
+    } else {
+      destinations.push([publicBase, publicBaseLabel]);
     }
-    destinations.sort((a, b) => b[0].date.valueOf() - a[0].date.valueOf());
+  }
+  destinations.sort((a, b) => b[0].date.valueOf() - a[0].date.valueOf());
 
-    return destinations;
-  },
+  return destinations;
 });
 
 export function SuggestedRebaseButton({
@@ -109,14 +104,11 @@ export function SuggestedRebaseButton({
       sources?: undefined;
       afterRun?: () => unknown;
     }) {
-  const validDestinations = useRecoilCallback(({snapshot}) => () => {
-    return snapshot.getLoadable(suggestedRebaseDestinations).valueMaybe();
-  });
   const runOperation = useRunOperation();
   const isBulk = source == null;
   const isAllDraftCommits = sources == null && source == null;
   const showContextMenu = useContextMenu(() => {
-    const destinations = validDestinations();
+    const destinations = readAtom(suggestedRebaseDestinations);
     return (
       destinations?.map(([dest, label]) => {
         return {
