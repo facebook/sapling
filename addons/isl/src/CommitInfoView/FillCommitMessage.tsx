@@ -14,12 +14,16 @@ import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {LinkButton} from '../components/LinkButton';
 import {T, t} from '../i18n';
-import {readAtom} from '../jotaiUtils';
+import {readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {layout} from '../stylexUtils';
 import {font, spacing} from '../tokens.stylex';
 import {useModal} from '../useModal';
-import {commitMessageTemplate, editedCommitMessages} from './CommitInfoState';
+import {
+  getDefaultEditedCommitMessage,
+  commitMessageTemplate,
+  editedCommitMessages,
+} from './CommitInfoState';
 import {
   parseCommitMessageFields,
   commitMessageFieldsSchema,
@@ -28,7 +32,7 @@ import {
 } from './CommitMessageFields';
 import {SmallCapsTitle} from './utils';
 import * as stylex from '@stylexjs/stylex';
-import {useRecoilCallback} from 'recoil';
+import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
 
 const fillCommitMessageMethods: Array<{
@@ -71,54 +75,54 @@ const fillCommitMessageMethods: Array<{
 
 export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: CommitInfoMode}) {
   const showModal = useModal();
-  const fillMessage = useRecoilCallback(
-    ({set, snapshot}) =>
-      async (newMessage: CommitMessageFields) => {
-        const hashOrHead = mode === 'commit' ? 'head' : commit.hash;
-        // TODO: support amending a message
+  const fillMessage = useCallback(
+    async (newMessage: CommitMessageFields) => {
+      const hashOrHead = mode === 'commit' ? 'head' : commit.hash;
+      // TODO: support amending a message
 
-        const schema = readAtom(commitMessageFieldsSchema);
-        const existing = snapshot.getLoadable(editedCommitMessages(hashOrHead)).valueMaybe();
-        if (schema == null) {
-          return;
-        }
-        if (existing == null) {
-          set(editedCommitMessages(hashOrHead), {fields: newMessage});
-          return;
-        }
-        const oldMessage = existing.fields as CommitMessageFields;
-        const buttons = [
-          {label: t('Cancel')},
-          {label: t('Overwrite')},
-          {label: t('Merge'), primary: true},
-        ] as const;
-        let answer: (typeof buttons)[number] | undefined = buttons[2]; // merge if no conflicts
-        const conflictingFields = findConflictingFieldsWhenMerging(schema, oldMessage, newMessage);
-        if (conflictingFields.length > 0) {
-          answer = await showModal({
-            type: 'confirm',
-            title: t('Commit Messages Conflict'),
-            icon: 'warning',
-            message: (
-              <MessageConflictWarning
-                conflictingFields={conflictingFields}
-                oldMessage={oldMessage}
-                newMessage={newMessage}
-              />
-            ),
-            buttons,
-          });
-        }
-        if (answer === buttons[2]) {
-          // TODO: T177275949 should we warn about conflicts instead of just merging?
-          const merged = mergeCommitMessageFields(schema, oldMessage, newMessage);
-          set(editedCommitMessages(hashOrHead), {fields: merged});
-          return;
-        } else if (answer === buttons[1]) {
-          set(editedCommitMessages(hashOrHead), {fields: newMessage});
-          return;
-        }
-      },
+      const schema = readAtom(commitMessageFieldsSchema);
+      const existing = readAtom(editedCommitMessages(hashOrHead));
+      if (schema == null) {
+        return;
+      }
+      if (existing == null) {
+        writeAtom(editedCommitMessages(hashOrHead), getDefaultEditedCommitMessage());
+        return;
+      }
+      const oldMessage = existing.fields as CommitMessageFields;
+      const buttons = [
+        {label: t('Cancel')},
+        {label: t('Overwrite')},
+        {label: t('Merge'), primary: true},
+      ] as const;
+      let answer: (typeof buttons)[number] | undefined = buttons[2]; // merge if no conflicts
+      const conflictingFields = findConflictingFieldsWhenMerging(schema, oldMessage, newMessage);
+      if (conflictingFields.length > 0) {
+        answer = await showModal({
+          type: 'confirm',
+          title: t('Commit Messages Conflict'),
+          icon: 'warning',
+          message: (
+            <MessageConflictWarning
+              conflictingFields={conflictingFields}
+              oldMessage={oldMessage}
+              newMessage={newMessage}
+            />
+          ),
+          buttons,
+        });
+      }
+      if (answer === buttons[2]) {
+        // TODO: T177275949 should we warn about conflicts instead of just merging?
+        const merged = mergeCommitMessageFields(schema, oldMessage, newMessage);
+        writeAtom(editedCommitMessages(hashOrHead), {fields: merged});
+        return;
+      } else if (answer === buttons[1]) {
+        writeAtom(editedCommitMessages(hashOrHead), {fields: newMessage});
+        return;
+      }
+    },
+    [commit, mode, showModal],
   );
 
   const methods = (

@@ -66,7 +66,7 @@ import {
 import {GeneratedStatus} from './types';
 import {VSCodeBadge, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
-import React, {useMemo, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -417,37 +417,40 @@ export function UncommittedChanges({place}: {place: Place}) {
 
   const runOperation = useRunOperation();
 
-  const openCommitForm = useRecoilCallback(({set}) => (which: 'commit' | 'amend') => {
-    // make sure view is expanded
-    writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
+  const openCommitForm = useCallback(
+    (which: 'commit' | 'amend') => {
+      // make sure view is expanded
+      writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
 
-    // show head commit & set to correct mode
-    writeAtom(selectedCommits, new Set());
-    writeAtom(commitMode, which);
+      // show head commit & set to correct mode
+      writeAtom(selectedCommits, new Set());
+      writeAtom(commitMode, which);
 
-    // Start editing fields when amending so you can go right into typing.
-    if (which === 'amend') {
-      writeAtom(forceNextCommitToEditAllFields, true);
-      if (headCommit != null) {
-        const latestMessage = readAtom(latestCommitMessageFieldsJotai(headCommit.hash));
-        if (latestMessage) {
-          set(editedCommitMessages(headCommit.hash), {
-            fields: {...latestMessage},
-          });
+      // Start editing fields when amending so you can go right into typing.
+      if (which === 'amend') {
+        writeAtom(forceNextCommitToEditAllFields, true);
+        if (headCommit != null) {
+          const latestMessage = readAtom(latestCommitMessageFieldsJotai(headCommit.hash));
+          if (latestMessage) {
+            writeAtom(editedCommitMessages(headCommit.hash), {
+              fields: {...latestMessage},
+            });
+          }
         }
       }
-    }
 
-    const quickCommitTyped = commitTitleRef.current?.value;
-    if (which === 'commit' && quickCommitTyped != null && quickCommitTyped != '') {
-      set(editedCommitMessages('head'), value => ({
-        ...value,
-        fields: {...value.fields, Title: quickCommitTyped},
-      }));
-      // delete what was written in the quick commit form
-      commitTitleRef.current != null && (commitTitleRef.current.value = '');
-    }
-  });
+      const quickCommitTyped = commitTitleRef.current?.value;
+      if (which === 'commit' && quickCommitTyped != null && quickCommitTyped != '') {
+        writeAtom(editedCommitMessages('head'), value => ({
+          ...value,
+          fields: {...value.fields, Title: quickCommitTyped},
+        }));
+        // delete what was written in the quick commit form
+        commitTitleRef.current != null && (commitTitleRef.current.value = '');
+      }
+    },
+    [headCommit],
+  );
 
   const onConfirmQuickCommit = () => {
     const title =

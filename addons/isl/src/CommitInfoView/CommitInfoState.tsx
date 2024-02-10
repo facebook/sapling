@@ -6,12 +6,12 @@
  */
 
 import type {CommitInfo, Hash} from '../types';
-import type {CommitMessageFields, FieldsBeingEdited} from './types';
+import type {CommitMessageFields} from './types';
 
 import {globalRecoil} from '../AccessGlobalRecoil';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
-import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
+import {latestCommitMessageFieldsJotai} from '../codeReview/CodeReviewInfo';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {entangledAtoms} from '../recoilUtils';
@@ -22,11 +22,11 @@ import {
   allFieldsBeingEdited,
   anyEditsMade,
   applyEditedFields,
-  commitMessageFieldsSchemaRecoil,
   commitMessageFieldsSchema,
 } from './CommitMessageFields';
 import {atom} from 'jotai';
-import {atomFamily, selectorFamily, selector} from 'recoil';
+import {atomFamily as jotaiAtomFamily} from 'jotai/utils';
+import {atomFamily, selector} from 'recoil';
 
 export type EditedMessage = {fields: Partial<CommitMessageFields>};
 
@@ -68,6 +68,8 @@ export const diffUpdateMessagesState = atomFamily<string, Hash>({
   default: '',
 });
 
+export const getDefaultEditedCommitMessage = (): EditedMessage => ({fields: {}});
+
 /**
  * Map of hash -> latest edited commit message, representing any changes made to the commit's message fields.
  * Only fields that are edited are entered here. Fields that are not edited are not in the object.
@@ -79,18 +81,15 @@ export const diffUpdateMessagesState = atomFamily<string, Hash>({
  * This also stores the state of new commit messages being written, keyed by "head" instead of a commit hash.
  * Note: this state should be cleared when amending / committing / meta-editing.
  */
-export const editedCommitMessages = atomFamily<EditedMessage, Hash | 'head'>({
-  key: 'editedCommitMessages',
-  default: () => ({fields: {}}),
+export const editedCommitMessages = jotaiAtomFamily((_hashOrHead: Hash | 'head') => {
+  return atom<EditedMessage>(getDefaultEditedCommitMessage());
 });
 
 function updateEditedCommitMessagesFromSuccessions() {
   return successionTracker.onSuccessions(successions => {
     for (const [oldHash, newHash] of successions) {
-      const existing = globalRecoil().getLoadable(editedCommitMessages(oldHash));
-      if (existing.state === 'hasValue') {
-        globalRecoil().set(editedCommitMessages(newHash), existing.valueOrThrow());
-      }
+      const existing = readAtom(editedCommitMessages(oldHash));
+      writeAtom(editedCommitMessages(newHash), existing);
 
       const existingUpdateMessage = globalRecoil().getLoadable(diffUpdateMessagesState(oldHash));
       if (existingUpdateMessage.state === 'hasValue') {
@@ -108,18 +107,12 @@ export const __TEST__ = {
   },
 };
 
-export const latestCommitMessageFieldsWithEdits = selectorFamily<
-  CommitMessageFields,
-  Hash | 'head'
->({
-  key: 'latestCommitMessageFieldsWithEdits',
-  get:
-    hash =>
-    ({get}) => {
-      const edited = get(editedCommitMessages(hash));
-      const latest = get(latestCommitMessageFields(hash));
-      return applyEditedFields(latest, edited.fields);
-    },
+export const latestCommitMessageFieldsWithEdits = jotaiAtomFamily((hashOrHead: Hash | 'head') => {
+  return atom(get => {
+    const edited = get(editedCommitMessages(hashOrHead));
+    const latest = get(latestCommitMessageFieldsJotai(hashOrHead));
+    return applyEditedFields(latest, edited.fields);
+  });
 });
 
 /**
@@ -131,35 +124,29 @@ export const latestCommitMessageFieldsWithEdits = selectorFamily<
  */
 export const forceNextCommitToEditAllFields = atom<boolean>(false);
 
-export const unsavedFieldsBeingEdited = selectorFamily<FieldsBeingEdited, Hash | 'head'>({
-  key: 'unsavedFieldsBeingEdited',
-  get:
-    hash =>
-    ({get}) => {
-      const edited = get(editedCommitMessages(hash));
-      const schema = get(commitMessageFieldsSchemaRecoil);
-      if (hash === 'head') {
-        return allFieldsBeingEdited(schema);
-      }
-      return Object.fromEntries(schema.map(field => [field.key, field.key in edited.fields]));
-    },
+export const unsavedFieldsBeingEdited = jotaiAtomFamily((hashOrHead: Hash | 'head') => {
+  return atom(get => {
+    const edited = get(editedCommitMessages(hashOrHead));
+    const schema = get(commitMessageFieldsSchema);
+    if (hashOrHead === 'head') {
+      return allFieldsBeingEdited(schema);
+    }
+    return Object.fromEntries(schema.map(field => [field.key, field.key in edited.fields]));
+  });
 });
 
-export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'head'>({
-  key: 'hasUnsavedEditedCommitMessage',
-  get:
-    hash =>
-    ({get}) => {
-      const beingEdited = get(unsavedFieldsBeingEdited(hash));
-      if (Object.values(beingEdited).some(Boolean)) {
-        // Some fields are being edited, let's look more closely to see if anything is actually different.
-        const edited = get(editedCommitMessages(hash));
-        const latest = get(latestCommitMessageFields(hash));
-        const schema = get(commitMessageFieldsSchemaRecoil);
-        return anyEditsMade(schema, latest, edited.fields);
-      }
-      return false;
-    },
+export const hasUnsavedEditedCommitMessage = jotaiAtomFamily((hashOrHead: Hash | 'head') => {
+  return atom(get => {
+    const beingEdited = get(unsavedFieldsBeingEdited(hashOrHead));
+    if (Object.values(beingEdited).some(Boolean)) {
+      // Some fields are being edited, let's look more closely to see if anything is actually different.
+      const edited = get(editedCommitMessages(hashOrHead));
+      const latest = get(latestCommitMessageFieldsJotai(hashOrHead));
+      const schema = get(commitMessageFieldsSchema);
+      return anyEditsMade(schema, latest, edited.fields);
+    }
+    return false;
+  });
 });
 
 export const commitMode = atom<CommitInfoMode>('amend');

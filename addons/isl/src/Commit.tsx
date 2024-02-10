@@ -524,7 +524,7 @@ function DivIfChildren({
 }
 
 function UnsavedEditedMessageIndicator({commit}: {commit: CommitInfo}) {
-  const isEdted = useRecoilValue(hasUnsavedEditedCommitMessage(commit.hash));
+  const isEdted = useAtomValue(hasUnsavedEditedCommitMessage(commit.hash));
   if (!isEdted) {
     return null;
   }

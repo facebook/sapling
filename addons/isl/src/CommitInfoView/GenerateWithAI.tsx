@@ -15,6 +15,7 @@ import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
+import {readAtom} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {
@@ -146,7 +147,7 @@ const generatedCommitMessages = selectorFamily<Result<string>, HashKey>({
       }
 
       const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
-      const latestFields = get(latestCommitMessageFieldsWithEdits(hashOrHead));
+      const latestFields = readAtom(latestCommitMessageFieldsWithEdits(hashOrHead));
       const latestWrittenTitle = latestFields.Title as string;
 
       // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,

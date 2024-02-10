@@ -33,6 +33,7 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
+import {readAtom, refreshAtom, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState, updateRemoteMessage} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {getAmendOperation} from '../operations/AmendOperation';
@@ -81,7 +82,7 @@ import {
 } from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
-import {useEffect} from 'react';
+import {useCallback, useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -210,7 +211,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [mode, setMode] = useAtom(commitMode);
   const isCommitMode = commit.isHead && mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
-  const [editedMessage, setEditedCommitMessage] = useRecoilState(editedCommitMessages(hashOrHead));
+  const [editedMessage, setEditedCommitMessage] = useAtom(editedCommitMessages(hashOrHead));
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const schema = useAtomValue(commitMessageFieldsSchema);
 
@@ -222,7 +223,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const isObsoleted = commit.successorInfo != null;
   const isAmendDisabled = mode === 'amend' && (isPublic || isObsoleted);
 
-  const fieldsBeingEdited = useRecoilValue(unsavedFieldsBeingEdited(hashOrHead));
+  const fieldsBeingEdited = useAtomValue(unsavedFieldsBeingEdited(hashOrHead));
 
   useDebounceFetchDiffDetails(commit.diffId);
 
@@ -449,14 +450,14 @@ function ShowingRemoteMessageBanner({
   const runOperation = useRunOperation();
   const syncingEnabled = useRecoilValue(messageSyncingEnabledState);
 
-  const loadLocalMessage = useRecoilCallback(({set}) => () => {
+  const loadLocalMessage = useCallback(() => {
     const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
     const beingEdited = findFieldsBeingEdited(schema, originalFields, latestFields);
 
-    set(editedCommitMessages(editedCommitMessageKey), () =>
+    writeAtom(editedCommitMessages(editedCommitMessageKey), () =>
       editedMessageSubset(originalFields, beingEdited),
     );
-  });
+  }, [commit, editedCommitMessageKey, latestFields, schema]);
 
   const contextMenu = useContextMenu(() => {
     return [
@@ -573,26 +574,25 @@ function ActionsBar({
     }
   });
 
-  const clearEditedCommitMessage = useRecoilCallback(
-    ({snapshot, reset}) =>
-      async (skipConfirmation?: boolean) => {
-        if (!skipConfirmation) {
-          const hasUnsavedEditsLoadable = snapshot.getLoadable(
-            hasUnsavedEditedCommitMessage(isCommitMode ? 'head' : commit.hash),
+  const clearEditedCommitMessage = useCallback(
+    async (skipConfirmation?: boolean) => {
+      if (!skipConfirmation) {
+        const hasUnsavedEdits = readAtom(
+          hasUnsavedEditedCommitMessage(isCommitMode ? 'head' : commit.hash),
+        );
+        if (hasUnsavedEdits) {
+          const confirmed = await platform.confirm(
+            t('Are you sure you want to discard your edited message?'),
           );
-          const hasUnsavedEdits = hasUnsavedEditsLoadable.valueMaybe() === true;
-          if (hasUnsavedEdits) {
-            const confirmed = await platform.confirm(
-              t('Are you sure you want to discard your edited message?'),
-            );
-            if (confirmed === false) {
-              return;
-            }
+          if (confirmed === false) {
+            return;
           }
         }
+      }
 
-        reset(editedCommitMessages(isCommitMode ? 'head' : commit.hash));
-      },
+      writeAtom(editedCommitMessages(isCommitMode ? 'head' : commit.hash), {fields: {}});
+    },
+    [commit.hash, isCommitMode],
   );
   const doAmendOrCommit = () => {
     const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);

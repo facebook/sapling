@@ -28,6 +28,7 @@ import {selectedCommits, selectedCommitsRecoil} from './selection';
 import {operationBeingPreviewedJotai, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useCallback} from 'react';
 import {type Snapshot, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
@@ -109,15 +110,13 @@ export function FoldButton({commit}: {commit?: CommitInfo}) {
  * Make a new copy of the FoldOperation with the latest edited message for the combined preview.
  * This allows running the fold operation to use the newly typed message.
  */
-export function updateFoldedMessageWithEditedMessage(
-  snapshot: Snapshot,
-): FoldOperation | undefined {
+export function updateFoldedMessageWithEditedMessage(): FoldOperation | undefined {
   const beingPreviewed = readAtom(operationBeingPreviewedJotai);
   if (beingPreviewed != null && beingPreviewed instanceof FoldOperation) {
     const range = beingPreviewed.getFoldRange();
     const combinedHash = getFoldRangeCommitHash(range, /* isPreview */ true);
     const [existingTitle, existingMessage] = beingPreviewed.getFoldedMessage();
-    const editedMessage = snapshot.getLoadable(editedCommitMessages(combinedHash)).valueMaybe();
+    const editedMessage = readAtom(editedCommitMessages(combinedHash));
 
     const schema = readAtom(commitMessageFieldsSchema);
     if (schema == null) {
@@ -135,8 +134,8 @@ export function updateFoldedMessageWithEditedMessage(
 
 export function useRunFoldPreview(): [cancel: () => unknown, run: () => unknown] {
   const handlePreviewedOperation = useRunPreviewedOperation();
-  const run = useRecoilCallback(({snapshot}) => () => {
-    const foldOperation = updateFoldedMessageWithEditedMessage(snapshot);
+  const run = useCallback(() => {
+    const foldOperation = updateFoldedMessageWithEditedMessage();
     if (foldOperation == null) {
       return;
     }
@@ -147,7 +146,7 @@ export function useRunFoldPreview(): [cancel: () => unknown, run: () => unknown]
         ? new Set([getFoldRangeCommitHash(foldOperation.getFoldRange(), /* isPreview */ false)])
         : last,
     );
-  });
+  }, [handlePreviewedOperation]);
   return [
     () => {
       handlePreviewedOperation(/* isCancel */ true);

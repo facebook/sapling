@@ -247,9 +247,7 @@ function rewriteCommitMessagesInStack(stack: ExportStack): ExportStack {
   return stack.map(c => {
     let text = c.text;
     if (schema) {
-      const editedMessage = globalRecoil()
-        .getLoadable(latestCommitMessageFieldsWithEdits(c.node))
-        .valueMaybe();
+      const editedMessage = readAtom(latestCommitMessageFieldsWithEdits(c.node));
       if (editedMessage != null) {
         text = commitMessageFieldsToString(schema, editedMessage);
       }
