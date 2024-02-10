@@ -16,7 +16,7 @@ import {islDrawerState} from './drawerState';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews, dagWithPreviewsJotai} from './previews';
-import {entangledAtoms} from './recoilUtils';
+import {entangledAtoms, jotaiMirrorFromRecoil} from './recoilUtils';
 import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
@@ -80,6 +80,8 @@ export const selectedCommitInfos = selector<Array<CommitInfo>>({
     });
   },
 });
+
+export const selectedCommitInfosJotai = jotaiMirrorFromRecoil(selectedCommitInfos);
 
 export function useCommitSelection(hash: string): {
   isSelected: boolean;

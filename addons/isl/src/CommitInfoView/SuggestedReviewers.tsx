@@ -134,7 +134,7 @@ export function SuggestedReviewers({
   const provider = useRecoilValue(codeReviewProvider);
   const recent = recentReviewers.getRecent().filter(s => !existingReviewers.includes(s));
   const mode = useAtomValue(commitMode);
-  const currentCommitInfoViewCommit = useRecoilValue(commitInfoViewCurrentCommits);
+  const currentCommitInfoViewCommit = useAtomValue(commitInfoViewCurrentCommits);
   const currentCommit = currentCommitInfoViewCommit?.[0]; // assume we only have one commit
 
   const key = currentCommit?.isHead && mode === 'commit' ? 'head' : currentCommit?.hash ?? '';

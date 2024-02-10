@@ -31,7 +31,6 @@ import {
   selectorFamily,
   useRecoilCallback,
   useRecoilRefresher_UNSTABLE,
-  useRecoilValue,
   useRecoilValueLoadable,
   useSetRecoilState,
 } from 'recoil';
@@ -52,7 +51,7 @@ export function GenerateAICommitMessageButton({
   textAreaRef: MutableRefObject<unknown>;
   appendToTextArea: (toAdd: string) => unknown;
 }) {
-  const currentCommit = useRecoilValue(commitInfoViewCurrentCommits)?.[0];
+  const currentCommit = useAtomValue(commitInfoViewCurrentCommits)?.[0];
   const mode = useAtomValue(commitMode);
   const featureEnabled = useFeatureFlagSync(Internal.featureFlags?.GeneratedAICommitMessages);
 

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, Hash} from '../types';
+import type {Hash} from '../types';
 import type {CommitMessageFields} from './types';
 
 import {globalRecoil} from '../AccessGlobalRecoil';
@@ -13,9 +13,9 @@ import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {readAtom, writeAtom} from '../jotaiUtils';
-import {dagWithPreviews} from '../previews';
+import {dagWithPreviewsJotai} from '../previews';
 import {entangledAtoms} from '../recoilUtils';
-import {selectedCommitInfos} from '../selection';
+import {selectedCommitInfosJotai} from '../selection';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {
   parseCommitMessageFields,
@@ -26,7 +26,7 @@ import {
 } from './CommitMessageFields';
 import {atom} from 'jotai';
 import {atomFamily as jotaiAtomFamily} from 'jotai/utils';
-import {atomFamily, selector} from 'recoil';
+import {atomFamily} from 'recoil';
 
 export type EditedMessage = {fields: Partial<CommitMessageFields>};
 
@@ -151,19 +151,16 @@ export const hasUnsavedEditedCommitMessage = jotaiAtomFamily((hashOrHead: Hash |
 
 export const commitMode = atom<CommitInfoMode>('amend');
 
-export const commitInfoViewCurrentCommits = selector<Array<CommitInfo> | null>({
-  key: 'commitInfoViewCurrentCommits',
-  get: ({get}) => {
-    const selected = get(selectedCommitInfos);
+export const commitInfoViewCurrentCommits = atom(get => {
+  const selected = get(selectedCommitInfosJotai);
 
-    // show selected commit, if there's exactly 1
-    const selectedCommit = selected.length === 1 ? selected[0] : undefined;
-    const commit = selectedCommit ?? get(dagWithPreviews).resolve('.');
+  // show selected commit, if there's exactly 1
+  const selectedCommit = selected.length === 1 ? selected[0] : undefined;
+  const commit = selectedCommit ?? get(dagWithPreviewsJotai).resolve('.');
 
-    if (commit == null) {
-      return null;
-    } else {
-      return selected.length > 1 ? selected : [commit];
-    }
-  },
+  if (commit == null) {
+    return null;
+  } else {
+    return selected.length > 1 ? selected : [commit];
+  }
 });

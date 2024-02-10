@@ -33,7 +33,7 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
-import {readAtom, refreshAtom, writeAtom} from '../jotaiUtils';
+import {readAtom, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState, updateRemoteMessage} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {getAmendOperation} from '../operations/AmendOperation';
@@ -83,7 +83,7 @@ import {
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect} from 'react';
-import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -93,7 +93,7 @@ import {notEmpty, unwrap} from 'shared/utils';
 import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
-  const commitsToShow = useRecoilValue(commitInfoViewCurrentCommits);
+  const commitsToShow = useAtomValue(commitInfoViewCurrentCommits);
 
   if (commitsToShow == null) {
     return (
