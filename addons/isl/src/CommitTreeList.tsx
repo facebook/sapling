@@ -25,12 +25,7 @@ import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {
-  dagWithPreviews,
-  dagWithPreviewsJotai,
-  treeWithPreviews,
-  useMarkOperationsCompleted,
-} from './previews';
+import {dagWithPreviewsJotai, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
 import {
@@ -45,7 +40,7 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
-import {selector, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -67,23 +62,20 @@ type DagCommitListProps = {
   isNarrow: boolean;
 };
 
-const dagWithYouAreHere = selector<Dag>({
-  key: 'dagWithYouAreHere',
-  get: ({get}) => {
-    let dag = get(dagWithPreviews);
-    // Insert a virtual "You are here" as a child of ".".
-    const dot = dag.resolve('.');
-    if (dot != null) {
-      dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dot.hash])]);
-    }
-    return dag;
-  },
+const dagWithYouAreHere = atom(get => {
+  let dag = get(dagWithPreviewsJotai);
+  // Insert a virtual "You are here" as a child of ".".
+  const dot = dag.resolve('.');
+  if (dot != null) {
+    dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dot.hash])]);
+  }
+  return dag;
 });
 
 function DagCommitList(props: DagCommitListProps) {
   const {isNarrow} = props;
 
-  const dag = useRecoilValue(dagWithYouAreHere);
+  const dag = useAtomValue(dagWithYouAreHere);
   const subset = getRenderSubset(dag);
 
   return (
