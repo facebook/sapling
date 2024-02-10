@@ -16,7 +16,6 @@ import {islDrawerState} from './drawerState';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviewsJotai} from './previews';
-import {entangledAtoms} from './recoilUtils';
 import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
@@ -29,10 +28,7 @@ import {useRecoilCallback} from 'recoil';
  * Note: it is possible to be selecting a commit that stops being rendered, and thus has no associated commit info.
  * Prefer to use `selectedCommitInfos` to get the subset of the selection that is visible.
  */
-export const [selectedCommits, selectedCommitsRecoil] = entangledAtoms<Set<Hash>>({
-  key: 'selectedCommits',
-  default: new Set(),
-});
+export const selectedCommits = atom(new Set<Hash>());
 registerCleanup(
   selectedCommits,
   successionTracker.onSuccessions(successions => {
