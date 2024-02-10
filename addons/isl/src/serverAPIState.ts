@@ -403,6 +403,8 @@ export const latestHeadCommit = selector<CommitInfo | undefined>({
   },
 });
 
+export const latestHeadCommitJotai = jotaiMirrorFromRecoil(latestHeadCommit);
+
 /**
  * No longer in the "loading" state:
  * - Either the list of commits has successfully loaded

@@ -6,7 +6,7 @@
  */
 
 import type {ISLCommandName} from './ISLShortcuts';
-import type {CommitInfo, Hash} from './types';
+import type {Hash} from './types';
 import type React from 'react';
 
 import {useCommand} from './ISLShortcuts';
@@ -15,14 +15,14 @@ import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './Succ
 import {islDrawerState} from './drawerState';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
-import {dagWithPreviews, dagWithPreviewsJotai} from './previews';
-import {entangledAtoms, jotaiMirrorFromRecoil} from './recoilUtils';
+import {dagWithPreviewsJotai} from './previews';
+import {entangledAtoms} from './recoilUtils';
 import {latestDagJotai, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
-import {selector, useRecoilCallback} from 'recoil';
+import {useRecoilCallback} from 'recoil';
 
 /**
  * See {@link selectedCommitInfos}
@@ -69,19 +69,14 @@ const previouslySelectedCommit = atom<undefined | string>(undefined);
  *
  * See {@link selectedCommits} for setting underlying storage
  */
-export const selectedCommitInfos = selector<Array<CommitInfo>>({
-  key: 'selectedCommitInfos',
-  get: ({get}) => {
-    const selected = get(selectedCommitsRecoil);
-    const dag = get(dagWithPreviews);
-    return [...selected].flatMap(h => {
-      const info = dag.get(h);
-      return info === undefined ? [] : [info];
-    });
-  },
+export const selectedCommitInfos = atom(get => {
+  const selected = get(selectedCommits);
+  const dag = get(dagWithPreviewsJotai);
+  return [...selected].flatMap(h => {
+    const info = dag.get(h);
+    return info === undefined ? [] : [info];
+  });
 });
-
-export const selectedCommitInfosJotai = jotaiMirrorFromRecoil(selectedCommitInfos);
 
 export function useCommitSelection(hash: string): {
   isSelected: boolean;

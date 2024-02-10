@@ -15,7 +15,7 @@ import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviewsJotai} from '../previews';
 import {entangledAtoms} from '../recoilUtils';
-import {selectedCommitInfosJotai} from '../selection';
+import {selectedCommitInfos} from '../selection';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {
   parseCommitMessageFields,
@@ -152,7 +152,7 @@ export const hasUnsavedEditedCommitMessage = jotaiAtomFamily((hashOrHead: Hash |
 export const commitMode = atom<CommitInfoMode>('amend');
 
 export const commitInfoViewCurrentCommits = atom(get => {
-  const selected = get(selectedCommitInfosJotai);
+  const selected = get(selectedCommitInfos);
 
   // show selected commit, if there's exactly 1
   const selectedCommit = selected.length === 1 ? selected[0] : undefined;
