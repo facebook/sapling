@@ -14,7 +14,7 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {HideOperation} from './operations/HideOperation';
-import {type Dag, dagWithPreviews} from './previews';
+import {type Dag, dagWithPreviewsJotai} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
@@ -66,7 +66,7 @@ export function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChi
 }
 
 export function CleanupAllButton() {
-  const dag = useRecoilValue(dagWithPreviews);
+  const dag = useAtomValue(dagWithPreviewsJotai);
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useAtomValue(allDiffSummaries)?.value;
   if (diffMap == null || reviewProvider == null) {

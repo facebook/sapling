@@ -9,9 +9,10 @@ import type {CommitInfo} from './types';
 import type {Snapshot} from 'recoil';
 
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
+import {readAtom} from './jotaiUtils';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelectionReadonly} from './partialSelection';
-import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {dagWithPreviewsJotai, uncommittedChangesWithPreviews} from './previews';
 
 /**
  * Amend --to allows amending to a parent commit other than head.
@@ -38,7 +39,7 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
     return false;
   }
 
-  const dag = snapshot.getLoadable(dagWithPreviews).valueMaybe();
+  const dag = readAtom(dagWithPreviewsJotai);
   const head = dag?.resolve('.');
   if (dag == null || head == null || !dag.has(commit.hash)) {
     return false;

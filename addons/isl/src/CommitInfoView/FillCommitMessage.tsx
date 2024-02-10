@@ -9,13 +9,12 @@ import type {CommitInfo} from '../types';
 import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
-import {globalRecoil} from '../AccessGlobalRecoil';
 import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {LinkButton} from '../components/LinkButton';
 import {T, t} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
-import {dagWithPreviews} from '../previews';
+import {dagWithPreviewsJotai} from '../previews';
 import {layout} from '../stylexUtils';
 import {font, spacing} from '../tokens.stylex';
 import {useModal} from '../useModal';
@@ -48,7 +47,7 @@ const fillCommitMessageMethods: Array<{
     tooltip: t("Fill in the previous commit's message here."),
     getMessage: (commit: CommitInfo, mode: CommitInfoMode) => {
       const schema = readAtom(commitMessageFieldsSchema);
-      const dag = globalRecoil().getLoadable(dagWithPreviews).valueMaybe();
+      const dag = readAtom(dagWithPreviewsJotai);
       if (!dag || !schema) {
         return undefined;
       }

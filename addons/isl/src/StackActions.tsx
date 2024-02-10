@@ -20,7 +20,7 @@ import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo'
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
-import {dagWithPreviews} from './previews';
+import {dagWithPreviewsJotai} from './previews';
 import {useRunOperation, latestUncommittedChangesDataJotai} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
@@ -44,7 +44,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const stackHashes = useAtomValue(editingStackIntentionHashes)[1];
   const loadingState = useAtomValue(loadingStackState);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(hash));
-  const dag = useRecoilValue(dagWithPreviews);
+  const dag = useAtomValue(dagWithPreviewsJotai);
   const runOperation = useRunOperation();
   const syncStatusMap = useRecoilValue(syncStatusAtom);
 
@@ -254,7 +254,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
 
 function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | null {
   const uncommitted = useAtomValue(latestUncommittedChangesDataJotai);
-  const dag = useRecoilValue(dagWithPreviews);
+  const dag = useAtomValue(dagWithPreviewsJotai);
   const [[, stackHashes], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
   const loadingState = useAtomValue(loadingStackState);
 

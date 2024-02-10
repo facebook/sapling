@@ -19,7 +19,7 @@ import {writeAtom} from './jotaiUtils';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
 import {CommitCloudCreateWorkspaceOperation} from './operations/CommitCloudCreateWorkspaceOperation';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
-import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './previews';
+import {CommitPreview, dagWithPreviewsJotai, useMostRecentPendingOperation} from './previews';
 import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
@@ -30,9 +30,8 @@ import {
   VSCodeOption,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
-import {atom, useAtom} from 'jotai';
+import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -311,7 +310,7 @@ function CommitCloudSyncStatusBadge({statuses}: {statuses: Map<Hash, CommitCloud
 }
 
 function BackupList({commits}: {commits: Array<Hash>}) {
-  const dag = useRecoilValue(dagWithPreviews);
+  const dag = useAtomValue(dagWithPreviewsJotai);
   const infos = commits.map(hash => dag.get(hash)).filter(notEmpty);
   return (
     <div className="commit-cloud-backup-list">

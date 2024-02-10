@@ -15,6 +15,7 @@ import {latestSuccessorsMap} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
+import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {
   queuedOperationsJotai,
   queuedOperationsRecoil,
@@ -273,6 +274,8 @@ export const dagWithPreviews = selector<Dag>({
     return dag;
   },
 });
+
+export const dagWithPreviewsJotai = jotaiMirrorFromRecoil(dagWithPreviews);
 
 export const treeWithPreviews = selector({
   key: 'treeWithPreviews',

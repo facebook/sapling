@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {globalRecoil} from './AccessGlobalRecoil';
 import {CommitCloudInfo} from './CommitCloud';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
@@ -15,13 +14,13 @@ import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {findCurrentPublicBase} from './getCommitTree';
 import {t, T} from './i18n';
-import {configBackedAtom} from './jotaiUtils';
+import {configBackedAtom, readAtom} from './jotaiUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {GraftOperation} from './operations/GraftOperation';
 import {PullRevOperation} from './operations/PullRevOperation';
 import {RebaseKeepOperation} from './operations/RebaseKeepOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {dagWithPreviews} from './previews';
+import {dagWithPreviewsJotai} from './previews';
 import {forceFetchCommit, useRunOperation} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
 import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
@@ -128,9 +127,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       const dest =
         rebaseType === 'rebase_ontop'
           ? '.'
-          : unwrap(
-              findCurrentPublicBase(globalRecoil().getLoadable(dagWithPreviews).valueMaybe())?.hash,
-            );
+          : unwrap(findCurrentPublicBase(readAtom(dagWithPreviewsJotai))?.hash);
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
       runOperation(new Op(exactRevset(enteredDiffNum), succeedableRevset(dest)));
