@@ -206,15 +206,16 @@ export const latestCommitMessage = selectorFamily<
     },
 });
 
-export const latestCommitMessageTitle = selectorFamily<string, Hash | 'head'>({
-  key: 'latestCommitMessageTitle',
-  get:
-    (hash: Hash | 'head') =>
-    ({get}) => {
-      const [title] = get(latestCommitMessage(hash));
-      return title;
-    },
-});
+export const latestCommitMessageJotai = atomFamily((hashOrHead: Hash | 'head') =>
+  jotaiMirrorFromRecoil(latestCommitMessage(hashOrHead)),
+);
+
+export const latestCommitMessageTitle = atomFamily((hashOrHead: Hash | 'head') =>
+  atom(get => {
+    const [title] = get(latestCommitMessageJotai(hashOrHead));
+    return title;
+  }),
+);
 
 export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Hash | 'head'>({
   key: 'latestCommitMessageFields',

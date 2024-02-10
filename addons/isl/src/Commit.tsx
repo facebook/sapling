@@ -138,7 +138,7 @@ export const Commit = memo(
 
     const isNarrow = useAtomValue(isNarrowCommitTree);
 
-    const title = useRecoilValue(latestCommitMessageTitle(commit.hash));
+    const title = useAtomValue(latestCommitMessageTitle(commit.hash));
 
     const toast = useShowToast();
     const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
