@@ -11,11 +11,12 @@ import serverAPI from '../ClientToServerAPI';
 import {tracker} from '../analytics';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {T} from '../i18n';
-import {uncommittedChangesWithPreviews} from '../previews';
-import {commitByHash} from '../serverAPIState';
+import {uncommittedChangesWithPreviewsJotai} from '../previews';
+import {commitByHashJotai} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
-import {useAtomValue} from 'jotai';
-import {selectorFamily, useRecoilValue, useRecoilValueLoadable} from 'recoil';
+import {atom, useAtomValue} from 'jotai';
+import {atomFamily, loadable} from 'jotai/utils';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {tryJsonParse} from 'shared/utils';
 
@@ -77,11 +78,9 @@ export const recentReviewers = new RecentReviewers();
  */
 const cachedSuggestions = new Map<string, {lastFetch: number; reviewers: Array<string>}>();
 const MAX_SUGGESTION_CACHE_AGE = 2 * 60 * 1000;
-const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
-  key: 'suggestedReviewersForCommit',
-  get:
-    (hashOrHead: string | 'head' | undefined) =>
-    ({get}) => {
+const suggestedReviewersForCommit = atomFamily((hashOrHead: string | 'head' | undefined) => {
+  return loadable(
+    atom(get => {
       if (hashOrHead == null) {
         return [];
       }
@@ -96,12 +95,12 @@ const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
       }
 
       if (hashOrHead === 'head') {
-        const uncommittedChanges = get(uncommittedChangesWithPreviews);
+        const uncommittedChanges = get(uncommittedChangesWithPreviewsJotai);
         context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
       } else {
-        const commit = get(commitByHash(hashOrHead));
+        const commit = get(commitByHashJotai(hashOrHead));
         if (commit?.isHead) {
-          const uncommittedChanges = get(uncommittedChangesWithPreviews);
+          const uncommittedChanges = get(uncommittedChangesWithPreviewsJotai);
           context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
         }
         context.paths.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
@@ -121,7 +120,8 @@ const suggestedReviewersForCommit = selectorFamily<Array<string>, string>({
         cachedSuggestions.set(hashOrHead, {lastFetch: Date.now(), reviewers: response.reviewers});
         return response.reviewers;
       });
-    },
+    }),
+  );
 });
 
 export function SuggestedReviewers({
@@ -138,11 +138,11 @@ export function SuggestedReviewers({
   const currentCommit = currentCommitInfoViewCommit?.[0]; // assume we only have one commit
 
   const key = currentCommit?.isHead && mode === 'commit' ? 'head' : currentCommit?.hash ?? '';
-  const suggestedReviewers = useRecoilValueLoadable(suggestedReviewersForCommit(key));
+  const suggestedReviewers = useAtomValue(suggestedReviewersForCommit(key));
 
-  const filteredSuggestions = suggestedReviewers
-    .valueMaybe()
-    ?.filter(s => !existingReviewers.includes(s));
+  const filteredSuggestions = (
+    suggestedReviewers.state === 'hasData' ? suggestedReviewers.data : []
+  ).filter(s => !existingReviewers.includes(s));
 
   return (
     <div className="suggested-reviewers" data-testid="suggested-reviewers">
