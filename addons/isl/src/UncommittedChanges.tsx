@@ -410,7 +410,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   const schema = useAtomValue(commitMessageFieldsSchema);
   const template = useAtomValue(commitMessageTemplate);
 
-  const conflicts = useRecoilValue(optimisticMergeConflicts);
+  const conflicts = useAtomValue(optimisticMergeConflicts);
 
   const selection = useUncommittedSelection();
   const commitTitleRef = useRef<HTMLTextAreaElement | undefined>(null);

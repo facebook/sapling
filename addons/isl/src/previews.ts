@@ -226,20 +226,16 @@ export const uncommittedChangesWithPreviewsJotai = jotaiMirrorFromRecoil(
   uncommittedChangesWithPreviews,
 );
 
-export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
-  key: 'optimisticMergeConflicts',
-  get: ({get}) => {
-    const list = get(operationListRecoil);
-    const queued = get(queuedOperationsRecoil);
-    const conflicts = get(mergeConflictsRecoil);
-    if (conflicts?.files == null) {
-      return conflicts;
-    }
+export const optimisticMergeConflicts = atom(get => {
+  const list = get(operationListJotai);
+  const queued = get(queuedOperationsJotai);
+  const conflicts = get(mergeConflictsJotai);
+  if (conflicts?.files == null) {
+    return conflicts;
+  }
 
-    return applyPreviewsToMergeConflicts(conflicts, list, queued);
-  },
+  return applyPreviewsToMergeConflicts(conflicts, list, queued);
 });
-export const optimisticMergeConflictsJotai = jotaiMirrorFromRecoil(optimisticMergeConflicts);
 
 export type TreeWithPreviews = {
   trees: Array<CommitTreeWithPreviews>;

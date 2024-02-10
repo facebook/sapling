@@ -34,7 +34,6 @@ import {registerCleanup} from './utils';
 import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue} from 'jotai';
 import React from 'react';
-import {useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -196,7 +195,7 @@ function FileActions({
   place?: Place;
 }) {
   const runOperation = useRunOperation();
-  const conflicts = useRecoilValue(optimisticMergeConflicts);
+  const conflicts = useAtomValue(optimisticMergeConflicts);
 
   const actions: Array<React.ReactNode> = [];
 
