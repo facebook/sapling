@@ -7,9 +7,10 @@
 
 import type {Hash} from '../types';
 
-import {latestCommits} from '../serverAPIState';
-import {allDiffSummariesRecoil, codeReviewProvider} from './CodeReviewInfo';
-import {selector, selectorFamily} from 'recoil';
+import {latestCommitsJotai} from '../serverAPIState';
+import {allDiffSummaries, codeReviewProviderJotai} from './CodeReviewInfo';
+import {atom} from 'jotai';
+import {atomFamily} from 'jotai/utils';
 
 export enum SyncStatus {
   InSync = 'inSync',
@@ -17,28 +18,22 @@ export enum SyncStatus {
   RemoteIsNewer = 'remoteIsNewer',
 }
 
-export const syncStatusAtom = selector<undefined | Map<Hash, SyncStatus>>({
-  key: 'syncStatusAtom',
-  get: ({get}) => {
-    const provider = get(codeReviewProvider);
-    if (provider == null) {
-      return undefined;
-    }
-    const commits = get(latestCommits);
-    const summaries = get(allDiffSummariesRecoil);
-    if (summaries.value == null) {
-      return undefined;
-    }
-    return provider.getSyncStatuses(commits, summaries.value);
-  },
+export const syncStatusAtom = atom(get => {
+  const provider = get(codeReviewProviderJotai);
+  if (provider == null) {
+    return undefined;
+  }
+  const commits = get(latestCommitsJotai);
+  const summaries = get(allDiffSummaries);
+  if (summaries.value == null) {
+    return undefined;
+  }
+  return provider.getSyncStatuses(commits, summaries.value);
 });
 
-export const syncStatusByHash = selectorFamily<SyncStatus | undefined, Hash>({
-  key: 'syncStatusByHash',
-  get:
-    (hash: Hash) =>
-    ({get}) => {
-      const syncStatus = get(syncStatusAtom);
-      return syncStatus?.get(hash);
-    },
-});
+export const syncStatusByHash = atomFamily((hash: Hash) =>
+  atom(get => {
+    const syncStatus = get(syncStatusAtom);
+    return syncStatus?.get(hash);
+  }),
+);

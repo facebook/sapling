@@ -181,7 +181,7 @@ export const Commit = memo(
 
     const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
       const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviewsJotai).length ?? 0) > 0;
-      const syncStatus = snapshot.getLoadable(syncStatusAtom).valueMaybe()?.get(commit.hash);
+      const syncStatus = readAtom(syncStatusAtom)?.get(commit.hash);
 
       const items: Array<ContextMenuItem> = [
         {

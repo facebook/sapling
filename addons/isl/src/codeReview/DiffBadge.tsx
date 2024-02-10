@@ -104,7 +104,7 @@ function DiffInfoInner({
   hideActions: boolean;
 }) {
   const diffInfoResult = useAtomValue(diffSummary(diffId));
-  const syncStatus = useRecoilValue(syncStatusByHash(commit.hash));
+  const syncStatus = useAtomValue(syncStatusByHash(commit.hash));
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }

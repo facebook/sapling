@@ -46,7 +46,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const suggestedRebase = useAtomValue(showSuggestedRebaseForStack(hash));
   const dag = useAtomValue(dagWithPreviews);
   const runOperation = useRunOperation();
-  const syncStatusMap = useRecoilValue(syncStatusAtom);
+  const syncStatusMap = useAtomValue(syncStatusAtom);
 
   // buttons at the bottom of the stack
   const actions = [];
