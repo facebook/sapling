@@ -11,7 +11,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use atomic_counter::AtomicCounter;
@@ -731,11 +730,7 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Root>, Error> {
-        if gap_size.is_some() {
-            bail!("Gap size not supported in deleted manifest")
-        }
         let simple_stacks =
             split_bonsais_in_linear_stacks(&bonsais, FileConflicts::AnyChange.into())?;
         let id_to_bonsai: HashMap<ChangesetId, BonsaiChangeset> = bonsais

@@ -112,9 +112,8 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
-        RootDeletedManifestDeriver::derive_batch(ctx, derivation_ctx, bonsais, gap_size).await
+        RootDeletedManifestDeriver::derive_batch(ctx, derivation_ctx, bonsais).await
     }
 
     fn from_thrift(data: thrift::DerivedData) -> Result<Self> {

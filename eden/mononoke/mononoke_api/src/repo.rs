@@ -1849,7 +1849,7 @@ impl RepoContext {
                     .derive_exactly_batch::<RootFsnodeId>(
                         self.ctx(),
                         csids,
-                        BatchDeriveOptions::Parallel { gap_size: None },
+                        BatchDeriveOptions::Parallel,
                         None,
                     )
                     .await?;
@@ -1861,7 +1861,7 @@ impl RepoContext {
                     .derive_exactly_batch::<RootSkeletonManifestId>(
                         self.ctx(),
                         csids,
-                        BatchDeriveOptions::Parallel { gap_size: None },
+                        BatchDeriveOptions::Parallel,
                         None,
                     )
                     .await?;

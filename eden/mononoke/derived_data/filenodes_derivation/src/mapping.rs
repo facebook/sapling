@@ -126,7 +126,6 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
         let filenodes = derivation_ctx.filenodes()?;
         let prepared = derive_filenodes_in_batch(ctx, derivation_ctx, bonsais).await?;

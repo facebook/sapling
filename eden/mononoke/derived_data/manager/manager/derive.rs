@@ -52,7 +52,7 @@ use crate::manager::util::DiscoveryStats;
 
 #[derive(Clone, Copy)]
 pub enum BatchDeriveOptions {
-    Parallel { gap_size: Option<usize> },
+    Parallel,
 }
 
 #[derive(Debug)]
@@ -941,10 +941,9 @@ impl DerivedDataManager {
         let (overall_stats, result) = async {
             let derivation_ctx_ref = &derivation_ctx;
             let (batch_stats, derived) = match batch_options {
-                BatchDeriveOptions::Parallel { gap_size } => {
-                    derived_data_scuba.add_batch_parameters(true, gap_size);
+                BatchDeriveOptions::Parallel => {
                     let (stats, derived) =
-                        Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais, gap_size)
+                        Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais)
                             .try_timed()
                             .await
                             .with_context(|| {

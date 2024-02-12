@@ -116,7 +116,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
         if bonsais.is_empty() {
             return Ok(HashMap::new());
@@ -365,7 +364,7 @@ mod test {
 
         // Recreate repo from scratch and derive everything again
         let repo = repo_func().await;
-        let options = BatchDeriveOptions::Parallel { gap_size: None };
+        let options = BatchDeriveOptions::Parallel;
         let csids = commits_desc_to_anc
             .clone()
             .into_iter()

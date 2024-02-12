@@ -510,7 +510,6 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
         stream::iter(bonsais.into_iter().map(anyhow::Ok))
             .and_then(|bonsai| async move {

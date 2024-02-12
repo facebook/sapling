@@ -564,7 +564,7 @@ mod tests {
             .derive_exactly_batch::<FilenodesOnlyPublic>(
                 &ctx,
                 cs_ids.clone(),
-                BatchDeriveOptions::Parallel { gap_size: None },
+                BatchDeriveOptions::Parallel,
                 None,
             )
             .await?;
@@ -627,7 +627,7 @@ mod tests {
             .derive_exactly_batch::<FilenodesOnlyPublic>(
                 &ctx,
                 cs_ids.clone(),
-                BatchDeriveOptions::Parallel { gap_size: None },
+                BatchDeriveOptions::Parallel,
                 None,
             )
             .await

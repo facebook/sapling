@@ -49,7 +49,6 @@ impl BonsaiDerivable for ChangesetInfo {
         _ctx: &CoreContext,
         _derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
         // Derivation with gaps doesn't make much sense for changeset info, so
         // ignore the gap size.
@@ -186,7 +185,7 @@ mod test {
             .derive_exactly_batch::<ChangesetInfo>(
                 &ctx,
                 cs_ids.clone(),
-                BatchDeriveOptions::Parallel { gap_size: None },
+                BatchDeriveOptions::Parallel,
                 None,
             )
             .await?;

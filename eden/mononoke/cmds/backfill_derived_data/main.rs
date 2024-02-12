@@ -123,7 +123,6 @@ const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_SLICED: &str = "sliced";
 const ARG_SLICE_SIZE: &str = "slice-size";
 const ARG_BACKFILL: &str = "backfill";
-const ARG_GAP_SIZE: &str = "gap-size";
 const ARG_JSON: &str = "json";
 const ARG_VALIDATE_CHUNK_SIZE: &str = "validate-chunk-size";
 const ARG_BACKFILL_CONFIG_NAME: &str = "backfill-config-name";
@@ -241,12 +240,6 @@ impl DerivedDataProcess {
                             .help("number of changesets in each derivation batch"),
                     )
                     .arg(
-                        Arg::with_name(ARG_GAP_SIZE)
-                            .long(ARG_GAP_SIZE)
-                            .takes_value(true)
-                            .help("size of gap to leave in derived data types that support gaps"),
-                    )
-                    .arg(
                         Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
                             .long(ARG_BACKFILL_CONFIG_NAME)
                             .help("sets the name for backfilling derived data types config")
@@ -317,12 +310,6 @@ impl DerivedDataProcess {
                             .help("number of generations to include in each generation slice"),
                     )
                     .arg(
-                        Arg::with_name(ARG_GAP_SIZE)
-                            .long(ARG_GAP_SIZE)
-                            .takes_value(true)
-                            .help("size of gap to leave in derived data types that support gaps"),
-                    )
-                    .arg(
                         Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
                             .long(ARG_BACKFILL_CONFIG_NAME)
                             .help("sets the name for backfilling derived data types config")
@@ -391,12 +378,6 @@ impl DerivedDataProcess {
                             .long(ARG_SLICE_SIZE)
                             .default_value(DEFAULT_SLICE_SIZE_STR)
                             .help("number of generations to include in each generation slice"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_GAP_SIZE)
-                            .long(ARG_GAP_SIZE)
-                            .takes_value(true)
-                            .help("size of gap to leave in derived data types that support gaps"),
                     )
                     .arg(
                         Arg::with_name(ARG_CHANGESET)
@@ -711,11 +692,6 @@ async fn run_subcmd<'a>(
             } else {
                 None
             };
-            let gap_size = sub_m
-                .value_of(ARG_GAP_SIZE)
-                .map(str::parse::<usize>)
-                .transpose()?;
-
             let csid = if let Some(cs) = sub_m.value_of_lossy(ARG_CHANGESET) {
                 Some(helpers::csid_resolve(ctx, repo.clone(), cs.to_string()).await?)
             } else {
@@ -727,7 +703,6 @@ async fn run_subcmd<'a>(
                 derived_data_types,
                 slice_size,
                 batch_size,
-                gap_size,
                 backfill_config_name,
                 wait_for_replication,
                 csid,
@@ -784,10 +759,6 @@ async fn run_subcmd<'a>(
                 .value_of(ARG_BATCH_SIZE)
                 .expect("batch-size must be set")
                 .parse::<usize>()?;
-            let gap_size = sub_m
-                .value_of(ARG_GAP_SIZE)
-                .map(str::parse::<usize>)
-                .transpose()?;
 
             let backfill_config_name = sub_m
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
@@ -799,7 +770,6 @@ async fn run_subcmd<'a>(
                 derived_data_type.as_str(),
                 regenerate,
                 batch_size,
-                gap_size,
                 changesets,
                 backfill_config_name,
                 wait_for_replication,
@@ -834,11 +804,6 @@ async fn run_subcmd<'a>(
             } else {
                 None
             };
-            let gap_size = sub_m
-                .value_of(ARG_GAP_SIZE)
-                .map(str::parse::<usize>)
-                .transpose()?;
-
             let backfill_config_name = sub_m
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
                 .unwrap_or(DEFAULT_BACKFILLING_CONFIG_NAME);
@@ -853,7 +818,6 @@ async fn run_subcmd<'a>(
                 use_shared_leases,
                 stop_on_idle,
                 batch_size,
-                gap_size,
                 backfill,
                 slice_size,
                 backfill_config_name,
@@ -959,7 +923,6 @@ async fn subcommand_backfill_all(
     derived_data_types: HashSet<String>,
     slice_size: Option<u64>,
     batch_size: usize,
-    gap_size: Option<usize>,
     config_name: &str,
     wait_for_replication: WaitForReplication,
     csid: Option<ChangesetId>,
@@ -984,7 +947,6 @@ async fn subcommand_backfill_all(
         heads,
         slice_size,
         batch_size,
-        gap_size,
         wait_for_replication,
     )
     .await
@@ -997,7 +959,6 @@ async fn backfill_heads(
     heads: Vec<ChangesetId>,
     slice_size: Option<u64>,
     batch_size: usize,
-    gap_size: Option<usize>,
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     if let Some(slice_size) = slice_size {
@@ -1018,23 +979,13 @@ async fn backfill_heads(
                 derivers,
                 slice_heads,
                 batch_size,
-                gap_size,
                 wait_for_replication.clone(),
             )
             .await?;
         }
     } else {
         info!(ctx.logger(), "Deriving {} heads", heads.len());
-        tail_batch_iteration(
-            ctx,
-            repo,
-            derivers,
-            heads,
-            batch_size,
-            gap_size,
-            wait_for_replication,
-        )
-        .await?;
+        tail_batch_iteration(ctx, repo, derivers, heads, batch_size, wait_for_replication).await?;
     }
     Ok(())
 }
@@ -1043,38 +994,12 @@ fn truncate_duration(duration: Duration) -> Duration {
     Duration::from_secs(duration.as_secs())
 }
 
-async fn get_batch_ctx(ctx: &CoreContext, limit_qps: bool) -> CoreContext {
-    if limit_qps {
-        // create new context so each derivation batch has its own trace
-        // and is rate-limited
-        const FALLBACK_READ_QPS_LIMIT: u64 = 8000;
-        let read_qps_limit = justknobs::get_as::<u64>("scm/mononoke:backfill_read_qps", None)
-            .unwrap_or(FALLBACK_READ_QPS_LIMIT);
-        const FALLBACK_WRITE_QPS_LIMIT: u64 = 4000;
-        let write_qps_limit = justknobs::get_as::<u64>("scm/mononoke:backfill_write_qps", None)
-            .unwrap_or(FALLBACK_WRITE_QPS_LIMIT);
-        let session = SessionContainer::builder(ctx.fb)
-            .blobstore_maybe_read_qps_limiter(read_qps_limit)
-            .await
-            .blobstore_maybe_write_qps_limiter(write_qps_limit)
-            .await
-            .build();
-        session.new_context(
-            ctx.logger().clone(),
-            MononokeScubaSampleBuilder::with_discard(),
-        )
-    } else {
-        ctx.clone()
-    }
-}
-
 async fn subcommand_backfill(
     ctx: &CoreContext,
     repo: &InnerRepo,
     derived_data_type: &str,
     regenerate: bool,
     batch_size: usize,
-    gap_size: Option<usize>,
     changesets: Vec<ChangesetId>,
     config_name: &str,
     wait_for_replication: WaitForReplication,
@@ -1121,12 +1046,7 @@ async fn subcommand_backfill(
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
-                .derive_exactly_batch(
-                    get_batch_ctx(ctx, gap_size.is_some()).await,
-                    repo.repo_derived_data_arc(),
-                    chunk,
-                    gap_size,
-                )
+                .derive_exactly_batch(ctx.clone(), repo.repo_derived_data_arc(), chunk)
                 .await?;
             Result::<_>::Ok(chunk_size)
         }
@@ -1173,7 +1093,6 @@ async fn subcommand_tail(
     use_shared_leases: bool,
     stop_on_idle: bool,
     batch_size: Option<usize>,
-    gap_size: Option<usize>,
     mut backfill: bool,
     slice_size: Option<u64>,
     config_name: &str,
@@ -1295,7 +1214,6 @@ async fn subcommand_tail(
                             &tail_derivers,
                             underived_heads,
                             batch_size,
-                            gap_size,
                             wait_for_replication.clone(),
                         )
                         .await?;
@@ -1332,7 +1250,6 @@ async fn subcommand_tail(
                                 underived_heads,
                                 slice_size,
                                 batch_size,
-                                gap_size,
                                 wait_for_replication.clone(),
                             )
                             .await?;
@@ -1384,7 +1301,6 @@ async fn tail_batch_iteration<'a>(
     derive_utils: &'a [Arc<dyn DerivedUtils>],
     heads: Vec<ChangesetId>,
     batch_size: usize,
-    gap_size: Option<usize>,
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     let derive_graph = derived_data_utils::build_derive_graph(
@@ -1454,10 +1370,9 @@ async fn tail_batch_iteration<'a>(
 
                         let job = deriver
                             .derive_exactly_batch(
-                                get_batch_ctx(&ctx, gap_size.is_some()).await,
+                                ctx.clone(),
                                 repo.repo_derived_data_arc(),
                                 node.csids.clone(),
-                                gap_size,
                             )
                             .try_timed();
                         let (stats, _) = tokio::spawn(job).await??;
@@ -1755,12 +1670,7 @@ mod tests {
         // error.
         assert!(
             derived_utils
-                .derive_exactly_batch(
-                    ctx.clone(),
-                    repo.repo_derived_data_arc(),
-                    vec![bcs_id],
-                    None
-                )
+                .derive_exactly_batch(ctx.clone(), repo.repo_derived_data_arc(), vec![bcs_id],)
                 .await
                 .is_err()
         );
@@ -1777,12 +1687,7 @@ mod tests {
 
         // Now the parent is derived, we can backfill a batch.
         derived_utils
-            .derive_exactly_batch(
-                ctx.clone(),
-                repo.repo_derived_data_arc(),
-                vec![bcs_id],
-                None,
-            )
+            .derive_exactly_batch(ctx.clone(), repo.repo_derived_data_arc(), vec![bcs_id])
             .await?;
 
         Ok(())
@@ -1822,12 +1727,7 @@ mod tests {
             .await?;
         assert_eq!(pending.len(), hg_cs_ids.len());
         derived_utils
-            .derive_exactly_batch(
-                ctx.clone(),
-                repo.repo_derived_data_arc(),
-                batch.clone(),
-                None,
-            )
+            .derive_exactly_batch(ctx.clone(), repo.repo_derived_data_arc(), batch.clone())
             .await?;
         let pending = derived_utils
             .pending(ctx, repo.repo_derived_data_arc(), batch)
@@ -1862,7 +1762,6 @@ mod tests {
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 vec![first_bcs_id],
-                None,
             )
             .await;
         // Deriving should fail because blobstore writes fail
@@ -1887,7 +1786,7 @@ mod tests {
             batch,
         );
         derived_utils
-            .derive_exactly_batch(ctx, repo.repo_derived_data_arc(), batch, None)
+            .derive_exactly_batch(ctx, repo.repo_derived_data_arc(), batch)
             .await?;
 
         Ok(())

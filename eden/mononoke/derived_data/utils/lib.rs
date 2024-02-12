@@ -225,7 +225,6 @@ pub trait DerivedUtils: Send + Sync + 'static {
         ctx: CoreContext,
         repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
-        gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<BatchDeriveStats>>;
 
     /// Derive data for a changeset using other derived data types without
@@ -357,9 +356,8 @@ where
         ctx: CoreContext,
         _repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
-        gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
-        let options = BatchDeriveOptions::Parallel { gap_size };
+        let options = BatchDeriveOptions::Parallel;
         let utils = Arc::new(self.clone());
         async move {
             let stats = utils
@@ -655,7 +653,6 @@ impl DeriveGraph {
         &self,
         ctx: CoreContext,
         repo: impl RepoDerivedDataArc + Send + Sync + Clone,
-        gap_size: Option<usize>,
     ) -> Result<()> {
         bounded_traversal::bounded_traversal_dag(
             100,
@@ -676,7 +673,6 @@ impl DeriveGraph {
                                 ctx.clone(),
                                 repo.repo_derived_data_arc(),
                                 node.csids.clone(),
-                                gap_size,
                             )
                             .try_timed();
                         let (stats, _) = tokio::spawn(job).await??;
@@ -1261,7 +1257,7 @@ mod tests {
             thin_out,
         )
         .await?;
-        graph.derive(ctx.clone(), repo.clone(), None).await?;
+        graph.derive(ctx.clone(), repo.clone()).await?;
 
         let graph = build_derive_graph(
             &ctx,
@@ -1335,10 +1331,8 @@ mod tests {
             ctx: CoreContext,
             repo: Arc<RepoDerivedData>,
             csids: Vec<ChangesetId>,
-            gap_size: Option<usize>,
         ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
-            self.deriver
-                .derive_exactly_batch(ctx, repo, csids, gap_size)
+            self.deriver.derive_exactly_batch(ctx, repo, csids)
         }
 
         async fn derive_from_predecessor(

@@ -101,15 +101,6 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
         self.scuba.add_metadata(metadata);
     }
 
-    /// Add values for the parameters controlling batched derivation to the
-    /// scuba logger.
-    pub(super) fn add_batch_parameters(&mut self, parallel: bool, gap_size: Option<usize>) {
-        self.scuba.add("parallel", parallel);
-        if let Some(gap_size) = gap_size {
-            self.scuba.add("gap_size", gap_size);
-        }
-    }
-
     /// Add statistics from derivation discovery to the scuba logger.
     pub(super) fn add_discovery_stats(&mut self, discovery_stats: &DiscoveryStats) {
         discovery_stats.add_scuba_fields(&mut self.scuba);

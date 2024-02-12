@@ -82,7 +82,6 @@ impl BonsaiDerivable for RootBlameV2 {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>, Error> {
         derive_blame_v2_in_batch(ctx, derivation_ctx, bonsais).await
     }

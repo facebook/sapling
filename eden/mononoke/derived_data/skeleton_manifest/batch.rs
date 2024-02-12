@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use anyhow::Context;
@@ -20,7 +19,6 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
-use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use stats::prelude::*;
 
@@ -43,7 +41,6 @@ pub async fn derive_skeleton_manifests_in_batch(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     batch: Vec<ChangesetId>,
-    gap_size: Option<usize>,
 ) -> Result<HashMap<ChangesetId, RootSkeletonManifestId>, Error> {
     let linear_stacks = split_batch_in_linear_stacks(
         ctx,
@@ -81,7 +78,6 @@ pub async fn derive_skeleton_manifests_in_batch(
             ctx,
             derivation_ctx,
             parent_skeleton_manifests,
-            gap_size,
             linear_stack.stack_items,
             &mut res,
         )
@@ -95,7 +91,6 @@ pub async fn new_batch_derivation(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     parent_skeleton_manifests: Vec<SkeletonManifestId>,
-    gap_size: Option<usize>,
     file_changes: Vec<StackItem>,
     already_derived: &mut HashMap<ChangesetId, RootSkeletonManifestId>,
 ) -> Result<(), Error> {
@@ -115,30 +110,10 @@ pub async fn new_batch_derivation(
         let first = file_changes.first().map(|item| item.cs_id);
         let last = file_changes.last().map(|item| item.cs_id);
 
-        let file_changes: Vec<_> = match gap_size {
-            Some(gap_size) => file_changes
-                .into_iter()
-                .chunks(gap_size)
-                .into_iter()
-                .filter_map(|chunk| {
-                    // We are deriving with gaps - that means we are deriving
-                    // just for the top commit out of `gap_size` linear stack
-                    // of commits. To do that we need to combine all file changes
-                    // for a given linear stack together
-                    let mut combined_file_changes = BTreeMap::new();
-                    let mut last_cs_id = None;
-                    for item in chunk {
-                        combined_file_changes.extend(item.per_commit_file_changes);
-                        last_cs_id = Some(item.cs_id);
-                    }
-                    Some((last_cs_id?, combined_file_changes))
-                })
-                .collect(),
-            None => file_changes
-                .into_iter()
-                .map(|item| (item.cs_id, item.per_commit_file_changes))
-                .collect(),
-        };
+        let file_changes = file_changes
+            .into_iter()
+            .map(|item| (item.cs_id, item.per_commit_file_changes))
+            .collect::<Vec<_>>();
 
         let derived = derive_skeleton_manifest_stack(
             ctx,
@@ -222,7 +197,7 @@ mod test {
                 .derive_exactly_batch::<RootSkeletonManifestId>(
                     &ctx,
                     cs_ids,
-                    BatchDeriveOptions::Parallel { gap_size: None },
+                    BatchDeriveOptions::Parallel,
                     None,
                 )
                 .await?;
@@ -267,7 +242,7 @@ mod test {
                 .derive_exactly_batch::<RootSkeletonManifestId>(
                     &ctx,
                     cs_ids,
-                    BatchDeriveOptions::Parallel { gap_size: None },
+                    BatchDeriveOptions::Parallel,
                     None,
                 )
                 .await?;
@@ -311,78 +286,5 @@ mod test {
         bookmark(ctx, &repo, "master").set_to(*m).await?;
 
         Ok(repo)
-    }
-
-    #[fbinit::test]
-    async fn batch_derive_with_gaps(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-
-        let repo = Linear::getrepo(fb).await;
-        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-        let ddm = repo.repo_derived_data().manager();
-        ddm.derive::<RootSkeletonManifestId>(&ctx, master_cs_id, None)
-            .await?
-            .into_skeleton_manifest_id();
-
-        for gap_size in 1..12 {
-            let new_batch_with_gaps = derive_new_batch(fb, &ctx, gap_size).await?;
-            for (cs_id, derived_with_gaps) in new_batch_with_gaps {
-                let derived_sequential = ddm
-                    .fetch_derived::<RootSkeletonManifestId>(&ctx, cs_id, None)
-                    .await?;
-                assert_eq!(derived_with_gaps, derived_sequential.unwrap());
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn derive_new_batch(
-        fb: FacebookInit,
-        ctx: &CoreContext,
-        gap_size: usize,
-    ) -> Result<HashMap<ChangesetId, RootSkeletonManifestId>, Error> {
-        let repo = Linear::getrepo(fb).await;
-        let master_cs_id = resolve_cs_id(ctx, &repo, "master").await?;
-
-        let mut cs_ids =
-            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
-                .compat()
-                .try_collect::<Vec<_>>()
-                .await?;
-        cs_ids.reverse();
-        let manager = repo.repo_derived_data().manager();
-
-        manager
-            .derive_exactly_batch::<RootSkeletonManifestId>(
-                ctx,
-                cs_ids.clone(),
-                BatchDeriveOptions::Parallel {
-                    gap_size: Some(gap_size),
-                },
-                None,
-            )
-            .await?;
-
-        let derived = cs_ids
-            .chunks(gap_size)
-            .filter_map(|chunk| chunk.last().cloned())
-            .collect();
-
-        let derived = manager
-            .fetch_derived_batch::<RootSkeletonManifestId>(ctx, derived, None)
-            .await?;
-        for cs_id in cs_ids {
-            if !derived.contains_key(&cs_id) {
-                assert_eq!(
-                    manager
-                        .fetch_derived::<RootSkeletonManifestId>(ctx, cs_id, None)
-                        .await?,
-                    None
-                );
-            }
-        }
-
-        Ok(derived)
     }
 }

@@ -145,7 +145,6 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
         let mut res: HashMap<ChangesetId, Self> = HashMap::new();
         // The default implementation must derive sequentially with no

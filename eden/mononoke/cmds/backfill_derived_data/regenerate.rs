@@ -167,9 +167,7 @@ pub async fn regenerate_derived_data(
             .await?;
         }
         DerivationType::BackfillParallel => {
-            derive_graph
-                .derive(ctx.clone(), repo.clone(), None /* gap size */)
-                .await?;
+            derive_graph.derive(ctx.clone(), repo.clone()).await?;
         }
     };
 

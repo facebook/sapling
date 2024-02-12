@@ -101,13 +101,11 @@ impl BonsaiDerivable for RootFsnodeId {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
-        gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
         derive_fsnode_in_batch(
             ctx,
             derivation_ctx,
             bonsais.into_iter().map(|b| b.get_changeset_id()).collect(),
-            gap_size,
         )
         .await
     }
