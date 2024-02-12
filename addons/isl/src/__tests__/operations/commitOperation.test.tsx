@@ -13,14 +13,11 @@ import {
   COMMIT,
   simulateUncommittedChangedFiles,
   simulateMessageFromServer,
-  enableDagRenderer,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
-
-enableDagRenderer();
 
 describe('CommitOperation', () => {
   beforeEach(() => {

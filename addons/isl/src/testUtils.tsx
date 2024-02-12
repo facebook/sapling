@@ -18,7 +18,6 @@ import type {
 } from './types';
 import type {Writable} from 'shared/typeUtils';
 
-import {setTestUseDag} from './CommitTreeList';
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
 import {mostRecentSubscriptionIds} from './serverAPIState';
@@ -351,16 +350,6 @@ export function waitForWithTick<T>(callback: () => Promise<T> | T): Promise<T> {
   return waitFor(async () => {
     await nextTick();
     return callback();
-  });
-}
-
-/** Enable the DAG graph renderer for the test file. */
-export function enableDagRenderer() {
-  beforeAll(() => {
-    setTestUseDag(true);
-  });
-  afterAll(() => {
-    setTestUseDag(false);
   });
 }
 

@@ -22,14 +22,11 @@ import {
   dragAndDropCommits,
   simulateUncommittedChangedFiles,
   COMMIT,
-  enableDagRenderer,
   scanForkedBranchHashes,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
-
-enableDagRenderer();
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
 

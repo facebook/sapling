@@ -14,14 +14,11 @@ import {
   simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
-  enableDagRenderer,
   expectYouAreHerePointAt,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
-
-enableDagRenderer();
 
 describe('GotoOperation', () => {
   beforeEach(() => {

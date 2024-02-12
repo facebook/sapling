@@ -18,7 +18,6 @@ import {
   simulateRepoConnected,
   dragAndDropCommits,
   COMMIT,
-  enableDagRenderer,
   expectYouAreHerePointAt,
 } from '../testUtils';
 import {fireEvent, render, screen, within} from '@testing-library/react';
@@ -28,8 +27,6 @@ import * as utils from 'shared/utils';
 const {clickGoto} = CommitTreeListTestUtils;
 
 const abortButton = () => screen.queryByTestId('abort-button');
-
-enableDagRenderer();
 
 describe('operations', () => {
   beforeEach(() => {

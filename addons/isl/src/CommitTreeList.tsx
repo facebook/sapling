@@ -23,7 +23,7 @@ import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
-import {atomFamilyWeak, configBackedAtom, lazyAtom, writeAtom} from './jotaiUtils';
+import {atomFamilyWeak, configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
@@ -36,6 +36,7 @@ import {
   useRunOperation,
 } from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
+import {isTest} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
@@ -50,29 +51,11 @@ enum GraphRendererConfig {
   Both = 2,
 }
 
-// This state is persisted across multiple stores.
-let testUseDag = false;
-const testUseDagAtom = lazyAtom<boolean>(() => testUseDag, false);
-
 const configGraphRenderer = configBackedAtom<GraphRendererConfig>(
   'isl.experimental-graph-renderer',
-  GraphRendererConfig.Tree,
+  isTest ? GraphRendererConfig.Dag : GraphRendererConfig.Tree,
   true,
 );
-
-const effectiveGraphRender = atom(get => {
-  if (get(testUseDagAtom)) {
-    return GraphRendererConfig.Dag;
-  } else {
-    return get(configGraphRenderer);
-  }
-});
-
-export function setTestUseDag(useDag: boolean) {
-  testUseDag = useDag;
-  // Might trigger re-calculate or re-render.
-  writeAtom(testUseDagAtom, useDag);
-}
 
 type DagCommitListProps = {
   isNarrow: boolean;
@@ -199,7 +182,7 @@ export function CommitTreeList() {
   // TODO: This is a little ugly, is there a better way to tell recoil to start the subscription immediately?
   // Or should we queue/cache messages?
   useAtomValue(latestUncommittedChangesDataJotai);
-  const renderer = useAtomValue(effectiveGraphRender);
+  const renderer = useAtomValue(configGraphRenderer);
 
   useMarkOperationsCompleted();
 
