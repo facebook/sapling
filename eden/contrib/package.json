@@ -2,11 +2,9 @@
   "private": true,
   "workspaces": [
     "shared",
-    "isl",
-    "isl-server",
-    "isl-standalone",
-    "textmate",
-    "vscode"
+    "reviewstack",
+    "reviewstack.dev",
+    "textmate"
   ],
   "devDependencies": {
     "@babel/runtime": "^7.21.0",
@@ -17,9 +15,6 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "eslint-plugin-rulesdir": "^0.2.1",
     "prettier": "2.8.8"
-  },
-  "resolutions": {
-    "@stylexjs/babel-plugin": "0.4.1"
   },
   "scripts": {
     "prettier-check": "prettier --check .",

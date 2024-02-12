@@ -1,0 +1,5 @@
+node_modules
+isl-server/coverage
+shared/coverage/
+vscode-build/
+/*.tar.xz

@@ -10,7 +10,7 @@ The code for ISL lives in the addons folder:
 | isl              | Front end UI written with React and Recoil                 |
 | isl-server       | Back end, which runs sl commands / interacts with the repo |
 | isl-server/proxy | `sl web` CLI and server management                         |
-| shared           | Utils shared by reviewstack and isl                        |
+| shared           | Utils shared by other projects                             |
 | vscode           | VS Code extension for Sapling, including ISL as a webview  |
 
 ## Development

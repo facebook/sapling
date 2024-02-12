@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {grammars, languages} from '../../isl/src/generated/textmate/TextMateGrammarManifest';
+import {
+  grammars,
+  languages,
+} from '../../reviewstack/src/generated/textmate/TextMateGrammarManifest';
 import FilepathClassifier from './FilepathClassifier';
 
 describe('findScopeNameForPath', () => {

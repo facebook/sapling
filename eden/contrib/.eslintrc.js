@@ -18,11 +18,10 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 'latest',
     project: [
-      workspaceRelative('isl/tsconfig.json'),
-      workspaceRelative('isl-server/tsconfig.json'),
+      workspaceRelative('reviewstack/tsconfig.json'),
+      workspaceRelative('reviewstack.dev/tsconfig.json'),
       workspaceRelative('shared/tsconfig.json'),
       workspaceRelative('textmate/tsconfig.json'),
-      workspaceRelative('vscode/tsconfig.json'),
     ],
     sourceType: 'module',
   },
@@ -43,11 +42,12 @@ module.exports = {
   ],
   ignorePatterns: [
     '.eslintrc.js',
-    'isl/build.js',
-    'isl/release.js',
-    'isl/start.js',
-    'isl-server/codegen.js',
-    // @fb-only
+    'reviewstack/src/generated/**',
+    'reviewstack/codegen.js',
+    'reviewstack/textmate.js',
+    'reviewstack.dev/build.js',
+    'reviewstack.dev/release.js',
+    'reviewstack.dev/start.js',
     // @fb-only
     'node_modules/**',
   ],

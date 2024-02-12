@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 import argparse
 import asyncio
@@ -28,20 +28,36 @@ Requirements:
     )
     parser.add_argument(
         "--use-vendored-grammars",
-        help=("No-op. Provided for compatibility."),
+        help=(
+            "Skips the codegen step for TextMate grammars that "
+            + "fetches content from raw.githubusercontent.com. "
+            + "Assumes TextMate codegen is already available."
+        ),
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-vendored-grammars",
+        help=("Reverse of --use-vendored-grammars (default)."),
         action="store_true",
     )
     args = parser.parse_args()
-    asyncio.run(verify())
+    if args.use_vendored_grammars:
+        use_vendored_grammars = True
+    elif args.no_vendored_grammars:
+        use_vendored_grammars = False
+    else:
+        use_vendored_grammars = True
+    asyncio.run(verify(use_vendored_grammars=use_vendored_grammars))
 
 
-async def verify():
+async def verify(*, use_vendored_grammars=True):
     await asyncio.gather(
         verify_prettier(),
         verify_shared(),
         verify_textmate(),
-        verify_isl(),
     )
+    # shared depends on reviewstack generated textmate grammars, so can't run concurrently without flakiness
+    await verify_reviewstack(use_vendored_grammars=use_vendored_grammars)
 
 
 async def verify_prettier():
@@ -67,28 +83,28 @@ async def verify_textmate():
     timer.report(ok("textmate/"))
 
 
-async def verify_isl():
-    """Verifies isl/ and isl-server/ and vscode/ as the builds are interdependent"""
-    timer = Timer("verifying ISL")
-    isl = addons / "isl"
-    isl_server = addons / "isl-server"
-    vscode = addons / "vscode"
-
-    await run(["yarn", "codegen"], cwd=isl_server)
-    await asyncio.gather(
-        run(["yarn", "build"], cwd=isl_server),
-        run(["yarn", "build"], cwd=isl),
-    )
-    await asyncio.gather(
-        run(["yarn", "build-extension"], cwd=vscode),
-        run(["yarn", "build-webview"], cwd=vscode),
-    )
-    await asyncio.gather(
-        lint_and_test(isl),
-        lint_and_test(isl_server),
-        lint_and_test(vscode),
-    )
-    timer.report(ok("ISL"))
+async def verify_reviewstack(*, use_vendored_grammars=False):
+    timer = Timer("verifying reviewstack/")
+    cwd = addons / "reviewstack"
+    if use_vendored_grammars:
+        # Normally, the full codegen step takes care of copying onig.wasm.
+        src_onig_wasm = (
+            addons / "node_modules" / "vscode-oniguruma" / "release" / "onig.wasm"
+        )
+        dest_onig_wasm = (
+            addons
+            / "reviewstack.dev"
+            / "public"
+            / "generated"
+            / "textmate"
+            / "onig.wasm"
+        )
+        shutil.copyfile(src_onig_wasm, dest_onig_wasm)
+        await run(["yarn", "graphql"], cwd=cwd)
+    else:
+        await run(["yarn", "codegen"], cwd=cwd)
+    await asyncio.gather(lint_and_test(cwd), verify_reviewstack_dev())
+    timer.report(ok("reviewstack/"))
 
 
 async def lint_and_test(cwd: Path):
@@ -96,6 +112,16 @@ async def lint_and_test(cwd: Path):
         run(["yarn", "run", "eslint"], cwd=cwd),
         run(["yarn", "test", "--watchAll=false"], cwd=cwd),
     )
+
+
+async def verify_reviewstack_dev():
+    """Requires codegen from reviewstack/ to have been built."""
+    timer = Timer("verifying reviewstack.dev/")
+    cwd = addons / "reviewstack.dev"
+    await run(["yarn", "build"], cwd=cwd)
+    await run(["yarn", "run", "eslint"], cwd=cwd)
+    await run(["yarn", "release"], cwd=cwd)
+    timer.report(ok("reviewstack.dev/"))
 
 
 async def run(args: List[str], cwd: str):

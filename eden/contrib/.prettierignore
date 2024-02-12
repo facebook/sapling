@@ -1,0 +1,8 @@
+._*
+.vscode/
+/textmate/dist/
+/reviewstack/src/generated/
+/reviewstack.dev/build/
+/reviewstack.dev/public/generated/
+/shared/third-party/github/schema.docs.graphql
+/shared/coverage
