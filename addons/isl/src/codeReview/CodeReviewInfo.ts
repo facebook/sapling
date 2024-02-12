@@ -21,13 +21,11 @@ import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
-import {entangledAtoms} from '../recoilUtils';
 import {commitByHash, repositoryInfoJotai} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
-import {DefaultValue} from 'recoil';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
@@ -72,17 +70,12 @@ export const diffSummary = atomFamily((diffId: DiffId | undefined) =>
   }),
 );
 
-export const [allDiffSummaries, allDiffSummariesRecoil] = entangledAtoms<
-  Result<Map<DiffId, DiffSummary> | null>
->({default: {value: null}, key: 'allDiffSummaries'});
+export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({value: null});
 
 registerDisposable(
   allDiffSummaries,
   serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
     writeAtom(allDiffSummaries, existing => {
-      if (existing instanceof DefaultValue) {
-        return event.summaries;
-      }
       if (existing.error) {
         // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?
         // Right now, this will reset all other diffs to "loading" instead of error
