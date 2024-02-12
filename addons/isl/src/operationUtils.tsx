@@ -6,12 +6,11 @@
  */
 
 import type {CommitInfo} from './types';
-import type {Snapshot} from 'recoil';
 
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {readAtom} from './jotaiUtils';
 import {AmendToOperation} from './operations/AmendToOperation';
-import {uncommittedSelectionReadonly} from './partialSelection';
+import {uncommittedSelection} from './partialSelection';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 
 /**
@@ -19,7 +18,7 @@ import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
  * Only allowed on a commit that is a parent of head, and when
  * your current selection is not a partial selection.
  */
-export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot): boolean {
+export function isAmendToAllowedForCommit(commit: CommitInfo): boolean {
   if (commit.isHead || commit.phase === 'public' || commit.successorInfo != null) {
     // no point, just amend normally
     return false;
@@ -32,7 +31,7 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
   }
 
   // amend --to doesn't handle partial chunk selections, only entire files
-  const selection = snapshot.getLoadable(uncommittedSelectionReadonly).valueOrThrow();
+  const selection = readAtom(uncommittedSelection);
   const hasPartialSelection = selection.hasChunkSelection();
 
   if (hasPartialSelection) {
@@ -48,8 +47,8 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
   return dag.isAncestor(commit.hash, head.hash);
 }
 
-export function getAmendToOperation(commit: CommitInfo, snapshot: Snapshot): AmendToOperation {
-  const selection = snapshot.getLoadable(uncommittedSelectionReadonly).valueOrThrow();
+export function getAmendToOperation(commit: CommitInfo): AmendToOperation {
+  const selection = readAtom(uncommittedSelection);
   const uncommittedChanges = readAtom(uncommittedChangesWithPreviews);
 
   const paths = uncommittedChanges

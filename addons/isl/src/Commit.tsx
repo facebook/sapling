@@ -179,7 +179,7 @@ export const Commit = memo(
       tracker.track('SplitOpenFromCommitContextMenu');
     }
 
-    const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
+    const makeContextMenuOptions = () => {
       const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviews).length ?? 0) > 0;
       const syncStatus = readAtom(syncStatusAtom)?.get(commit.hash);
 
@@ -236,10 +236,10 @@ export const Commit = memo(
               },
             })) ?? [],
         });
-        if (isAmendToAllowedForCommit(commit, snapshot)) {
+        if (isAmendToAllowedForCommit(commit)) {
           items.push({
             label: <T>Amend changes to here</T>,
-            onClick: () => runOperation(getAmendToOperation(commit, snapshot)),
+            onClick: () => runOperation(getAmendToOperation(commit)),
           });
         }
         if (!isObsoleted) {
@@ -267,7 +267,7 @@ export const Commit = memo(
         });
       }
       return items;
-    });
+    };
 
     const contextMenu = useContextMenu(makeContextMenuOptions);
 

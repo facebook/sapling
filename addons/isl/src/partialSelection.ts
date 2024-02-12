@@ -14,13 +14,11 @@ import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {resetOnCwdChange} from './jotaiUtils';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
-import {entangledAtoms} from './recoilUtils';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
 import Immutable from 'immutable';
-import {useAtom, useAtomValue} from 'jotai';
-import {selector} from 'recoil';
+import {atom, useAtom, useAtomValue} from 'jotai';
 import {RateLimiter} from 'shared/RateLimiter';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -249,10 +247,7 @@ const defaultUncommittedPartialSelection = PartialSelection.empty({
 });
 
 /** PartialSelection for `wdir()`. See `UseUncommittedSelection` for the public API. */
-const [uncommittedSelection, uncommittedSelectionRecoil] = entangledAtoms({
-  key: 'uncommittedSelection',
-  default: defaultUncommittedPartialSelection,
-});
+export const uncommittedSelection = atom(defaultUncommittedPartialSelection);
 
 resetOnCwdChange(uncommittedSelection, defaultUncommittedPartialSelection);
 
@@ -512,21 +507,6 @@ export class UseUncommittedSelection {
   }
 }
 
-type OmitNotMatching<T, K> = {
-  [P in keyof T]: K extends P ? T[P] : never;
-};
-type ReadonlyPartialSelection = OmitNotMatching<
-  PartialSelection,
-  | 'getSelection'
-  | 'isFullyOrPartiallySelected'
-  | 'isPartiallySelected'
-  | 'isFullySelected'
-  | 'isDeselected'
-  | 'isEverythingSelected'
-  | 'isNothingSelected'
-  | 'hasChunkSelection'
->;
-
 /** Get the uncommitted selection state. */
 export function useUncommittedSelection() {
   const [selection, setSelection] = useAtom(uncommittedSelection);
@@ -538,17 +518,6 @@ export function useUncommittedSelection() {
 
   return new UseUncommittedSelection(selection, setSelection, wdirHash, getPaths, epoch);
 }
-
-/** Get a readonly view of the selection state, accessible from a snapshot / outside of react hooks */
-export const uncommittedSelectionReadonly = selector<ReadonlyPartialSelection>({
-  key: 'uncommittedSelectionReadonly',
-  cachePolicy_UNSTABLE: {eviction: 'most-recent'},
-  get: ({get}) => {
-    const selection = get(uncommittedSelectionRecoil);
-    // Return the selection exactly, but modify the type to discourage using non-readonly methods.
-    return selection as ReadonlyPartialSelection;
-  },
-});
 
 function mergeObjectToMap<V>(obj: {[path: string]: V} | undefined, map: Map<string, V>) {
   if (obj === undefined) {
