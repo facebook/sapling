@@ -366,7 +366,10 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   }
 
   return (
-    <div className="render-dag-row-group" data-reorder-id={info.hash}>
+    <div
+      className="render-dag-row-group"
+      data-reorder-id={info.hash}
+      data-testid={`dag-row-group-${info.hash}`}>
       {row0}
       {row1}
       {row2}
