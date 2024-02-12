@@ -18,6 +18,7 @@ import {Ancestor, AncestorType, Renderer} from './render';
 import {TextRenderer} from './renderText';
 import {arrayFromHashes, HashSet} from './set';
 import {List, Record, Map as ImMap, Set as ImSet} from 'immutable';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {group, notEmpty, splitOnce, unwrap} from 'shared/utils';
@@ -214,15 +215,26 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   }
 
   /**
-   * Return a set with obsoleted commit stacks "collpased"
-   * (i.e. only keep the roots and draft parents).
+   * Return a subset suitable for rendering. This filters out:
+   * - Obsoleted stack. Only roots(obsolete()) and parents(draft()) are kept.
+   * - Unnamed public commits that do not have direct draft children.
    */
   @cached()
-  collapseObsolete(set?: SetLike): HashSet {
+  subsetForRendering(set?: SetLike): HashSet {
     const all = set === undefined ? this.all() : HashSet.fromHashes(set);
+    const draft = this.draft(all);
     const obsolete = this.obsolete(all);
-    const toKeep = this.parents(this.draft(all).subtract(obsolete)).union(this.roots(obsolete));
-    const toHide = obsolete.subtract(toKeep);
+    const toKeep = this.parents(draft.subtract(obsolete)).union(this.roots(obsolete));
+    const unamedPublic = this.filter(
+      i =>
+        i.phase === 'public' &&
+        i.remoteBookmarks.length === 0 &&
+        i.bookmarks.length === 0 &&
+        !i.isHead,
+      all,
+    );
+    const toHidePublic = unamedPublic.subtract(this.parents(draft));
+    const toHide = obsolete.subtract(toKeep).union(toHidePublic);
     return all.subtract(toHide);
   }
 

@@ -197,11 +197,11 @@ function DebugDagInfo() {
     // Slightly change the dag to invalidate its caches.
     const noise = performance.now();
     const newDag = dag.add([DagCommitInfo.fromCommitInfo({hash: `dummy-${noise}`, parents: []})]);
-    newDag.renderToRows(newDag.collapseObsolete());
+    newDag.renderToRows(newDag.subsetForRendering());
   }, [dag]);
 
   const dagSize = dag.all().size;
-  const dagDisplayedSize = dag.collapseObsolete().size;
+  const dagDisplayedSize = dag.subsetForRendering().size;
   const dagSortMs = useMeasureDuration(dagRenderBenchmark);
 
   return (

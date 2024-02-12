@@ -190,7 +190,7 @@ function HighlightedGlyph({info}: {info: DagCommitInfo}) {
 }
 
 function getRenderSubset(dag: Dag): HashSet {
-  return dag.collapseObsolete();
+  return dag.subsetForRendering();
 }
 
 export function CommitTreeList() {

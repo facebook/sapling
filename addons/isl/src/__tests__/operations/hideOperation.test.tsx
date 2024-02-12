@@ -122,7 +122,7 @@ describe('hide operation', () => {
     expect(screen.queryByTestId('commit-e')).not.toBeInTheDocument();
   });
 
-  it('show uninteresting public base during optimistic hide for now', () => {
+  it('does not show uninteresting public base during optimistic hide', () => {
     // Go to another branch so head is not being hidden.
     CommitTreeListTestUtils.clickGoto('z');
     rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
@@ -130,10 +130,8 @@ describe('hide operation', () => {
     const runHideButton = screen.getByText('Hide');
     fireEvent.click(runHideButton);
 
-    // The old tree renderer removes the public base in this case.
-    // The behavior is not implemented in the DAG renderer.
-    // A smartlog refresh later will animate out the public base.
-    expect(screen.queryByTestId('commit-1')).toBeInTheDocument();
+    // the whole subtree is hidden, so the parent commit is not even rendered
+    expect(screen.queryByTestId('commit-1')).not.toBeInTheDocument();
   });
 
   it('shows public base when its the goto preview destination', () => {
