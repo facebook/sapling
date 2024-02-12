@@ -18,6 +18,8 @@ import {
   simulateRepoConnected,
   dragAndDropCommits,
   COMMIT,
+  enableDagRenderer,
+  expectYouAreHerePointAt,
 } from '../testUtils';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
@@ -26,6 +28,8 @@ import * as utils from 'shared/utils';
 const {clickGoto} = CommitTreeListTestUtils;
 
 const abortButton = () => screen.queryByTestId('abort-button');
+
+enableDagRenderer();
 
 describe('operations', () => {
   beforeEach(() => {
@@ -405,13 +409,13 @@ describe('operations', () => {
       //                                 <----fetch1--->  (no effect)
       //                                            <---fetch2-->   (clears optimistic state)
 
-      // t=100 simulate spawn rebase
-      // t=200 simulate queue goto
-      // t=300 simulate exit rebase
-      //       expect optimistic "You were here..."
+      // t=100 simulate spawn rebase [c-d-e(YouAreHere)] -> a
+      // t=200 simulate queue goto 'd' (successor: 'd2')
+      // t=300 simulate exit rebase (success)
       // t=400 simulate spawn goto
-      // t=500 simulate exit goto
-      //       expect optimistic "You were here..."
+      // t=500 simulate exit goto (success)
+      // no "commitsAfterOperations" state received
+      //       expect optimistic "You are here" to be on the old 'e'
       // t=600 simulate new commits fetch started @ t=450, with new head
       //       no effect
       // t=700 simulate new commits fetch started @ t=550, with new head
@@ -488,8 +492,8 @@ describe('operations', () => {
       );
 
       // this latest fetch started before the goto finished, so we don't know that it has all the information
-      // included. So the optimistic state remains.
-      expect(screen.getByText('You were here...')).toBeInTheDocument();
+      // included. So the optimistic state remains (goto 'd').
+      expectYouAreHerePointAt('d');
 
       act(() =>
         simulateMessageFromServer({
@@ -506,8 +510,8 @@ describe('operations', () => {
 
       // However, even if the latest fetch started before the goto finished,
       // if "goto" saw that head = the new commit, the optimistic state is a
-      // no-op and we won't see "You were here...".
-      expect(screen.queryByText('You were here...')).not.toBeInTheDocument();
+      // no-op (does not update 'd2' from the smartlog head back to 'd').
+      expectYouAreHerePointAt('d2');
 
       act(() =>
         simulateMessageFromServer({
@@ -526,7 +530,8 @@ describe('operations', () => {
       // it accounts for that operation.
       // So the optimistic state should be cleared out, even though we didn't
       // detect that the optimistic state should have resolved according to the applier.
-      expect(screen.queryByText('You were here...')).not.toBeInTheDocument();
+      // (does not update 'e' from the smartlog head to 'd')
+      expectYouAreHerePointAt('e');
     });
   });
 
