@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -27,8 +28,6 @@ use strum::Display;
 use strum::EnumString;
 
 use crate::context::DerivationContext;
-use crate::BatchDeriveOptions;
-use crate::BatchDeriveStats;
 use crate::DerivationError;
 use crate::DerivedDataManager;
 use crate::Rederivation;
@@ -251,10 +250,9 @@ pub trait DerivationDependencies {
         ddm: &DerivedDataManager,
         ctx: &CoreContext,
         csid: Vec<ChangesetId>,
-        batch_options: BatchDeriveOptions,
         rederivation: Option<Arc<dyn Rederivation>>,
         visited: &mut HashSet<TypeId>,
-    ) -> Result<BatchDeriveStats, DerivationError>;
+    ) -> Result<Duration, DerivationError>;
 }
 
 #[async_trait]
@@ -271,11 +269,10 @@ impl DerivationDependencies for () {
         _ddm: &DerivedDataManager,
         _ctx: &CoreContext,
         _csid: Vec<ChangesetId>,
-        batch_options: BatchDeriveOptions,
         _rederivation: Option<Arc<dyn Rederivation>>,
         _visited: &mut HashSet<TypeId>,
-    ) -> Result<BatchDeriveStats, DerivationError> {
-        Ok(batch_options.into())
+    ) -> Result<Duration, DerivationError> {
+        Ok(Duration::ZERO)
     }
 }
 
@@ -307,40 +304,19 @@ where
         ddm: &DerivedDataManager,
         ctx: &CoreContext,
         csid: Vec<ChangesetId>,
-        batch_options: BatchDeriveOptions,
         rederivation: Option<Arc<dyn Rederivation>>,
         visited: &mut HashSet<TypeId>,
-    ) -> Result<BatchDeriveStats, DerivationError> {
+    ) -> Result<Duration, DerivationError> {
         let type_id = TypeId::of::<Derivable>();
         if visited.insert(type_id) {
             let res = try_join(
-                ddm.derive_exactly_batch::<Derivable>(
-                    ctx,
-                    csid.clone(),
-                    batch_options,
-                    rederivation.clone(),
-                ),
-                Rest::derive_exactly_batch_dependencies(
-                    ddm,
-                    ctx,
-                    csid,
-                    batch_options,
-                    rederivation,
-                    visited,
-                ),
+                ddm.derive_exactly_batch::<Derivable>(ctx, csid.clone(), rederivation.clone()),
+                Rest::derive_exactly_batch_dependencies(ddm, ctx, csid, rederivation, visited),
             )
             .await?;
-            Ok(res.0.append(res.1)?)
+            Ok(res.0 + res.1)
         } else {
-            Rest::derive_exactly_batch_dependencies(
-                ddm,
-                ctx,
-                csid,
-                batch_options,
-                rederivation,
-                visited,
-            )
-            .await
+            Rest::derive_exactly_batch_dependencies(ddm, ctx, csid, rederivation, visited).await
         }
     }
 }

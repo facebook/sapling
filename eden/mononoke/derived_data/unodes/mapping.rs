@@ -247,7 +247,6 @@ mod test {
     use borrowed::borrowed;
     use cloned::cloned;
     use derived_data::BonsaiDerived;
-    use derived_data_manager::BatchDeriveOptions;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::BranchEven;
@@ -364,7 +363,6 @@ mod test {
 
         // Recreate repo from scratch and derive everything again
         let repo = repo_func().await;
-        let options = BatchDeriveOptions::Parallel;
         let csids = commits_desc_to_anc
             .clone()
             .into_iter()
@@ -374,7 +372,7 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .derive_exactly_batch::<RootUnodeManifestId>(ctx, csids.clone(), options, None)
+            .derive_exactly_batch::<RootUnodeManifestId>(ctx, csids.clone(), None)
             .await
             .unwrap();
         let batch_derived = manager

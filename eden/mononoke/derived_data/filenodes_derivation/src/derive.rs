@@ -293,7 +293,6 @@ mod tests {
     use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use cloned::cloned;
-    use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filenodes::FilenodeRange;
     use filenodes::FilenodeResult;
@@ -561,12 +560,7 @@ mod tests {
 
         let manager1 = repo1.repo_derived_data().manager();
         manager1
-            .derive_exactly_batch::<FilenodesOnlyPublic>(
-                &ctx,
-                cs_ids.clone(),
-                BatchDeriveOptions::Parallel,
-                None,
-            )
+            .derive_exactly_batch::<FilenodesOnlyPublic>(&ctx, cs_ids.clone(), None)
             .await?;
         let batch = manager1
             .fetch_derived_batch::<FilenodesOnlyPublic>(&ctx, cs_ids.clone(), None)
@@ -624,12 +618,7 @@ mod tests {
         let manager = repo.repo_derived_data().manager();
 
         match manager
-            .derive_exactly_batch::<FilenodesOnlyPublic>(
-                &ctx,
-                cs_ids.clone(),
-                BatchDeriveOptions::Parallel,
-                None,
-            )
+            .derive_exactly_batch::<FilenodesOnlyPublic>(&ctx, cs_ids.clone(), None)
             .await
         {
             Ok(_) => {}

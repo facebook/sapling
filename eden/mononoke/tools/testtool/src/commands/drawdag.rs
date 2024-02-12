@@ -37,7 +37,6 @@ use changeset_info::ChangesetInfo;
 use clap::Parser;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data_manager::BatchDeriveOptions;
 use derived_data_manager::BonsaiDerivable;
 use fastlog::RootFastlog;
 use filenodes_derivation::FilenodesOnlyPublic;
@@ -580,7 +579,7 @@ async fn derive<D: BonsaiDerivable>(
     csids: &[ChangesetId],
 ) -> Result<()> {
     let mgr = repo.repo_derived_data().manager();
-    mgr.derive_exactly_batch::<D>(ctx, csids.to_vec(), BatchDeriveOptions::Parallel, None)
+    mgr.derive_exactly_batch::<D>(ctx, csids.to_vec(), None)
         .await
         .with_context(|| format!("Failed to derive {}", D::NAME))?;
     Ok(())

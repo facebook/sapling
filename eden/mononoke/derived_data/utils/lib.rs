@@ -15,6 +15,7 @@ use std::io::Write;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::format_err;
@@ -32,8 +33,6 @@ use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::DerivedDataTypesConfig;
-use derived_data_manager::BatchDeriveOptions;
-pub use derived_data_manager::BatchDeriveStats;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationError;
@@ -225,7 +224,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
         ctx: CoreContext,
         repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<'static, Result<BatchDeriveStats>>;
+    ) -> BoxFuture<'static, Result<Duration>>;
 
     /// Derive data for a changeset using other derived data types without
     /// required data to be derived for the parents of the changeset.
@@ -356,13 +355,12 @@ where
         ctx: CoreContext,
         _repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
-        let options = BatchDeriveOptions::Parallel;
+    ) -> BoxFuture<'static, Result<Duration>> {
         let utils = Arc::new(self.clone());
         async move {
             let stats = utils
                 .manager
-                .derive_exactly_batch::<Derivable>(&ctx, csids, options, Some(utils.clone()))
+                .derive_exactly_batch::<Derivable>(&ctx, csids, Some(utils.clone()))
                 .await?;
             Ok(stats)
         }
@@ -1331,7 +1329,7 @@ mod tests {
             ctx: CoreContext,
             repo: Arc<RepoDerivedData>,
             csids: Vec<ChangesetId>,
-        ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
+        ) -> BoxFuture<'static, Result<Duration>> {
             self.deriver.derive_exactly_batch(ctx, repo, csids)
         }
 

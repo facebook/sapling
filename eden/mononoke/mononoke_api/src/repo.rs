@@ -66,7 +66,6 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
-use derived_data_manager::manager::derive::BatchDeriveOptions;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
@@ -1846,24 +1845,14 @@ impl RepoContext {
                 self.repo
                     .repo_derived_data()
                     .manager()
-                    .derive_exactly_batch::<RootFsnodeId>(
-                        self.ctx(),
-                        csids,
-                        BatchDeriveOptions::Parallel,
-                        None,
-                    )
+                    .derive_exactly_batch::<RootFsnodeId>(self.ctx(), csids, None)
                     .await?;
             }
             DerivableType::SkeletonManifests => {
                 self.repo
                     .repo_derived_data()
                     .manager()
-                    .derive_exactly_batch::<RootSkeletonManifestId>(
-                        self.ctx(),
-                        csids,
-                        BatchDeriveOptions::Parallel,
-                        None,
-                    )
+                    .derive_exactly_batch::<RootSkeletonManifestId>(self.ctx(), csids, None)
                     .await?;
             }
             _ => {

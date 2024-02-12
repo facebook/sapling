@@ -162,7 +162,6 @@ mod test {
     use changeset_fetcher::ChangesetFetcher;
     use changeset_fetcher::ChangesetFetcherArc;
     use changesets::Changesets;
-    use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -215,12 +214,7 @@ mod test {
             let manager = repo.repo_derived_data().manager();
 
             manager
-                .derive_exactly_batch::<RootFsnodeId>(
-                    &ctx,
-                    cs_ids,
-                    BatchDeriveOptions::Parallel,
-                    None,
-                )
+                .derive_exactly_batch::<RootFsnodeId>(&ctx, cs_ids, None)
                 .await?;
 
             manager
@@ -260,12 +254,7 @@ mod test {
 
             let manager = repo.repo_derived_data().manager();
             manager
-                .derive_exactly_batch::<RootFsnodeId>(
-                    &ctx,
-                    cs_ids,
-                    BatchDeriveOptions::Parallel,
-                    None,
-                )
+                .derive_exactly_batch::<RootFsnodeId>(&ctx, cs_ids, None)
                 .await?;
 
             manager

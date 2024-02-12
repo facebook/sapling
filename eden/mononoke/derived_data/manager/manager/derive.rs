@@ -50,35 +50,6 @@ use crate::derivable::DerivationDependencies;
 use crate::error::DerivationError;
 use crate::manager::util::DiscoveryStats;
 
-#[derive(Clone, Copy)]
-pub enum BatchDeriveOptions {
-    Parallel,
-}
-
-#[derive(Debug)]
-pub enum BatchDeriveStats {
-    Parallel(Duration),
-    Serial(Vec<(ChangesetId, Duration)>),
-}
-
-impl BatchDeriveStats {
-    pub fn append(self, other: Self) -> anyhow::Result<Self> {
-        use BatchDeriveStats::*;
-        Ok(match (self, other) {
-            (Parallel(d1), Parallel(d2)) => Parallel(d1 + d2),
-            _ => anyhow::bail!("Incompatible stats"),
-        })
-    }
-}
-
-impl From<BatchDeriveOptions> for BatchDeriveStats {
-    fn from(batch_options: BatchDeriveOptions) -> Self {
-        match batch_options {
-            BatchDeriveOptions::Parallel { .. } => BatchDeriveStats::Parallel(Duration::ZERO),
-        }
-    }
-}
-
 /// Trait to allow determination of rederivation.
 pub trait Rederivation: Send + Sync + 'static {
     /// Determine whether a changeset needs rederivation of
@@ -784,9 +755,8 @@ impl DerivedDataManager {
         &self,
         ctx: &CoreContext,
         csids: Vec<ChangesetId>,
-        batch_options: BatchDeriveOptions,
         rederivation: Option<Arc<dyn Rederivation>>,
-    ) -> Result<BatchDeriveStats, DerivationError>
+    ) -> Result<Duration, DerivationError>
     where
         Derivable: BonsaiDerivable,
     {
@@ -798,21 +768,13 @@ impl DerivedDataManager {
                 async move {
                     secondary_data
                         .manager
-                        .derive_exactly_batch::<Derivable>(
-                            ctx,
-                            secondary,
-                            batch_options,
-                            rederivation,
-                        )
+                        .derive_exactly_batch::<Derivable>(ctx, secondary, rederivation)
                         .await
                 }
                 .left_future()
             })
         } else {
-            (
-                csids,
-                future::ready(Ok(batch_options.into())).right_future(),
-            )
+            (csids, future::ready(Ok(Duration::ZERO)).right_future())
         };
         self.check_enabled::<Derivable>()?;
         let mut derivation_ctx = self.derivation_context(rederivation.clone());
@@ -898,13 +860,12 @@ impl DerivedDataManager {
                 .context("a batch dependency has not been derived")
         };
         // If dependent derived data types are not derived yet, let's derive them
-        let dependent_types_stats = if let Err(e) = dependency_checks.await {
+        let dependent_types_duration = if let Err(e) = dependency_checks.await {
             // We will derive batch for ourselves and all of our dependencies
             Derivable::Dependencies::derive_exactly_batch_dependencies(
                 self,
                 ctx,
                 csids,
-                batch_options,
                 rederivation.clone(),
                 &mut HashSet::new(),
             )
@@ -912,7 +873,7 @@ impl DerivedDataManager {
             .context("failed to derive batch dependencies")
             .context(e)?
         } else {
-            batch_options.into()
+            Duration::ZERO
         };
 
         let ctx = ctx.clone_and_reset();
@@ -940,26 +901,23 @@ impl DerivedDataManager {
         derived_data_scuba.add_metadata(ctx.metadata());
         let (overall_stats, result) = async {
             let derivation_ctx_ref = &derivation_ctx;
-            let (batch_stats, derived) = match batch_options {
-                BatchDeriveOptions::Parallel => {
-                    let (stats, derived) =
-                        Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais)
-                            .try_timed()
-                            .await
-                            .with_context(|| {
-                                if let Some((first, last)) = csid_range {
-                                    format!(
-                                        "failed to derive {} batch (start:{}, end:{})",
-                                        Derivable::NAME,
-                                        first,
-                                        last
-                                    )
-                                } else {
-                                    format!("failed to derive empty {} batch", Derivable::NAME)
-                                }
-                            })?;
-                    (BatchDeriveStats::Parallel(stats.completion_time), derived)
-                }
+            let (batch_duration, derived) = {
+                let (stats, derived) = Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais)
+                    .try_timed()
+                    .await
+                    .with_context(|| {
+                        if let Some((first, last)) = csid_range {
+                            format!(
+                                "failed to derive {} batch (start:{}, end:{})",
+                                Derivable::NAME,
+                                first,
+                                last
+                            )
+                        } else {
+                            format!("failed to derive empty {} batch", Derivable::NAME)
+                        }
+                    })?;
+                (stats.completion_time, derived)
             };
 
             // Flush the blobstore.  If it has been set up to cache writes, these
@@ -1008,18 +966,16 @@ impl DerivedDataManager {
                 .add_future_stats(&persist_stats)
                 .log_with_msg("Flushed mapping", None);
 
-            Ok(batch_stats)
+            Ok(batch_duration)
         }
         .timed()
         .await;
 
         derived_data_scuba.log_batch_derivation_end(ctx, &overall_stats, result.as_ref().err());
 
-        let batch_stats = result?;
+        let batch_duration = result?;
 
-        Ok(batch_stats
-            .append(secondary_derivation.await?)?
-            .append(dependent_types_stats)?)
+        Ok(batch_duration + secondary_derivation.await? + dependent_types_duration)
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.

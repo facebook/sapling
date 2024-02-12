@@ -116,7 +116,6 @@ mod test {
     use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMappingRef;
     use changeset_fetcher::ChangesetFetcherArc;
-    use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -182,12 +181,7 @@ mod test {
                 .await?;
         cs_ids.reverse();
         manager
-            .derive_exactly_batch::<ChangesetInfo>(
-                &ctx,
-                cs_ids.clone(),
-                BatchDeriveOptions::Parallel,
-                None,
-            )
+            .derive_exactly_batch::<ChangesetInfo>(&ctx, cs_ids.clone(), None)
             .await?;
         let cs_infos = manager
             .fetch_derived_batch(&ctx, cs_ids.clone(), None)
