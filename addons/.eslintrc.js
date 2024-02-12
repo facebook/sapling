@@ -111,6 +111,20 @@ module.exports = {
     'sort-imports': 'off',
     yoda: 'error',
 
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: 'jotai/utils',
+            importNames: ['atomFamily'],
+            message:
+              'atomFamily leaks memory. Use atomFamilyWeak(keyToAtom), or cached(keyToAtom), or useAtomValue(useMemo(() => keyToAtom(k), [k])) instead.',
+          },
+        ],
+      },
+    ],
+
     // Custom rules
     'rulesdir/recoil-key-matches-variable': 'error',
     'rulesdir/recoil-maybe-use-family': 'error',
