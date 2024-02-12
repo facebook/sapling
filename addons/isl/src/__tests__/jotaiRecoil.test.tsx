@@ -5,12 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AtomFamilyWeak} from '../jotaiUtils';
+import type {Atom} from 'jotai';
+
 import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
-import {lazyAtom, readAtom, writeAtom} from '../jotaiUtils';
+import {atomFamilyWeak, lazyAtom, readAtom, writeAtom} from '../jotaiUtils';
 import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
-import {atom, useAtom, useAtomValue} from 'jotai';
+import {Provider, atom, createStore, useAtom, useAtomValue} from 'jotai';
+import {type MeasureMemoryOptions, measureMemory} from 'node:vm';
 import {useRef, useState, useEffect} from 'react';
 import {act} from 'react-dom/test-utils';
 import {
@@ -187,5 +191,180 @@ describe('jotaiMirrorFromRecoil', () => {
       button.click();
     });
     expect(value).toBe(22);
+  });
+});
+
+describe('atomFamilyWeak', () => {
+  let recalcFamilyCount = 0;
+  let recalcAtomCount = 0;
+  const family = atomFamilyWeak((key: number) => {
+    recalcFamilyCount += 1;
+    return atom(_get => {
+      recalcAtomCount += 1;
+      return key;
+    });
+  });
+
+  let store = createStore();
+
+  function TestComponent({k, f}: {k: number; f?: AtomFamilyWeak<number, Atom<number>>}) {
+    const value = useAtomValue((f ?? family)(k));
+    return <div>{value}</div>;
+  }
+  function TestApp({
+    keys,
+    family,
+  }: {
+    keys: Array<number>;
+    family?: AtomFamilyWeak<number, Atom<number>>;
+  }) {
+    return (
+      <Provider store={store}>
+        {keys.map(k => (
+          <TestComponent k={k} key={k} f={family} />
+        ))}
+      </Provider>
+    );
+  }
+
+  beforeEach(() => {
+    store = createStore();
+    family.clear();
+    recalcFamilyCount = 0;
+    recalcAtomCount = 0;
+  });
+
+  async function gc() {
+    // 'node --expose-gc' defines 'global.gc'.
+    // To run with yarn: yarn node --expose-gc ./node_modules/.bin/jest ...
+    const globalGc = global.gc;
+    if (globalGc != null) {
+      await new Promise<void>(r =>
+        setTimeout(() => {
+          globalGc();
+          r();
+        }, 0),
+      );
+    } else {
+      // measureMemory with 'eager' has a side effect of running the GC.
+      // This exists since node 14.
+      // 'as' used since `MeasureMemoryOptions` is outdated (node 13?).
+      await measureMemory({execution: 'eager'} as MeasureMemoryOptions);
+    }
+  }
+
+  it('with "strong" cache enabled (default), unmount/remount skips re-calculate', async () => {
+    const rendered = render(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(3);
+    expect(recalcAtomCount).toBe(3);
+
+    rendered.rerender(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(3);
+    expect(recalcAtomCount).toBe(3);
+
+    // After unmount, part of the atomFamily cache can still be used when re-mounting.
+    rendered.unmount();
+    await gc();
+
+    render(<TestApp keys={[3, 2, 1]} />);
+    expect(recalcFamilyCount).toBeLessThan(6);
+    expect(recalcAtomCount).toBeLessThan(6);
+  });
+
+  it('with "strong" cache disabled, unmount/remount might re-calculate', async () => {
+    let count = 0;
+    const family = atomFamilyWeak(
+      (key: number) => {
+        count += 1;
+        return atom(_get => key);
+      },
+      {useStrongCache: false},
+    );
+
+    const rendered = render(<TestApp keys={[1, 2, 3]} family={family} />);
+    expect(count).toBe(3);
+
+    rendered.unmount();
+    await gc();
+
+    render(<TestApp keys={[1, 2, 3]} family={family} />);
+    expect(count).toBe(6);
+  });
+
+  it('"cleanup" does not clean in-use states', () => {
+    const rendered = render(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(3);
+    expect(recalcAtomCount).toBe(3);
+    family.cleanup();
+
+    // re-render can still use cached state after "cleanup" (count remains the same).
+    rendered.rerender(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(3);
+    expect(recalcAtomCount).toBe(3);
+  });
+
+  it('"cleanup" can release memory', async () => {
+    const rendered = render(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(3);
+    expect(recalcAtomCount).toBe(3);
+    rendered.unmount();
+
+    await gc();
+    family.cleanup();
+    await gc();
+    family.cleanup();
+
+    // umount, then re-render will recalculate all atoms (count increases).
+    render(<TestApp keys={[3, 2, 1]} />);
+    expect(recalcFamilyCount).toBe(6);
+    expect(recalcAtomCount).toBe(6);
+  });
+
+  it('"clear" releases memory', () => {
+    const rendered = render(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(3);
+    expect(recalcAtomCount).toBe(3);
+    family.clear();
+
+    // re-render will recalculate all atoms.
+    rendered.rerender(<TestApp keys={[1, 2, 3]} />);
+    expect(recalcFamilyCount).toBe(6);
+    expect(recalcAtomCount).toBe(6);
+    rendered.unmount();
+    family.clear();
+
+    // umount, then re-render will recalculate all atoms (count increases).
+    render(<TestApp keys={[3, 2, 1]} />);
+    expect(recalcFamilyCount).toBe(9);
+    expect(recalcAtomCount).toBe(9);
+  });
+
+  it('"cleanup" runs automatically to reduce cache size', async () => {
+    const N = 10;
+    const M = 30;
+
+    // Render N items.
+    const rendered = render(<TestApp keys={Array.from({length: N}, (_, i) => i)} />);
+
+    // Umount to drop references to the atoms.
+    rendered.unmount();
+
+    // Force GC to run to stabilize the test.
+    await gc();
+
+    // After GC, render M items with different keys.
+    // This would trigger `family.cleanup` transparently.
+    render(<TestApp keys={Array.from({length: M}, (_, i) => N + i)} />);
+
+    // Neither of the caches should have N + M items (which means no cleanup).
+    expect(family.weakCache.size).toBeLessThan(N + M);
+    expect(family.strongCache.size).toBeLessThan(N + M);
+  });
+
+  it('provides debugLabel', () => {
+    const family = atomFamilyWeak((v: string) => atom(v));
+    family.debugLabel = 'prefix1';
+    const atom1 = family('a');
+    expect(atom1.debugLabel).toBe('prefix1:a');
   });
 });

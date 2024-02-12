@@ -254,3 +254,122 @@ export function atomLoadableWithRefresh<T>(fn: (get: Getter) => Promise<T>) {
     (_, set) => set(refreshCounter, i => i + 1),
   );
 }
+
+/**
+ * Drop-in replacement of `atomFamily` that tries to book-keep internal cache
+ * periodically to avoid memory leak.
+ *
+ * There are 2 caches:
+ * - "strong" cache: keep atoms alive even if all references are gone.
+ * - "weak" cache: keep atoms alive as long as there is a reference to it.
+ *
+ * Periodically, when the weak cache size reaches a threshold, a "cleanup"
+ * process runs to:
+ * - Clear the "strong" cache to mitigate memory leak.
+ * - Drop dead entries in the "weak" cache.
+ * - Update the threshold to 2x the "weak" cache size.
+ *
+ * Therefore the memory waste is hopefully within 2x of the needed memory.
+ *
+ * Setting `options.useStrongCache` to `false` disables the "strong" cache
+ * to further limit memory usage.
+ */
+export function atomFamilyWeak<K, A extends Atom<unknown>>(
+  fn: (key: K) => A,
+  options?: AtomFamilyWeakOptions,
+): AtomFamilyWeak<K, A> {
+  const {useStrongCache = true, initialCleanupThreshold = 4} = options ?? {};
+
+  // This cache persists through component unmount / remount, therefore
+  // it can be memory leaky.
+  const strongCache = new Map<K, A>();
+
+  // This cache ensures atoms in use are returned as-is during re-render,
+  // to avoid infinite re-render with React StrictMode.
+  const weakCache = new Map<K, WeakRef<A>>();
+
+  const cleanup = () => {
+    // Clear the strong cache. This allows GC to drop weakRefs.
+    strongCache.clear();
+    // Clean up weak cache - remove dead entries.
+    weakCache.forEach((weakRef, key) => {
+      if (weakRef.deref() == null) {
+        weakCache.delete(key);
+      }
+    });
+    // Adjust threshold to trigger the next cleanup.
+    resultFunc.threshold = weakCache.size * 2;
+  };
+
+  const resultFunc: AtomFamilyWeak<K, A> = (key: K) => {
+    const cached = strongCache.get(key);
+    if (cached != null) {
+      // This state was accessed recently.
+      return cached;
+    }
+    const weakCached = weakCache.get(key)?.deref();
+    if (weakCached != null) {
+      // State is not dead yet.
+      return weakCached;
+    }
+    // Not in cache. Need re-calculate.
+    const atom = fn(key);
+    if (useStrongCache) {
+      strongCache.set(key, atom);
+    }
+    weakCache.set(key, new WeakRef(atom));
+    if (weakCache.size > resultFunc.threshold) {
+      cleanup();
+    }
+    if (resultFunc.debugLabel != null && atom.debugLabel == null) {
+      atom.debugLabel = `${resultFunc.debugLabel}:${key}`;
+    }
+    return atom;
+  };
+
+  resultFunc.cleanup = cleanup;
+  resultFunc.threshold = initialCleanupThreshold;
+  resultFunc.strongCache = strongCache;
+  resultFunc.weakCache = weakCache;
+  resultFunc.clear = () => {
+    weakCache.clear();
+    strongCache.clear();
+    resultFunc.threshold = initialCleanupThreshold;
+  };
+
+  return resultFunc;
+}
+
+type AtomFamilyWeakOptions = {
+  /**
+   * Enable the "strong" cache so unmount / remount can try to reuse the cache.
+   *
+   * If this is disabled, then only the weakRef cache is used, states that
+   * are no longer referred by components might be lost to GC.
+   *
+   * Default: true.
+   */
+  useStrongCache?: boolean;
+
+  /**
+   * Number of items before triggering an initial cleanup.
+   * Default: 4.
+   */
+  initialCleanupThreshold?: number;
+};
+
+export interface AtomFamilyWeak<K, A extends Atom<unknown>> {
+  (key: K): A;
+  /** The "strong" cache (can be empty). */
+  strongCache: Map<K, A>;
+  /** The weakRef cache (must contain entries that are still referred elsewhere). */
+  weakCache: Map<K, WeakRef<A>>;
+  /** Trigger a cleanup ("GC"). */
+  cleanup(): void;
+  /** Clear the cache */
+  clear(): void;
+  /** Auto cleanup threshold on weakCache size. */
+  threshold: number;
+  /** Prefix of debugLabel. */
+  debugLabel?: string;
+}
