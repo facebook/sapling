@@ -27,7 +27,6 @@ import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/sta
 import {succeedableRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
-import {useRecoilValue} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 

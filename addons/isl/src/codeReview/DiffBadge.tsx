@@ -27,7 +27,6 @@ import {SyncStatus, syncStatusByHash} from './syncStatus';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Component, Suspense, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';

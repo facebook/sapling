@@ -21,7 +21,6 @@ import {useModal} from './useModal';
 import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
-import {useRecoilCallback} from 'recoil';
 import {useAutofocusRef} from 'shared/hooks';
 import {unwrap} from 'shared/utils';
 
@@ -59,7 +58,7 @@ export function shouldShowSubmitStackConfirmation(): boolean {
 export function useShowConfirmSubmitStack() {
   const showModal = useModal();
 
-  return useRecoilCallback(() => async (mode: SubmitType, stack: Array<CommitInfo>) => {
+  return async (mode: SubmitType, stack: Array<CommitInfo>) => {
     if (!shouldShowSubmitStackConfirmation()) {
       const draft = readAtom(submitAsDraft);
       return {submitAsDraft: draft ?? false};
@@ -82,7 +81,7 @@ export function useShowConfirmSubmitStack() {
       ),
     });
     return response;
-  });
+  };
 }
 
 function ConfirmModalContent({

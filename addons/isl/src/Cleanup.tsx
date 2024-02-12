@@ -18,7 +18,6 @@ import {type Dag, dagWithPreviews} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 

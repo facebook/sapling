@@ -6,7 +6,6 @@
  */
 
 import type {RepoRelativePath} from './types';
-import type {SetterOrUpdater} from 'recoil';
 import type {Hash, RepoPath} from 'shared/types/common';
 import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
@@ -273,7 +272,7 @@ export class UseUncommittedSelection {
 
   constructor(
     public selection: PartialSelection,
-    private setSelection: SetterOrUpdater<PartialSelection>,
+    private setSelection: (_v: PartialSelection) => void,
     wdirHash: Hash,
     private getPaths: () => Array<RepoRelativePath>,
     epoch: number,

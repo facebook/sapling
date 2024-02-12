@@ -8,10 +8,8 @@
 import type {Hash} from '../../types';
 import type {CommitState} from '../commitStackState';
 import type {RecordOf} from 'immutable';
-import type {SetterOrUpdater} from 'recoil';
 import type {ExportStack} from 'shared/types/stack';
 
-import {globalRecoil} from '../../AccessGlobalRecoil';
 import clientToServerAPI from '../../ClientToServerAPI';
 import {latestCommitMessageFieldsWithEdits} from '../../CommitInfoView/CommitInfoState';
 import {
@@ -304,12 +302,12 @@ const hasValueState: Loading<null> = {state: 'hasValue', value: null};
 /** APIs exposed via useStackEditState() */
 class UseStackEditState {
   state: StackEditState;
-  setState: SetterOrUpdater<StackEditState>;
+  setState: (_state: StackEditState) => void;
 
   // derived properties.
   private history: History;
 
-  constructor(state: StackEditState, setState: SetterOrUpdater<StackEditState>) {
+  constructor(state: StackEditState, setState: (_state: StackEditState) => void) {
     this.state = state;
     this.setState = setState;
     assert(

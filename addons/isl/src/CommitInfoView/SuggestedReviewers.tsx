@@ -16,7 +16,6 @@ import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily, loadable} from 'jotai/utils';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {tryJsonParse} from 'shared/utils';
 

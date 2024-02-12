@@ -12,7 +12,6 @@ import {MutationDag} from './dag/mutation_dag';
 import {writeAtom} from './jotaiUtils';
 import {exactRevset, succeedableRevset} from './types';
 import {atom} from 'jotai';
-import {DefaultValue} from 'recoil';
 
 type Successions = Array<[oldHash: string, newHash: string]>;
 type SuccessionCallback = (successions: Successions) => unknown;
@@ -98,8 +97,7 @@ export const successionTracker = new SuccessionTracker();
 export const latestSuccessorsMapAtom = atom<MutationDag>(new MutationDag());
 
 successionTracker.onSuccessions(successions => {
-  writeAtom(latestSuccessorsMapAtom, existing => {
-    const dag = existing instanceof DefaultValue ? new MutationDag() : existing;
+  writeAtom(latestSuccessorsMapAtom, dag => {
     return dag.addMutations(successions);
   });
 });
