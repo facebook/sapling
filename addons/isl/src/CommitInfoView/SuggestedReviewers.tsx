@@ -11,11 +11,12 @@ import serverAPI from '../ClientToServerAPI';
 import {tracker} from '../analytics';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {T} from '../i18n';
+import {atomFamilyWeak} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
 import {atom, useAtomValue} from 'jotai';
-import {atomFamily, loadable} from 'jotai/utils';
+import {loadable} from 'jotai/utils';
 import {Icon} from 'shared/Icon';
 import {tryJsonParse} from 'shared/utils';
 
@@ -77,7 +78,7 @@ export const recentReviewers = new RecentReviewers();
  */
 const cachedSuggestions = new Map<string, {lastFetch: number; reviewers: Array<string>}>();
 const MAX_SUGGESTION_CACHE_AGE = 2 * 60 * 1000;
-const suggestedReviewersForCommit = atomFamily((hashOrHead: string | 'head' | undefined) => {
+const suggestedReviewersForCommit = atomFamilyWeak((hashOrHead: string | 'head' | undefined) => {
   return loadable(
     atom(get => {
       if (hashOrHead == null) {

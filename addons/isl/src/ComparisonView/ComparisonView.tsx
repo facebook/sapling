@@ -17,6 +17,7 @@ import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
+import {atomFamilyWeak} from '../jotaiUtils';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
@@ -24,7 +25,7 @@ import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {atom, useSetAtom} from 'jotai';
-import {atomFamily as atomFamilyJotai, loadable} from 'jotai/utils';
+import {loadable} from 'jotai/utils';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {atomFamily, useRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
@@ -76,7 +77,7 @@ const currentComparisonData = atomFamily<
   ],
 });
 
-export const lineRange = atomFamilyJotai(
+export const lineRange = atomFamilyWeak(
   (params: LineRangeParams<{path: string; comparison: Comparison}>) =>
     loadable(
       atom(async (get): Promise<Array<string>> => {

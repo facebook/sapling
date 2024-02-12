@@ -12,7 +12,7 @@ import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {findCurrentPublicBase} from './getCommitTree';
 import {T, t} from './i18n';
-import {readAtom} from './jotaiUtils';
+import {atomFamilyWeak, readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -23,7 +23,6 @@ import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
@@ -33,7 +32,7 @@ import './SuggestedRebase.css';
  * Whether a given stack (from its base hash) is eligible for currently suggested rebase.
  * Determined by if the stack is old enough and worth rebasing (i.e. not obsolete or closed)
  */
-export const showSuggestedRebaseForStack = atomFamily((hash: Hash) =>
+export const showSuggestedRebaseForStack = atomFamilyWeak((hash: Hash) =>
   atom(get => {
     const dag = get(dagWithPreviews);
     const commit = dag.get(hash);

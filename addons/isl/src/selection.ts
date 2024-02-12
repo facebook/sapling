@@ -13,13 +13,12 @@ import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
-import {readAtom, writeAtom} from './jotaiUtils';
+import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {latestDag, operationBeingPreviewedJotai} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
 
 /**
@@ -51,7 +50,7 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const isCommitSelected = atomFamily((hash: Hash) =>
+export const isCommitSelected = atomFamilyWeak((hash: Hash) =>
   atom<boolean>(get => get(selectedCommits).has(hash)),
 );
 

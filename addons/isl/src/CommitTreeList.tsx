@@ -23,7 +23,7 @@ import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
-import {configBackedAtom} from './jotaiUtils';
+import {atomFamilyWeak, configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
@@ -39,7 +39,6 @@ import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -112,7 +111,7 @@ function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
   }
 }
 
-const dagHasChildren = atomFamily((key: string) => {
+const dagHasChildren = atomFamilyWeak((key: string) => {
   return atom(get => {
     const dag = get(dagWithPreviews);
     return dag.children(key).size > 0;
@@ -132,14 +131,14 @@ function DagCommitBody({info}: {info: DagCommitInfo}) {
   );
 }
 
-const dagHasParents = atomFamily((key: string) => {
+const dagHasParents = atomFamilyWeak((key: string) => {
   return atom(get => {
     const dag = get(dagWithPreviews);
     return dag.parents(key).size > 0;
   });
 });
 
-const dagIsDraftStackRoot = atomFamily((key: string) => {
+const dagIsDraftStackRoot = atomFamilyWeak((key: string) => {
   return atom(get => {
     const dag = get(dagWithPreviews);
     return dag.draft(dag.parents(key)).size === 0;

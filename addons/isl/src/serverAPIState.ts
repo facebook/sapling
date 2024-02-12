@@ -28,12 +28,17 @@ import messageBus from './MessageBus';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {getAllRecoilStateJson} from './debug/getAllRecoilStateJson';
-import {configBackedAtom, readAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
+import {
+  atomFamilyWeak,
+  configBackedAtom,
+  readAtom,
+  resetOnCwdChange,
+  writeAtom,
+} from './jotaiUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
-import {atomFamily, atomFamily as jotaiAtomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
 import {atom, DefaultValue} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
@@ -254,7 +259,7 @@ export const latestUncommittedChangesTimestamp = jotaiAtom(get => {
  * Lookup a commit by hash, *WITHOUT PREVIEWS*.
  * Generally, you'd want to look up WITH previews, which you can use dagWithPreviews for.
  */
-export const commitByHash = atomFamily((hash: string) =>
+export const commitByHash = atomFamilyWeak((hash: string) =>
   jotaiAtom(get => {
     return get(latestCommits).find(commit => commit.hash === hash);
   }),
@@ -580,7 +585,7 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const inlineProgressByHash = jotaiAtomFamily((hash: Hash) =>
+export const inlineProgressByHash = atomFamilyWeak((hash: Hash) =>
   jotaiAtom(get => {
     const info = get(operationListJotai);
     const inlineProgress = info.currentOperation?.inlineProgress;

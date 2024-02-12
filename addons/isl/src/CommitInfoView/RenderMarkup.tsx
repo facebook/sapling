@@ -7,14 +7,13 @@
 
 import clientToServerAPI from '../ClientToServerAPI';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
-import {lazyAtom} from '../jotaiUtils';
+import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
 import {useAtomValue} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 import {cached} from 'shared/LRU';
 
 import './RenderedMarkup.css';
 
-const renderedMarkup = atomFamily((markup: string) => {
+const renderedMarkup = atomFamilyWeak((markup: string) => {
   // This is an atom to trigger re-render when the server returns.
   return lazyAtom(get => {
     const provider = get(codeReviewProvider);

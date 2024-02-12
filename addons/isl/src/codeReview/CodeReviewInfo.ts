@@ -18,14 +18,13 @@ import {
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
-import {atomWithOnChange, writeAtom} from '../jotaiUtils';
+import {atomFamilyWeak, atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
@@ -54,7 +53,7 @@ function repoInfoToCodeReviewProvider(repoInfo?: RepoInfo): UICodeReviewProvider
   return null;
 }
 
-export const diffSummary = atomFamily((diffId: DiffId | undefined) =>
+export const diffSummary = atomFamilyWeak((diffId: DiffId | undefined) =>
   atom<Result<DiffSummary | undefined>>(get => {
     if (diffId == null) {
       return {value: undefined};
@@ -119,7 +118,7 @@ registerCleanup(
  * be smoother if we use the optimistic one before the remote has gotten the update propagated.
  * This is only necessary if the optimistic message is different than the local message.
  */
-export const latestCommitMessage = atomFamily((hash: Hash | 'head') =>
+export const latestCommitMessage = atomFamilyWeak((hash: Hash | 'head') =>
   atom((get): [title: string, description: string] => {
     if (hash === 'head') {
       const template = get(commitMessageTemplate);
@@ -168,14 +167,14 @@ export const latestCommitMessage = atomFamily((hash: Hash | 'head') =>
   }),
 );
 
-export const latestCommitMessageTitle = atomFamily((hashOrHead: Hash | 'head') =>
+export const latestCommitMessageTitle = atomFamilyWeak((hashOrHead: Hash | 'head') =>
   atom(get => {
     const [title] = get(latestCommitMessage(hashOrHead));
     return title;
   }),
 );
 
-export const latestCommitMessageFields = atomFamily((hashOrHead: Hash | 'head') =>
+export const latestCommitMessageFields = atomFamilyWeak((hashOrHead: Hash | 'head') =>
   atom(get => {
     const [title, description] = get(latestCommitMessage(hashOrHead));
     const schema = get(commitMessageFieldsSchema);

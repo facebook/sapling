@@ -15,7 +15,7 @@ import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
-import {atomLoadableWithRefresh, readAtom} from '../jotaiUtils';
+import {atomFamilyWeak, atomLoadableWithRefresh, readAtom} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {
@@ -26,7 +26,6 @@ import {
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {atomFamily as atomFamilyJotai} from 'jotai/utils';
 import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -108,7 +107,7 @@ const cachedSuggestions = new Map<
 >();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
-const generatedCommitMessages = atomFamilyJotai((hashKey: string | undefined) =>
+const generatedCommitMessages = atomFamilyWeak((hashKey: string | undefined) =>
   atomLoadableWithRefresh((get): Promise<Result<string>> => {
     if (hashKey == null || Internal.generateAICommitMessage == null) {
       return Promise.resolve({value: ''});
@@ -164,7 +163,7 @@ const generatedCommitMessages = atomFamilyJotai((hashKey: string | undefined) =>
   }),
 );
 
-const hasAcceptedAIMessageSuggestion = atomFamilyJotai((_key: HashKey) => atom<boolean>(false));
+const hasAcceptedAIMessageSuggestion = atomFamilyWeak((_key: HashKey) => atom<boolean>(false));
 
 function GenerateAICommitMessageModal({
   hashKey,

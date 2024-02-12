@@ -7,10 +7,10 @@
 
 import type {Hash} from '../types';
 
+import {atomFamilyWeak} from '../jotaiUtils';
 import {latestCommits} from '../serverAPIState';
 import {allDiffSummaries, codeReviewProvider} from './CodeReviewInfo';
 import {atom} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 
 export enum SyncStatus {
   InSync = 'inSync',
@@ -31,7 +31,7 @@ export const syncStatusAtom = atom(get => {
   return provider.getSyncStatuses(commits, summaries.value);
 });
 
-export const syncStatusByHash = atomFamily((hash: Hash) =>
+export const syncStatusByHash = atomFamilyWeak((hash: Hash) =>
   atom(get => {
     const syncStatus = get(syncStatusAtom);
     return syncStatus?.get(hash);

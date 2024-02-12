@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {atomFamilyWeak} from '../../jotaiUtils';
 import {repositoryInfo} from '../../serverAPIState';
 import {atom} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 
 /**
  * Configured pull request domain to view associated pull requests, such as reviewstack.dev.
@@ -17,7 +17,7 @@ export const pullRequestDomain = atom<string | undefined>(get => {
   return info?.type !== 'success' ? undefined : info.pullRequestDomain;
 });
 
-export const openerUrlForDiffUrl = atomFamily((url?: string) => {
+export const openerUrlForDiffUrl = atomFamilyWeak((url?: string) => {
   return atom(get => {
     if (!url) {
       return url;

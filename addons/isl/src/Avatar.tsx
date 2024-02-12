@@ -7,12 +7,11 @@
 
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
-import {atomWithRefresh, refreshAtom} from './jotaiUtils';
+import {atomFamilyWeak, atomWithRefresh, refreshAtom} from './jotaiUtils';
 import {logger} from './logger';
 import platform from './platform';
 import {latestCommits} from './serverAPIState';
 import {atom, useAtomValue} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 import {isPromise} from 'shared/utils';
 
 const uniqueAuthors = atom<Array<string>>(get => {
@@ -108,7 +107,7 @@ const avatars = atomWithRefresh<Map<string, string> | Promise<Map<string, string
   })();
 });
 
-const avatarUrl = atomFamily((username: string) =>
+const avatarUrl = atomFamilyWeak((username: string) =>
   atom(get => {
     const storage = get(avatars);
     if (isPromise(storage)) {

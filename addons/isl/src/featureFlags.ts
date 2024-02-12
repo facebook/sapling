@@ -6,15 +6,14 @@
  */
 
 import serverAPI from './ClientToServerAPI';
-import {lazyAtom} from './jotaiUtils';
+import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
 import {atom, useAtomValue} from 'jotai';
-import {atomFamily} from 'jotai/utils';
 
 /**
  * Boolean values to enable features via remote config.
  * TODO: we could cache values in localstorage to avoid async lookup time if you've previously fetched it
  */
-export const featureFlag = atomFamily((name?: string) => {
+export const featureFlag = atomFamilyWeak((name?: string) => {
   if (name == null) {
     // OSS doesn't have access to feature flags, so they are always "false" by setting the name to null
     return atom(false);
