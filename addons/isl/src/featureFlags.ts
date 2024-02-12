@@ -6,36 +6,35 @@
  */
 
 import serverAPI from './ClientToServerAPI';
-import {atomFamily, selectorFamily, useRecoilValueLoadable} from 'recoil';
+import {lazyAtom} from './jotaiUtils';
+import {atom, useAtomValue} from 'jotai';
+import {atomFamily} from 'jotai/utils';
 
 /**
  * Boolean values to enable features via remote config.
  * TODO: we could cache values in localstorage to avoid async lookup time if you've previously fetched it
  */
-export const featureFlag = atomFamily<boolean, string | undefined>({
-  key: 'featureFlag',
-  default: selectorFamily({
-    key: 'featureFlags/default',
-    get: (name: string | undefined) => async () => {
-      if (name == null) {
-        // OSS doesn't have access to feature flags, so they are always "false" by setting the name to null
-        return false;
-      }
-      serverAPI.postMessage({
-        type: 'fetchFeatureFlag',
-        name,
-      });
-      const response = await serverAPI.nextMessageMatching(
-        'fetchedFeatureFlag',
-        message => message.name === name,
-      );
-      return response.passes;
-    },
-  }),
+export const featureFlag = atomFamily((name?: string) => {
+  if (name == null) {
+    // OSS doesn't have access to feature flags, so they are always "false" by setting the name to null
+    return atom(false);
+  }
+
+  return lazyAtom(async () => {
+    serverAPI.postMessage({
+      type: 'fetchFeatureFlag',
+      name,
+    });
+    const response = await serverAPI.nextMessageMatching(
+      'fetchedFeatureFlag',
+      message => message.name === name,
+    );
+    return response.passes;
+  }, undefined);
 });
 
 /** Access recoil featureFlag state without suspending or throwing */
 export function useFeatureFlagSync(name: string | undefined) {
-  const loadable = useRecoilValueLoadable(featureFlag(name));
-  return loadable.valueMaybe() ?? false;
+  const maybe = useAtomValue(featureFlag(name));
+  return maybe ?? false;
 }
