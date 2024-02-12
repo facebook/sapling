@@ -95,11 +95,7 @@ module.exports = {
     'object-shorthand': 'error',
     'prefer-arrow-callback': 'error',
     'react-hooks/rules-of-hooks': 'error',
-    // https://recoiljs.org/docs/introduction/installation/#eslint
-    'react-hooks/exhaustive-deps': [
-      'error',
-      {additionalHooks: '(useRecoilCallback|useRecoilTransaction_UNSTABLE)'},
-    ],
+    'react-hooks/exhaustive-deps': 'error',
     'sort-imports': 'off',
     yoda: 'error',
 
@@ -111,15 +107,14 @@ module.exports = {
             name: 'jotai/utils',
             importNames: ['atomFamily'],
             message:
-              'atomFamily leaks memory. Use atomFamilyWeak(keyToAtom), or cached(keyToAtom), or useAtomValue(useMemo(() => keyToAtom(k), [k])) instead.',
+              'atomFamily leaks memory. Use atomFamilyWeak(keyToAtom), or cached(keyToAtom), or useAtomValue(useMemo(() => keyToAtom(k), [k])), or useAtomGet and useAtomHas instead.',
           },
         ],
       },
     ],
 
     // Custom rules
-    'rulesdir/recoil-key-matches-variable': 'error',
-    'rulesdir/recoil-maybe-use-family': 'error',
+    'rulesdir/jotai-maybe-use-family': 'error',
 
     // WARNINGS
     'require-await': 'warn',

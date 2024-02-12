@@ -10,36 +10,46 @@ const containerMethods = new Set(['get', 'has']);
 /**
  * Example:
  *
- *   function MaybeBackground(props: {id: string}) {
- *     const set = useRecoilValue(shouldUseBackgroundAtom);
- *     const hasBackground = set.has(props.id)
- *     return hasBackground ? <Background /> : null;
- *   }
+ *     function MaybeHighlight(props: {id: string}) {
+ *       const set = useAtomValue(selectedSet);
+ *       const selected = set.has(props.id)
+ *       return selected ? <Highlight /> : null;
+ *     }
  *
- * will trigger re-render of all MaybeBackground once the atom has any small
- * changes. To only re-render changed items, use a selectorFamily:
+ * will trigger re-render of all MaybeHigh once the atom has any small
+ * changes. To only re-render changed items, use `atomFamilyWeak`:
  *
- *   const shouldUseBackgroundById = selectorFamily({
- *     key: 'shouldUseBackgroundById',
- *     get: (id) => ({get}) => get(shouldUseBackgroundAtom).has(id),
- *   })
+ *     const selectedById = atomFamilyWeak((id: string) => {
+ *       return atom(get => get(selectedsSet).has(id));
+ *     });
+ *     function MaybeHighlight(props: {id: string}) {
+ *       const selected = useAtomValue(selectedById(props.id));
+ *       ...
+ *     }
  *
- *   function MaybeBackground(props: {id: string}) {
- *     const hasBackground = useRecoilValue(shouldUseBackgroundById(props.id);
- *     return hasBackground ? <Background /> : null;
- *   }
+ * Alternatively, calculate a memo-ed atom on demand:
+ *
+ *     function MaybeHighlight({id}: {id: string}) {
+ *       const selectedAtom = useMemo(() => atom(get => get(selectedsSet).has(id)), [id]);
+ *       const selected = useAtomValue(selectedAtom);
+ *       ...
+ *     }
+ *
+ * The `atomFamilyWeak` might keep some extra states alive to satisfy other
+ * use-cases. The memo-ed atom approach has no memory leak and might be
+ * preferred if there are only 1 component that needs this derived atom state.
  */
 module.exports = {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Suggest selectorFamily for container-get-key patterns to avoid re-render.',
+      description: 'Suggest alternatives for container-get-key patterns to avoid re-render.',
     },
   },
   create(context) {
     return {
       VariableDeclarator(node) {
-        if (node.init?.type === 'CallExpression' && node.init.callee.name === 'useRecoilValue') {
+        if (node.init?.type === 'CallExpression' && node.init.callee.name === 'useAtomValue') {
           analyzeUseRecoilValue(node, context);
         }
       },
@@ -81,10 +91,11 @@ function analyzeUseRecoilValue(node, context) {
     context.report({
       node,
       message:
-        'Recoil value `{{ varName }}` seems to be only used for `{{ method }}`. Consider moving `{{ method }}` to a `selectorFamily` to avoid re-render.',
+        'Atom value `{{ varName }}` seems to be only used for `{{ method }}`. Consider moving `{{ method }}` to a `atomFamilyWeak` or use `{{ useMethod }}` to avoid re-render.',
       data: {
         varName,
         method,
+        useMethod: method === 'get' ? 'useAtomGet' : 'useAtomHas',
       },
     });
   }
