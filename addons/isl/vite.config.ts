@@ -24,6 +24,26 @@ export default defineConfig({
   base: '',
   plugins: [
     react({
+      babel: {
+        plugins: [
+          [
+            'jotai/babel/plugin-debug-label',
+            {
+              customAtomNames: [
+                'atomFamilyWeak',
+                'atomLoadableWithRefresh',
+                'atomWithOnChange',
+                'atomWithRefresh',
+                'configBackedAtom',
+                'jotaiAtom',
+                'lazyAtom',
+                'localStorageBackedAtom',
+              ],
+            },
+          ],
+          'jotai/babel/plugin-react-refresh',
+        ],
+      },
       include: '**/*.tsx',
     }),
     styleX(),
