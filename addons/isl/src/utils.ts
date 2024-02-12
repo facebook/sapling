@@ -65,6 +65,8 @@ export function leftPad(val: string | number, len: number, char: string) {
 /** Whether running in a test environment. */
 export const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
+export const isDev = process.env.NODE_ENV === 'development';
+
 const cleanUpRegister = new FinalizationRegistry<() => void>((cleanUp: () => void) => {
   cleanUp();
 });

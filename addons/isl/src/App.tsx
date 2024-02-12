@@ -36,9 +36,10 @@ import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
+import {useAtomsDevtools} from './third-party/jotai-devtools/utils';
 import {light} from './tokens.stylex';
 import {ModalContainer} from './useModal';
-import {isTest} from './utils';
+import {isDev, isTest} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Provider, useAtom, useAtomValue, useSetAtom, useStore} from 'jotai';
@@ -88,10 +89,17 @@ function MaybeWithJotaiRoot({children}: {children: JSX.Element}) {
         {children}
       </Provider>
     );
+  } else if (isDev) {
+    return <AtomsDevtools>{children}</AtomsDevtools>;
   } else {
-    // Such scoped Provider or store complexity is not needed outside tests.
+    // Such scoped Provider or store complexity is not needed outside tests or dev.
     return children;
   }
+}
+
+function AtomsDevtools({children}: {children: JSX.Element}) {
+  useAtomsDevtools('jotai');
+  return children;
 }
 
 function AccessJotaiRoot() {

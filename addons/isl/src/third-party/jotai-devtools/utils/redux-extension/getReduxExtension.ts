@@ -1,3 +1,5 @@
+import { isDev as __DEV__ } from '../../../../utils';
+
 // Original but incomplete type of the redux extension package
 type Extension = NonNullable<typeof window.__REDUX_DEVTOOLS_EXTENSION__>;
 
