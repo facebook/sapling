@@ -8,7 +8,6 @@
 import type {Hash} from '../types';
 import type {CommitMessageFields} from './types';
 
-import {globalRecoil} from '../AccessGlobalRecoil';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
@@ -26,7 +25,6 @@ import {
 } from './CommitMessageFields';
 import {atom} from 'jotai';
 import {atomFamily as jotaiAtomFamily} from 'jotai/utils';
-import {atomFamily} from 'recoil';
 
 export type EditedMessage = {fields: Partial<CommitMessageFields>};
 
@@ -63,10 +61,7 @@ registerCleanup(
  * Unlike editedCommitMessages, you can't provide an update message when committing the first time,
  * so we don't need to track this state for 'head'.
  */
-export const diffUpdateMessagesState = atomFamily<string, Hash>({
-  key: 'diffUpdateMessagesState',
-  default: '',
-});
+export const diffUpdateMessagesState = jotaiAtomFamily((_hash: Hash) => atom<string>(''));
 
 export const getDefaultEditedCommitMessage = (): EditedMessage => ({fields: {}});
 
@@ -91,10 +86,10 @@ function updateEditedCommitMessagesFromSuccessions() {
       const existing = readAtom(editedCommitMessages(oldHash));
       writeAtom(editedCommitMessages(newHash), existing);
 
-      const existingUpdateMessage = globalRecoil().getLoadable(diffUpdateMessagesState(oldHash));
-      if (existingUpdateMessage.state === 'hasValue') {
+      const existingUpdateMessage = readAtom(diffUpdateMessagesState(oldHash));
+      if (existingUpdateMessage && existingUpdateMessage !== '') {
         // TODO: this doesn't work if you have multiple commits selected...
-        globalRecoil().set(diffUpdateMessagesState(newHash), existingUpdateMessage.valueOrThrow());
+        writeAtom(diffUpdateMessagesState(newHash), existingUpdateMessage);
       }
     }
   });

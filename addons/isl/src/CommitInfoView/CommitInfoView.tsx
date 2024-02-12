@@ -118,7 +118,7 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
-  const [updateMessage, setUpdateMessage] = useRecoilState(
+  const [updateMessage, setUpdateMessage] = useAtom(
     // Combine hashes to key the typed update message.
     // This is kind of volatile, since if you change your selection at all, the message will be cleared.
     diffUpdateMessagesState(selectedCommits.map(commit => commit.hash).join(',')),
@@ -557,7 +557,7 @@ function ActionsBar({
   const schema = useAtomValue(commitMessageFieldsSchema);
   const headCommit = useAtomValue(latestHeadCommit);
 
-  const [updateMessage, setUpdateMessage] = useRecoilState(diffUpdateMessagesState(commit.hash));
+  const [updateMessage, setUpdateMessage] = useAtom(diffUpdateMessagesState(commit.hash));
 
   const messageSyncEnabled = useAtomValue(messageSyncingEnabledState);
 
