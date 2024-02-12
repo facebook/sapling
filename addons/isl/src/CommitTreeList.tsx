@@ -99,6 +99,7 @@ function DagCommitList(props: DagCommitListProps) {
       dag={dag}
       subset={subset}
       className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
+      data-testid="commit-tree-root"
       renderCommit={renderCommit}
       renderCommitExtras={renderCommitExtras}
       renderGlyph={renderGlyph}
