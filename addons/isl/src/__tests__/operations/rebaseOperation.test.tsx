@@ -22,10 +22,14 @@ import {
   dragAndDropCommits,
   simulateUncommittedChangedFiles,
   COMMIT,
+  enableDagRenderer,
+  scanForkedBranchHashes,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
+
+enableDagRenderer();
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
 
@@ -95,9 +99,7 @@ describe('rebase operation', () => {
   it('previews onto correct branch', () => {
     expect(screen.getAllByText('Commit D')).toHaveLength(1);
     dragAndDropCommits('d', 'x');
-
-    expect(within(screen.getByTestId('branch-from-x')).queryByTestId('commit-d'));
-    expect(within(screen.getByTestId('branch-from-x')).queryByTestId('commit-e'));
+    expect(scanForkedBranchHashes('x')).toEqual(['d', 'e']);
   });
 
   it('cannot drag public commits', () => {
@@ -232,23 +234,12 @@ describe('rebase operation', () => {
   describe('stacking optimistic state', () => {
     it('cannot drag and drop preview descendants', () => {
       dragAndDropCommits('d', 'a');
-
-      expect(
-        within(screen.getByTestId('branch-from-a')).queryByTestId('commit-d'),
-      ).toBeInTheDocument();
-      expect(
-        within(screen.getByTestId('branch-from-a')).queryByTestId('commit-e'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('a')).toEqual(['d', 'e']);
 
       dragAndDropCommits(getCommitWithPreview('e', CommitPreview.REBASE_DESCENDANT), 'b');
 
       // we still see same commit preview
-      expect(
-        within(screen.getByTestId('branch-from-a')).queryByTestId('commit-d'),
-      ).toBeInTheDocument();
-      expect(
-        within(screen.getByTestId('branch-from-a')).queryByTestId('commit-e'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('a')).toEqual(['d', 'e']);
     });
 
     it('can drag preview root again', () => {
@@ -257,12 +248,7 @@ describe('rebase operation', () => {
       dragAndDropCommits(getCommitWithPreview('d', CommitPreview.REBASE_ROOT), 'b');
 
       // preview is updated to be based on b
-      expect(
-        within(screen.getByTestId('branch-from-b')).queryByTestId('commit-d'),
-      ).toBeInTheDocument();
-      expect(
-        within(screen.getByTestId('branch-from-b')).queryByTestId('commit-e'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('b')).toEqual(['d', 'e']);
     });
 
     it('can preview drag drop while previous rebase running', () => {
@@ -282,13 +268,9 @@ describe('rebase operation', () => {
       );
 
       // original optimistic is still there
-      expect(
-        within(screen.getByTestId('branch-from-a')).queryByTestId('commit-d'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('a')).toContain('d');
       // also previewing new drag
-      expect(
-        within(screen.getByTestId('branch-from-b')).queryByTestId('commit-e'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('b')).toEqual(['e']);
     });
 
     it('can see optimistic drag drop while previous rebase running', () => {
@@ -309,13 +291,9 @@ describe('rebase operation', () => {
       fireEvent.click(screen.getByText('Run Rebase'));
 
       // original optimistic is still there
-      expect(
-        within(screen.getByTestId('branch-from-a')).queryByTestId('commit-d'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('a')).toContain('d');
       // new optimistic state is also there
-      expect(
-        within(screen.getByTestId('branch-from-b')).queryByTestId('commit-e'),
-      ).toBeInTheDocument();
+      expect(scanForkedBranchHashes('b')).toEqual(['e']);
     });
   });
 });

@@ -262,7 +262,9 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   );
 
   const preNodeLinePart = (
-    <div className="render-dag-row-left-side-line pre-node-line grow">
+    <div
+      className="render-dag-row-left-side-line pre-node-line grow"
+      data-nodecolumn={row.nodeColumn}>
       {row.preNodeLine.map((l, i) => {
         const c = i === row.nodeColumn ? (info.isHead ? YOU_ARE_HERE_COLOR : color) : undefined;
         return <PadTile key={i} line={l} scaleY={0.1} stretchY={true} color={c} />;

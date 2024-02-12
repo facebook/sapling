@@ -363,3 +363,44 @@ export function enableDagRenderer() {
     setTestUseDag(false);
   });
 }
+
+/**
+ * Check that the "commit" is in the forked branch from "base".
+ *
+ *   o  <- does not return commit hashes here (not right-side)
+ *   :
+ *   |  ┌─────┐
+ *   |  │  o  │
+ *   |  │  :  │
+ *   |  │  o  │ <- return commit hashes here (right-side branch)
+ *   |  │  |  │
+ *   |  │  o  │
+ *   |  │ /   │
+ *   |  └─────┘
+ *   |  /
+ *   base
+ *
+ * This is a naive implementation that does not consider merges.
+ */
+export function scanForkedBranchHashes(base: string): string[] {
+  const baseRow = screen.getByTestId(`dag-row-group-${base}`);
+  const getAttr = (e: Element, attr: string) => e.querySelector(`[${attr}]`)?.getAttribute(attr);
+  const getNodeColumn = (row: Element) => parseInt(getAttr(row, 'data-nodecolumn') ?? '-1');
+  const baseIndent = getNodeColumn(baseRow);
+  // Scan rows above baseRow.
+  let prevRow = baseRow.previousElementSibling;
+  const branchHashes = [];
+  while (prevRow) {
+    const prevIndent = getNodeColumn(prevRow);
+    if (prevIndent <= baseIndent) {
+      // No longer right-side branch from 'base'.
+      break;
+    }
+    const hash = getAttr(prevRow, 'data-commit-hash');
+    if (hash) {
+      branchHashes.push(hash);
+    }
+    prevRow = prevRow.previousElementSibling;
+  }
+  return branchHashes;
+}
