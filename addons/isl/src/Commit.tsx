@@ -59,7 +59,6 @@ import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo, useCallback, useEffect, useState} from 'react';
-import {useRecoilCallback} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -646,62 +645,53 @@ function DraggableCommit({
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
 }) {
   const [dragDisabledMessage, setDragDisabledMessage] = useState<string | null>(null);
-  const handleDragEnter = useRecoilCallback(
-    ({snapshot}) =>
-      () => {
-        // Capture the environment.
-        const currentBeingDragged = commitBeingDragged;
-        const currentDndId = ++lastDndId;
-        const release = snapshot.retain();
+  const handleDragEnter = useCallback(() => {
+    // Capture the environment.
+    const currentBeingDragged = commitBeingDragged;
+    const currentDndId = ++lastDndId;
 
-        const handleDnd = () => {
-          // Skip handling if there was a new "DragEnter" event that invalidates this one.
-          if (lastDndId != currentDndId) {
-            return;
-          }
-          const dag = readAtom(latestDag);
+    const handleDnd = () => {
+      // Skip handling if there was a new "DragEnter" event that invalidates this one.
+      if (lastDndId != currentDndId) {
+        return;
+      }
+      const dag = readAtom(latestDag);
 
-          if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
-            const beingDragged = currentBeingDragged;
-            if (dag.has(beingDragged.hash)) {
-              if (
-                // can't rebase a commit onto its descendants
-                !dag.isAncestor(beingDragged.hash, commit.hash) &&
-                // can't rebase a commit onto its parent... it's already there!
-                !(beingDragged.parents as Array<string>).includes(commit.hash)
-              ) {
-                // if the dest commit has a remote bookmark, use that instead of the hash.
-                // this is easier to understand in the command history and works better with optimistic state
-                const destination =
-                  commit.remoteBookmarks.length > 0
-                    ? succeedableRevset(commit.remoteBookmarks[0])
-                    : latestSuccessorUnlessExplicitlyObsolete(commit);
-                writeAtom(operationBeingPreviewedJotai, op => {
-                  const newRebase = new RebaseOperation(
-                    latestSuccessorUnlessExplicitlyObsolete(beingDragged),
-                    destination,
-                  );
-                  const isEqual = newRebase.equals(op);
-                  return isEqual ? op : newRebase;
-                });
-              }
-            }
+      if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
+        const beingDragged = currentBeingDragged;
+        if (dag.has(beingDragged.hash)) {
+          if (
+            // can't rebase a commit onto its descendants
+            !dag.isAncestor(beingDragged.hash, commit.hash) &&
+            // can't rebase a commit onto its parent... it's already there!
+            !(beingDragged.parents as Array<string>).includes(commit.hash)
+          ) {
+            // if the dest commit has a remote bookmark, use that instead of the hash.
+            // this is easier to understand in the command history and works better with optimistic state
+            const destination =
+              commit.remoteBookmarks.length > 0
+                ? succeedableRevset(commit.remoteBookmarks[0])
+                : latestSuccessorUnlessExplicitlyObsolete(commit);
+            writeAtom(operationBeingPreviewedJotai, op => {
+              const newRebase = new RebaseOperation(
+                latestSuccessorUnlessExplicitlyObsolete(beingDragged),
+                destination,
+              );
+              const isEqual = newRebase.equals(op);
+              return isEqual ? op : newRebase;
+            });
           }
-        };
+        }
+      }
+    };
 
-        // This allows us to recieve a list of "queued" DragEnter events
-        // before actually handling them. This way we can skip "invalidated"
-        // events and only handle the last (valid) one.
-        window.setTimeout(() => {
-          try {
-            handleDnd();
-          } finally {
-            release();
-          }
-        }, 1);
-      },
-    [commit],
-  );
+    // This allows us to recieve a list of "queued" DragEnter events
+    // before actually handling them. This way we can skip "invalidated"
+    // events and only handle the last (valid) one.
+    window.setTimeout(() => {
+      handleDnd();
+    }, 1);
+  }, [commit]);
 
   const handleDragStart = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {

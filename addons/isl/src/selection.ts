@@ -21,7 +21,6 @@ import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {atomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
-import {useRecoilCallback} from 'recoil';
 
 /**
  * See {@link selectedCommitInfos}
@@ -143,8 +142,8 @@ export function useCommitSelection(hash: string): {
     [hash],
   );
 
-  const overrideSelection = useRecoilCallback(
-    () => (newSelected: Array<Hash>) => {
+  const overrideSelection = useCallback(
+    (newSelected: Array<Hash>) => {
       // previews won't change a commit from draft -> public, so we don't need
       // to use previews here
       const dag = readAtom(latestDag);
