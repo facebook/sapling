@@ -78,10 +78,12 @@ Basic case, deep scrub of the good branch still works
 
 Basic case, deep scrub of the bad branch does work only because of current mitigations
 and only because the bad commit is a head of the branch.
-  $ mononoke_walker scrub -I deep -q -b bad 2>&1 | strip_glog
+  $ mononoke_walker scrub -I deep -q -b bad \
+  > --exclude-node Changeset:c567ecc582f8822cf1529a127dec105db78a440fbeaa21221ce2abc4affff6ec \
+  > 2>&1 | strip_glog
   Walking edge types *, repo: repo (glob)
   Walking node types *, repo: repo (glob)
-  Seen,Loaded: 2,2, repo: repo
+  Seen,Loaded: 1,1, repo: repo
   Bytes/s,*, repo: repo (glob)
   Walked*, repo: repo (glob)
 
