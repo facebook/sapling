@@ -5,12 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {languages} from 'monaco-editor';
-
-export type LanguageExtensionAmendment = Omit<
-  languages.ILanguageExtensionPoint,
-  'id' | 'configuration'
->;
+// Omit<'monaco-editor'.languages.ILanguageExtensionPoint, 'id' | 'configuration'>;
+export type LanguageExtensionAmendment = {
+  extensions?: string[];
+  filenames?: string[];
+  filenamePatterns?: string[];
+  firstLine?: string;
+  aliases?: string[];
+  mimetypes?: string[];
+};
 
 /**
  * There are all sorts of additional file names/extensions that benefit from

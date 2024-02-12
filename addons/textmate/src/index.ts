@@ -516,7 +516,7 @@ function normalizeAutoClosingPairs(languageConfiguration: NormalizedLanguageExte
     return;
   }
 
-  const {autoClosingPairs} = languageConfiguration.configuration;
+  const {autoClosingPairs} = languageConfiguration.configuration ?? {};
   if (!Array.isArray(autoClosingPairs)) {
     return;
   }
