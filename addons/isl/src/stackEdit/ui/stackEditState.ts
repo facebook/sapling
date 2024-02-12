@@ -165,10 +165,14 @@ export type Loading<T> =
   | {state: 'hasValue'; value: T}
   | {state: 'hasError'; error: string};
 
-// This is private so we can maintain state consistency
-// (ex. stack and requested hashes cannot be out of sync)
-// via selectors.
-const stackEditState = (() => {
+/**
+ * Meant to be private. Exported for debugging purpose.
+ *
+ * You probably want to use `useStackEditState` and other atoms instead,
+ * which ensures consistency (ex. stack and requested hashes cannot be
+ * out of sync).
+ */
+export const stackEditState = (() => {
   const inner = atom<StackEditState>({
     hashes: new Set<Hash>(),
     intention: 'general',

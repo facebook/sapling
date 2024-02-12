@@ -45,7 +45,7 @@ const platformAltKey = (e: KeyboardEvent) => (isMac ? e.altKey : e.ctrlKey);
  * Is the alt key currently held down, used to show full file paths.
  * On windows, this actually uses the ctrl key instead to avoid conflicting with OS focus behaviors.
  */
-const holdingAltAtom = atom<boolean>(false);
+export const holdingAltAtom = atom<boolean>(false);
 
 const keydown = (e: KeyboardEvent) => {
   if (platformAltKey(e)) {

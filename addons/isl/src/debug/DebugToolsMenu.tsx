@@ -9,6 +9,7 @@ import type {Heartbeat} from '../heartbeat';
 import type {ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
+import {holdingAltAtom} from '../ChangedFile';
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
@@ -17,7 +18,7 @@ import {Tooltip} from '../Tooltip';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
-import {atomWithOnChange} from '../jotaiUtils';
+import {atomWithOnChange, readAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
@@ -27,11 +28,10 @@ import {
   repositoryInfo,
 } from '../serverAPIState';
 import {ComponentExplorerButton} from './ComponentExplorer';
-import {getAllRecoilStateJson} from './getAllRecoilStateJson';
+import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
-import {useRecoilCallback} from 'recoil';
 
 import './DebugToolsMenu.css';
 
@@ -54,7 +54,7 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
       <DropdownField title={<T>Commit graph</T>}>
         <DebugDagInfo />
       </DropdownField>
-      <DropdownField title={<T>Internal Recoil State</T>}>
+      <DropdownField title={<T>Internal Jotai State</T>}>
         <InternalState />
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
@@ -69,18 +69,23 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
 
 function InternalState() {
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
-  const generate = useRecoilCallback(({snapshot}) => () => {
-    const nodes = getAllRecoilStateJson(snapshot);
+  const generate = () => {
+    // No need for useAtomValue - no need to re-render or recalculate this function.
+    const needSerialize = readAtom(holdingAltAtom);
+    const atomsState = readInterestingAtoms();
+    const value = needSerialize ? serializeAtomsState(atomsState) : atomsState;
     // eslint-disable-next-line no-console
-    console.log(nodes);
-    setSuccessMessage('logged to console!');
-  });
+    console.log(value);
+    setSuccessMessage(`logged to console!${needSerialize ? ' (serialized)' : ''}`);
+  };
 
   return (
-    <div className="internal-debug-tools-recoil-state">
+    <div className="internal-debug-tools-atom-state">
       <Tooltip
         placement="bottom"
-        title={t('Capture a snapshot of all recoil atom state, log it to the dev tools console.')}>
+        title={t(
+          'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.',
+        )}>
         <VSCodeButton onClick={generate} appearance="secondary">
           <T>Take Snapshot</T>
         </VSCodeButton>

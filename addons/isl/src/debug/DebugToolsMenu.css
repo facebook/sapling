@@ -9,7 +9,7 @@
   width: 500px;
 }
 
-.internal-debug-tools-recoil-state .tooltip-creator {
+.internal-debug-tools-atom-state .tooltip-creator {
   display: flex;
   gap: var(--pad);
   align-items: center;

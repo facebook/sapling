@@ -22,12 +22,11 @@ import type {
 } from './types';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
-import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
-import {getAllRecoilStateJson} from './debug/getAllRecoilStateJson';
+import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
 import {
   atomFamilyWeak,
   configBackedAtom,
@@ -44,7 +43,7 @@ import {atom, DefaultValue} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
-const jotaiRepositoryData = jotaiAtom<{info?: RepoInfo; cwd?: string}>({});
+export const jotaiRepositoryData = jotaiAtom<{info?: RepoInfo; cwd?: string}>({});
 
 registerDisposable(
   jotaiRepositoryData,
@@ -184,6 +183,9 @@ export const latestUncommittedChangesDataJotai = jotaiAtom<{
   files: UncommittedChanges;
   error?: Error;
 }>({fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []});
+// This is used by a test. Tests do not go through babel to rewrite source
+// to insert debugLabel.
+latestUncommittedChangesDataJotai.debugLabel = 'latestUncommittedChangesData';
 
 registerCleanup(
   latestUncommittedChangesDataJotai,
@@ -773,10 +775,10 @@ export function useClearAllOptimisticState() {
 registerDisposable(
   serverAPI,
   serverAPI.onMessageOfType('getUiState', () => {
-    const state = getAllRecoilStateJson(globalRecoil().getSnapshot());
+    const state = readInterestingAtoms();
     window.clientToServerAPI?.postMessage({
       type: 'gotUiState',
-      state: JSON.stringify(state, undefined, 2),
+      state: JSON.stringify(serializeAtomsState(state), undefined, 2),
     });
   }),
   import.meta.hot,
