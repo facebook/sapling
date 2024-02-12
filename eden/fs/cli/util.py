@@ -852,8 +852,8 @@ def decode_varint(buf: bytes) -> typing.Tuple[int, int]:
     return result, bytes_read
 
 
-def create_filtered_rootid(root_id: str, filter: Optional[str] = None) -> bytes:
-    """Create a FilteredRootId from a RootId and FilterId pair.
+def create_filtered_rootid(root_id: str, filter_path: Optional[str] = None) -> bytes:
+    """Create a FilteredRootId from a RootId and filter path pair.
 
     The FilteredRootId is in the form:
 
@@ -864,6 +864,6 @@ def create_filtered_rootid(root_id: str, filter: Optional[str] = None) -> bytes:
     filter is provided, the "null" filter is used.
     """
     original_len = len(root_id)
-    filter_id = filter if filter is not None else "null"
+    filter_id = f"{filter_path}:{root_id}" if filter_path is not None else "null"
     varint = encode_varint(original_len)
     return varint + root_id.encode() + filter_id.encode()
