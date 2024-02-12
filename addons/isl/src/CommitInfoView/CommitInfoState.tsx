@@ -13,7 +13,6 @@ import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
-import {entangledAtoms} from '../recoilUtils';
 import {selectedCommitInfos} from '../selection';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {
@@ -30,12 +29,7 @@ export type EditedMessage = {fields: Partial<CommitMessageFields>};
 
 export type CommitInfoMode = 'commit' | 'amend';
 
-export const [commitMessageTemplate, commitMessageTemplateRecoil] = entangledAtoms<
-  EditedMessage | undefined
->({
-  key: 'commitMessageTemplate',
-  default: undefined,
-});
+export const commitMessageTemplate = atom<EditedMessage | undefined>(undefined);
 registerDisposable(
   commitMessageTemplate,
   serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {

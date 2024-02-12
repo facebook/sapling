@@ -10,8 +10,8 @@ import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from '
 
 import {MutationDag} from './dag/mutation_dag';
 import {writeAtom} from './jotaiUtils';
-import {entangledAtoms} from './recoilUtils';
 import {exactRevset, succeedableRevset} from './types';
+import {atom} from 'jotai';
 import {DefaultValue} from 'recoil';
 
 type Successions = Array<[oldHash: string, newHash: string]>;
@@ -95,10 +95,7 @@ export class SuccessionTracker {
 
 export const successionTracker = new SuccessionTracker();
 
-export const [latestSuccessorsMapAtom, latestSuccessorsMap] = entangledAtoms<MutationDag>({
-  key: 'latestSuccessorsMap',
-  default: new MutationDag(),
-});
+export const latestSuccessorsMapAtom = atom<MutationDag>(new MutationDag());
 
 successionTracker.onSuccessions(successions => {
   writeAtom(latestSuccessorsMapAtom, existing => {

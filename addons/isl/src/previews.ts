@@ -11,7 +11,7 @@ import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
-import {latestSuccessorsMap} from './SuccessionTracker';
+import {latestSuccessorsMapAtom} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
@@ -29,7 +29,6 @@ import {
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
-import {useRecoilValue} from 'recoil';
 import {notEmpty, unwrap} from 'shared/utils';
 
 export enum CommitPreview {
@@ -325,7 +324,7 @@ export function useMarkOperationsCompleted(): void {
   const commits = useAtomValue(latestCommits);
   const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
   const conflicts = useAtomValue(mergeConflictsJotai);
-  const successorMap = useRecoilValue(latestSuccessorsMap);
+  const successorMap = useAtomValue(latestSuccessorsMapAtom);
 
   const [list, setOperationList] = useAtom(operationListJotai);
 
