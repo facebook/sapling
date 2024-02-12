@@ -858,8 +858,12 @@ impl EdenApi for Client {
                 .collect(),
         };
         self.log_request(&land_stack_req, "land");
+
+        // Currently, server sends the land_stack response once it is fully completed,
+        // disable min speed transfer check to avoid premature termination of requests.
         let req = self
             .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
             .cbor(&land_stack_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
