@@ -14,10 +14,14 @@ import {
   simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
+  enableDagRenderer,
+  expectYouAreHerePointAt,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
+
+enableDagRenderer();
 
 describe('GotoOperation', () => {
   beforeEach(() => {
@@ -72,12 +76,7 @@ describe('GotoOperation', () => {
   it('renders optimistic state while running', () => {
     clickGoto('a');
 
-    expect(
-      within(screen.getByTestId('commit-a')).queryByText("You're moving here..."),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByTestId('commit-b')).queryByText('You were here...'),
-    ).toBeInTheDocument();
+    expectYouAreHerePointAt('a');
   });
 
   it('optimistic state resolves after goto completes', () => {
@@ -94,9 +93,10 @@ describe('GotoOperation', () => {
       });
     });
 
-    expect(within(screen.getByTestId('commit-a')).queryByText('You are here')).toBeInTheDocument();
-    expect(screen.queryByText("You're moving here...")).not.toBeInTheDocument();
-    expect(screen.queryByText('You were here...')).not.toBeInTheDocument();
+    // With the DAG renderer, we no longer show old "were here" and new "moving here".
+    // The idea is that there would be a spinner on the "status" calculation to indicate
+    // the in-progress checkout. For now this test looks the same as the above.
+    expectYouAreHerePointAt('a');
   });
 
   describe('bookmarks as destinations', () => {
@@ -117,12 +117,7 @@ describe('GotoOperation', () => {
     it('renders optimistic state while running', () => {
       clickGoto('2');
 
-      expect(
-        within(screen.getByTestId('commit-2')).queryByText("You're moving here..."),
-      ).toBeInTheDocument();
-      expect(
-        within(screen.getByTestId('commit-b')).queryByText('You were here...'),
-      ).toBeInTheDocument();
+      expectYouAreHerePointAt('2');
     });
   });
 
@@ -144,13 +139,8 @@ describe('GotoOperation', () => {
         });
       });
 
-      // the previews should stay intact
-      expect(
-        within(screen.getByTestId('commit-c2')).queryByText("You're moving here..."),
-      ).toBeInTheDocument();
-      expect(
-        within(screen.getByTestId('commit-b2')).queryByText('You were here...'),
-      ).toBeInTheDocument();
+      // "c" becomes "c2"
+      expectYouAreHerePointAt('c2');
     });
   });
 });

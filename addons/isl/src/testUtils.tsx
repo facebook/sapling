@@ -303,6 +303,17 @@ export function dragAndDropCommits(draggedCommit: Hash | HTMLElement, onto: Hash
   });
 }
 
+/** Check that YouAreHere points to the given commit. */
+export function expectYouAreHerePointAt(hash: string) {
+  // The previous row of "hash" should be "YouAreHere".
+  //   YouAreHere
+  //  /
+  // hash
+  const row = screen.getByTestId(`dag-row-group-${hash}`);
+  const previousRow = row.previousElementSibling;
+  expect(previousRow).toHaveTextContent('You are here');
+}
+
 /**
  * Despite catching the error in our error boundary, react + jsdom still
  * print big scary messages to console.warn when we throw an error.
