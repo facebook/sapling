@@ -9,7 +9,6 @@ import App from '../App';
 import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
 import platform from '../platform';
 import {
-  clearAllRecoilSelectorCaches,
   COMMIT,
   expectMessageSentToServer,
   openCommitInfoSidebar,
@@ -86,11 +85,6 @@ diff --git someFile.js someFile.js
 `;
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-
-// reset recoil caches between test runs
-afterEach(() => {
-  clearAllRecoilSelectorCaches();
-});
 
 describe('ComparisonView', () => {
   beforeEach(() => {

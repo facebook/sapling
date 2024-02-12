@@ -22,7 +22,6 @@ import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
 import {mostRecentSubscriptionIds} from './serverAPIState';
 import {screen, act, within, waitFor} from '@testing-library/react';
-import {selector, snapshot_UNSTABLE} from 'recoil';
 import {nextTick} from 'shared/testUtils';
 
 const testMessageBus = messageBus as TestingEventBus;
@@ -319,20 +318,6 @@ export function suppressReactErrorBoundaryErrorMessages() {
     jest.restoreAllMocks();
   });
 }
-
-const clearSelectorCachesState = selector({
-  key: 'clearSelectorCachesState',
-  get: ({getCallback}) =>
-    getCallback(({snapshot, refresh}) => () => {
-      for (const node of snapshot.getNodes_UNSTABLE()) {
-        refresh(node);
-      }
-    }),
-});
-
-export const clearAllRecoilSelectorCaches = () => {
-  snapshot_UNSTABLE().getLoadable(clearSelectorCachesState).getValue();
-};
 
 /**
  * Print test name beforeEach. This can be useful to figure out which test prints
