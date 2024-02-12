@@ -83,7 +83,7 @@ import {
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect} from 'react';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -448,7 +448,7 @@ function ShowingRemoteMessageBanner({
   const provider = useAtomValue(codeReviewProvider);
   const schema = useAtomValue(commitMessageFieldsSchema);
   const runOperation = useRunOperation();
-  const syncingEnabled = useRecoilValue(messageSyncingEnabledState);
+  const syncingEnabled = useAtomValue(messageSyncingEnabledState);
 
   const loadLocalMessage = useCallback(() => {
     const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
@@ -559,7 +559,7 @@ function ActionsBar({
 
   const [updateMessage, setUpdateMessage] = useRecoilState(diffUpdateMessagesState(commit.hash));
 
-  const messageSyncEnabled = useRecoilValue(messageSyncingEnabledState);
+  const messageSyncEnabled = useAtomValue(messageSyncingEnabledState);
 
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.

@@ -8,18 +8,13 @@
 import type {DiffId} from './types';
 
 import serverAPI from './ClientToServerAPI';
-import {codeReviewProviderRecoil} from './codeReview/CodeReviewInfo';
-import {jotaiMirrorFromRecoil} from './recoilUtils';
-import {selector} from 'recoil';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {atom} from 'jotai';
 
-export const messageSyncingEnabledState = selector({
-  key: 'messageSyncingEnabledState',
-  get: ({get}) => {
-    const provider = get(codeReviewProviderRecoil);
-    return provider?.enableMessageSyncing ?? false;
-  },
+export const messageSyncingEnabledState = atom(get => {
+  const provider = get(codeReviewProvider);
+  return provider?.enableMessageSyncing ?? false;
 });
-export const messageSyncingEnabledStateJotai = jotaiMirrorFromRecoil(messageSyncingEnabledState);
 
 export async function updateRemoteMessage(
   diffId: DiffId,

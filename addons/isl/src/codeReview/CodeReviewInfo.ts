@@ -19,15 +19,15 @@ import {
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
-import {messageSyncingEnabledStateJotai} from '../messageSyncing';
+import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
 import {entangledAtoms} from '../recoilUtils';
-import {commitByHash, repositoryInfo, repositoryInfoJotai} from '../serverAPIState';
+import {commitByHash, repositoryInfoJotai} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
-import {DefaultValue, selector} from 'recoil';
+import {DefaultValue} from 'recoil';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
@@ -35,14 +35,6 @@ import {unwrap} from 'shared/utils';
 export const codeReviewProvider = atom<UICodeReviewProvider | null>(get => {
   const repoInfo = get(repositoryInfoJotai);
   return repoInfoToCodeReviewProvider(repoInfo);
-});
-
-export const codeReviewProviderRecoil = selector<UICodeReviewProvider | null>({
-  key: 'codeReviewProviderRecoil',
-  get: ({get}) => {
-    const repoInfo = get(repositoryInfo);
-    return repoInfoToCodeReviewProvider(repoInfo);
-  },
 });
 
 function repoInfoToCodeReviewProvider(repoInfo?: RepoInfo): UICodeReviewProvider | null {
@@ -166,7 +158,7 @@ export const latestCommitMessage = atomFamily((hash: Hash | 'head') =>
       return ['', ''];
     }
 
-    const syncEnabled = get(messageSyncingEnabledStateJotai);
+    const syncEnabled = get(messageSyncingEnabledState);
 
     let remoteTitle = commit.title;
     let remoteDescription = commit.description;
