@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
+import type {HighlightedToken} from './textmate-lib/tokenize';
 
+import {CSS_CLASS_PREFIX} from './textmate-lib/textmateStyles';
 import {diffWordsWithSpace} from 'diff';
-import {CSS_CLASS_PREFIX} from 'shared/textmate-lib/textmateStyles';
 
 /** Type of Chunk: Added, Removed, Unmodified. */
 type ChunkType = 'A' | 'R' | 'U';

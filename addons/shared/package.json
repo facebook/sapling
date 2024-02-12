@@ -8,13 +8,10 @@
     "@testing-library/user-event": "^13.2.1",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "@types/jest": "27.5.2",
     "react-dom": "^18.1.0",
-    "jest": "27.5.1",
-    "ts-jest": "27"
+    "jest": "27.5.1"
   },
   "dependencies": {
-    "@primer/react": "35.7.0",
     "@types/diff": "^5.0.2",
     "@vscode/codicons": "^0.0.33",
     "diff-sequences": "^29.4.3",
@@ -24,7 +21,6 @@
     "node-abort-controller": "^3.1.1",
     "react": "^18.1.0",
     "recoil": "^0.7.5",
-    "styled-components": "^5.3.5",
     "vscode-oniguruma": "^1.6.1",
     "vscode-textmate": "^6.0.0"
   },

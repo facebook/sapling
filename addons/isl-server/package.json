@@ -25,10 +25,7 @@
     "jest": "27.5.1",
     "rollup": "^4.9.5",
     "rollup-plugin-esbuild": "^6.1.0",
-    "rollup-plugin-includepaths": "^0.2.4",
     "ts-jest": "27",
-    "ts-loader": "^9.3.1",
-    "ts-node": "^10.9.1",
     "typescript": "^4.6.4"
   },
   "workspaces": {
@@ -49,6 +46,7 @@
     "execa": "5.1.1",
     "fb-watchman": "^2.0.2",
     "isl": "0.1.0",
-    "ws": "^8.6.0"
+    "ws": "^8.6.0",
+    "shared": "0.1.0"
   }
 }
