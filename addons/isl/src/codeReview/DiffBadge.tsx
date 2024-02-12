@@ -21,12 +21,12 @@ import {PullRevOperation} from '../operations/PullRevOperation';
 import platform from '../platform';
 import {useRunOperation} from '../serverAPIState';
 import {exactRevset} from '../types';
-import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
+import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusByHash} from './syncStatus';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
-import {useState, Component, Suspense} from 'react';
+import {Component, Suspense, useState} from 'react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
@@ -39,7 +39,7 @@ export const showDiffNumberConfig = configBackedAtom<boolean>('isl.show-diff-num
  * such as its status, number of comments, CI state, etc.
  */
 export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions: boolean}) {
-  const repo = useRecoilValue(codeReviewProvider);
+  const repo = useAtomValue(codeReviewProvider);
   const diffId = commit.diffId;
   if (repo == null || diffId == null) {
     return null;

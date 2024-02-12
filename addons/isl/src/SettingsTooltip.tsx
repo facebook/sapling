@@ -33,8 +33,8 @@ import {
   VSCodeLink,
   VSCodeOption,
 } from '@vscode/webview-ui-toolkit/react';
-import {useAtom} from 'jotai';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {useAtom, useAtomValue} from 'jotai';
+import {useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {unwrap} from 'shared/utils';
@@ -187,7 +187,7 @@ function SettingsDropdown({
 
 function ConfirmSubmitStackSetting() {
   const [value, setValue] = useAtom(confirmShouldSubmitEnabledAtom);
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   if (provider == null || !provider.supportSubmittingAsDraft) {
     return null;
   }

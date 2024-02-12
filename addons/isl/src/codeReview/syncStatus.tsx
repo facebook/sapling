@@ -8,7 +8,7 @@
 import type {Hash} from '../types';
 
 import {latestCommits} from '../serverAPIState';
-import {allDiffSummaries, codeReviewProviderJotai} from './CodeReviewInfo';
+import {allDiffSummaries, codeReviewProvider} from './CodeReviewInfo';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
 
@@ -19,7 +19,7 @@ export enum SyncStatus {
 }
 
 export const syncStatusAtom = atom(get => {
-  const provider = get(codeReviewProviderJotai);
+  const provider = get(codeReviewProvider);
   if (provider == null) {
     return undefined;
   }

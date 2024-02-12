@@ -12,8 +12,7 @@ import {t, T} from '../i18n';
 import {configBackedAtom} from '../jotaiUtils';
 import {codeReviewProvider} from './CodeReviewInfo';
 import {VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import {useAtom} from 'jotai';
-import {useRecoilValue} from 'recoil';
+import {useAtom, useAtomValue} from 'jotai';
 
 export const submitAsDraft = configBackedAtom<boolean>('isl.submitAsDraft', false);
 
@@ -24,7 +23,7 @@ export function SubmitAsDraftCheckbox({
   | {commitsToBeSubmit: Array<CommitInfo>; forceShow?: undefined}
   | {forceShow: true; commitsToBeSubmit?: undefined}) {
   const [isDraft, setIsDraft] = useAtom(submitAsDraft);
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   if (
     !forceShow &&
     (provider == null ||

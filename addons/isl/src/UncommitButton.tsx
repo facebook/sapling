@@ -21,7 +21,7 @@ export function UncommitButton() {
   const dag = useAtomValue(dagWithPreviews);
   const headCommit = dag.resolve('.');
 
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const diff = useAtomValue(diffSummary(headCommit?.diffId));
   const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
 

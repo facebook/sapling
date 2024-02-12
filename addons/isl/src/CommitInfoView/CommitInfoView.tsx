@@ -114,7 +114,7 @@ export function CommitInfoSidebar() {
 }
 
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
@@ -445,7 +445,7 @@ function ShowingRemoteMessageBanner({
   latestFields: CommitMessageFields;
   editedCommitMessageKey: string;
 }) {
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const schema = useAtomValue(commitMessageFieldsSchema);
   const runOperation = useRunOperation();
   const syncingEnabled = useRecoilValue(messageSyncingEnabledState);
@@ -550,7 +550,7 @@ function ActionsBar({
     !selection.isNothingSelected() &&
     ((!isCommitMode && isAnythingBeingEdited) || uncommittedChanges.length > 0);
 
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);

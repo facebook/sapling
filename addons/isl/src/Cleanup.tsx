@@ -67,7 +67,7 @@ export function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChi
 
 export function CleanupAllButton() {
   const dag = useAtomValue(dagWithPreviews);
-  const reviewProvider = useRecoilValue(codeReviewProvider);
+  const reviewProvider = useAtomValue(codeReviewProvider);
   const diffMap = useAtomValue(allDiffSummaries)?.value;
   if (diffMap == null || reviewProvider == null) {
     return null;

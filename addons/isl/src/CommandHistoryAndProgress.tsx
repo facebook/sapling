@@ -37,7 +37,7 @@ function OperationDescription(props: {
   const {info, operation, className} = props;
   const desc = operation.getDescriptionForDisplay();
 
-  const reviewProvider = useRecoilValue(codeReviewProvider);
+  const reviewProvider = useAtomValue(codeReviewProvider);
 
   if (desc?.description) {
     return <span className={className}>{desc.description}</span>;

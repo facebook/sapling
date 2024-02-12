@@ -205,7 +205,7 @@ export const Commit = memo(
         !isPublic &&
         (syncStatus === SyncStatus.LocalIsNewer || syncStatus === SyncStatus.RemoteIsNewer)
       ) {
-        const provider = snapshot.getLoadable(codeReviewProvider).valueMaybe();
+        const provider = readAtom(codeReviewProvider);
         if (provider?.supportsComparingSinceLastSubmit) {
           items.push({
             label: <T replace={{$provider: provider?.label ?? 'remote'}}>Compare with $provider</T>,

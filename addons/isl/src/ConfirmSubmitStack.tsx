@@ -7,7 +7,6 @@
 
 import type {CommitInfo} from './types';
 import type {MutableRefObject} from 'react';
-import type {Snapshot} from 'recoil';
 
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
@@ -22,7 +21,7 @@ import {useModal} from './useModal';
 import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useRecoilCallback} from 'recoil';
 import {useAutofocusRef} from 'shared/hooks';
 import {unwrap} from 'shared/utils';
 
@@ -39,8 +38,8 @@ export type SubmitConfirmationReponse =
 
 type SubmitType = 'submit' | 'submit-all' | 'resubmit';
 
-export function shouldShowSubmitStackConfirmation(snapshot: Snapshot): boolean {
-  const provider = snapshot.getLoadable(codeReviewProvider).valueMaybe();
+export function shouldShowSubmitStackConfirmation(): boolean {
+  const provider = readAtom(codeReviewProvider);
   const shouldShowConfirmation = readAtom(confirmShouldSubmitEnabledAtom);
   return (
     shouldShowConfirmation === true &&
@@ -60,13 +59,13 @@ export function shouldShowSubmitStackConfirmation(snapshot: Snapshot): boolean {
 export function useShowConfirmSubmitStack() {
   const showModal = useModal();
 
-  return useRecoilCallback(({snapshot}) => async (mode: SubmitType, stack: Array<CommitInfo>) => {
-    if (!shouldShowSubmitStackConfirmation(snapshot)) {
+  return useRecoilCallback(() => async (mode: SubmitType, stack: Array<CommitInfo>) => {
+    if (!shouldShowSubmitStackConfirmation()) {
       const draft = readAtom(submitAsDraft);
       return {submitAsDraft: draft ?? false};
     }
 
-    const provider = snapshot.getLoadable(codeReviewProvider).valueMaybe();
+    const provider = readAtom(codeReviewProvider);
 
     const replace = {$numCommits: String(stack.length), $cmd: unwrap(provider).submitCommandName()};
     const title =
@@ -102,7 +101,7 @@ function ConfirmModalContent({
 
   const submitRef = useAutofocusRef();
 
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   return (
     <div className="confirm-submit-stack" data-testid="confirm-submit-stack">
       <div className="confirm-submit-stack-content">

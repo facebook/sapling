@@ -131,7 +131,7 @@ export function SuggestedReviewers({
   existingReviewers: Array<string>;
   addReviewer: (value: string) => unknown;
 }) {
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const recent = recentReviewers.getRecent().filter(s => !existingReviewers.includes(s));
   const mode = useAtomValue(commitMode);
   const currentCommitInfoViewCommit = useAtomValue(commitInfoViewCurrentCommits);

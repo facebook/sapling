@@ -83,7 +83,7 @@ export function CwdSelector() {
 function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   const info = useRecoilValue(repositoryInfo);
   const repoRoot = info?.type === 'success' ? info.repoRoot : null;
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const cwd = useAtomValue(serverCwd);
   return (
     <DropdownFields title={<T>Repository info</T>} icon="folder" data-testid="cwd-details-dropdown">

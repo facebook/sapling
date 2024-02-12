@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary, Hash, PageVisibility, Result} from '../types';
+import type {DiffId, DiffSummary, Hash, PageVisibility, RepoInfo, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
@@ -21,8 +21,8 @@ import {Internal} from '../Internal';
 import {atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledStateJotai} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
-import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
-import {commitByHash, repositoryInfo} from '../serverAPIState';
+import {entangledAtoms} from '../recoilUtils';
+import {commitByHash, repositoryInfo, repositoryInfoJotai} from '../serverAPIState';
 import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
@@ -32,31 +32,37 @@ import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
 
-export const codeReviewProvider = selector<UICodeReviewProvider | null>({
-  key: 'codeReviewProvider',
+export const codeReviewProvider = atom<UICodeReviewProvider | null>(get => {
+  const repoInfo = get(repositoryInfoJotai);
+  return repoInfoToCodeReviewProvider(repoInfo);
+});
+
+export const codeReviewProviderRecoil = selector<UICodeReviewProvider | null>({
+  key: 'codeReviewProviderRecoil',
   get: ({get}) => {
     const repoInfo = get(repositoryInfo);
-    if (repoInfo?.type !== 'success') {
-      return null;
-    }
-    if (repoInfo.codeReviewSystem.type === 'github') {
-      return new GithubUICodeReviewProvider(
-        repoInfo.codeReviewSystem,
-        repoInfo.preferredSubmitCommand ?? 'pr',
-      );
-    }
-    if (
-      repoInfo.codeReviewSystem.type === 'phabricator' &&
-      Internal.PhabricatorUICodeReviewProvider != null
-    ) {
-      return new Internal.PhabricatorUICodeReviewProvider(repoInfo.codeReviewSystem);
-    }
-
-    return null;
+    return repoInfoToCodeReviewProvider(repoInfo);
   },
 });
 
-export const codeReviewProviderJotai = jotaiMirrorFromRecoil(codeReviewProvider);
+function repoInfoToCodeReviewProvider(repoInfo?: RepoInfo): UICodeReviewProvider | null {
+  if (repoInfo?.type !== 'success') {
+    return null;
+  }
+  if (repoInfo.codeReviewSystem.type === 'github') {
+    return new GithubUICodeReviewProvider(
+      repoInfo.codeReviewSystem,
+      repoInfo.preferredSubmitCommand ?? 'pr',
+    );
+  }
+  if (
+    repoInfo.codeReviewSystem.type === 'phabricator' &&
+    Internal.PhabricatorUICodeReviewProvider != null
+  ) {
+    return new Internal.PhabricatorUICodeReviewProvider(repoInfo.codeReviewSystem);
+  }
+  return null;
+}
 
 export const diffSummary = atomFamily((diffId: DiffId | undefined) =>
   atom<Result<DiffSummary | undefined>>(get => {

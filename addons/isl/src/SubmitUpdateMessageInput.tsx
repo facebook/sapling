@@ -11,11 +11,12 @@ import {diffUpdateMessagesState} from './CommitInfoView/CommitInfoState';
 import {MinHeightTextField} from './CommitInfoView/MinHeightTextField';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
+import {useAtomValue} from 'jotai';
 import {useRef} from 'react';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilState} from 'recoil';
 
 export function SubmitUpdateMessageInput({commits}: {commits: Array<CommitInfo>}) {
-  const provider = useRecoilValue(codeReviewProvider);
+  const provider = useAtomValue(codeReviewProvider);
   const ref = useRef(null);
 
   // typically only one commit, but if you've selected multiple, we key the message on all hashes together.

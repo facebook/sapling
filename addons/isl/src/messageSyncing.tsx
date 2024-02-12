@@ -8,14 +8,14 @@
 import type {DiffId} from './types';
 
 import serverAPI from './ClientToServerAPI';
-import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {codeReviewProviderRecoil} from './codeReview/CodeReviewInfo';
 import {jotaiMirrorFromRecoil} from './recoilUtils';
 import {selector} from 'recoil';
 
 export const messageSyncingEnabledState = selector({
   key: 'messageSyncingEnabledState',
   get: ({get}) => {
-    const provider = get(codeReviewProvider);
+    const provider = get(codeReviewProviderRecoil);
     return provider?.enableMessageSyncing ?? false;
   },
 });

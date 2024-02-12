@@ -8,7 +8,6 @@
 import type {DagCommitInfo} from './dag/dag';
 import type {Hash} from './types';
 
-import {globalRecoil} from './AccessGlobalRecoil';
 import {CleanupButton, isStackEligibleForCleanup} from './Cleanup';
 import {FlexRow} from './ComponentUtils';
 import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './ConfirmSubmitStack';
@@ -39,7 +38,7 @@ import './StackActions.css';
  * like submitting, hiding, editing the stack.
  */
 export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
-  const reviewProvider = useRecoilValue(codeReviewProvider);
+  const reviewProvider = useAtomValue(codeReviewProvider);
   const diffMap = useAtomValue(allDiffSummaries);
   const stackHashes = useAtomValue(editingStackIntentionHashes)[1];
   const loadingState = useAtomValue(loadingStackState);
@@ -88,9 +87,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
       c => syncStatusMap?.get(c.hash) === SyncStatus.LocalIsNewer,
     );
 
-    const willShowConfirmationModal = shouldShowSubmitStackConfirmation(
-      globalRecoil().getSnapshot(),
-    );
+    const willShowConfirmationModal = shouldShowSubmitStackConfirmation();
 
     // any existing diffs -> show resubmit stack,
     if (
