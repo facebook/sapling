@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AtomFamilyWeak} from '../jotaiUtils';
+import {AtomFamilyWeak, useAtomGet, useAtomHas} from '../jotaiUtils';
 import type {Atom} from 'jotai';
 
 import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
@@ -15,7 +15,7 @@ import {render} from '@testing-library/react';
 import {List} from 'immutable';
 import {Provider, atom, createStore, useAtom, useAtomValue} from 'jotai';
 import {type MeasureMemoryOptions, measureMemory} from 'node:vm';
-import {useRef, useState, useEffect} from 'react';
+import {useRef, useState, useEffect, StrictMode} from 'react';
 import {act} from 'react-dom/test-utils';
 import {
   RecoilRoot,
@@ -366,5 +366,85 @@ describe('atomFamilyWeak', () => {
     family.debugLabel = 'prefix1';
     const atom1 = family('a');
     expect(atom1.debugLabel).toBe('prefix1:a');
+  });
+});
+
+describe('useAtomGet and useAtomSet', () => {
+  const initialMap = new Map([
+    ['a', 1],
+    ['b', 2],
+    ['c', 3],
+  ]);
+  const initialSet = new Set(['a', 'b']);
+
+  // Render an App, change the map and set, check what
+  // Runs a test and report re-render and atom states.
+  // insertMap specifies changes to the map (initially {a: 1, b: 2, c: 3}).
+  // changeSet specifies changes to the set (initially {a, b}).
+  function findRerender(props: {
+    insertMap?: Iterable<[string, number]>;
+    replaceSet?: Iterable<string>;
+  }): Array<string> {
+    // container types
+    const map = atom<Map<string, number>>(initialMap);
+    const set = atom<Set<string>>(initialSet);
+    const rerenderKeys = new Set<string>();
+
+    // test UI components
+    function Item({k}: {k: string}) {
+      const mapValue = useAtomGet(map, k);
+      const setValue = useAtomHas(set, k);
+      rerenderKeys.add(k);
+      return (
+        <span>
+          {mapValue} {setValue}
+        </span>
+      );
+    }
+
+    const store = createStore();
+
+    function TestApp({keys}: {keys: Array<string>}) {
+      return (
+        <StrictMode>
+          <Provider store={store}>
+            {keys.map(k => (
+              <Item k={k} key={k} />
+            ))}
+          </Provider>
+        </StrictMode>
+      );
+    }
+
+    const keys = ['a', 'b', 'c'];
+    render(<TestApp keys={keys} />);
+
+    rerenderKeys.clear();
+
+    const {insertMap, replaceSet} = props;
+
+    act(() => {
+      if (insertMap) {
+        store.set(map, oldMap => new Map([...oldMap, ...insertMap]));
+      }
+      if (replaceSet) {
+        const newSet = new Set([...replaceSet]);
+        store.set(set, newSet);
+      }
+    });
+
+    return [...rerenderKeys];
+  }
+
+  it('avoids re-rendering with changing to unrelated keys', () => {
+    expect(findRerender({insertMap: [['unrelated-key', 3]]})).toEqual([]);
+    expect(findRerender({replaceSet: [...initialSet, 'unrelated-key']})).toEqual([]);
+  });
+
+  it('only re-render changed items', () => {
+    const replaceSet = [...initialSet, 'c']; // add 'c' to the set.
+    expect(findRerender({insertMap: [['b', 5]]})).toEqual(['b']);
+    expect(findRerender({replaceSet})).toEqual(['c']);
+    expect(findRerender({insertMap: [['b', 5]], replaceSet})).toEqual(['b', 'c']);
   });
 });

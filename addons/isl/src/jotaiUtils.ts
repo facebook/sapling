@@ -11,8 +11,9 @@ import type {Json} from 'shared/typeUtils';
 
 import serverAPI from './ClientToServerAPI';
 import platform from './platform';
-import {atom, getDefaultStore} from 'jotai';
+import {atom, getDefaultStore, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
+import {useMemo} from 'react';
 import {RateLimiter} from 'shared/RateLimiter';
 import {isPromise} from 'shared/utils';
 
@@ -372,4 +373,45 @@ export interface AtomFamilyWeak<K, A extends Atom<unknown>> {
   threshold: number;
   /** Prefix of debugLabel. */
   debugLabel?: string;
+}
+
+function setDebugLabelForDerivedAtom<A extends Atom<unknown>>(
+  original: Atom<unknown>,
+  derived: A,
+  key: unknown,
+): A {
+  derived.debugLabel = `${original.debugLabel ?? original.toString()}:${key}`;
+  return derived;
+}
+
+/**
+ * Similar to `useAtomValue(mapAtom).get(key)` but avoids re-render if the map
+ * is changed but the `get(key)` does not change.
+ *
+ * This might be an appealing alternative to `atomFamilyWeak` in some cases.
+ * The `atomFamilyWeak` keeps caching state within itself and it has
+ * undesirable memory overhead regardless of settings. This function makes
+ * the hook own the caching state so states can be released cleanly on unmount.
+ */
+export function useAtomGet<K, V>(
+  mapAtom: Atom<{get(k: K): V | undefined}>,
+  key: K,
+): Awaited<V | undefined> {
+  const derivedAtom = useMemo(() => {
+    const derived = atom(get => get(mapAtom).get(key));
+    return setDebugLabelForDerivedAtom(mapAtom, derived, key);
+  }, [key, mapAtom]);
+  return useAtomValue(derivedAtom);
+}
+
+/**
+ * Similar to `useAtomValue(setAtom).has(key)` but avoids re-render if the set
+ * is changed but the `has(key)` does not change.
+ *
+ * This might be an appealing alternative to `atomFamilyWeak`. See `useAtomGet`
+ * for explanation.
+ */
+export function useAtomHas<K>(setAtom: Atom<{has(k: K): boolean}>, key: K): Awaited<boolean> {
+  const derivedAtom = useMemo(() => atom(get => get(setAtom).has(key)), [key, setAtom]);
+  return useAtomValue(derivedAtom);
 }
