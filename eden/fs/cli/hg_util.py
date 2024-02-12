@@ -10,7 +10,7 @@ import binascii
 import os
 import typing
 from pathlib import Path
-from typing import BinaryIO, Dict, Tuple
+from typing import BinaryIO, Dict, Optional, Tuple
 
 import eden.dirstate
 
@@ -27,7 +27,9 @@ portablefilenames = ignore
 """
 
 
-def setup_hg_dir(checkout: EdenCheckout, commit_id: str) -> None:
+def setup_hg_dir(
+    checkout: EdenCheckout, commit_id: str, filter_path: Optional[str] = None
+) -> None:
     checkout_hg_dir = checkout.hg_dot_path
     try:
         checkout_hg_dir.mkdir()
@@ -70,7 +72,9 @@ def setup_hg_dir(checkout: EdenCheckout, commit_id: str) -> None:
     # If the checkout is using FilteredFS, we need to write an initial
     # .hg/sparse file that indicates no filter is active.
     if checkout.get_config().scm_type == "filteredhg":
-        (checkout_hg_dir / "sparse").write_text("")
+        (checkout_hg_dir / "sparse").write_text(
+            filter_path if filter_path is not None else ""
+        )
 
 
 def get_backing_hg_dir(checkout: EdenCheckout) -> Path:

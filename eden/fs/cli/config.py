@@ -598,7 +598,11 @@ class EdenInstance(AbstractEdenInstance):
         return mount_points
 
     def clone(
-        self, checkout_config: CheckoutConfig, path: str, snapshot_id: str
+        self,
+        checkout_config: CheckoutConfig,
+        path: str,
+        snapshot_id: str,
+        filter_path: Optional[str] = None,
     ) -> None:
         if path in self._get_directory_map():
             raise Exception(
@@ -620,7 +624,7 @@ Do you want to run `eden mount %s` instead?"""
         checkout = EdenCheckout(self, Path(path), Path(client_dir))
         if snapshot_id:
             if checkout_config.scm_type == "filteredhg":
-                filtered_root_id = util.create_filtered_rootid(snapshot_id)
+                filtered_root_id = util.create_filtered_rootid(snapshot_id, filter_path)
                 checkout.save_snapshot(filtered_root_id)
             else:
                 checkout.save_snapshot(snapshot_id.encode())
@@ -638,7 +642,7 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client_legacy() as client:
             client.mount(mount_info)
 
-        self._post_clone_checkout_setup(checkout, snapshot_id)
+        self._post_clone_checkout_setup(checkout, snapshot_id, filter_path)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(Path(path), os.path.basename(client_dir))
@@ -731,7 +735,10 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
     def _post_clone_checkout_setup(
-        self, checkout: "EdenCheckout", commit_id: str
+        self,
+        checkout: "EdenCheckout",
+        commit_id: str,
+        filter_path: Optional[str] = None,
     ) -> None:
         # First, check to see if the post-clone setup has been run successfully
         # before.
@@ -740,7 +747,7 @@ Do you want to run `eden mount %s` instead?"""
         if is_initial_mount and checkout.get_config().scm_type in HG_REPO_TYPES:
             from . import hg_util
 
-            hg_util.setup_hg_dir(checkout, commit_id)
+            hg_util.setup_hg_dir(checkout, commit_id, filter_path)
 
         clone_success_path.touch()
 
