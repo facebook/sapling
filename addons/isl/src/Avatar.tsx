@@ -8,6 +8,7 @@
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {atomWithRefresh, refreshAtom} from './jotaiUtils';
+import {logger} from './logger';
 import platform from './platform';
 import {latestCommits} from './serverAPIState';
 import {atom, useAtomValue} from 'jotai';
@@ -26,9 +27,30 @@ type StoredAvatarData = {
   avatars: Array<[string, string]>;
 };
 
+/**
+ * On some platforms, the localstorage cache is not implemented or sometimes fails.
+ * This implementation depends on being able to cache avatars. So if localstorage
+ * is not available, we must cache in memory.
+ */
+const localCache: StoredAvatarData = {
+  avatars: [],
+  lastFetched: 0,
+};
+
+export const __TEST__ = {
+  clearLocallyCachedAvatars: () => {
+    localCache.avatars = [];
+    localCache.lastFetched = 0;
+  },
+};
+
 function getCachedAvatars(authors: Array<string>): undefined | Map<string, string> {
   try {
-    const found = platform.getTemporaryState('avatars') as StoredAvatarData;
+    const found =
+      (platform.getTemporaryState('avatars') as StoredAvatarData | undefined) ?? localCache;
+    if (found === localCache) {
+      logger.warn('avatars not found in localStorage, trying localCache.');
+    }
     if (
       // not yet cached
       found == null ||
@@ -49,10 +71,17 @@ function getCachedAvatars(authors: Array<string>): undefined | Map<string, strin
   return undefined;
 }
 function storeCachedAvatars(avatars: Map<string, string>) {
-  platform.setTemporaryState('avatars', {
-    lastFetched: new Date().valueOf(),
-    avatars: Array.from(avatars),
-  } as StoredAvatarData);
+  const now = new Date().valueOf();
+  const avatarsList = Array.from(avatars);
+  const data: StoredAvatarData = {
+    lastFetched: now,
+    avatars: avatarsList,
+  };
+  platform.setTemporaryState('avatars', data);
+
+  // Also store in local cache in case the localstorage one isn't working
+  localCache.avatars = avatarsList;
+  localCache.lastFetched = now;
 }
 
 const avatars = atomWithRefresh<Map<string, string> | Promise<Map<string, string>>>(get => {
