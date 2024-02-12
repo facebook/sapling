@@ -25,9 +25,9 @@ import {
 } from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
-import {useAtom, useAtomValue} from 'jotai';
+import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {atomFamily as atomFamilyJotai} from 'jotai/utils';
-import {atomFamily, useRecoilCallback, useSetRecoilState} from 'recoil';
+import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
@@ -66,19 +66,15 @@ export function GenerateAICommitMessageButton({
     [hashKey, featureEnabled],
   );
 
-  const onDismiss = useRecoilCallback(
-    ({snapshot}) =>
-      () => {
-        if (hashKey != null) {
-          const hasAcceptedState = snapshot.getLoadable(hasAcceptedAIMessageSuggestion(hashKey));
-          if (hasAcceptedState.valueMaybe() === true) {
-            return;
-          }
-          FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.Dismiss);
-        }
-      },
-    [hashKey],
-  );
+  const onDismiss = useCallback(() => {
+    if (hashKey != null) {
+      const hasAcceptedState = readAtom(hasAcceptedAIMessageSuggestion(hashKey));
+      if (hasAcceptedState === true) {
+        return;
+      }
+      FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.Dismiss);
+    }
+  }, [hashKey]);
 
   if (hashKey == null || !featureEnabled) {
     return null;
@@ -168,10 +164,7 @@ const generatedCommitMessages = atomFamilyJotai((hashKey: string | undefined) =>
   }),
 );
 
-const hasAcceptedAIMessageSuggestion = atomFamily<boolean, HashKey>({
-  key: 'hasAcceptedAIMessageSuggestion',
-  default: false,
-});
+const hasAcceptedAIMessageSuggestion = atomFamilyJotai((_key: HashKey) => atom<boolean>(false));
 
 function GenerateAICommitMessageModal({
   hashKey,
@@ -185,7 +178,7 @@ function GenerateAICommitMessageModal({
 }) {
   const [content, refetch] = useAtom(generatedCommitMessages(hashKey));
 
-  const setHasAccepted = useSetRecoilState(hasAcceptedAIMessageSuggestion(hashKey));
+  const setHasAccepted = useSetAtom(hasAcceptedAIMessageSuggestion(hashKey));
 
   const error =
     content.state === 'hasError'
