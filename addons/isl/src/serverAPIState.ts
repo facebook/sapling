@@ -29,7 +29,6 @@ import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {getAllRecoilStateJson} from './debug/getAllRecoilStateJson';
 import {configBackedAtom, readAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
-import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
@@ -174,16 +173,12 @@ function subscriptionEffect<K extends SubscriptionKind>(
   };
 }
 
-export const [latestUncommittedChangesDataJotai, latestUncommittedChangesDataRecoil] =
-  entangledAtoms<{
-    fetchStartTimestamp: number;
-    fetchCompletedTimestamp: number;
-    files: UncommittedChanges;
-    error?: Error;
-  }>({
-    key: 'latestUncommittedChangesData',
-    default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []},
-  });
+export const latestUncommittedChangesDataJotai = jotaiAtom<{
+  fetchStartTimestamp: number;
+  fetchCompletedTimestamp: number;
+  files: UncommittedChanges;
+  error?: Error;
+}>({fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []});
 
 registerCleanup(
   latestUncommittedChangesDataJotai,
@@ -214,12 +209,7 @@ export const uncommittedChangesFetchError = jotaiAtom(get => {
   return get(latestUncommittedChangesDataJotai).error;
 });
 
-export const [mergeConflictsJotai, mergeConflictsRecoil] = entangledAtoms<
-  MergeConflicts | undefined
->({
-  key: 'mergeConflicts',
-  default: undefined,
-});
+export const mergeConflictsJotai = jotaiAtom<MergeConflicts | undefined>(undefined);
 registerCleanup(
   mergeConflictsJotai,
   subscriptionEffect('mergeConflicts', data => {
@@ -390,13 +380,8 @@ export const haveCommitsLoadedYet = jotaiAtom(get => {
   return data.commits.length > 0 || data.error != null;
 });
 
-export const [operationBeingPreviewedJotai, operationBeingPreviewedRecoil] = entangledAtoms<
-  Operation | undefined
->({
-  key: 'operationBeingPreviewed',
-  default: undefined,
-  effects: [clearOnCwdChange()],
-});
+export const operationBeingPreviewedJotai = jotaiAtom<Operation | undefined>(undefined);
+resetOnCwdChange(operationBeingPreviewedJotai, undefined);
 
 export const haveRemotePath = jotaiAtom(get => {
   const info = get(repositoryInfo);
@@ -458,10 +443,7 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
   }
 }
 
-export const [operationListJotai, operationListRecoil] = entangledAtoms<OperationList>({
-  key: 'operationList',
-  default: defaultOperationList(),
-});
+export const operationListJotai = jotaiAtom<OperationList>(defaultOperationList());
 resetOnCwdChange(operationListJotai, defaultOperationList());
 registerDisposable(
   operationListJotai,
@@ -618,10 +600,7 @@ const operationsById = new Map<string, Operation>();
 /** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
 const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 
-export const [queuedOperationsJotai, queuedOperationsRecoil] = entangledAtoms<Array<Operation>>({
-  key: 'queuedOperations',
-  default: [],
-});
+export const queuedOperationsJotai = jotaiAtom<Array<Operation>>([]);
 resetOnCwdChange(queuedOperationsJotai, []);
 registerDisposable(
   queuedOperationsJotai,
