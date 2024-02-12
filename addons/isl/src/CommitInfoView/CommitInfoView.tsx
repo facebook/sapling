@@ -83,7 +83,6 @@ import {
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect} from 'react';
-import {useRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -551,7 +550,7 @@ function ActionsBar({
     ((!isCommitMode && isAnythingBeingEdited) || uncommittedChanges.length > 0);
 
   const provider = useAtomValue(codeReviewProvider);
-  const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
+  const [repoInfo, setRepoInfo] = useAtom(repositoryInfo);
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const schema = useAtomValue(commitMessageFieldsSchema);

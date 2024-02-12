@@ -34,7 +34,6 @@ import {
   VSCodeOption,
 } from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
-import {useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {unwrap} from 'shared/utils';
@@ -69,7 +68,7 @@ function SettingsDropdown({
   showShortcutsHelp: () => unknown;
 }) {
   const [theme, setTheme] = useAtom(themeState);
-  const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
+  const [repoInfo, setRepoInfo] = useAtom(repositoryInfo);
   const runOperation = useRunOperation();
   const [showDiffNumber, setShowDiffNumber] = useAtom(showDiffNumberConfig);
   return (

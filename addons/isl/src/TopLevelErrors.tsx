@@ -113,7 +113,7 @@ function computeTopLevelError(
 
 export function TopLevelErrors() {
   const reconnectStatus = useRecoilValue(reconnectingStatus);
-  const repoInfo = useRecoilValue(repositoryInfo);
+  const repoInfo = useAtomValue(repositoryInfo);
   const diffFetchError = useAtomValue(allDiffSummaries).error;
 
   const info = computeTopLevelError(repoInfo, reconnectStatus, diffFetchError);

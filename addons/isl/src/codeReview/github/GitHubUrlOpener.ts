@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {repositoryInfoJotai} from '../../serverAPIState';
+import {repositoryInfo} from '../../serverAPIState';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
 
@@ -13,7 +13,7 @@ import {atomFamily} from 'jotai/utils';
  * Configured pull request domain to view associated pull requests, such as reviewstack.dev.
  */
 export const pullRequestDomain = atom<string | undefined>(get => {
-  const info = get(repositoryInfoJotai);
+  const info = get(repositoryInfo);
   return info?.type !== 'success' ? undefined : info.pullRequestDomain;
 });
 

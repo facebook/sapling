@@ -23,7 +23,6 @@ import {CommandRunner} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
 import {notEmpty, truncate} from 'shared/utils';
@@ -92,7 +91,7 @@ export function CommandHistoryAndProgress() {
   const queued = useAtomValue(queuedOperationsJotai);
   const abortRunningOperation = useAbortRunningOperation();
 
-  const info = useRecoilValue(repositoryInfo);
+  const info = useAtomValue(repositoryInfo);
   if (info?.type !== 'success') {
     return null;
   }

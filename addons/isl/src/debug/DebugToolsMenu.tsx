@@ -31,7 +31,7 @@ import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useRecoilCallback} from 'recoil';
 
 import './DebugToolsMenu.css';
 
@@ -114,7 +114,7 @@ function DebugPerfInfo() {
   const latestLog = useAtomValue(latestCommitsData);
   const latestConflicts = useAtomValue(mergeConflictsJotai);
   const heartbeat = useHeartbeat();
-  const repoInfo = useRecoilValue(repositoryInfo);
+  const repoInfo = useAtomValue(repositoryInfo);
   let commandName = 'sl';
   if (repoInfo?.type === 'success') {
     commandName = repoInfo.command;

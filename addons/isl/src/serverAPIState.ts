@@ -29,21 +29,18 @@ import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {getAllRecoilStateJson} from './debug/getAllRecoilStateJson';
 import {configBackedAtom, readAtom, resetOnCwdChange, writeAtom} from './jotaiUtils';
-import {clearOnCwdChange, entangledAtoms, jotaiMirrorFromRecoil} from './recoilUtils';
+import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
 import {atomFamily, atomFamily as jotaiAtomFamily} from 'jotai/utils';
 import {useCallback} from 'react';
-import {atom, DefaultValue, selector} from 'recoil';
+import {atom, DefaultValue} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
-const [jotaiRepositoryData, repositoryData] = entangledAtoms<{info?: RepoInfo; cwd?: string}>({
-  key: 'repositoryData',
-  default: {},
-});
+const jotaiRepositoryData = jotaiAtom<{info?: RepoInfo; cwd?: string}>({});
 
 registerDisposable(
   jotaiRepositoryData,
@@ -62,21 +59,23 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const repositoryInfo = selector<RepoInfo | undefined>({
-  key: 'repositoryInfo',
-  get: ({get}) => {
-    const data = get(repositoryData);
+export const repositoryInfo = jotaiAtom(
+  get => {
+    const data = get(jotaiRepositoryData);
     return data?.info;
   },
-  set: ({set}, value) => {
-    set(repositoryData, last => ({
+  (
+    get,
+    set,
+    update: RepoInfo | undefined | ((_prev: RepoInfo | undefined) => RepoInfo | undefined),
+  ) => {
+    const value = typeof update === 'function' ? update(get(jotaiRepositoryData)?.info) : update;
+    set(jotaiRepositoryData, last => ({
       ...last,
-      info: value instanceof DefaultValue ? undefined : value,
+      info: value,
     }));
   },
-});
-
-export const repositoryInfoJotai = jotaiMirrorFromRecoil(repositoryInfo);
+);
 
 export const applicationinfo = jotaiAtom<ApplicationInfo | undefined>(undefined);
 registerDisposable(
@@ -400,7 +399,7 @@ export const [operationBeingPreviewedJotai, operationBeingPreviewedRecoil] = ent
 });
 
 export const haveRemotePath = jotaiAtom(get => {
-  const info = get(repositoryInfoJotai);
+  const info = get(repositoryInfo);
   // codeReviewSystem.type is 'unknown' or other values if paths.default is present.
   return info?.type === 'success' && info.codeReviewSystem.type !== 'none';
 });

@@ -25,7 +25,6 @@ import {
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
-import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
@@ -54,7 +53,7 @@ registerDisposable(
 );
 
 export function CwdSelector() {
-  const info = useRecoilValue(repositoryInfo);
+  const info = useAtomValue(repositoryInfo);
   const additionalToggles = useCommandEvent('ToggleCwdDropdown');
   if (info?.type !== 'success') {
     return null;
@@ -81,7 +80,7 @@ export function CwdSelector() {
 }
 
 function CwdDetails({dismiss}: {dismiss: () => unknown}) {
-  const info = useRecoilValue(repositoryInfo);
+  const info = useAtomValue(repositoryInfo);
   const repoRoot = info?.type === 'success' ? info.repoRoot : null;
   const provider = useAtomValue(codeReviewProvider);
   const cwd = useAtomValue(serverCwd);

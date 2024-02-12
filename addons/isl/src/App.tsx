@@ -43,7 +43,7 @@ import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Provider, useAtom, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React from 'react';
-import {RecoilRoot, useRecoilValue} from 'recoil';
+import {RecoilRoot} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
@@ -154,7 +154,7 @@ function ISLDrawers() {
 }
 
 function MainContent() {
-  const repoInfo = useRecoilValue(repositoryInfo);
+  const repoInfo = useAtomValue(repositoryInfo);
   useAtom(applicationinfo); // ensure this info is always fetched
 
   const ref = useMainContentWidth();
