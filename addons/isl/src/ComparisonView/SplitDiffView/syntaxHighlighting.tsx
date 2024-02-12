@@ -154,6 +154,13 @@ async function tokenizeHunks(
   cancellationToken: CancellationToken,
 ): Promise<TokenizedDiffHunks | undefined> {
   await ensureOnigurumaIsLoaded();
+
+  // During testing-library tear down (ex. syntax highlighting was canceled),
+  // `document` may be null. Abort here to avoid errors.
+  if (document == null) {
+    return undefined;
+  }
+
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   if (!scopeName) {
     return undefined;

@@ -17,17 +17,16 @@ import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
-import {atomFamilyWeak} from '../jotaiUtils';
+import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {atom, useSetAtom} from 'jotai';
+import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {useCallback, useEffect, useMemo, useState} from 'react';
-import {atomFamily, useRecoilState} from 'recoil';
+import {useEffect, useMemo, useState} from 'react';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {parsePatch} from 'shared/patch/parse';
@@ -51,31 +50,16 @@ function parsePatchAndFilter(patch: string): ReturnType<typeof parsePatch> {
   );
 }
 
-const currentComparisonData = atomFamily<
-  {isLoading: boolean; data: Result<Array<ParsedDiff>> | null},
-  Comparison
->({
-  key: 'currentComparisonData',
-  default: (_comparison: Comparison) => ({isLoading: true, data: null}),
-  effects: (comparison: Comparison) => [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('comparison', event => {
-        if (comparison.type === event.comparison.type) {
-          setSelf({isLoading: false, data: mapResult(event.data.diff, parsePatchAndFilter)});
-        }
-      });
-      return () => disposable.dispose();
-    },
-    // You can trigger a refresh just by setting isLoading: true
-    ({onSet}) => {
-      onSet(value => {
-        if (value.isLoading) {
-          serverAPI.postMessage({type: 'requestComparison', comparison});
-        }
-      });
-    },
-  ],
-});
+const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
+  atomLoadableWithRefresh<Result<Array<ParsedDiff>>>(async () => {
+    serverAPI.postMessage({type: 'requestComparison', comparison});
+    const event = await serverAPI.nextMessageMatching(
+      'comparison',
+      event => comparison.type === event.comparison.type,
+    );
+    return mapResult(event.data.diff, parsePatchAndFilter);
+  }),
+);
 
 export const lineRange = atomFamilyWeak(
   (params: LineRangeParams<{path: string; comparison: Comparison}>) =>
@@ -102,34 +86,28 @@ export const lineRange = atomFamilyWeak(
     ),
 );
 
-function useComparisonData(comparison: Comparison) {
-  const [compared, setCompared] = useRecoilState(currentComparisonData(comparison));
-  const reloadComparison = useCallback(() => {
-    // setting comparisonData's isLoading: true triggers a fetch
-    setCompared(data => ({...data, isLoading: true}));
-  }, [setCompared]);
-  return [compared, reloadComparison] as const;
-}
-
 export default function ComparisonView({comparison}: {comparison: Comparison}) {
-  const [compared, reloadComparison] = useComparisonData(comparison);
+  const compared = useAtomValue(currentComparisonData(comparison));
 
-  // any time the comparison changes, fetch the diff
-  useEffect(reloadComparison, [comparison, reloadComparison]);
+  const data = compared.state === 'hasData' ? compared.data : null;
 
   const paths = useMemo(
-    () => compared.data?.value?.map(file => file.newFileName).filter(notEmpty) ?? [],
-    [compared.data?.value],
+    () => data?.value?.map(file => file.newFileName).filter(notEmpty) ?? [],
+    [data?.value],
   );
   const generatedStatuses = useGeneratedFileStatuses(paths);
-  const [collapsedFiles, setCollapsedFile] = useCollapsedFilesState(compared);
+  const [collapsedFiles, setCollapsedFile] = useCollapsedFilesState({
+    isLoading: compared.state === 'loading',
+    data,
+  });
 
   let content;
-  if (compared.data == null) {
+  if (data == null) {
     content = <Icon icon="loading" />;
-  } else if (compared.data.error != null) {
-    content = <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />;
-  } else if (compared.data.value.length === 0) {
+  } else if (compared.state === 'hasError') {
+    const error = compared.error instanceof Error ? compared.error : new Error(`${compared.error}`);
+    content = <ErrorNotice error={error} title={t('Unable to load comparison')} />;
+  } else if (data?.value && data.value.length === 0) {
     content =
       comparison.type === ComparisonType.SinceLastCodeReviewSubmit ? (
         <EmptyState>
@@ -145,7 +123,7 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
         </EmptyState>
       );
   } else {
-    const files = compared.data.value;
+    const files = data.value ?? [];
     const fileGroups = group(files, file => generatedStatuses[file.newFileName ?? '']);
     content = (
       <>
@@ -216,17 +194,19 @@ function ComparisonViewHeader({
   setCollapsedFile: (path: string, collapsed: boolean) => unknown;
 }) {
   const setComparisonMode = useSetAtom(currentComparisonMode);
-  const [compared, reloadComparison] = useComparisonData(comparison);
+  const [compared, reloadComparison] = useAtom(currentComparisonData(comparison));
+
+  const data = compared.state === 'hasData' ? compared.data : null;
 
   const allFilesExpanded =
-    compared?.data?.value?.every(
+    data?.value?.every(
       file => file.newFileName && collapsedFiles.get(file.newFileName) === false,
     ) === true;
   const noFilesExpanded =
-    compared?.data?.value?.every(
+    data?.value?.every(
       file => file.newFileName && collapsedFiles.get(file.newFileName) === true,
     ) === true;
-  const isLoading = compared.isLoading;
+  const isLoading = compared.state === 'loading';
 
   return (
     <>
@@ -264,7 +244,7 @@ function ComparisonViewHeader({
           </Tooltip>
           <VSCodeButton
             onClick={() => {
-              for (const file of compared?.data?.value ?? []) {
+              for (const file of data?.value ?? []) {
                 if (file.newFileName) {
                   setCollapsedFile(file.newFileName, false);
                 }
@@ -277,7 +257,7 @@ function ComparisonViewHeader({
           </VSCodeButton>
           <VSCodeButton
             onClick={() => {
-              for (const file of compared?.data?.value ?? []) {
+              for (const file of data?.value ?? []) {
                 if (file.newFileName) {
                   setCollapsedFile(file.newFileName, true);
                 }
@@ -288,7 +268,7 @@ function ComparisonViewHeader({
             <Icon icon="fold" slot="start" />
             <T>Collapse all files</T>
           </VSCodeButton>
-          {compared.isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
+          {isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
         </span>
         <VSCodeButton
           data-testid="close-comparison-view-button"
