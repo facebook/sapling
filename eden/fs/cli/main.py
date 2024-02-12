@@ -789,6 +789,15 @@ class CloneCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
 
+        parser.add_argument(
+            "--filter-path",
+            help=(
+                "The FilteredFS filter to activate when "
+                "--backing-store=filteredhg. When this option is omitted, no "
+                "filter is applied to the repo but FilteredFS is still used."
+            ),
+        )
+
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
@@ -859,6 +868,14 @@ case-insensitive. This is not recommended and is intended only for testing."""
 Warning: Creating a case-insensitive checkout on a platform where the default
 is case-sensitive. This is not recommended and is intended only for testing."""
             )
+
+        # Filters are only valid for repos using FilteredFS
+        if args.filter_path and not args.backing_store == "filteredhg":
+            print_stderr(
+                "error: --filter-path can only be used with --backing-store=filteredhg"
+            )
+            return 1
+
         # Find the repository information
         try:
             repo, repo_config = self._get_repo_info(
@@ -965,7 +982,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         print(f"Cloning new repository at {args.path}...")
 
         try:
-            instance.clone(repo_config, args.path, commit)
+            instance.clone(repo_config, args.path, commit, args.filter_path)
             print(f"Success.  Checked out commit {commit:.8}")
             # In the future it would probably be nice to fork a background
             # process here to prefetch files that we think the user is likely
