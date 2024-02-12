@@ -13,7 +13,6 @@ import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
 import {InlineBadge} from './InlineBadge';
 import {LinkLine, NodeLine, PadLine} from './dag/render';
-import deepEqual from 'fast-deep-equal';
 import React from 'react';
 
 import './RenderDag.css';
@@ -479,11 +478,7 @@ function TileInner(props: TileProps) {
     </svg>
   );
 }
-const Tile = React.memo(TileInner, (prevProps, nextProps) => {
-  return (
-    prevProps.children == null && nextProps.children == null && deepEqual(prevProps, nextProps)
-  );
-});
+const Tile = React.memo(TileInner);
 
 function NodeTile(
   props: {
