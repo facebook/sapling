@@ -47,7 +47,26 @@ export default defineConfig(({mode}) => ({
   base: '',
   plugins: [
     react({
-      include: '**/*.tsx',
+      babel: {
+        plugins: [
+          ['@babel/plugin-proposal-decorators', {legacy: true}],
+          [
+            'jotai/babel/plugin-debug-label',
+            {
+              customAtomNames: [
+                'atomFamilyWeak',
+                'atomLoadableWithRefresh',
+                'atomWithOnChange',
+                'atomWithRefresh',
+                'configBackedAtom',
+                'jotaiAtom',
+                'lazyAtom',
+                'localStorageBackedAtom',
+              ],
+            },
+          ],
+        ],
+      },
     }),
     styleX(),
     viteTsconfigPaths(),
