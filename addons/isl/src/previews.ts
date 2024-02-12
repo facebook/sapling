@@ -16,7 +16,7 @@ import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
-  latestUncommittedChangesJotai,
+  latestUncommittedChanges,
   latestCommits,
   latestDag,
   operationBeingPreviewedJotai,
@@ -206,10 +206,10 @@ function applyPreviewsToMergeConflicts(
   return conflicts;
 }
 
-export const uncommittedChangesWithPreviews = atom(get => {
+export const uncommittedChangesWithPreviews = atom<Array<ChangedFile>>(get => {
   const list = get(operationListJotai);
   const queued = get(queuedOperationsJotai);
-  const uncommittedChanges = get(latestUncommittedChangesJotai);
+  const uncommittedChanges = get(latestUncommittedChanges);
 
   return applyPreviewsToChangedFiles(uncommittedChanges, list, queued);
 });

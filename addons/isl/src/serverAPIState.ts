@@ -141,7 +141,7 @@ export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
  * and send an unsubscribe message on dispose.
  * Extract subscription response messages via a unique subscriptionID per effect call.
  */
-function subscriptionEffect<K extends SubscriptionKind, T>(
+function subscriptionEffect<K extends SubscriptionKind>(
   kind: K,
   onData: (data: SubscriptionResultsData[K]) => unknown,
 ): () => void {
@@ -207,13 +207,9 @@ registerCleanup(
  * Prefer using `uncommittedChangesWithPreviews`, since it includes optimistic state
  * and previews.
  */
-export const latestUncommittedChanges = selector<Array<ChangedFile>>({
-  key: 'latestUncommittedChanges',
-  get: ({get}) => {
-    return get(latestUncommittedChangesDataRecoil).files;
-  },
-});
-export const latestUncommittedChangesJotai = jotaiMirrorFromRecoil(latestUncommittedChanges);
+export const latestUncommittedChanges = jotaiAtom<Array<ChangedFile>>(
+  get => get(latestUncommittedChangesDataJotai).files,
+);
 
 export const uncommittedChangesFetchError = jotaiAtom(get => {
   return get(latestUncommittedChangesDataJotai).error;

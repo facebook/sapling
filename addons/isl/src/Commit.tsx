@@ -59,7 +59,7 @@ import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo, useCallback, useEffect, useState} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useRecoilCallback} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -547,7 +547,7 @@ function HeadCommitInfo({
   previewType?: CommitPreview;
   hasChildren: boolean;
 }) {
-  const uncommittedChanges = useRecoilValue(latestUncommittedChanges);
+  const uncommittedChanges = useAtomValue(latestUncommittedChanges);
 
   // render head info indented when:
   //  - we have uncommitted changes, so we're showing files
