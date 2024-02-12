@@ -37,7 +37,6 @@ use slog::debug;
 
 const ARG_BACKFILL: &str = "backfill";
 const ARG_BATCH_SIZE: &str = "batch-size";
-const ARG_PARALLEL: &str = "parallel";
 
 pub struct DeriveOptions {
     batch_size: u64,
@@ -48,13 +47,7 @@ pub struct DeriveOptions {
 pub enum DerivationType {
     // Simple case - derive commits one by one
     Simple,
-    // Derive commits one by one, but send all writes
-    // to in-memory blobstore first, and only when
-    // all commits were derived send them to real blobstore.
-    Backfill,
-    // Use backfill mode, but also use parallel derivation -
-    // some derived data types (e.g. fsnodes, skeleton manifests)
-    // can derive the whole stack of commits in parallel.
+    // Backfill in parallel
     BackfillParallel,
 }
 
@@ -69,14 +62,6 @@ impl DeriveOptions {
                     .help("Whether we need to use backfill mode"),
             )
             .arg(
-                Arg::with_name(ARG_PARALLEL)
-                    .long(ARG_PARALLEL)
-                    .required(false)
-                    .takes_value(false)
-                    .requires(ARG_BACKFILL)
-                    .help("Whether we need to us parallel mode"),
-            )
-            .arg(
                 Arg::with_name(ARG_BATCH_SIZE)
                     .long(ARG_BATCH_SIZE)
                     .required(false)
@@ -88,11 +73,7 @@ impl DeriveOptions {
     pub fn from_matches(matches: &ArgMatches<'_>) -> Result<DeriveOptions, Error> {
         let batch_size = args::get_u64(&matches, ARG_BATCH_SIZE, 20);
         let derivation_type = if matches.is_present(ARG_BACKFILL) {
-            if matches.is_present(ARG_PARALLEL) {
-                DerivationType::BackfillParallel
-            } else {
-                DerivationType::Backfill
-            }
+            DerivationType::BackfillParallel
         } else {
             DerivationType::Simple
         };
@@ -185,15 +166,9 @@ pub async fn regenerate_derived_data(
             )
             .await?;
         }
-        DerivationType::Backfill | DerivationType::BackfillParallel => {
-            let parallel = opts.derivation_type == DerivationType::BackfillParallel;
+        DerivationType::BackfillParallel => {
             derive_graph
-                .derive(
-                    ctx.clone(),
-                    repo.clone(),
-                    parallel,
-                    None, /* gap size */
-                )
+                .derive(ctx.clone(), repo.clone(), None /* gap size */)
                 .await?;
         }
     };

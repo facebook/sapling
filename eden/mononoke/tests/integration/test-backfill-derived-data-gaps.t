@@ -46,7 +46,7 @@ add a mapping key prefix to skeleton manifests to test these work
 
 Backfill all enabled data types. That command uses the same logic as tailer does
 but doesn't run forever.
-  $ backfill_derived_data backfill-all --parallel --batch-size=10 --gap-size=3 &>/dev/null
+  $ backfill_derived_data backfill-all --batch-size=10 --gap-size=3 &>/dev/null
 
 Heads should all be derived
   $ mononoke_newadmin derived-data -R repo exists -T fsnodes -B main

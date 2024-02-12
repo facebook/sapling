@@ -225,7 +225,6 @@ pub trait DerivedUtils: Send + Sync + 'static {
         ctx: CoreContext,
         repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
-        parallel: bool,
         gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<BatchDeriveStats>>;
 
@@ -358,14 +357,9 @@ where
         ctx: CoreContext,
         _repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
-        parallel: bool,
         gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
-        let options = if parallel || gap_size.is_some() {
-            BatchDeriveOptions::Parallel { gap_size }
-        } else {
-            BatchDeriveOptions::Serial
-        };
+        let options = BatchDeriveOptions::Parallel { gap_size };
         let utils = Arc::new(self.clone());
         async move {
             let stats = utils
@@ -661,7 +655,6 @@ impl DeriveGraph {
         &self,
         ctx: CoreContext,
         repo: impl RepoDerivedDataArc + Send + Sync + Clone,
-        parallel: bool,
         gap_size: Option<usize>,
     ) -> Result<()> {
         bounded_traversal::bounded_traversal_dag(
@@ -683,7 +676,6 @@ impl DeriveGraph {
                                 ctx.clone(),
                                 repo.repo_derived_data_arc(),
                                 node.csids.clone(),
-                                parallel,
                                 gap_size,
                             )
                             .try_timed();
@@ -1269,7 +1261,7 @@ mod tests {
             thin_out,
         )
         .await?;
-        graph.derive(ctx.clone(), repo.clone(), false, None).await?;
+        graph.derive(ctx.clone(), repo.clone(), None).await?;
 
         let graph = build_derive_graph(
             &ctx,
@@ -1343,11 +1335,10 @@ mod tests {
             ctx: CoreContext,
             repo: Arc<RepoDerivedData>,
             csids: Vec<ChangesetId>,
-            parallel: bool,
             gap_size: Option<usize>,
         ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
             self.deriver
-                .derive_exactly_batch(ctx, repo, csids, parallel, gap_size)
+                .derive_exactly_batch(ctx, repo, csids, gap_size)
         }
 
         async fn derive_from_predecessor(

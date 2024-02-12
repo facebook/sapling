@@ -120,7 +120,6 @@ const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
 const ARG_STOP_ON_IDLE: &str = "stop-on-idle";
 const ARG_BATCHED: &str = "batched";
 const ARG_BATCH_SIZE: &str = "batch-size";
-const ARG_PARALLEL: &str = "parallel";
 const ARG_SLICED: &str = "sliced";
 const ARG_SLICE_SIZE: &str = "slice-size";
 const ARG_BACKFILL: &str = "backfill";
@@ -242,11 +241,6 @@ impl DerivedDataProcess {
                             .help("number of changesets in each derivation batch"),
                     )
                     .arg(
-                        Arg::with_name(ARG_PARALLEL)
-                            .long(ARG_PARALLEL)
-                            .help("derive commits within a batch in parallel"),
-                    )
-                    .arg(
                         Arg::with_name(ARG_GAP_SIZE)
                             .long(ARG_GAP_SIZE)
                             .takes_value(true)
@@ -305,11 +299,6 @@ impl DerivedDataProcess {
                             .long(ARG_BATCH_SIZE)
                             .default_value(DEFAULT_BATCH_SIZE_STR)
                             .help("number of changesets in each derivation batch"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_PARALLEL)
-                            .long(ARG_PARALLEL)
-                            .help("derive commits within a batch in parallel"),
                     )
                     .arg(
                         Arg::with_name(ARG_BACKFILL)
@@ -393,11 +382,6 @@ impl DerivedDataProcess {
                             .long(ARG_BATCH_SIZE)
                             .default_value(DEFAULT_BATCH_SIZE_STR)
                             .help("number of changesets in each derivation batch"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_PARALLEL)
-                            .long(ARG_PARALLEL)
-                            .help("derive commits within a batch in parallel"),
                     )
                     .arg(Arg::with_name(ARG_SLICED).long(ARG_SLICED).help(
                         "pre-slice repository into generation slices",
@@ -717,7 +701,6 @@ async fn run_subcmd<'a>(
                 .value_of(ARG_BATCH_SIZE)
                 .expect("batch-size must be set")
                 .parse::<usize>()?;
-            let parallel = sub_m.is_present(ARG_PARALLEL);
             let slice_size = if sub_m.is_present(ARG_SLICED) {
                 Some(
                     sub_m
@@ -744,7 +727,6 @@ async fn run_subcmd<'a>(
                 derived_data_types,
                 slice_size,
                 batch_size,
-                parallel,
                 gap_size,
                 backfill_config_name,
                 wait_for_replication,
@@ -798,7 +780,6 @@ async fn run_subcmd<'a>(
                 None => iter.map(|entry| entry.cs_id).collect(),
             };
 
-            let parallel = sub_m.is_present(ARG_PARALLEL);
             let batch_size = sub_m
                 .value_of(ARG_BATCH_SIZE)
                 .expect("batch-size must be set")
@@ -817,7 +798,6 @@ async fn run_subcmd<'a>(
                 &repo,
                 derived_data_type.as_str(),
                 regenerate,
-                parallel,
                 batch_size,
                 gap_size,
                 changesets,
@@ -833,7 +813,6 @@ async fn run_subcmd<'a>(
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let stop_on_idle = sub_m.is_present(ARG_STOP_ON_IDLE);
             let batched = sub_m.is_present(ARG_BATCHED);
-            let parallel = sub_m.is_present(ARG_PARALLEL);
             let batch_size = if batched {
                 Some(
                     sub_m
@@ -874,7 +853,6 @@ async fn run_subcmd<'a>(
                 use_shared_leases,
                 stop_on_idle,
                 batch_size,
-                parallel,
                 gap_size,
                 backfill,
                 slice_size,
@@ -981,7 +959,6 @@ async fn subcommand_backfill_all(
     derived_data_types: HashSet<String>,
     slice_size: Option<u64>,
     batch_size: usize,
-    parallel: bool,
     gap_size: Option<usize>,
     config_name: &str,
     wait_for_replication: WaitForReplication,
@@ -1007,7 +984,6 @@ async fn subcommand_backfill_all(
         heads,
         slice_size,
         batch_size,
-        parallel,
         gap_size,
         wait_for_replication,
     )
@@ -1021,7 +997,6 @@ async fn backfill_heads(
     heads: Vec<ChangesetId>,
     slice_size: Option<u64>,
     batch_size: usize,
-    parallel: bool,
     gap_size: Option<usize>,
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
@@ -1043,7 +1018,6 @@ async fn backfill_heads(
                 derivers,
                 slice_heads,
                 batch_size,
-                parallel,
                 gap_size,
                 wait_for_replication.clone(),
             )
@@ -1057,7 +1031,6 @@ async fn backfill_heads(
             derivers,
             heads,
             batch_size,
-            parallel,
             gap_size,
             wait_for_replication,
         )
@@ -1100,7 +1073,6 @@ async fn subcommand_backfill(
     repo: &InnerRepo,
     derived_data_type: &str,
     regenerate: bool,
-    parallel: bool,
     batch_size: usize,
     gap_size: Option<usize>,
     changesets: Vec<ChangesetId>,
@@ -1150,10 +1122,9 @@ async fn subcommand_backfill(
 
             derived_utils
                 .derive_exactly_batch(
-                    get_batch_ctx(ctx, parallel || gap_size.is_some()).await,
+                    get_batch_ctx(ctx, gap_size.is_some()).await,
                     repo.repo_derived_data_arc(),
                     chunk,
-                    parallel,
                     gap_size,
                 )
                 .await?;
@@ -1202,7 +1173,6 @@ async fn subcommand_tail(
     use_shared_leases: bool,
     stop_on_idle: bool,
     batch_size: Option<usize>,
-    parallel: bool,
     gap_size: Option<usize>,
     mut backfill: bool,
     slice_size: Option<u64>,
@@ -1325,7 +1295,6 @@ async fn subcommand_tail(
                             &tail_derivers,
                             underived_heads,
                             batch_size,
-                            parallel,
                             gap_size,
                             wait_for_replication.clone(),
                         )
@@ -1363,7 +1332,6 @@ async fn subcommand_tail(
                                 underived_heads,
                                 slice_size,
                                 batch_size,
-                                parallel,
                                 gap_size,
                                 wait_for_replication.clone(),
                             )
@@ -1416,7 +1384,6 @@ async fn tail_batch_iteration<'a>(
     derive_utils: &'a [Arc<dyn DerivedUtils>],
     heads: Vec<ChangesetId>,
     batch_size: usize,
-    parallel: bool,
     gap_size: Option<usize>,
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
@@ -1487,10 +1454,9 @@ async fn tail_batch_iteration<'a>(
 
                         let job = deriver
                             .derive_exactly_batch(
-                                get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
+                                get_batch_ctx(&ctx, gap_size.is_some()).await,
                                 repo.repo_derived_data_arc(),
                                 node.csids.clone(),
-                                parallel,
                                 gap_size,
                             )
                             .try_timed();
@@ -1793,7 +1759,6 @@ mod tests {
                     ctx.clone(),
                     repo.repo_derived_data_arc(),
                     vec![bcs_id],
-                    false,
                     None
                 )
                 .await
@@ -1816,7 +1781,6 @@ mod tests {
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 vec![bcs_id],
-                false,
                 None,
             )
             .await?;
@@ -1862,7 +1826,6 @@ mod tests {
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 batch.clone(),
-                false,
                 None,
             )
             .await?;
@@ -1899,7 +1862,6 @@ mod tests {
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 vec![first_bcs_id],
-                false,
                 None,
             )
             .await;
@@ -1925,7 +1887,7 @@ mod tests {
             batch,
         );
         derived_utils
-            .derive_exactly_batch(ctx, repo.repo_derived_data_arc(), batch, false, None)
+            .derive_exactly_batch(ctx, repo.repo_derived_data_arc(), batch, None)
             .await?;
 
         Ok(())

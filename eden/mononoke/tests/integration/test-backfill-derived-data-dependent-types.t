@@ -43,7 +43,9 @@ backfill derived data
   * starting batch of 13 from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec* (glob)
   * warmup of 13 changesets complete* (glob)
   * derive exactly unodes batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7, repo: repo (glob)
+  * derive unode batch at 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (stack of 13 from batch of 13), repo: repo (glob)
   * derive exactly blame batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7, repo: repo (glob)
+  * derive blame batch at 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (stack of 13 from batch of 13), repo: repo (glob)
   * 13/13 (13 in *) estimate:* speed:*s overall_speed:*, repo: repo (glob)
   * Finished derived data command execution for repo repo, repo: repo (glob)
 

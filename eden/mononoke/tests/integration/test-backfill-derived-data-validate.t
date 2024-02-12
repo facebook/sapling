@@ -24,7 +24,7 @@ setup configuration
   $ blobimport repo-hg/.hg repo
 
 run validation
-  $ backfill_derived_data --with-readonly-storage true validate  --backfill --parallel --batch-size=10 hgchangesets --input-file "$TESTTMP"/input_commits 2>&1 | grep 'Validation successful'
+  $ backfill_derived_data --with-readonly-storage true validate  --backfill --batch-size=10 hgchangesets --input-file "$TESTTMP"/input_commits 2>&1 | grep 'Validation successful'
   * Validation successful!* (glob)
-  $ backfill_derived_data --with-readonly-storage true validate  --backfill --parallel --batch-size=10 hgchangesets --input-file "$TESTTMP"/input_commits_latest 2>&1 | grep 'Validation successful'
+  $ backfill_derived_data --with-readonly-storage true validate  --backfill --batch-size=10 hgchangesets --input-file "$TESTTMP"/input_commits_latest 2>&1 | grep 'Validation successful'
   * Validation successful!* (glob)

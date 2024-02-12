@@ -27,6 +27,6 @@ Derive data
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   112478962961147124edd43549aedd1a335e44bf
   26805aba1e600a82e93661149f2313866a221a7b
-  $ backfill_derived_data benchmark --input-file "$TESTTMP/hashes.txt" --all-types --backfill --batch-size 2 --parallel 2>&1 | grep 'took'
+  $ backfill_derived_data benchmark --input-file "$TESTTMP/hashes.txt" --all-types --backfill --batch-size 2 2>&1 | grep 'took'
   Building derive graph took * (glob)
   Derivation took * (glob)

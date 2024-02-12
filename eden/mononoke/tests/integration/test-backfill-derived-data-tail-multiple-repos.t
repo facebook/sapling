@@ -79,7 +79,7 @@ Helpers to enable some more derived data types for normal usage and backfilling
 start the tailer with tailing and backfilling some different types
 normally the tailer runs forever, but for this test we will make it
 stop when it becomes idle.
-  $ REPOS="--repo-id=0:--repo-id=1" backfill_derived_data_multiple_repos tail --stop-on-idle --backfill --batched --parallel --sliced --slice-size=4 &>/dev/null
+  $ REPOS="--repo-id=0:--repo-id=1" backfill_derived_data_multiple_repos tail --stop-on-idle --backfill --batched --sliced --slice-size=4 &>/dev/null
 
   $ mononoke_newadmin derived-data -R repo exists -T fsnodes -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7

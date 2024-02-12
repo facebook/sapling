@@ -53,7 +53,6 @@ use crate::manager::util::DiscoveryStats;
 #[derive(Clone, Copy)]
 pub enum BatchDeriveOptions {
     Parallel { gap_size: Option<usize> },
-    Serial,
 }
 
 #[derive(Debug)]
@@ -67,10 +66,6 @@ impl BatchDeriveStats {
         use BatchDeriveStats::*;
         Ok(match (self, other) {
             (Parallel(d1), Parallel(d2)) => Parallel(d1 + d2),
-            (Serial(mut s1), Serial(mut s2)) => {
-                s1.append(&mut s2);
-                Serial(s1)
-            }
             _ => anyhow::bail!("Incompatible stats"),
         })
     }
@@ -79,7 +74,6 @@ impl BatchDeriveStats {
 impl From<BatchDeriveOptions> for BatchDeriveStats {
     fn from(batch_options: BatchDeriveOptions) -> Self {
         match batch_options {
-            BatchDeriveOptions::Serial => BatchDeriveStats::Serial(vec![]),
             BatchDeriveOptions::Parallel { .. } => BatchDeriveStats::Parallel(Duration::ZERO),
         }
     }
@@ -966,30 +960,6 @@ impl DerivedDataManager {
                                 }
                             })?;
                     (BatchDeriveStats::Parallel(stats.completion_time), derived)
-                }
-                BatchDeriveOptions::Serial => {
-                    derived_data_scuba.add_batch_parameters(false, None);
-                    let mut per_commit_stats = Vec::new();
-                    let mut per_commit_derived = HashMap::new();
-                    for bonsai in bonsais {
-                        let csid = bonsai.get_changeset_id();
-                        let parents = derivation_ctx_ref
-                            .fetch_unknown_parents(ctx, Some(&per_commit_derived), &bonsai)
-                            .await?;
-                        let (stats, derived) =
-                            Derivable::derive_single(ctx, derivation_ctx_ref, bonsai, parents)
-                                .try_timed()
-                                .await
-                                .with_context(|| {
-                                    format!("failed to derive {} for {}", Derivable::NAME, csid)
-                                })?;
-                        per_commit_stats.push((csid, stats.completion_time));
-                        per_commit_derived.insert(csid, derived);
-                    }
-                    (
-                        BatchDeriveStats::Serial(per_commit_stats),
-                        per_commit_derived,
-                    )
                 }
             };
 

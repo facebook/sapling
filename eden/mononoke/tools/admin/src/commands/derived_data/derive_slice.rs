@@ -283,13 +283,7 @@ async fn derive_slice_excluding_heads(
     let (stats, ()) = commit_graph
         .process_topologically(&ctx, exclusive_ancestors, |ancestor| {
             derived_utils
-                .derive_exactly_batch(
-                    ctx.clone(),
-                    repo_derived_data.clone(),
-                    vec![ancestor],
-                    false,
-                    None,
-                )
+                .derive_exactly_batch(ctx.clone(), repo_derived_data.clone(), vec![ancestor], None)
                 .map_ok(|_| ())
         })
         .try_timed()
