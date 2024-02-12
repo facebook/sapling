@@ -27,7 +27,7 @@ import {firstLine, registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai/utils';
-import {DefaultValue, selector, selectorFamily} from 'recoil';
+import {DefaultValue, selector} from 'recoil';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
@@ -73,28 +73,6 @@ export const diffSummary = atomFamily((diffId: DiffId | undefined) =>
     return {value: all.value?.get(diffId)};
   }),
 );
-
-export const diffSummaryRecoil = selectorFamily<
-  Result<DiffSummary | undefined>,
-  DiffId | undefined
->({
-  key: 'diffSummaryRecoil',
-  get:
-    diffId =>
-    ({get}) => {
-      if (diffId == null) {
-        return {value: undefined};
-      }
-      const all = get(allDiffSummariesRecoil);
-      if (all == null) {
-        return {value: undefined};
-      }
-      if (all.error) {
-        return {error: all.error};
-      }
-      return {value: all.value?.get(diffId)};
-    },
-});
 
 export const [allDiffSummaries, allDiffSummariesRecoil] = entangledAtoms<
   Result<Map<DiffId, DiffSummary> | null>
