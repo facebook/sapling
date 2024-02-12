@@ -260,9 +260,7 @@ export const latestUncommittedChangesTimestamp = jotaiAtom(get => {
  * Generally, you'd want to look up WITH previews, which you can use dagWithPreviews for.
  */
 export const commitByHash = atomFamilyWeak((hash: string) =>
-  jotaiAtom(get => {
-    return get(latestCommits).find(commit => commit.hash === hash);
-  }),
+  jotaiAtom(get => get(latestDag).get(hash)),
 );
 
 export const latestCommits = jotaiAtom(get => {
