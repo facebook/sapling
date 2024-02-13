@@ -54,10 +54,15 @@ export function startServer({
   slVersion,
   foreground,
 }: StartServerArgs): Promise<StartServerResult> {
+  const originalProcessCwd = process.cwd();
+  const serverRoot = path.isAbsolute(ossSmartlogDir)
+    ? ossSmartlogDir
+    : path.join(originalProcessCwd, ossSmartlogDir);
+
   return new Promise(resolve => {
     try {
       const manifest = JSON.parse(
-        fs.readFileSync(path.join(ossSmartlogDir, 'build/.vite/manifest.json'), 'utf-8'),
+        fs.readFileSync(path.join(serverRoot, 'build/.vite/manifest.json'), 'utf-8'),
       ) as {[key: string]: {file: string; css?: string[]}};
       const files = [];
       for (const [file, asset] of Object.entries(manifest)) {
@@ -123,7 +128,7 @@ export function startServer({
           const relativePath = requestUrlToResource[pathname];
           let contents: string | Buffer;
           try {
-            contents = await fs.promises.readFile(path.join(ossSmartlogDir, 'build', relativePath));
+            contents = await fs.promises.readFile(path.join(serverRoot, 'build', relativePath));
           } catch (e: unknown) {
             res.writeHead(500, {'Content-Type': 'text/plain'});
             res.end(htmlEscape((e as Error).toString()));
@@ -227,7 +232,7 @@ export function startServer({
           const dispose = () => emitter.off('message', handler);
           return {dispose};
         },
-        cwd: cwd ?? process.cwd(),
+        cwd: cwd ?? originalProcessCwd,
         logFileLocation: logFileLocation === 'stdout' ? undefined : logFileLocation,
         command,
         version: slVersion,
@@ -259,9 +264,13 @@ export function startServer({
     server.on('error', onError);
 
     // return succesful result when the server is successfully listening
-    server.on('listening', () =>
-      resolve({type: 'success', port: (server.address() as AddressInfo).port, pid: process.pid}),
-    );
+    server.on('listening', () => {
+      // Chdir to drive root so the "cwd" directory can be deleted on Windows.
+      if (process.platform === 'win32') {
+        process.chdir('\\');
+      }
+      resolve({type: 'success', port: (server.address() as AddressInfo).port, pid: process.pid});
+    });
   });
 }
 
