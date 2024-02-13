@@ -97,12 +97,14 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
         )
     ui.debug(f"uploaded {len(uploaded)} new commits\n")
 
-    bookmark_node = get_remote_bookmark_node_from_server(ui, edenapi, remote_bookmark)
+    curr_bookmark_val = get_remote_bookmark_value(repo, edenapi, remote_bookmark, force)
 
     # create remote bookmark
-    if bookmark_node is None:
+    if curr_bookmark_val.node is None:
         if opargs.get("create"):
-            create_remote_bookmark(ui, edenapi, remote_bookmark, head_node, opargs)
+            create_remote_bookmark(
+                ui, edenapi, remote_bookmark, head_node, curr_bookmark_val, opargs
+            )
             ui.debug("remote bookmark %s created\n" % remote_bookmark)
             record_remote_bookmark(repo, remote_bookmark, head_node)
             return 0
@@ -116,16 +118,17 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
         # if the head is already a public commit or force is set, then do a plain
         # push (no pushrebase)
         plain_push(
-            repo, edenapi, remote_bookmark, head_node, bookmark_node, force, opargs
+            repo, edenapi, remote_bookmark, head_node, curr_bookmark_val, force, opargs
         )
     else:
         # update the exiting bookmark with push rebase
         return push_rebase(repo, dest, head_node, draft_nodes, remote_bookmark, opargs)
 
 
-def plain_push(repo, edenapi, bookmark, to_node, from_node, force, opargs=None):
+def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, opargs=None):
     """Plain push without rebasing."""
     pushvars = parse_pushvars(opargs.get("pushvars"))
+    from_node = curr_bookmark_val.node
 
     if force:
         check_mutation_metadata(repo, to_node)
@@ -149,7 +152,17 @@ def plain_push(repo, edenapi, bookmark, to_node, from_node, force, opargs=None):
     )
     result = edenapi.setbookmark(bookmark, to_node, from_node, pushvars)["data"]
     if "Err" in result:
-        raise error.Abort(_("server error: %s") % result["Err"]["message"])
+        hint = gen_hint(
+            repo.ui,
+            edenapi,
+            bookmark,
+            curr_bookmark_val,
+            _("bookmark %s has changed since your last pull") % bookmark,
+        )
+        raise error.Abort(
+            _("server error: %s") % result["Err"]["message"],
+            hint=hint,
+        )
 
     record_remote_bookmark(repo, bookmark, to_node)
 
@@ -273,14 +286,24 @@ def get_remote_bookmark_node_from_client(repo, bookmark) -> Optional[bytes]:
     return None
 
 
-def create_remote_bookmark(ui, edenapi, bookmark, node, opargs) -> None:
+def create_remote_bookmark(
+    ui, edenapi, bookmark, node, curr_bookmark_val, opargs
+) -> None:
     ui.status(_("creating remote bookmark %s\n") % bookmark)
     pushvars = parse_pushvars(opargs.get("pushvars"))
     result = edenapi.setbookmark(bookmark, node, None, pushvars=pushvars)["data"]
     if "Err" in result:
+        hint = gen_hint(
+            ui,
+            edenapi,
+            bookmark,
+            curr_bookmark_val,
+            _("bookmark %s already exists on server") % bookmark,
+        )
         raise error.Abort(
             _("failed to create remote bookmark:\n  remote server error: %s")
-            % result["Err"]["message"]
+            % result["Err"]["message"],
+            hint=hint,
         )
 
 
@@ -393,3 +416,15 @@ def check_mutation_metadata(repo, to_node):
 
 def is_true(s: Optional[str]) -> bool:
     return s == "true" or s == "True"
+
+
+def gen_hint(ui, edenapi, bookmark, curr_bookmark_val, context_msg):
+    hint = ""
+    if curr_bookmark_val.source == RemoteBookmarkValueSource.LOCAL:
+        remote_node = get_remote_bookmark_node_from_server(ui, edenapi, bookmark)
+        if remote_node != curr_bookmark_val.node:
+            hint = _("%s, run '@prog@ pull -B %s' or add '--force'") % (
+                context_msg,
+                bookmark,
+            )
+    return hint
