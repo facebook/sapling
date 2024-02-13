@@ -29,12 +29,12 @@ pub struct BlockCommitMessagePatternConfig {
     /// Pattern to search for.  If found in any text file or the commit
     /// message, the commit is blocked.
     #[serde(with = "serde_regex")]
-    pub(crate) pattern: Regex,
+    pattern: Regex,
 
     /// Message to include in the hook rejection.  The string is expanded with
     /// the capture groups from the pattern, i.e. `${1}` is replaced with the
     /// first capture group, etc.
-    pub(crate) message: String,
+    message: String,
 }
 
 /// Hook to block commits based on matching a pattern in the commit message.

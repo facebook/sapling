@@ -28,7 +28,6 @@ use fbinit::FacebookInit;
 use metaconfig_types::HookParams;
 use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
-use regex::Regex;
 
 use crate::ChangesetHook;
 use crate::FileHook;
@@ -50,20 +49,6 @@ pub async fn make_changeset_hook(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),
         "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new())),
-        "check_nocommit_message" => {
-            // Implement old hook behaviour directly during the transition.
-            Some(Box::new(
-                block_commit_message_pattern::BlockCommitMessagePatternHook::with_config(
-                    block_commit_message_pattern::BlockCommitMessagePatternConfig {
-                        pattern: Regex::new(
-                            "(?i)(\x40(nocommit|no-commit|do-not-commit|do_not_commit))(\\W|_|\\z)",
-                        )
-                        .unwrap(),
-                        message: String::from("Commit message contains a nocommit marker: ${1}"),
-                    },
-                )?,
-            ))
-        }
         "limit_commit_message_length" => Some(b(
             limit_commit_message_length::LimitCommitMessageLength::new(&params.config)?,
         )),
@@ -82,20 +67,6 @@ pub fn make_file_hook(
         "block_content_pattern" => Some(Box::new(
             block_content_pattern::BlockContentPatternHook::new(&params.config)?,
         )),
-        "check_nocommit" => {
-            // Implement old hook behaviour directly during the transition.
-            Some(Box::new(
-                block_content_pattern::BlockContentPatternHook::with_config(
-                    block_content_pattern::BlockContentPatternConfig {
-                        pattern: Regex::new(
-                            "(?i)(\x40(nocommit|no-commit|do-not-commit|do_not_commit))(\\W|_|\\z)",
-                        )
-                        .unwrap(),
-                        message: String::from("File contains a ${1} marker"),
-                    },
-                )?,
-            ))
-        }
         "conflict_markers" => Some(Box::new(conflict_markers::ConflictMarkers::new())),
         "deny_files" => Some(Box::new(
             deny_files::DenyFiles::builder()
