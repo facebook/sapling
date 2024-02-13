@@ -70,10 +70,6 @@ pub async fn make_changeset_hook(
         "limit_commit_size" => Some(b(limit_commit_size::LimitCommitSizeHook::new(
             &params.config,
         )?)),
-        // Implement old hook behaviour during the transisiton
-        "limit_commitsize" => Some(b(limit_commit_size::legacy_limit_commitsize(
-            &params.config,
-        )?)),
         _ => None,
     })
 }

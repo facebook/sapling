@@ -6,7 +6,6 @@
  */
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -74,69 +73,6 @@ pub struct LimitCommitSizeOverride {
 #[derive(Clone, Debug)]
 pub struct LimitCommitSizeHook {
     config: LimitCommitSizeConfig,
-}
-
-pub fn legacy_limit_commitsize(hook_config: &HookConfig) -> Result<LimitCommitSizeHook> {
-    let mut config = LimitCommitSizeConfig {
-        commit_size_limit: None,
-        changed_files_limit: None,
-        ignore_path_regexes: Vec::new(),
-        path_overrides: Vec::new(),
-        too_many_files_message: String::from(concat!(
-            "Commit changed ${count} files but at most ${limit} are allowed. ",
-            "See https://fburl.com/landing_big_diffs for instructions.",
-        )),
-        too_large_message: String::from(concat!(
-            "Commit size limit is ${limit} bytes.\n",
-            "You tried to push a commit ${size} bytes in size that is over the limit.\n",
-            "See https://fburl.com/landing_big_diffs for instructions.",
-        )),
-    };
-
-    // Please note that the _i64 configs override any i32s one with the same key.
-    if let Some(v) = hook_config.ints.get("commitsizelimit") {
-        config.commit_size_limit = Some(*v as u64);
-    }
-    if let Some(v) = hook_config.ints_64.get("commitsizelimit") {
-        config.commit_size_limit = Some(*v as u64);
-    }
-    if let Some(v) = hook_config.string_lists.get("ignore_path_regexes") {
-        config.ignore_path_regexes = v
-            .iter()
-            .map(|r| anyhow::Ok(Regex::new(r)?))
-            .collect::<Result<_>>()?;
-    }
-    if let Some(v) = hook_config.ints.get("changed_files_limit") {
-        config.changed_files_limit = Some(*v as u64);
-    }
-    if let Some(v) = hook_config.ints_64.get("changed_files_limit") {
-        config.changed_files_limit = Some(*v as u64);
-    }
-    if let Some(paths) = hook_config.string_lists.get("override_limit_path_regexes") {
-        let limits = if let Some(v) = hook_config.int_lists.get("override_limits") {
-            v.iter().map(|i| *i as u64).collect::<Vec<_>>()
-        } else if let Some(v) = hook_config.int_64_lists.get("override_limits") {
-            v.iter().map(|i| *i as u64).collect::<Vec<_>>()
-        } else {
-            bail!("List 'override_limit_path_regexes' requires list 'override_limits'.");
-        };
-        if paths.len() != limits.len() {
-            bail!(
-                "Lists 'override_limit_path_regexes' and 'override_limits' have different sizes."
-            );
-        }
-        config.path_overrides = paths
-            .iter()
-            .zip(limits.iter())
-            .map(|(path, limit)| {
-                Ok(LimitCommitSizeOverride {
-                    path_regex: Regex::new(path)?,
-                    commit_size_limit: Some(*limit),
-                })
-            })
-            .collect::<Result<_>>()?;
-    }
-    LimitCommitSizeHook::with_config(config)
 }
 
 impl LimitCommitSizeHook {
