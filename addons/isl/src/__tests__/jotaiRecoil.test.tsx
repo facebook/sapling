@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {AtomFamilyWeak, useAtomGet, useAtomHas} from '../jotaiUtils';
+import type {AtomFamilyWeak} from '../jotaiUtils';
 import type {Atom} from 'jotai';
 
 import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
-import {atomFamilyWeak, lazyAtom, readAtom, writeAtom} from '../jotaiUtils';
+import {atomFamilyWeak, lazyAtom, readAtom, writeAtom, useAtomGet, useAtomHas} from '../jotaiUtils';
 import {entangledAtoms, jotaiMirrorFromRecoil} from '../recoilUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';

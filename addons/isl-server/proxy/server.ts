@@ -81,7 +81,9 @@ export function startServer({
       }
 
       for (const file of files) {
-        requestUrlToResource['/' + file] = file;
+        // `file` might have OS slash like `"assets\\stylex.0f7433cc.css".
+        // Normalize it to URL slash.
+        requestUrlToResource['/' + file.replace(/\\/g, '/')] = file;
       }
     } catch (e) {
       // ignore...
