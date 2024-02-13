@@ -6,6 +6,7 @@
  */
 
 use std::path::Path;
+use std::path::MAIN_SEPARATOR_STR as SEP;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
@@ -94,9 +95,9 @@ py_class!(pub class BindingsModuleFinder |py| {
                     let home = self.home(py);
                     if let Some(home) = home {
                         let path = if info.is_package() {
-                            format!("{}/{}/__init__.py", home, name.replace('.', "/"))
+                            format!("{}{SEP}{}{SEP}__init__.py", home, name.replace('.', SEP))
                         } else {
-                            format!("{}/{}.py", home, name.replace('.', "/"))
+                            format!("{}{SEP}{}.py", home, name.replace('.', SEP))
                         };
                         if Path::new(&path).exists() {
                             // Fallback to other finders.
