@@ -305,6 +305,7 @@ members = [
   "git/gitimport",
   "git/import_direct",
   "git/import_tools",
+  "git/packetline",
   "git/packfile",
   "git/packfile/if",
   "git/packfile/if/clients",

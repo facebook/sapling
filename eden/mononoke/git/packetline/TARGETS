@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "packetline",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+    ],
+)
+
+rust_unittest(
+    name = "packetline_test",
+    srcs = glob(["test/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:tokio",
+        ":packetline",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
+)
