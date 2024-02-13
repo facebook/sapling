@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 from collections import defaultdict
+from enum import Enum
 from typing import List, Optional, Tuple
 
 from . import edenapi_upload, error, hg, mutation, phases, scmutil
@@ -16,6 +17,20 @@ MUTATION_KEYS = {"mutpred", "mutuser", "mutdate", "mutop", "mutsplit"}
 
 CFG_SECTION = "push"
 CFG_KEY_ENABLE_DEBUG_INFO = "enable_debug_info"
+CFG_KEY_USE_LOCAL_BOOKMARK_VALUE = "use_local_bookmark_value"
+
+
+class RemoteBookmarkValueSource(Enum):
+    """The source of a remote bookmark value."""
+
+    LOCAL = "local"
+    SERVER = "server"
+
+
+class RemoteBookmarkValue:
+    def __init__(self, node: Optional[bytes], source: RemoteBookmarkValueSource):
+        self.node = node
+        self.source = source
 
 
 def get_edenapi_for_dest(repo, _dest):
@@ -82,7 +97,7 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
         )
     ui.debug(f"uploaded {len(uploaded)} new commits\n")
 
-    bookmark_node = get_remote_bookmark_node(ui, edenapi, remote_bookmark)
+    bookmark_node = get_remote_bookmark_node_from_server(ui, edenapi, remote_bookmark)
 
     # create remote bookmark
     if bookmark_node is None:
@@ -217,11 +232,45 @@ def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None
         return 0
 
 
-def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
+def get_remote_bookmark_value(repo, edenapi, bookmark, force) -> RemoteBookmarkValue:
+    use_local = repo.ui.configbool(CFG_SECTION, CFG_KEY_USE_LOCAL_BOOKMARK_VALUE)
+    # In force mode, we ignore the local bookmark value and always query the server
+    if use_local and not force:
+        node = get_remote_bookmark_node_from_client(repo, bookmark)
+        source = RemoteBookmarkValueSource.LOCAL
+    else:
+        node = get_remote_bookmark_node_from_server(repo.ui, edenapi, bookmark)
+        source = RemoteBookmarkValueSource.SERVER
+    return RemoteBookmarkValue(node, source)
+
+
+def get_remote_bookmark_node_from_server(ui, edenapi, bookmark) -> Optional[bytes]:
+    """Get the remote bookmark node from the server."""
     ui.debug("getting remote bookmark %s\n" % bookmark)
     response = edenapi.bookmarks([bookmark])
     hexnode = response.get(bookmark)
     return bin(hexnode) if hexnode else None
+
+
+def get_remote_bookmark_node_from_client(repo, bookmark) -> Optional[bytes]:
+    """Get the remote bookmark node from the client's local view."""
+    fullname_to_hexnode = {
+        f"{remote}/{name}": hexnode
+        for hexnode, nametype, remote, name in readremotenames(repo)
+        if nametype == "bookmarks"
+    }
+
+    # e.g. 'my-fork/main'
+    if bookmark in fullname_to_hexnode:
+        return bin(fullname_to_hexnode[bookmark])
+
+    hoist = repo.ui.config("remotenames", "hoist")
+    # convert to full name (e.g. 'stable' -> 'remote/stable')
+    fullname = f"{hoist}/{bookmark}"
+    if fullname in fullname_to_hexnode:
+        return bin(fullname_to_hexnode[fullname])
+
+    return None
 
 
 def create_remote_bookmark(ui, edenapi, bookmark, node, opargs) -> None:
@@ -249,21 +298,49 @@ def record_remote_bookmark(repo, bookmark, new_node) -> None:
         saveremotenames(repo, data)
 
 
-def delete_remote_bookmark(repo, edenapi, bookmark, pushvars_strs) -> None:
+def delete_remote_bookmark(repo, edenapi, bookmark, force, pushvars_strs) -> None:
+    def handle_error(ui, edenapi, bookmark, curr_bookmark_val, err):
+        hint = ""
+
+        if curr_bookmark_val.source == RemoteBookmarkValueSource.LOCAL:
+            # if the source is local, the it is likely the server has a newer value,
+            # let's check that.
+            remote_node = get_remote_bookmark_node_from_server(ui, edenapi, bookmark)
+            if remote_node is None:
+                # the bookmark is already deleted on the server, nothing needed
+                # from the user. In very rare cases, the remote_node can be stale data
+                # and the boomark may still exists on the server (this only happens in
+                # integration tests so far).
+                return
+            if remote_node != curr_bookmark_val.node:
+                hint = _(
+                    "bookmark %s has changed since your last pull, run '@prog@ pull -B %s'"
+                    " or add '--force'"
+                ) % (bookmark, bookmark)
+
+        raise error.Abort(
+            _("failed to delete remote bookmark:\n  remote server error: %s")
+            % err["message"],
+            hint=hint,
+        )
+
     ui = repo.ui
-    node = get_remote_bookmark_node(ui, edenapi, bookmark)
-    if node is None:
-        raise error.Abort(_("remote bookmark %s does not exist") % bookmark)
+    curr_bookmark_val = get_remote_bookmark_value(repo, edenapi, bookmark, force)
+    if curr_bookmark_val.node is None:
+        raise error.Abort(
+            _("remote bookmark %s does not exist in %s")
+            % (bookmark, curr_bookmark_val.source)
+        )
 
     # delete remote bookmark from server
     ui.status(_("deleting remote bookmark %s\n") % bookmark)
     pushvars = parse_pushvars(pushvars_strs)
-    result = edenapi.setbookmark(bookmark, None, node, pushvars=pushvars)["data"]
+    result = edenapi.setbookmark(
+        bookmark, None, curr_bookmark_val.node, pushvars=pushvars
+    )["data"]
+
     if "Err" in result:
-        raise error.Abort(
-            _("failed to delete remote bookmark:\n  remote server error: %s")
-            % result["Err"]["message"]
-        )
+        handle_error(ui, edenapi, bookmark, curr_bookmark_val, result["Err"])
 
     # delete remote bookmark from repo
     with repo.wlock(), repo.lock(), repo.transaction("deleteremotebookmark"):
