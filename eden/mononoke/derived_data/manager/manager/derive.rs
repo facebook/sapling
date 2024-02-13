@@ -660,13 +660,16 @@ impl DerivedDataManager {
                         // Currently, this is not supported. Let's fallback to local derivation to
                         // unblock derivation of, for example, "changeset_info" DDT required for most SCS
                         // methods to work.
-                        if let Some(req_err) = e.downcast_ref::<RequestError>() {
-                            if matches!(req_err.reason, RequestErrorReason::commit_not_found(_)) {
-                                derived_data_scuba.log_remote_derivation_end(
-                                    ctx,
-                                    Some(String::from("Commit Not Found Response")),
-                                );
-                                return Ok(None);
+                        for cause in e.chain() {
+                            if let Some(req_err) = cause.downcast_ref::<RequestError>() {
+                                if matches!(req_err.reason, RequestErrorReason::commit_not_found(_))
+                                {
+                                    derived_data_scuba.log_remote_derivation_end(
+                                        ctx,
+                                        Some(String::from("Commit Not Found Response")),
+                                    );
+                                    return Ok(None);
+                                }
                             }
                         }
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
