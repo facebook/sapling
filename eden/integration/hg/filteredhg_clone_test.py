@@ -6,7 +6,7 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from eden.integration.hg.lib.hg_extension_test_base import (
     filteredhg_test,
@@ -21,14 +21,14 @@ from eden.integration.lib import hgrepo
 class FilteredFSCloneBase(FilteredHgTestCase):
     """Clone FilteredFS repos using `hg clone`"""
 
-    filter_contents: str = """
+    test_filter0: str = """
 [exclude]
 foo
 [include]
 bar
 """
 
-    test_filter: str = """
+    test_filter1: str = """
 [include]
 *
 """
@@ -42,14 +42,15 @@ filtered
 """
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
-        repo.write_file("tools/scm/filter/test", self.test_filter)
-        repo.write_file("tools/scm/filter/test2", self.test_filter2)
+        repo.write_file("filter0", self.test_filter0)
+        repo.write_file("tools/scm/filter/filter1", self.test_filter1)
+        repo.write_file("tools/scm/filter/filter2", self.test_filter2)
         repo.write_file("foo", "foo")
         repo.write_file("bar", "bar")
         repo.write_file("filtered", "I should be filtered by filter2")
         repo.commit("Initial commit.")
 
-    def clone_eden_repo(
+    def eden_clone_filteredhg_repo(
         self, backing_store: Optional[str] = None, filter_path: Optional[str] = None
     ) -> Path:
         tmp = self.make_temporary_directory()
@@ -63,7 +64,7 @@ filtered
         )
         return Path(empty_dir)
 
-    def assert_eden_paths_filtered_unfiltered(
+    def assert_paths_filtered_unfiltered(
         self, repo: Path, filtered_paths: List[str], unfiltered_paths: List[str]
     ) -> None:
         for u in unfiltered_paths:
@@ -78,47 +79,91 @@ filtered
                 "filtered path should not be present in the repo",
             )
 
-    def clone_hg_repo(
-        self, repo_name: str
-    ) -> Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]:
+    def hg_clone_filteredhg_repo_legacy(
+        self, repo_name: str, filter_path: Optional[str] = None
+    ) -> hgrepo.HgRepository:
+        """
+        Uses the old method of cloning FilteredFS repositories (setting a config value to true).
+        Takes an optional filter_path to test using both FilteredFS cloning methods at once.
+        """
+        args = ["--config", "clone.use-eden-sparse=true"]
+        if filter_path is not None:
+            args.extend(["--config", f"clone.eden-sparse-filter={filter_path}"])
+
         return self.hg_clone_additional_repo(
-            "--config", "clone.use-eden-sparse=true", client_name=repo_name
+            *args, backing_repo=self.backing_repo, client_name=repo_name
         )
 
-    def test_hg_clone_succeeds(self) -> None:
-        ffs_repo, backing_repo = self.clone_hg_repo("ffs")
-        ffs_repo.write_file("foo", contents="bar")
-        ffs_repo.write_file("bar", contents="baz")
-        ffs_repo.write_file("filter", contents=self.filter_contents)
-        ffs_repo.commit("Initial commit")
-        self.assertTrue(os.path.exists(ffs_repo.get_path("bar")))
-        self.assertTrue(os.path.exists(ffs_repo.get_path("foo")))
-        ffs_repo.hg("filteredfs", "enable", "filter")
-        self.assertTrue(os.path.exists(ffs_repo.get_path("bar")))
-        self.assertFalse(os.path.exists(ffs_repo.get_path("foo")))
+    def hg_clone_filteredhg_repo(
+        self, repo_name: str, filter_path: Optional[str] = ""
+    ) -> hgrepo.HgRepository:
+        """
+        Uses the new method of cloning FilteredFS repositories (setting a string config value).
+        The config works as follows
+            - An empty string indicates that FilteredFS should be used, but no filter should be
+              activated at clone time.
+            - A non-empty string indicates that FilteredFS should be used, and the given filter
+              should be activated.
+            - None indicates that FilteredFS should not be used.
+
+        This function assumes that FilteredFS should be used at all times and therefore always
+        passes a config value.
+        """
+        return self.hg_clone_additional_repo(
+            "--config",
+            f"clone.eden-sparse-filter={filter_path}",
+            backing_repo=self.backing_repo,
+            client_name=repo_name,
+        )
+
+    def test_legacy_filteredhg_clone_succeeds(self) -> None:
+        ffs_repo = self.hg_clone_filteredhg_repo_legacy(repo_name="ffs")
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), [], ["foo", "bar", "filtered"]
+        )
+        ffs_repo.hg("filteredfs", "enable", "filter0")
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), ["foo", "filtered"], ["bar"]
+        )
+
+    def test_filteredhg_clone_succeeds(self) -> None:
+        ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs", filter_path="filter0")
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), ["foo", "filtered"], ["bar"]
+        )
+
+    def test_filteredhg_clone_succeeds_no_filter(self) -> None:
+        ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs")
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
+        )
+
+    def test_legacy_filteredhg_clone_with_filter(self) -> None:
+        ffs_repo = self.hg_clone_filteredhg_repo_legacy(
+            repo_name="ffs", filter_path="tools/scm/filter/filter2"
+        )
+        self.assert_paths_filtered_unfiltered(
+            Path(ffs_repo.path), ["filtered"], ["foo", "bar"]
+        )
 
     def test_eden_clone_succeeds(self) -> None:
-        self.clone_eden_repo(backing_store="filteredhg")
+        self.eden_clone_filteredhg_repo(backing_store="filteredhg")
 
     def test_eden_clone_with_filter_succeeds(self) -> None:
-        repo_path = self.clone_eden_repo(
-            backing_store="filteredhg", filter_path="tools/scm/filter/test"
+        repo_path = self.eden_clone_filteredhg_repo(
+            backing_store="filteredhg", filter_path="tools/scm/filter/filter1"
         )
-        self.assert_eden_paths_filtered_unfiltered(
-            repo_path, [], ["foo", "bar", "filtered"]
-        )
+        self.assert_paths_filtered_unfiltered(repo_path, [], ["foo", "bar", "filtered"])
 
     def test_filter_active_after_eden_clone(self) -> None:
-        repo_path = self.clone_eden_repo(
-            backing_store="filteredhg", filter_path="tools/scm/filter/test2"
+        repo_path = self.eden_clone_filteredhg_repo(
+            backing_store="filteredhg", filter_path="tools/scm/filter/filter2"
         )
-        self.assert_eden_paths_filtered_unfiltered(
-            repo_path, ["filtered"], ["foo", "bar"]
-        )
+        self.assert_paths_filtered_unfiltered(repo_path, ["filtered"], ["foo", "bar"])
 
     def test_clone_filter_without_backing_store_arg_fails(self) -> None:
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.clone_eden_repo(filter_path="tools/scm/filter/test")
+            self.eden_clone_filteredhg_repo(filter_path="tools/scm/filter/filter1")
         stderr = context.exception.stderr
         self.assertIn(
             "error: --filter-path can only be used with",

@@ -302,7 +302,11 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     ));
 
     let clone_type_str = if ctx.opts.eden {
-        if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
+        if config.get_or_default::<bool>("clone", "use-eden-sparse")?
+            || config
+                .must_get::<String>("clone", "eden-sparse-filter")
+                .is_ok()
+        {
             "eden_sparse"
         } else {
             "eden_fs"

@@ -172,14 +172,42 @@ pub enum EdenCloneError {
     MissingCommandConfig(),
 }
 
+fn get_eden_clone_command(config: &dyn Config) -> Result<Command> {
+    let eden_command = config.get_opt::<String>("edenfs", "command")?;
+    match eden_command {
+        Some(cmd) => Ok(Command::new(cmd)),
+        None => Err(EdenCloneError::MissingCommandConfig().into()),
+    }
+}
+
+#[tracing::instrument]
+fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
+    let output = clone_command
+        .output()
+        .with_context(|| format!("failed to execute {:?}", clone_command))?;
+
+    if !output.status.success() {
+        return Err(EdenCloneError::ExeuctionFailure(
+            String::from_utf8_lossy(&output.stdout).to_string(),
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        )
+        .into());
+    }
+
+    if String::from_utf8_lossy(&output.stdout)
+        .to_string()
+        .contains("edenfs daemon is not currently running")
+    {
+        tracing::debug!(target: "clone_info", edenfs_started_at_clone="true");
+    }
+    Ok(())
+}
+
 #[instrument(err)]
 pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>) -> Result<()> {
     let config = backing_repo.config();
-    let eden_command = config.get_opt::<String>("edenfs", "command")?;
-    let mut clone_command = match eden_command {
-        Some(cmd) => Command::new(cmd),
-        None => return Err(EdenCloneError::MissingCommandConfig().into()),
-    };
+
+    let mut clone_command = get_eden_clone_command(config)?;
 
     // allow tests to specify different configuration directories from prod defaults
     if let Some(base_dir) = config.get_opt::<PathBuf>("edenfs", "basepath")? {
@@ -218,32 +246,56 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         clone_command.arg("--allow-empty-repo");
     }
 
-    if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
-        clone_command.args(["--backing-store", "filteredhg"]);
-    }
+    // The old config value was a bool while the new config value is a String. We need to support
+    // both values until we can deprecate the old one.
+    let eden_sparse_filter = match config.must_get::<String>("clone", "eden-sparse-filter") {
+        // A non-empty string means we should activate this filter after cloning the repo.
+        // An empty string means the repo should be cloned without activating a filter.
+        Ok(val) => Some(val),
+        Err(_) => {
+            // If the old config value is true, we should use eden sparse but not activate a filter
+            if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
+                Some("".to_owned())
+            } else {
+                // Otherwise we don't want to use eden sparse or activate any filters
+                None
+            }
+        }
+    };
 
-    tracing::info!(?clone_command, "running edenfsctl clone");
+    // The current Eden installation may not yet support the --filter-path option. We will back-up
+    // the clone arguments and retry without --filter-path if our first clone attempt fails.
+    let args_without_filter = match eden_sparse_filter {
+        Some(filter) if !filter.is_empty() => {
+            clone_command.args(["--backing-store", "filteredhg"]);
+            let args_without_filter = clone_command
+                .get_args()
+                .map(|v| v.to_os_string())
+                .collect::<Vec<_>>();
+            clone_command.args(["--filter-path", &filter]);
+            Some(args_without_filter)
+        }
+        Some(_) => {
+            // The config didn't specify a filter, so we don't need to try to pass one.
+            clone_command.args(["--backing-store", "filteredhg"]);
+            None
+        }
+        // We aren't cloning with FilteredFS at all. No need to retry the clone if it fails.
+        None => None,
+    };
 
-    let output = clone_command
-        .output()
-        .with_context(|| format!("failed to execute {:?}", clone_command))?;
-
-    if !output.status.success() {
-        return Err(EdenCloneError::ExeuctionFailure(
-            String::from_utf8_lossy(&output.stdout).to_string(),
-            String::from_utf8_lossy(&output.stderr).to_string(),
-        )
-        .into());
-    }
-
-    if String::from_utf8_lossy(&output.stdout)
-        .to_string()
-        .contains("edenfs daemon is not currently running")
-    {
-        tracing::debug!(target: "clone_info", edenfs_started_at_clone="true");
-    }
-
-    Ok(())
+    run_eden_clone_command(&mut clone_command).or_else(|e| {
+        // Retry the clone without the --filter-path argument
+        if let Some(args_without_filter) = args_without_filter {
+            let mut new_command = get_eden_clone_command(config)?;
+            new_command.args(args_without_filter);
+            tracing::debug!(target: "clone_info", empty_eden_filter=true);
+            run_eden_clone_command(&mut new_command)?;
+            Ok(())
+        } else {
+            Err(e)
+        }
+    })
 }
 
 #[cfg(test)]
