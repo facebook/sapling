@@ -664,7 +664,7 @@ impl DerivedDataManager {
                             if matches!(req_err.reason, RequestErrorReason::commit_not_found(_)) {
                                 derived_data_scuba.log_remote_derivation_end(
                                     ctx,
-                                    Some(format!("Commit Not Found Response")),
+                                    Some(String::from("Commit Not Found Response")),
                                 );
                                 return Ok(None);
                             }
