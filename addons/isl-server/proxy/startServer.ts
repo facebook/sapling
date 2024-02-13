@@ -254,8 +254,22 @@ const validPlatforms: Array<PlatformName> = [
   'webview',
   'chromelike_app',
 ];
-function isValidCustomPlatform(name: unknown): name is PlatformName {
+function isValidCustomPlatform(name: string): name is PlatformName {
   return validPlatforms.includes(name as PlatformName);
+}
+/** Return the "index" html path like `androidStudio.html`. */
+function getPlatformIndexHtmlPath(name?: string): string {
+  if (name == null || name === 'browser') {
+    return '';
+  }
+  if (name === 'chromelike_app') {
+    // need to match isl/build/.vite/manifest.json
+    return 'chromelikeApp.html';
+  }
+  if (isValidCustomPlatform(name)) {
+    return `${encodeURIComponent(name)}.html`;
+  }
+  return '';
 }
 
 /**
@@ -420,10 +434,7 @@ export async function runProxyMain(args: Args) {
     if (sessionId) {
       urlArgs.sessionId = encodeURIComponent(sessionId);
     }
-    const platformPath =
-      platform && platform !== 'browser' && isValidCustomPlatform(platform)
-        ? `${encodeURIComponent(platform)}.html`
-        : '';
+    const platformPath = getPlatformIndexHtmlPath(platform);
     const url = `http://localhost:${serverPort}/${platformPath}?${Object.entries(urlArgs)
       .map(([key, value]) => `${key}=${value}`)
       .join('&')}`;
