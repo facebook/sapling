@@ -24,6 +24,7 @@ rust_binary(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         ":derivation_queue",
+        "//common/rust/experimental/base_controller:thrift_factory",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
