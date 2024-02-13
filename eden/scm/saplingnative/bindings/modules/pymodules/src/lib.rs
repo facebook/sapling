@@ -87,7 +87,10 @@ py_class!(pub class BindingsModuleFinder |py| {
         match python_modules::find_module(name) {
             None => Ok(None),
             Some(info) => {
-                if !info.is_stdlib() {
+                tracing::debug!(name=name,"find_spec");
+                if info.is_stdlib() {
+                    tracing::trace!(" skip filesystem, is stdlib");
+                } else {
                     let home = self.home(py);
                     if let Some(home) = home {
                         let path = if info.is_package() {
@@ -97,8 +100,13 @@ py_class!(pub class BindingsModuleFinder |py| {
                         };
                         if Path::new(&path).exists() {
                             // Fallback to other finders.
+                            tracing::trace!(path=path, " use filesystem, not static");
                             return Ok(None);
+                        } else {
+                            tracing::trace!(path=path, " skip filesystem, path does not exist");
                         }
+                    } else {
+                        tracing::trace!(" skip filesystem, no home set");
                     }
                 }
                 // ModuleSpec(name, loader, *, origin=None, loader_state=None, is_package=None)

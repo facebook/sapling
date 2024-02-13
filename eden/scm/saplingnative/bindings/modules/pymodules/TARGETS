@@ -20,6 +20,7 @@ rust_python_library(
     },
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/python-modules:python-modules",
         "//eden/scm/saplingnative/bindings/modules/pybytes:pybytes",
