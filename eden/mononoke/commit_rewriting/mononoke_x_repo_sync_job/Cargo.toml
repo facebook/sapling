@@ -18,7 +18,6 @@ clap = { version = "4.4.12", features = ["derive", "env", "string", "unicode", "
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
-cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }

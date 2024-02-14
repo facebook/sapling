@@ -21,8 +21,6 @@ use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::sync::SyncResult;
 
-pub const SCUBA_TABLE: &str = "mononoke_x_repo_sync";
-
 const SOURCE_REPO: &str = "source_repo";
 const TARGET_REPO: &str = "target_repo";
 const SOURCE_CS_ID: &str = "source_cs_id";

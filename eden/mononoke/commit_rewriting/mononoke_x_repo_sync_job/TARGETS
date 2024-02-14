@@ -29,7 +29,6 @@ rust_binary(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib:cmdlib_cross_repo",
-        "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
