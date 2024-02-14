@@ -50,11 +50,11 @@ Create small repo commits
       ),
   ]
   CommitSyncer{1->0}: unsafe_sync_commit called for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, with hint: CandidateSelectionHint::Only
-  derive changeset_info for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
+  derive exactly changeset_info batch from 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36 to 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   CommitSyncer{1->0}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
-  derive changeset_info for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
-  derive skeleton_manifests for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
+  derive exactly changeset_info batch from 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 to 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
+  derive exactly skeleton_manifests batch from 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36 to 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   CommitSyncer{1->0}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
   changeset 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 synced as 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652 in * (glob)
@@ -113,12 +113,12 @@ Add more commits to small repo
   ]
   CommitSyncer{1->0}: unsafe_sync_commit called for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, hint CandidateSelectionHint::Only
-  derive changeset_info for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
-  derive skeleton_manifests for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
+  derive exactly changeset_info batch from 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583 to 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
+  derive exactly skeleton_manifests batch from 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 to 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
   CommitSyncer{1->0}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
-  derive changeset_info for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
-  derive skeleton_manifests for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
+  derive exactly changeset_info batch from d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a to d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
+  derive exactly skeleton_manifests batch from 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583 to 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
   CommitSyncer{1->0}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
   changeset d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a synced as ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b in * (glob)

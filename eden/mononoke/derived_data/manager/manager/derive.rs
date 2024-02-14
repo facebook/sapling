@@ -118,115 +118,6 @@ impl DerivedDataManager {
         Ok(())
     }
 
-    /// Perform derivation for a single changeset.
-    /// Will fail in case data for parents changeset wasn't derived
-    async fn perform_single_derivation<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
-        csid: ChangesetId,
-        discovery_stats: &DiscoveryStats,
-    ) -> Result<(ChangesetId, Derivable)>
-    where
-        Derivable: BonsaiDerivable,
-    {
-        let mut scuba = ctx.scuba().clone();
-        scuba
-            .add("changeset_id", csid.to_string())
-            .add("derived_data_type", Derivable::NAME);
-        scuba
-            .clone()
-            .log_with_msg("Waiting for derived data to be generated", None);
-
-        debug!(ctx.logger(), "derive {} for {}", Derivable::NAME, csid);
-        let lease_key = format!("repo{}.{}.{}", self.repo_id(), Derivable::NAME, csid);
-
-        let ctx = ctx.clone_and_reset();
-
-        let (stats, result) = async {
-            let bonsai = csid.load(&ctx, self.repo_blobstore()).map_err(Error::from);
-            let guard = async {
-                if derivation_ctx.needs_rederive::<Derivable>(csid) {
-                    // We are rederiving this changeset, so do not try to take
-                    // the lease, as doing so will drop out immediately
-                    // because the data is already derived.
-                    None
-                } else {
-                    Some(
-                        self.lease()
-                            .try_acquire_in_loop(&ctx, &lease_key, || async {
-                                Ok(Derivable::fetch(&ctx, derivation_ctx, csid)
-                                    .await?
-                                    .is_some())
-                            })
-                            .await,
-                    )
-                }
-            };
-            let (bonsai, guard) = join!(bonsai, guard);
-            if matches!(guard, Some(Ok(None))) {
-                // Something else completed derivation
-                let derived = Derivable::fetch(&ctx, derivation_ctx, csid)
-                    .await?
-                    .ok_or_else(|| {
-                        anyhow!("derivation completed elsewhere but data could not be fetched")
-                    })?;
-                Ok((csid, derived))
-            } else {
-                // We must perform derivation.  Use the appropriate session
-                // class for derivation.
-                let ctx = self.set_derivation_session_class(ctx.clone());
-                let bonsai = bonsai?;
-
-                // The derivation process is additionally logged to the derived
-                // data scuba table.
-                let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-                derived_data_scuba.add_changeset(&bonsai);
-                derived_data_scuba.add_discovery_stats(discovery_stats);
-                derived_data_scuba.log_derivation_start(&ctx);
-
-                let (derive_stats, derived) = async {
-                    let parents = derivation_ctx.fetch_parents(&ctx, &bonsai).await?;
-                    Derivable::derive_single(&ctx, derivation_ctx, bonsai, parents).await
-                }
-                .timed()
-                .await;
-
-                derived_data_scuba.log_derivation_end(&ctx, &derive_stats, derived.as_ref().err());
-
-                let derived = derived?;
-
-                // We may now store the mapping, and flush the blobstore to
-                // ensure the mapping is persisted.
-                let (persist_stats, persisted) = derived
-                    .clone()
-                    .store_mapping(&ctx, derivation_ctx, csid)
-                    .timed()
-                    .await;
-
-                derived_data_scuba.log_mapping_insertion(
-                    &ctx,
-                    Some(&derived),
-                    &persist_stats,
-                    persisted.as_ref().err(),
-                );
-
-                persisted?;
-
-                Ok((csid, derived))
-            }
-        }
-        .timed()
-        .await;
-        scuba.add_future_stats(&stats);
-        if result.is_ok() {
-            scuba.log_with_msg("Got derived data", None);
-        } else {
-            scuba.log_with_msg("Failed to get derived data", None);
-        };
-        result
-    }
-
     /// Find ancestors of the target changeset that are underived.
     async fn find_underived_inner<Derivable>(
         &self,
@@ -315,10 +206,12 @@ impl DerivedDataManager {
         .try_timed()
         .await?;
 
-        let stats = DiscoveryStats {
+        let discovery_stats = DiscoveryStats {
             find_underived_completion_time: find_underived_stats.completion_time,
             commits_discovered: dag_traversal.len() as u32,
         };
+        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+        derived_data_scuba.add_discovery_stats(&discovery_stats);
         let mut dag_traversal = TopoSortedDagTraversal::new(dag_traversal);
 
         let buffer_size = self.max_parallel_derivations();
@@ -327,14 +220,69 @@ impl DerivedDataManager {
         let mut target_derived = None;
         while !dag_traversal.is_empty() || !derivations.is_empty() {
             let free = buffer_size.saturating_sub(derivations.len());
+            // TODO (Pierre):
+            // This is suboptimal: We spawn derivations for one csid at a time.
+            // We should leverage the batching provided by `derive_exactly_batch`.
+            // This comment was written during a refactoring change, so the existing behaviour was
+            // preserved to avoid mixing refactoring and behavioural changes.
             derivations.extend(dag_traversal.drain(free).map(|csid| {
                 cloned!(ctx, derivation_ctx);
                 let manager = self.clone();
-                let stats = stats.clone();
                 let derivation = async move {
-                    manager
-                        .perform_single_derivation(&ctx, &derivation_ctx, csid, &stats)
-                        .await
+                    let lease_key =
+                        format!("repo{}.{}.{}", manager.repo_id(), Derivable::NAME, csid);
+                    // TODO (Pierre):
+                    // Here, the `needs_rederive` check is only needed in case we are racing with
+                    // something else that is deriving the same changesets as we are, since we
+                    // found these changesets at the beginning of this function by finding
+                    // underived changesets.
+                    // Arguably, it can be removed entirely and just do the work.
+                    // This was modified in a refactoring, so it was preserved to avoid mixing
+                    // refactoring and behavioural changes.
+                    let bonsai = csid
+                        .load(&ctx, manager.repo_blobstore())
+                        .map_err(Error::from);
+                    let guard = async {
+                        if derivation_ctx.needs_rederive::<Derivable>(csid) {
+                            // We are rederiving this changeset, so do not try to take the lease,
+                            // as doing so will drop out immediately because the data is already
+                            // derived
+                            None
+                        } else {
+                            Some(
+                                manager
+                                    .lease()
+                                    .try_acquire_in_loop(&ctx, &lease_key, || async {
+                                        Ok(Derivable::fetch(&ctx, &derivation_ctx, csid)
+                                            .await?
+                                            .is_some())
+                                    })
+                                    .await,
+                            )
+                        }
+                    };
+                    let (_bonsai, guard) = join!(bonsai, guard);
+                    let derived =
+                        if matches!(guard, Some(Ok(None))) {
+                            // Something else completed derivation
+                            Derivable::fetch(&ctx, &derivation_ctx, csid).await?
+                        .ok_or_else(|| {
+                        anyhow!("derivation completed elsewhere but data could not be fetched")
+                    })?
+                        } else {
+                            let rederivation = None;
+                            manager
+                                .derive_exactly_batch::<Derivable>(&ctx, vec![csid], rederivation)
+                                .await?;
+                            Derivable::fetch(&ctx, &derivation_ctx, csid)
+                            .await?
+                            .ok_or_else(|| {
+                                anyhow!(
+                                    "derivation completed elsewhere but data could not be fetched"
+                                )
+                            })?
+                        };
+                    Ok::<_, DerivationError>((csid, derived))
                 };
                 tokio::spawn(derivation).map_err(Error::from)
             }));

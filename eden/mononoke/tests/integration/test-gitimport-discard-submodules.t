@@ -151,7 +151,9 @@
   Caused by:
       0: Error while counting objects for packing
       1: Error in deriving RootGitDeltaManifestId for commit ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))
-      2: Error while deriving current commit's Git tree
-      3: Raw Git tree with hash fc59e10f3c37ad53e0af6882e382f0169eae51ac should have been present already
-      4: The object corresponding to object ID fc59e10f3c37ad53e0af6882e382f0169eae51ac or its packfile item does not exist in the data store
+      2: a batch dependency has not been derived
+      3: failed to derive batch dependencies
+      4: failed to derive git_trees batch (start:4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e, end:4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)
+      5: Raw Git tree with hash fc59e10f3c37ad53e0af6882e382f0169eae51ac should have been present already
+      6: The object corresponding to object ID fc59e10f3c37ad53e0af6882e382f0169eae51ac or its packfile item does not exist in the data store
   [1]

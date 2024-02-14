@@ -48,7 +48,8 @@ Create commit that modifies git submodule in small repo
   Error: Failed to derive Mercurial changeset
   
   Caused by:
-      Git submodules not supported
+      0: failed to derive hgchangesets batch (start:3fa05e617e5bd79190a61e16cc23669825b57f36474df1902a63c071998b181d, end:3fa05e617e5bd79190a61e16cc23669825b57f36474df1902a63c071998b181d)
+      1: Git submodules not supported
   o  e462fc947f26 A
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
@@ -61,5 +62,8 @@ Create commit that modifies git submodule in small repo
   RewrittenAs([(ChangesetId(Blake2(ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
-  Error: Git submodules not supported
+  Error: failed to derive hgchangesets batch (start:3fa05e617e5bd79190a61e16cc23669825b57f36474df1902a63c071998b181d, end:3fa05e617e5bd79190a61e16cc23669825b57f36474df1902a63c071998b181d)
+  
+  Caused by:
+      Git submodules not supported
   [1]

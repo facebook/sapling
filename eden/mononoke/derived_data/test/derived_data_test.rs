@@ -6,7 +6,6 @@
  */
 
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -24,7 +23,6 @@ use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
-use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use fbinit::FacebookInit;
@@ -44,7 +42,6 @@ use futures::future::BoxFuture;
 use futures_stats::TimedTryFutureExt;
 use generation_derivation::make_test_repo_factory;
 use generation_derivation::DerivedGeneration;
-use lock_ext::LockExt;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
@@ -206,83 +203,6 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
         .await?;
     assert!(derived_anc2.is_none());
 
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = make_test_repo_factory(fb).build().await?;
-    Linear::initrepo(fb, &repo).await;
-
-    let master = repo
-        .bookmarks()
-        .get(ctx.clone(), &BookmarkKey::new("master")?)
-        .await?
-        .expect("master should be set");
-
-    let lease = repo.repo_derived_data().lease();
-    let lease_key = format!(
-        "repo{}.{}.{}",
-        repo.repo_identity().id(),
-        DerivedGeneration::NAME,
-        master
-    );
-
-    // take lease
-    assert!(lease.try_add_put_lease(&lease_key).await?);
-    assert!(!lease.try_add_put_lease(&lease_key).await?);
-
-    let output = Arc::new(Mutex::new(None));
-    tokio::spawn({
-        cloned!(ctx, repo, output);
-        async move {
-            let result = repo
-                .repo_derived_data()
-                .derive::<DerivedGeneration>(&ctx, master)
-                .await;
-            output.with(move |output| {
-                let _ = output.insert(result);
-            });
-        }
-    });
-
-    // Let the derivation process get started, however derivation won't
-    // happen yet.
-    tokio::time::sleep(Duration::from_millis(300)).await;
-
-    assert!(
-        repo.repo_derived_data()
-            .fetch_derived::<DerivedGeneration>(&ctx, master)
-            .await?
-            .is_none()
-    );
-
-    // Release the lease, allowing derivation to proceed.
-    lease.release_lease(&lease_key).await;
-    tokio::time::sleep(Duration::from_millis(3000)).await;
-
-    let expected = repo
-        .changesets()
-        .get(&ctx, master)
-        .await?
-        .expect("changeset should exist")
-        .gen;
-    let result = output
-        .with(|output| output.take())
-        .expect("scheduled derivation should have completed")?;
-    assert_eq!(expected, result.generation,);
-
-    // Take the lease again.
-    assert!(lease.try_add_put_lease(&lease_key).await?);
-
-    // This time it should succeed, as the lease won't be necessary.
-    let result = repo
-        .repo_derived_data()
-        .derive::<DerivedGeneration>(&ctx, master)
-        .await?;
-    assert_eq!(expected, result.generation);
-    lease.release_lease(&lease_key).await;
     Ok(())
 }
 
