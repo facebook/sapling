@@ -31,7 +31,6 @@ rust_binary(
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
         "//common/rust/everstore:everstore_client",
-        "//common/rust/experimental/base_controller:thrift_factory",
         "//common/rust/identity:identity",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",

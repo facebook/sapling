@@ -89,9 +89,6 @@ struct ScsServerArgs {
     bound_address_file: Option<String>,
     #[clap(flatten)]
     sharded_executor_args: ShardedExecutorArgs,
-    /// Number of thrift service workers.
-    #[structopt(long, default_value = "600")]
-    num_workers: usize,
 }
 
 /// Struct representing the Source Control Service process when sharding by
@@ -204,6 +201,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = app.logger().clone();
     let runtime = app.runtime();
+
+    let exec = runtime.clone();
     let env = app.environment();
 
     let scuba_builder = env.scuba_sample_builder.clone();
@@ -258,12 +257,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
     runtime.spawn(monitoring_forever);
 
-    let (thrift_factory, thrift_factory_handle) = runtime.block_on(
-        thrift_factory::ThriftFactoryBuilder::new(fb, SERVICE_NAME, args.num_workers)
-            .with_queueing_limit(args.num_workers)
-            .build(),
-    )?;
-
     let thrift: ThriftServer = ThriftServerBuilder::new(fb)
         .with_name(SERVICE_NAME)
         .expect("failed to set name")
@@ -272,7 +265,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .expect("failed to enable TLS")
         .with_cancel_if_client_disconnected()
         .with_metadata(metadata::create_metadata())
-        .with_factory(thrift_factory.clone(), move || service)
+        .with_factory(exec, move || service)
         .build();
 
     let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift)
@@ -335,8 +328,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 service_framework.stop();
             })
             .await;
-            thrift_factory.stop();
-            thrift_factory_handle.await.unwrap();
         },
         args.shutdown_timeout_args.shutdown_timeout,
     )?;
