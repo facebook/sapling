@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
+use std::fmt::Display;
 use std::future::Future;
 
 use anyhow::anyhow;
@@ -358,9 +359,14 @@ impl ChangesetContext {
     ) -> Result<ChangesetPathContentContext, MononokeError>
     where
         P: TryInto<MPath>,
-        MononokeError: From<P::Error>,
+        P::Error: Display,
     {
-        ChangesetPathContentContext::new(self.clone(), path.try_into()?).await
+        ChangesetPathContentContext::new(
+            self.clone(),
+            path.try_into()
+                .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
+        )
+        .await
     }
 
     /// Query a path within the respository. This could be a file or a
@@ -374,9 +380,14 @@ impl ChangesetContext {
     ) -> Result<ChangesetPathHistoryContext, MononokeError>
     where
         P: TryInto<MPath>,
-        MononokeError: From<P::Error>,
+        P::Error: Display,
     {
-        ChangesetPathHistoryContext::new(self.clone(), path.try_into()?).await
+        ChangesetPathHistoryContext::new(
+            self.clone(),
+            path.try_into()
+                .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
+        )
+        .await
     }
 
     /// Query a path within the respository. This could be a file or a
@@ -390,9 +401,14 @@ impl ChangesetContext {
     pub async fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
     where
         P: TryInto<MPath>,
-        MononokeError: From<P::Error>,
+        P::Error: Display,
     {
-        ChangesetPathContext::new(self.clone(), path.try_into()?).await
+        ChangesetPathContext::new(
+            self.clone(),
+            path.try_into()
+                .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
+        )
+        .await
     }
 
     /// Returns a stream of path history contexts for a set of paths.
