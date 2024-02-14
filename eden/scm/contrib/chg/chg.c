@@ -324,7 +324,19 @@ int chg_main(
         "wrapper to chg. Alternatively, set $CHGHG to the "
         "path of real hg.");
 
-  if (isunsupported(argc - 1, argv + 1) || nice(0) > 0 || isstdiomissing()) {
+  int fallback = 0;
+  if (isunsupported(argc - 1, argv + 1)) {
+    debugmsg("falling back - args unsupported");
+    fallback = 1;
+  } else if (nice(0) > 0) {
+    debugmsg("falling back - nice > 0");
+    fallback = 1;
+  } else if (isstdiomissing()) {
+    debugmsg("falling back - stdio missing");
+    fallback = 1;
+  }
+
+  if (fallback) {
     // For cases when chg and original hg are the same binary,
     // we need to tell the original hg that we've already made
     // a decision to not use chg logic
