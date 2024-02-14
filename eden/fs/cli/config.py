@@ -44,6 +44,7 @@ from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
 
 from . import configinterpolator, configutil, telemetry, util, version
+from .file_handler_tools import WinFileHandlerReleaser
 from .util import (
     FUSE_MOUNT_PROTOCOL_STRING,
     HealthStatus,
@@ -862,51 +863,6 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client_legacy(timeout=60) as client:
             client.unmount(os.fsencode(path))
 
-    def get_handle_path(self) -> Optional[Path]:
-        handle = shutil.which("handle.exe")
-        if handle:
-            return Path(handle)
-        return None
-
-    def check_handle(self, mount: Path) -> None:
-        handle = self.get_handle_path()
-
-        if not handle:
-            return
-
-        print(f"Checking handle.exe for processes using '{mount}'...")
-        print("Press ctrl+c to skip.")
-        try:
-            output = subprocess.check_output(
-                [handle, "-nobanner", "-accepteula", mount]
-            )
-        except KeyboardInterrupt:
-            print("Handle check interrupted.\n")
-            print("If you want to find out which process is still using the repo, run:")
-            print(f"    handle.exe {mount}\n")
-            return
-        parsed = [
-            line.split() for line in output.decode(errors="ignore").splitlines() if line
-        ]
-        non_edenfs_process = any(filter(lambda x: x[0].lower() != "edenfs.exe", parsed))
-
-        # When no handle is found in the repo, handle.exe will report `"No
-        # matching handles found."`, which will be 4 words.
-        if not non_edenfs_process or not parsed or len(parsed[0]) == 4:
-            # Nothing other than edenfs.exe is holding handles to files from
-            # the repo, we can proceed with the removal
-            return
-
-        print(
-            "The following processes are still using the repo, please terminate them.\n"
-        )
-
-        for executable, _, pid, _, _type, _, path in parsed:
-            print(f"{executable}({pid}): {path}")
-
-        print()
-        return
-
     def destroy_mount(
         self, path: Union[Path, str], preserve_mount_point: bool = False
     ) -> None:
@@ -1007,22 +963,8 @@ trouble cleaning up leftovers. You will need to manually remove {path}.
             )
 
             if used_by_other:
-                if self.get_handle_path():
-                    self.check_handle(path)
-                else:
-                    print(
-                        f"""\
-    It looks like {path} is still in use by another process. If you need help to
-    figure out which process, please try `handle.exe` from sysinternals:
-
-    handle.exe {path}
-
-    """
-                    )
-                print(
-                    f"After terminating the processes, please manually delete {path}."
-                )
-                print()
+                winhr = WinFileHandlerReleaser()
+                winhr.try_release(path)
 
             raise errors[0][1]
 

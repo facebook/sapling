@@ -141,6 +141,7 @@ python_library(
         "doctor/facebook/lib/fake_vscode_extensions_checker.py",
         "doctor/problem.py",
         "doctor/util.py",
+        "file_handler_tools.py",
         "filesystem.py",
         "hg_util.py",
         "logfile.py",

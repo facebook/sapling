@@ -78,6 +78,7 @@ from .constants import (
     SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN,
     SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL,
 )
+from .file_handler_tools import WinFileHandlerReleaser
 from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import get_environment_suitable_for_subprocess, print_stderr, ShutdownError
@@ -1599,8 +1600,15 @@ Do you still want to delete {path}?"""
                                     path.rmdir()
                                 return 0
                             except Exception as ex:
-                                print(f"error: cannot remove contents of {path}: {ex}")
-                                return 1
+                                if sys.platform != "win32":
+                                    print(
+                                        f"Error: cannot remove contents of {path}: {ex}"
+                                    )
+                                    return 1
+                                else:
+                                    winhr = WinFileHandlerReleaser()
+                                    winhr.try_release(path)
+                                    return 0
                     else:
                         # We can't ask the user what their true intentions are,
                         # so let's fail by default.
