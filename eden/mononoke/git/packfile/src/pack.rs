@@ -108,12 +108,9 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
         while let Some(entries) = entries_stream.next().await {
             let entries: Vec<_> = futures::stream::iter(entries)
                 .map_ok(|entry| async move {
-                    let entry: Entry = tokio::task::spawn_blocking(move || {
-                        entry
-                            .try_into()
-                            .context("Failure in converting PackfileItem to Entry")
-                    })
-                    .await??;
+                    let entry: Entry = entry
+                        .try_into()
+                        .context("Failure in converting PackfileItem to Entry")?;
                     anyhow::Ok(entry)
                 })
                 .try_buffered(self.concurrency)
