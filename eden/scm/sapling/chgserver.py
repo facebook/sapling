@@ -63,8 +63,8 @@ _log = commandserver.log
 
 def _newchgui(srcui, csystem, attachio):
     class chgui(srcui.__class__):
-        def __init__(self, src=None, rcfg=None):
-            super(chgui, self).__init__(src, rcfg)
+        def __init__(self, src=None, rctx=None):
+            super(chgui, self).__init__(src, rctx)
             if src:
                 self._csystem = getattr(src, "_csystem", csystem)
             else:
