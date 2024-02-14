@@ -180,7 +180,10 @@ rust_binary(
         },
         "cargo_toml_dir": "exec/hgmain",
     },
-    features = ["with_chg"],
+    features = [
+        "fb",
+        "with_chg",
+    ],
     link_style = "static",
     linker_flags = select({
         "DEFAULT": [],
