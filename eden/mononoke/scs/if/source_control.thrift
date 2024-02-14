@@ -1432,8 +1432,6 @@ struct FileContentChunkParams {
   2: i64 size;
 }
 
-struct FileContentStreamParams {}
-
 struct FileDiffParams {
   /// The ID of the other file, obtained from a previous response.
   1: binary other_file_id;
