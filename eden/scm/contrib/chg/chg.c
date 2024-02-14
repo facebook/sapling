@@ -328,7 +328,7 @@ int chg_main(
   if (isunsupported(argc - 1, argv + 1)) {
     debugmsg("falling back - args unsupported");
     fallback = 1;
-  } else if (nice(0) > 0) {
+  } else if (nice(0) > 0 && !getenv("TESTTMP")) {
     debugmsg("falling back - nice > 0");
     fallback = 1;
   } else if (isstdiomissing()) {
