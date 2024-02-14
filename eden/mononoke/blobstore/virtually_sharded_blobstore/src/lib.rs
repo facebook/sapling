@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#![feature(generic_assert)]
+#![feature(core_intrinsics)]
+
 mod ratelimit;
 mod shard;
 
@@ -1262,7 +1265,8 @@ mod test {
             }))
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() > 50);
+            let completion_time = stats.completion_time.as_millis_unchecked();
+            assert!(completion_time > 50);
 
             // is_present
             let (stats, _) = futures::future::try_join_all((0..10u64).map(|i| {
@@ -1271,7 +1275,8 @@ mod test {
             }))
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() > 50);
+            let completion_time = stats.completion_time.as_millis_unchecked();
+            assert!(completion_time > 50);
 
             // put
             let bytes = BlobstoreBytes::from_bytes("test foobar");
@@ -1280,7 +1285,8 @@ mod test {
             )
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() > 50);
+            let completion_time = stats.completion_time.as_millis_unchecked();
+            assert!(completion_time > 50);
 
             Ok(())
         }
@@ -1320,7 +1326,8 @@ mod test {
             }))
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() <= 100);
+            let completion_time = stats.completion_time.as_millis_unchecked();
+            assert!(completion_time <= 100);
 
             // put
             let bytes = &BlobstoreBytes::from_bytes("test foobar");
@@ -1329,7 +1336,8 @@ mod test {
             }))
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() <= 100);
+            let completion_time = stats.completion_time.as_millis_unchecked();
+            assert!(completion_time <= 100);
 
             Ok(())
         }
