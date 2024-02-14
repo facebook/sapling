@@ -8,6 +8,5 @@
 mod derive;
 mod mapping;
 
-pub use derive::generate_all_filenodes;
 pub use mapping::FilenodesOnlyPublic;
 pub use mapping::PreparedRootFilenode;

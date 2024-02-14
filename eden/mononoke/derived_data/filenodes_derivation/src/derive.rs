@@ -41,7 +41,7 @@ use mononoke_types::RepoPath;
 use crate::mapping::FilenodesOnlyPublic;
 use crate::mapping::PreparedRootFilenode;
 
-pub async fn derive_filenodes(
+pub(crate) async fn derive_filenodes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bcs: BonsaiChangeset,
@@ -60,7 +60,7 @@ pub async fn derive_filenodes(
     Ok(public_filenode)
 }
 
-pub async fn derive_filenodes_in_batch(
+pub(crate) async fn derive_filenodes_in_batch(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     batch: Vec<BonsaiChangeset>,
@@ -76,7 +76,7 @@ pub async fn derive_filenodes_in_batch(
     .await
 }
 
-pub async fn prepare_filenodes_for_cs(
+pub(crate) async fn prepare_filenodes_for_cs(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bcs: BonsaiChangeset,
@@ -117,7 +117,7 @@ pub async fn prepare_filenodes_for_cs(
     }
 }
 
-pub async fn generate_all_filenodes(
+pub(crate) async fn generate_all_filenodes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bcs: &BonsaiChangeset,
@@ -128,7 +128,7 @@ pub async fn generate_all_filenodes(
         .await?
         .hg_changeset_id();
     let root_mf = hg_id.load(ctx, &blobstore).await?.manifestid();
-    // In case of non-existant manifest (that's created by hg if the first commit in the repo
+    // In case of non-existent manifest (that's created by hg if the first commit in the repo
     // is empty) it's fine to return the empty list of filenodes.
     if root_mf.clone().into_nodehash() == NULL_HASH {
         return Ok(vec![]);
