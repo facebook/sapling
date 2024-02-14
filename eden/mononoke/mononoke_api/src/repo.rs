@@ -66,6 +66,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
@@ -1626,8 +1627,14 @@ impl RepoContext {
             .build_candidate_selection_hint(maybe_candidate_selection_hint_args, other)
             .await?;
 
-        let commit_sync_repos =
-            CommitSyncRepos::new(self.repo().clone(), other.repo().clone(), &common_config)?;
+        let submodule_deps = SubmoduleDeps::NotNeeded;
+
+        let commit_sync_repos = CommitSyncRepos::new(
+            self.repo().clone(),
+            other.repo().clone(),
+            submodule_deps,
+            &common_config,
+        )?;
 
         let specifier = specifier.into();
         let changeset = self.resolve_specifier(specifier).await?.ok_or_else(|| {

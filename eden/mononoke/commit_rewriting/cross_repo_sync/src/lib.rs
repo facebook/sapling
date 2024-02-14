@@ -23,7 +23,10 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::Loadable;
+use blobstore::LoadableError;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -66,6 +69,7 @@ use environment::Caching;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
+use fsnodes::RootFsnodeId;
 use futures::channel::oneshot;
 use futures::future;
 use futures::future::try_join;
@@ -75,6 +79,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::FutureExt;
 use live_commit_sync_config::LiveCommitSyncConfig;
+use manifest::Entry;
+use manifest::Manifest;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -84,11 +90,16 @@ use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
+use mononoke_types::fsnode::Fsnode;
+use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
@@ -267,12 +278,14 @@ impl CommitSyncInMemoryResult {
 ///
 /// Precondition: this function expects all `cs` parents to be present
 /// in `remapped_parents` as keys, and their remapped versions as values.
-pub async fn rewrite_commit<'a>(
+pub async fn rewrite_commit<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
-    source_repo: &impl Repo,
+    source_repo: &'a R,
+    // TODO(T174902563): support expansion of git submodules
+    _source_repo_deps: &'a SubmoduleDeps<R>,
     rewrite_opts: RewriteOpts,
     git_submodules_action: GitSubmodulesChangesAction,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
@@ -291,6 +304,8 @@ pub async fn rewrite_commit<'a>(
             vec![filter]
         }
         GitSubmodulesChangesAction::Keep => vec![],
+        // TODO(T174902563): support git submodules expansion
+        GitSubmodulesChangesAction::Expand => vec![],
     };
 
     rewrite_commit_with_file_changes_filter(
@@ -644,10 +659,36 @@ pub struct ConcreteRepo {
 
 assert_impl_all!(ConcreteRepo: Repo);
 
+/// Syncing commits from a small Mononoke repo with submodule file changes to a
+/// large repo requires the small repo submodule dependencies to be available.
+///
+/// However, LargeToSmall sync and some SmallToLarge operations don't require
+/// loading these repos, in which case this value will be set to `None`.
+/// When rewriting commits from small to large (i.e. calling `rewrite_commit`),
+/// this map has to be available, or the operation will crash otherwise.
+#[derive(Clone)]
+pub enum SubmoduleDeps<R> {
+    ForSync(HashMap<NonRootMPath, R>),
+    NotNeeded,
+}
+
+impl<R> Default for SubmoduleDeps<R> {
+    fn default() -> Self {
+        Self::NotNeeded
+    }
+}
+
 #[derive(Clone)]
 pub enum CommitSyncRepos<R> {
-    LargeToSmall { large_repo: R, small_repo: R },
-    SmallToLarge { small_repo: R, large_repo: R },
+    LargeToSmall {
+        large_repo: R,
+        small_repo: R,
+    },
+    SmallToLarge {
+        small_repo: R,
+        large_repo: R,
+        submodule_deps: SubmoduleDeps<R>,
+    },
 }
 
 impl<R: Repo> CommitSyncRepos<R> {
@@ -657,6 +698,7 @@ impl<R: Repo> CommitSyncRepos<R> {
     pub fn new(
         source_repo: R,
         target_repo: R,
+        submodule_deps: SubmoduleDeps<R>,
         common_commit_sync_config: &CommonCommitSyncConfig,
     ) -> Result<Self, Error> {
         let small_repo_id = if common_commit_sync_config.large_repo_id
@@ -684,12 +726,20 @@ impl<R: Repo> CommitSyncRepos<R> {
             Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo,
                 small_repo: source_repo,
+                submodule_deps,
             })
         } else {
             Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: source_repo,
                 small_repo: target_repo,
             })
+        }
+    }
+
+    pub fn get_submodule_deps(&self) -> &SubmoduleDeps<R> {
+        match self {
+            CommitSyncRepos::LargeToSmall { .. } => &SubmoduleDeps::NotNeeded,
+            CommitSyncRepos::SmallToLarge { submodule_deps, .. } => submodule_deps,
         }
     }
 }
@@ -787,6 +837,10 @@ where
 
     pub fn get_source_repo(&self) -> &R {
         self.repos.get_source_repo()
+    }
+
+    pub fn get_submodule_deps(&self) -> &SubmoduleDeps<R> {
+        self.repos.get_submodule_deps()
     }
 
     pub fn get_source_repo_id(&self) -> RepositoryId {
@@ -1207,6 +1261,9 @@ where
         .buffered(100)
         .try_collect()
         .await?;
+
+        let submodule_deps = self.get_submodule_deps();
+
         CommitInMemorySyncer {
             ctx,
             source_repo: Source(self.get_source_repo()),
@@ -1214,6 +1271,7 @@ where
             target_repo_id: Target(self.get_target_repo_id()),
             live_commit_sync_config: Arc::clone(&self.live_commit_sync_config),
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
+            submodule_deps,
         }
         .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
         .await?
@@ -1276,6 +1334,8 @@ where
         sync_config_version: &CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
+
+        let submodule_deps = self.get_submodule_deps();
         let mover = self.get_mover_by_version(sync_config_version).await?;
 
         let git_submodules_action = get_strip_git_submodules_by_version(
@@ -1298,6 +1358,7 @@ where
             &remapped_parents,
             mover,
             &source_repo,
+            submodule_deps,
             Default::default(),
             git_submodules_action,
         )
@@ -1387,6 +1448,8 @@ where
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
 
+        let source_repo_deps = self.get_submodule_deps();
+
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
             target_bookmark.clone(),
             Target(self.get_target_repo().clone()),
@@ -1428,6 +1491,7 @@ where
             &remapped_parents,
             mover,
             &source_repo,
+            source_repo_deps,
             Default::default(),
             git_submodules_action,
         )
@@ -1677,6 +1741,7 @@ pub struct CommitInMemorySyncer<'a, R: Repo> {
     pub ctx: &'a CoreContext,
     pub source_repo: Source<&'a R>,
     pub target_repo_id: Target<RepositoryId>,
+    pub submodule_deps: &'a SubmoduleDeps<R>,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub mapped_parents: &'a HashMap<ChangesetId, CommitSyncOutcome>,
     pub small_to_large: bool,
@@ -1809,6 +1874,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             &HashMap::new(),
             mover,
             self.source_repo.0,
+            self.submodule_deps,
             rewrite_opts,
             git_submodules_action,
         )
@@ -1896,6 +1962,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     &remapped_parents,
                     rewrite_paths,
                     self.source_repo.0,
+                    self.submodule_deps,
                     rewrite_opts,
                     git_submodules_action,
                 )
@@ -2058,6 +2125,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 &new_parents,
                 mover,
                 self.source_repo.0,
+                self.submodule_deps,
                 Default::default(),
                 git_submodules_action,
             )
@@ -2230,6 +2298,9 @@ pub fn create_commit_syncers<M, R>(
     ctx: &CoreContext,
     small_repo: R,
     large_repo: R,
+    // Map from submodule path in the repo to the submodule's Mononoke repo
+    // instance.
+    submodule_deps: SubmoduleDeps<R>,
     mapping: M,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_sync_lease: Arc<dyn LeaseOps>,
@@ -2241,10 +2312,18 @@ where
     let common_config =
         live_commit_sync_config.get_common_config(large_repo.repo_identity().id())?;
 
-    let small_to_large_commit_sync_repos =
-        CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &common_config)?;
-    let large_to_small_commit_sync_repos =
-        CommitSyncRepos::new(large_repo, small_repo, &common_config)?;
+    let small_to_large_commit_sync_repos = CommitSyncRepos::new(
+        small_repo.clone(),
+        large_repo.clone(),
+        submodule_deps,
+        &common_config,
+    )?;
+    let large_to_small_commit_sync_repos = CommitSyncRepos::new(
+        large_repo,
+        small_repo,
+        SubmoduleDeps::NotNeeded,
+        &common_config,
+    )?;
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,

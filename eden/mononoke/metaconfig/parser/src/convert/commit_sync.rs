@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
@@ -162,6 +163,7 @@ impl Convert for RawGitSubmodulesChangesAction {
         let converted = match self {
             RawGitSubmodulesChangesAction::KEEP => GitSubmodulesChangesAction::Keep,
             RawGitSubmodulesChangesAction::STRIP => GitSubmodulesChangesAction::Strip,
+            RawGitSubmodulesChangesAction::EXPAND => GitSubmodulesChangesAction::Expand,
             RawGitSubmodulesChangesAction::UNKNOWN => GitSubmodulesChangesAction::default(),
             v => {
                 return Err(anyhow!(
@@ -184,6 +186,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             default_prefix,
             mapping,
             git_submodules_action,
+            submodule_dependencies,
             ..
         } = self;
 
@@ -202,6 +205,12 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             },
             other => return Err(anyhow!("unknown default_action: {:?}", other)),
         };
+        let submodule_dependencies = submodule_dependencies
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(path, id)| Ok((NonRootMPath::new(path)?, RepositoryId::new(id))))
+            .collect::<Result<HashMap<_, _>>>()
+            .context("Failed to get small repo dependencies from config")?;
 
         let map = mapping
             .into_iter()
@@ -217,6 +226,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             default_action,
             map,
             git_submodules_action,
+            submodule_dependencies,
         })
     }
 }

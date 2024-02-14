@@ -26,6 +26,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use futures::future;
 use futures::future::try_join_all;
 use futures::future::FutureExt;
@@ -125,10 +126,16 @@ impl<R: Repo> PushRedirectorArgs<R> {
 
         let small_repo = (*source_repo).clone();
         let large_repo = (*target_repo).clone();
+
+        // Push redirector uses large repo as source, so there are no submodule
+        // deps to load.
+        let submodule_deps = SubmoduleDeps::NotNeeded;
+
         let syncers = create_commit_syncers(
             ctx,
             small_repo,
             large_repo,
+            submodule_deps,
             synced_commit_mapping,
             live_commit_sync_config,
             x_repo_sync_lease,

@@ -1231,6 +1231,12 @@ pub enum GitSubmodulesChangesAction {
     /// Strip any changes made to git submodules from the synced bonsai.
     #[default]
     Strip,
+    /// Expand any submodule file change into multiple file changes that
+    /// achieve the same working copy. i.e. Copy the contents of the submodule
+    /// repo into the synced version of the source repo in the target repo.
+    /// This requires the `submodule_dependencies` field to be properly set
+    /// in the small repo's sync config.
+    Expand,
 }
 
 /// Commit sync configuration for a small repo
@@ -1246,6 +1252,11 @@ pub struct SmallRepoCommitSyncConfig {
     /// Whether any changes made to git submodules should be stripped from
     /// the changesets before being synced.
     pub git_submodules_action: GitSubmodulesChangesAction,
+    /// Map from submodule path in the small repo to the ID of the submodule's
+    /// repository in Mononoke.
+    /// These repos have to be loaded with the small repo before syncing starts,
+    /// as file changes from the submodule dependencies might need to be copied.
+    pub submodule_dependencies: HashMap<NonRootMPath, RepositoryId>,
 }
 
 /// Commit sync direction

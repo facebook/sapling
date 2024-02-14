@@ -8,6 +8,7 @@
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
 #![feature(trait_alias)]
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -20,6 +21,7 @@ use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use futures::future;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -65,6 +67,9 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     let caching = app.environment().caching;
     let x_repo_syncer_lease = create_commit_syncer_lease(app.fb, caching)?;
 
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
     let large_repo_id = common_config.large_repo_id;
     let source_repo_id = source_repo.0.repo_identity().id();
     let target_repo_id = target_repo.0.repo_identity().id();
@@ -85,6 +90,7 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
         ctx,
         small_repo,
         large_repo,
+        submodule_deps,
         mapping,
         live_commit_sync_config,
         x_repo_syncer_lease,
@@ -191,10 +197,14 @@ async fn create_commit_syncer_from_app_impl<R: CrossRepo>(
     let caching = app.environment().caching;
     let x_repo_syncer_lease = create_commit_syncer_lease(app.fb, caching)?;
 
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
     create_commit_syncer(
         ctx,
         source_repo,
         target_repo,
+        submodule_deps,
         mapping,
         live_commit_sync_config,
         x_repo_syncer_lease,
@@ -206,6 +216,7 @@ async fn create_commit_syncer<'a, R: CrossRepo>(
     ctx: &'a CoreContext,
     source_repo: Source<R>,
     target_repo: Target<R>,
+    submodule_deps: SubmoduleDeps<R>,
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_syncer_lease: Arc<dyn LeaseOps>,
@@ -213,7 +224,7 @@ async fn create_commit_syncer<'a, R: CrossRepo>(
     let common_config =
         live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
 
-    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &common_config)?;
+    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps, &common_config)?;
     let commit_syncer = CommitSyncer::new(
         ctx,
         mapping,

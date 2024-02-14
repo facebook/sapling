@@ -52,6 +52,7 @@ use super::CommitSyncer;
 use super::Repo;
 use crate::types::Source;
 use crate::types::Target;
+use crate::SubmoduleDeps;
 
 // NOTE: Occurrences of Option<NonRootMPath> in this file have not been replaced with MPath since such a
 // replacement is only possible in cases where Option<NonRootMPath> is used to represent a path that can also
@@ -1666,6 +1667,7 @@ mod test {
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
+                submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
             },
         };
 
@@ -1707,6 +1709,7 @@ mod test {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
                     git_submodules_action: Default::default(),
+                    submodule_dependencies: HashMap::new(),
                 },
             },
             version_name: current_version.clone(),

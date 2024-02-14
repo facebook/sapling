@@ -9,6 +9,7 @@
 
 #![feature(trait_alias)]
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -23,6 +24,7 @@ use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use futures_util::try_join;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -64,11 +66,14 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
             target_repo_id
         );
     };
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
 
     create_commit_syncers(
         ctx,
         small_repo,
         large_repo,
+        submodule_deps,
         mapping,
         live_commit_sync_config,
         x_repo_syncer_lease,
@@ -202,7 +207,10 @@ async fn create_commit_syncer<'a, R: Repo>(
     let common_config =
         live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
 
-    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &common_config)?;
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
+    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps, &common_config)?;
     let commit_syncer = CommitSyncer::new(
         ctx,
         mapping,

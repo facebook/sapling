@@ -39,6 +39,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use derived_data_utils::derived_data_utils;
 use environment::MononokeEnvironment;
@@ -226,6 +227,9 @@ async fn rewrite_file_paths(
     .try_collect::<Vec<_>>()
     .await?;
 
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
     for (index, bcs) in gitimport_changesets.iter().enumerate() {
         let bcs_id = bcs.get_changeset_id();
         let rewritten_bcs_opt = rewrite_commit(
@@ -234,6 +238,7 @@ async fn rewrite_file_paths(
             &remapped_parents,
             mover.clone(),
             repo,
+            &submodule_deps,
             Default::default(),
             Default::default(),
         )
@@ -958,11 +963,15 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
     let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env).await?;
     let syncers = create_commit_syncers(
         ctx,
         repo.clone(),
         large_repo.clone(),
+        submodule_deps,
         mapping.clone(),
         Arc::new(live_commit_sync_config),
         x_repo_syncer_lease,

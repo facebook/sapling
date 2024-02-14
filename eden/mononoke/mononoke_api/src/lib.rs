@@ -14,7 +14,7 @@ use anyhow::Error;
 pub use bookmarks::BookmarkCategory;
 pub use bookmarks::BookmarkKey;
 use mononoke_repos::MononokeRepos;
-use mononoke_types::RepositoryId;
+pub use mononoke_types::RepositoryId;
 
 use crate::repo::RepoContextBuilder;
 

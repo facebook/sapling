@@ -38,6 +38,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
@@ -727,7 +728,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                 ),
                 map: hashmap! { },
                 git_submodules_action: Default::default(),
-
+                submodule_dependencies: HashMap::new(),
             },
         },
         version_name: current_version.clone(),
@@ -745,7 +746,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                 ),
                 map: hashmap! { },
                 git_submodules_action: Default::default(),
-
+                submodule_dependencies: HashMap::new(),
             },
         },
         version_name: new_version.clone(),
@@ -1261,6 +1262,7 @@ impl MoverType {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
                 git_submodules_action: Default::default(),
+                submodule_dependencies: HashMap::new(),
             },
             Except(files) => {
                 let mut map = hashmap! {};
@@ -1274,6 +1276,7 @@ impl MoverType {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map,
                     git_submodules_action: Default::default(),
+                    submodule_dependencies: HashMap::new(),
                 }
             }
             Only(path) => SmallRepoCommitSyncConfig {
@@ -1284,6 +1287,7 @@ impl MoverType {
                     NonRootMPath::new(path).unwrap() => NonRootMPath::new(path).unwrap(),
                 },
                 git_submodules_action: Default::default(),
+                submodule_dependencies: HashMap::new(),
             },
         }
     }
@@ -1386,6 +1390,8 @@ async fn init_repos(
         .await?;
     upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
     let first_bcs_mut = first_bcs.into_mut();
+
+    let source_repo_deps = SubmoduleDeps::NotNeeded;
     let maybe_rewritten = {
         let empty_map = HashMap::new();
         cloned!(ctx, source_repo);
@@ -1395,6 +1401,7 @@ async fn init_repos(
             &empty_map,
             commit_syncer.get_mover_by_version(&version).await?,
             &source_repo,
+            &source_repo_deps,
             Default::default(),
             git_submodules_action,
         )
@@ -1650,6 +1657,7 @@ async fn init_merged_repos(
                     ),
                     map: hashmap! { },
                     git_submodules_action: Default::default(),
+                    submodule_dependencies: HashMap::new(),
                 },
             },
             version_name: after_merge_version.clone(),
@@ -1939,6 +1947,7 @@ async fn preserve_premerge_commit(
         let repos = CommitSyncRepos::SmallToLarge {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
+            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
         };
 
         let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();

@@ -35,6 +35,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use futures::compat::Future01CompatExt;
 use futures::future::FutureExt;
@@ -136,10 +137,14 @@ pub async fn do_sync_diamond_merge(
 
     let new_branch = find_new_branch_oldest_first(ctx.clone(), small_repo, p1, p2).await?;
 
+    // TODO(T174902563): get submodule_deps from config
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
     let syncers = create_commit_syncers(
         ctx,
         small_repo.clone(),
         large_repo.clone(),
+        submodule_deps,
         mapping,
         live_commit_sync_config,
         lease,
@@ -275,6 +280,9 @@ async fn create_rewritten_merge_commit(
         p1 => onto_value,
         p2 => remapped_p2,
     };
+
+    let submodule_deps = syncers.small_to_large.get_submodule_deps();
+
     let maybe_rewritten = rewrite_commit(
         &ctx,
         merge_bcs,
@@ -284,6 +292,7 @@ async fn create_rewritten_merge_commit(
             .get_mover_by_version(&version_p1)
             .await?,
         syncers.small_to_large.get_source_repo(),
+        submodule_deps,
         Default::default(),
         Default::default(),
     )

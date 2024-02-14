@@ -36,6 +36,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ErrorKind;
 use cross_repo_sync::PluralCommitSyncOutcome;
 use cross_repo_sync::PushrebaseRewriteDates;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
@@ -276,6 +277,7 @@ fn create_commit_sync_config(
         )?),
         map: hashmap! {},
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     };
 
     Ok(CommitSyncConfig {
@@ -308,7 +310,8 @@ fn create_small_to_large_commit_syncer(
         },
         large_repo_id: large_repo.repo_identity().id(),
     };
-    let repos = CommitSyncRepos::new(small_repo, large_repo, &common_config)?;
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+    let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps, &common_config)?;
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
@@ -353,7 +356,10 @@ fn create_large_to_small_commit_syncer_and_config_source(
         },
         large_repo_id: large_repo.repo_identity().id(),
     };
-    let repos = CommitSyncRepos::new(large_repo, small_repo, &common_config)?;
+
+    // Large to small has no submodule_deps
+    let submodule_deps = SubmoduleDeps::NotNeeded;
+    let repos = CommitSyncRepos::new(large_repo, small_repo, submodule_deps, &common_config)?;
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config);
@@ -701,6 +707,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             NonRootMPath::new("dir1")? => NonRootMPath::new("prefix2")?,
         },
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     };
 
     let commit_sync_config = CommitSyncConfig {
@@ -732,6 +739,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: repo.clone(),
         large_repo: megarepo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     let version = version_name_with_small_repo();
     commit_syncer.live_commit_sync_config = live_commit_sync_config;
@@ -1647,6 +1655,7 @@ async fn prepare_commit_syncer_with_mapping_change(
             NonRootMPath::new("tools")? => NonRootMPath::new("tools")?,
         },
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     };
 
     let old_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
@@ -1725,6 +1734,7 @@ fn get_merge_sync_live_commit_sync_config(
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     };
     let commit_sync_config_v1 = CommitSyncConfig {
         large_repo_id,
@@ -2037,6 +2047,7 @@ async fn test_no_accidental_preserved_roots(
             SmallToLarge {
                 small_repo,
                 large_repo,
+                submodule_deps: _submodule_deps,
             } => create_small_to_large_commit_syncer(
                 &ctx,
                 small_repo.clone(),
@@ -2046,10 +2057,19 @@ async fn test_no_accidental_preserved_roots(
             )?,
         };
 
+        let submodule_deps = match commit_sync_repos.get_submodule_deps() {
+            SubmoduleDeps::ForSync(submodule_deps) => submodule_deps
+                .iter()
+                .map(|(p, repo)| (p.clone(), repo.repo_identity().id()))
+                .collect(),
+            SubmoduleDeps::NotNeeded => HashMap::new(),
+        };
+
         let small_repo_config = SmallRepoCommitSyncConfig {
             default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
             map: hashmap! {},
             git_submodules_action: Default::default(),
+            submodule_dependencies: submodule_deps,
         };
         let commit_sync_config = CommitSyncConfig {
             large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
@@ -2119,6 +2139,7 @@ async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> 
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
 }
@@ -2166,6 +2187,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
                 git_submodules_action: Default::default(),
+                submodule_dependencies: HashMap::new(),
             },
         },
         version_name: noop_version_first_small_repo.clone(),
@@ -2232,3 +2254,5 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     );
     Ok(())
 }
+
+// TODO(T174902563): add test case for small repo with submodule dependencies

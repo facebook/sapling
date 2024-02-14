@@ -34,6 +34,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -142,6 +143,9 @@ where
 
     let bookmark_val = maybe_bookmark_val.ok_or_else(|| format_err!("master not found"))?;
     let source_bcs_mut = source_bcs.into_mut();
+
+    let submodule_deps = commit_syncer.get_submodule_deps();
+
     let maybe_rewritten = {
         let map = HashMap::new();
         let mover = commit_syncer
@@ -153,6 +157,7 @@ where
             &map,
             mover,
             source_repo,
+            submodule_deps,
             Default::default(),
             Default::default(),
         )
@@ -212,6 +217,7 @@ pub async fn init_small_large_repo(
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
 
     let noop_version = CommitSyncConfigVersion("noop".to_string());
@@ -391,6 +397,7 @@ pub fn base_commit_sync_config(large_repo: &TestRepo, small_repo: &TestRepo) -> 
         ),
         map: hashmap! {},
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     };
     CommitSyncConfig {
         large_repo_id: large_repo.repo_identity().id(),
@@ -453,6 +460,7 @@ fn get_small_repo_sync_config_noop() -> SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     }
 }
 
@@ -463,6 +471,7 @@ fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
         ),
         map: hashmap! {},
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     }
 }
 
@@ -475,6 +484,7 @@ fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
             NonRootMPath::new("special").unwrap() => NonRootMPath::new("special").unwrap(),
         },
         git_submodules_action: Default::default(),
+        submodule_dependencies: HashMap::new(),
     }
 }
 

@@ -41,6 +41,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::PluralCommitSyncOutcome;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use derived_data_utils::derive_all_enabled_datatypes_for_csids;
@@ -151,9 +152,12 @@ pub async fn subcommand_crossrepo<'a>(
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping::<CrossRepo>(fb, logger, matches).await?;
 
+            let submodule_deps = SubmoduleDeps::NotNeeded;
+
             let common_config =
                 live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
-            let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &common_config)?;
+            let commit_sync_repos =
+                CommitSyncRepos::new(source_repo, target_repo, submodule_deps, &common_config)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
 
@@ -1492,10 +1496,13 @@ async fn get_syncers<'a>(
         ));
     };
 
+    let submodule_deps = SubmoduleDeps::NotNeeded;
+
     create_commit_syncers(
         ctx,
         small_repo,
         large_repo,
+        submodule_deps,
         mapping,
         live_commit_sync_config,
         x_repo_sync_lease,
@@ -1524,6 +1531,7 @@ async fn get_large_to_small_commit_syncer<'a>(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use std::collections::HashSet;
     use std::sync::Arc;
 
@@ -1728,6 +1736,7 @@ mod test {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
                     git_submodules_action: Default::default(),
+                    submodule_dependencies: HashMap::new(),
                 },
             },
             version_name: current_version.clone(),
@@ -1742,6 +1751,7 @@ mod test {
             &ctx,
             small_repo,
             large_repo,
+            SubmoduleDeps::ForSync(HashMap::new()),
             mapping,
             live_commit_sync_config,
             x_repo_sync_lease,

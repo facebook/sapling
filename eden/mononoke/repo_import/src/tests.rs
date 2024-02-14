@@ -28,6 +28,7 @@ mod tests {
     use context::CoreContext;
     use cross_repo_sync::create_commit_syncers;
     use cross_repo_sync::CommitSyncContext;
+    use cross_repo_sync::SubmoduleDeps;
     use derived_data_manager::BonsaiDerivable;
     use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
@@ -530,6 +531,7 @@ mod tests {
                 mp("dest_path_prefix/B") => mp("random_dir/B"),
             },
             git_submodules_action: Default::default(),
+            submodule_dependencies: HashMap::new(),
         }
     }
 
@@ -543,6 +545,7 @@ mod tests {
                 mp("dest_path_prefix/C") => mp("random_dir/C"),
             },
             git_submodules_action: Default::default(),
+            submodule_dependencies: HashMap::new(),
         }
     }
 
@@ -553,6 +556,7 @@ mod tests {
                 mp("dest_path_prefix_2") => mp("dpp2"),
             },
             git_submodules_action: Default::default(),
+            submodule_dependencies: HashMap::new(),
         }
     }
 
@@ -634,6 +638,7 @@ mod tests {
             &ctx,
             small_repo_1.clone(),
             large_repo.clone(),
+            SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config.clone(),
             Arc::new(InProcessLease::new()),
@@ -660,6 +665,7 @@ mod tests {
             &ctx,
             small_repo_2.clone(),
             large_repo.clone(),
+            SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -713,6 +719,7 @@ mod tests {
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
+            SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -878,6 +885,7 @@ mod tests {
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
+            SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -960,6 +968,7 @@ mod tests {
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
+            SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),

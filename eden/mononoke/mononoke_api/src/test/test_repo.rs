@@ -22,6 +22,7 @@ use chrono::TimeZone;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync_test_utils::init_small_large_repo;
 use fbinit::FacebookInit;
 use fixtures::BranchUneven;
@@ -1369,6 +1370,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let commit_sync_repos = CommitSyncRepos::new(
         largerepo.inner_repo().clone(),
         smallrepo.inner_repo().clone(),
+        SubmoduleDeps::ForSync(HashMap::new()),
         &common_config,
     )?;
 
