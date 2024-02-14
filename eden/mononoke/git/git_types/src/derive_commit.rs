@@ -45,7 +45,7 @@ fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
 }
 
 fn get_name_and_email<'a>(input: &'a str) -> Result<(&'a str, &'a str)> {
-    let regex = regex::Regex::new(r"((?<name>.*)<(?<email>.*)>)|(?<name_without_email>.*)")
+    let regex = regex::Regex::new(r"((?<name>.*?)\s?<(?<email>.*)>)|(?<name_without_email>.*)")
         .context("Invalid regex for parsing name and email")?;
     let captures = regex
         .captures(input)
@@ -202,6 +202,7 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use futures_util::stream::TryStreamExt;
+    use maplit::hashmap;
     use mononoke_types::hash::GitSha1;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedDataRef;
@@ -343,4 +344,25 @@ mod test {
     impl_test!(unshared_merge_even, UnsharedMergeEven);
     impl_test!(unshared_merge_uneven, UnsharedMergeUneven);
     impl_test!(many_diamonds, ManyDiamonds);
+
+    #[fbinit::test]
+    fn test_get_name_and_email() {
+        let test_cases = hashmap! {
+             "John Doe <john.doe@gmail.com>" => ("John Doe", "john.doe@gmail.com"),
+             "John Doe<john.doe@gmail.com>" => ("John Doe", "john.doe@gmail.com"),
+             "John Doe\t<john.doe@gmail.com>" => ("John Doe", "john.doe@gmail.com"),
+             "  John Doe  <john.doe@gmail.com>" => ("  John Doe ", "john.doe@gmail.com"),
+             "John Doe" => ("John Doe", ""),
+             "<john.doe@gmail.com>" => ("", "john.doe@gmail.com"),
+        };
+
+        for (input, expected) in test_cases {
+            let actual = get_name_and_email(input).expect("We are only testing valid inputs");
+
+            assert_eq!(
+                expected, actual,
+                "Failed to get name and email for input: {input}"
+            );
+        }
+    }
 }
