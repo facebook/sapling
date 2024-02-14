@@ -16,6 +16,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
+use maplit::hashmap;
 use sharding_ext::encode_repo_name;
 use source_control::client::SourceControlService;
 use source_control_x2pclients::make_SourceControlService_x2pclient;
@@ -64,7 +65,6 @@ impl Connection {
         tier: impl AsRef<str>,
         shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
-        use maplit::hashmap;
         use source_control_srclients::make_SourceControlService_srclient;
         use srclient::ClientParams;
 
@@ -114,18 +114,29 @@ impl Connection {
     /// Build a connection from a tier name via x2p.
     pub fn from_tier_name_via_x2p(
         fb: FacebookInit,
-        _client_id: String,
+        client_id: String,
         tier: impl AsRef<str>,
         shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
+        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
+        let headers = hashmap! {
+            String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
+        };
         let client = if let Some(shardmanager_domain) = shardmanager_domain {
             make_SourceControlService_x2pclient!(
                 fb,
                 tiername = tier.as_ref(),
+                with_client_id = client_id,
+                with_persistent_headers = headers,
                 with_shard_manager_domain = encode_repo_name(shardmanager_domain)
             )?
         } else {
-            make_SourceControlService_x2pclient!(fb, tiername = tier.as_ref())?
+            make_SourceControlService_x2pclient!(
+                fb,
+                tiername = tier.as_ref(),
+                with_client_id = client_id,
+                with_persistent_headers = headers,
+            )?
         };
 
         Ok(Self { client })
