@@ -5,18 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ResolveCommandConflictOutput} from '../Repository';
+import type {ResolveCommandConflictOutput} from '../commands';
 import type {ServerPlatform} from '../serverPlatform';
 import type {ExecutionContext} from '../serverTypes';
 import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
 
-import {
-  absolutePathForFileInRepo,
-  extractRepoInfoFromUrl,
-  setConfigOverrideForTests,
-  Repository,
-} from '../Repository';
+import {absolutePathForFileInRepo, Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
+import {extractRepoInfoFromUrl, setConfigOverrideForTests} from '../commands';
 import * as execa from 'execa';
 import os from 'os';
 import path from 'path';

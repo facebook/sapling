@@ -168,3 +168,20 @@ export function parseExecJson<T>(
 export function isExecaError(s: unknown): s is ExecaError & {code?: string} {
   return s != null && typeof s === 'object' && 'exitCode' in s;
 }
+
+export function fromEntries<V>(entries: Array<[string, V]>): {
+  [key: string]: V;
+} {
+  // Object.fromEntries() is available in Node v12 and later.
+  if (typeof Object.fromEntries === 'function') {
+    return Object.fromEntries(entries);
+  }
+
+  const obj: {
+    [key: string]: V;
+  } = {};
+  for (const [key, value] of entries) {
+    obj[key] = value;
+  }
+  return obj;
+}

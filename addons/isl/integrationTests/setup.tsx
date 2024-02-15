@@ -16,7 +16,7 @@ import mockedClientMessagebus from '../src/MessageBus';
 import * as internalLogger from '../src/logger';
 import {render} from '@testing-library/react';
 import fs from 'fs';
-import {__TEST__} from 'isl-server/src/Repository';
+import {runCommand} from 'isl-server/src/commands';
 import os from 'os';
 import path from 'path';
 import React from 'react';
@@ -120,7 +120,7 @@ export async function initRepo(): Promise<{
   log('temp repo: ', repoDir);
 
   function sl(args: Array<string>, options?: ExecaOptions) {
-    return __TEST__.runCommand('sl', args, mockLogger, repoDir, {
+    return runCommand('sl', args, mockLogger, repoDir, {
       ...options,
       env: {
         ...(options?.env ?? {}),

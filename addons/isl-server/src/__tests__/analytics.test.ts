@@ -9,8 +9,9 @@ import type {ServerSideTracker} from '../analytics/serverSideTracker';
 import type {FullTrackData} from '../analytics/types';
 import type {ServerPlatform} from '../serverPlatform';
 
-import {Repository, setConfigOverrideForTests} from '../Repository';
+import {Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
+import {setConfigOverrideForTests} from '../commands';
 import * as execa from 'execa';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
