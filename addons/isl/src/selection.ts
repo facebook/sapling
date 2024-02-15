@@ -13,12 +13,12 @@ import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
-import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
+import {readAtom, useAtomHas, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
-import {atom, useAtomValue} from 'jotai';
+import {atom} from 'jotai';
 import {useCallback} from 'react';
 
 /**
@@ -50,10 +50,6 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const isCommitSelected = atomFamilyWeak((hash: Hash) =>
-  atom<boolean>(get => get(selectedCommits).has(hash)),
-);
-
 const previouslySelectedCommit = atom<undefined | string>(undefined);
 
 /**
@@ -79,7 +75,7 @@ export function useCommitSelection(hash: string): {
   ) => unknown;
   overrideSelection: (newSelected: Array<Hash>) => void;
 } {
-  const isSelected = useAtomValue(isCommitSelected(hash));
+  const isSelected = useAtomHas(selectedCommits, hash);
   const onClickToSelect = useCallback(
     (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
       // previews won't change a commit from draft -> public, so we don't need
