@@ -73,6 +73,7 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
     const VARIANT: DerivableType = DerivableType::BssmV3;
 
     type Dependencies = dependencies![RootSkeletonManifestId];
+    type PredecessorDependencies = dependencies![RootSkeletonManifestId];
 
     async fn derive_single(
         ctx: &CoreContext,

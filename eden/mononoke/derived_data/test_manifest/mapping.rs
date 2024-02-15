@@ -65,6 +65,7 @@ impl BonsaiDerivable for RootTestManifestDirectory {
     const VARIANT: DerivableType = DerivableType::TestManifest;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

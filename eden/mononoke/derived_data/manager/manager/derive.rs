@@ -450,13 +450,34 @@ impl DerivedDataManager {
 
         derived_data_scuba.log_derivation_start(&ctx);
 
+        let predecessor_checks = Derivable::PredecessorDependencies::check_dependencies(
+            &ctx,
+            &derivation_ctx,
+            csid,
+            &mut HashSet::new(),
+        )
+        .await;
+        // If predecessor derived data types are not derived yet, let's derive them
+        if let Err(e) = predecessor_checks {
+            Derivable::PredecessorDependencies::derive_predecessors(
+                self,
+                &ctx,
+                csid,
+                rederivation.clone(),
+                &mut HashSet::new(),
+            )
+            .await
+            .context("failed to derive predecessors")
+            .context(e)?
+        };
+
         let (derive_stats, derived) =
             Derivable::derive_from_predecessor(&ctx, &derivation_ctx, bonsai)
                 .timed()
                 .await;
         derivation_ctx.flush(&ctx).await?;
 
-        derived_data_scuba.log_derivation_end(&ctx, &derive_stats, derived.as_ref().err());
+        derived_data_scuba.log_derivation_end(&ctx, &(derive_stats), derived.as_ref().err());
 
         let derived = derived?;
 

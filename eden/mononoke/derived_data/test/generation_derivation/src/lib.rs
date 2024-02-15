@@ -63,6 +63,7 @@ impl BonsaiDerivable for DerivedGeneration {
     const VARIANT: DerivableType = DerivableType::Unodes;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         _ctx: &CoreContext,

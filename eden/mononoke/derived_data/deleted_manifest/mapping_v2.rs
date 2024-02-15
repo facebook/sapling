@@ -81,6 +81,7 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
     const VARIANT: DerivableType = DerivableType::DeletedManifests;
 
     type Dependencies = dependencies![RootUnodeManifestId];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

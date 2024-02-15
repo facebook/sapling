@@ -496,6 +496,7 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
     const VARIANT: DerivableType = DerivableType::GitDeltaManifest;
 
     type Dependencies = dependencies![TreeHandle, MappedGitCommitId, RootUnodeManifestId];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,
