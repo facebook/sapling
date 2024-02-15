@@ -677,6 +677,7 @@ export default class ServerToClientAPI {
           this.postMessage({
             type: 'fetchedAvatars',
             avatars,
+            authors: data.authors,
           });
         });
         break;

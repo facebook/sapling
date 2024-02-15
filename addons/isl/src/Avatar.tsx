@@ -7,116 +7,22 @@
 
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
-import {atomFamilyWeak, atomWithRefresh, refreshAtom} from './jotaiUtils';
-import {logger} from './logger';
-import platform from './platform';
-import {latestCommits} from './serverAPIState';
-import {atom, useAtomValue} from 'jotai';
-import {isPromise} from 'shared/utils';
+import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
+import {useAtomValue} from 'jotai';
 
-const uniqueAuthors = atom<Array<string>>(get => {
-  const commits = get(latestCommits);
-  const authors = commits.filter(commit => commit.phase !== 'public').map(commit => commit.author);
-  const unique = new Set(authors);
-  return Array.from(unique);
+const avatarUrl = atomFamilyWeak((author: string) => {
+  // Rate limitor for the same author is by lazyAtom and atomFamilyWeak caching.
+  return lazyAtom(async () => {
+    serverAPI.postMessage({
+      type: 'fetchAvatars',
+      authors: [author],
+    });
+    const result = await serverAPI.nextMessageMatching('fetchedAvatars', ({authors}) =>
+      authors.includes(author),
+    );
+    return result.avatars.get(author);
+  }, undefined);
 });
-
-type StoredAvatarData = {
-  lastFetched: number;
-  avatars: Array<[string, string]>;
-};
-
-/**
- * On some platforms, the localstorage cache is not implemented or sometimes fails.
- * This implementation depends on being able to cache avatars. So if localstorage
- * is not available, we must cache in memory.
- */
-const localCache: StoredAvatarData = {
-  avatars: [],
-  lastFetched: 0,
-};
-
-export const __TEST__ = {
-  clearLocallyCachedAvatars: () => {
-    localCache.avatars = [];
-    localCache.lastFetched = 0;
-  },
-};
-
-function getCachedAvatars(authors: Array<string>): undefined | Map<string, string> {
-  try {
-    const found =
-      (platform.getTemporaryState('avatars') as StoredAvatarData | undefined) ?? localCache;
-    if (found === localCache) {
-      logger.warn('avatars not found in localStorage, trying localCache.');
-    }
-    if (
-      // not yet cached
-      found == null ||
-      // cache expired
-      new Date().valueOf() - new Date(found.lastFetched).valueOf() > 24 * 60 * 60 * 1000
-    ) {
-      return undefined;
-    }
-    const storedAvatars = new Map(found.avatars);
-
-    // make sure the cache is exhaustive
-    if (authors.every(author => storedAvatars.has(author))) {
-      return storedAvatars;
-    }
-  } catch {
-    // ignore
-  }
-  return undefined;
-}
-function storeCachedAvatars(avatars: Map<string, string>) {
-  const now = new Date().valueOf();
-  const avatarsList = Array.from(avatars);
-  const data: StoredAvatarData = {
-    lastFetched: now,
-    avatars: avatarsList,
-  };
-  platform.setTemporaryState('avatars', data);
-
-  // Also store in local cache in case the localstorage one isn't working
-  localCache.avatars = avatarsList;
-  localCache.lastFetched = now;
-}
-
-const avatars = atomWithRefresh<Map<string, string> | Promise<Map<string, string>>>(get => {
-  const authors = get(uniqueAuthors);
-
-  const found = getCachedAvatars(authors);
-  if (found != null) {
-    return found;
-  }
-
-  // PERF: This might be O(N^2) if we see new authors over time (ex. infinite scroll).
-  // Consider avoiding fetching "known" authors.
-  serverAPI.postMessage({
-    type: 'fetchAvatars',
-    authors,
-  });
-
-  return (async () => {
-    const result = await serverAPI.nextMessageMatching('fetchedAvatars', () => true);
-
-    storeCachedAvatars(result.avatars);
-    refreshAtom(avatars);
-    return result.avatars;
-  })();
-});
-
-const avatarUrl = atomFamilyWeak((username: string) =>
-  atom(get => {
-    const storage = get(avatars);
-    if (isPromise(storage)) {
-      // TODO: Consider loading from cache here.
-      return undefined;
-    }
-    return storage.get(username);
-  }),
-);
 
 export function Avatar({username}: {username: string}) {
   const img = useAtomValue(avatarUrl(username));

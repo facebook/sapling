@@ -595,7 +595,7 @@ export type ServerToClientMessage =
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
-  | {type: 'fetchedAvatars'; avatars: Map<string, string>}
+  | {type: 'fetchedAvatars'; avatars: Map<string, string>; authors: Array<string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
