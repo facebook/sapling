@@ -116,6 +116,7 @@ export type TrackEventName =
   | 'OptInToNewISLAgain'
   | 'OpenAllFiles'
   | 'QueueOperation'
+  | 'QueryGraphQL'
   | 'UploadImage'
   | 'RunVSCodeCommand'
   | 'RageCommand'
