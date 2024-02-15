@@ -16,14 +16,14 @@ import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
-import {configBackedAtom} from '../jotaiUtils';
+import {configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import platform from '../platform';
 import {useRunOperation} from '../serverAPIState';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
-import {SyncStatus, syncStatusByHash} from './syncStatus';
+import {SyncStatus, syncStatusAtom} from './syncStatus';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Component, Suspense, useState} from 'react';
@@ -103,7 +103,7 @@ function DiffInfoInner({
   hideActions: boolean;
 }) {
   const diffInfoResult = useAtomValue(diffSummary(diffId));
-  const syncStatus = useAtomValue(syncStatusByHash(commit.hash));
+  const syncStatus = useAtomGet(syncStatusAtom, commit.hash);
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }

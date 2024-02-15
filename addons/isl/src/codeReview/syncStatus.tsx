@@ -7,7 +7,6 @@
 
 import type {Hash} from '../types';
 
-import {atomFamilyWeak} from '../jotaiUtils';
 import {latestCommits} from '../serverAPIState';
 import {allDiffSummaries, codeReviewProvider} from './CodeReviewInfo';
 import {atom} from 'jotai';
@@ -18,22 +17,17 @@ export enum SyncStatus {
   RemoteIsNewer = 'remoteIsNewer',
 }
 
+const emptyMap = new Map<Hash, SyncStatus>();
+
 export const syncStatusAtom = atom(get => {
   const provider = get(codeReviewProvider);
   if (provider == null) {
-    return undefined;
+    return emptyMap;
   }
   const commits = get(latestCommits);
   const summaries = get(allDiffSummaries);
   if (summaries.value == null) {
-    return undefined;
+    return emptyMap;
   }
   return provider.getSyncStatuses(commits, summaries.value);
 });
-
-export const syncStatusByHash = atomFamilyWeak((hash: Hash) =>
-  atom(get => {
-    const syncStatus = get(syncStatusAtom);
-    return syncStatus?.get(hash);
-  }),
-);
