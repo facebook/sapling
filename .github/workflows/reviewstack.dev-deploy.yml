@@ -19,22 +19,22 @@ jobs:
       - name: Grant Access
         run: git config --global --add safe.directory "$PWD"
       - name: Install dependencies
-        working-directory: ./contrib
+        working-directory: ./eden/contrib/
         run: yarn install --prefer-offline
 
       # Build codegen and then do some sanity checks so we don't push the site
       # when the tests are broken.
       - name: GraphQL/TextMate codegen
-        working-directory: ./contrib/reviewstack
+        working-directory: ./eden/contrib/reviewstack
         run: yarn codegen
       - name: ESLint
-        working-directory: ./contrib/reviewstack
+        working-directory: ./eden/contrib/reviewstack
         run: yarn eslint
       - name: Unit tests
-        working-directory: ./contrib/reviewstack
+        working-directory: ./eden/contrib/reviewstack
         run: yarn test --watchAll=false
       - name: Build the static site
-        working-directory: ./contrib/reviewstack.dev
+        working-directory: ./eden/contrib/reviewstack.dev
         run: yarn release
 
       # Push to the release branch.
@@ -44,4 +44,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: reviewstack.dev-prod
-          publish_dir: ./contrib/reviewstack.dev/build
+          publish_dir: ./eden/contrib/reviewstack.dev/build
