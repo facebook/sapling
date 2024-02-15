@@ -28,6 +28,7 @@ import {assert, firstLine} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {generatorContains, unwrap, zip} from 'shared/utils';

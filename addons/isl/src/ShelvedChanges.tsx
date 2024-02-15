@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ShelvedChange} from './types';
-
 import serverAPI from './ClientToServerAPI';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {FlexSpacer} from './ComponentUtils';

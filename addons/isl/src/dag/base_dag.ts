@@ -11,6 +11,7 @@ import type {RecordOf} from 'immutable';
 
 import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {unwrap} from 'shared/utils';

@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ClientToServerAPI} from './ClientToServerAPI';
 import type {ThemeColor} from './theme';
 import type {
   Disposable,

@@ -10,6 +10,7 @@ import type {RecordOf} from 'immutable';
 
 import {FileStackState} from './fileStackState';
 import {List, Record, Set as ImSet} from 'immutable';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 
