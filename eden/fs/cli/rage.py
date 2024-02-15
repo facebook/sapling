@@ -108,6 +108,32 @@ def get_watchman_log_path() -> Optional[Path]:
     return None
 
 
+def get_upgrade_log_path() -> Optional[Path]:
+    if sys.platform == "win32":
+        return None
+
+    for upgrade_log in [
+        "/var/facebook/logs/edenfs_upgrade.log",
+        "/Users/Shared/edenfs_upgrade.log",
+    ]:
+        if os.path.isfile(upgrade_log):
+            return Path(upgrade_log)
+    return None
+
+
+def get_config_log_path() -> Optional[Path]:
+    if sys.platform == "win32":
+        return None
+
+    for config_log in [
+        "/var/facebook/logs/edenfs_config.log",
+        "/Users/Shared/edenfs_config.log",
+    ]:
+        if os.path.isfile(config_log):
+            return Path(config_log)
+    return None
+
+
 def print_diagnostic_info(
     instance: EdenInstance, out: IO[bytes], dry_run: bool
 ) -> None:
@@ -173,6 +199,45 @@ def print_diagnostic_info(
             out,
             dry_run,
         )
+
+    upgrade_log_path = get_upgrade_log_path()
+
+    if upgrade_log_path:
+        section_title("EdenFS Upgrade logs:", out)
+        out.write(b"Logs from: %s\n" % str(upgrade_log_path).encode())
+        paste_output(
+            lambda sink: print_log_file(
+                upgrade_log_path,
+                sink,
+                whole_file=False,
+            ),
+            processor,
+            out,
+            dry_run,
+        )
+    elif sys.platform != "win32":
+        section_title("EdenFS Upgrade logs:", out)
+        out.write(b"Log file does not exist\n")
+
+    config_log_path = get_config_log_path()
+
+    if config_log_path:
+        section_title("EdenFS Config logs:", out)
+        out.write(b"Logs from: %s\n" % str(config_log_path).encode())
+        paste_output(
+            lambda sink: print_log_file(
+                config_log_path,
+                sink,
+                whole_file=False,
+            ),
+            processor,
+            out,
+            dry_run,
+        )
+    elif sys.platform != "win32":
+        section_title("EdenFS Config logs:", out)
+        out.write(b"Log file does not exist\n")
+
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
     print_crashed_edenfs_logs(processor, out, dry_run)
