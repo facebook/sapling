@@ -79,7 +79,7 @@ impl BonsaiDerivable for MappedGitCommitId {
             bail!("Can't derive MappedGitCommitId for snapshot")
         }
         let tree_handle = derivation_ctx
-            .derive_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
+            .fetch_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
             .await?;
         let commit_tree_id = gix_hash::oid::try_from_bytes(tree_handle.oid().as_ref())
             .with_context(|| {

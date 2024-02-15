@@ -88,7 +88,7 @@ impl BonsaiDerivable for RootFastlog {
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let unode_mf_id = derivation_ctx
-            .derive_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id())
+            .fetch_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id())
             .await?
             .manifest_unode_id()
             .clone();

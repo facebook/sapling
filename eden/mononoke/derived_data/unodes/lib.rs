@@ -55,6 +55,8 @@ pub struct UnodeRenameSource {
 ///
 /// Returns a mapping from paths in the current changeset to the source of the
 /// rename in the parent changesets.
+///
+/// Pre-condition: RootUnodeManifestId has been derived for this bonsai
 pub async fn find_unode_rename_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
@@ -87,7 +89,7 @@ pub async fn find_unode_rename_sources(
                 )
             })?;
             let mf_root = derivation_ctx
-                .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+                .fetch_dependency::<RootUnodeManifestId>(ctx, csid)
                 .await?;
             let from_paths: Vec<_> = paths.keys().cloned().cloned().collect();
             let unodes = mf_root
@@ -149,7 +151,7 @@ pub async fn find_unode_renames_incorrect_for_blame_v1(
 
     let unodes = references.into_iter().map(|(csid, mut paths)| async move {
         let mf_root = derivation_ctx
-            .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+            .fetch_dependency::<RootUnodeManifestId>(ctx, csid)
             .await?;
         let from_paths: Vec<_> = paths.keys().cloned().collect();
         let blobstore = derivation_ctx.blobstore();
@@ -192,8 +194,11 @@ mod tests {
     use mononoke_types::NonRootMPath;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
+    use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
     use tests_utils::CreateCommitContext;
+
+    use crate::RootUnodeManifestId;
 
     #[derive(Clone)]
     #[facet::container]
@@ -248,6 +253,11 @@ mod tests {
 
         let bonsai = c4.load(ctx, &repo.repo_blobstore).await?;
         let derivation_ctx = repo.repo_derived_data.manager().derivation_context(None);
+
+        repo.repo_derived_data()
+            .manager()
+            .derive::<RootUnodeManifestId>(&ctx, c4, None)
+            .await?;
         let renames = crate::find_unode_rename_sources(ctx, &derivation_ctx, &bonsai).await?;
 
         let check = |path: &str, parent_index: usize, from_path: &str| {

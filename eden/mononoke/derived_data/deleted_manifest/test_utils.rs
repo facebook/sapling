@@ -49,6 +49,7 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;
 use tests_utils::CreateCommitContext;
+use unodes::RootUnodeManifestId;
 
 use crate::derive::get_unodes;
 use crate::derive::DeletedManifestDeriver;
@@ -799,6 +800,11 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
 ) -> Result<(ChangesetId, Root::Id, Vec<(MPath, Status)>), Error> {
     let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
     let bcs_id = bcs.get_changeset_id();
+
+    repo.repo_derived_data()
+        .manager()
+        .derive::<RootUnodeManifestId>(&ctx, bcs.get_changeset_id(), None)
+        .await?;
 
     let (current_unode, parent_unodes) = get_unodes(
         ctx,

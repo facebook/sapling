@@ -280,18 +280,18 @@ async fn derive_git_delta_manifest(
     }
     // Ensure that the dependent Git commit is derived at this point
     derivation_ctx
-        .derive_dependency::<MappedGitCommitId>(ctx, bonsai.get_changeset_id())
+        .fetch_dependency::<MappedGitCommitId>(ctx, bonsai.get_changeset_id())
         .await?;
     // Derive the Git tree manifest for the current commit
     let tree_handle = derivation_ctx
-        .derive_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
+        .fetch_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
         .await
         .context("Error while deriving current commit's Git tree")?;
     // For each parent of the bonsai changeset, derive the Git tree manifest
     // Ok to try join since there will only be a handful of parents for Git repos
     let parent_trees_with_commit = try_join_all(bonsai.parents().map(|parent| async move {
         let parent_tree_handle = derivation_ctx
-            .derive_dependency::<TreeHandle>(ctx, parent.clone())
+            .fetch_dependency::<TreeHandle>(ctx, parent.clone())
             .await
             .with_context(|| {
                 format!("Error while deriving Git tree for parent commit {}", parent)
@@ -384,7 +384,7 @@ async fn derive_git_delta_manifest(
     // that were modified in the current commit
     let parent_unodes_with_commit = try_join_all(bonsai.parents().map(|parent| async move {
         let parent_root_unode = derivation_ctx
-            .derive_dependency::<RootUnodeManifestId>(ctx, parent.clone())
+            .fetch_dependency::<RootUnodeManifestId>(ctx, parent.clone())
             .await
             .with_context(|| {
                 format!(
