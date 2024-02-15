@@ -13,7 +13,10 @@
  */
 export function getZoomLevel(): number {
   try {
-    return parseFloat(document.body.style.getPropertyValue('--zoom'));
+    const number = parseFloat(document.body.style.getPropertyValue('--zoom'));
+    if (isNaN(number)) {
+      return 1;
+    }
   } catch {}
   return 1;
 }
