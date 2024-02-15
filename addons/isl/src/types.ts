@@ -418,7 +418,7 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openExternal'; url: string}
   | {type: 'platform/confirm'; message: string; details?: string | undefined}
   | {type: 'platform/subscribeToAvailableCwds'}
-  | {type: 'platform/setPersistedState'; data: string}
+  | {type: 'platform/setPersistedState'; data?: string}
   | {
       type: 'platform/setVSCodeConfig';
       config: string;

@@ -11,6 +11,7 @@ import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {holdingAltAtom} from '../ChangedFile';
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
+import {FlexRow} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
 import {Subtle} from '../Subtle';
@@ -19,6 +20,7 @@ import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
 import {atomWithOnChange, localStorageBackedAtom, readAtom} from '../jotaiUtils';
+import platform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
@@ -27,6 +29,7 @@ import {
   mergeConflicts,
   repositoryInfo,
 } from '../serverAPIState';
+import {useShowToast} from '../toast';
 import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
@@ -35,6 +38,8 @@ import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 
 import './DebugToolsMenu.css';
+
+/* eslint-disable no-console */
 
 export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
   return (
@@ -55,7 +60,7 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
       <DropdownField title={<T>Commit graph</T>}>
         <DebugDagInfo />
       </DropdownField>
-      <DropdownField title={<T>Internal Jotai State</T>}>
+      <DropdownField title={<T>Internal State</T>}>
         <InternalState />
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
@@ -71,30 +76,59 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
 export const enableReduxTools = localStorageBackedAtom<boolean>('isl.debug-redux-tools', false);
 
 function InternalState() {
-  const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [reduxTools, setReduxTools] = useAtom(enableReduxTools);
+  const showToast = useShowToast();
   const generate = () => {
     // No need for useAtomValue - no need to re-render or recalculate this function.
     const needSerialize = readAtom(holdingAltAtom);
     const atomsState = readInterestingAtoms();
     const value = needSerialize ? serializeAtomsState(atomsState) : atomsState;
-    // eslint-disable-next-line no-console
-    console.log(value);
-    setSuccessMessage(`logged to console!${needSerialize ? ' (serialized)' : ''}`);
+    console.log('jotai state:', value);
+    showToast.show(`logged jotai state to console!${needSerialize ? ' (serialized)' : ''}`);
   };
 
   return (
-    <div className="internal-debug-tools-atom-state">
-      <Tooltip
-        placement="bottom"
-        title={t(
-          'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.',
-        )}>
-        <VSCodeButton onClick={generate} appearance="secondary">
-          <T>Take Snapshot</T>
-        </VSCodeButton>
-        {successMessage && <Subtle>{successMessage}</Subtle>}
-      </Tooltip>
+    <div>
+      <FlexRow>
+        <Tooltip
+          placement="bottom"
+          title={t(
+            'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.',
+          )}>
+          <VSCodeButton onClick={generate} appearance="secondary">
+            <T>Take Snapshot</T>
+          </VSCodeButton>
+        </Tooltip>
+        <Tooltip
+          placement="bottom"
+          title={t(
+            'Log persisted state (localStorage or vscode storage) to the dev tools console.',
+          )}>
+          <VSCodeButton
+            onClick={() => {
+              console.log('persisted state:', platform.getAllTemporaryState());
+              showToast.show('logged persisted state to console!');
+            }}
+            appearance="secondary">
+            <T>Log Persisted State</T>
+          </VSCodeButton>
+        </Tooltip>
+        <Tooltip
+          placement="bottom"
+          title={t(
+            'Clear any persisted state (localStorage or vscode storage). Usually only matters after restarting.',
+          )}>
+          <VSCodeButton
+            onClick={() => {
+              platform.clearTemporaryState();
+              console.log('--- cleared isl persisted state ---');
+              showToast.show('cleared persisted state');
+            }}
+            appearance="secondary">
+            <T>Clear Persisted State</T>
+          </VSCodeButton>
+        </Tooltip>
+      </FlexRow>
       {isDev && (
         <VSCodeCheckbox checked={reduxTools} onChange={() => setReduxTools(v => !v)}>
           Integrate with Redux DevTools
@@ -106,7 +140,6 @@ function InternalState() {
 
 const logMessagesState = atomWithOnChange(atom(debugLogMessageTraffic.shoudlLog), newValue => {
   debugLogMessageTraffic.shoudlLog = newValue;
-  // eslint-disable-next-line no-console
   console.log(`----- ${newValue ? 'Enabled' : 'Disabled'} Logging Messages -----`);
 });
 
