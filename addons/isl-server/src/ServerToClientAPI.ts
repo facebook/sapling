@@ -796,7 +796,7 @@ export default class ServerToClientAPI {
           break;
         }
         repo.runDiff(data.comparison, /* context lines */ 4).then(diff => {
-          Internal.generateAICommitMessage?.(logger, {
+          Internal.generateAICommitMessage?.(repo.ctx, {
             title: data.title,
             context: diff,
           })
