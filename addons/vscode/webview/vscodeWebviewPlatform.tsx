@@ -9,8 +9,16 @@ import type {Platform} from 'isl/src/platform';
 import type {ThemeColor} from 'isl/src/theme';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
+import type {Json} from 'shared/typeUtils';
 
 import {Internal} from './Internal';
+
+declare global {
+  interface Window {
+    islInitialTemporaryState: Record<string, Json>;
+  }
+}
+const temporaryState: Record<string, Json> = window.islInitialTemporaryState ?? {};
 
 export const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
@@ -37,21 +45,17 @@ export const vscodeWebviewPlatform: Platform = {
   },
   clipboardCopy: data => navigator.clipboard.writeText(data),
 
-  getTemporaryState<T>(key: string): T | null {
-    try {
-      const found = localStorage.getItem(key) as string | null;
-      if (found == null) {
-        return null;
-      }
-      return JSON.parse(found) as T;
-    } catch {
-      return null;
-    }
+  getTemporaryState<T extends Json>(key: string): T | null {
+    return temporaryState[key] as T;
   },
-  setTemporaryState<T>(key: string, value: T): void {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
+  setTemporaryState<T extends Json>(key: string, value: T): void {
+    temporaryState[key] = value;
+
+    // send entire state every time
+    window.clientToServerAPI?.postMessage({
+      type: 'platform/setPersistedState',
+      data: JSON.stringify(temporaryState),
+    });
   },
 
   theme: {

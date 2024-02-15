@@ -247,6 +247,40 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
 }
 
 /**
+ * To persist state, we store data in extension globalStorage.
+ * In order to access this synchronously at startup inside the webview,
+ * we need to inject this initial state into the webview HTML.
+ * This gives the javascript snippet that can be safely put into a webview HTML <script> tag.
+ */
+function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
+  const stateStr = context.globalState.get<string>('isl-persisted');
+  if (stateStr == null) {
+    logger.info('No initial persisted state found');
+    return '';
+  }
+  try {
+    // This snippet is injected directly as javascript, much like `eval`.
+    // Therefore, it's very important that the stateStr is validated to be safe to be injected.
+    const parsed = JSON.parse(stateStr);
+    if (typeof parsed !== 'object' || parsed == null) {
+      // JSON is not in the format we expect
+      logger.info('Found INVALID JSON for initial persisted state for webview: ', stateStr);
+      return '';
+    }
+    // validated is injected not as a string, but directly as a javascript object (since JSON is a subset of js)
+    const validated = JSON.stringify(parsed);
+    logger.info('Found valid initial persisted state for webview: ', validated);
+    return `try {
+      window.islInitialTemporaryState = ${validated};
+    } catch (e) {}
+    `;
+  } catch {
+    logger.info('Found INVALID initial persisted state for webview: ', stateStr);
+    return '';
+  }
+}
+
+/**
  * When built in dev mode using vite, files are not written to disk.
  * In order to get files to load, we need to set up the server path ourself.
  *
@@ -284,6 +318,7 @@ function devModeHtmlForISLWebview(
 
 		<script>
 			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
+      ${getInitialStateJs(context, logger)}
 		</script>
     <script type="module" src="/webview/islWebviewPreload.ts"></script>
     <script type="module" src="/webview/islWebviewEntry.tsx"></script>
@@ -305,7 +340,7 @@ function htmlForISLWebview(
     if (!Internal?.supportsDevBuilds?.()) {
       throw new Error('Cannot use dev build with current VS Code version');
     }
-    return devModeHtmlForISLWebview(kind, logger);
+    return devModeHtmlForISLWebview(kind, context, logger);
   }
 
   // Only allow accessing resources relative to webview dir,
@@ -347,6 +382,7 @@ function htmlForISLWebview(
 		<link href="res/stylex.css" rel="stylesheet">
 		<script nonce="${nonce}">
 			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
+      ${getInitialStateJs(context, logger)}
 		</script>
 		<script type="module" defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
 	</head>

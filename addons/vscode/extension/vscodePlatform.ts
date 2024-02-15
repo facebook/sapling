@@ -109,6 +109,11 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
             );
           break;
         }
+        case 'platform/setPersistedState': {
+          const {data} = message;
+          context.globalState.update('isl-persisted', data);
+          break;
+        }
         case 'platform/subscribeToVSCodeConfig': {
           const sendLatestValue = () =>
             postMessage({
