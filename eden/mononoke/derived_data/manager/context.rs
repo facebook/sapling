@@ -21,7 +21,6 @@ use futures::future::try_join_all;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::RepositoryId;
 
 use crate::derivable::BonsaiDerivable;
 use crate::manager::derive::Rederivation;
@@ -165,16 +164,6 @@ impl DerivationContext {
             return Ok(parent.clone());
         }
         self.fetch_dependency(ctx, csid).await
-    }
-
-    /// The repo id of the repo being derived.
-    pub fn repo_id(&self) -> RepositoryId {
-        self.manager.repo_id()
-    }
-
-    /// The repo name of the repo being derived.
-    pub fn repo_name(&self) -> &str {
-        self.manager.repo_name()
     }
 
     /// The blobstore that should be used for storing and retrieving blobs.

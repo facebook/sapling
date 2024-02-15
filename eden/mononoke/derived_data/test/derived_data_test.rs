@@ -183,7 +183,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
     repo.repo_blobstore()
         .put(
             &ctx,
-            format!("repo0.test_generation.{}", master_anc1),
+            format!("test_generation.{}", master_anc1),
             BlobstoreBytes::from_bytes(Bytes::from_static(b"41")),
         )
         .await?;
