@@ -253,15 +253,21 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
   const dag = useAtomValue(dagWithPreviews);
   const [[, stackHashes], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
   const loadingState = useAtomValue(loadingStackState);
+  const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
 
-  const set = dag.descendants(info.hash);
+  const set = dag.nonObsolete(dag.descendants(info.hash));
+  if (set.size <= 1) {
+    return null;
+  }
+
   const stackCommits = dag.getBatch(set.toArray());
   const isEditing = stackHashes.size > 0 && set.toSeq().some(h => stackHashes.has(h));
 
   const isPreview = info.previewType != null;
   const isLoading = isEditing && loadingState.state === 'loading';
   const isError = isEditing && loadingState.state === 'hasError';
-  const isLinear = dag.merge(set).size === 0 && dag.heads(set).size === 1;
+  const isLinear =
+    dag.merge(set).size === 0 && dag.heads(set).size === 1 && dag.roots(set).size === 1;
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
   const hasPublic = stackCommits.some(c => c.phase === 'public');
   const obsoleted = stackCommits.filter(c => c.successorInfo != null);
@@ -290,7 +296,6 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
   const highlight = disabled ? [] : stackCommits;
   const tooltipDelay = disabled && !isLoading ? undefined : DOCUMENTATION_DELAY;
   const icon = isLoading ? <Icon icon="loading" slot="start" /> : <StackEditIcon slot="start" />;
-  const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
 
   return (
     <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
