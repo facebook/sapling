@@ -282,6 +282,10 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return this.filter(c => c.successorInfo != null, set);
   }
 
+  nonObsolete(set?: SetLike): HashSet {
+    return this.filter(c => c.successorInfo == null, set);
+  }
+
   public_(set?: SetLike): HashSet {
     return this.filter(c => c.phase === 'public', set);
   }
