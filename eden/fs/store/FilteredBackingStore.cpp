@@ -25,7 +25,7 @@ namespace facebook::eden {
 FilteredBackingStore::FilteredBackingStore(
     std::shared_ptr<BackingStore> backingStore,
     std::unique_ptr<Filter> filter)
-    : backingStore_{std::move(backingStore)}, filter_{std::move(filter)} {};
+    : backingStore_{std::move(backingStore)}, filter_{std::move(filter)} {}
 
 FilteredBackingStore::~FilteredBackingStore() = default;
 

@@ -2127,7 +2127,7 @@ TraceDetailedArgumentsHandle Nfsd3::traceDetailedArguments() {
       });
   traceDetailedArguments_.fetch_add(1, std::memory_order_acq_rel);
   return handle;
-};
+}
 
 Nfsd3::~Nfsd3() {
   // TODO(xavierd): wait for the pending requests,
