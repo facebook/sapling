@@ -18,7 +18,7 @@ import {Tooltip} from '../Tooltip';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
-import {atomWithOnChange, readAtom} from '../jotaiUtils';
+import {atomWithOnChange, localStorageBackedAtom, readAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
@@ -27,6 +27,7 @@ import {
   mergeConflicts,
   repositoryInfo,
 } from '../serverAPIState';
+import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
@@ -67,8 +68,11 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
   );
 }
 
+export const enableReduxTools = localStorageBackedAtom<boolean>('isl.debug-redux-tools', false);
+
 function InternalState() {
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
+  const [reduxTools, setReduxTools] = useAtom(enableReduxTools);
   const generate = () => {
     // No need for useAtomValue - no need to re-render or recalculate this function.
     const needSerialize = readAtom(holdingAltAtom);
@@ -91,6 +95,11 @@ function InternalState() {
         </VSCodeButton>
         {successMessage && <Subtle>{successMessage}</Subtle>}
       </Tooltip>
+      {isDev && (
+        <VSCodeCheckbox checked={reduxTools} onChange={() => setReduxTools(v => !v)}>
+          Integrate with Redux DevTools
+        </VSCodeCheckbox>
+      )}
     </div>
   );
 }

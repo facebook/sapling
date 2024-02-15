@@ -25,6 +25,7 @@ import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {TopLevelToast} from './TopLevelToast';
 import {tracker} from './analytics';
+import {enableReduxTools} from './debug/DebugToolsMenu';
 import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
@@ -84,11 +85,16 @@ function MaybeWithJotaiRoot({children}: {children: JSX.Element}) {
       </Provider>
     );
   } else if (isDev) {
-    return <AtomsDevtools>{children}</AtomsDevtools>;
+    return <MaybeAtomsDevtools>{children}</MaybeAtomsDevtools>;
   } else {
     // Such scoped Provider or store complexity is not needed outside tests or dev.
     return children;
   }
+}
+
+function MaybeAtomsDevtools({children}: {children: JSX.Element}) {
+  const enabled = useAtomValue(enableReduxTools);
+  return enabled ? <AtomsDevtools>{children}</AtomsDevtools> : children;
 }
 
 function AtomsDevtools({children}: {children: JSX.Element}) {
