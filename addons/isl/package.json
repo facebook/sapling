@@ -21,7 +21,6 @@
     "jotai": "^2.6.2",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
-    "recoil": "^0.7.5",
     "shared": "0.1.0",
     "typescript": "^4.4.2",
     "vite": "^5.1.0-beta.2",

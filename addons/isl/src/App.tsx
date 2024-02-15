@@ -9,7 +9,6 @@ import type {RepositoryError} from './types';
 import type {ReactNode} from 'react';
 import type {Writable} from 'shared/typeUtils';
 
-import {AccessGlobalRecoil} from './AccessGlobalRecoil';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
@@ -31,7 +30,6 @@ import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
 import {setJotaiStore} from './jotaiUtils';
 import platform from './platform';
-import {getEntangledAtomsInitializedState} from './recoilUtils';
 import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
@@ -44,7 +42,6 @@ import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Provider, useAtom, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React from 'react';
-import {RecoilRoot} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
@@ -57,22 +54,19 @@ export default function App() {
       <ResetStyle />
       <I18nSupport>
         <MaybeWithJotaiRoot>
-          <RecoilRoot initializeState={getEntangledAtomsInitializedState}>
-            <AccessGlobalRecoil />
-            <ISLRoot>
-              <ISLCommandContext>
-                <ErrorBoundary>
-                  <ISLDrawers />
-                  <TooltipRootContainer />
-                  <GettingStartedModal />
-                  <ComparisonViewModal />
-                  <ModalContainer />
-                  <ContextMenus />
-                  <TopLevelToast />
-                </ErrorBoundary>
-              </ISLCommandContext>
-            </ISLRoot>
-          </RecoilRoot>
+          <ISLRoot>
+            <ISLCommandContext>
+              <ErrorBoundary>
+                <ISLDrawers />
+                <TooltipRootContainer />
+                <GettingStartedModal />
+                <ComparisonViewModal />
+                <ModalContainer />
+                <ContextMenus />
+                <TopLevelToast />
+              </ErrorBoundary>
+            </ISLCommandContext>
+          </ISLRoot>
         </MaybeWithJotaiRoot>
       </I18nSupport>
     </React.StrictMode>
