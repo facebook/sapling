@@ -106,7 +106,7 @@ function InternalState() {
           )}>
           <VSCodeButton
             onClick={() => {
-              console.log('persisted state:', platform.getAllTemporaryState());
+              console.log('persisted state:', platform.getAllPersistedState());
               showToast.show('logged persisted state to console!');
             }}
             appearance="secondary">
@@ -120,7 +120,7 @@ function InternalState() {
           )}>
           <VSCodeButton
             onClick={() => {
-              platform.clearTemporaryState();
+              platform.clearPersistedState();
               console.log('--- cleared isl persisted state ---');
               showToast.show('cleared persisted state');
             }}

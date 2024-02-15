@@ -39,13 +39,13 @@ export interface Platform {
    * Note: Some platforms may not support this (e.g. browser with localStorage disabled),
    * or it may not be persisted indefinitely---usual localStorage caveats apply.
    */
-  getTemporaryState<T extends Json>(key: string): T | null;
-  /** see getTemporaryState  */
-  setTemporaryState<T extends Json>(key: string, value: T): void;
-  /** see getTemporaryState  */
-  clearTemporaryState(): void;
-  /** see getTemporaryState  */
-  getAllTemporaryState(): Json | undefined;
+  getPersistedState<T extends Json>(key: string): T | null;
+  /** see getPersistedState  */
+  setPersistedState<T extends Json>(key: string, value: T): void;
+  /** see getPersistedState  */
+  clearPersistedState(): void;
+  /** see getPersistedState  */
+  getAllPersistedState(): Json | undefined;
 
   handleServerMessage?: (message: ServerToClientMessage) => void;
 

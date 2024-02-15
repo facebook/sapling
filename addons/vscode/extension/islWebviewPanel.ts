@@ -271,7 +271,7 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
     const validated = JSON.stringify(parsed);
     logger.info('Found valid initial persisted state for webview: ', validated);
     return `try {
-      window.islInitialTemporaryState = ${validated};
+      window.islInitialPersistedState = ${validated};
     } catch (e) {}
     `;
   } catch {

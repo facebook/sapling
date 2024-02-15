@@ -22,8 +22,8 @@ describe('persistAtomToLocalStorageEffect', () => {
   const setTemporary = jest.fn();
 
   beforeEach(() => {
-    platform.getTemporaryState = getTemporary;
-    platform.setTemporaryState = setTemporary;
+    platform.getPersistedState = getTemporary;
+    platform.setPersistedState = setTemporary;
     getTemporary.mockReset();
     setTemporary.mockReset();
 
@@ -58,7 +58,7 @@ describe('persistAtomToLocalStorageEffect', () => {
 
     expect(screen.queryByTestId('commit-info-view')).not.toBeInTheDocument();
 
-    expect(platform.setTemporaryState).toHaveBeenCalledWith(
+    expect(platform.setPersistedState).toHaveBeenCalledWith(
       'isl.drawer-state',
       expect.objectContaining({
         right: {collapsed: true, size: 500},
@@ -69,7 +69,7 @@ describe('persistAtomToLocalStorageEffect', () => {
       CommitInfoTestUtils.openCommitInfoSidebar(); // toggle
     });
 
-    expect(platform.setTemporaryState).toHaveBeenCalledWith(
+    expect(platform.setPersistedState).toHaveBeenCalledWith(
       'isl.drawer-state',
       expect.objectContaining({
         right: {collapsed: false, size: 500},
@@ -78,8 +78,8 @@ describe('persistAtomToLocalStorageEffect', () => {
   });
 
   it.skip('loads state on startup', () => {
-    // mock seems to happen too late to capture the getTemporaryState call.
-    // but I verified that getTemporaryState is called using console log.
-    expect(platform.getTemporaryState).toHaveBeenCalledWith('isl.drawer-state');
+    // mock seems to happen too late to capture the getPersistedState call.
+    // but I verified that getPersistedState is called using console log.
+    expect(platform.getPersistedState).toHaveBeenCalledWith('isl.drawer-state');
   });
 });

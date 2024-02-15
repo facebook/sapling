@@ -17,7 +17,7 @@ import {tryJsonParse} from 'shared/utils';
 
 declare global {
   interface Window {
-    islInitialTemporaryState: Record<string, Json>;
+    islInitialPersistedState: Record<string, Json>;
   }
 }
 
@@ -51,8 +51,8 @@ function tryGetStateFromLocalStorage(): Record<string, Json> | undefined {
   }
 }
 
-const temporaryState: Record<string, Json> =
-  window.islInitialTemporaryState ?? tryGetStateFromLocalStorage() ?? {};
+const persistedState: Record<string, Json> =
+  window.islInitialPersistedState ?? tryGetStateFromLocalStorage() ?? {};
 
 function persistStateAsSoonAsPossible() {
   let tries = 20;
@@ -65,7 +65,7 @@ function persistStateAsSoonAsPossible() {
     }
     window.clientToServerAPI?.postMessage({
       type: 'platform/setPersistedState',
-      data: JSON.stringify(temporaryState),
+      data: JSON.stringify(persistedState),
     });
     logger.info('Saved persisted state to extension storage');
   };
@@ -97,29 +97,29 @@ export const vscodeWebviewPlatform: Platform = {
   },
   clipboardCopy: data => navigator.clipboard.writeText(data),
 
-  getTemporaryState<T extends Json>(key: string): T | null {
-    return temporaryState[key] as T;
+  getPersistedState<T extends Json>(key: string): T | null {
+    return persistedState[key] as T;
   },
-  setTemporaryState<T extends Json>(key: string, value: T): void {
-    temporaryState[key] = value;
+  setPersistedState<T extends Json>(key: string, value: T): void {
+    persistedState[key] = value;
 
     // send entire state every time
     window.clientToServerAPI?.postMessage({
       type: 'platform/setPersistedState',
-      data: JSON.stringify(temporaryState),
+      data: JSON.stringify(persistedState),
     });
   },
-  clearTemporaryState(): void {
-    for (const key in temporaryState) {
-      delete temporaryState[key];
+  clearPersistedState(): void {
+    for (const key in persistedState) {
+      delete persistedState[key];
     }
     window.clientToServerAPI?.postMessage({
       type: 'platform/setPersistedState',
       data: undefined,
     });
   },
-  getAllTemporaryState(): Json | undefined {
-    return temporaryState;
+  getAllPersistedState(): Json | undefined {
+    return persistedState;
   },
 
   theme: {

@@ -44,17 +44,17 @@ const androidStudioPlatform: Platform = {
     window.__IdeBridge.clipboardCopy?.(data);
   },
 
-  getTemporaryState<T>(_key: string): T | null {
+  getPersistedState<T>(_key: string): T | null {
     // TODO: support local storage, which may require enabling some webview permissions.
     return null;
   },
-  setTemporaryState<T>(_key: string, _value: T): void {
+  setPersistedState<T>(_key: string, _value: T): void {
     // TODO: support local storage, which may require enabling some webview permissions.
   },
-  clearTemporaryState(): void {
+  clearPersistedState(): void {
     // TODO: support local storage, which may require enabling some webview permissions.
   },
-  getAllTemporaryState() {
+  getAllPersistedState() {
     // TODO: support local storage, which may require enabling some webview permissions.
     return undefined;
   },

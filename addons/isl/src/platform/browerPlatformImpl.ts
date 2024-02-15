@@ -33,7 +33,7 @@ export const browserPlatformImpl = {
     navigator.clipboard.writeText(data);
   },
 
-  getTemporaryState<T>(key: string): T | null {
+  getPersistedState<T>(key: string): T | null {
     try {
       const found = localStorage.getItem(key) as string | null;
       if (found == null) {
@@ -44,17 +44,17 @@ export const browserPlatformImpl = {
       return null;
     }
   },
-  setTemporaryState<T>(key: string, value: T): void {
+  setPersistedState<T>(key: string, value: T): void {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {}
   },
-  clearTemporaryState(): void {
+  clearPersistedState(): void {
     try {
       localStorage.clear();
     } catch {}
   },
-  getAllTemporaryState(): Json | undefined {
+  getAllPersistedState(): Json | undefined {
     try {
       return {...localStorage};
     } catch {

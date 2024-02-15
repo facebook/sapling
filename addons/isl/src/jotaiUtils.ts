@@ -109,14 +109,14 @@ export function localStorageBackedAtom<T extends Json>(
   name: LocalStorageName,
   defaultValue: T,
 ): MutAtom<T> {
-  const primitiveAtom = atom<T>(platform.getTemporaryState<T>(name) ?? defaultValue);
+  const primitiveAtom = atom<T>(platform.getPersistedState<T>(name) ?? defaultValue);
 
   return atom(
     get => get(primitiveAtom),
     (get, set, update) => {
       const newValue = typeof update === 'function' ? update(get(primitiveAtom)) : update;
       set(primitiveAtom, newValue);
-      platform.setTemporaryState(name, newValue);
+      platform.setPersistedState(name, newValue);
     },
   );
 }
