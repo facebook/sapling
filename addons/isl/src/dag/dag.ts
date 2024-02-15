@@ -216,7 +216,8 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   /**
    * Return a subset suitable for rendering. This filters out:
-   * - Obsoleted stack. Only roots(obsolete()) and parents(draft()) are kept.
+   * - Obsoleted stack. Only roots(obsolete()), heads(obsolete()), and
+   *   parents(draft()) are kept.
    * - Unnamed public commits that do not have direct draft children.
    */
   @cached()
@@ -224,7 +225,9 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     const all = set === undefined ? this.all() : HashSet.fromHashes(set);
     const draft = this.draft(all);
     const obsolete = this.obsolete(all);
-    const toKeep = this.parents(draft.subtract(obsolete)).union(this.roots(obsolete));
+    const toKeep = this.parents(draft.subtract(obsolete))
+      .union(this.roots(obsolete))
+      .union(this.heads(obsolete));
     const unamedPublic = this.filter(
       i =>
         i.phase === 'public' &&
