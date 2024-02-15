@@ -79,6 +79,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
     const VARIANT: DerivableType = DerivableType::SkeletonManifests;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

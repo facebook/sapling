@@ -117,6 +117,9 @@ pub(crate) async fn prepare_filenodes_for_cs(
     }
 }
 
+/// Pre-condition: HgChangeset for this bcs has already been derived by this point.
+/// This is enforced when interacting with this through this crate's API:
+/// the BonsaiDerivable implementation in mapping.rs
 pub(crate) async fn generate_all_filenodes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
@@ -124,7 +127,7 @@ pub(crate) async fn generate_all_filenodes(
 ) -> Result<Vec<PreparedFilenode>> {
     let blobstore = derivation_ctx.blobstore();
     let hg_id = derivation_ctx
-        .derive_dependency::<MappedHgChangesetId>(ctx, bcs.get_changeset_id())
+        .fetch_dependency::<MappedHgChangesetId>(ctx, bcs.get_changeset_id())
         .await?
         .hg_changeset_id();
     let root_mf = hg_id.load(ctx, &blobstore).await?.manifestid();
@@ -342,6 +345,13 @@ mod tests {
         expected_paths: Vec<RepoPath>,
     ) -> Result<()> {
         let bonsai = cs_id.load(ctx, &repo.repo_blobstore).await?;
+
+        // Satisfy the precondition for this function:
+        // hgchangesets was derived already
+        repo.repo_derived_data()
+            .manager()
+            .derive::<MappedHgChangesetId>(ctx, cs_id, None)
+            .await?;
         let filenodes = generate_all_filenodes(
             ctx,
             &repo.repo_derived_data().manager().derivation_context(None),

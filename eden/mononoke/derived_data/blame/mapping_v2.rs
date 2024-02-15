@@ -55,6 +55,7 @@ impl BonsaiDerivable for RootBlameV2 {
     const VARIANT: DerivableType = DerivableType::BlameV2;
 
     type Dependencies = dependencies![RootUnodeManifestId];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,
@@ -64,7 +65,7 @@ impl BonsaiDerivable for RootBlameV2 {
     ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
         let root_manifest = derivation_ctx
-            .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+            .fetch_dependency::<RootUnodeManifestId>(ctx, csid)
             .await?;
         if derivation_ctx.config().blame_version != BlameVersion::V2 {
             return Err(anyhow!(

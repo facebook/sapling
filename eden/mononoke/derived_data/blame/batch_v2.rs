@@ -82,7 +82,7 @@ pub async fn derive_blame_v2_in_batch(
                         .ok_or_else(|| anyhow!("changeset {} should be in bonsai batch", csid))?;
                     let derivation_fut = async move {
                         let root_manifest = derivation_ctx
-                            .derive_dependency::<RootUnodeManifestId>(&ctx, csid)
+                            .fetch_dependency::<RootUnodeManifestId>(&ctx, csid)
                             .await?;
                         derive_blame_v2(&ctx, &derivation_ctx, bonsai, root_manifest)
                             .await

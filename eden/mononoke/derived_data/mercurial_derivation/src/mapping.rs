@@ -61,6 +61,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
     const VARIANT: DerivableType = DerivableType::HgChangesets;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

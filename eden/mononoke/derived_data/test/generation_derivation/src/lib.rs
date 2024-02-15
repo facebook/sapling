@@ -63,6 +63,7 @@ impl BonsaiDerivable for DerivedGeneration {
     const VARIANT: DerivableType = DerivableType::Unodes;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         _ctx: &CoreContext,
@@ -98,11 +99,7 @@ impl BonsaiDerivable for DerivedGeneration {
             .blobstore()
             .put(
                 ctx,
-                format!(
-                    "repo{}.test_generation.{}",
-                    derivation_ctx.repo_id(),
-                    changeset_id,
-                ),
+                format!("test_generation.{}", changeset_id,),
                 self.into(),
             )
             .await?;
@@ -116,14 +113,7 @@ impl BonsaiDerivable for DerivedGeneration {
     ) -> Result<Option<Self>> {
         match derivation_ctx
             .blobstore()
-            .get(
-                ctx,
-                &format!(
-                    "repo{}.test_generation.{}",
-                    derivation_ctx.repo_id(),
-                    changeset_id
-                ),
-            )
+            .get(ctx, &format!("test_generation.{}", changeset_id))
             .await?
         {
             Some(blob) => Ok(Some(blob.try_into()?)),

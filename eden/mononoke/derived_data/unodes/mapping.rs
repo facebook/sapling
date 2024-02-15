@@ -90,6 +90,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
     const VARIANT: DerivableType = DerivableType::Unodes;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

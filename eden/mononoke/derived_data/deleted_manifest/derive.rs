@@ -614,14 +614,14 @@ pub(crate) async fn get_changes_list(
     let parent_unodes = parent_cs_ids.into_iter().map({
         move |cs_id| async move {
             let root_mf_id = derivation_ctx
-                .derive_dependency::<RootUnodeManifestId>(ctx, cs_id)
+                .fetch_dependency::<RootUnodeManifestId>(ctx, cs_id)
                 .await?;
             Ok(root_mf_id.manifest_unode_id().clone())
         }
     });
 
     let (root_unode_mf_id, parent_mf_ids) = future::try_join(
-        derivation_ctx.derive_dependency::<RootUnodeManifestId>(ctx, bcs_id),
+        derivation_ctx.fetch_dependency::<RootUnodeManifestId>(ctx, bcs_id),
         future::try_join_all(parent_unodes),
     )
     .await?;
@@ -856,14 +856,14 @@ pub(crate) async fn get_unodes(
     let parent_unodes = parent_cs_ids.into_iter().map({
         move |cs_id| async move {
             let root_mf_id = derivation_ctx
-                .derive_dependency::<RootUnodeManifestId>(ctx, cs_id)
+                .fetch_dependency::<RootUnodeManifestId>(ctx, cs_id)
                 .await?;
             Ok(root_mf_id.manifest_unode_id().clone())
         }
     });
 
     let (root_unode_mf_id, parent_unodes) = future::try_join(
-        derivation_ctx.derive_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id()),
+        derivation_ctx.fetch_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id()),
         // We're assuming that the commits have hanful of parents in (in most
         // cases <= 2) and iterating over all of them won't be a problem.
         // (which is the case for all our current repos)
@@ -887,6 +887,7 @@ mod test {
     use tests_utils::drawdag::changes;
     use tests_utils::drawdag::create_from_dag_with_changes;
     use tests_utils::drawdag::extend_from_dag_with_changes;
+    use unodes::RootUnodeManifestId;
 
     use super::*;
     use crate::test_utils::build_repo;
@@ -967,6 +968,15 @@ mod test {
             },
         )
         .await?;
+
+        repo.repo_derived_data()
+            .manager()
+            .derive::<RootUnodeManifestId>(
+                &ctx,
+                *commits.get("H").expect("Drawdag failed us"),
+                None,
+            )
+            .await?;
 
         borrowed!(ctx, commits);
         let blobstore: &Arc<dyn Blobstore> = &blobstore;

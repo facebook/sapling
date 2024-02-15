@@ -46,7 +46,7 @@ pub(crate) async fn derive_blame_v2(
     let csid = bonsai.get_changeset_id();
     let parent_manifests = bonsai.parents().map(|csid| async move {
         let parent_root_mf_id = derivation_ctx
-            .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+            .fetch_dependency::<RootUnodeManifestId>(ctx, csid)
             .await?;
         Ok::<_, Error>(parent_root_mf_id.manifest_unode_id().clone())
     });

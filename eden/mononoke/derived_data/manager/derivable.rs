@@ -108,6 +108,18 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
     /// Use the `dependencies!` macro to populate this type.
     type Dependencies: DerivationDependencies;
 
+    /// Types of derived data types which this derived data type
+    /// can use as predecessors for the "predecessors optimization".
+    ///
+    /// This is a technique where you can derive a type from a "predecessor"
+    /// type, which allows to parallelize backfilling of the latter type
+    /// by using the predecessor type to start deriving future commits before
+    /// we have backfilled the latter type.
+    /// Example: SkeletonManifest can be used as a predecessor for BSSM.
+    ///
+    /// Use the `dependencies!` macro to populate this type.
+    type PredecessorDependencies: DerivationDependencies;
+
     /// Derive data for a single changeset.
     ///
     /// If the implementation generates any other data (e.g. manifest nodes
@@ -253,6 +265,15 @@ pub trait DerivationDependencies {
         rederivation: Option<Arc<dyn Rederivation>>,
         visited: &mut HashSet<TypeId>,
     ) -> Result<Duration, DerivationError>;
+    /// Derive all predecessor data types for this batch of commits.
+    /// The same pre-conditions apply as in derive.rs
+    async fn derive_predecessors(
+        ddm: &DerivedDataManager,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        visited: &mut HashSet<TypeId>,
+    ) -> Result<(), DerivationError>;
 }
 
 #[async_trait]
@@ -273,6 +294,15 @@ impl DerivationDependencies for () {
         _visited: &mut HashSet<TypeId>,
     ) -> Result<Duration, DerivationError> {
         Ok(Duration::ZERO)
+    }
+    async fn derive_predecessors(
+        _ddm: &DerivedDataManager,
+        _ctx: &CoreContext,
+        _csid: ChangesetId,
+        _rederivation: Option<Arc<dyn Rederivation>>,
+        _visited: &mut HashSet<TypeId>,
+    ) -> Result<(), DerivationError> {
+        Ok(())
     }
 }
 
@@ -317,6 +347,25 @@ where
             Ok(res.0 + res.1)
         } else {
             Rest::derive_exactly_batch_dependencies(ddm, ctx, csid, rederivation, visited).await
+        }
+    }
+    async fn derive_predecessors(
+        ddm: &DerivedDataManager,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        visited: &mut HashSet<TypeId>,
+    ) -> Result<(), DerivationError> {
+        let type_id = TypeId::of::<Derivable>();
+        if visited.insert(type_id) {
+            try_join(
+                ddm.derive::<Derivable>(ctx, csid, rederivation.clone()),
+                Rest::derive_predecessors(ddm, ctx, csid, rederivation, visited),
+            )
+            .await?;
+            Ok(())
+        } else {
+            Rest::derive_predecessors(ddm, ctx, csid, rederivation, visited).await
         }
     }
 }

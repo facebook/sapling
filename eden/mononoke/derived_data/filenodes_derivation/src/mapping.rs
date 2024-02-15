@@ -112,6 +112,7 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
     const VARIANT: DerivableType = DerivableType::FileNodes;
 
     type Dependencies = dependencies![MappedHgChangesetId];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

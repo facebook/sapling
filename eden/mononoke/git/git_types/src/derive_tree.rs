@@ -49,6 +49,7 @@ impl BonsaiDerivable for TreeHandle {
     const VARIANT: DerivableType = DerivableType::GitTree;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,

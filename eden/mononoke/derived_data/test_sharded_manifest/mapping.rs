@@ -68,6 +68,7 @@ impl BonsaiDerivable for RootTestShardedManifestDirectory {
     const VARIANT: DerivableType = DerivableType::TestShardedManifest;
 
     type Dependencies = dependencies![];
+    type PredecessorDependencies = dependencies![RootTestManifestDirectory];
 
     async fn derive_single(
         ctx: &CoreContext,
@@ -85,7 +86,7 @@ impl BonsaiDerivable for RootTestShardedManifestDirectory {
     ) -> Result<Self> {
         let csid = bonsai.get_changeset_id();
         let test_manifest = derivation_ctx
-            .derive_dependency::<RootTestManifestDirectory>(ctx, csid)
+            .fetch_dependency::<RootTestManifestDirectory>(ctx, csid)
             .await?;
         derive_from_predecessor(ctx, derivation_ctx, test_manifest).await
     }
