@@ -19,12 +19,12 @@ import {
   latestUncommittedChanges,
   latestCommits,
   latestDag,
-  operationBeingPreviewedJotai,
+  operationBeingPreviewed,
   latestHeadCommit,
-  queuedOperationsJotai,
-  operationListJotai,
-  mergeConflictsJotai,
-  latestUncommittedChangesDataJotai,
+  queuedOperations,
+  operationList,
+  mergeConflicts,
+  latestUncommittedChangesData,
   latestCommitsData,
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
@@ -207,17 +207,17 @@ function applyPreviewsToMergeConflicts(
 }
 
 export const uncommittedChangesWithPreviews = atom<Array<ChangedFile>>(get => {
-  const list = get(operationListJotai);
-  const queued = get(queuedOperationsJotai);
+  const list = get(operationList);
+  const queued = get(queuedOperations);
   const uncommittedChanges = get(latestUncommittedChanges);
 
   return applyPreviewsToChangedFiles(uncommittedChanges, list, queued);
 });
 
 export const optimisticMergeConflicts = atom(get => {
-  const list = get(operationListJotai);
-  const queued = get(queuedOperationsJotai);
-  const conflicts = get(mergeConflictsJotai);
+  const list = get(operationList);
+  const queued = get(queuedOperations);
+  const conflicts = get(mergeConflicts);
   if (conflicts?.files == null) {
     return conflicts;
   }
@@ -246,11 +246,11 @@ export type {Dag};
 
 export const dagWithPreviews = atom(get => {
   const originalDag = get(latestDag);
-  const list = get(operationListJotai);
-  const queued = get(queuedOperationsJotai);
+  const list = get(operationList);
+  const queued = get(queuedOperations);
   const currentOperation = list.currentOperation;
   const history = list.operationHistory;
-  const currentPreview = get(operationBeingPreviewedJotai);
+  const currentPreview = get(operationBeingPreviewed);
   let dag = originalDag;
   for (const op of optimisticOperations({history, queued, currentOperation})) {
     dag = op.optimisticDag(dag);
@@ -322,11 +322,11 @@ function* optimisticOperations(props: {
 export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useAtomValue(latestCommitsData);
   const commits = useAtomValue(latestCommits);
-  const uncommittedChanges = useAtomValue(latestUncommittedChangesDataJotai);
-  const conflicts = useAtomValue(mergeConflictsJotai);
+  const uncommittedChanges = useAtomValue(latestUncommittedChangesData);
+  const conflicts = useAtomValue(mergeConflicts);
   const successorMap = useAtomValue(latestSuccessorsMapAtom);
 
-  const [list, setOperationList] = useAtom(operationListJotai);
+  const [list, setOperationList] = useAtom(operationList);
 
   // Mark operations as completed when their optimistic applier is no longer needed
   // n.b. this must be a useEffect since React doesn't like setCurrentOperation getting called during render
@@ -480,8 +480,8 @@ type Class<T> = new (...args: any[]) => T;
 export function useIsOperationRunningOrQueued(
   cls: Class<Operation>,
 ): 'running' | 'queued' | undefined {
-  const list = useAtomValue(operationListJotai);
-  const queued = useAtomValue(queuedOperationsJotai);
+  const list = useAtomValue(operationList);
+  const queued = useAtomValue(queuedOperations);
   if (list.currentOperation?.operation instanceof cls && list.currentOperation?.exitCode == null) {
     return 'running';
   } else if (queued.some(op => op instanceof cls)) {
@@ -491,8 +491,8 @@ export function useIsOperationRunningOrQueued(
 }
 
 export function useMostRecentPendingOperation(): Operation | undefined {
-  const list = useAtomValue(operationListJotai);
-  const queued = useAtomValue(queuedOperationsJotai);
+  const list = useAtomValue(operationList);
+  const queued = useAtomValue(queuedOperations);
   if (queued.length > 0) {
     return queued.at(-1);
   }

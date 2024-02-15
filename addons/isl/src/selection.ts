@@ -16,7 +16,7 @@ import {islDrawerState} from './drawerState';
 import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
-import {latestDag, operationBeingPreviewedJotai} from './serverAPIState';
+import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
@@ -287,7 +287,7 @@ export function useBackspaceToHideSelected(): void {
     }
 
     writeAtom(
-      operationBeingPreviewedJotai,
+      operationBeingPreviewed,
       new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commitToHide)),
     );
   }, []);

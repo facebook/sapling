@@ -23,8 +23,8 @@ import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
   latestCommitsData,
-  latestUncommittedChangesDataJotai,
-  mergeConflictsJotai,
+  latestUncommittedChangesData,
+  mergeConflicts,
   repositoryInfo,
 } from '../serverAPIState';
 import {ComponentExplorerButton} from './ComponentExplorer';
@@ -115,9 +115,9 @@ function ServerClientMessageLogging() {
 }
 
 function DebugPerfInfo() {
-  const latestStatus = useAtomValue(latestUncommittedChangesDataJotai);
+  const latestStatus = useAtomValue(latestUncommittedChangesData);
   const latestLog = useAtomValue(latestCommitsData);
-  const latestConflicts = useAtomValue(mergeConflictsJotai);
+  const latestConflicts = useAtomValue(mergeConflicts);
   const heartbeat = useHeartbeat();
   const repoInfo = useAtomValue(repositoryInfo);
   let commandName = 'sl';

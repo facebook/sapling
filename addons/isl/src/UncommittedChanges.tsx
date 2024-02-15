@@ -59,7 +59,7 @@ import {
 import {selectedCommits} from './selection';
 import {
   latestHeadCommit,
-  operationListJotai,
+  operationList,
   uncommittedChangesFetchError,
   useRunOperation,
 } from './serverAPIState';
@@ -745,7 +745,7 @@ function MergeConflictButtons({
   // But only if the abort/continue command succeeded.
   // TODO: is this reliable? Is it possible to get stuck with buttons disabled because
   // we think it's still running?
-  const lastRunOperation = useAtomValue(operationListJotai).currentOperation;
+  const lastRunOperation = useAtomValue(operationList).currentOperation;
   const justFinishedContinue =
     lastRunOperation?.operation instanceof ContinueOperation && lastRunOperation.exitCode === 0;
   const justFinishedAbort =

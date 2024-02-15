@@ -25,7 +25,7 @@ import {
 } from './operations/FoldOperation';
 import {type Dag, dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
-import {operationBeingPreviewedJotai, useRunPreviewedOperation} from './serverAPIState';
+import {operationBeingPreviewed, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue} from 'jotai';
@@ -87,7 +87,7 @@ export function FoldButton({commit}: {commit?: CommitInfo}) {
       foldable.map(commit => parseCommitMessageFields(schema, commit.title, commit.description)),
     );
     const message = commitMessageFieldsToString(schema, messageFields);
-    writeAtom(operationBeingPreviewedJotai, new FoldOperation(foldable, message));
+    writeAtom(operationBeingPreviewed, new FoldOperation(foldable, message));
     writeAtom(selectedCommits, new Set([getFoldRangeCommitHash(foldable, /* isPreview */ true)]));
   }, [foldable]);
   if (foldable == null || (commit != null && foldable?.[0]?.hash !== commit.hash)) {
@@ -108,7 +108,7 @@ export function FoldButton({commit}: {commit?: CommitInfo}) {
  * This allows running the fold operation to use the newly typed message.
  */
 export function updateFoldedMessageWithEditedMessage(): FoldOperation | undefined {
-  const beingPreviewed = readAtom(operationBeingPreviewedJotai);
+  const beingPreviewed = readAtom(operationBeingPreviewed);
   if (beingPreviewed != null && beingPreviewed instanceof FoldOperation) {
     const range = beingPreviewed.getFoldRange();
     const combinedHash = getFoldRangeCommitHash(range, /* isPreview */ true);

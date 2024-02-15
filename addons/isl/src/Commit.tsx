@@ -45,7 +45,7 @@ import {
   isFetchingUncommittedChanges,
   latestDag,
   latestUncommittedChanges,
-  operationBeingPreviewedJotai,
+  operationBeingPreviewed,
   useRunOperation,
   useRunPreviewedOperation,
 } from './serverAPIState';
@@ -260,7 +260,7 @@ export const Commit = memo(
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
           onClick: () =>
             writeAtom(
-              operationBeingPreviewedJotai,
+              operationBeingPreviewed,
               new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
             ),
         });
@@ -672,7 +672,7 @@ function DraggableCommit({
               commit.remoteBookmarks.length > 0
                 ? succeedableRevset(commit.remoteBookmarks[0])
                 : latestSuccessorUnlessExplicitlyObsolete(commit);
-            writeAtom(operationBeingPreviewedJotai, op => {
+            writeAtom(operationBeingPreviewed, op => {
               const newRebase = new RebaseOperation(
                 latestSuccessorUnlessExplicitlyObsolete(beingDragged),
                 destination,

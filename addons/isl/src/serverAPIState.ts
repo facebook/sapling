@@ -37,22 +37,22 @@ import {
 import {initialParams} from './urlParams';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
-import {atom as jotaiAtom} from 'jotai';
+import {atom} from 'jotai';
 import {useCallback} from 'react';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
-export const jotaiRepositoryData = jotaiAtom<{info?: RepoInfo; cwd?: string}>({});
+export const repositoryData = atom<{info?: RepoInfo; cwd?: string}>({});
 
 registerDisposable(
-  jotaiRepositoryData,
+  repositoryData,
   serverAPI.onMessageOfType('repoInfo', event => {
-    writeAtom(jotaiRepositoryData, {info: event.info, cwd: event.cwd});
+    writeAtom(repositoryData, {info: event.info, cwd: event.cwd});
   }),
   import.meta.hot,
 );
 registerCleanup(
-  jotaiRepositoryData,
+  repositoryData,
   serverAPI.onSetup(() =>
     serverAPI.postMessage({
       type: 'requestRepoInfo',
@@ -61,9 +61,9 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const repositoryInfo = jotaiAtom(
+export const repositoryInfo = atom(
   get => {
-    const data = get(jotaiRepositoryData);
+    const data = get(repositoryData);
     return data?.info;
   },
   (
@@ -71,15 +71,15 @@ export const repositoryInfo = jotaiAtom(
     set,
     update: RepoInfo | undefined | ((_prev: RepoInfo | undefined) => RepoInfo | undefined),
   ) => {
-    const value = typeof update === 'function' ? update(get(jotaiRepositoryData)?.info) : update;
-    set(jotaiRepositoryData, last => ({
+    const value = typeof update === 'function' ? update(get(repositoryData)?.info) : update;
+    set(repositoryData, last => ({
       ...last,
       info: value,
     }));
   },
 );
 
-export const applicationinfo = jotaiAtom<ApplicationInfo | undefined>(undefined);
+export const applicationinfo = atom<ApplicationInfo | undefined>(undefined);
 registerDisposable(
   applicationinfo,
   serverAPI.onMessageOfType('applicationInfo', event => {
@@ -97,7 +97,7 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const reconnectingStatus = jotaiAtom<MessageBusStatus>({type: 'initializing'});
+export const reconnectingStatus = atom<MessageBusStatus>({type: 'initializing'});
 registerDisposable(
   reconnectingStatus,
   messageBus.onChangeStatus(status => {
@@ -106,8 +106,8 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const serverCwd = jotaiAtom(get => {
-  const data = get(jotaiRepositoryData);
+export const serverCwd = atom(get => {
+  const data = get(repositoryData);
   if (data.info?.type === 'cwdNotARepository') {
     return data.info.cwd;
   }
@@ -174,7 +174,7 @@ function subscriptionEffect<K extends SubscriptionKind>(
   };
 }
 
-export const latestUncommittedChangesDataJotai = jotaiAtom<{
+export const latestUncommittedChangesData = atom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
   files: UncommittedChanges;
@@ -182,12 +182,12 @@ export const latestUncommittedChangesDataJotai = jotaiAtom<{
 }>({fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []});
 // This is used by a test. Tests do not go through babel to rewrite source
 // to insert debugLabel.
-latestUncommittedChangesDataJotai.debugLabel = 'latestUncommittedChangesData';
+latestUncommittedChangesData.debugLabel = 'latestUncommittedChangesData';
 
 registerCleanup(
-  latestUncommittedChangesDataJotai,
+  latestUncommittedChangesData,
   subscriptionEffect('uncommittedChanges', data => {
-    writeAtom(latestUncommittedChangesDataJotai, last => ({
+    writeAtom(latestUncommittedChangesData, last => ({
       ...data,
       files:
         data.files.value ??
@@ -205,23 +205,23 @@ registerCleanup(
  * Prefer using `uncommittedChangesWithPreviews`, since it includes optimistic state
  * and previews.
  */
-export const latestUncommittedChanges = jotaiAtom<Array<ChangedFile>>(
-  get => get(latestUncommittedChangesDataJotai).files,
+export const latestUncommittedChanges = atom<Array<ChangedFile>>(
+  get => get(latestUncommittedChangesData).files,
 );
 
-export const uncommittedChangesFetchError = jotaiAtom(get => {
-  return get(latestUncommittedChangesDataJotai).error;
+export const uncommittedChangesFetchError = atom(get => {
+  return get(latestUncommittedChangesData).error;
 });
 
-export const mergeConflictsJotai = jotaiAtom<MergeConflicts | undefined>(undefined);
+export const mergeConflicts = atom<MergeConflicts | undefined>(undefined);
 registerCleanup(
-  mergeConflictsJotai,
+  mergeConflicts,
   subscriptionEffect('mergeConflicts', data => {
-    writeAtom(mergeConflictsJotai, data);
+    writeAtom(mergeConflicts, data);
   }),
 );
 
-export const latestCommitsData = jotaiAtom<{
+export const latestCommitsData = atom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
   commits: SmartlogCommits;
@@ -250,24 +250,22 @@ registerCleanup(
   }),
 );
 
-export const latestUncommittedChangesTimestamp = jotaiAtom(get => {
-  return get(latestUncommittedChangesDataJotai).fetchCompletedTimestamp;
+export const latestUncommittedChangesTimestamp = atom(get => {
+  return get(latestUncommittedChangesData).fetchCompletedTimestamp;
 });
 
 /**
  * Lookup a commit by hash, *WITHOUT PREVIEWS*.
  * Generally, you'd want to look up WITH previews, which you can use dagWithPreviews for.
  */
-export const commitByHash = atomFamilyWeak((hash: string) =>
-  jotaiAtom(get => get(latestDag).get(hash)),
-);
+export const commitByHash = atomFamilyWeak((hash: string) => atom(get => get(latestDag).get(hash)));
 
-export const latestCommits = jotaiAtom(get => {
+export const latestCommits = atom(get => {
   return get(latestCommitsData).commits;
 });
 
 /** The dag also includes a mutationDag to answer successor queries. */
-export const latestDag = jotaiAtom(get => {
+export const latestDag = atom(get => {
   const commits = get(latestCommits);
   const successorMap = get(latestSuccessorsMapAtom);
   const commitDag = undefined; // will be populated from `commits`
@@ -277,7 +275,7 @@ export const latestDag = jotaiAtom(get => {
   return dag;
 });
 
-export const commitFetchError = jotaiAtom(get => {
+export const commitFetchError = atom(get => {
   return get(latestCommitsData).error;
 });
 
@@ -287,7 +285,7 @@ export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
   true /* read-only */,
 );
 
-export const isFetchingCommits = jotaiAtom(false);
+export const isFetchingCommits = atom(false);
 registerDisposable(
   isFetchingCommits,
   serverAPI.onMessageOfType('subscriptionResult', () => {
@@ -303,7 +301,7 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const isFetchingAdditionalCommits = jotaiAtom(false);
+export const isFetchingAdditionalCommits = atom(false);
 registerDisposable(
   isFetchingAdditionalCommits,
   serverAPI.onMessageOfType('subscriptionResult', e => {
@@ -330,7 +328,7 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const isFetchingUncommittedChanges = jotaiAtom(false);
+export const isFetchingUncommittedChanges = atom(false);
 registerDisposable(
   isFetchingUncommittedChanges,
   serverAPI.onMessageOfType('subscriptionResult', e => {
@@ -348,7 +346,7 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const commitsShownRange = jotaiAtom<number | undefined>(DEFAULT_DAYS_OF_COMMITS_TO_LOAD);
+export const commitsShownRange = atom<number | undefined>(DEFAULT_DAYS_OF_COMMITS_TO_LOAD);
 registerCleanup(
   commitsShownRange,
   resetOnCwdChange(commitsShownRange, DEFAULT_DAYS_OF_COMMITS_TO_LOAD),
@@ -367,7 +365,7 @@ registerDisposable(
  * Prefer using `dagWithPreviews.resolve('.')`, since it includes optimistic state
  * and previews.
  */
-export const latestHeadCommit = jotaiAtom(get => {
+export const latestHeadCommit = atom(get => {
   const commits = get(latestCommits);
   return commits.find(commit => commit.isHead);
 });
@@ -377,15 +375,15 @@ export const latestHeadCommit = jotaiAtom(get => {
  * - Either the list of commits has successfully loaded
  * - or there was an error during the fetch
  */
-export const haveCommitsLoadedYet = jotaiAtom(get => {
+export const haveCommitsLoadedYet = atom(get => {
   const data = get(latestCommitsData);
   return data.commits.length > 0 || data.error != null;
 });
 
-export const operationBeingPreviewedJotai = jotaiAtom<Operation | undefined>(undefined);
-resetOnCwdChange(operationBeingPreviewedJotai, undefined);
+export const operationBeingPreviewed = atom<Operation | undefined>(undefined);
+resetOnCwdChange(operationBeingPreviewed, undefined);
 
-export const haveRemotePath = jotaiAtom(get => {
+export const haveRemotePath = atom(get => {
   const info = get(repositoryInfo);
   // codeReviewSystem.type is 'unknown' or other values if paths.default is present.
   return info?.type === 'success' && info.codeReviewSystem.type !== 'none';
@@ -445,14 +443,14 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
   }
 }
 
-export const operationListJotai = jotaiAtom<OperationList>(defaultOperationList());
-resetOnCwdChange(operationListJotai, defaultOperationList());
+export const operationList = atom<OperationList>(defaultOperationList());
+resetOnCwdChange(operationList, defaultOperationList());
 registerDisposable(
-  operationListJotai,
+  operationList,
   serverAPI.onMessageOfType('operationProgress', progress => {
     switch (progress.kind) {
       case 'spawn':
-        writeAtom(operationListJotai, list => {
+        writeAtom(operationList, list => {
           const operation = operationsById.get(progress.id);
           if (operation == null) {
             return list;
@@ -463,7 +461,7 @@ registerDisposable(
         break;
       case 'stdout':
       case 'stderr':
-        writeAtom(operationListJotai, current => {
+        writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -480,7 +478,7 @@ registerDisposable(
         });
         break;
       case 'inlineProgress':
-        writeAtom(operationListJotai, current => {
+        writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -515,7 +513,7 @@ registerDisposable(
         });
         break;
       case 'progress':
-        writeAtom(operationListJotai, current => {
+        writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -540,7 +538,7 @@ registerDisposable(
         });
         break;
       case 'exit':
-        writeAtom(operationListJotai, current => {
+        writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -570,8 +568,8 @@ registerDisposable(
 );
 
 export const inlineProgressByHash = atomFamilyWeak((hash: Hash) =>
-  jotaiAtom(get => {
-    const info = get(operationListJotai);
+  atom(get => {
+    const info = get(operationList);
     const inlineProgress = info.currentOperation?.inlineProgress;
     if (inlineProgress == null) {
       return undefined;
@@ -589,26 +587,26 @@ const operationsById = new Map<string, Operation>();
 /** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
 const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 
-export const queuedOperationsJotai = jotaiAtom<Array<Operation>>([]);
-resetOnCwdChange(queuedOperationsJotai, []);
+export const queuedOperations = atom<Array<Operation>>([]);
+resetOnCwdChange(queuedOperations, []);
 registerDisposable(
-  queuedOperationsJotai,
+  queuedOperations,
   serverAPI.onMessageOfType('operationProgress', progress => {
     switch (progress.kind) {
       case 'queue':
       case 'spawn': // spawning doubles as our notification to dequeue the next operation, and includes the new queue state.
         // Update with the latest queue state. We expect this to be sent whenever we try to run a command but it gets queued.
-        writeAtom(queuedOperationsJotai, () => {
+        writeAtom(queuedOperations, () => {
           return progress.queue
             .map(opId => operationsById.get(opId))
             .filter((op): op is Operation => op != null);
         });
         break;
       case 'error':
-        writeAtom(queuedOperationsJotai, () => []); // empty queue when a command hits an error
+        writeAtom(queuedOperations, () => []); // empty queue when a command hits an error
         break;
       case 'exit':
-        writeAtom(queuedOperationsJotai, current => {
+        writeAtom(queuedOperations, current => {
           operationsById.delete(progress.id); // we don't need to care about this operation anymore
           if (progress.exitCode != null && progress.exitCode !== 0) {
             // if any process in the queue exits with an error, the entire queue is cleared.
@@ -641,15 +639,15 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   });
 
   operationsById.set(operation.id, operation);
-  const ongoing = readAtom(operationListJotai);
+  const ongoing = readAtom(operationList);
 
   if (ongoing?.currentOperation != null && ongoing.currentOperation.exitCode == null) {
-    const queue = readAtom(queuedOperationsJotai);
+    const queue = readAtom(queuedOperations);
     // Add to the queue optimistically. The server will tell us the real state of the queue when it gets our run request.
-    writeAtom(queuedOperationsJotai, [...(queue || []), operation]);
+    writeAtom(queuedOperations, [...(queue || []), operation]);
   } else {
     // start a new operation. We need to manage the previous operations
-    writeAtom(operationListJotai, list => startNewOperation(operation, list));
+    writeAtom(operationList, list => startNewOperation(operation, list));
   }
 
   return defered.promise;
@@ -683,10 +681,10 @@ export function useAbortRunningOperation() {
       type: 'abortRunningOperation',
       operationId,
     });
-    const ongoing = readAtom(operationListJotai);
+    const ongoing = readAtom(operationList);
     if (ongoing?.currentOperation?.operation?.id === operationId) {
       // Mark 'aborting' as true.
-      writeAtom(operationListJotai, list => {
+      writeAtom(operationList, list => {
         const currentOperation = list.currentOperation;
         if (currentOperation != null) {
           return {...list, currentOperation: {aborting: true, ...currentOperation}};
@@ -704,12 +702,12 @@ export function useAbortRunningOperation() {
 export function useRunPreviewedOperation() {
   return useCallback((isCancel: boolean, operation?: Operation) => {
     if (isCancel) {
-      writeAtom(operationBeingPreviewedJotai, undefined);
+      writeAtom(operationBeingPreviewed, undefined);
       return;
     }
 
-    const operationToRun = operation ?? readAtom(operationBeingPreviewedJotai);
-    writeAtom(operationBeingPreviewedJotai, undefined);
+    const operationToRun = operation ?? readAtom(operationBeingPreviewed);
+    writeAtom(operationBeingPreviewed, undefined);
     if (operationToRun) {
       runOperationImpl(operationToRun);
     }
@@ -723,7 +721,7 @@ export function useRunPreviewedOperation() {
  */
 export function useClearAllOptimisticState() {
   return useCallback(() => {
-    writeAtom(operationListJotai, list => {
+    writeAtom(operationList, list => {
       const operationHistory = [...list.operationHistory];
       for (let i = 0; i < operationHistory.length; i++) {
         if (operationHistory[i].exitCode != null) {

@@ -14,13 +14,13 @@ import {readAtom} from '../jotaiUtils';
 import {uncommittedSelection} from '../partialSelection';
 import {selectedCommits} from '../selection';
 import {
-  operationBeingPreviewedJotai,
-  jotaiRepositoryData,
+  operationBeingPreviewed,
+  repositoryData,
   latestCommitsData,
-  latestUncommittedChangesDataJotai,
-  mergeConflictsJotai,
-  operationListJotai,
-  queuedOperationsJotai,
+  latestUncommittedChangesData,
+  mergeConflicts,
+  operationList,
+  queuedOperations,
 } from '../serverAPIState';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -31,14 +31,14 @@ function listInterestingAtoms(): Array<Atom<unknown>> {
   return [
     allDiffSummaries,
     codeReviewProvider,
-    jotaiRepositoryData,
+    repositoryData,
     latestCommitsData,
     latestSuccessorsMapAtom,
-    latestUncommittedChangesDataJotai,
-    mergeConflictsJotai,
-    operationBeingPreviewedJotai,
-    operationListJotai,
-    queuedOperationsJotai,
+    latestUncommittedChangesData,
+    mergeConflicts,
+    operationBeingPreviewed,
+    operationList,
+    queuedOperations,
     selectedCommits,
     uncommittedSelection,
     // This is an atomFamily. Need extra work to read it.
