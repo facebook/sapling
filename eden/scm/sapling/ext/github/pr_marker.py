@@ -45,7 +45,15 @@ def cleanup_landed_pr(ui, repo, dry_run: bool = False) -> None:
         # not a GitHubRepo, just return
         return
 
-    pr_to_draft = _get_draft_commits(repo)
+    try:
+        pr_to_draft = _get_draft_commits(repo)
+    except Exception:
+        ui.warn(
+            _(
+                "warning: pr_marker was not able to mark commits as landed (try '@prog@ debugprmarker')\n"
+            )
+        )
+        return
 
     try:
         to_hide, mutation_entries = _get_landed_commits(
