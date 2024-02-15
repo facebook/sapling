@@ -10,8 +10,8 @@
 import '@testing-library/jest-dom';
 import {ContextMenus, useContextMenu} from '../ContextMenu';
 import {fireEvent, render, screen} from '@testing-library/react';
+import {Provider} from 'jotai';
 import {act} from 'react-dom/test-utils';
-import {RecoilRoot} from 'recoil';
 
 const onClick1 = jest.fn();
 const onClick2 = jest.fn();
@@ -30,12 +30,12 @@ function TestComponent() {
 
 function TestApp() {
   return (
-    <RecoilRoot>
+    <Provider>
       <div>
         <TestComponent />
         <ContextMenus />
       </div>
-    </RecoilRoot>
+    </Provider>
   );
 }
 
