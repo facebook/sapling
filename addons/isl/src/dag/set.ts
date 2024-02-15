@@ -50,19 +50,19 @@ export class HashSet extends SelfUpdate<ImSet<Hash>> {
     return this.set.toArray();
   }
 
-  /** Union with another set. */
+  /** Union with another set. Preserves the order: this, then other without the overlapping subset. */
   union(other: SetLike): HashSet {
     const set = this.set.union(HashSet.fromHashes(other).set);
     return new HashSet(set);
   }
 
-  /** Interset with another set. */
+  /** Interset with another set. Preserves the order of `this` set. */
   intersect(other: SetLike): HashSet {
     const set = this.set.intersect(HashSet.fromHashes(other).set);
     return new HashSet(set);
   }
 
-  /** Remove items that exist in another set. */
+  /** Remove items that exist in another set. Preserves the order of the `this` set. */
   subtract(other: SetLike): HashSet {
     const set = this.set.subtract(HashSet.fromHashes(other).set);
     return new HashSet(set);

@@ -10,6 +10,7 @@ import type {SetLike} from '../set';
 
 import {BaseDag} from '../base_dag';
 import {Dag, DagCommitInfo, REBASE_SUCC_PREFIX} from '../dag';
+import {HashSet} from '../set';
 
 const toInfo = (info: Partial<CommitInfo>): DagCommitInfo => DagCommitInfo.fromCommitInfo(info);
 const DRAFT: CommitPhaseType = 'draft';
@@ -587,5 +588,32 @@ describe('Dag', () => {
       │
       ~"
     `);
+  });
+});
+
+describe('HashSet', () => {
+  it('preserves order on intersect', () => {
+    const a = HashSet.fromHashes(['c', 'b', 'e', 'd', 'a', 'f']);
+    expect(a.intersect(['d', 'b']).toArray()).toEqual(['b', 'd']);
+    expect(a.intersect(['b', 'd']).toArray()).toEqual(['b', 'd']);
+  });
+
+  it('preserves order on substract', () => {
+    const a = HashSet.fromHashes(['c', 'b', 'e', 'd', 'a', 'f']);
+    expect(a.subtract(['d', 'b']).toArray()).toEqual(['c', 'e', 'a', 'f']);
+    expect(a.subtract(['b', 'd']).toArray()).toEqual(['c', 'e', 'a', 'f']);
+    expect(a.subtract(['f', 'c', 'e']).toArray()).toEqual(['b', 'd', 'a']);
+  });
+
+  it('preserves order on union', () => {
+    const a = HashSet.fromHashes(['d', 'a', 'c']);
+    expect(a.union(['x', 'z', 'y']).toArray()).toEqual(['d', 'a', 'c', 'x', 'z', 'y']);
+    expect(a.union(['y', 'z', 'x']).toArray()).toEqual(['d', 'a', 'c', 'y', 'z', 'x']);
+
+    expect(a.union(['a', 'd']).toArray()).toEqual(['d', 'a', 'c']);
+    expect(a.union(['d', 'a']).toArray()).toEqual(['d', 'a', 'c']);
+
+    expect(a.union(['a', 'b']).toArray()).toEqual(['d', 'a', 'c', 'b']);
+    expect(a.union(['f', 'c', 'a', 'd', 'e']).toArray()).toEqual(['d', 'a', 'c', 'f', 'e']);
   });
 });
