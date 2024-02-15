@@ -785,7 +785,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchInternalUserInfo': {
-        Internal.fetchUserInfo?.().then((info: Serializable) => {
+        Internal.fetchUserInfo?.(repo.ctx).then((info: Serializable) => {
           this.logger.info('user info:', info);
           this.postMessage({type: 'fetchedInternalUserInfo', info});
         });
