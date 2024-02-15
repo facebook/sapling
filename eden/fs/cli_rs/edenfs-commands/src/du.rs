@@ -11,7 +11,14 @@ use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::fmt;
 use std::fs;
+#[cfg(target_os = "macos")]
+use std::io::IsTerminal;
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use std::process::Command;
+#[cfg(target_os = "macos")]
+use std::process::Stdio;
+use std::u64;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -24,6 +31,8 @@ use comfy_table::CellAlignment;
 use comfy_table::Color;
 use comfy_table::Row;
 use comfy_table::Table;
+#[cfg(target_os = "macos")]
+use dialoguer::Confirm;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::EdenFsCheckout;
 use edenfs_client::redirect;
@@ -42,6 +51,9 @@ use subprocess::Redirection as SubprocessRedirection;
 use thrift_types::edenfs::GetScmStatusParams;
 
 use crate::ExitCode;
+
+#[cfg(target_os = "macos")]
+const PURGEABLE_DATA_UTIL: &str = "System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util";
 
 #[derive(Parser, Debug)]
 #[clap(about = "Show disk space usage for a checkout")]
@@ -77,6 +89,19 @@ pub struct DiskUsageCmd {
     )]
     clean_orphaned: bool,
 
+    #[clap(
+        long,
+        help = "MacOS only. Checks and displays the APFS purgeable space usage and \
+        gives the user the option to purge it. Requires elevated permissions, \
+        user will be prompted. Do not run with sudo as this will cause filepath issues. \
+        Has no effect on non-APFS filesystems.",
+        conflicts_with = "deep-clean",
+        conflicts_with = "clean",
+        conflicts_with = "json",
+        conflicts_with = "clean_orphaned"
+    )]
+    purgeable: bool,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
@@ -90,6 +115,7 @@ struct AggregatedUsageCounts {
     backing: u64,
     shared: u64,
     fsck: u64,
+    purgeable_space: u64,
 }
 
 impl AggregatedUsageCounts {
@@ -102,6 +128,7 @@ impl AggregatedUsageCounts {
             backing: 0,
             shared: 0,
             fsck: 0,
+            purgeable_space: 0,
         }
     }
 }
@@ -213,6 +240,18 @@ impl fmt::Display for AggregatedUsageCounts {
                         .fg(Color::Yellow),
                     );
                 }
+            }
+            table.add_row(row);
+        }
+
+        #[cfg(target_os = "macos")]
+        if !f.alternate() && !f.sign_minus() {
+            let mut row = Row::new();
+            row.add_cell(Cell::new("Purgeable space:").set_alignment(CellAlignment::Right));
+            if f.sign_plus() {
+                row.add_cell(Cell::new(format_size(self.purgeable_space)));
+            } else {
+                row.add_cell(Cell::new("Requires --purgeable flag."));
             }
             table.add_row(row);
         }
@@ -498,6 +537,87 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
+fn get_purgeable_size() -> Result<u64> {
+    let instance = EdenFsInstance::global();
+    let home_dir = instance
+        .get_user_home_dir()
+        .and_then(|x| x.to_str())
+        .expect("Unable to get user home dir");
+    let args = &[PURGEABLE_DATA_UTIL, "-G", home_dir];
+
+    let output = Command::new("sudo")
+        .args(args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .output()
+        .with_context(|| {
+            format!(
+                "Failed to run purgeable space command: sudo {}",
+                shlex::try_join(args.iter().copied()).expect("shlex join failed")
+            )
+        })?;
+
+    let text_output = String::from_utf8(output.stdout).expect("Our bytes should be valid utf8");
+    let mut purgeable_size = 0;
+    if output.status.success() {
+        // As of time of writing this (macOS 14.2.1 (23C71)), the format of the output is as follows:
+        // Getting purgeable file stats on $HOME returned 0 (No such process)
+        // Total num purgeable files: NUM_PURGEABLE_FILES   Total purgeable data size: PURGEABLE_DATA_SIZE
+        // type       Data: num purgeable files:   NUM_PURGEABLE_FILES purgeable data size: PURGEABLE_DATA_SIZE
+        let lines: Vec<&str> = text_output.split('\n').collect();
+        let tokens: Vec<&str> = lines[1].split(' ').collect();
+        purgeable_size = tokens[tokens.len() - 1].parse::<u64>()?;
+        println!("{:?}: {}", tokens, purgeable_size);
+    } else {
+        println!(
+            "Failed to get purgeable space. Error code {}, msg: {}",
+            output.status, text_output
+        );
+    }
+    Ok(purgeable_size)
+}
+
+#[cfg(target_os = "macos")]
+fn clear_purgeable_space(purgeable_space: String) -> Result<()> {
+    let instance = EdenFsInstance::global();
+    let home_dir = instance
+        .get_user_home_dir()
+        .and_then(|x| x.to_str())
+        .expect("Unable to get user home dir");
+
+    let args = &[
+        PURGEABLE_DATA_UTIL,
+        "-P",
+        "-total",
+        purgeable_space.as_str(),
+        home_dir,
+    ];
+
+    let output = Command::new("sudo")
+        .args(args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .output()
+        .with_context(|| {
+            format!(
+                "Failed to run purgeable space command: sudo {}",
+                shlex::try_join(args.iter().copied()).expect("shlex join failed")
+            )
+        })?;
+
+    let text_output = String::from_utf8(output.stdout).expect("Our bytes should be valid utf8");
+    if output.status.success() {
+        println!("{}", text_output);
+    } else {
+        println!(
+            "Failed to clear purgeable space. Error code {}, msg: {}",
+            output.status, text_output
+        );
+    }
+    Ok(())
+}
+
 // Calulate the real storage used in each redirect directory.
 fn get_redirect_usage_count(
     redirections: BTreeSet<(PathBuf, PathBuf)>,
@@ -605,6 +725,13 @@ impl crate::Subcommand for DiskUsageCmd {
                 })?;
             aggregated_usage_counts.orphaned_redirections += usage_count;
             orphaned_redirection_failed_file_checks.extend(failed_file_checks);
+        }
+
+        // Get Purgeable space if on MacOS
+        #[cfg(target_os = "macos")]
+        if self.purgeable {
+            aggregated_usage_counts.purgeable_space +=
+                get_purgeable_size().with_context(|| "Failed to get purgeable space")?;
         }
 
         // Make immutable
@@ -779,11 +906,16 @@ impl crate::Subcommand for DiskUsageCmd {
             // PRINT SUMMARY
             write_title("Summary");
             if self.clean_orphaned {
+                // Displays with the sign_minus print flag
                 println!("{:-}", aggregated_usage_counts);
             } else if self.deep_clean {
+                // Displays with the alternate print flag
                 println!("{:+#}", aggregated_usage_counts);
             } else if self.clean {
+                // Displays with the alternate print flag
                 println!("{:#}", aggregated_usage_counts);
+            } else if cfg!(target_os = "macos") && self.purgeable {
+                println!("{:+}", aggregated_usage_counts);
             } else {
                 println!("{}", aggregated_usage_counts);
             }
@@ -801,6 +933,19 @@ impl crate::Subcommand for DiskUsageCmd {
                     "{}",
                     "\nTo perform automated cleanup, run `eden du --clean`".blue()
                 );
+            }
+
+            #[cfg(target_os = "macos")]
+            if self.purgeable
+                && std::io::stdin().is_terminal()
+                && aggregated_usage_counts.purgeable_space > 0
+            {
+                if Confirm::new()
+                    .with_prompt("Would you like to clear purgeable space?")
+                    .interact()?
+                {
+                    clear_purgeable_space(aggregated_usage_counts.purgeable_space.to_string())?;
+                }
             }
         }
         Ok(0)
