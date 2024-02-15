@@ -64,6 +64,65 @@ describe('cwd', () => {
     expect(screen.getByText('SEV 4')).toBeInTheDocument();
   });
 
+  describe('version matching', () => {
+    const simulateApplicationInfo = (version: string) => {
+      act(() => {
+        simulateMessageFromServer({
+          type: 'applicationInfo',
+          info: {
+            version,
+            logFilePath: '',
+            platformName: 'vscode',
+          },
+        });
+      });
+    };
+
+    const simulateAlert = (regex: string | undefined) => {
+      act(() => {
+        simulateMessageFromServer({
+          type: 'fetchedActiveAlerts',
+          alerts: [
+            {
+              key: 'version_test',
+              title: 'Test Alert',
+              description: 'This is a test',
+              severity: 'SEV 4',
+              url: 'https://sapling-scm.com',
+              ['show-in-isl']: true,
+              ['isl-version-regex']: regex,
+            },
+          ],
+        });
+      });
+    };
+
+    it('shows alerts matching current version', () => {
+      simulateApplicationInfo('0.1.38000');
+      simulateAlert('^0.1.38.*$');
+      expect(screen.getByText('Test Alert')).toBeInTheDocument();
+    });
+
+    it('hides alerts not matching current version', () => {
+      simulateApplicationInfo('0.1.36000');
+      simulateAlert('^0.1.38.*$');
+      expect(screen.queryByText('Test Alert')).not.toBeInTheDocument();
+    });
+
+    it('shows alerts missing regex', () => {
+      simulateApplicationInfo('0.1.36000');
+      simulateAlert(undefined);
+      expect(screen.getByText('Test Alert')).toBeInTheDocument();
+    });
+
+    it('hides alerts when regex given, while app info is loading', () => {
+      simulateAlert('^0.1.38.*$');
+      expect(screen.queryByText('Test Alert')).not.toBeInTheDocument();
+      simulateApplicationInfo('0.1.38');
+      expect(screen.getByText('Test Alert')).toBeInTheDocument();
+    });
+  });
+
   it('dismiss alerts', () => {
     expectMessageSentToServer({type: 'fetchActiveAlerts'});
     act(() => {

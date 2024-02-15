@@ -15,6 +15,7 @@ import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {T} from './i18n';
 import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
+import {applicationinfo} from './serverAPIState';
 import {layout} from './stylexUtils';
 import {colors, font, radius, spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -50,6 +51,8 @@ serverAPI.onSetup(() => {
 export function TopLevelAlerts() {
   const [dismissed, setDismissed] = useAtom(dismissedAlerts);
   const alerts = useAtomValue(activeAlerts);
+  const info = useAtomValue(applicationinfo);
+  const version = info?.version;
 
   useEffect(() => {
     for (const {key} of alerts) {
@@ -63,7 +66,12 @@ export function TopLevelAlerts() {
   return (
     <div>
       {alerts
-        .filter(alert => dismissed[alert.key] !== true)
+        .filter(
+          alert =>
+            dismissed[alert.key] !== true &&
+            (alert['isl-version-regex'] == null ||
+              (version != null && new RegExp(alert['isl-version-regex']).test(version))),
+        )
         .map((alert, i) => (
           <TopLevelAlert
             alert={alert}

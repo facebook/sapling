@@ -16,6 +16,7 @@ describe('alerts', () => {
         {name: 'alerts.S12345.severity', value: 'SEV 1'},
         {name: 'alerts.S12345.url', value: 'https://sapling-scm.com'},
         {name: 'alerts.S12345.show-in-isl', value: 'true'},
+        {name: 'alerts.S12345.isl-version-regex', value: '0.1.38.*'},
       ]),
     ).toEqual([
       {
@@ -25,6 +26,7 @@ describe('alerts', () => {
         severity: 'SEV 1',
         url: 'https://sapling-scm.com',
         ['show-in-isl']: true,
+        ['isl-version-regex']: '0.1.38.*',
       },
     ]);
   });

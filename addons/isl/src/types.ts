@@ -332,6 +332,7 @@ export type Alert = {
   url: string;
   severity: AlertSeverity;
   ['show-in-isl']: boolean;
+  ['isl-version-regex']?: string;
 };
 
 /**
