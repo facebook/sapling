@@ -57,6 +57,18 @@ export const vscodeWebviewPlatform: Platform = {
       data: JSON.stringify(temporaryState),
     });
   },
+  clearTemporaryState(): void {
+    for (const key in temporaryState) {
+      delete temporaryState[key];
+    }
+    window.clientToServerAPI?.postMessage({
+      type: 'platform/setPersistedState',
+      data: undefined,
+    });
+  },
+  getAllTemporaryState(): Json | undefined {
+    return temporaryState;
+  },
 
   theme: {
     getTheme,

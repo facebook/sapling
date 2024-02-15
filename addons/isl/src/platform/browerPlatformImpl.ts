@@ -6,6 +6,7 @@
  */
 
 import type {RepoRelativePath, OneIndexedLineNumber} from '../types';
+import type {Json} from 'shared/typeUtils';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
@@ -47,5 +48,17 @@ export const browserPlatformImpl = {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {}
+  },
+  clearTemporaryState(): void {
+    try {
+      localStorage.clear();
+    } catch {}
+  },
+  getAllTemporaryState(): Json | undefined {
+    try {
+      return {...localStorage};
+    } catch {
+      return undefined;
+    }
   },
 };

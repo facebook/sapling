@@ -42,6 +42,10 @@ export interface Platform {
   getTemporaryState<T extends Json>(key: string): T | null;
   /** see getTemporaryState  */
   setTemporaryState<T extends Json>(key: string, value: T): void;
+  /** see getTemporaryState  */
+  clearTemporaryState(): void;
+  /** see getTemporaryState  */
+  getAllTemporaryState(): Json | undefined;
 
   handleServerMessage?: (message: ServerToClientMessage) => void;
 

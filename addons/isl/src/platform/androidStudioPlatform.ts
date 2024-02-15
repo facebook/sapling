@@ -51,6 +51,13 @@ const androidStudioPlatform: Platform = {
   setTemporaryState<T>(_key: string, _value: T): void {
     // TODO: support local storage, which may require enabling some webview permissions.
   },
+  clearTemporaryState(): void {
+    // TODO: support local storage, which may require enabling some webview permissions.
+  },
+  getAllTemporaryState() {
+    // TODO: support local storage, which may require enabling some webview permissions.
+    return undefined;
+  },
 
   theme: {
     getTheme(): ThemeColor {
