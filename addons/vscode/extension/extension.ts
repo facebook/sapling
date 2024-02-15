@@ -17,7 +17,7 @@ import {InlineBlameProvider} from './blame/blame';
 import {registerCommands} from './commands';
 import {ensureTranslationsLoaded} from './i18n';
 import {registerISLCommands} from './islWebviewPanel';
-import {VSCodePlatform} from './vscodePlatform';
+import {getVSCodePlatform} from './vscodePlatform';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import * as util from 'util';
 import * as vscode from 'vscode';
@@ -25,7 +25,8 @@ import * as vscode from 'vscode';
 export async function activate(context: vscode.ExtensionContext) {
   const start = Date.now();
   const [outputChannel, logger] = createOutputChannelLogger();
-  const extensionTracker = makeServerSideTracker(logger, VSCodePlatform, packageJson.version);
+  const platform = getVSCodePlatform(context);
+  const extensionTracker = makeServerSideTracker(logger, platform, packageJson.version);
   try {
     const [, enabledSCMApiFeatures] = await Promise.all([
       ensureTranslationsLoaded(context),
@@ -33,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
     Internal.maybeOverwriteIslEnabledSetting?.(logger);
-    context.subscriptions.push(registerISLCommands(context, logger));
+    context.subscriptions.push(registerISLCommands(context, platform, logger));
     context.subscriptions.push(outputChannel);
     const reposList = new VSCodeReposList(logger, extensionTracker, enabledSCMApiFeatures);
     context.subscriptions.push(reposList);

@@ -25,7 +25,7 @@ function looksLikeImageUri(uri: vscode.Uri): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
-export const VSCodePlatform: ServerPlatform = {
+export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatform => ({
   platformName: 'vscode',
   sessionId: vscode.env.sessionId,
   handleMessageFromClient: async (
@@ -134,4 +134,4 @@ export const VSCodePlatform: ServerPlatform = {
       vscode.window.showErrorMessage(`error handling message ${JSON.stringify(message)}\n${err}`);
     }
   },
-};
+});

@@ -6,6 +6,7 @@
  */
 
 import type {Logger} from 'isl-server/src/logger';
+import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 
 import packageJson from '../package.json';
@@ -13,7 +14,6 @@ import {Internal} from './Internal';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';
-import {VSCodePlatform} from './vscodePlatform';
 import crypto from 'crypto';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
@@ -30,6 +30,7 @@ const devUri = `http://localhost:${devPort}`;
 
 function createOrFocusISLWebview(
   context: vscode.ExtensionContext,
+  platform: ServerPlatform,
   logger: Logger,
 ): vscode.WebviewPanel | vscode.WebviewView {
   // Try to re-use existing ISL panel/view
@@ -44,6 +45,7 @@ function createOrFocusISLWebview(
   islPanelOrView = populateAndSetISLWebview(
     context,
     vscode.window.createWebviewPanel(viewType, t('isl.title'), column, getWebviewOptions(context)),
+    platform,
     logger,
   );
   return unwrap(islPanelOrView);
@@ -74,9 +76,10 @@ export function hasOpenedISLWebviewBefore() {
 
 export function registerISLCommands(
   context: vscode.ExtensionContext,
+  platform: ServerPlatform,
   logger: Logger,
 ): vscode.Disposable {
-  const webviewViewProvider = new ISLWebviewViewProvider(context, logger);
+  const webviewViewProvider = new ISLWebviewViewProvider(context, platform, logger);
   return vscode.Disposable.from(
     vscode.commands.registerCommand('sapling.open-isl', () => {
       if (shouldUseWebviewView()) {
@@ -85,7 +88,7 @@ export function registerISLCommands(
         return;
       }
       try {
-        createOrFocusISLWebview(context, logger);
+        createOrFocusISLWebview(context, platform, logger);
       } catch (err: unknown) {
         vscode.window.showErrorMessage(`error opening isl: ${err}`);
       }
@@ -101,7 +104,7 @@ export function registerISLCommands(
         executeVSCodeCommand('workbench.action.closeSidebar');
       }
     }),
-    registerDeserializer(context, logger),
+    registerDeserializer(context, platform, logger),
     vscode.window.registerWebviewViewProvider(viewType, webviewViewProvider, {
       webviewOptions: {
         retainContextWhenHidden: true,
@@ -118,7 +121,11 @@ export function registerISLCommands(
   );
 }
 
-function registerDeserializer(context: vscode.ExtensionContext, logger: Logger) {
+function registerDeserializer(
+  context: vscode.ExtensionContext,
+  platform: ServerPlatform,
+  logger: Logger,
+) {
   // Make sure we register a serializer in activation event
   return vscode.window.registerWebviewPanelSerializer(viewType, {
     deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, _state: unknown) {
@@ -130,7 +137,7 @@ function registerDeserializer(context: vscode.ExtensionContext, logger: Logger) 
       }
       // Reset the webview options so we use latest uri for `localResourceRoots`.
       webviewPanel.webview.options = getWebviewOptions(context);
-      populateAndSetISLWebview(context, webviewPanel, logger);
+      populateAndSetISLWebview(context, webviewPanel, platform, logger);
       return Promise.resolve();
     },
   });
@@ -142,11 +149,15 @@ function registerDeserializer(context: vscode.ExtensionContext, logger: Logger) 
  * that shows this view.
  */
 class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
-  constructor(private extensionContext: vscode.ExtensionContext, private logger: Logger) {}
+  constructor(
+    private extensionContext: vscode.ExtensionContext,
+    private platform: ServerPlatform,
+    private logger: Logger,
+  ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
     webviewView.webview.options = getWebviewOptions(this.extensionContext);
-    populateAndSetISLWebview(this.extensionContext, webviewView, this.logger);
+    populateAndSetISLWebview(this.extensionContext, webviewView, this.platform, this.logger);
   }
 }
 
@@ -160,6 +171,7 @@ function isPanel(
 function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.WebviewView>(
   context: vscode.ExtensionContext,
   panelOrView: W,
+  platform: ServerPlatform,
   logger: Logger,
 ): W {
   logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
@@ -190,7 +202,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
       });
     },
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(), // TODO
-    platform: VSCodePlatform,
+    platform,
     logger,
     command: getCLICommand(),
     version: packageJson.version,
@@ -240,7 +252,11 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
  *
  * Note: no CSPs in dev mode. This should not be used in production!
  */
-function devModeHtmlForISLWebview(kind: 'panel' | 'view', logger: Logger) {
+function devModeHtmlForISLWebview(
+  kind: 'panel' | 'view',
+  context: vscode.ExtensionContext,
+  logger: Logger,
+) {
   logger.info('using dev mode webview');
   // make resource access use vite dev server, instead of `webview.asWebviewUri`
   const baseUri = vscode.Uri.parse(devUri);
