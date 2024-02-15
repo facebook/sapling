@@ -207,9 +207,6 @@ export function startServer({
         case 'androidStudioRemote':
           platformImpl = (await import('../platform/androidStudioRemoteServerPlatform')).platform;
           break;
-        case 'standalone':
-          platformImpl = (await import('../platform/standaloneServerPlatform')).platform;
-          break;
         case 'webview':
           platformImpl = (await import('../platform/webviewServerPlatform')).platform;
           break;

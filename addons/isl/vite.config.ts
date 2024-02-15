@@ -26,7 +26,6 @@ const platforms = {
   main: normalizeInputPath('index.html'),
   androidStudio: normalizeInputPath('androidStudio.html'),
   androidStudioRemote: normalizeInputPath('androidStudioRemote.html'),
-  standalone: normalizeInputPath('standalone.html'),
   webview: normalizeInputPath('webview.html'),
   chromelikeApp: normalizeInputPath('chromelikeApp.html'),
 };

@@ -250,7 +250,6 @@ function generateToken(): Promise<string> {
 const validPlatforms: Array<PlatformName> = [
   'androidStudio',
   'androidStudioRemote',
-  'standalone',
   'webview',
   'chromelike_app',
 ];

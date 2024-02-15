@@ -4,7 +4,6 @@
     "shared",
     "isl",
     "isl-server",
-    "isl-standalone",
     "textmate",
     "vscode"
   ],

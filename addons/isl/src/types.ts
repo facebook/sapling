@@ -24,7 +24,6 @@ export type PlatformName =
   | 'androidStudio'
   | 'androidStudioRemote'
   | 'vscode'
-  | 'standalone'
   | 'webview'
   | 'chromelike_app';
 
