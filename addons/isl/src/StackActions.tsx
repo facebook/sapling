@@ -270,18 +270,13 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
     dag.merge(set).size === 0 && dag.heads(set).size === 1 && dag.roots(set).size === 1;
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
   const hasPublic = stackCommits.some(c => c.phase === 'public');
-  const obsoleted = stackCommits.filter(c => c.successorInfo != null);
-  const hasObsoleted = obsoleted.length > 0;
-  const disabled =
-    isDirty || hasObsoleted || !isLinear || isLoading || isError || isPreview || hasPublic;
+  const disabled = isDirty || !isLinear || isLoading || isError || isPreview || hasPublic;
   const title = isError
     ? t(`Failed to load stack: ${loadingState.error}`)
     : isLoading
     ? loadingState.exportedStack === undefined
       ? t('Reading stack content')
       : t('Analyzing stack content')
-    : hasObsoleted
-    ? t('Cannot edit stack with commits that have newer versions')
     : isDirty
     ? t(
         'Cannot edit stack when there are uncommitted changes.\nCommit or amend your changes first.',
