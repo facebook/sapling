@@ -52,7 +52,6 @@ use super::CommitSyncer;
 use super::Repo;
 use crate::types::Source;
 use crate::types::Target;
-use crate::SubmoduleDeps;
 
 // NOTE: Occurrences of Option<NonRootMPath> in this file have not been replaced with MPath since such a
 // replacement is only possible in cases where Option<NonRootMPath> is used to represent a path that can also
@@ -1344,6 +1343,7 @@ mod test {
 
     use super::*;
     use crate::CommitSyncRepos;
+    use crate::SubmoduleDeps;
 
     #[fbinit::test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
