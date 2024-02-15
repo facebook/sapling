@@ -41,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
       logger,
       tracker: extensionTracker,
     };
-    Internal.maybeOverwriteIslEnabledSetting?.(logger);
+    Internal.maybeOverwriteIslEnabledSetting?.(ctx);
     context.subscriptions.push(registerISLCommands(context, platform, logger));
     context.subscriptions.push(outputChannel);
     const reposList = new VSCodeReposList(logger, extensionTracker, enabledSCMApiFeatures);

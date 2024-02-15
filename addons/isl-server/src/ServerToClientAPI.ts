@@ -778,7 +778,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchFeatureFlag': {
-        Internal.fetchFeatureFlag?.(data.name).then((passes: boolean) => {
+        Internal.fetchFeatureFlag?.(repo.ctx, data.name).then((passes: boolean) => {
           this.logger.info(`feature flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
           this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes});
         });
@@ -869,7 +869,7 @@ export default class ServerToClientAPI {
           undefined,
           this.tracker,
         ),
-        Internal.getCustomDefaultCommitTemplate?.(repo),
+        Internal.getCustomDefaultCommitTemplate?.(repo.ctx),
       ]);
 
       let template = result.stdout
