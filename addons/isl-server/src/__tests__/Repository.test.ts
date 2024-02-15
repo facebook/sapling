@@ -7,6 +7,7 @@
 
 import type {ResolveCommandConflictOutput} from '../Repository';
 import type {ServerPlatform} from '../serverPlatform';
+import type {ExecutionContext} from '../serverTypes';
 import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
 
 import {
@@ -83,9 +84,15 @@ function setPathsDefault(path: string) {
 }
 
 describe('Repository', () => {
+  const ctx: ExecutionContext = {
+    cmd: 'sl',
+    cwd: '/path/to/cwd',
+    logger: mockLogger,
+    tracker: mockTracker,
+  };
   it('setting command name', async () => {
     const execaSpy = mockExeca([]);
-    await Repository.getRepoInfo('slb', mockLogger, '/path/to/cwd');
+    await Repository.getRepoInfo({...ctx, cmd: 'slb'});
     expect(execaSpy).toHaveBeenCalledWith(
       'slb',
       expect.arrayContaining(['root']),
@@ -109,11 +116,7 @@ describe('Repository', () => {
 
     it('extracting github repo info', async () => {
       setPathsDefault('https://github.com/myUsername/myRepo.git');
-      const info = (await Repository.getRepoInfo(
-        'sl',
-        mockLogger,
-        '/path/to/cwd',
-      )) as ValidatedRepoInfo;
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
       const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
@@ -132,11 +135,7 @@ describe('Repository', () => {
 
     it('extracting github enterprise repo info', async () => {
       setPathsDefault('https://ghe.myCompany.com/myUsername/myRepo.git');
-      const info = (await Repository.getRepoInfo(
-        'sl',
-        mockLogger,
-        '/path/to/cwd',
-      )) as ValidatedRepoInfo;
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
       const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
@@ -155,11 +154,7 @@ describe('Repository', () => {
 
     it('handles non-github-enterprise unknown code review providers', async () => {
       setPathsDefault('https://gitlab.myCompany.com/myUsername/myRepo.git');
-      const info = (await Repository.getRepoInfo(
-        'sl',
-        mockLogger,
-        '/path/to/cwd',
-      )) as ValidatedRepoInfo;
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
       const repo = new Repository(info, mockLogger, mockTracker);
       expect(repo.info).toEqual({
         type: 'success',
@@ -177,11 +172,7 @@ describe('Repository', () => {
 
   it('applies isl.hold-off-refresh-ms config', async () => {
     setConfigOverrideForTests([['isl.hold-off-refresh-ms', '12345']], false);
-    const info = (await Repository.getRepoInfo(
-      'sl',
-      mockLogger,
-      '/path/to/cwd',
-    )) as ValidatedRepoInfo;
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     const repo = new Repository(info, mockLogger, mockTracker);
     await new Promise(process.nextTick);
     expect(repo.configHoldOffRefreshMs).toBe(12345);
@@ -194,11 +185,7 @@ describe('Repository', () => {
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
-    const info = (await Repository.getRepoInfo(
-      'sl',
-      mockLogger,
-      '/path/to/cwd',
-    )) as ValidatedRepoInfo;
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     const repo = new Repository(info, mockLogger, mockTracker);
     expect(repo.info).toEqual({
       type: 'success',
@@ -214,11 +201,7 @@ describe('Repository', () => {
     const err = new Error('cwd does not exist') as Error & {code: string};
     err.code = 'ENOENT';
     mockExeca([[/^sl root/, err]]);
-    const info = (await Repository.getRepoInfo(
-      'sl',
-      mockLogger,
-      '/path/to/cwd',
-    )) as ValidatedRepoInfo;
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     expect(info).toEqual({
       type: 'cwdDoesNotExist',
       cwd: '/path/to/cwd',
@@ -237,11 +220,7 @@ describe('Repository', () => {
       ],
     ]);
     jest.spyOn(fsUtils, 'exists').mockImplementation(async () => true);
-    const info = (await Repository.getRepoInfo(
-      'sl',
-      mockLogger,
-      '/path/to/cwd',
-    )) as ValidatedRepoInfo;
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     expect(info).toEqual({
       type: 'invalidCommand',
       command: 'sl',

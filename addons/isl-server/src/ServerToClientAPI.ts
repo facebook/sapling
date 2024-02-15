@@ -10,6 +10,7 @@ import type {RepositoryReference} from './RepositoryCache';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
+import type {ExecutionContext} from './serverTypes';
 import type {Serializable} from 'isl/src/serialize';
 import type {
   ServerToClientMessage,
@@ -196,7 +197,13 @@ export default class ServerToClientAPI {
     // This ensures new messages coming in will be queued and handled only with the new repository
     this.currentState = {type: 'loading'};
     const command = this.connection.command ?? 'sl';
-    this.activeRepoRef = repositoryCache.getOrCreate(command, this.logger, this.tracker, newCwd);
+    const ctx: ExecutionContext = {
+      cwd: newCwd,
+      cmd: command,
+      logger: this.logger,
+      tracker: this.tracker,
+    };
+    this.activeRepoRef = repositoryCache.getOrCreate(ctx);
     this.activeRepoRef.promise.then(repoOrError => {
       if (repoOrError instanceof Repository) {
         this.setCurrentRepo(repoOrError, newCwd);

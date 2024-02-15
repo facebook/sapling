@@ -7,6 +7,7 @@
 
 import type {EnabledSCMApiFeature} from './types';
 import type {Logger} from 'isl-server/src/logger';
+import type {ExecutionContext} from 'isl-server/src/serverTypes';
 
 import packageJson from '../package.json';
 import {DeletedFileContentProvider} from './DeletedFileContentProvider';
@@ -15,6 +16,7 @@ import {Internal} from './Internal';
 import {VSCodeReposList} from './VSCodeRepo';
 import {InlineBlameProvider} from './blame/blame';
 import {registerCommands} from './commands';
+import {getCLICommand} from './config';
 import {ensureTranslationsLoaded} from './i18n';
 import {registerISLCommands} from './islWebviewPanel';
 import {getVSCodePlatform} from './vscodePlatform';
@@ -33,6 +35,12 @@ export async function activate(context: vscode.ExtensionContext) {
       Internal.getEnabledSCMApiFeatures?.() ?? new Set<EnabledSCMApiFeature>(['blame', 'sidebar']),
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
+    const ctx: ExecutionContext = {
+      cmd: getCLICommand(),
+      cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(),
+      logger,
+      tracker: extensionTracker,
+    };
     Internal.maybeOverwriteIslEnabledSetting?.(logger);
     context.subscriptions.push(registerISLCommands(context, platform, logger));
     context.subscriptions.push(outputChannel);

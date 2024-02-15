@@ -9,6 +9,7 @@ import type {EnabledSCMApiFeature} from '../types';
 import type {Repository} from 'isl-server/src/Repository';
 import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
+import type {ExecutionContext} from 'isl-server/src/serverTypes';
 import type {RepoInfo, ValidatedRepoInfo} from 'isl/src/types';
 
 import {VSCodeReposList} from '../VSCodeRepo';
@@ -29,15 +30,15 @@ const mockTracker = makeServerSideTracker(
 
 jest.mock('isl-server/src/Repository', () => {
   class MockRepository implements Partial<Repository> {
-    static getRepoInfo = jest.fn((_cmd, _logger, cwd: string): Promise<RepoInfo> => {
+    static getRepoInfo = jest.fn((ctx: ExecutionContext): Promise<RepoInfo> => {
       let root: string;
       // resolve cwd into shared mock locations
-      if (cwd.includes('/path/to/repo1')) {
+      if (ctx.cwd.includes('/path/to/repo1')) {
         root = '/path/to/repo1';
-      } else if (cwd.includes('/path/to/repo2')) {
+      } else if (ctx.cwd.includes('/path/to/repo2')) {
         root = '/path/to/repo2';
       } else {
-        return Promise.resolve({type: 'cwdNotARepository', cwd});
+        return Promise.resolve({type: 'cwdNotARepository', cwd: ctx.cwd});
       }
       return Promise.resolve({
         type: 'success',

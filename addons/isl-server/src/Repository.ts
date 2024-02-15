@@ -10,6 +10,7 @@ import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
+import type {ExecutionContext} from './serverTypes';
 import type {
   CommitInfo,
   CommitPhaseType,
@@ -228,6 +229,8 @@ export class Repository {
     undefined,
   ];
 
+  public ctx: ExecutionContext;
+
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(
     public info: ValidatedRepoInfo,
@@ -239,6 +242,8 @@ export class Repository {
      */
     public trackerBestEffort: ServerSideTracker,
   ) {
+    this.ctx = {logger, cmd: info.command, cwd: info.repoRoot, tracker: trackerBestEffort};
+
     const remote = info.codeReviewSystem;
     if (remote.type === 'github') {
       this.codeReviewProvider = new GitHubCodeReviewProvider(remote, logger);
@@ -465,13 +470,14 @@ export class Repository {
    * Resulting RepoInfo may have null fields if cwd is not a valid repo root.
    * Throws if `command` is not found.
    */
-  static async getRepoInfo(command: string, logger: Logger, cwd: string): Promise<RepoInfo> {
+  static async getRepoInfo(ctx: ExecutionContext): Promise<RepoInfo> {
+    const {cmd, cwd, logger} = ctx;
     const [repoRoot, dotdir, configs] = await Promise.all([
-      findRoot(command, logger, cwd).catch((err: Error) => err),
-      findDotDir(command, logger, cwd),
+      findRoot(ctx).catch((err: Error) => err),
+      findDotDir(ctx),
       // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
       // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
-      getConfigs(command, logger, cwd, [
+      getConfigs(ctx, [
         'paths.default',
         'github.pull_request_domain',
         'github.preferred_submit_command',
@@ -490,7 +496,7 @@ export class Repository {
 
       return {
         type: 'invalidCommand',
-        command,
+        command: cmd,
         path: process.env.PATH,
       };
     }
@@ -525,7 +531,7 @@ export class Repository {
 
     const result: RepoInfo = {
       type: 'success',
-      command,
+      command: cmd,
       dotdir,
       repoRoot,
       codeReviewSystem,
@@ -1092,10 +1098,8 @@ export class Repository {
       },
       () =>
         runCommand(
-          this.info.command,
+          {...this.ctx, cwd: cwd ?? this.info.repoRoot},
           args,
-          this.logger,
-          unwrap(cwd ?? this.info.repoRoot),
           {
             ...options,
             env: {...options?.env, ...Internal.additionalEnvForCommand?.(id)} as NodeJS.ProcessEnv,
@@ -1115,8 +1119,9 @@ export class Repository {
    * Prefer `getConfig` to batch fetches when possible.
    */
   public async forceGetConfig(configName: string, cwd: string): Promise<string | undefined> {
-    const result = (await runCommand(this.info.command, ['config', configName], this.logger, cwd))
-      .stdout;
+    const result = (
+      await runCommand({...this.ctx, cwd: cwd ?? this.info.repoRoot}, ['config', configName])
+    ).stdout;
     this.logger.info(`loaded configs from ${cwd}: ${configName} => ${result}`);
     return result;
   }
@@ -1130,12 +1135,7 @@ export class Repository {
       if (this.knownConfigs == null) {
         // Fetch all configs using one command.
         const knownConfig = new Map<ConfigName, string>(
-          await getConfigs<ConfigName>(
-            this.info.command,
-            this.logger,
-            this.info.repoRoot,
-            allConfigNames,
-          ),
+          await getConfigs<ConfigName>(this.ctx, allConfigNames),
         );
         this.knownConfigs = knownConfig;
       }
@@ -1146,7 +1146,7 @@ export class Repository {
   public setConfig(level: ConfigLevel, configName: string, configValue: string): Promise<void> {
     // Attempt to avoid racy config read/write.
     return this.configRateLimiter.enqueueRun(() =>
-      setConfig(this.info.command, this.logger, this.info.repoRoot, level, configName, configValue),
+      setConfig(this.ctx, level, configName, configValue),
     );
   }
 
@@ -1164,16 +1164,14 @@ export class Repository {
 }
 
 /** Run an sl command (without analytics). */
-async function runCommand(
-  command_: string,
+export async function runCommand(
+  ctx: ExecutionContext,
   args_: Array<string>,
-  logger: Logger,
-  cwd: string,
   options_?: execa.Options,
   timeout: number = READ_COMMAND_TIMEOUT_MS,
 ): Promise<execa.ExecaReturnValue<string>> {
-  const {command, args, options} = getExecParams(command_, args_, cwd, options_);
-  logger.log('run command: ', command, args[0]);
+  const {command, args, options} = getExecParams(ctx.cmd, args_, ctx.cwd, options_);
+  ctx.logger.log('run command: ', command, args[0]);
   const result = execa(command, args, options);
 
   let timedOut = false;
@@ -1181,7 +1179,7 @@ async function runCommand(
   if (timeout > 0) {
     timeoutId = setTimeout(() => {
       result.kill('SIGTERM', {forceKillAfterTimeout: 5_000});
-      logger.error(`Timed out waiting for ${command} ${args[0]} to finish`);
+      ctx.logger.error(`Timed out waiting for ${command} ${args[0]} to finish`);
       timedOut = true;
     }, timeout);
     result.on('exit', () => {
@@ -1214,13 +1212,9 @@ export const __TEST__ = {
 /**
  * Root of the repository where the .sl folder lives.
  * Throws only if `command` is invalid, so this check can double as validation of the `sl` command */
-async function findRoot(
-  command: string,
-  logger: Logger,
-  cwd: string,
-): Promise<AbsolutePath | undefined> {
+async function findRoot(ctx: ExecutionContext): Promise<AbsolutePath | undefined> {
   try {
-    return (await runCommand(command, ['root'], logger, cwd)).stdout;
+    return (await runCommand(ctx, ['root'])).stdout;
   } catch (error) {
     if (
       ['ENOENT', 'EACCES'].includes((error as {code: string}).code) ||
@@ -1231,21 +1225,17 @@ async function findRoot(
       // https://github.com/sindresorhus/execa/issues/469#issuecomment-859924543
       (os.platform() === 'win32' && (error as {exitCode: number}).exitCode === 1)
     ) {
-      logger.error(`command ${command} not found`, error);
+      ctx.logger.error(`command ${ctx.cmd} not found`, error);
       throw error;
     }
   }
 }
 
-async function findDotDir(
-  command: string,
-  logger: Logger,
-  cwd: string,
-): Promise<AbsolutePath | undefined> {
+async function findDotDir(ctx: ExecutionContext): Promise<AbsolutePath | undefined> {
   try {
-    return (await runCommand(command, ['root', '--dotdir'], logger, cwd)).stdout;
+    return (await runCommand(ctx, ['root', '--dotdir'])).stdout;
   } catch (error) {
-    logger.error(`Failed to find repository dotdir in ${cwd}`, error);
+    ctx.logger.error(`Failed to find repository dotdir in ${ctx.cwd}`, error);
     return undefined;
   }
 }
@@ -1257,9 +1247,7 @@ async function findDotDir(
  * Errors are silenced.
  */
 async function getConfigs<T extends string>(
-  command: string,
-  logger: Logger,
-  cwd: string,
+  ctx: ExecutionContext,
   configNames: ReadonlyArray<T>,
 ): Promise<Map<T, string>> {
   if (configOverride !== undefined) {
@@ -1277,33 +1265,26 @@ async function getConfigs<T extends string>(
     // config command does not support multiple configs yet, but supports multiple sections.
     // (such limitation makes sense for non-JSON output, which can be ambigious)
     const sections = new Set<string>(configNames.flatMap(name => name.split('.').at(0) ?? []));
-    const result = await runCommand(
-      command,
-      ['config', '-Tjson'].concat([...sections]),
-      logger,
-      cwd,
-    );
+    const result = await runCommand(ctx, ['config', '-Tjson'].concat([...sections]));
     const configs: [{name: T; value: string}] = JSON.parse(result.stdout);
     for (const config of configs) {
       configMap.set(config.name, config.value);
     }
   } catch (e) {
-    logger.error(`failed to read configs from ${cwd}: ${e}`);
+    ctx.logger.error(`failed to read configs from ${ctx.cwd}: ${e}`);
   }
-  logger.info(`loaded configs from ${cwd}:`, configMap);
+  ctx.logger.info(`loaded configs from ${ctx.cwd}:`, configMap);
   return configMap;
 }
 
 type ConfigLevel = 'user' | 'system' | 'local';
 async function setConfig(
-  command: string,
-  logger: Logger,
-  cwd: string,
+  ctx: ExecutionContext,
   level: ConfigLevel,
   configName: string,
   configValue: string,
 ): Promise<void> {
-  await runCommand(command, ['config', `--${level}`, configName, configValue], logger, cwd);
+  await runCommand(ctx, ['config', `--${level}`, configName, configValue]);
 }
 
 function getExecParams(

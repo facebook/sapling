@@ -8,6 +8,7 @@
 import type {Repository} from '../Repository';
 import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
+import type {ExecutionContext} from '../serverTypes';
 import type {RepoInfo, RepositoryError} from 'isl/src/types';
 
 import {__TEST__} from '../RepositoryCache';
@@ -25,7 +26,8 @@ const mockTracker = makeServerSideTracker(
 );
 
 class SimpleMockRepositoryImpl {
-  static getRepoInfo(command: string, _logger: Logger, cwd: string): Promise<RepoInfo> {
+  static getRepoInfo(ctx: ExecutionContext): Promise<RepoInfo> {
+    const {cwd, cmd} = ctx;
     let data;
     if (cwd.includes('/path/to/repo')) {
       data = {
@@ -42,7 +44,7 @@ class SimpleMockRepositoryImpl {
     }
     return Promise.resolve({
       type: 'success',
-      command,
+      command: cmd,
       pullRequestDomain: undefined,
       preferredSubmitCommand: 'pr',
       codeReviewSystem: {type: 'unknown'},
@@ -55,10 +57,17 @@ class SimpleMockRepositoryImpl {
 }
 const SimpleMockRepository = SimpleMockRepositoryImpl as unknown as typeof Repository;
 
+const ctx: ExecutionContext = {
+  cmd: 'sl',
+  logger: mockLogger,
+  tracker: mockTracker,
+  cwd: '/path/to/repo/cwd',
+};
+
 describe('RepositoryCache', () => {
   it('Provides repository references that resolve', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd');
+    const ref = cache.getOrCreate(ctx);
 
     const repo = await ref.promise;
     expect(repo).toEqual(
@@ -75,7 +84,7 @@ describe('RepositoryCache', () => {
 
   it('Gives error for paths without repos', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref = cache.getOrCreate('sl', mockLogger, mockTracker, '/some/invalid/repo');
+    const ref = cache.getOrCreate({...ctx, cwd: '/some/invalid/repo'});
 
     const repo = await ref.promise;
     expect(repo).toEqual({type: 'cwdNotARepository', cwd: '/some/invalid/repo'});
@@ -85,7 +94,7 @@ describe('RepositoryCache', () => {
 
   it('Disposes repositories', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd');
+    const ref = cache.getOrCreate(ctx);
 
     const repo = await ref.promise;
     const disposeFunc = (repo as Repository).dispose;
@@ -99,7 +108,7 @@ describe('RepositoryCache', () => {
 
   it('Can dispose references before the repo promise has resolved', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd');
+    const ref = cache.getOrCreate(ctx);
 
     ref.unref();
 
@@ -111,10 +120,10 @@ describe('RepositoryCache', () => {
 
   it('shares repositories under the same cwd', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo'});
     const repo1 = await ref1.promise;
 
-    const ref2 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo');
+    const ref2 = cache.getOrCreate({...ctx, cwd: '/path/to/repo'});
     const repo2 = await ref2.promise;
 
     expect(cache.numberOfActiveServers()).toBe(2);
@@ -127,10 +136,10 @@ describe('RepositoryCache', () => {
 
   it('shares repositories under the same repo', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd1');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd1'});
     const repo1 = await ref1.promise;
 
-    const ref2 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd2');
+    const ref2 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd2'});
     const repo2 = await ref2.promise;
 
     expect(cache.numberOfActiveServers()).toBe(2);
@@ -143,8 +152,8 @@ describe('RepositoryCache', () => {
 
   it('does not share repositories under different cwds', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd');
-    const ref2 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/anotherrepo/cwd');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd'});
+    const ref2 = cache.getOrCreate({...ctx, cwd: '/path/to/anotherrepo/cwd'});
 
     const repo1 = await ref1.promise;
     const repo2 = await ref2.promise;
@@ -157,8 +166,8 @@ describe('RepositoryCache', () => {
 
   it('reference counts and disposes after 0 refs', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd1');
-    const ref2 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd2');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd1'});
+    const ref2 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd2'});
 
     const repo = await ref1.promise;
     await ref2.promise;
@@ -176,12 +185,12 @@ describe('RepositoryCache', () => {
 
   it('does not re-use diposed repos', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd1');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd1'});
 
     const repo1 = await ref1.promise;
     ref1.unref();
 
-    const ref2 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd2');
+    const ref2 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd2'});
     const repo2 = await ref2.promise;
 
     expect(cache.numberOfActiveServers()).toBe(1);
@@ -195,7 +204,7 @@ describe('RepositoryCache', () => {
 
   it('prefix matching repos are treated separately', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo'});
     await ref1.promise;
 
     expect(cache.cachedRepositoryForPath('/path/to/repo')).not.toEqual(undefined);
@@ -222,7 +231,8 @@ describe('RepositoryCache', () => {
     const p2 = defer<RepoInfo>();
 
     class BlockingMockRepository {
-      static getRepoInfo(_command: string, _logger: Logger, cwd: string): Promise<RepoInfo> {
+      static getRepoInfo(ctx: ExecutionContext): Promise<RepoInfo> {
+        const {cwd} = ctx;
         if (cwd === '/path/to/repo/cwd1') {
           return p1.promise;
         } else if (cwd === '/path/to/repo/cwd2') {
@@ -237,8 +247,8 @@ describe('RepositoryCache', () => {
 
     const cache = new RepositoryCache(BlockingMockRepository as unknown as typeof Repository);
     // start looking up repoInfos at the same time
-    const ref1 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd1');
-    const ref2 = cache.getOrCreate('sl', mockLogger, mockTracker, '/path/to/repo/cwd2');
+    const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd1'});
+    const ref2 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd2'});
 
     p2.resolve({...repoInfo});
     const repo2 = await ref2.promise;

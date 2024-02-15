@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ServerSideTracker} from './analytics/serverSideTracker';
-import type {Logger} from './logger';
+import type {ExecutionContext} from './serverTypes';
 import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 
 import {Repository} from './Repository';
@@ -100,15 +99,10 @@ class RepositoryCache {
    * Create a new Repository, or re-use if one already exists.
    * Repositories are reference-counted to ensure they can be disposed when no longer needed.
    */
-  getOrCreate(
-    cmd: string,
-    logger: Logger,
-    tracker: ServerSideTracker,
-    cwd: string,
-  ): RepositoryReference {
+  getOrCreate(ctx: ExecutionContext): RepositoryReference {
     // Fast path: if this cwd is already a known repo root, we can use it directly.
     // This only works if the cwd happens to be the repo root.
-    const found = this.lookup(cwd);
+    const found = this.lookup(ctx.cwd);
     if (found) {
       found.ref();
       return new RepositoryReferenceImpl(Promise.resolve(found.value), () => found.dispose());
@@ -123,7 +117,7 @@ class RepositoryCache {
       // this would guard against querying lots of redundant paths within the same repo.
       // This is probably not necessary right now, but would be useful for a VS Code extension where we need to query
       // individual file paths to add diff gutters.
-      const repoInfo = await this.RepositoryType.getRepoInfo(cmd, logger, cwd);
+      const repoInfo = await this.RepositoryType.getRepoInfo(ctx);
       // important: there should be no `await` points after here, to ensure there is no race when re-using Repositories.
       if (repoInfo.type !== 'success') {
         // No repository found at this root, or some other error prevents the repo from being created
@@ -153,8 +147,8 @@ class RepositoryCache {
       // once we're sure we don't have a repository to re-use.
       const repo = new this.RepositoryType(
         repoInfo as ValidatedRepoInfo, // repoInfo is now guaranteed to have these root/dotdir set
-        logger,
-        tracker,
+        ctx.logger,
+        ctx.tracker,
       );
 
       const internalRef = new RefCounted(repo);

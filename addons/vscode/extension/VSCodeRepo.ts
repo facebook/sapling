@@ -54,12 +54,12 @@ export class VSCodeReposList {
       if (this.knownRepos.has(fsPath)) {
         throw new Error(`Attempted to add workspace folder path twice: ${fsPath}`);
       }
-      const repoReference = repositoryCache.getOrCreate(
-        getCLICommand(),
-        this.logger,
-        this.tracker,
-        fsPath,
-      );
+      const repoReference = repositoryCache.getOrCreate({
+        cwd: fsPath,
+        cmd: getCLICommand(),
+        logger: this.logger,
+        tracker: this.tracker,
+      });
       this.knownRepos.set(fsPath, repoReference);
       repoReference.promise.then(repo => {
         if (repo instanceof Repository) {
