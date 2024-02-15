@@ -46,11 +46,21 @@ export const showSuggestedRebaseForStack = atomFamilyWeak((hash: Hash) =>
     }
 
     // If the public base is already on a remote bookmark or a stable commit, don't suggest rebasing it.
-    return (
-      stackBase.remoteBookmarks.length === 0 &&
-      stackBase.bookmarks.length === 0 &&
-      (stackBase.stableCommitMetadata?.length ?? 0) === 0
-    );
+    if (
+      stackBase.remoteBookmarks.length > 0 ||
+      stackBase.bookmarks.length > 0 ||
+      (stackBase.stableCommitMetadata?.length ?? 0) > 0
+    ) {
+      return false;
+    }
+
+    // If all commits are obsoleted, do not suggest rebasing (but should suggest cleanup).
+    const stack = dag.descendants(hash);
+    if (stack.size === dag.obsolete(stack).size) {
+      return false;
+    }
+
+    return true;
   }),
 );
 
