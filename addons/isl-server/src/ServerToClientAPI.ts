@@ -342,13 +342,20 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fileBugReport': {
+        const maybeRepo = this.currentState.type === 'repo' ? this.currentState.repo : undefined;
+        const ctx: ExecutionContext = {
+          // cwd is only needed to run graphql query, here it's just best-effort
+          cwd: maybeRepo?.ctx.cwd ?? process.cwd(),
+          cmd: this.connection.command ?? 'sl',
+          logger: this.logger,
+          tracker: this.tracker,
+        };
         Internal.fileABug?.(
+          ctx,
           data.data,
           data.uiState,
-          this.tracker,
           // Use repo for rage, if available.
-          this.currentState.type === 'repo' ? this.currentState.repo : undefined,
-          this.logger,
+          maybeRepo,
           data.collectRage,
           (progress: FileABugProgress) => {
             this.connection.logger?.info('file a bug progress: ', JSON.stringify(progress));
