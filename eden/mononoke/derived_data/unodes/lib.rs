@@ -126,58 +126,6 @@ pub async fn find_unode_rename_sources(
         .await
 }
 
-/// Given bonsai changeset find unodes for all renames that happened in this changesest.
-///
-/// Returns mapping from paths in current changeset to file unodes in parents changesets
-/// that were coppied to a given path.
-///
-/// This version of the function is incorrect: it fails to take into account
-/// files that are copied multiple times.  The function is retained for
-/// blame_v1 compatibility.
-pub async fn find_unode_renames_incorrect_for_blame_v1(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    bonsai: &BonsaiChangeset,
-) -> Result<HashMap<NonRootMPath, FileUnodeId>, Error> {
-    let mut references: HashMap<ChangesetId, HashMap<NonRootMPath, NonRootMPath>> = HashMap::new();
-    for (to_path, file_change) in bonsai.file_changes() {
-        if let Some((from_path, csid)) = file_change.copy_from() {
-            references
-                .entry(*csid)
-                .or_default()
-                .insert(from_path.clone(), to_path.clone());
-        }
-    }
-
-    let unodes = references.into_iter().map(|(csid, mut paths)| async move {
-        let mf_root = derivation_ctx
-            .fetch_dependency::<RootUnodeManifestId>(ctx, csid)
-            .await?;
-        let from_paths: Vec<_> = paths.keys().cloned().collect();
-        let blobstore = derivation_ctx.blobstore();
-        mf_root
-            .manifest_unode_id()
-            .clone()
-            .find_entries(ctx.clone(), blobstore.clone(), from_paths)
-            .map_ok(|(from_path, entry)| {
-                Some((Option::<NonRootMPath>::from(from_path)?, entry.into_leaf()?))
-            })
-            .try_filter_map(future::ok)
-            .try_collect::<Vec<_>>()
-            .map_ok(move |unodes| {
-                unodes
-                    .into_iter()
-                    .filter_map(|(from_path, unode_id)| Some((paths.remove(&from_path)?, unode_id)))
-                    .collect::<HashMap<_, _>>()
-            })
-            .await
-    });
-
-    future::try_join_all(unodes)
-        .map_ok(|unodes| unodes.into_iter().flatten().collect())
-        .await
-}
-
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
