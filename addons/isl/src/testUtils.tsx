@@ -106,6 +106,7 @@ export function simulateRepoConnected() {
       codeReviewSystem: {type: 'github', owner: 'owner', repo: 'repo', hostname: 'github.com'},
     },
   });
+  testMessageBus.simulateServerStatusChange({type: 'open'});
 }
 
 export function resetTestMessages() {

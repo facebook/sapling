@@ -39,7 +39,6 @@ import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom as jotaiAtom} from 'jotai';
 import {useCallback} from 'react';
-import {atom, DefaultValue} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
@@ -98,16 +97,14 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const reconnectingStatus = atom<MessageBusStatus>({
-  key: 'reconnectingStatus',
-  default: {type: 'initializing'},
-  effects: [
-    ({setSelf}) => {
-      const disposable = messageBus.onChangeStatus(setSelf);
-      return () => disposable.dispose();
-    },
-  ],
-});
+export const reconnectingStatus = jotaiAtom<MessageBusStatus>({type: 'initializing'});
+registerDisposable(
+  reconnectingStatus,
+  messageBus.onChangeStatus(status => {
+    writeAtom(reconnectingStatus, status);
+  }),
+  import.meta.hot,
+);
 
 export const serverCwd = jotaiAtom(get => {
   const data = get(jotaiRepositoryData);
@@ -235,7 +232,7 @@ registerCleanup(
   latestCommitsData,
   subscriptionEffect('smartlogCommits', data => {
     writeAtom(latestCommitsData, last => {
-      let commits = last instanceof DefaultValue ? [] : last.commits;
+      let commits = last.commits;
       const newCommits = data.commits.value;
       if (newCommits != null) {
         // leave existing commits in place if there was no erro
@@ -455,11 +452,10 @@ registerDisposable(
   serverAPI.onMessageOfType('operationProgress', progress => {
     switch (progress.kind) {
       case 'spawn':
-        writeAtom(operationListJotai, current => {
-          const list = current instanceof DefaultValue ? defaultOperationList() : current;
+        writeAtom(operationListJotai, list => {
           const operation = operationsById.get(progress.id);
           if (operation == null) {
-            return current;
+            return list;
           }
 
           return startNewOperation(operation, list);
@@ -468,9 +464,6 @@ registerDisposable(
       case 'stdout':
       case 'stderr':
         writeAtom(operationListJotai, current => {
-          if (current == null || current instanceof DefaultValue) {
-            return current;
-          }
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -488,9 +481,6 @@ registerDisposable(
         break;
       case 'inlineProgress':
         writeAtom(operationListJotai, current => {
-          if (current == null || current instanceof DefaultValue) {
-            return current;
-          }
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -526,9 +516,6 @@ registerDisposable(
         break;
       case 'progress':
         writeAtom(operationListJotai, current => {
-          if (current == null || current instanceof DefaultValue) {
-            return current;
-          }
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
@@ -554,9 +541,6 @@ registerDisposable(
         break;
       case 'exit':
         writeAtom(operationListJotai, current => {
-          if (current == null || current instanceof DefaultValue) {
-            return current;
-          }
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
