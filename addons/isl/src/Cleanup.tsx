@@ -32,13 +32,23 @@ export function isStackEligibleForCleanup(
     .toSeq()
     .every(h => {
       const info = dag.get(h);
-      return !(
-        info == null ||
-        info.diffId == null ||
-        info.isHead || // don't allow hiding a stack you're checked out on
-        diffMap.get(info.diffId) == null ||
-        !provider.isDiffEligibleForCleanup(unwrap(diffMap.get(info.diffId)))
-      );
+      // don't allow hiding a stack you're checked out on
+      if (info == null || info.isHead) {
+        return false;
+      }
+      // allow clean up obsoleted commits regardless of review state
+      if (info.successorInfo != null) {
+        return true;
+      }
+      // if not obsoleted, still allow cleanup for "Closed" diffs
+      if (info.diffId != null) {
+        const diffInfo = diffMap.get(info.diffId);
+        if (diffInfo != null && provider.isDiffEligibleForCleanup(diffInfo)) {
+          return true;
+        }
+      }
+      // no cleanup otherwise
+      return false;
     });
 }
 
