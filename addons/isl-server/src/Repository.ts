@@ -250,7 +250,7 @@ export class Repository {
     }
 
     if (remote.type === 'phabricator' && Internal?.PhabricatorCodeReviewProvider != null) {
-      this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(remote, logger);
+      this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(remote, this.ctx);
     }
 
     const shouldWait = (): boolean => {
