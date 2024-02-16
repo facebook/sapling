@@ -25,6 +25,7 @@ import {is} from 'immutable';
 import {useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
+import {getZoomLevel} from 'shared/zoom';
 
 import './StackEditSubTree.css';
 
@@ -61,13 +62,15 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
       setReorderState(state);
     };
 
+    const zoom = getZoomLevel();
+
     return (x, y, isDragging) => {
       // Visual update.
       const draggingDiv = draggingDivRef.current;
       if (draggingDiv != null) {
         if (isDragging) {
           Object.assign(draggingDiv.style, {
-            transform: `translate(${x}px, calc(-50% + ${y}px))`,
+            transform: `translate(${x / zoom}px, calc(-50% + ${y / zoom}px))`,
             opacity: '1',
           });
         } else {

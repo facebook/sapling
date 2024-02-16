@@ -17,6 +17,7 @@ export function getZoomLevel(): number {
     if (isNaN(number)) {
       return 1;
     }
+    return number;
   } catch {}
   return 1;
 }
