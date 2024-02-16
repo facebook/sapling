@@ -24,7 +24,6 @@ use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
@@ -325,7 +324,7 @@ impl WorkingCopy {
 
     fn construct_file_system(
         vfs: VFS,
-        config: &dyn Config,
+        _config: &dyn Config,
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
@@ -631,6 +630,10 @@ impl WorkingCopy {
 
     pub fn watchman_client(&self) -> Result<Arc<watchman_client::Client>> {
         self.watchman_client.get()
+    }
+
+    pub fn config(&self) -> &Arc<dyn Config> {
+        &self.config
     }
 }
 

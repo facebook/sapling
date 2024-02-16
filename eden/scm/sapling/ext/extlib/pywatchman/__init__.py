@@ -582,7 +582,7 @@ class WindowsNamedPipeTransport(Transport):
         if self._iobuf:
             if size >= len(self._iobuf):
                 res = self._iobuf
-                self.buf = None
+                self._iobuf = None
                 return res
             res = self._iobuf[:size]
             self._iobuf = self._iobuf[size:]

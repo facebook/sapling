@@ -60,6 +60,8 @@ use vfs::VFS;
 use workingcopy::sparse;
 use workingcopy::workingcopy::LockedWorkingCopy;
 
+use crate::watchman_state::WatchmanStateChange;
+
 #[allow(dead_code)]
 mod actions;
 pub mod clone;
@@ -70,6 +72,7 @@ pub mod edenfs;
 pub mod errors;
 #[allow(dead_code)]
 mod merge;
+mod watchman_state;
 
 pub use actions::Action;
 pub use actions::ActionMap;
@@ -848,6 +851,8 @@ pub fn checkout(
     mut maybe_bookmark: Option<String>,
     update_mode: CheckoutMode,
 ) -> Result<Option<(usize, usize)>> {
+    let mut state_change = WatchmanStateChange::maybe_open(wc, target_commit);
+
     let preupdate_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "preupdate");
     preupdate_hooks.run_shell_hooks(
         Some(repo.path()),
@@ -921,6 +926,8 @@ pub fn checkout(
         &[source_commit],
         &[target_commit],
     )?;
+
+    state_change.mark_success();
 
     Ok(stats)
 }

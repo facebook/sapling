@@ -6,7 +6,7 @@
   $ configure modernclient
   $ setconfig checkout.use-rust=true
 
-FIXME Test we emit watchman states across checkout:
+Test we emit watchman states across checkout:
   $ newclientrepo watchman-events
   $ enable hgevents
   $ drawdag <<'EOS'
@@ -27,6 +27,36 @@ Wait for debugwatchmansubscribe to exit.
     "files": [],
     "is_fresh_instance": true,
     "root": "$TESTTMP/watchman-events",
+    "subscription": "test-subscription",
+    "unilateral": true,
+    "version": * (glob)
+  }
+  {
+    "clock": *, (glob)
+    "metadata": {
+      "distance": 0,
+      "merge": false,
+      "partial": false,
+      "rev": "0000000000000000000000000000000000000000",
+      "status": "ok"
+    },
+    "root": "$TESTTMP/watchman-events",
+    "state-enter": "hg.update",
+    "subscription": "test-subscription",
+    "unilateral": true,
+    "version": * (glob)
+  }
+  {
+    "clock": *, (glob)
+    "metadata": {
+      "distance": 0,
+      "merge": false,
+      "partial": false,
+      "rev": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0",
+      "status": "ok"
+    },
+    "root": "$TESTTMP/watchman-events",
+    "state-leave": "hg.update",
     "subscription": "test-subscription",
     "unilateral": true,
     "version": * (glob)

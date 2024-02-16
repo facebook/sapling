@@ -56,6 +56,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/edenfs-client:edenfs-client",
@@ -78,5 +79,6 @@ rust_library(
         "//eden/scm/lib/util/atexit:atexit",
         "//eden/scm/lib/vfs:vfs",
         "//eden/scm/lib/workingcopy:workingcopy",
+        "//watchman/rust/watchman_client:watchman_client",
     ],
 )
