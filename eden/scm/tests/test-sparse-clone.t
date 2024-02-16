@@ -44,7 +44,6 @@ Verify sparse clone with a non-existing sparse profile warns
   Checking out 'master'
    WARN workingcopy::sparse: non-existent sparse profile include repo_path=RepoPathBuf("nonexisting.sparse")
    WARN workingcopy::sparse: non-existent sparse profile include repo_path=RepoPathBuf("nonexisting.sparse")
-   WARN workingcopy::sparse: non-existent sparse profile include repo_path=RepoPathBuf("nonexisting.sparse")
   5 files updated
   $ cd clone5
   $ ls

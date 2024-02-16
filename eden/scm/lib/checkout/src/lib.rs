@@ -963,14 +963,18 @@ pub fn filesystem_checkout(
     let mut current_mf = tree_resolver.get(&current_commit)?;
     let target_mf = tree_resolver.get(&target_commit)?;
 
-    let (sparse_matcher, sparse_change) =
-        create_sparse_matchers(repo, wc.vfs(), &current_mf, &target_mf)?;
+    let (sparse_matcher, sparse_change) = create_sparse_matchers(
+        repo,
+        wc.vfs(),
+        &current_mf,
+        &target_mf,
+        current_commit.is_null(),
+    )?;
 
-    // Overlay manifest with "status" info to include outstanding working copy changes.
     let status = wc.status(ctx, sparse_matcher.clone(), false)?;
 
     if update_mode == CheckoutMode::Force {
-        // With --clean, mix on our working copy changes so they are "undone" by
+        // With --clean, overlay working copy changes so they are "undone" by
         // the diff w/ target manifest.
         overlay_working_changes(wc.vfs(), &mut current_mf, &status)?;
 
@@ -1098,11 +1102,13 @@ pub(crate) fn check_conflicts(
     Ok(())
 }
 
+#[instrument(skip_all)]
 fn create_sparse_matchers(
     repo: &mut Repo,
     vfs: &VFS,
     current_mf: &TreeManifest,
     target_mf: &TreeManifest,
+    is_clone: bool,
 ) -> Result<(DynMatcher, Option<(DynMatcher, DynMatcher)>)> {
     let dot_path = repo.dot_hg_path().to_owned();
     if util::file::exists(dot_path.join("sparse"))?.is_none() {
@@ -1111,10 +1117,10 @@ fn create_sparse_matchers(
 
     let overrides = sparse::config_overrides(repo.config());
 
-    let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
+    let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
         vfs,
         &dot_path,
-        current_mf,
+        target_mf,
         repo.file_store()?,
         &overrides,
     )?
@@ -1123,10 +1129,15 @@ fn create_sparse_matchers(
         (matcher, 0)
     });
 
-    let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
+    // Optimization when checking out from "null" commit.
+    if is_clone {
+        return Ok((target_sparse, None));
+    }
+
+    let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
         vfs,
         &dot_path,
-        target_mf,
+        current_mf,
         repo.file_store()?,
         &overrides,
     )?
@@ -1148,6 +1159,7 @@ fn create_sparse_matchers(
     Ok((sparse_matcher, sparse_change))
 }
 
+#[instrument(skip_all)]
 fn create_plan(
     vfs: &VFS,
     config: &dyn Config,
