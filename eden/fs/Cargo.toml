@@ -1,5 +1,6 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
+arrow2 = { git = "https://github.com/diliop/arrow2", rev = "03647f0a32669aaaa90447aa4ca448b9b44cd1fb" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
 bindgen = { git = "https://github.com/rust-lang/rust-bindgen", rev = "2997017b5a3065b83e9d76f0080d6cb99c94c0c1" }
 bindgen-cli = { git = "https://github.com/rust-lang/rust-bindgen", rev = "2997017b5a3065b83e9d76f0080d6cb99c94c0c1" }
