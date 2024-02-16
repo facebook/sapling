@@ -68,7 +68,7 @@ pub struct Repo {
     pub requirements: Requirements,
     pub store_requirements: Requirements,
     repo_name: Option<String>,
-    metalog: Option<Arc<RwLock<MetaLog>>>,
+    metalog: OnceCell<Arc<RwLock<MetaLog>>>,
     eden_api: OnceCell<Arc<dyn EdenApi>>,
     dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: OnceCell<Arc<dyn FileStore>>,
@@ -88,7 +88,7 @@ impl Repo {
     ) -> Result<Repo> {
         let root_path = absolute(root_path)?;
         init::init_hg_repo(&root_path, config, repo_config_contents)?;
-        let mut repo = Self::load(&root_path, pinned_config)?;
+        let repo = Self::load(&root_path, pinned_config)?;
         repo.metalog()?.write().init_tracked()?;
         Ok(repo)
     }
@@ -180,7 +180,7 @@ impl Repo {
             requirements,
             store_requirements,
             repo_name,
-            metalog: None,
+            metalog: Default::default(),
             eden_api: Default::default(),
             dag_commits: Default::default(),
             file_store: Default::default(),
@@ -262,19 +262,14 @@ impl Repo {
         self.dot_hg_path.join(self.ident.config_repo_file())
     }
 
-    pub fn metalog(&mut self) -> Result<Arc<RwLock<MetaLog>>> {
-        match &self.metalog {
-            Some(metalog) => Ok(metalog.clone()),
-            None => {
-                let ml = Arc::new(RwLock::new(self.load_metalog()?));
-                self.metalog = Some(ml.clone());
-                Ok(ml)
-            }
-        }
+    pub fn metalog(&self) -> Result<Arc<RwLock<MetaLog>>> {
+        self.metalog
+            .get_or_try_init(|| Ok(Arc::new(RwLock::new(self.load_metalog()?))))
+            .cloned()
     }
 
     pub fn invalidate_metalog(&self) -> Result<()> {
-        if let Some(ml) = &self.metalog {
+        if let Some(ml) = self.metalog.get() {
             *ml.write() = self.load_metalog()?;
         }
         Ok(())
@@ -404,21 +399,21 @@ impl Repo {
         Ok(())
     }
 
-    pub fn remote_bookmarks(&mut self) -> Result<BTreeMap<String, HgId>> {
+    pub fn remote_bookmarks(&self) -> Result<BTreeMap<String, HgId>> {
         match self.metalog()?.read().get("remotenames")? {
             Some(rn) => Ok(refencode::decode_remotenames(&rn)?),
             None => Err(errors::RemotenamesMetalogKeyError.into()),
         }
     }
 
-    pub fn set_remote_bookmarks(&mut self, names: &BTreeMap<String, HgId>) -> Result<()> {
+    pub fn set_remote_bookmarks(&self, names: &BTreeMap<String, HgId>) -> Result<()> {
         self.metalog()?
             .write()
             .set("remotenames", &refencode::encode_remotenames(names))?;
         Ok(())
     }
 
-    pub fn local_bookmarks(&mut self) -> Result<BTreeMap<String, HgId>> {
+    pub fn local_bookmarks(&self) -> Result<BTreeMap<String, HgId>> {
         match self.metalog()?.read().get("bookmarks")? {
             Some(rn) => Ok(refencode::decode_bookmarks(&rn)?),
             None => Err(errors::RemotenamesMetalogKeyError.into()),

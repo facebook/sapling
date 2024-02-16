@@ -844,7 +844,7 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
 
 pub fn checkout(
     ctx: &CoreContext,
-    repo: &mut Repo,
+    repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     mut maybe_bookmark: Option<String>,
@@ -952,7 +952,7 @@ fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
 
 pub fn filesystem_checkout(
     ctx: &CoreContext,
-    repo: &mut Repo,
+    repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     update_mode: CheckoutMode,
@@ -1066,7 +1066,7 @@ fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) ->
 
 pub(crate) fn check_conflicts(
     ctx: &CoreContext,
-    repo: &mut Repo,
+    repo: &Repo,
     wc: &LockedWorkingCopy,
     plan: &CheckoutPlan,
     target_mf: &TreeManifest,
@@ -1104,7 +1104,7 @@ pub(crate) fn check_conflicts(
 
 #[instrument(skip_all)]
 fn create_sparse_matchers(
-    repo: &mut Repo,
+    repo: &Repo,
     vfs: &VFS,
     current_mf: &TreeManifest,
     target_mf: &TreeManifest,

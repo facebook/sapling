@@ -89,7 +89,7 @@ fn actionmap_from_eden_conflicts(
 
 pub fn edenfs_checkout(
     ctx: &CoreContext,
-    repo: &mut Repo,
+    repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     checkout_mode: CheckoutMode,
@@ -135,7 +135,7 @@ fn create_edenfs_plan(
 
 fn edenfs_noconflict_checkout(
     ctx: &CoreContext,
-    repo: &mut Repo,
+    repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     target_commit_tree_hash: HgId,
@@ -182,7 +182,7 @@ fn edenfs_noconflict_checkout(
 }
 
 fn edenfs_force_checkout(
-    repo: &mut Repo,
+    repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     target_commit_tree_hash: HgId,
