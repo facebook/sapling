@@ -66,12 +66,12 @@ impl ISLChromelikeOptions<'_> {
 fn find_chrome_like() -> anyhow::Result<String> {
     if cfg!(target_os = "windows") {
         let program_files = [
-            std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".into()),
             std::env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".into()),
+            std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".into()),
         ];
         let relative_paths = [
-            r"\Microsoft\Edge\Application\msedge.exe",
             r"\Google\Chrome\Application\chrome.exe",
+            r"\Microsoft\Edge\Application\msedge.exe",
         ];
         for dir in program_files {
             for path in relative_paths {
