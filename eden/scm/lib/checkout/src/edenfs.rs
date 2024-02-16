@@ -13,7 +13,6 @@ use std::os::unix::prelude::MetadataExt;
 use std::process::Command;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
@@ -39,7 +38,6 @@ use crate::check_conflicts;
 use crate::errors::EdenConflictError;
 use crate::ActionMap;
 use crate::Checkout;
-use crate::CheckoutMode;
 use crate::CheckoutPlan;
 
 fn actionmap_from_eden_conflicts(
@@ -92,21 +90,17 @@ pub fn edenfs_checkout(
     repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
-    checkout_mode: CheckoutMode,
+    revert_conflicts: bool,
 ) -> anyhow::Result<()> {
     // TODO (sggutier): try to unify these steps with the non-edenfs version of checkout
     let target_commit_tree_hash = repo.tree_resolver()?.get_root_id(&target_commit)?;
 
     // Perform the actual checkout depending on the mode
-    match checkout_mode {
-        CheckoutMode::RevertConflicts => {
-            edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
-        }
-        CheckoutMode::AbortIfConflicts => {
-            edenfs_noconflict_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
-        }
-        CheckoutMode::MergeConflicts => bail!("native merge checkout not yet supported for EdenFS"),
-    };
+    if revert_conflicts {
+        edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
+    } else {
+        edenfs_noconflict_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
+    }
 
     // Update the treestate and parents with the new changes
     wc.set_parents(vec![target_commit], Some(target_commit_tree_hash))?;

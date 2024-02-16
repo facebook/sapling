@@ -272,3 +272,21 @@ Support "preupdate" and "update" hooks:
   $ hg whereami
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0
 #endif
+
+Test --check
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A
+  > EOS
+  $ touch B
+  $ hg go --check -q $A
+  $ hg st
+  ? B
+  $ rm A
+  $ SL_LOG=checkout_info=debug hg go --check -q null
+  DEBUG checkout_info: checkout_mode="rust"
+  abort: uncommited changes
+  [255]
+  $ hg go --clean --check -q null
+  abort: can only specify one of --check, --clean, or --merge
+  [255]

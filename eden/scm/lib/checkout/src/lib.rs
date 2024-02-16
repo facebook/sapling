@@ -91,6 +91,7 @@ pub enum CheckoutMode {
     RevertConflicts,
     AbortIfConflicts,
     MergeConflicts,
+    AbortIfUncommittedChanges,
 }
 
 /// Contains lists of files to be removed / updated during checkout.
@@ -850,6 +851,19 @@ pub fn checkout(
     mut maybe_bookmark: Option<String>,
     update_mode: CheckoutMode,
 ) -> Result<Option<(usize, usize)>> {
+    if update_mode == CheckoutMode::MergeConflicts {
+        unimplemented!("Rust checkout doesn't support merging files");
+    }
+
+    if update_mode == CheckoutMode::AbortIfUncommittedChanges {
+        let status = wc.status(ctx, Arc::new(AlwaysMatcher::new()), false)?;
+        if status.dirty() {
+            bail!("uncommited changes");
+        }
+    }
+
+    let revert_conflicts = update_mode == CheckoutMode::RevertConflicts;
+
     let mut state_change = WatchmanStateChange::maybe_open(wc, target_commit);
 
     let preupdate_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "preupdate");
@@ -866,7 +880,7 @@ pub fn checkout(
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
-            edenfs::edenfs_checkout(ctx, repo, wc, target_commit, update_mode)?;
+            edenfs::edenfs_checkout(ctx, repo, wc, target_commit, revert_conflicts)?;
             None
         }
 
@@ -878,7 +892,7 @@ pub fn checkout(
             repo,
             wc,
             target_commit,
-            update_mode,
+            revert_conflicts,
         )?)
     };
 
@@ -955,7 +969,7 @@ pub fn filesystem_checkout(
     repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
-    update_mode: CheckoutMode,
+    revert_conflicts: bool,
 ) -> Result<(usize, usize)> {
     let current_commit = wc.first_parent()?;
 
@@ -973,7 +987,7 @@ pub fn filesystem_checkout(
 
     let status = wc.status(ctx, sparse_matcher.clone(), false)?;
 
-    if update_mode == CheckoutMode::RevertConflicts {
+    if revert_conflicts {
         // With --clean, overlay working copy changes so they are "undone" by
         // the diff w/ target manifest.
         overlay_working_changes(wc.vfs(), &mut current_mf, &status)?;
@@ -999,7 +1013,7 @@ pub fn filesystem_checkout(
         progress_path,
     )?;
 
-    if update_mode != CheckoutMode::RevertConflicts {
+    if !revert_conflicts {
         // 2. Check if status is dirty
         check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
     }

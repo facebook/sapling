@@ -79,7 +79,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         fallback!("checkout.use-rust is False");
     }
 
-    if ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty() {
+    if ctx.opts.merge || !ctx.opts.date.is_empty() {
         tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
         fallback!("one or more unsupported options in Rust checkout");
     }
@@ -95,6 +95,10 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     if !dest.is_empty() && ctx.opts.r#continue {
         abort!("can't specify a destination commit and --continue");
+    }
+
+    if ctx.opts.check as i32 + ctx.opts.clean as i32 + ctx.opts.merge as i32 > 1 {
+        abort!("can only specify one of --check, --clean, or --merge");
     }
 
     // Protect the various ".hg" state file checks.
@@ -165,9 +169,12 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         checkout::CheckoutMode::RevertConflicts
     } else if ctx.opts.merge {
         checkout::CheckoutMode::MergeConflicts
+    } else if ctx.opts.check {
+        checkout::CheckoutMode::AbortIfUncommittedChanges
     } else {
         checkout::CheckoutMode::AbortIfConflicts
     };
+
     let _lock = repo.lock()?;
     let update_result = checkout::checkout(
         &ctx.core,
