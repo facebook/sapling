@@ -9,16 +9,20 @@ use clap::Args;
 
 /// Command line arguments for TLS parameters
 #[derive(Args, Debug)]
+#[group(requires_all = ["tls_certificate", "tls_private_key", "tls_ca"])]
 pub struct TLSArgs {
     /// TLS Certificate for auth
     #[clap(long)]
-    pub tls_certificate: Option<String>,
+    #[arg(required = false)]
+    pub tls_certificate: String,
     /// TLS private key
     #[clap(long)]
-    pub tls_private_key: Option<String>,
+    #[arg(required = false)]
+    pub tls_private_key: String,
     /// TLS CA
     #[clap(long)]
-    pub tls_ca: Option<String>,
+    #[arg(required = false)]
+    pub tls_ca: String,
     /// TLS Ticket Seeds
     #[clap(long)]
     pub tls_ticket_seeds: Option<String>,

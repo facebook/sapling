@@ -17,7 +17,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -121,7 +120,7 @@ struct LfsServerArgs {
     shutdown_timeout_args: ShutdownTimeoutArgs,
     /// TLS parameters for this service
     #[clap(flatten)]
-    tls_params: TLSArgs,
+    tls_params: Option<TLSArgs>,
     /// The host to listen on locally
     #[clap(long, default_value = "127.0.0.1")]
     listen_host: String,
@@ -210,25 +209,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let addr = format!("{}:{}", listen_host, listen_port);
 
-    let tls_certificate = args.tls_params.tls_certificate.clone();
-    let tls_private_key = args.tls_params.tls_private_key.clone();
-    let tls_ca = args.tls_params.tls_ca.clone();
-    let tls_ticket_seeds = args.tls_params.tls_ticket_seeds.clone();
-
-    let tls_acceptor = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
-        (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
-            let acceptor = secure_utils::SslConfig::new(
-                tls_ca,
-                tls_certificate,
-                tls_private_key,
-                tls_ticket_seeds,
+    let tls_acceptor = args
+        .tls_params
+        .map(|tls_params| {
+            secure_utils::SslConfig::new(
+                tls_params.tls_ca,
+                tls_params.tls_certificate,
+                tls_params.tls_private_key,
+                tls_params.tls_ticket_seeds,
             )
-            .build_tls_acceptor(logger.clone())?;
-            Some(acceptor)
-        }
-        (None, None, None, None) => None,
-        _ => bail!("TLS flags must be passed together"),
-    };
+            .build_tls_acceptor(logger.clone())
+        })
+        .transpose()?;
 
     let tls_session_data_log = args.tls_session_data_log_file.clone();
 
