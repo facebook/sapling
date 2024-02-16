@@ -88,9 +88,9 @@ const VFS_BATCH_SIZE: usize = 128;
 
 #[derive(PartialEq)]
 pub enum CheckoutMode {
-    Force,
-    NoConflict,
-    Merge,
+    RevertConflicts,
+    AbortIfConflicts,
+    MergeConflicts,
 }
 
 /// Contains lists of files to be removed / updated during checkout.
@@ -973,7 +973,7 @@ pub fn filesystem_checkout(
 
     let status = wc.status(ctx, sparse_matcher.clone(), false)?;
 
-    if update_mode == CheckoutMode::Force {
+    if update_mode == CheckoutMode::RevertConflicts {
         // With --clean, overlay working copy changes so they are "undone" by
         // the diff w/ target manifest.
         overlay_working_changes(wc.vfs(), &mut current_mf, &status)?;
@@ -999,7 +999,7 @@ pub fn filesystem_checkout(
         progress_path,
     )?;
 
-    if update_mode != CheckoutMode::Force {
+    if update_mode != CheckoutMode::RevertConflicts {
         // 2. Check if status is dirty
         check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
     }

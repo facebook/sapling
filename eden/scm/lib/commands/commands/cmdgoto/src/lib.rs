@@ -162,11 +162,11 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
     let checkout_mode = if ctx.opts.clean {
-        checkout::CheckoutMode::Force
+        checkout::CheckoutMode::RevertConflicts
     } else if ctx.opts.merge {
-        checkout::CheckoutMode::Merge
+        checkout::CheckoutMode::MergeConflicts
     } else {
-        checkout::CheckoutMode::NoConflict
+        checkout::CheckoutMode::AbortIfConflicts
     };
     let _lock = repo.lock()?;
     let update_result = checkout::checkout(

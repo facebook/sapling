@@ -76,7 +76,7 @@ pub fn init_working_copy(
             &wc,
             target,
             None,
-            checkout::CheckoutMode::NoConflict,
+            checkout::CheckoutMode::AbortIfConflicts,
         ) {
             Ok(stats) => {
                 if let Some((updated, _removed)) = stats {

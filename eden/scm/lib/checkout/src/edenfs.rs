@@ -99,13 +99,13 @@ pub fn edenfs_checkout(
 
     // Perform the actual checkout depending on the mode
     match checkout_mode {
-        CheckoutMode::Force => {
+        CheckoutMode::RevertConflicts => {
             edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
         }
-        CheckoutMode::NoConflict => {
+        CheckoutMode::AbortIfConflicts => {
             edenfs_noconflict_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
         }
-        CheckoutMode::Merge => bail!("native merge checkout not yet supported for EdenFS"),
+        CheckoutMode::MergeConflicts => bail!("native merge checkout not yet supported for EdenFS"),
     };
 
     // Update the treestate and parents with the new changes
