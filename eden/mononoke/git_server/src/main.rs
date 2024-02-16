@@ -52,10 +52,13 @@ use repo_identity::RepoIdentity;
 use slog::info;
 use tokio::net::TcpListener;
 
+use crate::middleware::RequestContentEncodingMiddleware;
+use crate::middleware::ResponseContentTypeMiddleware;
 use crate::model::GitServerContext;
 use crate::service::build_router;
 
 mod errors;
+mod middleware;
 mod model;
 mod service;
 mod util;
@@ -214,6 +217,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
+                .add(RequestContentEncodingMiddleware {})
+                .add(ResponseContentTypeMiddleware {})
                 .build(router);
 
             info!(&logger, "Listening on {}", bound_addr);
