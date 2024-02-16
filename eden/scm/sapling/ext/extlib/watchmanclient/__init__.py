@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import ctypes
-import getpass
 import os
 import time
 
@@ -127,11 +126,7 @@ class client:
 
     @util.propertycache
     def _user(self):
-        try:
-            return getpass.getuser()
-        except KeyError:
-            # couldn't figure out our user
-            return None
+        return util.getuser()
 
     def _command(self, *args):
         with util.traced("watchman-command", args=json.dumps(args[1:])) as span:

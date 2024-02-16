@@ -16,7 +16,7 @@ import time
 
 import bindings
 
-from . import capabilities, compat, encoding, load  # noqa: F401
+from . import capabilities, encoding  # noqa: F401
 
 bser = bindings.cext.bser
 

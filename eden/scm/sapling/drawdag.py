@@ -645,7 +645,7 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
                 repo.ui.write("%s %s\n" % (short(n), name))
     if opts.get("write_env"):
         path = opts.get("write_env")
-        with open(path, "w") as f:
+        with open(path, "wb") as f:
             for name, n in sorted(committed.items()):
                 if name and name not in existed:
-                    f.write("%s=%s\n" % (name, hex(n)))
+                    f.write(("%s=%s\n" % (name, hex(n))).encode())

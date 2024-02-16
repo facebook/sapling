@@ -3777,3 +3777,54 @@ def debugcommitmessage(ui, repo, *args):
         committext = cmdutil.buildcommittext(repo, ctx, extramsg)
 
     ui.status(committext)
+
+
+@command(
+    "debugwatchmansubscribe",
+    [("", "timeout", 2, "seconds of inactivity before exitting")],
+)
+def debugwatchmansubscribe(ui, repo, **opts) -> None:
+    """subscribe to watchman events"""
+
+    import json
+
+    from sapling.ext.extlib import pywatchman, watchmanclient
+
+    client = pywatchman.client(
+        sendEncoding="bser",
+        recvEncoding="bser",
+    )
+
+    root = watchmanclient.getcanonicalpath(repo.root)
+    client.query(
+        "subscribe",
+        root,
+        "test-subscription",
+        {
+            "expression": [
+                "not",
+                [
+                    "anyof",
+                    ["dirname", ui.identity.dotdir()],
+                    ["name", ui.identity.dotdir(), "wholename"],
+                ],
+            ],
+            "empty_on_fresh_instance": True,
+            "defer": ["hg.update"],
+            "fields": ["name"],
+        },
+    )
+
+    start = time.time()
+    while time.time() - start < opts["timeout"]:
+        while True:
+            try:
+                client.receive()
+            except pywatchman.SocketTimeout:
+                break
+
+        while events := client.getSubscription("test-subscription"):
+            for event in events:
+                if event:
+                    ui.write("%s\n" % json.dumps(event, indent=2, sort_keys=True))
+            start = time.time()
