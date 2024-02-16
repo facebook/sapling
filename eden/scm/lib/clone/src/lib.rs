@@ -75,7 +75,7 @@ pub fn init_working_copy(
             repo,
             &wc,
             target,
-            None,
+            checkout::BookmarkAction::None,
             checkout::CheckoutMode::AbortIfConflicts,
         ) {
             Ok(stats) => {

@@ -843,12 +843,23 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
     truncated as i32
 }
 
+#[derive(PartialEq)]
+pub enum BookmarkAction {
+    // Don't touch active bookmark.
+    None,
+    // Unset active bookmark if set.
+    UnsetActive,
+    // Update active bookmark if value is a valid bookmark, else unset active.
+    SetActiveIfValid(String),
+}
+
+#[instrument(skip_all)]
 pub fn checkout(
     ctx: &CoreContext,
     repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
-    mut maybe_bookmark: Option<String>,
+    bookmark_action: BookmarkAction,
     update_mode: CheckoutMode,
 ) -> Result<Option<(usize, usize)>> {
     if update_mode == CheckoutMode::MergeConflicts {
@@ -909,17 +920,21 @@ pub fn checkout(
         ]),
     )?;
 
-    let local_bms = repo.local_bookmarks()?;
-    if !maybe_bookmark
-        .as_ref()
-        .is_some_and(|bm| local_bms.contains_key(bm))
-    {
-        maybe_bookmark = None;
-    }
-
     let current_bookmark = wc.active_bookmark()?;
-    if maybe_bookmark != current_bookmark {
-        match (&current_bookmark, &maybe_bookmark) {
+    let new_bookmark = match bookmark_action {
+        BookmarkAction::None => current_bookmark.clone(),
+        BookmarkAction::UnsetActive => None,
+        BookmarkAction::SetActiveIfValid(bm) => {
+            if repo.local_bookmarks()?.contains_key(&bm) {
+                Some(bm)
+            } else {
+                None
+            }
+        }
+    };
+
+    if new_bookmark != current_bookmark {
+        match (&current_bookmark, &new_bookmark) {
             // TODO: color bookmark name
             (Some(old), Some(new)) => ctx
                 .logger
@@ -929,7 +944,7 @@ pub fn checkout(
             (None, None) => {}
         }
 
-        wc.set_active_bookmark(maybe_bookmark)?;
+        wc.set_active_bookmark(new_bookmark)?;
     }
 
     wc.journal.record_new_entry(

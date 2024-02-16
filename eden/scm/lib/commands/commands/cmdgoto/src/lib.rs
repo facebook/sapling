@@ -10,6 +10,7 @@ use std::io;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use checkout::BookmarkAction;
 use clidispatch::abort;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
@@ -181,7 +182,11 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         repo,
         &wc,
         target,
-        if ctx.opts.inactive { None } else { Some(dest) },
+        if ctx.opts.inactive {
+            BookmarkAction::UnsetActive
+        } else {
+            BookmarkAction::SetActiveIfValid(dest)
+        },
         checkout_mode,
     )?;
 

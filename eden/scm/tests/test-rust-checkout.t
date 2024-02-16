@@ -79,7 +79,7 @@ Can continue interrupted checkout:
   [255]
 
   $ LOG=checkout=debug hg go -q --continue 2>&1 | grep skipped_count
-  DEBUG apply_store: checkout: skipped files based on progress skipped_count=3
+  DEBUG checkout:apply_store: checkout: skipped files based on progress skipped_count=3
   $ hg st
   $ tglog
   @  a19fc4bcafed 'A'
