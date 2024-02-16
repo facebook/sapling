@@ -64,12 +64,7 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import (
-    get_eden_instance,
-    get_fsck_command,
-    prompt_confirmation,
-    require_checkout,
-)
+from .cmd_util import get_eden_instance, get_fsck_command, require_checkout
 from .config import EdenCheckout, EdenInstance, ListMountInfo
 from .constants import (
     SHUTDOWN_EXIT_CODE_ERROR,
@@ -78,7 +73,10 @@ from .constants import (
     SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN,
     SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL,
 )
-from .file_handler_tools import WinFileHandlerReleaser
+
+if sys.platform == "win32":
+    from .file_handler_tools import WinFileHandlerReleaser
+from .prompt import prompt_confirmation
 from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import get_environment_suitable_for_subprocess, print_stderr, ShutdownError

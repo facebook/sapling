@@ -23,8 +23,10 @@ from typing import Dict, Iterable, Optional, Set
 from thrift.Thrift import TApplicationException
 
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
+
 from .buck import is_buckd_running_for_path, stop_buckd_for_path, stop_buckd_for_repo
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
+from .prompt import prompt_confirmation
 from .subcmd import Subcmd
 from .util import mkscratch_bin
 
@@ -834,7 +836,7 @@ Warning: this operation will permanently delete the following volumes:
   {volumes_str}
 """
             )
-            if not cmd_util.prompt_confirmation("Proceed?"):
+            if not prompt_confirmation("Proceed?"):
                 print("Not deleting volumes")
                 return 2
 

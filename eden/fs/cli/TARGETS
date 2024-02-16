@@ -149,6 +149,7 @@ python_library(
         "overlay.py",
         "prefetch.py",
         "prjfs.py",
+        "prompt.py",
         "rage.py",
         "redirect.py",
         "stats.py",
@@ -171,6 +172,7 @@ python_library(
     ],
     deps = [
         "fbsource//third-party/pypi/filelock:filelock",
+        "fbsource//third-party/pypi/psutil:psutil",
         "fbsource//third-party/pypi/toml:toml",
         "fbsource//third-party/pypi/tqdm:tqdm",
         ":hostname",

@@ -44,7 +44,9 @@ from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
 
 from . import configinterpolator, configutil, telemetry, util, version
-from .file_handler_tools import WinFileHandlerReleaser
+
+if sys.platform == "win32":
+    from .file_handler_tools import WinFileHandlerReleaser
 from .util import (
     FUSE_MOUNT_PROTOCOL_STRING,
     HealthStatus,
