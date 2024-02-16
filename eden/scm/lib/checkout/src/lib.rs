@@ -64,7 +64,6 @@ use crate::watchman_state::WatchmanStateChange;
 
 #[allow(dead_code)]
 mod actions;
-pub mod clone;
 #[allow(dead_code)]
 mod conflict;
 #[cfg(feature = "eden")]

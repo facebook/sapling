@@ -7,31 +7,23 @@
 
 use std::env;
 use std::ffi::OsStr;
-use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use async_runtime::block_unless_interrupted as block_on;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use manifest_tree::Manifest;
-use manifest_tree::TreeManifest;
+use context::CoreContext;
 use repo::repo::Repo;
-use termlogger::TermLogger;
 use tracing::instrument;
-use treestate::treestate::TreeState;
 use types::HgId;
-use types::RepoPath;
 use util::errors::IOContext;
 use util::file::atomic_write;
 use util::path::absolute;
 use util::path::expand_path;
-use vfs::VFS;
 
 pub fn get_default_destination_directory(config: &dyn Config) -> Result<PathBuf> {
     Ok(absolute(
@@ -55,25 +47,13 @@ pub fn get_default_eden_backing_directory(config: &dyn Config) -> Result<Option<
     Ok(config.get("edenfs", "backing-repos-dir").map(expand_path))
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum WorkingCopyError {
-    #[error("No such checkout target '{0}'")]
-    NoSuchTarget(HgId),
-
-    #[error(transparent)]
-    Io(#[from] io::Error),
-
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
-}
-
-#[instrument(skip(logger), err)]
+#[instrument(skip(ctx), err)]
 pub fn init_working_copy(
-    logger: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     target: Option<HgId>,
     sparse_profiles: Vec<String>,
-) -> Result<(), WorkingCopyError> {
+) -> Result<()> {
     if !sparse_profiles.is_empty() {
         let mut sparse_contents: Vec<u8> = Vec::new();
         for profile in &sparse_profiles {
@@ -85,83 +65,37 @@ pub fn init_working_copy(
         })?;
     }
 
-    let target = match target {
-        Some(t) => t,
-        None => {
-            // Nothing to check out - init empty dirstate and bail.
-            let mut ts = create_treestate(repo.dot_hg_path())?;
-            checkout::clone::flush_dirstate(
-                repo.config(),
-                &mut ts,
-                repo.dot_hg_path(),
-                types::hgid::NULL_ID,
-            )?;
-            return Ok(());
-        }
-    };
+    let wc = repo.working_copy()?;
 
-    let roots = repo.dag_commits()?.read().to_dyn_read_root_tree_ids();
-    let tree_id = match block_on(roots.read_root_tree_ids(vec![target.clone()]))
-        .io_context("error blocking on read_root_tree_ids")??
-        .into_iter()
-        .next()
-    {
-        Some((_, tree_id)) => tree_id,
-        None => return Err(WorkingCopyError::NoSuchTarget(target)),
-    };
+    if let Some(target) = target {
+        let wc = wc.lock()?;
 
-    let tree_store = repo.tree_store()?;
-    let file_store = repo.file_store()?;
-
-    let source_mf = TreeManifest::ephemeral(tree_store.clone());
-    let target_mf = TreeManifest::durable(tree_store.clone(), tree_id.clone());
-
-    for profile in &sparse_profiles {
-        let path = RepoPath::from_str(profile).map_err(|e| anyhow!(e))?;
-        if target_mf.get(path)?.is_none() {
-            logger.warn(format!(
-                "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with '@prog@ sparse disableprofile'."
-            ));
-        }
-    }
-
-    let mut ts = create_treestate(repo.dot_hg_path())?;
-
-    match checkout::clone::checkout(
-        repo.config(),
-        repo.dot_hg_path(),
-        &source_mf,
-        &target_mf,
-        file_store.clone(),
-        &mut ts,
-        target,
-        repo.locker(),
-    ) {
-        Ok(stats) => {
-            logger.info(format!("{}", stats));
-
-            Ok(())
-        }
-        Err(err) => {
-            if err.resumable {
-                logger.info(format!(
-                    "Checkout failed. Resume with '{} checkout --continue'",
-                    logger.cli_name(),
-                ));
+        match checkout::checkout(
+            ctx,
+            repo,
+            &wc,
+            target,
+            None,
+            checkout::CheckoutMode::NoConflict,
+        ) {
+            Ok(stats) => {
+                if let Some((updated, _removed)) = stats {
+                    ctx.logger.info(format!("{} files updated", updated));
+                }
             }
-
-            Err(err.source.into())
+            Err(err) => {
+                if ctx.config.get_or_default("checkout", "resumable")? {
+                    ctx.logger.info(format!(
+                        "Checkout failed. Resume with '{} checkout --continue'",
+                        ctx.logger.cli_name(),
+                    ));
+                }
+                return Err(err);
+            }
         }
     }
-}
 
-fn create_treestate(dot_hg_path: &Path) -> Result<TreeState> {
-    let ts_dir = dot_hg_path.join("treestate");
-    Ok(TreeState::new(
-        &ts_dir,
-        VFS::new(dot_hg_path.to_path_buf())?.case_sensitive(),
-    )?
-    .0)
+    Ok(())
 }
 
 #[derive(Debug, thiserror::Error)]

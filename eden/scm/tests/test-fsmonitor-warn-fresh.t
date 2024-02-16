@@ -2,13 +2,10 @@
 
   $ configure modernclient
   $ setconfig fsmonitor.warn-fresh-instance=true
-  $ newclientrepo repo
 
 A warning is printed for the first use
-
-  $ hg status --debug
+  $ newclientrepo repo
   warning: watchman has recently started (pid *) - operation will be slower than usual (glob)
-  poststatusfixup decides to wait for wlock since watchman reported fresh instance (?)
 
   $ hg status --debug
 

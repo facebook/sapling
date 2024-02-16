@@ -47,6 +47,9 @@ Clone can create a ".sl" repo.
   00changelog.i
   config
   dirstate
+  namejournal
+  namejournal_lock.data
+  namejournal_lock.lock
   reponame
   requires
   store

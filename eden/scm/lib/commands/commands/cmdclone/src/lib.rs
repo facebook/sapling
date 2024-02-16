@@ -392,7 +392,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         };
 
         clone::init_working_copy(
-            &logger,
+            &ctx.core,
             &mut repo,
             target_rev,
             ctx.opts.enable_profile.clone(),
