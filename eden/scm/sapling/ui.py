@@ -1327,7 +1327,7 @@ class ui:
         if action == "diff":
             suffix = ".diff"
         elif action:
-            suffix = ".%s.hg.txt" % action
+            suffix = ".%s.%s.txt" % (action, self.identity.cliname())
         else:
             suffix = extra["suffix"]
 
@@ -1338,7 +1338,9 @@ class ui:
             rdir = os.path.join(rdir, "edit-tmp")
             util.makedirs(rdir)
         (fd, name) = tempfile.mkstemp(
-            prefix="hg-" + extra["prefix"] + "-", suffix=suffix, dir=rdir
+            prefix=self.identity.cliname() + "-" + extra["prefix"] + "-",
+            suffix=suffix,
+            dir=rdir,
         )
         try:
             f = util.fdopen(fd, r"wb")
