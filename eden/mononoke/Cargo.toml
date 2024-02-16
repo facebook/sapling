@@ -312,6 +312,7 @@ members = [
   "git/packfile/if/services",
   "git/packfile/if/types",
   "git/protocol",
+  "git_server",
   "git_symbolic_refs",
   "gotham_ext",
   "hgproto",
