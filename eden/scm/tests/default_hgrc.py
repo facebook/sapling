@@ -23,7 +23,7 @@ ipv6={use_ipv6}
 
 [commands]
 status.relative=True
-update.check=linear
+update.check=none
 
 [config]
 use-rust=True

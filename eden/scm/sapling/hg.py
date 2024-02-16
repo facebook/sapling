@@ -952,17 +952,15 @@ def updatetotally(
 
      * abort: abort if the working directory is dirty
      * none: don't check (merge working directory changes into destination)
-     * linear: check that update is linear before merging working directory
-               changes into destination
      * noconflict: check that the update does not result in file merges
 
     This returns whether conflict is detected at updating or not.
     """
     if updatecheck is None:
         updatecheck = ui.config("commands", "update.check")
-        if updatecheck not in ("abort", "none", "linear", "noconflict"):
+        if updatecheck not in ("abort", "none", "noconflict"):
             # If not configured, or invalid value configured
-            updatecheck = "linear"
+            updatecheck = "noconflict"
     with repo.wlock():
         movemarkfrom = None
         warndest = False

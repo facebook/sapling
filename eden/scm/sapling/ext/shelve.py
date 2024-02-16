@@ -533,7 +533,7 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
     # it might have been created previously and shelve just
     # reuses it
     try:
-        hg.update(repo, parent.node())
+        hg.update(repo, parent.node(), updatecheck="none")
     except Exception:
         # failed to update to the original revision, which has left us on the
         # (hidden) shelve commit.  Move directly to the original commit by

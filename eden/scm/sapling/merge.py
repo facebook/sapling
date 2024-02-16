@@ -1937,8 +1937,8 @@ def goto(
         # a value for updatecheck. We may want to allow updatecheck='abort' to
         # better suppport some of these callers.
         if updatecheck is None:
-            updatecheck = "linear"
-        assert updatecheck in ("none", "linear", "noconflict")
+            updatecheck = "noconflict"
+        assert updatecheck in ("none", "noconflict")
 
     if edenfs.requirement in repo.requirements:
         from . import eden_update
@@ -2160,28 +2160,6 @@ def _update(
                 repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
                 repo.hook("update", parent1=xp2, parent2="", error=0)
                 return 0, 0, 0, 0
-
-            if updatecheck == "linear" and pas not in ([p1], [p2]):  # nonlinear
-                dirty = wc.dirty(missing=True)
-                if dirty:
-                    # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to mutation.foreground_contains.
-                    if mutation.enabled(repo):
-                        in_foreground = mutation.foreground_contains(
-                            repo, [p1.node()], repo[node].node()
-                        )
-                    else:
-                        in_foreground = False
-                    # note: the <node> variable contains a random identifier
-                    if in_foreground:
-                        pass  # allow updating to successors
-                    else:
-                        msg = _("uncommitted changes")
-                        hint = _("commit or goto --clean to discard changes")
-                        raise error.UpdateAbort(msg, hint=hint)
-                else:
-                    # Allow jumping branches if clean and specific rev given
-                    pass
 
         if overwrite:
             pas = [wc]
