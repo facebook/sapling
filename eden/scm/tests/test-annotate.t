@@ -63,7 +63,7 @@ annotate (JSON)
   [
    {
     "abspath": "a",
-    "lines": [{"age_bucket": "old", "line": "a\n", "rev": 0}],
+    "lines": [{"age_bucket": "old", "line": "a\n", "node": "8435f90966e442695d2ded29fdade2bac5ad8065"}],
     "path": "a"
    }
   ]
@@ -97,12 +97,12 @@ annotate multiple files (JSON)
   [
    {
     "abspath": "a",
-    "lines": [{"age_bucket": "old", "line": "a\n", "rev": 0}, {"age_bucket": "old", "line": "a\n", "rev": 1}, {"age_bucket": "old", "line": "a\n", "rev": 1}],
+    "lines": [{"age_bucket": "old", "line": "a\n", "node": "8435f90966e442695d2ded29fdade2bac5ad8065"}, {"age_bucket": "old", "line": "a\n", "node": "762f04898e6684ff713415f7b8a8d53d33f96c92"}, {"age_bucket": "old", "line": "a\n", "node": "762f04898e6684ff713415f7b8a8d53d33f96c92"}],
     "path": "a"
    },
    {
     "abspath": "b",
-    "lines": [{"age_bucket": "old", "line": "a\n", "rev": 0}, {"age_bucket": "old", "line": "a\n", "rev": 1}, {"age_bucket": "old", "line": "a\n", "rev": 1}, {"age_bucket": "old", "line": "b4\n", "rev": 3}, {"age_bucket": "old", "line": "b5\n", "rev": 3}, {"age_bucket": "old", "line": "b6\n", "rev": 3}],
+    "lines": [{"age_bucket": "old", "line": "a\n", "node": "8435f90966e442695d2ded29fdade2bac5ad8065"}, {"age_bucket": "old", "line": "a\n", "node": "762f04898e6684ff713415f7b8a8d53d33f96c92"}, {"age_bucket": "old", "line": "a\n", "node": "762f04898e6684ff713415f7b8a8d53d33f96c92"}, {"age_bucket": "old", "line": "b4\n", "node": "37ec9f5c3d1f99572d7075971cb4876e2139b52f"}, {"age_bucket": "old", "line": "b5\n", "node": "37ec9f5c3d1f99572d7075971cb4876e2139b52f"}, {"age_bucket": "old", "line": "b6\n", "node": "37ec9f5c3d1f99572d7075971cb4876e2139b52f"}],
     "path": "b"
    }
   ]
@@ -135,12 +135,12 @@ annotate -n b
 annotate --no-follow b
 
   $ hg annotate --no-follow b
-  2: a
-  2: a
-  2: a
-  3: b4
-  3: b5
-  3: b6
+  3086dbafde1c: a
+  3086dbafde1c: a
+  3086dbafde1c: a
+  37ec9f5c3d1f: b4
+  37ec9f5c3d1f: b5
+  37ec9f5c3d1f: b6
 
 annotate -nl b
 
@@ -319,8 +319,8 @@ annotate file without '\n' on last line
   $ printf "a\nb" > c
   $ hg ci -m test
   $ hg annotate c
-  [0-9]+: a (re)
-  [0-9]+: b (re)
+  8c47368c200b: a
+  8c47368c200b: b
 
 Issue3841: check annotation of the file of which filelog includes
 merging between the revision and its ancestor
@@ -383,11 +383,11 @@ and its ancestor by overriding "repo._filecommit".
   $ hg debugsetparents 933981f264573acb5782b58f8f6fba0f5c815ac7 933981f264573acb5782b58f8f6fba0f5c815ac7
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:2"
   $ hg annotate baz
-  17: 1 baz:1
-  18: 2 baz:2
-  16: 3
-  16: 4
-  16: 5
+  933981f26457: 1 baz:1
+  5d14c328cf75: 2 baz:2
+  6bf217a7698a: 3
+  6bf217a7698a: 4
+  6bf217a7698a: 5
 
   $ cat > baz <<EOF
   > 1 baz:1
@@ -408,11 +408,11 @@ and its ancestor by overriding "repo._filecommit".
   $ hg debugsetparents b94c9d8986533962f0ee2d1a8f1e244f839b6868 5d14c328cf75b0994b39f667b9a453cc4d050663
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:4"
   $ hg annotate baz
-  17: 1 baz:1
-  18: 2 baz:2
-  19: 3 baz:3
-  20: 4 baz:4
-  16: 5
+  933981f26457: 1 baz:1
+  5d14c328cf75: 2 baz:2
+  b94c9d898653: 3 baz:3
+  b6bedd5477e7: 4 baz:4
+  6bf217a7698a: 5
 
 annotate clean file
 
@@ -423,8 +423,8 @@ annotate modified file
 
   $ echo foofoo >> foo
   $ hg annotate -r "wdir()" foo
-  11 : foo
-  20+: foofoo
+  472b18db256d : foo
+  b6bedd5477e7+: foofoo
 
   $ hg annotate -cr "wdir()" foo
   472b18db256d : foo
@@ -532,34 +532,34 @@ Test annotate with whitespace options
 Annotate with no option
 
   $ hg annotate a
-  1: a  a
-  0: 
-  1:  
-  1: b  b
+  08f1b20a6199: a  a
+  9ba9c410f1ce: 
+  08f1b20a6199:  
+  08f1b20a6199: b  b
 
 Annotate with --ignore-space-change
 
   $ hg annotate --ignore-space-change a
-  1: a  a
-  1: 
-  0:  
-  0: b  b
+  08f1b20a6199: a  a
+  08f1b20a6199: 
+  9ba9c410f1ce:  
+  9ba9c410f1ce: b  b
 
 Annotate with --ignore-all-space
 
   $ hg annotate --ignore-all-space a
-  0: a  a
-  0: 
-  1:  
-  0: b  b
+  9ba9c410f1ce: a  a
+  9ba9c410f1ce: 
+  08f1b20a6199:  
+  9ba9c410f1ce: b  b
 
 Annotate with --ignore-blank-lines (similar to no options case)
 
   $ hg annotate --ignore-blank-lines a
-  1: a  a
-  0: 
-  1:  
-  1: b  b
+  08f1b20a6199: a  a
+  9ba9c410f1ce: 
+  08f1b20a6199:  
+  08f1b20a6199: b  b
 
   $ cd ..
 
@@ -615,21 +615,21 @@ create history with a filerev whose linkrev points to another branch
 Annotate should list ancestor of starting revision only
 
   $ hg annotate a
-  0: A
-  3: B
-  4: C
+  f0932f74827e: A
+  ff38df03cc4b: B
+  072f1e8df249: C
 
   $ hg annotate a -r 'wdir()'
-  0 : A
-  3 : B
-  4 : C
-  4+: W
+  f0932f74827e : A
+  ff38df03cc4b : B
+  072f1e8df249 : C
+  072f1e8df249+: W
 
 Even when the starting revision is the linkrev-shadowed one:
 
   $ hg annotate a -r 'max(desc(contentB))'
-  0: A
-  3: B
+  f0932f74827e: A
+  ff38df03cc4b: B
 
   $ cd ..
 
@@ -657,10 +657,10 @@ Issue5360: Deleted chunk in p1 of a merge changeset
   $ hg resolve --mark -q
   $ hg commit -m m
   $ hg annotate a
-  4: b
-  0: 1
-  1: 2
-  3: 3
-  2: a
+  af87e62e663e: b
+  eff892de26ec: 1
+  1ed24be7e7a0: 2
+  0a068f0261cf: 3
+  9409851bc20a: a
 
   $ cd ..

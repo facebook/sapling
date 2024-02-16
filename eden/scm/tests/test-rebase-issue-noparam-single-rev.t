@@ -60,7 +60,7 @@
 
   $ hg up -q -C 2
 
-  $ hg rebase
+  $ hg rebase -d 'desc(r2)'
   rebasing 87c180a611f2 "l1"
 
   $ tglog
@@ -107,25 +107,6 @@
   │ │
   │ o  87c180a611f2 'l1'
   ├─╯
-  o  56daeba07f4b 'c2'
-  │
-  o  e8faad3d03ff 'c1'
-
-# Rebase with no arguments - single revision in target branch:
-
-  $ hg up -q -C 3
-
-  $ hg rebase
-  rebasing 87c180a611f2 "l1"
-  rebasing 1ac923b736ef "l2"
-
-  $ tglog
-  @  023181307ed0 'l2'
-  │
-  o  913ab52b43b4 'l1'
-  │
-  o  8d0a8c99b309 'r1'
-  │
   o  56daeba07f4b 'c2'
   │
   o  e8faad3d03ff 'c1'

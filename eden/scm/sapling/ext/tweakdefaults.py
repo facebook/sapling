@@ -54,6 +54,7 @@ from typing import List, Set, Tuple
 
 from sapling import (
     bookmarks,
+    cmdutil,
     commands,
     encoding,
     error,
@@ -339,6 +340,11 @@ def pull(orig, ui, repo, *args, **opts):
     if "dest" in opts and dest:
         del opts["dest"]
 
+    if rebase:
+        # Bail out before "pull" if we can't do the rebase.
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
+
     ret = orig(ui, repo, *args, **opts)
 
     # NB: we use rebase and not isrebase on the next line because
@@ -415,20 +421,22 @@ def wrapblame() -> None:
         options[cind] = ("c", "changeset", None, _("list the changeset (default)"))
 
 
-def blame(orig, ui, repo, *pats, **opts):
-    @templater.templatefunc("blame_phabdiffid")
-    def phabdiff(context, mapping, args):
-        """Fetch the Phab Diff Id from the node in mapping"""
-        res = ""
-        try:
-            d = repo[mapping["rev"]].description()
-            pat = r"https://.*/(D\d+)"
-            m = re.search(pat, d)
-            res = m.group(1) if m else ""
-        except Exception:
-            pass
-        return res
+@templater.templatefunc("blame_phabdiffid")
+def phabdiff(context, mapping, args):
+    """Fetch the Phab Diff Id from the node in mapping"""
+    res = ""
+    try:
+        repo = mapping["ctx"].repo()
+        d = repo[mapping["rev"]].description()
+        pat = r"https://.*/(D\d+)"
+        m = re.search(pat, d)
+        res = m.group(1) if m else ""
+    except Exception:
+        pass
+    return res
 
+
+def blame(orig, ui, repo, *pats, **opts):
     if not ui.plain():
         # changeset is the new default
         if all(
@@ -523,15 +531,16 @@ def _rebase(orig, ui, repo, *pats, **opts):
     # specified.
     if not (opts.get("base") or opts.get("source") or opts.get("rev")):
         dests = opts.get("dest")
-        if dests and len(dests) == 1:
+        if dests and len(dests) == 1 and dests[0] != prev:
             dest = scmutil.revsingle(repo, dests[0])
             common = dest.ancestor(prev)
-            if prev == common:
+            if prev == common and dest != prev:
                 activebookmark = repo._activebookmark
                 result = hg.updatetotally(ui, repo, dest.node(), activebookmark)
                 if activebookmark:
                     with repo.wlock():
                         bookmarks.update(repo, [prev.node()], dest.node())
+                ui.status(_("nothing to rebase - fast-forwarded to %s\n") % dest)
                 return result
 
     return orig(ui, repo, *pats, **opts)
@@ -638,7 +647,11 @@ def histeditcommitfuncfor(orig, repo, src):
 def log(orig, ui, repo, *pats, **opts):
     # 'hg log' defaults to -f
     # All special uses of log (--date, --branch, etc) will also now do follow.
-    if not opts.get("rev") and not opts.get("all"):
+    if (
+        not opts.get("rev")
+        and not opts.get("all")
+        and ui.configbool("tweakdefaults", "logdefaultfollow", True)
+    ):
         opts["follow"] = True
 
     return orig(ui, repo, *pats, **opts)

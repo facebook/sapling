@@ -373,10 +373,6 @@ def _tracking(ui):
     return ui.configbool("remotenames", "tracking")
 
 
-def _branchesenabled(ui):
-    return False
-
-
 def exrebasecmd(orig, ui, repo, *pats, **opts):
     dest = opts["dest"]
     source = opts["source"]

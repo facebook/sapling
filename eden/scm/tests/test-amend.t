@@ -86,10 +86,10 @@ Amend with editor
 
   $ HGEDITOR='sh "$TESTTMP/prefix.sh"' hg amend --edit
   $ hg log -r . -T '{node|short} {desc}\n'
-  298f085230c3 EDITED: NEWMESSAGE
+  ba71dfa60431 EDITED: NEWMESSAGE
   $ HGEDITOR='sh "$TESTTMP/prefix.sh"' hg amend -e -m MSG
   $ hg log -r . -T '{node|short} {desc}\n'
-  974f07f28537 EDITED: MSG
+  41db3c750c91 EDITED: MSG
 
   $ echo FOO > $TESTTMP/msg
   $ hg amend -l $TESTTMP/msg -m BAR
@@ -97,7 +97,7 @@ Amend with editor
   [255]
   $ hg amend -l $TESTTMP/msg
   $ hg log -r . -T '{node|short} {desc}\n'
-  507be9bdac71 FOO
+  83eeb3f5a3e6 FOO
 
 Interactive mode
 

@@ -61,7 +61,7 @@ Issue622: hg init && hg pull -u URL doesn't checkout default branch
   $ cd ..
   $ hg init empty
   $ cd empty
-  $ hg pull -u ../test
+  $ hg pull -u ../test -d tip
   pulling from ../test
   requesting all changes
   adding changesets

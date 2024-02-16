@@ -37,8 +37,8 @@
   $ hg push -q --to master
   $ cd ../clone
   $ hg pull --update
-  abort: update destination required by configuration
-  (use hg pull followed by hg goto DEST)
+  abort: you must specify a destination for the update
+  (use `hg pull --update --dest <destination>`)
   [255]
 
   $ cd ..

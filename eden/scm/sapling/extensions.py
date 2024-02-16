@@ -89,10 +89,6 @@ _ignoreextensions = {
 _exclude_list = {"extlib"}
 
 
-# root of the directory, or installed distribution
-_hgroot = os.path.abspath(os.path.join(__file__, "../../"))
-_sysroot = os.path.abspath(os.path.join(os.__file__, "../"))
-
 # List of extensions to always enable by default, unless overwritten by config.
 #
 # This allows us to integrate extensions into the codebase while leaving them in
@@ -105,8 +101,9 @@ DEFAULT_EXTENSIONS = {
     "githelp",
     "mergedriver",
     "progressfile",
-    "sampling",
     "remotefilelog",
+    "sampling",
+    "tweakdefaults",
 }
 
 # Similar to DEFAULT_EXTENSIONS. But cannot be disabled.

@@ -231,12 +231,11 @@ Same, but with changes in working dir (different code path):
   HG: changed A
 
   $ rm editor.sh
-  $ hg log -r .
-  commit:      f7f2c5aae908
+  $ hg log -r . 
+  commit:      642ea5add1ce
   user:        foo
-  date:        Thu Jan 01 00:00:01 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another precious commit message
-  
 
 Moving bookmarks, preserve active bookmark:
 

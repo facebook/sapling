@@ -263,17 +263,17 @@ Pager should not override the exit code of other commands
 
 A command that asks for paging using ui.pager() directly works:
   $ hg blame --color=no a
-  paged! ' 0: a\n'
-  paged! ' 1: a 1\n'
-  paged! ' 2: a 2\n'
-  paged! ' 3: a 3\n'
-  paged! ' 4: a 4\n'
-  paged! ' 5: a 5\n'
-  paged! ' 6: a 6\n'
-  paged! ' 7: a 7\n'
-  paged! ' 8: a 8\n'
-  paged! ' 9: a 9\n'
-  paged! '10: a 10\n'
+  paged! '1f0dee641bb7: a\n'
+  paged! 'f4be7687d414: a 1\n'
+  paged! 'bce265549556: a 2\n'
+  paged! 'e5baa915639e: a 3\n'
+  paged! '64d06b3cd986: a 4\n'
+  paged! '1656f9ff0378: a 5\n'
+  paged! 'd0767a268e61: a 6\n'
+  paged! 'd92a10dd26e4: a 7\n'
+  paged! 'cff05a6312fe: a 8\n'
+  paged! '6dd8ea7dd621: a 9\n'
+  paged! '46106edeeb38: a 10\n'
 but not with HGPLAIN
   $ HGPLAIN=1 hg blame a
    0: a
@@ -289,17 +289,17 @@ but not with HGPLAIN
   10: a 10
 explicit flags work too:
   $ hg blame --pager=no --color=no a
-   0: a
-   1: a 1
-   2: a 2
-   3: a 3
-   4: a 4
-   5: a 5
-   6: a 6
-   7: a 7
-   8: a 8
-   9: a 9
-  10: a 10
+  1f0dee641bb7: a
+  f4be7687d414: a 1
+  bce265549556: a 2
+  e5baa915639e: a 3
+  64d06b3cd986: a 4
+  1656f9ff0378: a 5
+  d0767a268e61: a 6
+  d92a10dd26e4: a 7
+  cff05a6312fe: a 8
+  6dd8ea7dd621: a 9
+  46106edeeb38: a 10
 
 A command with --output option:
 
@@ -316,17 +316,17 @@ Put annotate in the ignore list for pager:
   > ignore = annotate
   > EOF
   $ hg blame --color=no a
-   0: a
-   1: a 1
-   2: a 2
-   3: a 3
-   4: a 4
-   5: a 5
-   6: a 6
-   7: a 7
-   8: a 8
-   9: a 9
-  10: a 10
+  1f0dee641bb7: a
+  f4be7687d414: a 1
+  bce265549556: a 2
+  e5baa915639e: a 3
+  64d06b3cd986: a 4
+  1656f9ff0378: a 5
+  d0767a268e61: a 6
+  d92a10dd26e4: a 7
+  cff05a6312fe: a 8
+  6dd8ea7dd621: a 9
+  46106edeeb38: a 10
 
 During pushbuffer, pager should not start:
   $ cat > $TESTTMP/pushbufferpager.py <<EOF

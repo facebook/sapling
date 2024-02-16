@@ -3,7 +3,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
-  $ enable tweakdefaults remotenames rebase
+  $ enable remotenames rebase
 
   $ hg init master
   $ cd master

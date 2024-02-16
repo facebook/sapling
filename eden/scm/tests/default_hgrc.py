@@ -56,6 +56,10 @@ contentstorefallback=True
 [experimental]
 use-rust-changelog=True
 windows-symlinks=True
+
+[tweakdefaults]
+graftkeepdate=True
+logdefaultfollow=False
 """
     if use_watchman:
         content += """

@@ -456,7 +456,7 @@ Test that rewriting leaving instability behind is allowed
 
   $ hg log -r 'children(max(desc(C)))'
   b9a00f7e0244 D (no-eol)
-  $ hg rebase -r 'max(desc(C))'
+  $ hg rebase -r 'max(desc(C))' -d 'desc(B)'
   rebasing 6c4492b9afc0 "C"
   $ hg log -G
   o  fb16c8a4d41d C

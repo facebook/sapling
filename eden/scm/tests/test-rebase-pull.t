@@ -56,7 +56,7 @@
 
 # Now b has one revision to be pulled from a:
 
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   adding changesets
@@ -75,17 +75,17 @@
 
 # Re-run:
 
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   no changes found
+  nothing to rebase - working directory parent is also destination
 
 # Abort pull early if working dir is not clean:
 
   $ echo L1-mod > L1
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   abort: uncommitted changes
-  (cannot pull with rebase: please commit or shelve your changes first)
   [255]
   $ hg goto --clean --quiet
 
@@ -97,7 +97,7 @@
   Editing (d80cc2da061e), you may commit or record as needed now.
   (hg histedit --continue to resume)
   [1]
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   abort: histedit in progress
   (use 'hg histedit --continue' to continue or
        'hg histedit --abort' to abort)
@@ -120,9 +120,8 @@
   $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   abort: outstanding uncommitted merge
-  (cannot pull with rebase: please commit or shelve your changes first)
   [255]
   $ hg goto --clean --quiet
 
@@ -131,15 +130,14 @@
   $ cd ../c
 
   $ hg book norebase
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updating bookmark norebase
+  nothing to rebase - fast-forwarded to tip
 
   $ tglog -l 1
   @  77ae9631bcca 'R1' norebase
@@ -149,21 +147,22 @@
 # pull --rebase --update should ignore --update:
 
   $ hg pull --rebase --update
-  pulling from $TESTTMP/a
-  searching for changes
-  no changes found
+  abort: missing rebase destination - supply --dest / -d
+  [255]
 
 # pull --rebase doesn't update if nothing has been pulled:
 
   $ hg up -q 1
 
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   no changes found
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  nothing to rebase - fast-forwarded to tip
 
   $ tglog -l 1
-  o  77ae9631bcca 'R1' norebase
+  @  77ae9631bcca 'R1' norebase
   │
   ~
 
@@ -186,27 +185,19 @@
   adding R3
   $ cd ../c
   $ tglog
-  o  77ae9631bcca 'R1' norebase
+  @  77ae9631bcca 'R1' norebase
   │
-  @  783333faa078 'C2'
+  o  783333faa078 'C2'
   │
   o  05d58a0c15dd 'C1'
   $ echo L1 > L1
   $ hg ci -Am L1
   adding L1
   $ hg pull --rev tip --rebase
-  pulling from $TESTTMP/a
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  rebasing ff8d69a621f9 "L1"
+  abort: missing rebase destination - supply --dest / -d
+  [255]
   $ tglog
-  @  518d153c0ba3 'L1'
-  │
-  o  770a61882ace 'R3'
-  │
-  o  31cd3a05214e 'R2'
+  @  e6e5bf5749a8 'L1'
   │
   o  77ae9631bcca 'R1' norebase
   │
@@ -233,15 +224,15 @@
   │
   o  05d58a0c15dd 'C1'
   $ cd ../c
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  rebasing 518d153c0ba3 "L1"
+  rebasing e6e5bf5749a8 "L1"
   $ tglog
-  @  0d0727eb7ce0 'L1'
+  @  72a2b49a3265 'L1'
   │
   o  00e3b7781125 'R4'
   │
@@ -281,18 +272,18 @@
   adding L2
   $ hg up 'desc(L1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  rebasing 0d0727eb7ce0 "L1"
-  rebasing c1f58876e3bf "L2"
+  rebasing 72a2b49a3265 "L1"
+  rebasing 43ae73471a3f "L2"
   $ tglog
-  o  6dc0ea5dcf55 'L2'
+  o  7ca39666ab9f 'L2'
   │
-  @  864e0a2d2614 'L1'
+  @  d8edd0f176f6 'L1'
   │
   o  88dd24261747 'R5'
   │
@@ -318,22 +309,20 @@
   $ cd ../c
   $ hg up 'desc(R5)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "65bc164c1d9b: R6"
-  1 other heads for branch "default"
+  nothing to rebase - fast-forwarded to tip
   $ tglog
   @  65bc164c1d9b 'R6'
   │
-  │ o  6dc0ea5dcf55 'L2'
+  │ o  7ca39666ab9f 'L2'
   │ │
-  │ o  864e0a2d2614 'L1'
+  │ o  d8edd0f176f6 'L1'
   ├─╯
   o  88dd24261747 'R5'
   │

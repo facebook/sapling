@@ -40,7 +40,6 @@ FIXME: (recursive) alias expansion is not logged
   [legacy][command] so-confusing
   [legacy][dirstate_info]
   [legacy][jobid]
-  [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][connectionpool]

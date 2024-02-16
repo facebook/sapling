@@ -130,7 +130,6 @@ clone() {
 [extensions]
 remotenames=
 treemanifest=
-tweakdefaults=
 
 [phases]
 publish=False

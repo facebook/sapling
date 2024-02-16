@@ -16,17 +16,19 @@ Require a destination
   $ echo c >> c
   $ hg commit -qAm cc
   $ hg rebase
-  abort: you must specify a destination
-  (use: hg rebase -d REV)
+  abort: you must specify a destination (-d) for the rebase
   [255]
   $ hg rebase -d 'desc(bb)'
   rebasing 5db65b93a12b "cc"
   $ hg rebase -d 'desc(aa)' -r . -q
   $ HGPLAIN=1 hg rebase
-  rebasing 889b0bc6a730 "cc"
+  abort: you must specify a destination (-d) for the rebase
+  [255]
   $ hg rebase -d 'desc(aa)' -r . -q
   $ hg --config commands.rebase.requiredest=False rebase
-  rebasing 279de9495438 "cc"
+  abort: you must specify a destination (-d) for the rebase
+  [255]
+  $ hg rebase -d 'desc(bb)' -r . -q
 
 Requiring dest should not break continue or other rebase options
   $ hg up 'desc(bb)' -q
@@ -66,8 +68,7 @@ Check rebase.requiredest interaction with pull --rebase
   $ echo f > f
   $ hg commit -qAm ff
   $ hg pull --rebase
-  abort: rebase destination required by configuration
-  (use hg pull followed by hg rebase -d DEST)
+  abort: missing rebase destination - supply --dest / -d
   [255]
 
 Setup rebase with multiple destinations

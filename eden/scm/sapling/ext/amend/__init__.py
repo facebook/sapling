@@ -388,13 +388,6 @@ def amend(ui, repo, *pats, **opts):
     if not opts.get("noeditmessage") and not opts.get("message"):
         opts["message"] = old.description()
 
-    commitdate = opts.get("date")
-    if not commitdate:
-        if ui.config("amend", "date") == "implicitupdate":
-            commitdate = "now"
-        else:
-            commitdate = old.date()
-
     oldbookmarks = old.bookmarks()
     with repo.wlock(), repo.lock():
         node = cmdutil.amend(ui, repo, old, {}, pats, opts)

@@ -81,11 +81,10 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   ├─╯
   o  root |  |
   
-  $ hg pull --rebase
+  $ hg pull --rebase -d tip
   pulling from test:remoterepo
   searching for changes
-  updating to active bookmark bmnottracking
-  nothing to rebase
+  nothing to rebase - working directory parent is also destination
   $ hg rebase -d 'desc(untrackedremotecommit)'
   rebasing 6a7c7fb59c1e "localcommit" (bmnottracking)
   $ printdag

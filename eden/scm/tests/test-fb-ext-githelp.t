@@ -266,7 +266,7 @@ git merge-base
 
 githelp for git blame (tweakdefaults disabled)
   $ hg githelp -- git blame
-  hg annotate -udl
+  hg annotate -pudl
 
 githelp for git blame (tweakdefaults enabled)
   $ hg --config extensions.tweakdefaults= githelp -- git blame

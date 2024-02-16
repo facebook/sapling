@@ -41,7 +41,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
 
 pull from generaldelta to generaldelta
   $ cd ../shallow-generaldelta
-  $ hg pull -u
+  $ hg pull -u -d tip
   pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
@@ -62,7 +62,7 @@ push from generaldelta to generaldelta
   remote: adding file changes
 pull from generaldelta to non-generaldelta
   $ cd ../shallow-plain
-  $ hg pull -u
+  $ hg pull -u -d tip
   pulling from ssh://user@dummy/master
   searching for changes
   adding changesets

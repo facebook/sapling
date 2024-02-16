@@ -54,10 +54,10 @@ Check the next behaviour in case of ambiguity between obsolete and non-obsolete
   $ hg next
   changeset 61246295ee1e has multiple children, namely:
   [e8ec16] r1
-  [f03405] amended
-  choosing the only non-obsolete child: f03405deb52b
+  [12d1da] amended
+  choosing the only non-obsolete child: 12d1da2fcedd
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [f03405] amended
+  [12d1da] amended
 
 Rebasing single changeset.
   $ hg next
@@ -66,7 +66,7 @@ Rebasing single changeset.
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [8fb200] r2
+  [d5815c] r2
   $ showgraph
   @  r2
   │
@@ -92,7 +92,7 @@ Test --clean flag.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [f12433] r3
+  [2aaa42] r3
   $ hg status
   ? foo
   $ showgraph
@@ -118,7 +118,7 @@ Rebasing multiple changesets at once.
   rebasing 137d867d71d5 "r3"
   rebasing daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [d25685] r4
+  [ce6b85] r4
   $ showgraph
   @  r4
   │
@@ -142,11 +142,11 @@ Rebasing a stack one changeset at a time.
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [8fb200] r2
+  [d5815c] r2
   $ hg next --rebase
   rebasing 137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [f12433] r3
+  [2aaa42] r3
   $ showgraph
   @  r3
   │
@@ -168,7 +168,7 @@ Rebasing a stack one changeset at a time.
   $ hg next --rebase
   rebasing daa37004f338 "r4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [d25685] r4
+  [ce6b85] r4
   $ showgraph
   @  r4
   │
@@ -193,7 +193,7 @@ Rebasing a stack two changesets at a time.
   rebasing 776c07fa2b12 "r2"
   rebasing 137d867d71d5 "r3"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [f12433] r3
+  [2aaa42] r3
   $ showgraph
   @  r3
   │
@@ -217,7 +217,7 @@ Rebasing a stack two changesets at a time.
   rebasing daa37004f338 "r4"
   rebasing 5f333e6f7274 "r5"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [dd153e] r5
+  [9a9b92] r5
   $ showgraph
   @  r5
   │
@@ -260,7 +260,7 @@ Rebasing after multiple amends.
   rebasing 137d867d71d5 "r3"
   rebasing daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [5d31c6] r4
+  [8de7e0] r4
   $ showgraph
   @  r4
   │
@@ -303,7 +303,7 @@ Rebasing from below the amended changeset with the --newest flag.
   rebasing daa37004f338 "r4"
   rebasing 5f333e6f7274 "r5"
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2d8122] r5
+  [f814a1] r5
   $ showgraph
   @  r5
   │
@@ -330,7 +330,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   $ mkcommit a
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [f03405] amended
+  [12d1da] amended
   $ showgraph
   o  add a
   │
@@ -350,9 +350,9 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
-  changeset f03405deb52b has multiple children, namely:
-  [c9239a] add a
-  [8fb200] r2
+  changeset 12d1da2fcedd has multiple children, namely:
+  [ee3138] add a
+  [d5815c] r2
   transaction abort!
   rollback completed
   abort: ambiguous next changeset
@@ -455,12 +455,12 @@ Rebase when other predecessors are still visible
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [bd2075] r2
+  [74274e] r2
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [80573e] amended 1
+  [b97f16] amended 1
   $ hg amend -m "amended 2" --no-rebase
-  hint[amend-restack]: descendants of 80573e6618ae are left behind - use 'hg restack' to rebase them
+  hint[amend-restack]: descendants of b97f1630b31f are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  amended 2
@@ -478,9 +478,9 @@ Rebase when other predecessors are still visible
   o  r0
   
   $ hg next --rebase
-  rebasing bd2075358087 "r2"
+  rebasing 74274e275ccf "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [88a893] r2
+  [f4eead] r2
   $ showgraph
   @  r2
   │

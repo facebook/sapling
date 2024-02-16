@@ -286,6 +286,8 @@ Test extension help:
                      minimize and speed up large repositories
        sampling      (no help text available)
        treemanifest
+       tweakdefaults
+                     user friendly defaults
   
       Disabled extensions:
   
@@ -354,8 +356,6 @@ Test extension help:
        stablerev     provide a way to expose the "stable" commit via a revset
        traceprof     (no help text available)
        treemanifestserver
-       tweakdefaults
-                     user friendly defaults
        undo          (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
 

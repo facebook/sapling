@@ -67,11 +67,11 @@ log before edit
 
 log after edit
   $ hg logt --graph
-  @  c4d7f3def76d d
+  @  54f64c576eaf d
   │
-  o  575228819b7e f
+  o  7c6777b45203 f
   │
-  o  505a591af19e e
+  o  dcc6f3975330 e
   │
   o  97d72e5f12c7 b
   │
@@ -91,14 +91,14 @@ post-fold manifest
 check histedit_source, including that it uses the later date, from the first changeset
 
   $ hg log --debug --rev 'max(desc(f))'
-  commit:      575228819b7e6ed69e8c0a6a383ee59a80db7358
+  commit:      7c6777b45203a557f268e11d9c25fa3038f1d4a9
   phase:       draft
   manifest:    81eede616954057198ead0b2c73b41d1f392829a
   user:        test
-  date:        Thu Jan 01 00:00:06 1970 +0000
+  date:        Thu Jan 01 00:00:03 1970 +0000
   files+:      c f
   extra:       branch=default
-  extra:       histedit_source=7cad1d7030207872dfd1c3a7cb430f24f2884086,ff2c9fa2018b15fa74b33363bda9527323e2a99f
+  extra:       histedit_source=111f74b802e1dc2fb4aa83f846674862f75e930e,ff2c9fa2018b15fa74b33363bda9527323e2a99f
   description:
   f
   ***
@@ -112,20 +112,20 @@ rollup will fold without preserving the folded commit's message or date
   $ HGEDITOR=false
   $ hg histedit 97d72e5f12c7 --commands - <<EOF | fixbundle
   > pick 97d72e5f12c7 b
-  > roll 505a591af19e e
-  > pick 575228819b7e f
-  > pick c4d7f3def76d d
+  > roll dcc6f3975330 e
+  > pick 7c6777b45203 f
+  > pick 54f64c576eaf d
   > EOF
 
   $ HGEDITOR=$OLDHGEDITOR
 
 log after edit
   $ hg logt --graph
-  @  bab801520cec d
+  @  d965c106234a d
   │
-  o  58c8f2bfc151 f
+  o  8a359a5848bb f
   │
-  o  5d939c56c72e b
+  o  a2e8b40131dd b
   │
   o  8580ff50825a a
   
@@ -133,14 +133,14 @@ log after edit
 description is taken from rollup target commit
 
   $ hg log --debug --rev 'max(desc(b))'
-  commit:      5d939c56c72e77e29f5167696218e2131a40f5cf
+  commit:      a2e8b40131dd3d8a86b4fb1d62a449187afc12c1
   phase:       draft
   manifest:    b5e112a3a8354e269b1524729f0918662d847c38
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   files+:      b e
   extra:       branch=default
-  extra:       histedit_source=97d72e5f12c7e84f85064aa72e5a297142c36ed9,505a591af19eed18f560af827b9e03d2076773dc
+  extra:       histedit_source=97d72e5f12c7e84f85064aa72e5a297142c36ed9,dcc6f3975330bf69a702e82d61e649698e6c9b7a
   description:
   b
   
@@ -169,13 +169,13 @@ check saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ hg status --rev '58c8f2bfc151^1::bab801520cec'
+  $ hg status --rev '8a359a5848bb^1::d965c106234a'
   A c
   A d
   A f
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 58c8f2bfc151 --commands - <<EOF
-  > pick 58c8f2bfc151 f
-  > fold bab801520cec d
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 8a359a5848bb --commands - <<EOF
+  > pick 8a359a5848bb f
+  > fold d965c106234a d
   > EOF
   ==== before editing
   f

@@ -694,7 +694,7 @@ In client1 (which hasn't synced yet), make the midbook commit obsolete.
 Attempt to sync.  The midbook bookmark should make it visible again.
   $ hg cloud sync -q
   $ tglog
-  @  2ace67ee4791 'oldstack-mar4 amended'
+  @  0fe175b134e8 'oldstack-mar4 amended'
   │
   │ x  2b8dce7bd745 'oldstack-mar4' midbook
   ├─╯
@@ -719,7 +719,7 @@ Sync in client2.  It should match.
   $ cd ../client2
   $ hg cloud sync -q
   $ tglog
-  o  2ace67ee4791 'oldstack-mar4 amended'
+  o  0fe175b134e8 'oldstack-mar4 amended'
   │
   │ x  2b8dce7bd745 'oldstack-mar4' midbook
   ├─╯
@@ -780,7 +780,7 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   $ hg cloud sync -q
   f770b7f72fa5 not found, omitting midbook bookmark
   $ tglogp
-  o  2ace67ee4791 draft 'oldstack-mar4 amended'
+  o  0fe175b134e8 draft 'oldstack-mar4 amended'
   │
   o  d16408588b2d draft 'oldstack-feb4'
   │
@@ -792,7 +792,7 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   $ tglogp
   o  f770b7f72fa5 public 'public1' midbook
   │
-  │ @  2ace67ee4791 draft 'oldstack-mar4 amended'
+  │ @  0fe175b134e8 draft 'oldstack-mar4 amended'
   │ │
   │ o  d16408588b2d draft 'oldstack-feb4'
   │ │
@@ -805,7 +805,7 @@ from the cloud workspace, but the sync should still work.
   $ cd ../client4
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 2ace67ee4791 from ssh://user@dummy/server
+  pulling 0fe175b134e8 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

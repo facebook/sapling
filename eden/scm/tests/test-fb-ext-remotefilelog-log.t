@@ -47,6 +47,7 @@ Shallow clone from full
 Log on a file without -f
 
   $ hg log dir/y
+  warning: file log can be slow on large repos - use -f to speed it up
   commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
@@ -102,6 +103,7 @@ Log on a file from inside a directory
 
   $ cd dir
   $ hg log y
+  warning: file log can be slow on large repos - use -f to speed it up
   commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master

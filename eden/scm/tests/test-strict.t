@@ -10,19 +10,19 @@
   adding a
 
   $ hg an a
-  0: a
+  cb9a9f314b8b: a
 
   $ hg --config ui.strict=False an a
-  0: a
+  cb9a9f314b8b: a
 
   $ setconfig ui.strict=true
 
 No difference - "an" is an alias
 
   $ hg an a
-  0: a
+  cb9a9f314b8b: a
   $ hg annotate a
-  0: a
+  cb9a9f314b8b: a
 
 should succeed - up is an alias, not an abbreviation
 

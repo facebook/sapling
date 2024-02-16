@@ -289,11 +289,11 @@ Test rebase with unrelated predecessors:
   $ hg debugbuilddag -m +6
   $ hg rebase -q -r 'desc(r2)' -r 'desc(r3)' -r 'desc(r4)' -d 'desc(r0)'
   $ showgraph
-  o  657a15828ddc r4
+  o  f30478ba2a09 r4
   │
-  o  529253ee297f r3
+  o  07b1d12d566f r3
   │
-  o  04b5fa612c4e r2
+  o  3d728bfe6347 r2
   │
   │ o  f2987ebe5838 r5
   │ │
@@ -306,10 +306,10 @@ Test rebase with unrelated predecessors:
   │ o  09bb8c08de89 r1
   ├─╯
   o  fdaccbb26270 r0
-  $ hg fold -q --exact 04b5fa612c4e 529253ee297f
+  $ hg fold -q --exact 3d728bfe6347 07b1d12d566f
 Don't restack r5 since it isn't related to our fold.
   $ showgraph
-  o  5a5dfc14d0aa r4
+  o  4073cfe527c3 r4
   │
   o  f240f06c8498 r2
   │

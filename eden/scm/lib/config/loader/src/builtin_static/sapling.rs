@@ -173,7 +173,6 @@ strip=
 traceprof=
 treedirstate=
 treemanifest=
-tweakdefaults=
 undo=
 
 [extorder]

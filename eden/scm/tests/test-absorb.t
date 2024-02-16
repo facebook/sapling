@@ -94,11 +94,11 @@
   4ec16f8 commit 1
   2 of 2 chunks applied
   $ hg annotate a
-  5: 1a
-  6: 2b
-  7: 3
-  8: 4d
-  9: 5e
+  f54828298aa6: 1a
+  bcf7a4f7b11a: 2b
+  ff5d556bb159: 3
+  63b22995aaf2: 4d
+  84e5416c937c: 5e
 
 # Delete a few lines and related commits will be removed if they will be empty:
 
@@ -121,8 +121,8 @@
   f548282 commit 1
   3 of 3 chunks applied
   $ hg annotate a
-  11: 2b
-  12: 4d
+  1cae118c7ed8: 2b
+  58a62bade1c6: 4d
   $ hg log -T '{rev} {desc}\n' -Gp
   @  12 commit 4
   │  diff -r 1cae118c7ed8 -r 58a62bade1c6 a
@@ -164,10 +164,10 @@
   $ hg absorb -aq
   $ hg status
   $ hg annotate a
-  13: insert before 2b
-  13: 2b
-  14: 4d
-  14: insert aftert 4d
+  b35060a57a50: insert before 2b
+  b35060a57a50: 2b
+  946e4bc87915: 4d
+  946e4bc87915: insert aftert 4d
 
 # Bookmarks are moved:
 
@@ -249,10 +249,10 @@
   -Insert before 2b
   +insert before 2b
   $ hg annotate a
-  18: Insert before 2b
-  18: 2b
-  21: 4d
-  21: insert aftert 4d
+  d6e0ccf6177f: Insert before 2b
+  d6e0ccf6177f: 2b
+  e2aa83de7582: 4d
+  e2aa83de7582: insert aftert 4d
 
 # Make working copy clean:
 

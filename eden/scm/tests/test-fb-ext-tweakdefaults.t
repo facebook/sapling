@@ -3,9 +3,12 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ enable amend histedit rebase tweakdefaults
+  $ enable amend histedit rebase
   $ setconfig commands.update.check=noconflict
   $ setconfig ui.suggesthgprev=True
+
+These are the actual default values for tweakdefaults.
+  $ setconfig tweakdefaults.logdefaultfollow=true tweakdefaults.graftkeepdate=false
 
 Setup repo
 
@@ -100,8 +103,9 @@ Rebase fast forwards bookmark
   
   $ hg rebase -d 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  nothing to rebase - fast-forwarded to 5e0171bd5ee2
 
-  $ hg log -G -T '{desc} {bookmarks}\n'
+  $ hg log --all -G -T '{desc} {bookmarks}\n'
   @  b mybook
   │
   o  a2
@@ -122,8 +126,9 @@ Rebase works with hyphens
   
   $ hg rebase -d hyphen-dest
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  nothing to rebase - fast-forwarded to 5e0171bd5ee2
 
-  $ hg log --all -G -T '{desc} {bookmarks}\n'
+  $ hg log -G -T '{desc} {bookmarks}\n'
   @  b hyphen-book hyphen-dest mybook
   │
   o  a2
