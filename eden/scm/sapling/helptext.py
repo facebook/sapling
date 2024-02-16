@@ -598,12 +598,6 @@ effect and style see :prog:`help color`.
     would not trigger a merge with uncommitted changes, if any are present.
     (default: ``noconflict``)
 
-``update.requiredest``
-    Require that the user pass a destination when running :prog:`goto`.
-    For example, :prog:`goto .::` will be allowed, but a plain :prog:`goto`
-    will be disallowed.
-    (default: False)
-
 ``commit``
 ----------
 

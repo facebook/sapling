@@ -31,7 +31,7 @@
   $ hg verify
   warning: verify does not actually check anything in this repo
 
-  $ hg co
+  $ hg co tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat foo
   foo

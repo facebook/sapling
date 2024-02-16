@@ -308,7 +308,7 @@ The other way around:
 
 Verify how the output looks and how verbose it is:
 
-  $ hg up -qC
+  $ hg up -qC .
   $ hg merge
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -335,7 +335,7 @@ Verify how the output looks and how verbose it is:
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ hg up -qC
+  $ hg up -qC tip
   $ hg merge -v --debug --config merge.preferancestor="*"
   note: merging 78d7b604d909+ and f05367a88590 using bids from ancestors 0e415ae82418 and 0f6b37dbe527
   

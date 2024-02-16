@@ -179,7 +179,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     msg 0
 
-  $ hg up -C
+  $ hg up -C tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # bisect test

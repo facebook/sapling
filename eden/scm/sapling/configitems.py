@@ -158,7 +158,6 @@ coreconfigitem("commands", "status.relative", default=False)
 coreconfigitem("commands", "status.skipstates", default=[])
 coreconfigitem("commands", "status.verbose", default=False)
 coreconfigitem("commands", "update.check", default="noconflict")
-coreconfigitem("commands", "update.requiredest", default=False)
 coreconfigitem("commands", "new-pull", default=True)
 coreconfigitem("commit", "description-size-limit", default=None)
 coreconfigitem("commit", "extras-size-limit", default=None)
@@ -561,7 +560,6 @@ coreconfigitem("worker", "numcpus", default=None)
 # Rebase related configuration moved to core because other extension are doing
 # strange things. For example, shelve import the extensions to reuse some bit
 # without formally loading it.
-coreconfigitem("commands", "rebase.requiredest", default=False)
 coreconfigitem("experimental", "rebaseskipobsolete", default=True)
 coreconfigitem("rebase", "singletransaction", default=False)
 coreconfigitem("rebase", "experimental.inmemory", default=False)

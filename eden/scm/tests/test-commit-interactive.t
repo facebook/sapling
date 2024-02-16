@@ -1426,7 +1426,7 @@ random text in random positions is still an error
   abort: error parsing patch: unhandled transition: file -> other
   [255]
 
-  $ hg up -C
+  $ hg up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Ignore win32text deprecation warning for now:

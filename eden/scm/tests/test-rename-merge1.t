@@ -73,7 +73,7 @@ This used to trigger a "divergent renames" warning, despite no renames
   $ hg ci -A -m 'copy b twice'
   $ hg up eb92d88a9712
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg up
+  $ hg up tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rm b3 b4
   $ hg ci -m 'clean up a bit of our mess'
@@ -85,7 +85,7 @@ We'd rather not warn on divergent renames done in the same changeset (issue2113)
   $ hg ci -A -m 'divergent renames in same changeset'
   $ hg up c761c6948de0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg up
+  $ hg up tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Check for issue2642

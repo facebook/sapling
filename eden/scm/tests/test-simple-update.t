@@ -16,7 +16,7 @@
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../branch
-  $ hg co
+  $ hg co tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo bar>>foo
   $ hg commit -m "2"
@@ -33,7 +33,7 @@
   $ hg verify
   warning: verify does not actually check anything in this repo
 
-  $ hg co
+  $ hg co tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cat foo
@@ -78,7 +78,7 @@ update with worker processes
 
   $ hg goto null
   0 files updated, 0 files merged, 100 files removed, 0 files unresolved
-  $ hg goto -v | grep 100
+  $ hg goto -v tip | grep 100
   getting 100
   100 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

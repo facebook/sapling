@@ -117,7 +117,7 @@
   adding manifests
   adding file changes
 
-  $ hg up
+  $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cat a

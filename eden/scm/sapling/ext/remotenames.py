@@ -712,7 +712,10 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     if not opts.get("rebase"):
         return orig(ui, repo, source, **opts)
 
-    rebasemodule = extensions.find("rebase")
+    try:
+        rebasemodule = extensions.find("rebase")
+    except KeyError:
+        rebasemodule = None
 
     if not rebasemodule:
         return orig(ui, repo, source, **opts)

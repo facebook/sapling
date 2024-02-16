@@ -14,7 +14,7 @@
   $ hg book main
 
   $ newclientrepo r2 ~/r1 main
-  $ hg up
+  $ hg up tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo abc > a
   $ hg diff --nodates
@@ -97,7 +97,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  $ hg --debug up
+  $ hg --debug up tip
     searching for copies back to c19d34741b0a
     unmatched files in other:
      b

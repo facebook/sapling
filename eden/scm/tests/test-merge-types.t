@@ -161,10 +161,8 @@ Update to link without local change should get us a symlink (issue3316):
 
   $ hg up -C 'desc(add)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg up
+  $ hg up 'desc(symlink)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "521a1e40188f: symlink"
-  1 other heads for branch "default"
   $ hg st
   ? a.orig
 
@@ -172,7 +170,7 @@ Update to link with local change should cause a merge prompt (issue3200):
 
   $ hg up -Cq 'desc(add)'
   $ echo data > a
-  $ HGMERGE= hg up -y --debug
+  $ HGMERGE= hg up -y --debug 'desc(symlink)'
     searching for copies back to c334dc3be0da
   resolving manifests
    branchmerge: False, force: False
@@ -186,8 +184,6 @@ Update to link with local change should cause a merge prompt (issue3200):
   keep (l)ocal [working copy], take (o)ther [destination], or leave (u)nresolved for a? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
-  updated to "521a1e40188f: symlink"
-  1 other heads for branch "default"
   [1]
   $ hg diff --git
   diff --git a/a b/a

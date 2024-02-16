@@ -14,7 +14,7 @@ https://bz.mercurial-scm.org/1175
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg mv a a2
-  $ hg up
+  $ hg up 'desc(1)'
   note: possible conflict - a was renamed multiple times to:
    a2
    a1

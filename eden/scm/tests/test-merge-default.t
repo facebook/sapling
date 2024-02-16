@@ -35,10 +35,8 @@ Should fail because not at a head:
   (use 'hg goto' or merge with an explicit revision)
   [255]
 
-  $ hg up
+  $ hg up 'desc(e)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "f25cbe84d8b3: e"
-  2 other heads for branch "default"
 
 Should fail because > 2 heads:
 

@@ -26,5 +26,5 @@ No difference - "an" is an alias
 
 should succeed - up is an alias, not an abbreviation
 
-  $ hg up
+  $ hg up tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

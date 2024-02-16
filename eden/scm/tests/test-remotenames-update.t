@@ -47,16 +47,3 @@ Testing update -B feature
   abort: bookmark 'foo' already exists
   [255]
 
-Test that a bare update no long moves the active bookmark
-
-  $ hg goto
-  updating to active bookmark bar
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ hg log -G -T '{bookmarks} {remotebookmarks}'
-  o
-  │
-  @  bar foo
-  │
-  o
-  

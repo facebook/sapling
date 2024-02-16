@@ -37,6 +37,8 @@ FIXME: (recursive) alias expansion is not logged
   [legacy][env_vars]
   [legacy][command_info] (?)
   [legacy][env_vars] (?)
+  [legacy][command_info]
+  [legacy][env_vars]
   [legacy][command] so-confusing
   [legacy][dirstate_info]
   [legacy][jobid]
@@ -105,11 +107,9 @@ extension and python hooks - use the eol extension for a pythonhook
   $ echo 'eol=' >> .hg/hgrc
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'update = echo hooked' >> .hg/hgrc
-  $ hg goto
+  $ hg goto tip
   hooked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "d02f48003e62: c"
-  1 other heads for branch "default"
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > # disable eol, because it is not needed for subsequent tests

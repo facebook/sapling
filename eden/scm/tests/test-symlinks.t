@@ -286,7 +286,7 @@ reverting to rev 0:
   $ f dangling
   dangling -> nothing
 
-  $ hg up -C
+  $ hg up -C tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 copies
@@ -303,7 +303,7 @@ copies
 
 Issue995: hg copy -A incorrectly handles symbolic links
 
-  $ hg up -C
+  $ hg up -C tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir dir
   $ ln -s dir dirlink

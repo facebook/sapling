@@ -52,7 +52,7 @@ the server supports our custom getfiles method.
                         read : { bytes : *}, (glob)
                         write : { bytes : *}}}} (glob)
 
-  $ hg up
+  $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
@@ -98,7 +98,7 @@ the server supports our custom getfiles method.
                         read : { bytes : *}, (glob)
                         write : { bytes : *}}}} (glob)
 
-  $ hg up
+  $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat z
   z
@@ -124,7 +124,7 @@ the server supports our custom getfiles method.
                         write : { bytes : *}}}} (glob)
 
   $ cd ../shallow2
-  $ hg up
+  $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat a
   a

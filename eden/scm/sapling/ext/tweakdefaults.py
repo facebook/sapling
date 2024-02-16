@@ -142,6 +142,10 @@ def extsetup(ui) -> None:
     wrapfunction(scmutil, "cleanupnodes", cleanupnodeswrapper)
     entry = wrapcommand(commands.table, "pull", pull)
     options = entry[1]
+    options.append(
+        ("", "rebase", None, _("rebase current commit or current stack onto master"))
+    )
+    options.append(("t", "tool", "", _("specify merge tool for rebase")))
     options.append(("d", "dest", "", _("destination for rebase or update")))
 
     # anonymous function to pass ui object to _analyzewrapper
@@ -383,8 +387,12 @@ def pullrebaseffwd(orig, rebasefunc, ui, repo, source: str = "default", **opts):
     # need to wrap the rebasemodule.rebase function that it calls to replace it
     # with our rebaseorfastforward method.
     rebasing = "rebase" in opts
+    rebasemodule = None
     if rebasing:
-        rebasemodule = extensions.find("rebase")
+        try:
+            rebasemodule = extensions.find("rebase")
+        except KeyError:
+            pass
         if rebasemodule:
             wrapfunction(rebasemodule, "rebase", rebaseorfastforward)
     ret = orig(rebasefunc, ui, repo, source, **opts)

@@ -87,7 +87,7 @@
   $ hg pull --rebase -d tip
   abort: uncommitted changes
   [255]
-  $ hg goto --clean --quiet
+  $ hg goto --clean --quiet .
 
 # Abort pull early if another operation (histedit) is in progress:
 
@@ -123,7 +123,7 @@
   $ hg pull --rebase -d tip
   abort: outstanding uncommitted merge
   [255]
-  $ hg goto --clean --quiet
+  $ hg goto --clean --quiet .
 
 # Invoke pull --rebase and nothing to rebase:
 

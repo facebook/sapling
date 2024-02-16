@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ enable rebase
 
 Tests for the journal extension; records bookmark locations.
 
@@ -78,12 +79,12 @@ Test that bookmarks are tracked
   previous locations of 'bar':
   cb9a9f314b8b  book -f bar
   1e6c11564562  book -r tip bar
-  $ hg up
+  $ hg rebase -d tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updating bookmark bar
+  nothing to rebase - fast-forwarded to 1e6c11564562
   $ hg journal bar
   previous locations of 'bar':
-  1e6c11564562  up
+  1e6c11564562  rebase -d tip
   cb9a9f314b8b  book -f bar
   1e6c11564562  book -r tip bar
 
@@ -91,7 +92,7 @@ Test that bookmarks and working copy tracking is not mixed
 
   $ hg journal
   previous locations of '.':
-  1e6c11564562  up
+  1e6c11564562  rebase -d tip
   cb9a9f314b8b  up 'desc(a)'
   1e6c11564562  commit -Aqm b
   cb9a9f314b8b  commit -Aqm a
@@ -102,8 +103,8 @@ Test that you can list all entries as well as limit the list or filter on them
   $ hg journal --all
   previous locations of the working copy and bookmarks:
   1e6c11564562  baz       book -r tip baz
-  1e6c11564562  bar       up
-  1e6c11564562  .         up
+  1e6c11564562  bar       rebase -d tip
+  1e6c11564562  .         rebase -d tip
   cb9a9f314b8b  bar       book -f bar
   1e6c11564562  bar       book -r tip bar
   cb9a9f314b8b  .         up 'desc(a)'
@@ -111,11 +112,11 @@ Test that you can list all entries as well as limit the list or filter on them
   cb9a9f314b8b  .         commit -Aqm a
   $ hg journal --limit 2
   previous locations of '.':
-  1e6c11564562  up
+  1e6c11564562  rebase -d tip
   cb9a9f314b8b  up 'desc(a)'
   $ hg journal bar
   previous locations of 'bar':
-  1e6c11564562  up
+  1e6c11564562  rebase -d tip
   cb9a9f314b8b  book -f bar
   1e6c11564562  book -r tip bar
   $ hg journal foo
@@ -123,14 +124,14 @@ Test that you can list all entries as well as limit the list or filter on them
   no recorded locations
   $ hg journal .
   previous locations of '.':
-  1e6c11564562  up
+  1e6c11564562  rebase -d tip
   cb9a9f314b8b  up 'desc(a)'
   1e6c11564562  commit -Aqm b
   cb9a9f314b8b  commit -Aqm a
   $ hg journal "re:ba."
   previous locations of 're:ba.':
   1e6c11564562  baz       book -r tip baz
-  1e6c11564562  bar       up
+  1e6c11564562  bar       rebase -d tip
   cb9a9f314b8b  bar       book -f bar
   1e6c11564562  bar       book -r tip bar
 
@@ -139,8 +140,8 @@ Test that verbose, JSON, template and commit output work
   $ hg journal --verbose --all
   previous locations of the working copy and bookmarks:
   000000000000 -> 1e6c11564562 foobar    baz      1970-01-01 00:00 +0000  book -r tip baz
-  cb9a9f314b8b -> 1e6c11564562 foobar    bar      1970-01-01 00:00 +0000  up
-  cb9a9f314b8b -> 1e6c11564562 foobar    .        1970-01-01 00:00 +0000  up
+  cb9a9f314b8b -> 1e6c11564562 foobar    bar      1970-01-01 00:00 +0000  rebase -d tip
+  cb9a9f314b8b -> 1e6c11564562 foobar    .        1970-01-01 00:00 +0000  rebase -d tip
   1e6c11564562 -> cb9a9f314b8b foobar    bar      1970-01-01 00:00 +0000  book -f bar
   000000000000 -> 1e6c11564562 foobar    bar      1970-01-01 00:00 +0000  book -r tip bar
   1e6c11564562 -> cb9a9f314b8b foobar    .        1970-01-01 00:00 +0000  up 'desc(a)'
@@ -149,7 +150,7 @@ Test that verbose, JSON, template and commit output work
   $ hg journal --verbose -Tjson
   [
    {
-    "command": "up",
+    "command": "rebase -d tip",
     "date": [5, 0],
     "name": ".",
     "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
@@ -195,14 +196,14 @@ Test that verbose, JSON, template and commit output work
   $ hg journal -Tj -l1
   CB9A9F314B8B07BA71012FCDBC544B5A4D82FF5B -> 1E6C11564562B4ED919BACA798BC4338BD299D6A
   - user: foobar
-  - command: up
+  - command: rebase -d tip
   - date: 1970-01-01T00:00:05+00:00
   - newhashes: 1e6c11564562b4ed919baca798bc4338bd299d6a
   - oldhashes: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
 
   $ hg journal --commit
   previous locations of '.':
-  1e6c11564562  up
+  1e6c11564562  rebase -d tip
   commit:      1e6c11564562
   bookmark:    bar
   bookmark:    baz
@@ -229,7 +230,6 @@ Test that verbose, JSON, template and commit output work
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
 
 Test for behaviour on unexpected storage version information
 

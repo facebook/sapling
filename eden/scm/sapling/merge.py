@@ -1937,7 +1937,7 @@ def goto(
         # a value for updatecheck. We may want to allow updatecheck='abort' to
         # better suppport some of these callers.
         if updatecheck is None:
-            updatecheck = "noconflict"
+            updatecheck = "none"
         assert updatecheck in ("none", "noconflict")
 
     if edenfs.requirement in repo.requirements:
@@ -2098,8 +2098,6 @@ def _update(
     Return the same tuple as applyupdates().
     """
 
-    # This function used to find the default destination if node was None, but
-    # that's now in destutil.py.
     assert node is not None
 
     # Positive indication we aren't using eden fastpath for eden integration tests.

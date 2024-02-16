@@ -239,10 +239,8 @@ internal:merge3
 Add some unconflicting changes on each head, to make sure we really
 are merging, unlike :local and :other
 
-  $ hg up -C
+  $ hg up -C tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "e0693e20f496: 123456789012345678901234567890123456789012345678901234567890\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88" (esc)
-  1 other heads for branch "default"
   $ printf "\n\nEnd of file\n" >> a
   $ hg ci -m "Add some stuff at the end"
   $ hg up -r 'desc(branch1)'
@@ -278,10 +276,8 @@ Now test :merge-other and :merge-local
   
   End of file
 
-  $ hg up -C
+  $ hg up -C tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  updated to "18b51d585961: Add some stuff at the beginning"
-  1 other heads for branch "default"
   $ hg merge --tool :merge-local
   merging a
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved

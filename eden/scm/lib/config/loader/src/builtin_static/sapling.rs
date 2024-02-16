@@ -464,7 +464,6 @@ singlecolonwarn=True
 singlecolonmsg=':' is deprecated; use '::' instead.
 
 [ui]
-disallowemptyupdate=True
 enableincomingoutgoing=False
 hyperlink=True
 interface=curses

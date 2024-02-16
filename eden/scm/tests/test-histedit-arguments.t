@@ -81,7 +81,7 @@ Run on a revision not ancestors of the current working directory.
   $ hg histedit -r 'desc(five)'
   abort: 08d98a8350f3 is not an ancestor of working directory
   [255]
-  $ hg up --quiet
+  $ hg up --quiet tip
 
 
 Test that we pick the minimum of a revrange
@@ -92,14 +92,14 @@ Test that we pick the minimum of a revrange
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  $ hg up --quiet
+  $ hg up --quiet tip
 
   $ HGEDITOR=cat hg histedit 'tip:desc(three)' --commands - << EOF
   > pick eb57da33312f 2 three
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  $ hg up --quiet
+  $ hg up --quiet tip
 
 Test config specified default
 -----------------------------

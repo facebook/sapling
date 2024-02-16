@@ -23,7 +23,7 @@
 
 # Same issue, different code path
 
-  $ hg up -C
+  $ hg up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch does-not-exist-in-1
   $ hg add

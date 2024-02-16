@@ -93,7 +93,7 @@
   [1]
 
 # Update to the last revision containing the large file
-  $ hg goto
+  $ hg goto tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check the blobstore has been populated on update
@@ -471,7 +471,7 @@
   >     if [ $i = 3 ]; then
   >         # make a content-only change
   >         hg import -q --bypass ../patch.diff
-  >         hg goto -q
+  >         hg goto -q tip
   >         rm ../patch.diff
   >     else
   >         echo $i >> a

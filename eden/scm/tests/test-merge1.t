@@ -31,7 +31,7 @@ Test interrupted updates by having a non-empty dir with the same name as one
 of the files in a commit we're updating to
 
   $ mkdir b && touch b/nonempty
-  $ hg up
+  $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg ci
   nothing changed
@@ -45,7 +45,7 @@ of the files in a commit we're updating to
 The following line is commented out because the file doesn't exist at the moment, and some OSes error out even with `rm -f`.
 $ rm b/nonempty
 
-  $ hg up
+  $ hg up tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
   parent: b8bb4a988f25 

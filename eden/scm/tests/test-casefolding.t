@@ -108,7 +108,7 @@ used to fail under case insensitive fs
 
   $ hg up -C 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg up -C
+  $ hg up -C tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 no clobbering of untracked files with wrong casing
@@ -116,7 +116,7 @@ no clobbering of untracked files with wrong casing
   $ hg up -r 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo gold > b
-  $ hg up
+  $ hg up tip
   B: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]

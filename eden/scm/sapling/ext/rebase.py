@@ -29,10 +29,8 @@ from bindings import checkout as nativecheckout
 from sapling import (
     bookmarks,
     cmdutil,
-    commands,
     context,
     copies,
-    destutil,
     dirstateguard,
     error,
     extensions,
@@ -109,36 +107,6 @@ def _makeextrafn(copiers):
             c(ctx, extra)
 
     return extrafn
-
-
-def _destrebase(repo, sourceset, destspace=None):
-    """small wrapper around destmerge to pass the right extra args
-
-    Please wrap destutil.destmerge instead."""
-    return destutil.destmerge(
-        repo,
-        action="rebase",
-        sourceset=sourceset,
-        onheadcheck=False,
-        destspace=destspace,
-    )
-
-
-revsetpredicate = registrar.revsetpredicate()
-
-
-@revsetpredicate("_destrebase")
-def _revsetdestrebase(repo, subset, x):
-    # ``_rebasedefaultdest()``
-
-    # default destination for rebase.
-    # # XXX: Currently private because I expect the signature to change.
-    # # XXX: - bailing out in case of ambiguity vs returning all data.
-    # i18n: "_rebasedefaultdest" is a keyword
-    sourceset = None
-    if x is not None:
-        sourceset = revset.getset(repo, smartset.fullreposet(repo), x)
-    return subset & smartset.baseset([_destrebase(repo, sourceset)], repo=repo)
 
 
 def _ctxdesc(ctx) -> str:
@@ -1201,12 +1169,6 @@ def rebase(ui, repo, templ=None, **opts):
 
       Configuration Options:
 
-      You can make rebase require a destination if you set the following config
-      option::
-
-        [commands]
-        rebase.requiredest = True
-
       By default, rebase will close the transaction after each commit. For
       performance purposes, you can configure rebase to use a single transaction
       across the entire rebase. WARNING: This setting introduces a significant
@@ -1392,9 +1354,11 @@ def _definedestmap(
     destlen = len(dests)
     if destlen == 1:
         destf = dests[0]
+    elif destlen == 0:
+        raise error.Abort(_("rebase dest is required"))
     else:
         destf = None
-    if destlen > 1:
+
         if srcf or basef:
             raise error.Abort(
                 _("multiple --dest requires --rev, not --base or --source")
@@ -1414,11 +1378,6 @@ def _definedestmap(
     cmdutil.checkunfinished(repo)
     if not rbsrt.inmemory:
         cmdutil.bailifchanged(repo)
-
-    if ui.configbool("commands", "rebase.requiredest") and not dests:
-        raise error.Abort(
-            _("you must specify a destination"), hint=_("use: @prog@ rebase -d REV")
-        )
 
     dest = None
     destmap = None
@@ -1455,12 +1414,9 @@ def _definedestmap(
         if not base:
             ui.status(_('empty "base" revision set - ' "can't compute rebase set\n"))
             return None
-        if destf:
-            # --base does not support multiple destinations
-            dest = scmutil.revsingle(repo, destf)
-        else:
-            dest = repo[_destrebase(repo, base, destspace=destspace)]
-            destf = str(dest)
+
+        # --base does not support multiple destinations
+        dest = scmutil.revsingle(repo, destf)
 
         rootnodes = []  # selected children of branching points
         bpbase = {}  # {branchingpoint: [origbase]}
@@ -1526,10 +1482,6 @@ def _definedestmap(
                     % ("+".join(str(repo[r]) for r in base), dest)
                 )
             return None
-
-    if not destf and not dests:
-        dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
-        destf = str(dest)
 
     allsrc = revsetlang.formatspec("%ld", rebaseset)
     alias = {"ALLSRC": allsrc}
@@ -2333,76 +2285,6 @@ def clearrebased(
         templ.setprop("nodereplacements", replacements)
 
 
-def pullrebase(orig, ui, repo, *args, **opts):
-    "Call rebase after pull if the latter has been invoked with --rebase"
-    ret = None
-    if opts.get(r"rebase"):
-        if ui.configbool("commands", "rebase.requiredest"):
-            msg = _("rebase destination required by configuration")
-            hint = _("use @prog@ pull followed by @prog@ rebase -d DEST")
-            raise error.Abort(msg, hint=hint)
-
-        with repo.wlock(), repo.lock():
-            if opts.get(r"update"):
-                del opts[r"update"]
-                ui.debug(
-                    "--update and --rebase are not compatible, ignoring "
-                    "the update flag\n"
-                )
-
-            cmdutil.checkunfinished(repo)
-            cmdutil.bailifchanged(
-                repo,
-                hint=_(
-                    "cannot pull with rebase: "
-                    "please commit or shelve your changes first"
-                ),
-            )
-
-            revsprepull = len(repo)
-            origpostincoming = commands.postincoming
-
-            def _dummy(*args, **kwargs):
-                pass
-
-            commands.postincoming = _dummy
-            try:
-                ret = orig(ui, repo, *args, **opts)
-            finally:
-                commands.postincoming = origpostincoming
-            revspostpull = len(repo)
-            if revspostpull > revsprepull:
-                # --rev option from pull conflict with rebase own --rev
-                # dropping it
-                if r"rev" in opts:
-                    del opts[r"rev"]
-                # positional argument from pull conflicts with rebase's own
-                # --source.
-                if r"source" in opts:
-                    del opts[r"source"]
-                # revsprepull is the len of the repo, not revnum of tip.
-                destspace = list(repo.changelog.revs(start=revsprepull))
-                opts[r"_destspace"] = destspace
-                try:
-                    rebase(ui, repo, **opts)
-                except error.NoMergeDestAbort:
-                    # we can maybe update instead
-                    rev, _a, _b = destutil.destupdate(repo)
-                    if rev == repo["."].rev():
-                        ui.status(_("nothing to rebase\n"))
-                    else:
-                        ui.status(_("nothing to rebase - updating instead\n"))
-                        # not passing argument to get the bare update behavior
-                        # with warning and trumpets
-                        commands.update(ui, repo)
-    else:
-        if opts.get(r"tool"):
-            raise error.Abort(_("--tool can only be used with --rebase"))
-        ret = orig(ui, repo, *args, **opts)
-
-    return ret
-
-
 def _filterobsoleterevs(repo, revs):
     """returns a set of the obsolete revisions in revs"""
     return set(r for r in revs if repo[r].obsolete())
@@ -2484,11 +2366,5 @@ def summaryhook(ui, repo) -> None:
 
 
 def uisetup(ui) -> None:
-    # Replace pull with a decorator to provide --rebase option
-    entry = extensions.wrapcommand(commands.table, "pull", pullrebase)
-    entry[1].append(
-        ("", "rebase", None, _("rebase current commit or current stack onto master"))
-    )
-    entry[1].append(("t", "tool", "", _("specify merge tool for rebase")))
     cmdutil.summaryhooks.add("rebase", summaryhook)
     cmdutil.afterresolvedstates.append(("rebasestate", _("@prog@ rebase --continue")))

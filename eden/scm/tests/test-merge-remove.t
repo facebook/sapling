@@ -91,7 +91,7 @@ Reverting foo1 and bar:
 Merge should not overwrite local file that is untracked after remove
 
   $ rm *
-  $ hg up -qC
+  $ hg up -qC .
   $ hg rm bar
   $ hg ci -m 'remove bar'
   $ echo 'memories of buried pirate treasure' > bar

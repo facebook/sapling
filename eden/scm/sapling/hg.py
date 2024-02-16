@@ -24,7 +24,6 @@ from . import (
     bundlerepo,
     clone as clonemod,
     cmdutil,
-    destutil,
     eagerpeer,
     edenfs,
     error,
@@ -962,12 +961,7 @@ def updatetotally(
             # If not configured, or invalid value configured
             updatecheck = "noconflict"
     with repo.wlock():
-        movemarkfrom = None
-        warndest = False
-        if checkout is None:
-            updata = destutil.destupdate(repo, clean=clean)
-            checkout, movemarkfrom, brev = updata
-            warndest = True
+        assert checkout is not None
 
         if clean:
             hasunresolved = _clean(repo, checkout)
@@ -976,18 +970,7 @@ def updatetotally(
                 cmdutil.bailifchanged(repo, merge=False)
                 updatecheck = "none"
             hasunresolved = _update(repo, checkout, updatecheck=updatecheck)
-        if not hasunresolved and movemarkfrom:
-            if movemarkfrom == repo["."].node():
-                pass  # no-op update
-            elif bookmarks.update(repo, [movemarkfrom], repo["."].node()):
-                b = ui.label(repo._activebookmark, "bookmarks.active")
-                ui.status(_("updating bookmark %s\n") % b)
-            else:
-                # this can happen with a non-linear update
-                b = ui.label(repo._activebookmark, "bookmarks")
-                ui.status(_("(leaving bookmark %s)\n") % b)
-                bookmarks.deactivate(repo)
-        elif brev in repo._bookmarks:
+        if brev in repo._bookmarks:
             if brev != repo._activebookmark:
                 b = ui.label(brev, "bookmarks.active")
                 ui.status(_("(activating bookmark %s)\n") % b)
@@ -997,9 +980,6 @@ def updatetotally(
                 b = ui.label(repo._activebookmark, "bookmarks")
                 ui.status(_("(leaving bookmark %s)\n") % b)
             bookmarks.deactivate(repo)
-
-        if warndest:
-            destutil.statusotherdests(ui, repo)
 
     return hasunresolved
 

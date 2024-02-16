@@ -92,7 +92,7 @@ Test graft state
 
 Test hg status is normal after graft abort
   $ hg graft --abort -q
-  $ hg up --clean -q
+  $ hg up --clean -q .
   $ hg status
   ? a.orig
   $ rm a.orig
@@ -229,7 +229,7 @@ Test if listed files have a relative path to current location
   $ cd ../..
 
 Test hg status is normal after merge abort
-  $ hg goto --clean -q
+  $ hg goto --clean -q .
   $ hg status
   ? a.orig
   $ rm a.orig

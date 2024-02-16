@@ -55,7 +55,7 @@ Local changes to revision 0:
 
 Local merge with bad merge tool:
 
-  $ HGMERGE=false hg co
+  $ HGMERGE=false hg co tip
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   merging zzz2_merge_bad failed!
@@ -93,7 +93,7 @@ Local merge with conflicts:
   $ hg resolve -m
   (no more unresolved files)
 
-  $ hg co
+  $ hg co tip
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: 1 conflicts while merging zzz2_merge_bad! (edit, then use 'hg resolve --mark')
@@ -140,7 +140,7 @@ Local merge without conflicts:
   $ hg resolve -m
   (no more unresolved files)
 
-  $ hg co
+  $ hg co tip
   merging zzz1_merge_ok
   4 files updated, 1 files merged, 2 files removed, 0 files unresolved
 
