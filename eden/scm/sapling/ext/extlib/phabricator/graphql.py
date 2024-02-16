@@ -347,6 +347,11 @@ class Client:
             ret = self._client.query(timeout, self._getquery(signalstatus), params)
         return self._processrevisioninfo(ret)
 
+    def graphqlquery(self, query, variables, timeout=60_000):
+        if self._mock:
+            return self._mocked_responses.pop()
+        return self._client.query(timeout, query, variables)
+
     def _getquery(self, signalstatus):
         signalquery = ""
 

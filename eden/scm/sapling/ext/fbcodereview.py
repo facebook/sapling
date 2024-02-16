@@ -896,6 +896,37 @@ def _scmquerylookupglobalrev(orig, repo, rev):
 
 
 @command(
+    "debuggraphql",
+    [
+        ("", "query", "", _("GraphQL query to execute"), _("QUERY")),
+        ("", "variables", "", _("variables to use in GraphQL query"), _("JSON")),
+    ],
+    norepo=True,
+)
+def debuggraphql(ui, *args, **opts):
+    """Runs authenticated phabricator graphql queries, and returns output in JSON. Used by ISL."""
+    try:
+        client = graphql.Client(ui=ui)
+
+        query = opts.get("query")
+        if not query:
+            raise ValueError("query must be provided")
+
+        try:
+            var = opts.get("variables") or "{}"
+            variables = json.loads(var)
+        except json.JSONDecodeError:
+            raise ValueError("variables input is invalid JSON")
+
+        result = client.graphqlquery(query, variables)
+        ui.write(json.dumps(result), "\n")
+    except Exception as e:
+        err = str(e)
+        ui.write(json.dumps({"error": err}), "\n")
+        return 32
+
+
+@command(
     "debuginternusername",
     [("u", "unixname", "", _("unixname to lookup"))],
     norepo=True,

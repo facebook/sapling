@@ -69,7 +69,10 @@ def loadforpath(path):
             break
         path = parent
 
-    raise ArcConfigError("no .arcconfig found")
+    if not userconfig:
+        # We didn't load anything from the .arcrc file, and didn't find a file searching upwards.
+        raise ArcConfigError("no .arcconfig found")
+    return userconfig
 
 
 @command("debugarcconfig")
