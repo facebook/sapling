@@ -60,6 +60,7 @@ use crate::service::build_router;
 mod errors;
 mod middleware;
 mod model;
+mod read;
 mod service;
 mod util;
 
