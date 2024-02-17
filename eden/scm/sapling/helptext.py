@@ -4553,26 +4553,44 @@ Merge Algorithms
 
 subset-changes
     If the changes of one side is the subset of the other side, then the conflict will
-    be resolved and the other side changes are kept.
+    be resolved and the other side changes are kept. Currently, we limit this to addtions
+    on both sides.
 
     Here is an example of the conflict::
 
-        merging a.txt
         <<<<<<< dest
-        - ? t('Cannot edit penging changes')
-        + ? t('Cannot edit pending changes')
+        +
+        +   if (ignore_funny && 45 < len && !memcmp(name, "refs/", 5) &&
+        +       check_ref_format(name + 5))
+        +     continue;
+        +
         =======
-        - ? t('Cannot edit penging changes')
-        + ? t('Cannot edit pending changes')
-        + : hasPublic
-        + ? t('Cannot edit public commits')
+        +
+        +   if (ignore_funny && 45 < len && !memcmp(name, "refs/", 5) &&
+        +       check_ref_format(name + 5))
+        +     continue;
+        +
+        +   name_len = strlen(name);
+        +   if (len != name_len + 41) {
+        +     if (server_capabilities)
+        +       free(server_capabilities);
+        +     server_capabilities = strdup(name + name_len + 1);
+        +   }
+        +
         >>>>>>> source
 
     It will be resolved to::
 
-          ? t('Cannot edit pending changes')
-          : hasPublic
-          ? t('Cannot edit public commits')
+          if (ignore_funny && 45 < len && !memcmp(name, "refs/", 5) &&
+              check_ref_format(name + 5))
+          continue;
+
+          name_len = strlen(name);
+          if (len != name_len + 41) {
+          if (server_capabilities)
+              free(server_capabilities);
+          server_capabilities = strdup(name + name_len + 1);
+          }
 
 adjacent-changes
     Merge adjacent, non-overlapping modifications on both sides. The idea comes from
