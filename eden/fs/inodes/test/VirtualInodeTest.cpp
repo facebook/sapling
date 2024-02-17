@@ -155,7 +155,7 @@ struct TestFileInfo {
   ContainedType containedType;
   mode_t mode;
   RelativePath path;
-  folly::Optional<struct timespec> mtime;
+  std::optional<struct timespec> mtime;
   int flags{0};
   std::string contents;
 
