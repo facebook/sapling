@@ -622,8 +622,4 @@ use-rust=true
 
 [init]
 prefer-git=True
-
-[automerge]
-merge-algos=adjacent-changes,subset-changes
-mode=accept
 "###);
