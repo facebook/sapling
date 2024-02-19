@@ -29,6 +29,8 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
+use cmdlib_cross_repo::get_all_possible_small_repo_submodule_deps;
+use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
@@ -212,6 +214,7 @@ async fn rewrite_file_paths(
     mover: &Mover,
     gitimport_bcs_ids: &[ChangesetId],
     git_merge_bcs_id: &ChangesetId,
+    submodule_deps: SubmoduleDeps<Repo>,
 ) -> Result<(Vec<ChangesetId>, Option<ChangesetId>), Error> {
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mut bonsai_changesets = vec![];
@@ -226,9 +229,6 @@ async fn rewrite_file_paths(
     .buffered(len)
     .try_collect::<Vec<_>>()
     .await?;
-
-    // TODO(T174902563): get submodule_deps from config
-    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
 
     for (index, bcs) in gitimport_changesets.iter().enumerate() {
         let bcs_id = bcs.get_changeset_id();
@@ -963,8 +963,16 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    // TODO(T174902563): get submodule_deps from config
-    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
+
+    let repo_provider = repo_provider_from_mononoke_app(app);
+    let submodule_deps = get_all_possible_small_repo_submodule_deps(
+        repo.clone(),
+        live_commit_sync_config.clone(),
+        repo_provider,
+    )
+    .await?;
 
     let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env).await?;
     let syncers = create_commit_syncers(
@@ -973,7 +981,7 @@ async fn get_pushredirected_vars(
         large_repo.clone(),
         submodule_deps,
         mapping.clone(),
-        Arc::new(live_commit_sync_config),
+        live_commit_sync_config,
         x_repo_syncer_lease,
     )?;
 
@@ -1089,7 +1097,7 @@ async fn repo_import(
             &large_repo_config,
             configs,
             env,
-            live_commit_sync_config,
+            live_commit_sync_config.clone(),
         )
         .await?;
 
@@ -1211,12 +1219,21 @@ async fn repo_import(
             .git_merge_bcs_id
             .as_ref()
             .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
+
+        let repo_provider = repo_provider_from_mononoke_app(app);
+        let submodule_deps = get_all_possible_small_repo_submodule_deps(
+            repo.clone(),
+            Arc::new(live_commit_sync_config),
+            repo_provider,
+        )
+        .await?;
         let (shifted_bcs_ids, git_merge_shifted_bcs_id) = rewrite_file_paths(
             &ctx,
             &repo,
             &combined_mover,
             gitimport_bcs_ids,
             git_merge_bcs_id,
+            submodule_deps,
         )
         .await?;
 

@@ -757,6 +757,7 @@ mod tests {
             &combined_mover,
             &cs_ids,
             cs_ids.last().unwrap(),
+            SubmoduleDeps::ForSync(HashMap::new()),
         )
         .await?;
 
@@ -923,6 +924,7 @@ mod tests {
             &combined_mover,
             &cs_ids,
             cs_ids.last().unwrap(),
+            SubmoduleDeps::ForSync(HashMap::new()),
         )
         .await?;
         let small_repo_cs_ids = back_sync_commits_to_small_repo(
