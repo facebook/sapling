@@ -22,6 +22,7 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
+use cmdlib_x_repo::get_all_possible_small_repo_submodule_deps_from_matches;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -333,14 +334,24 @@ async fn run_sync_diamond_merge<'a>(
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
+    let submodule_deps = get_all_possible_small_repo_submodule_deps_from_matches(
+        ctx,
+        matches,
+        &source_repo,
+        live_commit_sync_config.clone(),
+    )
+    .await?;
+
     sync_diamond_merge::do_sync_diamond_merge(
         ctx,
         &source_repo,
         &target_repo,
+        submodule_deps,
         source_merge_cs_id,
         mapping,
         bookmark,
-        Arc::new(live_commit_sync_config),
+        live_commit_sync_config,
         x_repo_syncer_lease,
     )
     .await

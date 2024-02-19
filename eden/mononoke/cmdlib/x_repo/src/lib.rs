@@ -10,10 +10,12 @@
 #![feature(trait_alias)]
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
+use anyhow::Result;
 use cacheblob::LeaseOps;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -26,9 +28,13 @@ use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
+use futures_util::stream;
 use futures_util::try_join;
+use futures_util::StreamExt;
+use futures_util::TryStreamExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -66,8 +72,14 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
             target_repo_id
         );
     };
-    // TODO(T174902563): get submodule_deps from config
-    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+
+    let submodule_deps = get_all_possible_small_repo_submodule_deps_from_matches(
+        ctx,
+        matches,
+        &small_repo,
+        live_commit_sync_config.clone(),
+    )
+    .await?;
 
     create_commit_syncers(
         ctx,
@@ -185,10 +197,19 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
+    let submodule_deps = get_all_possible_small_repo_submodule_deps_from_matches(
+        ctx,
+        matches,
+        &source_repo.0,
+        live_commit_sync_config.clone(),
+    )
+    .await?;
+
     create_commit_syncer(
         ctx,
         source_repo,
         target_repo,
+        submodule_deps,
         mapping,
         live_commit_sync_config,
         x_repo_syncer_lease,
@@ -200,15 +221,13 @@ async fn create_commit_syncer<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_repo: Source<R>,
     target_repo: Target<R>,
+    submodule_deps: SubmoduleDeps<R>,
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_syncer_lease: Arc<dyn LeaseOps>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
     let common_config =
         live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
-
-    // TODO(T174902563): get submodule_deps from config
-    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
 
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps, &common_config)?;
     let commit_syncer = CommitSyncer::new(
@@ -219,4 +238,46 @@ async fn create_commit_syncer<'a, R: Repo>(
         x_repo_syncer_lease,
     );
     Ok(commit_syncer)
+}
+
+/// Loads the Mononoke repos from the git submodules that the small repo depends.
+///
+/// These repos need to be loaded in order to be able to sync commits from the
+/// small repo that have git submodule changes to the large repo.
+///
+/// Since the dependencies might change for each version, this eagerly loads
+/// the dependencies from all versions, to guarantee that if we sync a sligthly
+/// older commit, its dependencies will be loaded.
+pub async fn get_all_possible_small_repo_submodule_deps_from_matches<R: Repo>(
+    ctx: &CoreContext,
+    matches: &MononokeMatches<'_>,
+    source_repo: &R,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<SubmoduleDeps<R>> {
+    let source_repo_id = source_repo.repo_identity().id();
+
+    let source_repo_sync_configs = live_commit_sync_config
+        .get_all_commit_sync_config_versions(source_repo_id)
+        .await?;
+
+    let small_repo_deps_ids = source_repo_sync_configs
+        .into_values()
+        .filter_map(|mut cfg| {
+            cfg.small_repos
+                .remove(&source_repo_id)
+                .map(|small_repo_cfg| small_repo_cfg.submodule_dependencies)
+        })
+        .flatten()
+        .collect::<HashSet<_>>();
+
+    let submodule_deps_map: HashMap<NonRootMPath, R> = stream::iter(small_repo_deps_ids)
+        .then(|(submodule_path, repo_id)| async move {
+            let repo =
+                args::open_repo_by_id_unredacted(ctx.fb, ctx.logger(), matches, repo_id).await?;
+            anyhow::Ok((submodule_path, repo))
+        })
+        .try_collect()
+        .await?;
+
+    Ok(SubmoduleDeps::ForSync(submodule_deps_map))
 }

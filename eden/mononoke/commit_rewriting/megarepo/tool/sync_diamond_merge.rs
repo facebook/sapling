@@ -117,6 +117,7 @@ pub async fn do_sync_diamond_merge(
     ctx: &CoreContext,
     small_repo: &Repo,
     large_repo: &Repo,
+    submodule_deps: SubmoduleDeps<Repo>,
     small_merge_cs_id: ChangesetId,
     mapping: SqlSyncedCommitMapping,
     onto_bookmark: BookmarkKey,
@@ -136,9 +137,6 @@ pub async fn do_sync_diamond_merge(
     let (p1, p2) = validate_parents(parents)?;
 
     let new_branch = find_new_branch_oldest_first(ctx.clone(), small_repo, p1, p2).await?;
-
-    // TODO(T174902563): get submodule_deps from config
-    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
 
     let syncers = create_commit_syncers(
         ctx,
