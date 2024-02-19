@@ -332,6 +332,21 @@ dott_test(
 )
 
 dott_test(
+    name = "mononoke-git-server",
+    dott_files =
+        glob([
+            "test-mononoke-git-server*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/git_server:git_server",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
     name = "hooks",
     dott_files =
         glob(

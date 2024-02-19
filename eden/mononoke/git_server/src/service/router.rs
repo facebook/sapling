@@ -12,15 +12,16 @@ use gotham::handler::HandlerFuture;
 use gotham::middleware::state::StateMiddleware;
 use gotham::pipeline::new_pipeline;
 use gotham::pipeline::single_pipeline;
-use gotham::prelude::DrawRoutes;
 use gotham::router::builder::build_router as gotham_build_router;
 use gotham::router::builder::DefineSingleRoute;
+use gotham::router::builder::DrawRoutes;
 use gotham::router::Router;
 use gotham::state::State;
 use gotham_ext::response::build_error_response;
 use gotham_ext::response::build_response;
 
 use super::error_formatter::GitErrorFormatter;
+use crate::model::GitServerContext;
 use crate::model::RepositoryParams;
 use crate::model::ServiceType;
 use crate::read;
@@ -46,7 +47,6 @@ fn upload_pack_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     }
     .boxed()
 }
-use crate::GitServerContext;
 
 fn health_handler(state: State) -> (State, &'static str) {
     (state, "I_AM_ALIVE\n")

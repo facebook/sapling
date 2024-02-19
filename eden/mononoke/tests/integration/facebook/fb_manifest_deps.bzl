@@ -28,6 +28,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/git/facebook/remote_gitimport:remote_gitimport": "MONONOKE_REMOTE_GITIMPORT",
     "//eden/mononoke/git/gitexport:gitexport": "MONONOKE_GITEXPORT",
     "//eden/mononoke/git/gitimport:gitimport": "MONONOKE_GITIMPORT",
+    "//eden/mononoke/git_server:git_server": "MONONOKE_GIT_SERVER",
     "//eden/mononoke/land_service:land_service": "LAND_SERVICE",
     "//eden/mononoke/lfs_server:lfs_server": "LFS_SERVER",
     "//eden/mononoke/microwave:builder": "MONONOKE_MICROWAVE_BUILDER",

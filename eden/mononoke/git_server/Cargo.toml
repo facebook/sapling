@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
+async-stream = "0.3"
 async-trait = "0.1.71"
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
@@ -25,6 +26,7 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_symbolic_refs = { version = "0.1.0", path = "../git_symbolic_refs" }
+gix-hash = "0.11"
 gix-packetline = { version = "0.17.2", features = ["blocking-io"] }
 gix-transport = "0.41"
 gotham = "0.7.1"
@@ -36,6 +38,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 packetline = { version = "0.1.0", path = "../git/packetline" }
+packfile = { version = "0.1.0", path = "../git/packfile" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
@@ -46,3 +49,5 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.10", features = ["full"] }

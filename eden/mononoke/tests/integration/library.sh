@@ -31,11 +31,13 @@ SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=600
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
+  MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT=60
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
   MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
 else
   MONONOKE_DEFAULT_START_TIMEOUT=60
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
+  MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT=60
   # First scsc call takes a while as scs server is doing derivation
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
   MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
@@ -141,6 +143,10 @@ function scs_address {
 
 function land_service_address {
   echo -n "$(mononoke_host):$LAND_SERVICE_PORT"
+}
+
+function mononoke_git_service_address {
+  echo -n "$(mononoke_host):$MONONOKE_GIT_SERVICE_PORT"
 }
 
 function dds_address {
@@ -1611,6 +1617,38 @@ function lfs_server {
 
   cp "$log" "$log.saved"
   truncate -s 0 "$log"
+}
+
+function git_client {
+  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/localhost.crt" -c http.sslKey="$TEST_CERTDIR/localhost.key" "$@"
+}
+
+function mononoke_git_service {
+  # Set Git related environment variables
+  local bound_addr_file log
+  bound_addr_file="$TESTTMP/mononoke_git_service_addr.txt"
+  log="${TESTTMP}/mononoke_git_service.out"
+  rm -f "$bound_addr_file"
+  GLOG_minloglevel=5 "$MONONOKE_GIT_SERVER" "$@" \
+    --tls-ca "$TEST_CERTDIR/root-ca.crt" \
+    --tls-private-key "$TEST_CERTDIR/localhost.key" \
+    --tls-certificate "$TEST_CERTDIR/localhost.crt" \
+    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
+    --listen-port 0 \
+    --log-level DEBUG \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --bound-address-file "$TESTTMP/mononoke_git_service_addr.txt" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
+  export MONONOKE_GIT_SERVICE_PID=$!
+  echo "$MONONOKE_GIT_SERVICE_PID" >> "$DAEMON_PIDS"
+
+  export MONONOKE_GIT_SERVICE_PORT
+  wait_for_server "Mononoke Git Service" "MONONOKE_GIT_SERVICE_PORT" "$log" \
+    "${MONONOKE_GIT_SERVICE_START_TIMEOUT:-"$MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT"}" "$bound_addr_file"
+
+  export MONONOKE_GIT_SERVICE_BASE_URL
+  MONONOKE_GIT_SERVICE_BASE_URL="https://localhost:$MONONOKE_GIT_SERVICE_PORT"
 }
 
 # Run an hg binary configured with the settings required to talk to Mononoke
