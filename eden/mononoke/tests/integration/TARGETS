@@ -339,6 +339,7 @@ dott_test(
         ]),
     deps = [
         "//eden/mononoke:admin",
+        "//eden/mononoke:backfill_derived_data",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/git_server:git_server",
