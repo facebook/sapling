@@ -132,7 +132,6 @@ where
         &None,
     )
     .await
-    // TODO(stash): test with other movers
     // Note: counter update might fail after a successful sync
 }
 
