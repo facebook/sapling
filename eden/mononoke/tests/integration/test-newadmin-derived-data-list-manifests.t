@@ -61,9 +61,9 @@ Fsnodes from root path
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "" -i "$B" fsnodes
   A	eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9	regular	1
   B	55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f	regular	1
-  b/hoo.txt	88c50336ada15d8abe61f2adce8af17b63eb74985d50eec76d4d0248f33bb4a9	regular	5
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	regular	5
   a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	regular	5
+  b/hoo.txt	88c50336ada15d8abe61f2adce8af17b63eb74985d50eec76d4d0248f33bb4a9	regular	5
 Unodes
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -B main unodes
   a/ ManifestUnodeId(Blake2(dbdbdd1b393b32741aaab820850468c06b3f50319bea3728e8b2d346e61a01ef))
@@ -79,12 +79,12 @@ Unodes from root
   / ManifestUnodeId(Blake2(8ade1b6151194edff398e823450e3bfbc8a1252958ea89f0c3ef58b0c3d30e70))
   A FileUnodeId(Blake2(5da8409b6ec0f3759444f93c2c5194f5c94c02037095ca16b5f3e0f70152c613))
   B FileUnodeId(Blake2(eb68a776a3017fcc811f6f23a8724a771db09de2f35fda2db314b580d41fb7ae))
-  b/ ManifestUnodeId(Blake2(4668835e236dfec9b0273f21f33cfa4570769a24a5a5422b10920b28e5440092))
-  b/hoo.txt FileUnodeId(Blake2(54942dc4ea2bd38839a40566d01e06d56e479adaeba9b3c64b94e55ae6911936))
   a/ ManifestUnodeId(Blake2(abb223a8d49252e82a934e09c8031ce77dd5fe70d481aace567b6f0b13e90e95))
   a/foo.txt FileUnodeId(Blake2(5b5ddd33b0347715e192bfc25bc172ed8c5800d87ba3d3238ef88dee25d28dc6))
   a/b/ ManifestUnodeId(Blake2(0d78d5210f51fcf3f7dd906722f1a0080ad4062b71c32a811b13edec903eeb06))
   a/b/bar.txt FileUnodeId(Blake2(4e8fbca02d5fa0d2a9abb7f075d8b5c4ad22e54e49dd6e18e00590032b1d3064))
+  b/ ManifestUnodeId(Blake2(4668835e236dfec9b0273f21f33cfa4570769a24a5a5422b10920b28e5440092))
+  b/hoo.txt FileUnodeId(Blake2(54942dc4ea2bd38839a40566d01e06d56e479adaeba9b3c64b94e55ae6911936))
 
 Deleted manifests
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -i "$B" deleted-manifests

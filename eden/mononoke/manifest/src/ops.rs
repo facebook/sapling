@@ -75,49 +75,49 @@ where
                 init,
                 move |(manifest_id, selector, path, recursive)| {
                     let (select, subentries) = selector.deconstruct();
-
+                    cloned!(ctx, store);
                     async move {
-                        let manifest = manifest_id.load(ctx, store).await?;
-
-                        let mut output = Vec::new();
-                        let mut recurse = Vec::new();
-
-                        if recursive || select.is_recursive() {
-                            output.push((path.clone(), Entry::Tree(manifest_id)));
-                            let mut stream = manifest.list(ctx, store).await?;
-                            while let Some((name, entry)) = stream.try_next().await? {
-                                let path = path.join(&name);
-                                match entry {
-                                    Entry::Leaf(_) => {
-                                        output.push((path.clone(), entry));
-                                    }
-                                    Entry::Tree(manifest_id) => {
-                                        recurse.push((manifest_id, Default::default(), path, true));
-                                    }
-                                }
-                            }
-                        } else {
-                            if select.is_selected() {
+                        tokio::spawn(async move {
+                            let manifest = manifest_id.load(&ctx, &store).await?;
+                            let mut output = Vec::new();
+                            let mut recurse = Vec::new();
+                            if recursive || select.is_recursive() {
                                 output.push((path.clone(), Entry::Tree(manifest_id)));
-                            }
-                            for (name, selector) in subentries {
-                                if let Some(entry) = manifest.lookup(ctx, store, &name).await? {
+                                let mut stream = manifest.list(&ctx, &store).await?;
+                                while let Some((name, entry)) = stream.try_next().await? {
                                     let path = path.join(&name);
                                     match entry {
                                         Entry::Leaf(_) => {
-                                            if selector.value.is_selected() {
-                                                output.push((path.clone(), entry));
-                                            }
+                                            output.push((path.clone(), entry));
                                         }
                                         Entry::Tree(manifest_id) => {
-                                            recurse.push((manifest_id, selector, path, false));
+                                            recurse.push((manifest_id, Default::default(), path, true));
+                                        }
+                                    }
+                                }
+                            } else {
+                                if select.is_selected() {
+                                    output.push((path.clone(), Entry::Tree(manifest_id)));
+                                }
+                                for (name, selector) in subentries {
+                                    if let Some(entry) = manifest.lookup(&ctx, &store, &name).await? {
+                                        let path = path.join(&name);
+                                        match entry {
+                                            Entry::Leaf(_) => {
+                                                if selector.value.is_selected() {
+                                                    output.push((path.clone(), entry));
+                                                }
+                                            }
+                                            Entry::Tree(manifest_id) => {
+                                                recurse.push((manifest_id, selector, path, false));
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        Ok::<_, Error>((output, recurse))
+                            Ok::<_, Error>((output, recurse))
+                        }).await?
                     }.boxed()
                 },
             )
@@ -507,50 +507,53 @@ where
 {
     match diff_against.first().cloned() {
         Some(parent) => async move {
-            let mut new_entries = Vec::new();
-            let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);
-            while let Some(diff_entry) = parent_diff.try_next().await? {
-                match diff_entry {
-                    Diff::Added(path, entry) => new_entries.push((path, entry, vec![])),
-                    Diff::Removed(..) => continue,
-                    Diff::Changed(path, parent_entry, entry) => {
-                        new_entries.push((path, entry, vec![parent_entry]))
-                    }
-                }
-            }
-
-            let paths: Vec<_> = new_entries
-                .clone()
-                .into_iter()
-                .map(|(path, _, _)| path)
-                .collect();
-
-            let futs = diff_against.into_iter().skip(1).map(move |p| {
-                p.find_entries(ctx.clone(), store.clone(), paths.clone())
-                    .try_collect::<HashMap<_, _>>()
-            });
-            let entries_in_parents = future::try_join_all(futs).await?;
-
-            let mut res = vec![];
-            for (path, unode, mut parent_entries) in new_entries {
-                let mut new_entry = true;
-                for p in &entries_in_parents {
-                    if let Some(parent_entry) = p.get(&path) {
-                        if parent_entry == &unode {
-                            new_entry = false;
-                            break;
-                        } else {
-                            parent_entries.push(parent_entry.clone());
+            tokio::spawn(async move {
+                let mut new_entries = Vec::new();
+                let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);
+                while let Some(diff_entry) = parent_diff.try_next().await? {
+                    match diff_entry {
+                        Diff::Added(path, entry) => new_entries.push((path, entry, vec![])),
+                        Diff::Removed(..) => continue,
+                        Diff::Changed(path, parent_entry, entry) => {
+                            new_entries.push((path, entry, vec![parent_entry]))
                         }
                     }
                 }
 
-                if new_entry {
-                    res.push((path, unode, parent_entries));
-                }
-            }
+                let paths: Vec<_> = new_entries
+                    .clone()
+                    .into_iter()
+                    .map(|(path, _, _)| path)
+                    .collect();
 
-            Ok(stream::iter(res.into_iter().map(Ok)))
+                let futs = diff_against.into_iter().skip(1).map(move |p| {
+                    p.find_entries(ctx.clone(), store.clone(), paths.clone())
+                        .try_collect::<HashMap<_, _>>()
+                });
+                let entries_in_parents = future::try_join_all(futs).await?;
+
+                let mut res = vec![];
+                for (path, unode, mut parent_entries) in new_entries {
+                    let mut new_entry = true;
+                    for p in &entries_in_parents {
+                        if let Some(parent_entry) = p.get(&path) {
+                            if parent_entry == &unode {
+                                new_entry = false;
+                                break;
+                            } else {
+                                parent_entries.push(parent_entry.clone());
+                            }
+                        }
+                    }
+
+                    if new_entry {
+                        res.push((path, unode, parent_entries));
+                    }
+                }
+
+                Ok(stream::iter(res.into_iter().map(Ok)))
+            })
+            .await?
         }
         .try_flatten_stream()
         .right_stream(),
