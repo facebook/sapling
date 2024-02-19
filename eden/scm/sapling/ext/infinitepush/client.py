@@ -337,9 +337,6 @@ def _dopull(orig, ui, repo, source: str = "default", **opts):
         # know about them. Let's save it before pull and restore after
         remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, source)
         result = orig(ui, repo, source, **opts)
-        # TODO(stash): race condition is possible
-        # if scratch bookmarks was updated right after orig.
-        # But that's unlikely and shouldn't be harmful.
         with repo.wlock(), repo.lock(), repo.transaction("pull"):
             if bookmarks.remotebookmarksenabled(ui):
                 remotescratchbookmarks.update(scratchbookmarks)

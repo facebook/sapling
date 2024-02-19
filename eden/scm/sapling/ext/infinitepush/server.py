@@ -271,7 +271,6 @@ def _getsupportedcgversion(repo, bundlecaps):
     return cgversion
 
 
-# TODO(stash): remove copy-paste from upstream hg
 def _decodebundle2caps(bundlecaps):
     b2caps = {}
     for bcaps in bundlecaps:
