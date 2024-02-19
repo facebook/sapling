@@ -56,6 +56,7 @@ use crate::middleware::RequestContentEncodingMiddleware;
 use crate::middleware::ResponseContentTypeMiddleware;
 use crate::model::GitServerContext;
 use crate::service::build_router;
+mod command;
 
 mod errors;
 mod middleware;

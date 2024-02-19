@@ -9,14 +9,16 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fmt::Formatter;
-use std::io::Write;
+use std::marker::Unpin;
 
 use anyhow::Result;
 use futures::stream::BoxStream;
 use gix_hash::ObjectId;
 use mononoke_types::ChangesetId;
+use packetline::encode::write_binary_packetline;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
+use tokio::io::AsyncWrite;
 
 const SYMREF_HEAD: &str = "HEAD";
 
@@ -304,17 +306,17 @@ impl LsRefsResponse {
         Self { included_refs }
     }
 
-    pub fn write<W>(&self, writer: &mut W) -> Result<()>
+    pub async fn write_packetline<W>(&self, writer: &mut W) -> Result<()>
     where
-        W: Write + Send,
+        W: AsyncWrite + Send + Unpin,
     {
         // HEAD symref should always be written first
         if let Some(target) = self.included_refs.get(SYMREF_HEAD) {
-            write!(writer, "{}", ref_line(SYMREF_HEAD, target))?;
+            write_binary_packetline(ref_line(SYMREF_HEAD, target).as_bytes(), writer).await?;
         }
         for (name, target) in &self.included_refs {
             if name.as_str() != SYMREF_HEAD {
-                write!(writer, "{}", ref_line(name, target))?;
+                write_binary_packetline(ref_line(name, target).as_bytes(), writer).await?;
             }
         }
         Ok(())

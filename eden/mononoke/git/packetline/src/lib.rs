@@ -10,7 +10,7 @@ const U16_HEX_BYTES: usize = 4;
 /// Maximum number of bytes in a single packetline line excluding the length prefix
 const MAX_DATA_LEN: usize = 65516;
 /// Packetline representing the end of a message
-const FLUSH_LINE: &[u8] = b"0000";
+pub const FLUSH_LINE: &[u8] = b"0000";
 /// Packetline separating sections of a message
 const DELIMITER_LINE: &[u8] = b"0001";
 /// Packetline representing the end of response for stateless connections

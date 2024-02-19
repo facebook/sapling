@@ -17,6 +17,7 @@ use gotham::router::builder::build_router as gotham_build_router;
 use gotham::router::builder::DefineSingleRoute;
 use gotham::router::Router;
 use gotham::state::State;
+use gotham_ext::response::build_error_response;
 use gotham_ext::response::build_response;
 
 use super::error_formatter::GitErrorFormatter;
@@ -28,6 +29,20 @@ fn capability_advertisement_handler(mut state: State) -> Pin<Box<HandlerFuture>>
     async move {
         let res = read::capability_advertisement(&mut state).await;
         build_response(res, state, &GitErrorFormatter)
+    }
+    .boxed()
+}
+
+fn upload_pack_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let res = read::upload_pack(&mut state).await;
+        match res {
+            Ok(res) => Ok((state, res)),
+            Err(err) => {
+                println!("Encountered error {:?}", err);
+                build_error_response(err, state, &GitErrorFormatter)
+            }
+        }
     }
     .boxed()
 }
@@ -48,6 +63,11 @@ pub fn build_router(context: GitServerContext) -> Router {
             .with_path_extractor::<RepositoryParams>()
             .with_query_string_extractor::<ServiceType>()
             .to(capability_advertisement_handler);
+
+        route
+            .post("/*repository/git-upload-pack")
+            .with_path_extractor::<RepositoryParams>()
+            .to(upload_pack_handler);
 
         route.get("/health_check").to(health_handler);
     })
