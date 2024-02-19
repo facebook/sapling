@@ -413,6 +413,26 @@ pub async fn assert_children(
     Ok(())
 }
 
+pub async fn assert_descendants(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    cs_ids: Vec<&str>,
+    descendants: Vec<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .descendants(ctx, cs_ids.into_iter().map(name_cs_id).collect())
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        descendants
+            .into_iter()
+            .map(name_cs_id)
+            .collect::<HashSet<_>>(),
+    );
+    Ok(())
+}
+
 pub async fn assert_ancestors_difference_segments(
     ctx: &CoreContext,
     graph: &CommitGraph,

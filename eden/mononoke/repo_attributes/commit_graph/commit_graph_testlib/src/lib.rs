@@ -54,6 +54,7 @@ macro_rules! impl_commit_graph_tests {
             test_common_base,
             test_slice_ancestors,
             test_children,
+            test_descendants,
             test_ancestors_difference_segments_1,
             test_ancestors_difference_segments_2,
             test_ancestors_difference_segments_3,
@@ -1024,6 +1025,73 @@ pub async fn test_children(
     assert_children(&graph, &ctx, "L", vec!["M", "N"]).await?;
     assert_children(&graph, &ctx, "M", vec![]).await?;
     assert_children(&graph, &ctx, "N", vec![]).await?;
+
+    Ok(())
+}
+
+pub async fn test_descendants(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A-B-C-D-E-L------N
+           \       \    /
+            F-G-H   M  /
+             \     /  /
+              I-J-K--/
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_descendants(
+        &graph,
+        &ctx,
+        vec!["A"],
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+        ],
+    )
+    .await?;
+    assert_descendants(
+        &graph,
+        &ctx,
+        vec!["B"],
+        vec![
+            "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+        ],
+    )
+    .await?;
+    assert_descendants(&graph, &ctx, vec!["C"], vec!["C", "D", "E", "L", "M", "N"]).await?;
+    assert_descendants(&graph, &ctx, vec!["D"], vec!["D", "E", "L", "M", "N"]).await?;
+    assert_descendants(&graph, &ctx, vec!["E"], vec!["E", "L", "M", "N"]).await?;
+    assert_descendants(
+        &graph,
+        &ctx,
+        vec!["F"],
+        vec!["F", "G", "H", "I", "J", "K", "M", "N"],
+    )
+    .await?;
+    assert_descendants(&graph, &ctx, vec!["G"], vec!["G", "H"]).await?;
+    assert_descendants(&graph, &ctx, vec!["H"], vec!["H"]).await?;
+    assert_descendants(&graph, &ctx, vec!["I"], vec!["I", "J", "K", "M", "N"]).await?;
+    assert_descendants(&graph, &ctx, vec!["J"], vec!["J", "K", "M", "N"]).await?;
+    assert_descendants(&graph, &ctx, vec!["K"], vec!["K", "M", "N"]).await?;
+    assert_descendants(&graph, &ctx, vec!["L"], vec!["L", "M", "N"]).await?;
+    assert_descendants(&graph, &ctx, vec!["M"], vec!["M"]).await?;
+    assert_descendants(&graph, &ctx, vec!["N"], vec!["N"]).await?;
+
+    assert_descendants(
+        &graph,
+        &ctx,
+        vec!["C", "G", "H"],
+        vec!["C", "D", "E", "G", "H", "L", "M", "N"],
+    )
+    .await?;
+    assert_descendants(&graph, &ctx, vec![], vec![]).await?;
 
     Ok(())
 }

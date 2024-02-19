@@ -467,4 +467,38 @@ impl CommitGraph {
     ) -> Result<Vec<ChangesetId>> {
         self.storage.fetch_children(ctx, cs_id).await
     }
+
+    /// Returns the union of descendants of `cs_ids`.
+    pub async fn descendants(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        let mut visited: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
+        let mut descendants: Vec<ChangesetId> = cs_ids.clone();
+
+        // We will add a future for every traversed changeset to futs to
+        // fetch its children.
+        let mut futs: FuturesUnordered<_> = Default::default();
+
+        // Add children of initial changesets.
+        for cs_id in cs_ids {
+            futs.push(self.changeset_children(ctx, cs_id));
+        }
+
+        while let Some(result) = futs.next().await {
+            let children = result?;
+
+            for child in children {
+                // If we haven't traversed this changeset yet, add it to the output
+                // and add a future to fetch its children to futs.
+                if visited.insert(child) {
+                    descendants.push(child);
+                    futs.push(self.changeset_children(ctx, child));
+                }
+            }
+        }
+
+        Ok(descendants)
+    }
 }
