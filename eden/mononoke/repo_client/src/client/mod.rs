@@ -553,7 +553,6 @@ impl RepoClient {
                 let items = stream::iter(pull_default_bookmarks.await?).map(anyhow::Ok);
                 bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
             }
-            // TODO(stash): handle includepattern= and excludepattern=
 
             Ok(create_bundle_stream_new(bundle2_parts))
         }
