@@ -364,7 +364,6 @@ pub trait MegarepoOp {
                     // We got file/dir conflict - old target has a file
                     // with the same path as a directory in merge commit with additions
                     if path_context.is_file().await? {
-                        // TODO(stash): it would be good to show which file it conflicts with
                         Result::<(), _>::Err(MegarepoError::request(anyhow!(
                             "File in target path {} conflicts with newly added files",
                             &path_context.path()
@@ -507,7 +506,7 @@ pub trait MegarepoOp {
         for (src_path, entry) in entries {
             match (src_path.into_optional_non_root_path(), entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
-                    // TODO(stash, simonfar, mitrandir): we record file
+                    // TODO(mitrandir): we record file
                     // moves to mutable_renames even though these moves are already
                     // recorded in non-mutable renames. We have to do it because
                     // scsc log doesn't use non-mutable renames,
@@ -584,7 +583,7 @@ pub trait MegarepoOp {
 
                     let linkfiles = self.prepare_linkfiles(&source_config, &directory_mover)?;
                     let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
-                    // TODO(stash): it assumes that commit is present in target
+                    // NOTE: it assumes that commit is present in target
                     let moved = self
                         .create_single_move_commit(
                             ctx,
@@ -884,7 +883,7 @@ pub trait MegarepoOp {
         version: SyncConfigVersion,
         source_name: &SourceName,
     ) -> Result<BonsaiChangesetMut, Error> {
-        // TODO(stash, mateusz, simonfar): figure out what fields
+        // TODO(mateusz): figure out what fields
         // we need to set here
         let message = message.unwrap_or(format!(
             "merging source {} for target version {}",
