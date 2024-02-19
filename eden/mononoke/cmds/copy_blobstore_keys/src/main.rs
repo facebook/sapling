@@ -141,9 +141,6 @@ async fn async_main(app: MononokeApp) -> Result<()> {
 
     // Background session class tells multiplexed blobstore to wait
     // for all blobstores to finish.
-    // TODO(stash): T89677672 at the moment Background session class writes to
-    // blobstore sync queue if blobstore has failed. This might not be what we
-    // want here.
     let mut ctx = CoreContext::new_with_logger(app.fb, app.logger().clone());
     ctx.session_mut()
         .override_session_class(SessionClass::Background);
