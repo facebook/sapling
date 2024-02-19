@@ -48,22 +48,36 @@ use crate::Bundle2Item;
 lazy_static! {
     static ref KNOWN_PARAMS: HashMap<PartHeaderType, HashSet<&'static str>> = {
         let mut m: HashMap<PartHeaderType, HashSet<&'static str>> = HashMap::new();
-        m.insert(PartHeaderType::Changegroup, hashset!{"version", "nbchanges", "treemanifest"});
-        // TODO(stash): currently ignore all the parameters. Later we'll
-        // support 'bookmark' parameter, and maybe 'create' and 'force' (although 'force' will
-        // probably) be renamed T26385545. 'bookprevnode' and 'pushbackbookmarks' will be
-        // removed T26384190.
-        m.insert(PartHeaderType::B2xInfinitepush, hashset!{
-            "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"});
-        m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset!{});
-        m.insert(PartHeaderType::B2xInfinitepushMutation, hashset!{});
-        m.insert(PartHeaderType::B2xCommonHeads, hashset!{});
-        m.insert(PartHeaderType::B2xRebase, hashset!{"onto", "newhead", "cgversion", "obsmarkerversions"});
-        m.insert(PartHeaderType::B2xRebasePack, hashset!{"version", "cache", "category"});
-        m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
-        m.insert(PartHeaderType::Replycaps, hashset!{});
-        m.insert(PartHeaderType::Pushkey, hashset!{ "namespace", "key", "old", "new" });
-        m.insert(PartHeaderType::Pushvars, hashset!{});
+        m.insert(
+            PartHeaderType::Changegroup,
+            hashset! {"version", "nbchanges", "treemanifest"},
+        );
+        m.insert(
+            PartHeaderType::B2xInfinitepush,
+            hashset! {
+            "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"},
+        );
+        m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset! {});
+        m.insert(PartHeaderType::B2xInfinitepushMutation, hashset! {});
+        m.insert(PartHeaderType::B2xCommonHeads, hashset! {});
+        m.insert(
+            PartHeaderType::B2xRebase,
+            hashset! {"onto", "newhead", "cgversion", "obsmarkerversions"},
+        );
+        m.insert(
+            PartHeaderType::B2xRebasePack,
+            hashset! {"version", "cache", "category"},
+        );
+        m.insert(
+            PartHeaderType::B2xTreegroup2,
+            hashset! {"version", "cache", "category"},
+        );
+        m.insert(PartHeaderType::Replycaps, hashset! {});
+        m.insert(
+            PartHeaderType::Pushkey,
+            hashset! { "namespace", "key", "old", "new" },
+        );
+        m.insert(PartHeaderType::Pushvars, hashset! {});
         m
     };
 }
