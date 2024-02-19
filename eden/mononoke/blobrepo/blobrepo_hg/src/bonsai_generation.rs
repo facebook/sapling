@@ -171,7 +171,7 @@ async fn find_file_changes(
             }
         }
     })
-    .try_buffer_unordered(100) // TODO(stash): magic number?
+    .try_buffer_unordered(100)
     .try_collect::<std::collections::BTreeMap<_, _>>()
     .await;
 
