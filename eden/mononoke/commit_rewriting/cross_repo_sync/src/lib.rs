@@ -460,8 +460,6 @@ where
 
     // sort_topological returns a list which contains both commits_to_backsync keys and
     // values (i.e. parents). We need only keys, so below we added a filter to remove parents
-    //
-    // TODO(stash): T60147215 change sort_topological logic to not return parents!
     let res = sort_topological(&commits_to_backsync).expect("unexpected cycle in commit graph!");
 
     Ok((
