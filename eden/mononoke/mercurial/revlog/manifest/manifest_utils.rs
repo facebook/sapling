@@ -272,10 +272,6 @@ fn diff_manifests(
 }
 
 /// Compares vectors of entries and returns the difference
-// TODO(stash): T25644857 this method is made public to make it possible to test it.
-// Otherwise we need create dependency to mercurial_types_mocks, which depends on mercurial_types.
-// This causing compilation failure.
-// We need to find a workaround for an issue.
 pub fn diff_sorted_vecs(
     path: MPath,
     to: Vec<RevlogEntry>,
