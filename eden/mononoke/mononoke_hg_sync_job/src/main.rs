@@ -983,13 +983,7 @@ impl LatestReplayedSyncCounter {
 
     async fn set_counter(&self, ctx: &CoreContext, value: i64) -> Result<bool, Error> {
         self.mutable_counters
-            .set_counter(
-                ctx,
-                LATEST_REPLAYED_REQUEST_KEY,
-                value,
-                // TODO(stash): do we need conditional updates here?
-                None,
-            )
+            .set_counter(ctx, LATEST_REPLAYED_REQUEST_KEY, value, None)
             .await
     }
 }
