@@ -113,7 +113,7 @@ impl FileUnode {
     }
 
     pub fn get_unode_id(&self) -> FileUnodeId {
-        // TODO(stash): try avoid clone (although BonsaiChangeset has the same problem)
+        // FIXME: try avoid clone
         *self.clone().into_blob().id()
     }
 
@@ -232,7 +232,7 @@ impl ManifestUnode {
     }
 
     pub fn get_unode_id(&self) -> ManifestUnodeId {
-        // TODO(stash): try avoid clone (although BonsaiChangeset has the same problem)
+        // FIXME: try avoid clone
         *self.clone().into_blob().id()
     }
 
