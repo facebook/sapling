@@ -99,7 +99,7 @@ async fn blobstore_and_filenodes_warmup(
     bcs_id: ChangesetId,
     hg_cs_id: HgChangesetId,
 ) -> Result<(), Error> {
-    // TODO(stash): Arbitrary number. Tweak somehow?
+    // NOTE: Arbitrary number. Tweak somehow?
     let buffer_size = 100usize;
 
     // Ensure filenodes are derived for this, and load the changeset.
