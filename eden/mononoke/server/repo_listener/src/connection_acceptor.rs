@@ -523,8 +523,6 @@ impl ChannelConn {
     }
 }
 
-// TODO(stash): T33775046 we had to chunk responses because hgcli
-// can't cope with big chunks
 fn split_bytes_in_chunk<E>(blob: Bytes, chunksize: usize) -> impl Stream<Item = Result<Bytes, E>> {
     stream::try_unfold(blob, move |mut remain| async move {
         let len = remain.len();
