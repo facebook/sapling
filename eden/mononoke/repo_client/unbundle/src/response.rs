@@ -171,7 +171,6 @@ impl UnbundleResponse {
                 total_capacity += c.len();
             }
 
-            // TODO(stash): make push and pushrebase response streamable - T34090105
             let mut res = BytesMut::with_capacity(total_capacity);
             for c in chunks {
                 res.extend_from_slice(&c);
