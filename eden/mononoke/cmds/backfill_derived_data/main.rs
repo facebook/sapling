@@ -250,15 +250,6 @@ impl DerivedDataProcess {
                 SubCommand::with_name(SUBCOMMAND_TAIL)
                     .about("tail public commits and fill derived data")
                     .arg(
-                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                            .required(false)
-                            .multiple(true)
-                            .index(1)
-                            .possible_values(POSSIBLE_DERIVED_TYPES)
-                            // TODO(stash): T66492899 remove unused value
-                            .help("Unused, will be deleted soon"),
-                    )
-                    .arg(
                         Arg::with_name(ARG_USE_SHARED_LEASES)
                             .long(ARG_USE_SHARED_LEASES)
                             .takes_value(false)
