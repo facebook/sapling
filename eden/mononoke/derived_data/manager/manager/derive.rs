@@ -95,7 +95,9 @@ impl DerivedDataManager {
         &self,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> DerivationContext {
-        DerivationContext::new(self.clone(), rederivation, self.repo_blobstore().boxed())
+        self.inner
+            .derivation_context
+            .with_replaced_rederivation(rederivation)
     }
 
     pub async fn check_derived<Derivable>(

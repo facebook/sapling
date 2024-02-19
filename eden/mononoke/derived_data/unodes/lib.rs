@@ -204,7 +204,7 @@ mod tests {
 
         repo.repo_derived_data()
             .manager()
-            .derive::<RootUnodeManifestId>(&ctx, c4, None)
+            .derive::<RootUnodeManifestId>(ctx, c4, None)
             .await?;
         let renames = crate::find_unode_rename_sources(ctx, &derivation_ctx, &bonsai).await?;
 

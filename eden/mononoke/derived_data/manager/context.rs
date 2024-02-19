@@ -24,7 +24,6 @@ use mononoke_types::ChangesetId;
 
 use crate::derivable::BonsaiDerivable;
 use crate::manager::derive::Rederivation;
-use crate::manager::DerivedDataManager;
 
 /// Context for performing derivation.
 ///
@@ -33,9 +32,13 @@ use crate::manager::DerivedDataManager;
 /// derived data types.
 #[derive(Clone)]
 pub struct DerivationContext {
-    manager: DerivedDataManager,
+    pub(crate) bonsai_hg_mapping: Option<Arc<dyn BonsaiHgMapping>>,
+    bonsai_git_mapping: Option<Arc<dyn BonsaiGitMapping>>,
+    pub(crate) filenodes: Option<Arc<dyn Filenodes>>,
+    config_name: String,
+    config: DerivedDataTypesConfig,
     rederivation: Option<Arc<dyn Rederivation>>,
-    blobstore: Arc<dyn Blobstore>,
+    pub(crate) blobstore: Arc<dyn Blobstore>,
 
     /// Write cache layered over the blobstore.  This is the same object
     /// with two views, so we can return a reference to the `Arc<dyn
@@ -48,15 +51,72 @@ pub struct DerivationContext {
 
 impl DerivationContext {
     pub(crate) fn new(
-        manager: DerivedDataManager,
-        rederivation: Option<Arc<dyn Rederivation>>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+        filenodes: Arc<dyn Filenodes>,
+        config_name: String,
+        config: DerivedDataTypesConfig,
         blobstore: Arc<dyn Blobstore>,
     ) -> Self {
+        // Start with None. Use with_rederivation later if needed
+        let rederivation = None;
         DerivationContext {
-            manager,
+            bonsai_hg_mapping: Some(bonsai_hg_mapping),
+            bonsai_git_mapping: Some(bonsai_git_mapping),
+            filenodes: Some(filenodes),
+            config_name,
+            config,
             rederivation,
             blobstore,
             blobstore_write_cache: None,
+        }
+    }
+
+    pub(crate) fn with_replaced_rederivation(
+        &self,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Self {
+        Self {
+            rederivation,
+            ..self.clone()
+        }
+    }
+
+    // For dangerous-override: allow replacement of bonsai-hg-mapping
+    pub fn with_replaced_bonsai_hg_mapping(
+        &self,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    ) -> Self {
+        Self {
+            bonsai_hg_mapping: Some(bonsai_hg_mapping),
+            ..self.clone()
+        }
+    }
+
+    // For dangerous-override: allow replacement of filenodes
+    pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
+        Self {
+            filenodes: Some(filenodes),
+            ..self.clone()
+        }
+    }
+
+    pub fn with_replaced_config(
+        &self,
+        config_name: String,
+        config: DerivedDataTypesConfig,
+    ) -> Self {
+        Self {
+            config_name,
+            config,
+            ..self.clone()
+        }
+    }
+
+    pub fn with_replaced_blobstore(&self, blobstore: Arc<dyn Blobstore>) -> Self {
+        Self {
+            blobstore,
+            ..self.clone()
         }
     }
 
@@ -175,20 +235,28 @@ impl DerivationContext {
     }
 
     pub fn bonsai_hg_mapping(&self) -> Result<&dyn BonsaiHgMapping> {
-        self.manager.bonsai_hg_mapping()
+        self.bonsai_hg_mapping
+            .as_deref()
+            .context("Missing BonsaiHgMapping")
     }
 
     pub fn bonsai_git_mapping(&self) -> Result<&dyn BonsaiGitMapping> {
-        self.manager.bonsai_git_mapping()
+        self.bonsai_git_mapping
+            .as_deref()
+            .context("Missing BonsaiGitMapping")
     }
 
     pub fn filenodes(&self) -> Result<&dyn Filenodes> {
-        self.manager.filenodes()
+        self.filenodes.as_deref().context("Missing filenodes")
+    }
+
+    pub fn config_name(&self) -> String {
+        self.config_name.clone()
     }
 
     /// The config that should be used for derivation.
     pub fn config(&self) -> &DerivedDataTypesConfig {
-        self.manager.config()
+        &self.config
     }
 
     /// Mapping key prefix for a particular derived data type.

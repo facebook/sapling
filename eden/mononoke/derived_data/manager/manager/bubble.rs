@@ -51,16 +51,21 @@ impl DerivedDataManager {
         container: &(impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef),
     ) -> Self {
         let changesets = Arc::new(bubble.changesets(container));
+        let wrapped_blobstore = bubble.wrap_repo_blobstore(self.inner.repo_blobstore.clone());
+        let mut derivation_context = self.inner.derivation_context.clone();
+        derivation_context.bonsai_hg_mapping = None;
+        derivation_context.filenodes = None;
+        derivation_context.blobstore = wrapped_blobstore.boxed();
+
+        // TODO (Pierre): Should we also clear bonsai_git_mapping? By symmetry, it appears so
         Self {
             inner: Arc::new(DerivedDataManagerInner {
                 secondary: Some(SecondaryManagerData {
                     manager: Self {
                         inner: Arc::new(DerivedDataManagerInner {
                             changesets: changesets.clone(),
-                            repo_blobstore: bubble
-                                .wrap_repo_blobstore(self.inner.repo_blobstore.clone()),
-                            filenodes: None,
-                            bonsai_hg_mapping: None,
+                            repo_blobstore: wrapped_blobstore,
+                            derivation_context,
                             ..self.inner.as_ref().clone()
                         }),
                     },

@@ -803,7 +803,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
 
     repo.repo_derived_data()
         .manager()
-        .derive::<RootUnodeManifestId>(&ctx, bcs.get_changeset_id(), None)
+        .derive::<RootUnodeManifestId>(ctx, bcs.get_changeset_id(), None)
         .await?;
 
     let (current_unode, parent_unodes) = get_unodes(
