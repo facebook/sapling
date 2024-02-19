@@ -571,7 +571,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
 
                     // If the source path doesn't remap, drop this copy info.
 
-                    // TODO(stash): a path can be remapped to multiple other paths,
+                    // FIXME: a path can be remapped to multiple other paths,
                     // but for copy_from path we pick only the first one. Instead of
                     // picking only the first one, it's a better to have a dedicated
                     // field in a thrift struct which says which path should be picked
