@@ -63,26 +63,42 @@ export const browserServerPlatform: ServerPlatform = {
         break;
       }
       case 'platform/openFile': {
-        const absPath: AbsolutePath = pathModule.join(unwrap(repo?.info.repoRoot), message.path);
-        let args: Array<string> = [];
-        // use OS-builtin open command to open files
-        // (which may open different file extensions with different programs)
-        // TODO: add a config option to determine which program to launch
-        switch (process.platform) {
-          case 'darwin':
-            args = ['/usr/bin/open', absPath];
-            break;
-          case 'win32':
-            args = ['notepad.exe', absPath];
-            break;
-          case 'linux':
-            args = ['xdg-open', absPath];
-            break;
-        }
-        repo?.logger.log('open file', absPath);
-        if (args.length > 0) {
-          spawnInBackground(repo, args);
-        }
+        (async () => {
+          const opener = await repo?.getConfig('isl.open-file-cmd');
+          const absPath: AbsolutePath = pathModule.join(unwrap(repo?.info.repoRoot), message.path);
+          let args: Array<string> = [];
+          if (opener) {
+            // opener should be either a JSON string (wrapped in quotes) or a JSON array of strings,
+            // to include arguments
+            try {
+              const jsonOpenerArgs = JSON.parse(opener);
+              args = Array.isArray(jsonOpenerArgs)
+                ? [...jsonOpenerArgs, absPath]
+                : [jsonOpenerArgs, absPath];
+            } catch {
+              // if it's not JSON, it should be a regular string
+              args = [opener, absPath];
+            }
+          } else {
+            // by default, use OS-builtin open command to open files
+            // (which may open different file extensions with different programs)
+            switch (process.platform) {
+              case 'darwin':
+                args = ['/usr/bin/open', absPath];
+                break;
+              case 'win32':
+                args = ['notepad.exe', absPath];
+                break;
+              case 'linux':
+                args = ['xdg-open', absPath];
+                break;
+            }
+          }
+          repo?.logger.log('open file', absPath);
+          if (args.length > 0) {
+            spawnInBackground(repo, args);
+          }
+        })();
         break;
       }
     }
