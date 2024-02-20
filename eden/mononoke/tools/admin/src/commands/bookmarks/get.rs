@@ -44,7 +44,7 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: BookmarksGetArgs) -> 
         Some(cs_id) => {
             // If the bookmark is a tag, print the ID of the changeset containing the
             // metadata associated with the tag along with the changeset that it points to.
-            if key.category() == &BookmarkCategory::Tag {
+            if key.is_tag() {
                 let metadata_changeset = repo
                     .bonsai_tag_mapping
                     .get_entry_by_tag_name(key.name().clone().into_string())
