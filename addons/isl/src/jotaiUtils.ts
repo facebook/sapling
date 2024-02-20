@@ -54,12 +54,14 @@ export function configBackedAtom<T extends Json>(
   name: ConfigName,
   defaultValue: T,
   readonly: true,
+  useRawValue?: boolean,
 ): Atom<T>;
 
 export function configBackedAtom<T extends Json>(
   name: ConfigName | SettableConfigName,
   defaultValue: T,
   readonly = false,
+  useRawValue?: boolean,
 ): MutAtom<T> | Atom<T> {
   // https://jotai.org/docs/guides/persistence
   const primitiveAtom = atom<T>(defaultValue);
@@ -70,7 +72,14 @@ export function configBackedAtom<T extends Json>(
       return;
     }
     lastStrValue = event.value;
-    writeAtom(primitiveAtom, event.value === undefined ? defaultValue : JSON.parse(event.value));
+    writeAtom(
+      primitiveAtom,
+      event.value === undefined
+        ? defaultValue
+        : useRawValue === true
+        ? event.value
+        : JSON.parse(event.value),
+    );
   });
   serverAPI.onConnectOrReconnect(() => {
     serverAPI.postMessage({
@@ -86,7 +95,7 @@ export function configBackedAtom<T extends Json>(
         (get, set, update) => {
           const newValue = typeof update === 'function' ? update(get(primitiveAtom)) : update;
           set(primitiveAtom, newValue);
-          const strValue = JSON.stringify(newValue);
+          const strValue = useRawValue ? String(newValue) : JSON.stringify(newValue);
           if (strValue !== lastStrValue) {
             lastStrValue = strValue;
             serverAPI.postMessage({

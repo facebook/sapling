@@ -35,6 +35,7 @@ const androidStudioPlatform: Platform = {
     // TODO: support line numbers
     window.__IdeBridge.openFileInAndroidStudio(_path);
   },
+  canCustomizeFileOpener: false,
 
   openExternalLink(_url: string): void {
     window.open(_url, '_blank');

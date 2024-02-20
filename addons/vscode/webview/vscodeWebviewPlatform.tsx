@@ -90,6 +90,7 @@ export const vscodeWebviewPlatform: Platform = {
   },
   openFile: (path, options) =>
     window.clientToServerAPI?.postMessage({type: 'platform/openFile', path, options}),
+  canCustomizeFileOpener: false,
   openDiff: (path: RepoRelativePath, comparison: Comparison) =>
     window.clientToServerAPI?.postMessage({type: 'platform/openDiff', path, comparison}),
   openExternalLink: url => {

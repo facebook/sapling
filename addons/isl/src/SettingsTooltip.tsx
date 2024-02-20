@@ -9,6 +9,7 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
+import {FlexRow} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
@@ -21,6 +22,7 @@ import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
+import {configBackedAtom} from './jotaiUtils';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
@@ -36,7 +38,7 @@ import {
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
-import {unwrap} from 'shared/utils';
+import {tryJsonParse, unwrap} from 'shared/utils';
 
 import './VSCodeDropdown.css';
 import './SettingsTooltip.css';
@@ -179,6 +181,11 @@ function SettingsDropdown({
           <SubmitAsDraftCheckbox forceShow />
         </div>
       </Setting>
+      {platform.canCustomizeFileOpener && (
+        <Setting title={<T>Environment</T>}>
+          <OpenFilesCmdSetting />
+        </Setting>
+      )}
       <DebugToolsField />
     </DropdownFields>
   );
@@ -223,6 +230,47 @@ function RenderCompactSetting() {
         }}>
         <T>Compact Mode</T>
       </VSCodeCheckbox>
+    </Tooltip>
+  );
+}
+
+export const openFileCmdAtom = configBackedAtom<string | null>(
+  'isl.open-file-cmd',
+  null,
+  /* readonly */ true,
+  /* use raw value */ true,
+);
+
+function OpenFilesCmdSetting() {
+  const cmdRaw = useAtomValue(openFileCmdAtom);
+  const cmd = cmdRaw == null ? null : (tryJsonParse(cmdRaw) as string | Array<string>) ?? cmdRaw;
+  const cmdEl =
+    cmd == null ? (
+      <T>OS Default Program</T>
+    ) : (
+      <code>{Array.isArray(cmd) ? cmd.join(' ') : cmd}</code>
+    );
+  return (
+    <Tooltip
+      component={() => (
+        <div>
+          <div>
+            <T>You can configure how to open files from ISL via</T>
+          </div>
+          <pre>sl config --user isl.open-file-cmd "/path/to/command"</pre>
+          <div>
+            <T>or</T>
+          </div>
+          <pre>sl config --user isl.open-file-cmd '["cmd", "with", "args"]'</pre>
+        </div>
+      )}>
+      <FlexRow>
+        <T replace={{$cmd: cmdEl}}>Open files in $cmd</T>
+        <Subtle>
+          <T>How to configure?</T>
+        </Subtle>
+        <Icon icon="question" />
+      </FlexRow>
     </Tooltip>
   );
 }
