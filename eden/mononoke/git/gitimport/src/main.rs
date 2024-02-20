@@ -38,7 +38,6 @@ use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
 use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_derivation::DeriveHgChangeset;
-use mononoke_api::BookmarkCategory;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
 use mononoke_app::args::RepoArgs;
@@ -342,12 +341,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     )
                     .await?;
                 }
-                // Set the appropriate category for branch and tag bookmarks
-                let bookmark_key = if maybe_tag_id.is_some() {
-                    BookmarkKey::with_name_and_category(name.parse()?, BookmarkCategory::Tag)
-                } else {
-                    BookmarkKey::new(&name)?
-                };
+                let bookmark_key = BookmarkKey::new(&name)?;
 
                 let pushvars = if args.bypass_readonly {
                     Some(HashMap::from_iter([(
