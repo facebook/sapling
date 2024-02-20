@@ -182,28 +182,15 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
   );
 }
 
-const debouncedDiffFetch = debounce(
-  (diffId: string) => {
-    serverAPI.postMessage({
-      type: 'fetchDiffSummaries',
-      diffIds: [diffId],
-    });
-  },
-  10_000,
-  undefined,
-  /* leading */ true,
-);
-function useDebounceFetchDiffDetails(diffId?: string) {
+function useFetchActiveDiffDetails(diffId?: string) {
   useEffect(() => {
-    // reset debouncing any time the current diff changes
-    debouncedDiffFetch.reset();
     if (diffId != null) {
-      debouncedDiffFetch(diffId);
+      serverAPI.postMessage({
+        type: 'fetchDiffSummaries',
+        diffIds: [diffId],
+      });
     }
   }, [diffId]);
-  if (diffId != null) {
-    debouncedDiffFetch(diffId);
-  }
 }
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
@@ -224,7 +211,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const fieldsBeingEdited = useAtomValue(unsavedFieldsBeingEdited(hashOrHead));
 
-  useDebounceFetchDiffDetails(commit.diffId);
+  useFetchActiveDiffDetails(commit.diffId);
 
   const [forceEditAll, setForceEditAll] = useAtom(forceNextCommitToEditAllFields);
 
