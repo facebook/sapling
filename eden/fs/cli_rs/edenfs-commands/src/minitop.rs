@@ -435,7 +435,7 @@ impl crate::Subcommand for MinitopCmd {
             if self.interactive {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All))?;
             }
-            client.flushStatsNow();
+            client.flushStatsNow().await?;
             system.refresh_processes();
             cursor.refresh_terminal_size()?;
 
@@ -577,7 +577,7 @@ mod unix {
 
     use anyhow::anyhow;
     use anyhow::Result;
-    use shlex::quote;
+    use shlex::try_quote;
 
     pub fn trim_cmd_binary_path(cmd: &str) -> Result<String> {
         let mut parts: Vec<&str> = cmd.split(char::from(0)).collect();
@@ -598,7 +598,7 @@ mod unix {
                     // the first item is the cmd
                     String::from(part)
                 } else {
-                    quote(part).into_owned()
+                    try_quote(part).unwrap().into_owned()
                 }
             })
             .collect::<Vec<String>>()

@@ -377,10 +377,10 @@ async fn test_linear_multiple_renames_with_deletes() {
     let c = t.copy_trace().await;
 
     assert_trace_rename!(c A X, a -> d);
-    assert_trace_rename!(c A Z, a -> !-Z d);
+    assert_trace_rename!(c A Z, a -> ! - Z d);
 
     assert_trace_rename!(c Z B, b2 -> b2);
-    assert_trace_rename!(c Z A, b2 -> !+B b2);
+    assert_trace_rename!(c Z A, b2 -> ! + B b2);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -440,8 +440,8 @@ async fn test_non_linear_multiple_renames_with_deletes() {
     let c = t.copy_trace().await;
 
     assert_trace_rename!(c Z 1000, a2 -> d);
-    assert_trace_rename!(c Z 1001, a2 -> !-1001 d);
-    assert_trace_rename!(c Z 1023, a2 -> !-1001 d);
+    assert_trace_rename!(c Z 1001, a2 -> ! - 1001 d);
+    assert_trace_rename!(c Z 1023, a2 -> ! - 1001 d);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

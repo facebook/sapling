@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(arc_unwrap_or_clone)]
-
 use std::path::Path;
 use std::sync::Arc;
 
