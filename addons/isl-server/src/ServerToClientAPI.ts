@@ -630,7 +630,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchGeneratedStatuses': {
         generatedFilesDetector
-          .queryFilesGenerated(repo.logger, repo.info.repoRoot, data.paths)
+          .queryFilesGenerated(repo, repo.logger, repo.info.repoRoot, data.paths)
           .then(results => {
             this.postMessage({type: 'fetchedGeneratedStatuses', results});
           });
