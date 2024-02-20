@@ -543,6 +543,7 @@ export class Repository {
 
   setPageFocus(page: string, state: PageVisibility) {
     this.pageFocusTracker.setState(page, state);
+    this.trackerBestEffort.track('FocusChanged', {extras: {state}});
   }
 
   /** Return the latest fetched value for UncommittedChanges. */
