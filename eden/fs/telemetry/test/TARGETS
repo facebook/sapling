@@ -70,7 +70,7 @@ cpp_unittest(
     deps = [
         "//eden/fs/telemetry:scribe_logger",
         "//eden/fs/telemetry:structured_logger",
-        "//folly:dynamic",
+        "//folly/json:dynamic",
         "//folly/portability:gmock",
         "//folly/portability:gtest",
     ],

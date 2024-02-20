@@ -8,7 +8,7 @@
 #pragma once
 
 #include <folly/Portability.h>
-#include <folly/dynamic.h>
+#include <folly/json/dynamic.h>
 #include <optional>
 
 #include "eden/fs/config/InodeCatalogType.h"

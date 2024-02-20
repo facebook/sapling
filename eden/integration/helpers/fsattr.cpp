@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/dynamic.h>
 #include <folly/init/Init.h>
-#include <folly/json.h>
+#include <folly/json/dynamic.h>
+#include <folly/json/json.h>
 #include <gflags/gflags.h>
 #include "eden/fs/utils/XAttr.h"
 

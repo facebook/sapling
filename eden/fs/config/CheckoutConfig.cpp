@@ -13,7 +13,7 @@
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include <folly/json.h>
+#include <folly/json/json.h>
 #include <optional>
 
 #include "eden/fs/utils/FileUtils.h"

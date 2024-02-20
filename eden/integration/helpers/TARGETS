@@ -32,8 +32,8 @@ cpp_binary(
     ],
     deps = [
         "//eden/fs/utils:utils",
-        "//folly:dynamic",
         "//folly/init:init",
+        "//folly/json:dynamic",
     ],
     external_deps = ["gflags"],
 )
