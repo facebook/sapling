@@ -38,6 +38,7 @@ import type {
   ConfigName,
   Alert,
   RepoRelativePath,
+  SettableConfigName,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -73,7 +74,12 @@ import {
 } from './templates';
 import {handleAbortSignalOnProcess, isExecaError, serializeAsyncCall} from './utils';
 import execa from 'execa';
-import {allConfigNames, CommitCloudBackupStatus, CommandRunner} from 'isl/src/types';
+import {
+  settableConfigNames,
+  allConfigNames,
+  CommitCloudBackupStatus,
+  CommandRunner,
+} from 'isl/src/types';
 import path from 'path';
 import {revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
@@ -1057,7 +1063,16 @@ export class Repository {
     });
   }
 
-  public setConfig(level: ConfigLevel, configName: string, configValue: string): Promise<void> {
+  public setConfig(
+    level: ConfigLevel,
+    configName: SettableConfigName,
+    configValue: string,
+  ): Promise<void> {
+    if (!settableConfigNames.includes(configName)) {
+      return Promise.reject(
+        new Error(`Config ${configName} not in allowlist for settable configs`),
+      );
+    }
     // Attempt to avoid racy config read/write.
     return this.configRateLimiter.enqueueRun(() =>
       setConfig(this.ctx, level, configName, configValue),

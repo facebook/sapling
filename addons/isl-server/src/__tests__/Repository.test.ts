@@ -225,6 +225,21 @@ describe('Repository', () => {
     osSpy.mockRestore();
   });
 
+  it('prevents setting configs not in the allowlist', async () => {
+    setConfigOverrideForTests([]);
+    setPathsDefault('mononoke://0.0.0.0/fbsource');
+    mockExeca([
+      [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
+      [/^sl root/, {stdout: '/path/to/myRepo'}],
+    ]);
+    const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+    const repo = new Repository(info, mockLogger, mockTracker);
+    // @ts-expect-error We expect a type error in addition to runtime validation
+    await expect(repo.setConfig('user', 'some-random-config', 'hi')).rejects.toEqual(
+      new Error('Config some-random-config not in allowlist for settable configs'),
+    );
+  });
+
   describe('merge conflicts', () => {
     const repoInfo: ValidatedRepoInfo = {
       type: 'success',

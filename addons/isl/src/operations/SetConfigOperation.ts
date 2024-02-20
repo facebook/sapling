@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {SettableConfigName} from '../types';
+
 import {Operation} from './Operation';
 
 export class SetConfigOperation extends Operation {
   constructor(
     private scope: 'user' | 'local' | 'global',
-    private configName: string,
+    private configName: SettableConfigName,
     private value: string,
   ) {
     super('SetConfigOperation');

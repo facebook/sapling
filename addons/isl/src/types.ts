@@ -491,13 +491,39 @@ export const allConfigNames = [
   'isl.experimental-features',
   'isl.hold-off-refresh-ms',
   'isl.use-sl-graphql',
+  'github.preferred_submit_command',
   'isl.open-file-cmd',
   // which graph renderer to use (0: tree; 1: dag; 2: show both).
   'isl.experimental-graph-renderer',
 ] as const;
 
-/** sl configs written by ISL */
+/** sl configs read by ISL */
 export type ConfigName = (typeof allConfigNames)[number];
+
+/**
+ * Not all configs should be set-able from the UI, for security.
+ * Only configs which could not possibly allow code execution should be allowed.
+ * Most ISL configs are OK.
+ */
+export const settableConfigNames = [
+  'isl.submitAsDraft',
+  'isl.changedFilesDisplayType',
+  'isl.hasShownGettingStarted',
+  'isl.pull-button-choice',
+  'isl.show-stack-submit-confirmation',
+  'isl.show-diff-number',
+  'isl.render-compact',
+  'isl.download-commit-should-goto',
+  'isl.download-commit-rebase-type',
+  'isl.experimental-features',
+  'isl.hold-off-refresh-ms',
+  'isl.use-sl-graphql',
+  'isl.experimental-graph-renderer',
+  'github.preferred_submit_command',
+] as const;
+
+/** sl configs written to by ISL */
+export type SettableConfigName = (typeof settableConfigNames)[number];
 
 /** local storage keys written by ISL */
 export type LocalStorageName =
@@ -513,7 +539,7 @@ export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
   | {type: 'refresh'}
   | {type: 'getConfig'; name: ConfigName}
-  | {type: 'setConfig'; name: ConfigName; value: string}
+  | {type: 'setConfig'; name: SettableConfigName; value: string}
   | {type: 'changeCwd'; cwd: string}
   | {type: 'track'; data: TrackDataWithEventName}
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json; collectRage: boolean}

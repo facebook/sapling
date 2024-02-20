@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ConfigName, LocalStorageName} from './types';
+import type {ConfigName, LocalStorageName, SettableConfigName} from './types';
 import type {WritableAtom, Atom, Getter} from 'jotai';
 import type {Json} from 'shared/typeUtils';
 
@@ -38,7 +38,7 @@ export function setJotaiStore(newStore: typeof store) {
 
 /** Define a read-write atom backed by a config. */
 export function configBackedAtom<T extends Json>(
-  name: ConfigName,
+  name: SettableConfigName,
   defaultValue: T,
   readonly?: false,
 ): MutAtom<T>;
@@ -57,7 +57,7 @@ export function configBackedAtom<T extends Json>(
 ): Atom<T>;
 
 export function configBackedAtom<T extends Json>(
-  name: ConfigName,
+  name: ConfigName | SettableConfigName,
   defaultValue: T,
   readonly = false,
 ): MutAtom<T> | Atom<T> {
@@ -75,7 +75,7 @@ export function configBackedAtom<T extends Json>(
   serverAPI.onConnectOrReconnect(() => {
     serverAPI.postMessage({
       type: 'getConfig',
-      name,
+      name: name as ConfigName,
     });
   });
 
@@ -91,7 +91,7 @@ export function configBackedAtom<T extends Json>(
             lastStrValue = strValue;
             serverAPI.postMessage({
               type: 'setConfig',
-              name,
+              name: name as SettableConfigName,
               value: strValue,
             });
           }
