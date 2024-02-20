@@ -23,6 +23,8 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use tokio::task;
@@ -138,7 +140,7 @@ type WorkEntry<ManifestId, FileId> = HashMap<
 >;
 
 /// Identify further work to be performed for this Bonsai diff.
-async fn recurse_trees<ManifestId, FileId, Store>(
+async fn recurse_trees<ManifestId, FileId, Store, Leaf>(
     ctx: &CoreContext,
     store: &Store,
     path: Option<&NonRootMPath>,
@@ -149,7 +151,8 @@ where
     FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)>,
+        Manifest<TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+    Leaf: ManifestLeafId<FileId = FileId>,
 {
     // If there is a single parent, and it's unchanged, then we don't need to recurse.
     if parents.len() == 1 && node.as_ref() == parents.iter().next() {
@@ -174,9 +177,15 @@ where
 
     let mut ret = HashMap::new();
 
+    let convert_entry = |entry: Entry<ManifestId, Leaf>| match entry {
+        Entry::Leaf(manif_leaf) => Entry::Leaf((manif_leaf.file_type(), manif_leaf.file_id())),
+        Entry::Tree(mid) => Entry::Tree(mid),
+    };
+
     if let Some(node) = node {
         for (path, entry) in node.list() {
-            ret.entry(path).or_insert((None, CompositeEntry::empty())).0 = Some(entry);
+            ret.entry(path).or_insert((None, CompositeEntry::empty())).0 =
+                Some(convert_entry(entry));
         }
     }
 
@@ -185,7 +194,7 @@ where
             ret.entry(path)
                 .or_insert((None, CompositeEntry::empty()))
                 .1
-                .insert(entry);
+                .insert(convert_entry(entry));
         }
     }
 
@@ -230,7 +239,7 @@ where
     BonsaiDiffFileChange::Changed(path, node.0, node.1)
 }
 
-async fn bonsai_diff_unfold<ManifestId, FileId, Store>(
+async fn bonsai_diff_unfold<ManifestId, FileId, Store, Leaf>(
     ctx: &CoreContext,
     store: &Store,
     path: NonRootMPath,
@@ -247,7 +256,8 @@ where
     FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)>,
+        Manifest<TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+    Leaf: ManifestLeafId<FileId = FileId>,
 {
     let res = match node {
         Some(Entry::Tree(node)) => {
@@ -315,18 +325,19 @@ where
     Ok(res)
 }
 
-pub fn bonsai_diff<ManifestId, FileId, Store>(
+pub fn bonsai_diff<ManifestId, FileId, Store, Leaf>(
     ctx: CoreContext,
     store: Store,
     node: ManifestId,
     parents: HashSet<ManifestId>,
 ) -> impl Stream<Item = Result<BonsaiDiffFileChange<FileId>, Error>>
 where
-    FileId: Hash + Eq + Send + Sync + 'static,
+    FileId: Hash + Eq + Send + Sync + Clone + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)> + Send + Sync,
+        Manifest<TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+    Leaf: ManifestLeafId<FileId = FileId>,
 {
     // NOTE: `async move` blocks are used below to own CoreContext and Store for the (static)
     // lifetime of the stream we're returning here (recurse_trees and bonsai_diff_unfold don't
@@ -349,6 +360,39 @@ where
     })
     .try_flatten_stream()
     .try_filter_map(future::ok)
+}
+
+/// Trait that generalizes the LeafId bound from `bonsai_diff` so that it can be
+/// called with manifests other than the ones that have the leaf `(FileType, _)`.
+pub trait ManifestLeafId: Hash + Eq {
+    type FileId: Hash + Eq;
+
+    fn file_type(&self) -> FileType;
+    fn file_id(self) -> Self::FileId;
+}
+
+impl<FId: Hash + Eq> ManifestLeafId for (FileType, FId) {
+    type FileId = FId;
+
+    fn file_type(&self) -> FileType {
+        self.0
+    }
+
+    fn file_id(self) -> Self::FileId {
+        self.1
+    }
+}
+
+impl ManifestLeafId for FsnodeFile {
+    type FileId = (ContentId, u64);
+
+    fn file_type(&self) -> FileType {
+        *self.file_type()
+    }
+
+    fn file_id(self) -> Self::FileId {
+        (*self.content_id(), self.size())
+    }
 }
 
 #[cfg(test)]
