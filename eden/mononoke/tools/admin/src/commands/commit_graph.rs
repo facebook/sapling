@@ -11,6 +11,7 @@ mod backfill_one;
 mod checkpoints;
 mod children;
 mod common_base;
+mod descendants;
 mod range_stream;
 mod segments;
 mod slice_ancestors;
@@ -31,6 +32,7 @@ use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use common_base::CommonBaseArgs;
+use descendants::DescendantsArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -71,6 +73,8 @@ pub enum CommitGraphSubcommand {
     SliceAncestors(SliceAncestorsArgs),
     /// Display ids of all children commits of a given commit.
     Children(ChildrenArgs),
+    /// Display ids of the union of descendants of the given commits.
+    Descendants(DescendantsArgs),
     /// Display segments representing ancestors of one set of commits (heads), excluding
     /// ancestors of another set of commits (common) in reverse topological order.
     Segments(SegmentsArgs),
@@ -134,6 +138,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             slice_ancestors::slice_ancestors(&ctx, &repo, args).await
         }
         CommitGraphSubcommand::Children(args) => children::children(&ctx, &repo, args).await,
+        CommitGraphSubcommand::Descendants(args) => {
+            descendants::descendants(&ctx, &repo, args).await
+        }
         CommitGraphSubcommand::Segments(args) => segments::segments(&ctx, &repo, args).await,
     }
 }
