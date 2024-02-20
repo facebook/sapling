@@ -107,7 +107,7 @@ pub enum TraversalOrder {
     },
     GenNumOrder {
         front_queue: VecDeque<NextChangeset>,
-        // TODO(stash): ParentOrder is very basic at the moment,
+        // FIXME: ParentOrder is very basic at the moment,
         // and won't work correctly in all cases.
         heap: BinaryHeap<(Generation, Reverse<ParentOrder>, CsAndPath)>,
         ctx: CoreContext,
@@ -700,8 +700,6 @@ async fn find_mutable_renames(
         .await?
     {
         let src_path = Arc::new(rename.src_path().clone());
-        // TODO(stash): this unode can be used to avoid unode manifest traversal
-        // later while doing prefetching
         let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
         let linknode = match src_unode {
             Entry::Tree(tree_unode) => *tree_unode.linknode(),
