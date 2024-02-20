@@ -86,7 +86,7 @@ where
 
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
-    // TODO(stash): in reality both source and target should point to the same mapping
+    // FIXME: in reality both source and target should point to the same mapping
     // It'll be nice to verify it
     let (source_repo, target_repo) = try_join!(source_repo, target_repo)?;
 
