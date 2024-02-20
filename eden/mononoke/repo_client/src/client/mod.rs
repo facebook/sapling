@@ -2060,8 +2060,6 @@ pub fn gettreepack_entries(
     // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
     let fetchdepth = fetchdepth.unwrap_or(2 << 16);
 
-    // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
-    // already has can be sent to the client.
     let mut basemfnode = basemfnodes.iter().next().cloned();
 
     cloned!(repo);
