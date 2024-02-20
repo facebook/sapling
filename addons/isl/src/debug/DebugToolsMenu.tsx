@@ -138,10 +138,14 @@ function InternalState() {
   );
 }
 
-const logMessagesState = atomWithOnChange(atom(debugLogMessageTraffic.shoudlLog), newValue => {
-  debugLogMessageTraffic.shoudlLog = newValue;
-  console.log(`----- ${newValue ? 'Enabled' : 'Disabled'} Logging Messages -----`);
-});
+const logMessagesState = atomWithOnChange(
+  atom(debugLogMessageTraffic.shoudlLog),
+  newValue => {
+    debugLogMessageTraffic.shoudlLog = newValue;
+    console.log(`----- ${newValue ? 'Enabled' : 'Disabled'} Logging Messages -----`);
+  },
+  /* skipInitialCall */ true,
+);
 
 function ServerClientMessageLogging() {
   const [shouldLog, setShouldLog] = useAtom(logMessagesState);

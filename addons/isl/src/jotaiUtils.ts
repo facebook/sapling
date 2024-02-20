@@ -124,13 +124,16 @@ export function localStorageBackedAtom<T extends Json>(
 /**
  * Wraps an atom with an "onChange" callback.
  * Changing the returned atom will trigger the callback.
- * Calling this function will trigger `onChange` with the current value.
+ * Calling this function will trigger `onChange` with the current value except when `skipInitialCall` is `true`.
  */
 export function atomWithOnChange<T>(
   originalAtom: MutAtom<T>,
   onChange: (value: T) => void,
+  skipInitialCall?: boolean,
 ): MutAtom<T> {
-  onChange(readAtom(originalAtom));
+  if (skipInitialCall !== true) {
+    onChange(readAtom(originalAtom));
+  }
   return atom(
     get => get(originalAtom),
     (get, set, args) => {
