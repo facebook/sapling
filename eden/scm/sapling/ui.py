@@ -811,6 +811,7 @@ class ui:
           command: The full, non-aliased name of the command. That is, "log"
                    not "history, "summary" not "summ", etc.
         """
+
         if self._disablepager or self.pageractive:
             # how pager should do is already determined
             return
@@ -853,6 +854,11 @@ class ui:
         wasterminaloutput = self.terminaloutput()
         if hasattr(signal, "SIGPIPE"):
             util.signal(signal.SIGPIPE, _catchterm)
+
+        if self.configbool("experimental", "rust-custom-pager", True):
+            self._runrustpager(pagercmd)
+            return
+
         if pagercmd == "internal:streampager":
             self._runinternalstreampager()
         elif self._runpager(pagercmd, pagerenv):
@@ -873,6 +879,27 @@ class ui:
             # given, don't try again when the command runs, to avoid a duplicate
             # warning about a missing pager command.
             self.disablepager()
+
+    def _runrustpager(self, pagercmd):
+        """Delegate both streampager and custom pagers to rust"""
+        self.debug("starting rust pager command: %r\n" % pagercmd)
+
+        origencoding = encoding.outputencoding
+
+        self.flush()
+        util.get_main_io().start_pager(self._rcfg)
+
+        # The Rust streampager wants utf-8 unconditionally.
+        if pagercmd == "internal:streampager":
+            encoding.outputencoding = "utf-8"
+
+        @self.atexit
+        def waitpager():
+            util.get_main_io().wait_pager()
+            encoding.outputencoding = origencoding
+
+        self.pageractive = True
+        return True
 
     def _runinternalstreampager(self):
         """Start the builtin streampager"""
@@ -898,6 +925,7 @@ class ui:
         This is separate in part so that extensions (like chg) can
         override how a pager is invoked.
         """
+
         if command == "cat":
             # Save ourselves some work.
             return False

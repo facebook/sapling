@@ -6,10 +6,13 @@
  */
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::io;
 use std::mem;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::process::Command;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::spawn;
@@ -25,6 +28,7 @@ use parking_lot::MutexGuard;
 use parking_lot::RwLock;
 use pipe::pipe;
 use pipe::PipeWriter;
+use spawn_ext::CommandExt;
 use streampager::action::Action;
 use streampager::config::InterfaceMode;
 use streampager::config::WrappingMode;
@@ -45,7 +49,7 @@ mod buf;
 mod impls;
 mod term;
 
-use crate::impls::PipeWriterWithTty;
+use crate::impls::WriterWithTty;
 
 // IO is Clone, but care must be taken to drop the IO object normally
 // to ensure things are cleaned up before the process exits.
@@ -104,7 +108,7 @@ struct IOState {
 
     // Function to wait for the pager to cleanup (restore terminal state).
     // Might block, unless `pager_quit_func` is called right before.
-    pager_wait_func: Option<Box<dyn FnOnce() + Send>>,
+    pager_wait_func: Option<Box<dyn FnOnce(&mut IOState) + Send>>,
 }
 
 /// The "main" IO used by the process.
@@ -519,10 +523,109 @@ impl IO {
         state.is_pager_active()
     }
 
+    pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
+        match config.get("pager", "pager").as_deref() {
+            None | Some("internal:streampager") => self.start_streampager(config),
+            Some(pager) => self.start_custom_pager(config, pager),
+        }
+    }
+
+    pub fn start_custom_pager(&self, config: &dyn Config, pager_cmd: &str) -> io::Result<()> {
+        let mut inner = self.inner.locked_with_blocked_interval();
+        if inner.is_pager_active() {
+            return Ok(());
+        }
+
+        // use inner.disable_progress to prevent double locking
+        inner.disable_progress(true)?;
+
+        let is_shell = "|&;<>()$`\\\"' \t\n*?[#~=%"
+            .chars()
+            .any(|c| pager_cmd.contains(c));
+
+        let mut command = if is_shell {
+            Command::new_shell(pager_cmd)
+        } else {
+            Command::new(pager_cmd)
+        };
+
+        // config ENV for pager
+        // keep rcutil::defaultpagerenv behavior
+        let mut pager_envs: HashMap<&str, String> =
+            [("LESS", String::from("FRX")), ("LV", String::from("-c"))]
+                .into_iter()
+                .filter(|(k, _)| std::env::var(k).is_err())
+                .collect();
+        if let Some(encoding) = config.get("pager", "encoding") {
+            pager_envs.insert("LESSCHARSET", String::from(encoding.as_ref()));
+        }
+
+        let spawn_result = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .envs(&pager_envs)
+            .spawn();
+
+        let mut child = match spawn_result {
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    if let Some(err) = inner.error.as_mut() {
+                        writeln!(err, "missing pager command '{}', skipping pager", pager_cmd)?;
+                    }
+
+                    return Ok(());
+                }
+                _ => return Err(e),
+            },
+            Ok(child) => child,
+        };
+
+        // pipe hg output to pager input
+        inner.output = {
+            let mut pipe =
+                WriterWithTty::new(Box::new(child.stdin.take().unwrap()), inner.output.is_tty());
+            pipe.pretend_stdout = inner.output.is_stdout();
+            Box::new(pipe)
+        };
+
+        let err_is_tty = inner
+            .error
+            .as_ref()
+            .map_or_else(|| inner.output.is_tty(), |e| e.is_tty());
+
+        // handle pager.stderr
+        let send_err_to_pager = err_is_tty && config.get_or_default("pager", "stderr").unwrap();
+        if send_err_to_pager {
+            inner.redirect_err_to_out = true;
+            inner.error = None;
+        }
+
+        inner.flush()?;
+
+        let child = Arc::new(Mutex::new(child));
+        let child_copy = child.clone();
+
+        // wait for the pager to finish and restore the progress state
+        inner.pager_wait_func = Some(Box::new(move |io_state| {
+            // currently wait_pager() reset inner's io to hard coded values.
+
+            let _ = child.lock().wait();
+            let _ = io_state.disable_progress(false);
+        }));
+
+        // kill the child process when quitting
+        self.inner.pager_quit_func.lock().replace(Box::new(move || {
+            let _ = child_copy.lock().kill();
+        }));
+
+        Ok(())
+    }
+
     /// Starts a pager.
     ///
     /// It is recommended to run [`IO::flush`] and [`IO::wait_pager`] before exiting.
-    pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
+    pub fn start_streampager(&self, config: &dyn Config) -> io::Result<()> {
         let mut inner = self.inner.locked_with_blocked_interval();
         if inner.is_pager_active() {
             return Ok(());
@@ -576,7 +679,7 @@ impl IO {
 
         inner.flush()?;
         inner.output = {
-            let mut pipe = PipeWriterWithTty::new(out_write, out_is_tty);
+            let mut pipe = WriterWithTty::new(Box::new(out_write), out_is_tty);
             pipe.pretend_stdout = out_is_stdout;
             Box::new(pipe)
         };
@@ -587,7 +690,10 @@ impl IO {
         // Only use the pager for error stream if error stream is a tty.
         // This makes `hg 2>foo` works as expected.
         if err_is_tty {
-            inner.error = Some(Box::new(PipeWriterWithTty::new(err_write, err_is_tty)));
+            inner.error = Some(Box::new(WriterWithTty::new(
+                Box::new(err_write),
+                err_is_tty,
+            )));
             let separate =
                 config.get_opt::<bool>("pager", "separate-stderr").ok() == Some(Some(true));
             inner.redirect_err_to_out = !separate;
@@ -610,7 +716,7 @@ impl IO {
         }))));
 
         let pager_thread_handler_wait = pager_thread_handler.clone();
-        inner.pager_wait_func = Some(Box::new(move || {
+        inner.pager_wait_func = Some(Box::new(move |_| {
             if let Some(handler) = pager_thread_handler_wait.lock().take() {
                 let _ = handler.join();
             }
@@ -639,19 +745,7 @@ impl IO {
     ///   rendering.
     pub fn disable_progress(&self, disabled: bool) -> io::Result<()> {
         let mut inner = self.inner.locked_with_blocked_interval();
-        if disabled {
-            inner.progress_disabled += 1;
-            inner.set_progress(&[])?;
-        } else {
-            if inner.progress_disabled == 0 {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "disable_progress(false) called without matching disable_progress(true)",
-                ));
-            }
-            inner.progress_disabled -= 1;
-        }
-        Ok(())
+        inner.disable_progress(disabled)
     }
 
     pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) -> io::Result<()> {
@@ -739,6 +833,22 @@ impl IOState {
         (DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT)
     }
 
+    fn disable_progress(&mut self, disabled: bool) -> io::Result<()> {
+        if disabled {
+            self.progress_disabled += 1;
+            self.set_progress(&[])?;
+        } else {
+            if self.progress_disabled == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "disable_progress(false) called without matching disable_progress(true)",
+                ));
+            }
+            self.progress_disabled -= 1;
+        }
+        Ok(())
+    }
+
     fn set_progress(&mut self, mut changes: &[Change]) -> io::Result<()> {
         let inner = self;
         if inner.progress_disabled > 0 {
@@ -779,7 +889,7 @@ impl IOState {
         let mut func = None;
         mem::swap(&mut func, &mut self.pager_wait_func);
         if let Some(func) = func {
-            func();
+            func(self);
         }
     }
 

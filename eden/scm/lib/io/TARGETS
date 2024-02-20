@@ -19,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:terminal_size",
         "fbsource//third-party/rust:termwiz",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/third-party/streampager:streampager",
         "//eden/scm/lib/util/hgplain:hgplain",
         "//eden/scm/lib/util/time-interval:time-interval",
