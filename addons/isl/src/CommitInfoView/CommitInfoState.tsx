@@ -14,7 +14,7 @@ import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, readAtom, writeAtom} from '../jotaiUtils';
 import {dagWithPreviews} from '../previews';
 import {selectedCommitInfos} from '../selection';
-import {firstLine, registerCleanup, registerDisposable} from '../utils';
+import {registerCleanup, registerDisposable} from '../utils';
 import {
   parseCommitMessageFields,
   allFieldsBeingEdited,
@@ -23,6 +23,7 @@ import {
   commitMessageFieldsSchema,
 } from './CommitMessageFields';
 import {atom} from 'jotai';
+import {firstLine} from 'shared/utils';
 
 export type EditedMessage = {fields: Partial<CommitMessageFields>};
 

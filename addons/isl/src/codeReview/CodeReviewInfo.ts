@@ -22,12 +22,12 @@ import {atomFamilyWeak, atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
-import {firstLine, registerCleanup, registerDisposable} from '../utils';
+import {registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom} from 'jotai';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
-import {unwrap} from 'shared/utils';
+import {firstLine, unwrap} from 'shared/utils';
 
 export const codeReviewProvider = atom<UICodeReviewProvider | null>(get => {
   const repoInfo = get(repositoryInfo);

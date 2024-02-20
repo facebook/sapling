@@ -86,6 +86,14 @@ export function findParentWithClassName(
 }
 
 /**
+ * Given a multi-line string, return the first line excluding '\n'.
+ * If no newlines in the string, return the whole string.
+ */
+export function firstLine(s: string): string {
+  return s.split('\n', 1)[0];
+}
+
+/**
  * Applies a function to each key & value in an Object.
  * ```
  * mapObject(

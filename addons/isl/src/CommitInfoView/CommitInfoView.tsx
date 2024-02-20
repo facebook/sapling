@@ -49,7 +49,7 @@ import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {succeedableRevset} from '../types';
 import {useModal} from '../useModal';
-import {firstLine, firstOfIterable} from '../utils';
+import {firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
   forceNextCommitToEditAllFields,
@@ -87,7 +87,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {debounce} from 'shared/debounce';
-import {notEmpty, unwrap} from 'shared/utils';
+import {firstLine, notEmpty, unwrap} from 'shared/utils';
 
 import './CommitInfoView.css';
 

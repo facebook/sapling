@@ -24,14 +24,14 @@ import {
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {t} from '../i18n';
-import {assert, firstLine} from '../utils';
+import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
-import {generatorContains, unwrap, zip} from 'shared/utils';
+import {firstLine, generatorContains, unwrap, zip} from 'shared/utils';
 
 type CommitStackProps = {
   /**

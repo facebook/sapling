@@ -26,7 +26,6 @@ import {Subtle} from '../../Subtle';
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
-import {firstLine} from '../../utils';
 import {isAbsent} from '../commitStackState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
@@ -38,7 +37,7 @@ import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
-import {unwrap} from 'shared/utils';
+import {firstLine, unwrap} from 'shared/utils';
 
 import './SplitStackEditPanel.css';
 
