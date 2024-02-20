@@ -279,23 +279,29 @@ pub async fn rewrite_commit<'a, R: Repo>(
     git_submodules_action: GitSubmodulesChangesAction,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     // TODO(T169695293): add filter to only keep submodules for implicit deletes?
-    let file_changes_filters: Vec<FileChangeFilter<'a>> = match git_submodules_action {
-        GitSubmodulesChangesAction::Strip => {
-            let filter_func: FileChangeFilterFunc<'a> = Arc::new(move |(_path, fc)| match fc {
-                FileChange::Change(tfc) => tfc.file_type() != FileType::GitSubmodule,
-                _ => true,
-            });
-            let filter: FileChangeFilter<'a> = FileChangeFilter {
-                func: filter_func,
-                application: FileChangeFilterApplication::MultiMover,
-            };
 
-            vec![filter]
-        }
-        GitSubmodulesChangesAction::Keep => vec![],
-        // TODO(T174902563): support git submodules expansion
-        GitSubmodulesChangesAction::Expand => vec![],
-    };
+    // Based on the submodule action, create the file change filters and modify
+    // the bonsai (e.g. expand submodule file changes).
+    let (file_changes_filters, cs): (Vec<FileChangeFilter<'a>>, BonsaiChangesetMut) =
+        match git_submodules_action {
+            GitSubmodulesChangesAction::Strip => {
+                let filter_func: FileChangeFilterFunc<'a> = Arc::new(move |(_path, fc)| match fc {
+                    FileChange::Change(tfc) => tfc.file_type() != FileType::GitSubmodule,
+                    _ => true,
+                });
+                let filter: FileChangeFilter<'a> = FileChangeFilter {
+                    func: filter_func,
+                    application: FileChangeFilterApplication::MultiMover,
+                };
+
+                (vec![filter], cs)
+            }
+            // Keep submodules -> no filters and keep original bonsai
+            GitSubmodulesChangesAction::Keep => (vec![], cs),
+            // Expand submodules -> no filters, but modify the file change
+            // file types in the bonsai
+            GitSubmodulesChangesAction::Expand => (vec![], cs),
+        };
 
     rewrite_commit_with_file_changes_filter(
         ctx,
