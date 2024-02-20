@@ -43,20 +43,27 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
           const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
           const uri = vscode.Uri.file(path);
           if (looksLikeImageUri(uri)) {
-            await vscode.commands.executeCommand('vscode.open', uri);
+            vscode.commands.executeCommand('vscode.open', uri).then(undefined, err => {
+              vscode.window.showErrorMessage('cannot open file' + err.message ?? String(err));
+            });
             return;
           }
-          const editorPromise = vscode.window.showTextDocument(uri);
-          const line = message.options?.line;
-          if (line != null) {
-            const editor = await editorPromise;
-            const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
-            editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
-            editor.revealRange(
-              new vscode.Range(lineZeroIndexed, 0, lineZeroIndexed, 0),
-              vscode.TextEditorRevealType.InCenterIfOutsideViewport,
-            ); // scroll to line
-          }
+          vscode.window.showTextDocument(uri).then(
+            editor => {
+              const line = message.options?.line;
+              if (line != null) {
+                const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
+                editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
+                editor.revealRange(
+                  new vscode.Range(lineZeroIndexed, 0, lineZeroIndexed, 0),
+                  vscode.TextEditorRevealType.InCenterIfOutsideViewport,
+                ); // scroll to line
+              }
+            },
+            err => {
+              vscode.window.showErrorMessage(err.message ?? String(err));
+            },
+          );
           break;
         }
         case 'platform/openDiff': {
