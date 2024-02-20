@@ -38,7 +38,7 @@ import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Co
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {isMac} from 'shared/OperatingSystem';
-import {basename} from 'shared/utils';
+import {basename, notEmpty} from 'shared/utils';
 
 const platformAltKey = (e: KeyboardEvent) => (isMac ? e.altKey : e.ctrlKey);
 /**
@@ -122,7 +122,9 @@ export function File({
   // needing to go through the menu to change the rendering type.
   const isHoldingAlt = useAtomValue(holdingAltAtom);
 
-  const tooltip = file.tooltip + '\n\n' + generatedStatusDescription(generatedStatus);
+  const tooltip = [file.tooltip, generatedStatusDescription(generatedStatus)]
+    .filter(notEmpty)
+    .join('\n\n');
 
   return (
     <>
