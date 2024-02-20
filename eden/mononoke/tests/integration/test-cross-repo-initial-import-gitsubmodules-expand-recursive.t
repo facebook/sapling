@@ -134,25 +134,11 @@ Setup git repo A
 
 Import repos in reverse dependency order, C, B then A.
 
-  $ REPOID="$REPO_C_ID" with_stripped_logs gitimport "$GIT_REPO_C" full-repo
-  using repo "repo_c" repoid RepositoryId(2)
-  GitRepo:$TESTTMP/git-repo-c commit 1 of 2 - Oid:7f760d81 => Bid:801df9a4
-  GitRepo:$TESTTMP/git-repo-c commit 2 of 2 - Oid:114b61ca => Bid:6705887d
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(6705887de3a8cc55e6f13cc68a2a3536981cfd7ae86b1493e9ce1e00f8cbad61)))
+  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" full-repo
 
-  $ REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" full-repo
-  using repo "repo_b" repoid RepositoryId(3)
-  GitRepo:$TESTTMP/git-repo-b commit 1 of 3 - Oid:1c7ecd42 => Bid:28470d51
-  GitRepo:$TESTTMP/git-repo-b commit 2 of 3 - Oid:b7dc5d8f => Bid:80a511a4
-  GitRepo:$TESTTMP/git-repo-b commit 3 of 3 - Oid:776166f1 => Bid:7d91c579
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(7d91c579c7001a246e1b4fe30fa6c1cac45e73b5b3c191cd063a36b25acb8fd4)))
+  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" full-repo
 
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" full-repo 2>&1 | tee $TESTTMP/gitimport_output
-  using repo "small_repo" repoid RepositoryId(1)
-  GitRepo:$TESTTMP/git-repo-a commit 1 of 3 - Oid:37661687 => Bid:117dc237
-  GitRepo:$TESTTMP/git-repo-a commit 2 of 3 - Oid:7d814e13 => Bid:cf1a5d22
-  GitRepo:$TESTTMP/git-repo-a commit 3 of 3 - Oid:9d737ebe => Bid:d94c6c31
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(d94c6c31bb05a49fdf2cccf5a3220bd054463d6c7877fc9cacf83534170688ea)))
+  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" full-repo > $TESTTMP/gitimport_output
 
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
@@ -160,11 +146,11 @@ Import repos in reverse dependency order, C, B then A.
   > --no-progress-bar -i "$GIT_REPO_A_HEAD" \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee $TESTTMP/initial_import_output
   Starting session with id * (glob)
-  Checking if d94c6c31bb05a49fdf2cccf5a3220bd054463d6c7877fc9cacf83534170688ea is already synced 1->0
-  syncing d94c6c31bb05a49fdf2cccf5a3220bd054463d6c7877fc9cacf83534170688ea
-  Found 3 unsynced ancestors
-  changeset d94c6c31bb05a49fdf2cccf5a3220bd054463d6c7877fc9cacf83534170688ea synced as dadbe354a32b6e23625871377f1594f67e8b9debffa8a5e8290b23f39ce37de3 in * (glob)
-  successful sync of head d94c6c31bb05a49fdf2cccf5a3220bd054463d6c7877fc9cacf83534170688ea
+  Checking if * (glob)
+  syncing * (glob)
+  Found * unsynced ancestors (glob)
+  changeset * synced as * in * (glob)
+  successful sync of head * (glob)
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo $SYNCED_HEAD
@@ -263,30 +249,11 @@ Update those changes in repo A
   3766168 Add root_file
 
 
-  $ REPOID="$REPO_C_ID" with_stripped_logs gitimport "$GIT_REPO_C" full-repo
-  using repo "repo_c" repoid RepositoryId(2)
-  GitRepo:$TESTTMP/git-repo-c commit 1 of 4 - Oid:7f760d81 => Bid:801df9a4 (already exists)
-  GitRepo:$TESTTMP/git-repo-c commit 2 of 4 - Oid:114b61ca => Bid:6705887d (already exists)
-  GitRepo:$TESTTMP/git-repo-c commit 3 of 4 - Oid:55e83088 => Bid:016a8e67
-  GitRepo:$TESTTMP/git-repo-c commit 4 of 4 - Oid:810d4f53 => Bid:faec21d1
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(faec21d11740ef4c783254dbe148581c849d895beeb3fb31fba802dc2f117670)))
+  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" full-repo
 
-  $ REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" full-repo
-  using repo "repo_b" repoid RepositoryId(3)
-  GitRepo:$TESTTMP/git-repo-b commit 1 of 4 - Oid:1c7ecd42 => Bid:28470d51 (already exists)
-  GitRepo:$TESTTMP/git-repo-b commit 2 of 4 - Oid:b7dc5d8f => Bid:80a511a4 (already exists)
-  GitRepo:$TESTTMP/git-repo-b commit 3 of 4 - Oid:776166f1 => Bid:7d91c579 (already exists)
-  GitRepo:$TESTTMP/git-repo-b commit 4 of 4 - Oid:c9e21855 => Bid:a24bd25f
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(a24bd25f90f09c07e07f71897e05ae2bba16c94a5e351b2b9291f89bb782cf36)))
+  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" full-repo
 
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" full-repo | tee $TESTTMP/gitimport_output
-  using repo "small_repo" repoid RepositoryId(1)
-  GitRepo:$TESTTMP/git-repo-a commit 1 of 5 - Oid:37661687 => Bid:117dc237 (already exists)
-  GitRepo:$TESTTMP/git-repo-a commit 2 of 5 - Oid:7d814e13 => Bid:cf1a5d22 (already exists)
-  GitRepo:$TESTTMP/git-repo-a commit 3 of 5 - Oid:9d737ebe => Bid:d94c6c31 (already exists)
-  GitRepo:$TESTTMP/git-repo-a commit 4 of 5 - Oid:ef545462 => Bid:9de5e77a
-  GitRepo:$TESTTMP/git-repo-a commit 5 of 5 - Oid:6d5b3867 => Bid:990ba786
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(990ba7861bdc27d76feb43085f6e248189789e86bc6dde83fed715c3689f3e4f)))
+  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" full-repo > $TESTTMP/gitimport_output
 
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
@@ -295,11 +262,11 @@ Update those changes in repo A
   > --no-progress-bar -i "$GIT_REPO_A_HEAD" \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee $TESTTMP/initial_import_output
   Starting session with id * (glob)
-  Checking if 990ba7861bdc27d76feb43085f6e248189789e86bc6dde83fed715c3689f3e4f is already synced 1->0
-  syncing 990ba7861bdc27d76feb43085f6e248189789e86bc6dde83fed715c3689f3e4f
-  Found 2 unsynced ancestors
-  changeset 990ba7861bdc27d76feb43085f6e248189789e86bc6dde83fed715c3689f3e4f synced as 647a2898995b70a69809ba0e83d52aeb153af0217158622429b784d83ed72bc6 in * (glob)
-  successful sync of head 990ba7861bdc27d76feb43085f6e248189789e86bc6dde83fed715c3689f3e4f
+  Checking if * (glob)
+  syncing * (glob)
+  Found * unsynced ancestors (glob)
+  changeset * synced as * in * (glob)
+  successful sync of head * (glob)
  
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo "$SYNCED_HEAD" 
