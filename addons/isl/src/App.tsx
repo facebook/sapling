@@ -33,7 +33,7 @@ import {setJotaiStore} from './jotaiUtils';
 import platform from './platform';
 import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
-import {applicationinfo, repositoryInfo} from './serverAPIState';
+import {repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
 import {useAtomsDevtools} from './third-party/jotai-devtools/utils';
 import {light} from './tokens.stylex';
@@ -41,7 +41,7 @@ import {ModalContainer} from './useModal';
 import {isDev, isTest} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {Provider, useAtom, useAtomValue, useSetAtom, useStore} from 'jotai';
+import {Provider, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React from 'react';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -58,7 +58,7 @@ export default function App() {
           <ISLRoot>
             <ISLCommandContext>
               <ErrorBoundary>
-                <ISLDrawers />
+                <NullStateOrDrawers />
                 <TooltipRootContainer />
                 <GettingStartedModal />
                 <ComparisonViewModal />
@@ -136,6 +136,14 @@ function handleDragAndDrop(e: React.DragEvent<HTMLDivElement>) {
   }
 }
 
+function NullStateOrDrawers() {
+  const repoInfo = useAtomValue(repositoryInfo);
+  if (repoInfo != null && repoInfo.type !== 'success') {
+    return <ISLNullState repoError={repoInfo} />;
+  }
+  return <ISLDrawers />;
+}
+
 function ISLDrawers() {
   const setDrawerState = useSetAtom(islDrawerState);
   useCommand('ToggleSidebar', () => {
@@ -162,21 +170,13 @@ function ISLDrawers() {
 }
 
 function MainContent() {
-  const repoInfo = useAtomValue(repositoryInfo);
-  useAtom(applicationinfo); // ensure this info is always fetched
-
   const ref = useMainContentWidth();
-
   return (
     <div className="main-content-area" ref={ref}>
       <TopBar />
       <TopLevelErrors />
       <TopLevelAlerts />
-      {repoInfo != null && repoInfo.type !== 'success' ? (
-        <ISLNullState repoError={repoInfo} />
-      ) : (
-        <CommitTreeList />
-      )}
+      <CommitTreeList />
     </div>
   );
 }
