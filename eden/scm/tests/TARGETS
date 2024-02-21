@@ -1,6 +1,5 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
-load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_run_tests_excluded", "get_hg_watchman_run_tests_excluded")
@@ -57,13 +56,6 @@ ENV = {
     "HGTEST_CERTDIR": "$(location //eden/mononoke/tests/integration/certs/facebook:test_certs)",
 }
 
-python_library(
-    name = "watchman",
-    srcs = [
-        "watchman.py",
-    ],
-)
-
 python_unittest(
     # @autodeps-skip
     name = "hg_run_tests",
@@ -108,7 +100,6 @@ python_unittest(
     },
     supports_static_listing = False,
     deps = [
-        ":watchman",
         "//libfb/py:parutil",
     ],
 )
