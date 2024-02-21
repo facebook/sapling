@@ -25,6 +25,7 @@ pub struct CachelibSettings {
     pub filenodes_history_cache_size: Option<usize>,
     pub hg_mutation_store_cache_size: Option<usize>,
     pub idmapping_cache_size: Option<usize>,
+    pub bonsai_git_mapping_cache_size: Option<usize>,
     pub globalrev_cache_size: Option<usize>,
     pub svnrev_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
@@ -105,6 +106,11 @@ impl CachelibSettings {
         );
         set_default(
             &mut defaults,
+            "bonsai-git-mapping-cache-size",
+            &self.bonsai_git_mapping_cache_size,
+        );
+        set_default(
+            &mut defaults,
             "globalrevs-cache-size",
             &self.globalrev_cache_size,
         );
@@ -157,6 +163,10 @@ impl CachelibSettings {
             &args.hg_mutation_store_cache_size,
         );
         replace(&mut self.idmapping_cache_size, &args.idmapping_cache_size);
+        replace(
+            &mut self.bonsai_git_mapping_cache_size,
+            &args.bonsai_git_mapping_cache_size,
+        );
         replace(&mut self.globalrev_cache_size, &args.globalrevs_cache_size);
         replace(&mut self.svnrev_cache_size, &args.svnrevs_cache_size);
         replace(&mut self.blob_cache_size, &args.blob_cache_size);
@@ -188,6 +198,7 @@ impl Default for CachelibSettings {
             filenodes_history_cache_size: None,
             hg_mutation_store_cache_size: None,
             idmapping_cache_size: None,
+            bonsai_git_mapping_cache_size: None,
             globalrev_cache_size: None,
             svnrev_cache_size: None,
             blob_cache_size: None,

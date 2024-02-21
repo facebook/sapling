@@ -105,6 +105,10 @@ pub struct CachelibArgs {
     #[clap(long, value_name = "SIZE", hide = true)]
     pub idmapping_cache_size: Option<usize>,
 
+    /// Override size of the bonsai-git mapping cache
+    #[clap(long, value_name = "SIZE", hide = true)]
+    pub bonsai_git_mapping_cache_size: Option<usize>,
+
     /// Override size of the bonsai-globalrevs mapping cache
     #[clap(long, value_name = "SIZE", hide = true)]
     pub globalrevs_cache_size: Option<usize>,
