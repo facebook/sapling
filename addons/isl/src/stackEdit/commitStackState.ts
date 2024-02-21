@@ -28,8 +28,7 @@ import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {cached} from 'shared/LRU';
+import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {firstLine, generatorContains, unwrap, zip} from 'shared/utils';
 
@@ -127,21 +126,17 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * `record` initialization is for internal use only.
    */
   constructor(originalStack?: Readonly<ExportStack>, record?: CommitStackRecord) {
-    if (originalStack !== undefined) {
-      const bottomFiles = getBottomFilesFromExportStack(originalStack);
-      const stack = getCommitStatesFromExportStack(originalStack);
-      super(
-        CommitStackRecord({
-          originalStack,
-          bottomFiles,
-          stack,
-        }),
-      );
-    } else if (record !== undefined) {
-      super(record);
-    } else {
-      super(CommitStackRecord());
-    }
+    super(
+      originalStack !== undefined
+        ? CommitStackRecord({
+            originalStack,
+            bottomFiles: getBottomFilesFromExportStack(originalStack),
+            stack: getCommitStatesFromExportStack(originalStack),
+          })
+        : record !== undefined
+        ? record
+        : CommitStackRecord(),
+    );
   }
 
   // Delegates to SelfUpdate.inner
@@ -847,8 +842,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * commits. For example, if rev 3 depends on rev 2, then rev 3 cannot be
    * moved to be an ancestor of rev 2, and rev 2 cannot be dropped alone.
    */
-  @cached({cacheSize: 100})
-  calculateDepMap(): Readonly<Map<Rev, Set<Rev>>> {
+  calculateDepMap = cachedMethod(this.calculateDepMapImpl, {cache: calculateDepMapCache});
+  private calculateDepMapImpl(): Readonly<Map<Rev, Set<Rev>>> {
     const state = this.maybeBuildFileStacks();
     const depMap = new Map<Rev, Set<Rev>>(state.stack.map(c => [c.rev, new Set()]));
 
@@ -904,8 +899,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /**
    * Test if the commit can be folded with its parent.
    */
-  @cached({cacheSize: 1000})
-  canFoldDown(rev: Rev): boolean {
+  canFoldDown = cachedMethod(this.canFoldDownImpl, {cache: canFoldDownCache});
+  private canFoldDownImpl(rev: Rev): boolean {
     if (rev <= 0) {
       return false;
     }
@@ -1020,8 +1015,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /**
    * Test if the commit can be dropped. That is, none of its descendants depend on it.
    */
-  @cached({cacheSize: 1000})
-  canDrop(rev: Rev): boolean {
+  canDrop = cachedMethod(this.canDropImpl, {cache: canDropCache});
+  private canDropImpl(rev: Rev): boolean {
     if (rev < 0 || this.stack.get(rev)?.immutableKind !== 'none') {
       return false;
     }
@@ -1178,12 +1173,13 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return true;
   }
 
-  canMoveDown(rev: Rev): boolean {
+  canMoveDown = cachedMethod(this.canMoveDownImpl, {cache: canMoveDownCache});
+  private canMoveDownImpl(rev: Rev): boolean {
     return rev > 0 && this.canMoveUp(rev - 1);
   }
 
-  @cached({cacheSize: 1000})
-  canMoveUp(rev: Rev): boolean {
+  canMoveUp = cachedMethod(this.canMoveUpImpl, {cache: canMoveUpCache});
+  private canMoveUpImpl(rev: Rev): boolean {
     return this.canReorder(reorderedRevs(this, rev));
   }
 
@@ -1511,6 +1507,12 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return fileMeta.equals(parentMeta) ? undefined : [parentMeta, fileMeta];
   }
 }
+
+const canDropCache = new LRU(1000);
+const calculateDepMapCache = new LRU(1000);
+const canFoldDownCache = new LRU(1000);
+const canMoveUpCache = new LRU(1000);
+const canMoveDownCache = new LRU(1000);
 
 function getBottomFilesFromExportStack(stack: Readonly<ExportStack>): Map<RepoPath, FileState> {
   // bottomFiles requires that the stack only has one root.
