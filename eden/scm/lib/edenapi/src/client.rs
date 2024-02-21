@@ -807,6 +807,37 @@ impl Client {
         self.fetch::<BlameResult>(requests)
     }
 
+    async fn commit_translate_id_attempt(
+        &self,
+        commits: Vec<CommitId>,
+        scheme: CommitIdScheme,
+        from_repo: Option<String>,
+        to_repo: Option<String>,
+    ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
+        tracing::info!(
+            "Requesting commit id translation for {} commits into {:?}",
+            commits.len(),
+            scheme
+        );
+        let url = self.build_url(paths::COMMIT_TRANSLATE_ID)?;
+        let requests = self.prepare_requests(
+            &url,
+            commits,
+            self.config().max_commit_translate_id,
+            |commits| {
+                let req = CommitTranslateIdRequest {
+                    commits,
+                    scheme,
+                    from_repo: from_repo.clone(),
+                    to_repo: to_repo.clone(),
+                };
+                self.log_request(&req, "commit_translate_id");
+                req
+            },
+        )?;
+        self.fetch::<CommitTranslateIdResponse>(requests)
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -1494,7 +1525,6 @@ impl EdenApi for Client {
             .await
     }
 
-    // This method doesn't perform retries.
     async fn commit_translate_id(
         &self,
         commits: Vec<CommitId>,
@@ -1502,28 +1532,16 @@ impl EdenApi for Client {
         from_repo: Option<String>,
         to_repo: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
-        tracing::info!(
-            "Requesting commit id translation for {} commits into {:?}",
-            commits.len(),
-            scheme
-        );
-        let url = self.build_url(paths::COMMIT_TRANSLATE_ID)?;
-        let requests = self.prepare_requests(
-            &url,
-            commits,
-            self.config().max_commit_translate_id,
-            |commits| {
-                let req = CommitTranslateIdRequest {
-                    commits,
-                    scheme,
-                    from_repo: from_repo.clone(),
-                    to_repo: to_repo.clone(),
-                };
-                self.log_request(&req, "commit_translate_id");
-                req
-            },
-        )?;
-        Ok(self.fetch::<CommitTranslateIdResponse>(requests)?)
+        self.with_retry(|this| {
+            this.commit_translate_id_attempt(
+                commits.clone(),
+                scheme.clone(),
+                from_repo.clone(),
+                to_repo.clone(),
+            )
+            .boxed()
+        })
+        .await
     }
 
     async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
