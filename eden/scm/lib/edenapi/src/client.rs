@@ -610,6 +610,25 @@ impl Client {
         self.fetch::<UploadTokensResponse>(vec![request])
     }
 
+    async fn commit_revlog_data_attempt(
+        &self,
+        hgids: Vec<HgId>,
+    ) -> Result<Response<CommitRevlogData>, EdenApiError> {
+        tracing::info!("Requesting revlog data for {} commit(s)", hgids.len());
+
+        let url = self.build_url(paths::COMMIT_REVLOG_DATA)?;
+        let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
+
+        self.log_request(&commit_revlog_data_req, "commit_revlog_data");
+
+        let req = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&commit_revlog_data_req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_raw::<CommitRevlogData>(vec![req])
+    }
+
     async fn upload_bonsai_changeset_attempt(
         &self,
         changeset: BonsaiChangesetContent,
@@ -865,19 +884,8 @@ impl EdenApi for Client {
         &self,
         hgids: Vec<HgId>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError> {
-        tracing::info!("Requesting revlog data for {} commit(s)", hgids.len());
-
-        let url = self.build_url(paths::COMMIT_REVLOG_DATA)?;
-        let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
-
-        self.log_request(&commit_revlog_data_req, "commit_revlog_data");
-
-        let req = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&commit_revlog_data_req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        self.fetch_raw::<CommitRevlogData>(vec![req])
+        self.with_retry(|this| this.commit_revlog_data_attempt(hgids.clone()).boxed())
+            .await
     }
 
     async fn hash_prefixes_lookup(
