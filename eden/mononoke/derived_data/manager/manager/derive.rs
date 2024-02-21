@@ -32,7 +32,6 @@ use derived_data_service_if::RequestStatus;
 use either::Either;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
-use futures::join;
 use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -242,9 +241,6 @@ impl DerivedDataManager {
                     // Arguably, it can be removed entirely and just do the work.
                     // This was modified in a refactoring, so it was preserved to avoid mixing
                     // refactoring and behavioural changes.
-                    let bonsai = csid
-                        .load(&ctx, manager.repo_blobstore())
-                        .map_err(Error::from);
                     let guard = async {
                         if derivation_ctx.needs_rederive::<Derivable>(csid) {
                             // We are rederiving this changeset, so do not try to take the lease,
@@ -262,8 +258,7 @@ impl DerivedDataManager {
                             )
                         }
                     };
-                    let (_bonsai, guard) = join!(bonsai, guard);
-                    let derived = if let Some(Ok(Either::Left(fetched))) = guard {
+                    let derived = if let Some(Ok(Either::Left(fetched))) = guard.await {
                         // Something else completed derivation
                         fetched
                     } else {
