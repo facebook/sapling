@@ -86,6 +86,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-recursion",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:either",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:slog",

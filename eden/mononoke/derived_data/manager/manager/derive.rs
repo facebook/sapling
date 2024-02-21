@@ -29,6 +29,7 @@ use derived_data_service_if::DerivedDataType;
 use derived_data_service_if::RequestError;
 use derived_data_service_if::RequestErrorReason;
 use derived_data_service_if::RequestStatus;
+use either::Either;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::join;
@@ -255,35 +256,27 @@ impl DerivedDataManager {
                                 manager
                                     .lease()
                                     .try_acquire_in_loop(&ctx, &lease_key, || async {
-                                        Ok(Derivable::fetch(&ctx, &derivation_ctx, csid)
-                                            .await?
-                                            .is_some())
+                                        Ok(Derivable::fetch(&ctx, &derivation_ctx, csid).await?)
                                     })
                                     .await,
                             )
                         }
                     };
                     let (_bonsai, guard) = join!(bonsai, guard);
-                    let derived =
-                        if matches!(guard, Some(Ok(None))) {
-                            // Something else completed derivation
-                            Derivable::fetch(&ctx, &derivation_ctx, csid).await?
-                        .ok_or_else(|| {
-                        anyhow!("derivation completed elsewhere but data could not be fetched")
-                    })?
-                        } else {
-                            let rederivation = None;
-                            manager
-                                .derive_exactly_batch::<Derivable>(&ctx, vec![csid], rederivation)
-                                .await?;
-                            Derivable::fetch(&ctx, &derivation_ctx, csid)
+                    let derived = if let Some(Ok(Either::Left(fetched))) = guard {
+                        // Something else completed derivation
+                        fetched
+                    } else {
+                        let rederivation = None;
+                        manager
+                            .derive_exactly_batch::<Derivable>(&ctx, vec![csid], rederivation)
+                            .await?;
+                        Derivable::fetch(&ctx, &derivation_ctx, csid)
                             .await?
                             .ok_or_else(|| {
-                                anyhow!(
-                                    "derivation completed elsewhere but data could not be fetched"
-                                )
+                                anyhow!("derivation completed but data could not be fetched")
                             })?
-                        };
+                    };
                     Ok::<_, DerivationError>((csid, derived))
                 };
                 tokio::spawn(derivation).map_err(Error::from)

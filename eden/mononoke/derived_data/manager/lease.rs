@@ -13,6 +13,7 @@ use std::time::Instant;
 use anyhow::Result;
 use cacheblob::LeaseOps;
 use context::CoreContext;
+use either::Either;
 use futures::channel::oneshot;
 use futures::future::FutureExt;
 use slog::warn;
@@ -33,22 +34,22 @@ impl DerivedDataLease {
         &self.lease_ops
     }
 
-    pub async fn try_acquire_in_loop<F, Fut>(
+    pub async fn try_acquire_in_loop<F, Fut, Ret>(
         &self,
         ctx: &CoreContext,
         key: &str,
         mut abort_fn: F,
-    ) -> Result<Option<DerivedDataLeaseGuard>>
+    ) -> Result<Either<Ret, DerivedDataLeaseGuard>>
     where
         F: FnMut() -> Fut,
-        Fut: Future<Output = Result<bool>>,
+        Fut: Future<Output = Result<Option<Ret>>>,
     {
         let mut start = Instant::now();
         let mut total_elapsed = Duration::from_secs(0);
         let mut backoff_ms = 200;
         while !self.lease_ops.try_add_put_lease(key).await? {
-            if abort_fn().await? {
-                return Ok(None);
+            if let Some(ret) = abort_fn().await? {
+                return Ok(Either::Left(ret));
             }
             let elapsed = start.elapsed();
             if elapsed > LEASE_WARNING_THRESHOLD {
@@ -66,7 +67,7 @@ impl DerivedDataLease {
         let (sender, receiver) = oneshot::channel();
         self.lease_ops
             .renew_lease_until(ctx.clone(), key, receiver.map(|_| ()).boxed());
-        Ok(Some(DerivedDataLeaseGuard {
+        Ok(Either::Right(DerivedDataLeaseGuard {
             sender: Some(sender),
         }))
     }
