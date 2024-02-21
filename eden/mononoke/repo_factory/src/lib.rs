@@ -35,6 +35,7 @@ use bonsai_blob_mapping::ArcBonsaiBlobMapping;
 use bonsai_blob_mapping::BonsaiBlobMapping;
 use bonsai_blob_mapping::SqlBonsaiBlobMapping;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
+use bonsai_git_mapping::CachingBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
 use bonsai_globalrev_mapping::ArcBonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::CachingBonsaiGlobalrevMapping;
@@ -865,7 +866,14 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::BonsaiGitMapping)?
             .build(repo_identity.id());
-        Ok(Arc::new(bonsai_git_mapping))
+        if let Some(cache_handler_factory) = self.cache_handler_factory("bonsai_git_mapping")? {
+            Ok(Arc::new(CachingBonsaiGitMapping::new(
+                Arc::new(bonsai_git_mapping),
+                cache_handler_factory,
+            )?))
+        } else {
+            Ok(Arc::new(bonsai_git_mapping))
+        }
     }
 
     pub async fn long_running_requests_queue(
