@@ -87,6 +87,10 @@ mononoke_queries! {
 
 #[async_trait]
 impl BonsaiGitMapping for SqlBonsaiGitMapping {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
     async fn bulk_add(
         &self,
         ctx: &CoreContext,

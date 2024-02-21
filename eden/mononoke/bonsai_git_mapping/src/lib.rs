@@ -13,8 +13,10 @@ use context::CoreContext;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use slog::warn;
 
+mod caching;
 mod errors;
 mod nodehash;
 mod sql;
@@ -78,6 +80,8 @@ impl From<Vec<GitSha1>> for BonsaisOrGitShas {
 #[facet::facet]
 #[async_trait]
 pub trait BonsaiGitMapping: Send + Sync {
+    fn repo_id(&self) -> RepositoryId;
+
     async fn add(
         &self,
         ctx: &CoreContext,
