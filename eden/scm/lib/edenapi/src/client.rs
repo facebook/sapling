@@ -838,6 +838,35 @@ impl Client {
         self.fetch::<CommitTranslateIdResponse>(requests)
     }
 
+    async fn download_file_attempt(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
+        tracing::info!("Downloading file");
+        let url = self.build_url(paths::DOWNLOAD_FILE)?;
+        let metadata = token.data.metadata.clone();
+        let req = token.to_wire();
+        let request = self
+            .configure_request(self.inner.client.post(url.clone()))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        use bytes::BytesMut;
+        let buf = if let Some(UploadTokenMetadata::FileContentTokenMetadata(m)) = metadata {
+            BytesMut::with_capacity(m.content_size.try_into().unwrap_or_default())
+        } else {
+            BytesMut::new()
+        };
+
+        Ok(self
+            .fetch::<RawBytes>(vec![request])?
+            .entries
+            .try_fold(buf, |mut buf, chunk| async move {
+                buf.extend_from_slice(&chunk);
+                Ok(buf)
+            })
+            .await?
+            .freeze()
+            .into())
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -1474,34 +1503,9 @@ impl EdenApi for Client {
             .await
     }
 
-    // This method doesn't perform retries.
     async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
-        tracing::info!("Downloading file");
-        let url = self.build_url(paths::DOWNLOAD_FILE)?;
-        let metadata = token.data.metadata.clone();
-        let req = token.to_wire();
-        let request = self
-            .configure_request(self.inner.client.post(url.clone()))?
-            .cbor(&req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        use bytes::BytesMut;
-        let buf = if let Some(UploadTokenMetadata::FileContentTokenMetadata(m)) = metadata {
-            BytesMut::with_capacity(m.content_size.try_into().unwrap_or_default())
-        } else {
-            BytesMut::new()
-        };
-
-        Ok(self
-            .fetch::<RawBytes>(vec![request])?
-            .entries
-            .try_fold(buf, |mut buf, chunk| async move {
-                buf.extend_from_slice(&chunk);
-                Ok(buf)
-            })
-            .await?
-            .freeze()
-            .into())
+        self.with_retry(|this| this.download_file_attempt(token.clone()).boxed())
+            .await
     }
 
     async fn commit_mutations(
