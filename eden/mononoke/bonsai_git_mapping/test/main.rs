@@ -5,15 +5,24 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
+use ::sql::Transaction;
 use anyhow::Error;
 use assert_matches::assert_matches;
+use async_trait::async_trait;
 use bonsai_git_mapping::AddGitMappingErrorKind;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaisOrGitShas;
+use bonsai_git_mapping::CachingBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
@@ -21,6 +30,79 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::open_sqlite_in_memory;
 use sql_ext::SqlConnections;
+
+struct CountedBonsaiGitMapping {
+    inner_mapping: Arc<dyn BonsaiGitMapping>,
+    fetched_entries: Arc<AtomicUsize>,
+}
+
+impl CountedBonsaiGitMapping {
+    pub fn new(inner_mapping: Arc<dyn BonsaiGitMapping>) -> Self {
+        Self {
+            inner_mapping,
+            fetched_entries: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    pub fn fetched_entries_counter(&self) -> Arc<AtomicUsize> {
+        self.fetched_entries.clone()
+    }
+}
+
+#[async_trait]
+impl BonsaiGitMapping for CountedBonsaiGitMapping {
+    fn repo_id(&self) -> RepositoryId {
+        self.inner_mapping.repo_id()
+    }
+
+    async fn add(
+        &self,
+        ctx: &CoreContext,
+        entry: BonsaiGitMappingEntry,
+    ) -> Result<(), AddGitMappingErrorKind> {
+        self.inner_mapping.add(ctx, entry).await
+    }
+
+    async fn bulk_add(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGitMappingEntry],
+    ) -> Result<(), AddGitMappingErrorKind> {
+        self.inner_mapping.bulk_add(ctx, entries).await
+    }
+
+    async fn bulk_add_git_mapping_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGitMappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddGitMappingErrorKind> {
+        self.inner_mapping
+            .bulk_add_git_mapping_in_transaction(ctx, entries, transaction)
+            .await
+    }
+
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        cs: BonsaisOrGitShas,
+    ) -> Result<Vec<BonsaiGitMappingEntry>, Error> {
+        self.fetched_entries
+            .fetch_add(cs.count(), Ordering::Relaxed);
+        self.inner_mapping.get(ctx, cs).await
+    }
+
+    /// Use caching for the ranges of one element, use slower path otherwise.
+    async fn get_in_range(
+        &self,
+        ctx: &CoreContext,
+        low: GitSha1,
+        high: GitSha1,
+        limit: usize,
+    ) -> Result<Vec<GitSha1>, Error> {
+        self.inner_mapping.get_in_range(ctx, low, high, limit).await
+    }
+}
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
@@ -252,5 +334,70 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
             .await?
     );
 
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_get_with_caching(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let conn = open_sqlite_in_memory()?;
+    conn.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
+    let conn = Connection::with_sqlite(conn);
+    let mapping =
+        SqlBonsaiGitMappingBuilder::from_sql_connections(SqlConnections::new_single(conn.clone()))
+            .build(REPO_ZERO);
+    let counted_mapping = CountedBonsaiGitMapping::new(Arc::new(mapping));
+    let fetched_entries = counted_mapping.fetched_entries_counter();
+    let caching_mapping = CachingBonsaiGitMapping::new_test(Arc::new(counted_mapping));
+
+    // Populate a few bonsai_git_mappings
+    let entry1 = BonsaiGitMappingEntry {
+        bcs_id: bonsai::ONES_CSID,
+        git_sha1: ONES_GIT_SHA1,
+    };
+    let entry2 = BonsaiGitMappingEntry {
+        bcs_id: bonsai::TWOS_CSID,
+        git_sha1: TWOS_GIT_SHA1,
+    };
+    let entry3 = BonsaiGitMappingEntry {
+        bcs_id: bonsai::THREES_CSID,
+        git_sha1: THREES_GIT_SHA1,
+    };
+
+    caching_mapping
+        .bulk_add(&ctx, &[entry1.clone(), entry2.clone(), entry3.clone()])
+        .await?;
+
+    // Fetch a single bonsai_git_mapping. Since this is the first time we are fetching it,
+    // we expect that the counter has been incremented by 1.
+    assert_eq!(fetched_entries.load(Ordering::Relaxed), 0);
+    let result = caching_mapping
+        .get(&ctx, BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
+        .await?;
+    assert_eq!(fetched_entries.load(Ordering::Relaxed), 1);
+    assert_eq!(result, vec![entry1.clone()]);
+
+    // Fetch the same bonsai_git_mapping again. This time, since we have already fetched it once,
+    // we expect that the counter has not changed.
+    let result = caching_mapping
+        .get(&ctx, BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
+        .await?;
+    assert_eq!(fetched_entries.load(Ordering::Relaxed), 1);
+    assert_eq!(result, vec![entry1]);
+
+    // Fetch multiple bonsai_git_mappings at once. The counter should be incremented for the entries that
+    // we haven't fetched so far
+    let result = caching_mapping
+        .get(
+            &ctx,
+            BonsaisOrGitShas::Bonsai(vec![
+                bonsai::ONES_CSID,
+                bonsai::TWOS_CSID,
+                bonsai::THREES_CSID,
+            ]),
+        )
+        .await?;
+    assert_eq!(fetched_entries.load(Ordering::Relaxed), 3);
+    assert!(result.len() == 3);
     Ok(())
 }

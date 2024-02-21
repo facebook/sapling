@@ -21,6 +21,7 @@ mod errors;
 mod nodehash;
 mod sql;
 
+pub use crate::caching::CachingBonsaiGitMapping;
 pub use crate::errors::AddGitMappingErrorKind;
 pub use crate::nodehash::GitSha1Prefix;
 pub use crate::nodehash::GitSha1sResolvedFromPrefix;
@@ -49,6 +50,13 @@ impl BonsaisOrGitShas {
         match self {
             BonsaisOrGitShas::Bonsai(v) => v.is_empty(),
             BonsaisOrGitShas::GitSha1(v) => v.is_empty(),
+        }
+    }
+
+    pub fn count(&self) -> usize {
+        match self {
+            BonsaisOrGitShas::Bonsai(v) => v.len(),
+            BonsaisOrGitShas::GitSha1(v) => v.len(),
         }
     }
 }

@@ -150,7 +150,12 @@ impl CachingBonsaiGitMapping {
     }
 
     pub fn new_test(mapping: Arc<dyn BonsaiGitMapping>) -> Self {
-        Self::new(mapping, CacheHandlerFactory::Mocked).unwrap()
+        Self {
+            mapping,
+            cachelib: CacheHandlerFactory::Mocked.cachelib(),
+            memcache: CacheHandlerFactory::Mocked.memcache(),
+            keygen: CachingBonsaiGitMapping::create_key_gen_test(),
+        }
     }
 
     fn create_key_gen() -> Result<KeyGen> {
@@ -160,6 +165,11 @@ impl CachingBonsaiGitMapping {
             justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:bonsai_git_mapping", None)?;
 
         Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
+    }
+
+    fn create_key_gen_test() -> KeyGen {
+        let key_prefix = "scm.mononoke.bonsai_git_mapping_test";
+        KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, 0)
     }
 }
 
