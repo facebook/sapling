@@ -580,6 +580,58 @@ impl Client {
         }])
     }
 
+    // the request isn't batched, batching should be done outside if needed
+    async fn upload_changesets_attempt(
+        &self,
+        changesets: Vec<UploadHgChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        tracing::info!(
+            "Requesting changesets upload for {} item(s)",
+            changesets.len(),
+        );
+
+        if changesets.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::UPLOAD_CHANGESETS)?;
+        let req = UploadHgChangesetsRequest {
+            changesets,
+            mutations,
+        }
+        .to_wire();
+
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch::<UploadTokensResponse>(vec![request])
+    }
+
+    async fn upload_bonsai_changeset_attempt(
+        &self,
+        changeset: BonsaiChangesetContent,
+        bubble_id: Option<std::num::NonZeroU64>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        tracing::info!("Requesting changeset upload");
+
+        let mut url = self.build_url(paths::UPLOAD_BONSAI_CHANGESET)?;
+        if let Some(bubble_id) = bubble_id {
+            url.query_pairs_mut()
+                .append_pair("bubble_id", &bubble_id.to_string());
+        }
+        let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
+
+        let request = self
+            .configure_request(self.inner.client.post(url.clone()))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch::<UploadTokensResponse>(vec![request])
+    }
+
     async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, EdenApiError> {
         let url = self.build_url(paths::CLONE_DATA)?;
         let req = self.configure_request(self.inner.client.post(url))?;
@@ -1237,34 +1289,16 @@ impl EdenApi for Client {
         Ok(self.fetch::<UploadTreeResponse>(requests)?)
     }
 
-    // the request isn't batched, batching should be done outside if needed
     async fn upload_changesets(
         &self,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        tracing::info!(
-            "Requesting changesets upload for {} item(s)",
-            changesets.len(),
-        );
-
-        if changesets.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let url = self.build_url(paths::UPLOAD_CHANGESETS)?;
-        let req = UploadHgChangesetsRequest {
-            changesets,
-            mutations,
-        }
-        .to_wire();
-
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        Ok(self.fetch::<UploadTokensResponse>(vec![request])?)
+        self.with_retry(|this| {
+            this.upload_changesets_attempt(changesets.clone(), mutations.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn upload_bonsai_changeset(
@@ -1272,21 +1306,11 @@ impl EdenApi for Client {
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        tracing::info!("Requesting changeset upload");
-
-        let mut url = self.build_url(paths::UPLOAD_BONSAI_CHANGESET)?;
-        if let Some(bubble_id) = bubble_id {
-            url.query_pairs_mut()
-                .append_pair("bubble_id", &bubble_id.to_string());
-        }
-        let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
-
-        let request = self
-            .configure_request(self.inner.client.post(url.clone()))?
-            .cbor(&req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        Ok(self.fetch::<UploadTokensResponse>(vec![request])?)
+        self.with_retry(|this| {
+            this.upload_bonsai_changeset_attempt(changeset.clone(), bubble_id.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn ephemeral_prepare(
