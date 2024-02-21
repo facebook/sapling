@@ -91,7 +91,7 @@ pub struct WorkingCopy {
     tree_resolver: ArcReadTreeManifest,
     filestore: ArcFileStore,
     pub(crate) filesystem: Mutex<BoxFileSystem>,
-    ignore_matcher: Arc<GitignoreMatcher>,
+    pub ignore_matcher: Arc<GitignoreMatcher>,
     pub(crate) locker: Arc<RepoLocker>,
     pub(crate) dot_hg_path: PathBuf,
     eden_client: Option<Arc<EdenFsClient>>,

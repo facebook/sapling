@@ -23,6 +23,8 @@ use manifest::Manifest;
 use pathmatcher::AlwaysMatcher;
 use repo::repo::Repo;
 use spawn_ext::CommandExt;
+use status::Status;
+use status::StatusBuilder;
 use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
 use types::HgId;
@@ -42,10 +44,18 @@ use crate::CheckoutPlan;
 
 fn actionmap_from_eden_conflicts(
     config: &dyn Config,
+    wc: &WorkingCopy,
     source_manifest: &impl Manifest,
     target_manifest: &impl Manifest,
     conflicts: Vec<edenfs_client::CheckoutConflict>,
-) -> Result<ActionMap> {
+) -> Result<(ActionMap, Status)> {
+    let mut modified = Vec::new();
+    let mut removed = Vec::new();
+    let mut added = Vec::new();
+    let mut unknown = Vec::new();
+    let treestate_binding = wc.treestate();
+    let mut treestate = treestate_binding.lock();
+
     let mut map = HashMap::new();
     for conflict in conflicts {
         let action = match conflict.conflict_type {
@@ -56,15 +66,50 @@ fn actionmap_from_eden_conflicts(
             edenfs_client::ConflictType::UntrackedAdded
             | edenfs_client::ConflictType::RemovedModified => {
                 let conflict_path = conflict.path.as_repo_path();
+                if conflict.conflict_type == edenfs_client::ConflictType::UntrackedAdded {
+                    let file_state = treestate
+                        .normalized_get(conflict_path.as_str().as_bytes())?
+                        .map_or(StateFlags::empty(), |f| f.state);
+                    if file_state.intersects(StateFlags::EXIST_NEXT) {
+                        // This means that the file was added, since it's
+                        // visible in the treestate but EdenFS sees it as
+                        // untracked
+                        added.push(conflict_path.to_owned());
+                    } else if !wc
+                        .ignore_matcher
+                        .match_relative(conflict_path.to_path().as_path(), false)
+                    {
+                        // If the treestate doesn't see the file, it means that
+                        // the file is either ignored or untracked. There are
+                        // some particular edge cases when we want to treat
+                        // unknown files as special during checkout
+                        unknown.push(conflict_path.to_owned());
+                    }
+                } else if let Some(file_state) =
+                    treestate.normalized_get(conflict_path.as_str().as_bytes())?
+                {
+                    if file_state
+                        .state
+                        .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2)
+                    {
+                        // Seems like this code path never gets hit, but let's handle it anyways
+                        removed.push(conflict_path.to_owned());
+                    }
+                }
                 let meta = target_manifest.get_file(conflict_path)?.context(format!(
                     "file metadata for {} not found at destination commit",
                     conflict_path
                 ))?;
                 Some(Action::Update(UpdateAction::new(None, meta)))
             }
-            edenfs_client::ConflictType::ModifiedRemoved => Some(Action::Remove),
+            edenfs_client::ConflictType::ModifiedRemoved => {
+                let conflict_path = conflict.path.as_repo_path();
+                modified.push(conflict_path.to_owned());
+                Some(Action::Remove)
+            }
             edenfs_client::ConflictType::ModifiedModified => {
                 let conflict_path = conflict.path.as_repo_path();
+                modified.push(conflict_path.to_owned());
                 let old_meta = source_manifest.get_file(conflict_path)?.context(format!(
                     "file metadata for {} not found at source commit",
                     conflict_path
@@ -82,7 +127,16 @@ fn actionmap_from_eden_conflicts(
             map.insert(conflict.path, action);
         }
     }
-    Ok(ActionMap { map })
+
+    // This will generate something mostly equivalent to what one gets
+    // with the status command
+    let mut status_builder = StatusBuilder::new();
+    status_builder = status_builder.modified(modified);
+    status_builder = status_builder.removed(removed);
+    status_builder = status_builder.added(added);
+    status_builder = status_builder.unknown(unknown);
+
+    Ok((ActionMap { map }, status_builder.build()))
 }
 
 pub fn edenfs_checkout(
@@ -119,12 +173,12 @@ fn create_edenfs_plan(
     source_manifest: &impl Manifest,
     target_manifest: &impl Manifest,
     conflicts: Vec<edenfs_client::CheckoutConflict>,
-) -> Result<CheckoutPlan> {
+) -> Result<(CheckoutPlan, Status)> {
     let vfs = wc.vfs();
-    let actionmap =
-        actionmap_from_eden_conflicts(config, source_manifest, target_manifest, conflicts)?;
+    let (actionmap, status) =
+        actionmap_from_eden_conflicts(config, wc, source_manifest, target_manifest, conflicts)?;
     let checkout = Checkout::from_config(vfs.clone(), &config)?;
-    Ok(checkout.plan_action_map(actionmap))
+    Ok((checkout.plan_action_map(actionmap), status))
 }
 
 fn edenfs_noconflict_checkout(
@@ -145,9 +199,7 @@ fn edenfs_noconflict_checkout(
         target_commit_tree_hash,
         edenfs_client::CheckoutMode::DryRun,
     )?;
-    let plan = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
-
-    let status = wc.status(ctx, Arc::new(AlwaysMatcher::new()), false)?;
+    let (plan, status) = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
     check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
 

@@ -1061,8 +1061,6 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             self.hg(
                 "config", "--local", "experimental.abort-on-eden-conflict-error", "True"
             )
-            # TODO(sggutier): Remove this once the Rust checkout becomes independent of status
-            self.repo.hg("config", "--local", "checkout.use-rust=false")
 
             if initial_state == PrjFsState.PLACEHOLDER:
                 # Stat file2 to populate a placeholder, making the file non-virtual.
