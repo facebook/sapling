@@ -8,6 +8,7 @@
 #![feature(trait_alias)]
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -740,7 +741,7 @@ pub async fn upload_commits<'a>(
     source_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef),
     target_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef + FilestoreConfigRef),
 ) -> Result<(), Error> {
-    let mut files_to_sync = vec![];
+    let mut files_to_sync = HashSet::new();
     for rewritten in &rewritten_list {
         let rewritten_mut = rewritten.clone().into_mut();
         let new_files_to_sync =
@@ -763,7 +764,10 @@ pub async fn copy_file_contents<'a>(
     ctx: &'a CoreContext,
     source_repo: &'a impl RepoBlobstoreRef,
     target_repo: &'a (impl RepoBlobstoreRef + FilestoreConfigRef),
-    content_ids: impl IntoIterator<Item = ContentId>,
+    // Contents are uploaded concurrently, so they have to deduped to prevent
+    // race conditions that bypass the `filestore::exists` check and lead to
+    // `File exists (os error 17)` errors.
+    content_ids: HashSet<ContentId>,
     progress_reporter: impl Fn(usize),
 ) -> Result<(), Error> {
     let source_blobstore = source_repo.repo_blobstore();

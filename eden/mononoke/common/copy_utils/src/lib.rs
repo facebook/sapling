@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::num::NonZeroU64;
 
 use anyhow::anyhow;
@@ -65,7 +66,7 @@ pub async fn copy(
     // These are the file changes that have to be copied
     let mut file_changes = BTreeMap::new();
     let mut total_file_size = 0;
-    let mut contents_to_upload = vec![];
+    let mut contents_to_upload = HashSet::new();
     let same_repo = source_repo.repo_identity().id() == target_repo.repo_identity().id();
 
     for (from_dir, to_dir) in from_to_dirs {
@@ -113,7 +114,7 @@ pub async fn copy(
             file_changes.insert(to_path, Some((from_path, fsnode_file)));
 
             if !same_repo {
-                contents_to_upload.push(fsnode_file.content_id().clone());
+                contents_to_upload.insert(fsnode_file.content_id().clone());
             }
 
             if let Some(lfs_threshold) = limits.lfs_threshold {

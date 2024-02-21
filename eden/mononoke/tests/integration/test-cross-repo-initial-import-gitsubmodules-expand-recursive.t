@@ -97,7 +97,11 @@ Setup git repo A
   $ cd "$GIT_REPO_A"
   $ git init -q
   $ echo "root_file" > root_file
-  $ git add root_file
+  $ mkdir duplicates
+  $ echo "Same content" > duplicates/x
+  $ echo "Same content" > duplicates/y
+  $ echo "Same content" > duplicates/z
+  $ git add .
   $ git commit -q -am "Add root_file"
   $ mkdir regular_dir
   $ cd regular_dir
@@ -111,12 +115,16 @@ Setup git repo A
   $ git add .
   $ git commit -q -am "Added git repo B as submodule in A" 
   $ git log --oneline
-  9d737eb Added git repo B as submodule in A
-  7d814e1 Add regular_dir/aardvar
-  3766168 Add root_file
+  f3ce0ee Added git repo B as submodule in A
+  ad7b606 Add regular_dir/aardvar
+  8c33a27 Add root_file
 
   $ tree
   .
+  |-- duplicates
+  |   |-- x
+  |   |-- y
+  |   `-- z
   |-- git-repo-b
   |   |-- bar
   |   |   `-- zoo
@@ -126,7 +134,7 @@ Setup git repo A
   |   `-- aardvar
   `-- root_file
   
-  4 directories, 4 files
+  5 directories, 7 files
 
 
   $ cd "$TESTTMP"
@@ -154,31 +162,34 @@ Import repos in reverse dependency order, C, B then A.
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo $SYNCED_HEAD
-  dadbe354a32b6e23625871377f1594f67e8b9debffa8a5e8290b23f39ce37de3
+  1aaa6e560792d9d1affcdb1538e083206b9fc3c8a535b058113e6c643ce022c5
   $ clone_and_log_large_repo "$SYNCED_HEAD"
-  o  77856ed54146 Added git repo B as submodule in A
+  o  898ab49b1447 Added git repo B as submodule in A
   │   smallrepofolder1/.gitmodules |  3 +++
   │   1 files changed, 3 insertions(+), 0 deletions(-)
   │
-  o  6047474c75d0 Add regular_dir/aardvar
+  o  e2c69ce8cc11 Add regular_dir/aardvar
   │   smallrepofolder1/regular_dir/aardvar |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
   │
-  o  af6d6f4979c6 Add root_file
-      smallrepofolder1/root_file |  1 +
-      1 files changed, 1 insertions(+), 0 deletions(-)
+  o  df9086c77129 Add root_file
+      smallrepofolder1/duplicates/x |  1 +
+      smallrepofolder1/duplicates/y |  1 +
+      smallrepofolder1/duplicates/z |  1 +
+      smallrepofolder1/root_file    |  1 +
+      4 files changed, 4 insertions(+), 0 deletions(-)
   
   
   
   Running mononoke_admin to verify mapping
   
-  RewrittenAs([(ChangesetId(Blake2(d94c6c31bb05a49fdf2cccf5a3220bd054463d6c7877fc9cacf83534170688ea)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  RewrittenAs([(ChangesetId(Blake2(c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
 
   $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
   $ hg show --stat "$HG_SYNCED_HEAD"
-  commit:      77856ed54146
+  commit:      898ab49b1447
   user:        mononoke <mononoke@mononoke>
   date:        Sat Jan 01 00:00:00 2000 +0000
   files:       smallrepofolder1/.gitmodules
@@ -195,11 +206,15 @@ Import repos in reverse dependency order, C, B then A.
   $ tree
   .
   `-- smallrepofolder1
+      |-- duplicates
+      |   |-- x
+      |   |-- y
+      |   `-- z
       |-- regular_dir
       |   `-- aardvar
       `-- root_file
   
-  2 directories, 2 files
+  3 directories, 5 files
 
 
 Make changes to submodule and make sure they're synced properly
@@ -242,11 +257,11 @@ Update those changes in repo A
   Submodule path 'git-repo-b': checked out 'c9e218553071172339473b3cec7cc18dd5bcd978'
   $ git commit -q -am "Update submodule B in repo A" 
   $ git log --oneline
-  6d5b386 Update submodule B in repo A
-  ef54546 Change directly in A
-  9d737eb Added git repo B as submodule in A
-  7d814e1 Add regular_dir/aardvar
-  3766168 Add root_file
+  13e2e77 Update submodule B in repo A
+  f6c9619 Change directly in A
+  f3ce0ee Added git repo B as submodule in A
+  ad7b606 Add regular_dir/aardvar
+  8c33a27 Add root_file
 
 
   $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" full-repo
@@ -270,7 +285,7 @@ Update those changes in repo A
  
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo "$SYNCED_HEAD" 
-  647a2898995b70a69809ba0e83d52aeb153af0217158622429b784d83ed72bc6
+  571eb1f42ab84f4a399434138d78a1b92fffb51ecd2716ffa18510f55ad8a8ed
   $ with_stripped_logs mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive -i "$SYNCED_HEAD" -T hgchangesets
   $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
@@ -280,8 +295,12 @@ Update those changes in repo A
   $ tree
   .
   `-- smallrepofolder1
+      |-- duplicates
+      |   |-- x
+      |   |-- y
+      |   `-- z
       |-- regular_dir
       |   `-- aardvar
       `-- root_file
   
-  2 directories, 2 files
+  3 directories, 5 files
