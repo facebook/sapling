@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use edenapi_types::wire::WireToApiConversionError;
 use edenapi_types::EdenApiServerError;
 use http::header::HeaderMap;
@@ -99,6 +101,22 @@ impl EdenApiError {
                 }
             }
             _ => false,
+        }
+    }
+
+    pub fn retry_after(&self, attempt: usize, max: usize) -> Option<Duration> {
+        if self.is_retryable() && attempt < max {
+            // Retrying for a longer period of time is simply a
+            // way to wait until whatever surge of traffic is happening ends.
+            if self.is_rate_limiting() {
+                Some(Duration::from_secs(
+                    u32::pow(2, std::cmp::min(3, attempt as u32 + 1)) as u64,
+                ))
+            } else {
+                Some(Duration::from_secs(attempt as u64 + 1))
+            }
+        } else {
+            None
         }
     }
 

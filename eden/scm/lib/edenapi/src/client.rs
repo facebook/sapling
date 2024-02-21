@@ -1622,13 +1622,15 @@ async fn with_retry<'t, T>(
         }
         match result {
             Ok(result) => return Ok(result),
-            Err(ref error) => {
-                if !error.is_retryable() {
+            Err(ref error) => match error.retry_after(attempt, max_retry_count) {
+                Some(sleep_time) => {
+                    tracing::warn!("Retrying http error {:?}", error);
+                    tokio::time::sleep(sleep_time).await;
+                }
+                None => {
                     return result;
                 }
-                tracing::warn!("Retrying http error {:?}", error);
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
+            },
         }
         attempt += 1;
     }

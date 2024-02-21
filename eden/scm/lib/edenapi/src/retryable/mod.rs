@@ -32,27 +32,6 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
 
     fn received_item(&mut self, _item: &Self::Item) {}
 
-    fn retry_after(
-        &mut self,
-        error: &EdenApiError,
-        attempt: usize,
-        max: usize,
-    ) -> Option<Duration> {
-        if error.is_retryable() && attempt < max {
-            // Retrying for a longer period of time is simply a
-            // way to wait until whatever surge of traffic is happening ends.
-            if error.is_rate_limiting() {
-                Some(Duration::from_secs(
-                    u32::pow(2, std::cmp::min(3, attempt as u32 + 1)) as u64,
-                ))
-            } else {
-                Some(Duration::from_secs(attempt as u64 + 1))
-            }
-        } else {
-            None
-        }
-    }
-
     async fn perform_with_retries(
         self,
         client: Client,
@@ -114,17 +93,13 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
                         Err(e) => e,
                     };
 
-                    let retry_after =
-                        match state
-                            .request
-                            .retry_after(&error, state.attempt, max_attempts)
-                        {
-                            Some(d) => d,
-                            None => {
-                                state.attempt = max_attempts + 1;
-                                return Some((Err(error), state));
-                            }
-                        };
+                    let retry_after = match error.retry_after(state.attempt, max_attempts) {
+                        Some(d) => d,
+                        None => {
+                            state.attempt = max_attempts + 1;
+                            return Some((Err(error), state));
+                        }
+                    };
                     state.attempt += 1;
                     state.entries = None;
 
