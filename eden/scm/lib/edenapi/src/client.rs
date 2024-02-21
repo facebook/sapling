@@ -747,6 +747,44 @@ impl Client {
         })?
     }
 
+    async fn history_attempt(
+        &self,
+        keys: Vec<Key>,
+        length: Option<u32>,
+    ) -> Result<Response<HistoryEntry>, EdenApiError> {
+        tracing::info!("Requesting history for {} file(s)", keys.len());
+
+        if keys.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let mut url = self.build_url(paths::HISTORY)?;
+
+        if self.config().try_route_consistently && keys.len() == 1 {
+            url.set_query(Some(&format!(
+                "routing_file={}",
+                keys.first().unwrap().hgid
+            )));
+            tracing::debug!("Requesting history for 1 file with a routing key: {}", url);
+        }
+
+        let requests = self.prepare_requests(&url, keys, self.config().max_history, |keys| {
+            let req = HistoryRequest { keys, length };
+            self.log_request(&req, "history");
+            req
+        })?;
+
+        let Response { entries, stats } = self.fetch::<HistoryResponseChunk>(requests)?;
+
+        // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
+        let entries = entries
+            .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
+            .try_flatten()
+            .boxed();
+
+        Ok(Response { entries, stats })
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -827,37 +865,8 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
-        tracing::info!("Requesting history for {} file(s)", keys.len());
-
-        if keys.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let mut url = self.build_url(paths::HISTORY)?;
-
-        if self.config().try_route_consistently && keys.len() == 1 {
-            url.set_query(Some(&format!(
-                "routing_file={}",
-                keys.first().unwrap().hgid
-            )));
-            tracing::debug!("Requesting history for 1 file with a routing key: {}", url);
-        }
-
-        let requests = self.prepare_requests(&url, keys, self.config().max_history, |keys| {
-            let req = HistoryRequest { keys, length };
-            self.log_request(&req, "history");
-            req
-        })?;
-
-        let Response { entries, stats } = self.fetch::<HistoryResponseChunk>(requests)?;
-
-        // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
-        let entries = entries
-            .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
-            .try_flatten()
-            .boxed();
-
-        Ok(Response { entries, stats })
+        self.with_retry(|this| this.history_attempt(keys.clone(), length.clone()).boxed())
+            .await
     }
 
     async fn trees(
