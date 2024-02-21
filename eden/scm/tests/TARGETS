@@ -6,24 +6,6 @@ load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_run_tests_excluded
 
 oncall("mercurial_release")
 
-python_binary(
-    name = "run_tests",
-    srcs = ["unittestify.py"] + glob(["**/*.t"]),
-    base_module = "",
-    main_function = "unittestify.main",
-    package_style = "inplace",
-    resources = {
-        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
-        "//eden/scm:hg": "fb/run_buck_hg.sh",
-        "//eden/scm:hgpython": "fb/run_buck_hgpython.sh",
-        "//watchman:watchman": "watchman",
-    },
-    deps = [
-        "//libfb/py:parutil",
-        "//libfb/py:pathutils",
-    ],
-)
-
 SRCS = dict(
     [("unittestify.py", "unittestify.py")] +
     [(f, f) for f in glob(["**/*.t"])],

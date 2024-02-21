@@ -18,28 +18,12 @@ import unittest
 import libfb.py.parutil as parutil
 
 
-try:
-    # Used by :run_tests binary target
-    import libfb.py.pathutils as pathutils
-
-    hgpath = parutil.get_file_path("fb/run_buck_hg.sh", pkg=__package__)
-    pythonbinpath = parutil.get_file_path("fb/run_buck_hgpython.sh", pkg=__package__)
-    watchman = parutil.get_file_path("watchman", pkg=__package__)
-    dummyssh = parutil.get_file_path("dummyssh3.par", pkg=__package__)
-    if os.environ.get("USE_MONONOKE"):
-        mononoke_server = parutil.get_file_path("mononoke", pkg=__package__)
-        get_free_socket = parutil.get_file_path("get_free_socket.par", pkg=__package__)
-    else:
-        mononoke_server = None
-        get_free_socket = None
-except ImportError:
-    # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
-    hgpath = os.environ.get("HGTEST_HG")
-    pythonbinpath = os.environ.get("HGTEST_PYTHON", "python3")
-    watchman = os.environ.get("HGTEST_WATCHMAN")
-    mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
-    dummyssh = os.environ.get("HGTEST_DUMMYSSH")
-    get_free_socket = os.environ.get("HGTEST_GET_FREE_SOCKET")
+hgpath = os.environ.get("HGTEST_HG")
+pythonbinpath = os.environ.get("HGTEST_PYTHON", "python3")
+watchman = os.environ.get("HGTEST_WATCHMAN")
+mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
+dummyssh = os.environ.get("HGTEST_DUMMYSSH")
+get_free_socket = os.environ.get("HGTEST_GET_FREE_SOCKET")
 
 
 if watchman is not None and not os.path.exists(str(watchman)):
