@@ -785,6 +785,28 @@ impl Client {
         Ok(Response { entries, stats })
     }
 
+    async fn blame_attempt(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
+        tracing::info!("Blaming {} file(s)", files.len());
+
+        if files.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::BLAME)?;
+        let requests = self.prepare_requests(
+            &url,
+            files,
+            Some(MAX_CONCURRENT_BLAMES_PER_REQUEST),
+            |files| {
+                let req = BlameRequest { files };
+                self.log_request(&req, "blame");
+                req
+            },
+        )?;
+
+        self.fetch::<BlameResult>(requests)
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -1504,27 +1526,9 @@ impl EdenApi for Client {
         Ok(self.fetch::<CommitTranslateIdResponse>(requests)?)
     }
 
-    // This method doesn't perform retries.
     async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
-        tracing::info!("Blaming {} file(s)", files.len());
-
-        if files.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let url = self.build_url(paths::BLAME)?;
-        let requests = self.prepare_requests(
-            &url,
-            files,
-            Some(MAX_CONCURRENT_BLAMES_PER_REQUEST),
-            |files| {
-                let req = BlameRequest { files };
-                self.log_request(&req, "blame");
-                req
-            },
-        )?;
-
-        Ok(self.fetch::<BlameResult>(requests)?)
+        self.with_retry(|this| this.blame_attempt(files.clone()).boxed())
+            .await
     }
 }
 
