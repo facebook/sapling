@@ -511,6 +511,10 @@ impl GitSha1 {
             )
         })
     }
+
+    pub fn from_thrift(b: thrift::GitSha1) -> Result<Self> {
+        Self::from_bytes(b.0)
+    }
 }
 
 impl Blake3 {
@@ -805,6 +809,16 @@ mod test {
         let nil_thrift = thrift::Blake2(NILHASH.0.into());
         assert_eq!(NILHASH, Blake2::from_thrift(nil_thrift.clone()).unwrap());
         assert_eq!(NILHASH.into_thrift(), nil_thrift);
+    }
+
+    #[test]
+    fn parse_git_sha1_thrift() {
+        let null_thrift = thrift::GitSha1(vec![0; 20].into());
+        assert_eq!(
+            GitSha1([0; 20]),
+            GitSha1::from_thrift(null_thrift.clone()).unwrap()
+        );
+        assert_eq!(GitSha1([0; 20]).into_thrift(), null_thrift);
     }
 
     #[test]

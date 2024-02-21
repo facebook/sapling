@@ -24,6 +24,7 @@ thrift_library(
     # thrift services -- do not allow other code to use them, except for other private Thrift code.
     # THIS IS NOT A PUBLIC SOURCE CONTROL API AND THERE IS NO BACKWARDS COMPAT GUARANTEEE.
     visibility = [
+        "//eden/mononoke/bonsai_git_mapping/if:",
         "//eden/mononoke/bonsai_globalrev_mapping/if:",
         "//eden/mononoke/bonsai_hg_mapping/if:",
         "//eden/mononoke/bonsai_svnrev_mapping/if:",
