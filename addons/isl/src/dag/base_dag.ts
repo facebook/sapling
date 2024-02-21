@@ -11,8 +11,7 @@ import type {RecordOf} from 'immutable';
 
 import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {cached} from 'shared/LRU';
+import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {unwrap} from 'shared/utils';
 
@@ -132,8 +131,8 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
    * set + parents(set) + parents(parents(set)) + ...
    * If `within` is set, change `parents` to only return hashes within `within`.
    */
-  @cached({cacheSize: 500})
-  ancestors(set: SetLike, props?: {within?: SetLike}): HashSet {
+  ancestors = cachedMethod(this.ancestorsImpl, {cache: ancestorsCache});
+  ancestorsImpl(set: SetLike, props?: {within?: SetLike}): HashSet {
     const filter = nullableWithinContains(props?.within);
     return unionFlatMap(set, h => this.parentHashes(h).filter(filter));
   }
@@ -317,6 +316,8 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
     return this.filter(c => c.parents.length > 1, set);
   }
 }
+
+const ancestorsCache = new LRU(1000);
 
 function flatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
   return new HashSet(

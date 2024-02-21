@@ -18,8 +18,7 @@ import {Ancestor, AncestorType, Renderer} from './render';
 import {TextRenderer} from './renderText';
 import {arrayFromHashes, HashSet} from './set';
 import {List, Record, Map as ImMap, Set as ImSet} from 'immutable';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {cached} from 'shared/LRU';
+import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {group, notEmpty, splitOnce, unwrap} from 'shared/utils';
 
@@ -187,13 +186,13 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return this.commitDag.range(roots, heads);
   }
 
-  @cached()
-  roots(set: SetLike): HashSet {
+  roots = cachedMethod(this.rootsImpl, {cache: rootsCache});
+  private rootsImpl(set: SetLike): HashSet {
     return this.commitDag.roots(set);
   }
 
-  @cached()
-  heads(set: SetLike): HashSet {
+  heads = cachedMethod(this.headsImpl, {cache: headsCache});
+  private headsImpl(set: SetLike): HashSet {
     return this.commitDag.heads(set);
   }
 
@@ -209,8 +208,8 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return this.commitDag.filter(predicate, set);
   }
 
-  @cached()
-  all(): HashSet {
+  all = cachedMethod(this.allImpl, {cache: allCache});
+  private allImpl(): HashSet {
     return HashSet.fromHashes(this);
   }
 
@@ -220,8 +219,8 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
    *   parents(draft()) are kept.
    * - Unnamed public commits that do not have direct draft children.
    */
-  @cached()
-  subsetForRendering(set?: SetLike): HashSet {
+  subsetForRendering = cachedMethod(this.subsetForRenderingImpl, {cache: subsetForRenderingCache});
+  private subsetForRenderingImpl(set?: SetLike): HashSet {
     const all = set === undefined ? this.all() : HashSet.fromHashes(set);
     const draft = this.draft(all);
     const obsolete = this.obsolete(all);
@@ -244,8 +243,10 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   // Sort
 
   // sortAsc all commits, with the default compare function.
-  @cached()
-  defaultSortAscIndex(): ReadonlyMap<Hash, number> {
+  defaultSortAscIndex = cachedMethod(this.defaultSortAscIndexImpl, {
+    cache: defaultSortAscIndexCache,
+  });
+  private defaultSortAscIndexImpl(): ReadonlyMap<Hash, number> {
     return new Map(
       this.commitDag
         .sortAsc(this.all(), {compare: sortAscCompare, gap: false})
@@ -522,8 +523,8 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   }
 
   /** Render `set` into `ExtendedGraphRow`s. */
-  @cached()
-  renderToRows(set?: SetLike): ReadonlyArray<[DagCommitInfo, ExtendedGraphRow]> {
+  renderToRows = cachedMethod(this.renderToRowsImpl, {cache: renderToRowsCache});
+  private renderToRowsImpl(set?: SetLike): ReadonlyArray<[DagCommitInfo, ExtendedGraphRow]> {
     const renderer = new Renderer();
     const rows: Array<[DagCommitInfo, ExtendedGraphRow]> = [];
     for (const [type, item] of this.dagWalkerForRendering(set)) {
@@ -633,6 +634,13 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return renderedRows.join('').trimEnd();
   }
 }
+
+const rootsCache = new LRU(1000);
+const headsCache = new LRU(1000);
+const allCache = new LRU(1000);
+const subsetForRenderingCache = new LRU(1000);
+const defaultSortAscIndexCache = new LRU(1000);
+const renderToRowsCache = new LRU(1000);
 
 type NameMapEntry = [string, HashPriRecord];
 
