@@ -10,8 +10,7 @@ import type {RecordOf} from 'immutable';
 
 import {FileStackState} from './fileStackState';
 import {List, Record, Set as ImSet} from 'immutable';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {cached} from 'shared/LRU';
+import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 
 /**
@@ -90,8 +89,8 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
    * Get the `SelectLine`s. Useful for rendering the lines.
    * See `SelectLine` for details.
    */
-  @cached()
-  getLines(): Readonly<SelectLine[]> {
+  getLines = cachedMethod(this.getLinesImpl, {cache: getLinesCache});
+  private getLinesImpl(): Readonly<SelectLine[]> {
     let nextALine = 1;
     let nextBLine = 1;
     let nextSelLine = 1;
@@ -270,8 +269,8 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
    * the 1st, 2nd, or 3rd line. That's 3 different ways of selections with the same
    * `getSelectedText` output.
    */
-  @cached()
-  getSelectedText(): string {
+  getSelectedText = cachedMethod(this.getSelectedTextImpl, {cache: getSelectedTextCache});
+  private getSelectedTextImpl(): string {
     return (
       this.inner.lines
         // eslint-disable-next-line no-bitwise
@@ -359,6 +358,9 @@ export class ChunkSelectState extends SelfUpdate<ChunkSelectRecord> {
     super(record);
   }
 }
+
+const getLinesCache = new LRU(1000);
+const getSelectedTextCache = new LRU(1000);
 
 /** A line and its position on both sides, and selection state. */
 export type SelectLine = {
