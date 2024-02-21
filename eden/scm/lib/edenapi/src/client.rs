@@ -867,6 +867,33 @@ impl Client {
             .into())
     }
 
+    async fn set_bookmark_attempt(
+        &self,
+        bookmark: String,
+        to: Option<HgId>,
+        from: Option<HgId>,
+        pushvars: HashMap<String, String>,
+    ) -> Result<SetBookmarkResponse, EdenApiError> {
+        tracing::info!("Set bookmark '{}' from {:?} to {:?}", &bookmark, from, to);
+        let url = self.build_url(paths::SET_BOOKMARK)?;
+        let set_bookmark_req = SetBookmarkRequest {
+            bookmark,
+            to,
+            from,
+            pushvars: pushvars
+                .into_iter()
+                .map(|(k, v)| PushVar { key: k, value: v })
+                .collect(),
+        };
+        self.log_request(&set_bookmark_req, "set_bookmark");
+        let req = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&set_bookmark_req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<SetBookmarkResponse>(req).await
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -1012,7 +1039,6 @@ impl EdenApi for Client {
         self.fetch_vec_with_retry::<BookmarkEntry>(vec![req]).await
     }
 
-    // This method doesn't perform retries.
     async fn set_bookmark(
         &self,
         bookmark: String,
@@ -1020,24 +1046,11 @@ impl EdenApi for Client {
         from: Option<HgId>,
         pushvars: HashMap<String, String>,
     ) -> Result<SetBookmarkResponse, EdenApiError> {
-        tracing::info!("Set bookmark '{}' from {:?} to {:?}", &bookmark, from, to);
-        let url = self.build_url(paths::SET_BOOKMARK)?;
-        let set_bookmark_req = SetBookmarkRequest {
-            bookmark,
-            to,
-            from,
-            pushvars: pushvars
-                .into_iter()
-                .map(|(k, v)| PushVar { key: k, value: v })
-                .collect(),
-        };
-        self.log_request(&set_bookmark_req, "set_bookmark");
-        let req = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&set_bookmark_req.to_wire())
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<SetBookmarkResponse>(req).await
+        self.with_retry(|this| {
+            this.set_bookmark_attempt(bookmark.clone(), to.clone(), from.clone(), pushvars.clone())
+                .boxed()
+        })
+        .await
     }
 
     /// Land a stack of commits, rebasing them onto the specified bookmark
