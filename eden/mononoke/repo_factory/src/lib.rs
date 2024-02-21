@@ -1468,11 +1468,14 @@ impl RepoFactory {
     ) -> Result<ArcBookmarksCache> {
         match &self.env.bookmark_cache_options.cache_kind {
             BookmarkCacheKind::Local => {
-                let mut scuba = self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
-                scuba.add("repo", repo_identity.name());
+                let scuba_sample_builder =
+                    self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
+                let ctx = self
+                    .ctx(Some(repo_identity))
+                    .with_mutated_scuba(|_| scuba_sample_builder);
 
                 let mut wbc_builder = WarmBookmarksCacheBuilder::new(
-                    self.ctx(Some(repo_identity)),
+                    ctx,
                     bookmarks.clone(),
                     bookmark_update_log.clone(),
                     repo_identity.clone(),
