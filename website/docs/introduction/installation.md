@@ -94,7 +94,7 @@ setx PATH "$env:PATH;C:\Program Files\Sapling" -m
 Note the following tools must be installed to leverage Sapling's full feature set:
 
 - [Git for Windows](https://git-scm.com/download/win) is required to use Sapling with Git repositories
-- [Node.js](https://nodejs.org/en/download/) (v10 or later) is required to use <SLCommand name="web" />
+- [Node.js](https://nodejs.org/en/download/) (v16 or later) is required to use <SLCommand name="web" />
 
 Note that the name of the Sapling CLI `sl.exe` conflicts with the `sl` shell built-in in PowerShell (`sl` is an alias for `Set-Location`, which is equivalent to `cd`). If you want to use `sl` to run `sl.exe` in PowerShell, you must reassign the alias. Again, you must run the following as Administrator:
 
