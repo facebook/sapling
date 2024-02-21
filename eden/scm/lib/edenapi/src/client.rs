@@ -930,6 +930,7 @@ impl EdenApi for Client {
         self.fetch_vec_with_retry::<BookmarkEntry>(vec![req]).await
     }
 
+    // This method doesn't perform retries.
     async fn set_bookmark(
         &self,
         bookmark: String,
@@ -959,6 +960,7 @@ impl EdenApi for Client {
 
     /// Land a stack of commits, rebasing them onto the specified bookmark
     /// and updating the bookmark to the top of the rebased stack
+    /// This method doesn't perform retries.
     async fn land_stack(
         &self,
         bookmark: String,
@@ -1231,6 +1233,7 @@ impl EdenApi for Client {
         self.fetch_vec_with_retry::<LookupResponse>(requests).await
     }
 
+    // This method doesn't perform retries.
     async fn process_files_upload(
         &self,
         data: Vec<(AnyFileContentId, Bytes)>,
@@ -1311,6 +1314,7 @@ impl EdenApi for Client {
         })
     }
 
+    // This method doesn't perform retries.
     async fn upload_filenodes_batch(
         &self,
         items: Vec<HgFilenodeData>,
@@ -1337,6 +1341,7 @@ impl EdenApi for Client {
         Ok(self.fetch::<UploadTokensResponse>(requests)?)
     }
 
+    // This method doesn't perform retries.
     async fn upload_trees_batch(
         &self,
         items: Vec<UploadTreeEntry>,
@@ -1416,6 +1421,7 @@ impl EdenApi for Client {
             .await
     }
 
+    // This method doesn't perform retries.
     async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
         tracing::info!("Downloading file");
         let url = self.build_url(paths::DOWNLOAD_FILE)?;
@@ -1466,6 +1472,7 @@ impl EdenApi for Client {
             .await
     }
 
+    // This method doesn't perform retries.
     async fn commit_translate_id(
         &self,
         commits: Vec<CommitId>,
@@ -1497,6 +1504,7 @@ impl EdenApi for Client {
         Ok(self.fetch::<CommitTranslateIdResponse>(requests)?)
     }
 
+    // This method doesn't perform retries.
     async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
         tracing::info!("Blaming {} file(s)", files.len());
 
