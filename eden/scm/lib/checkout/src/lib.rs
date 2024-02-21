@@ -642,41 +642,44 @@ impl CheckoutProgress {
         let file = util::file::open(path, "r")?;
         let mut reader = BufReader::new(file);
         let mut buffer = vec![];
+
+        let deserialize_buffer = |buffer: &mut Vec<u8>| -> Result<_> {
+            let mut split = buffer.splitn(4, |c| *c == b' ');
+            let hgid = HgId::from_hex(
+                split
+                    .next()
+                    .ok_or_else(|| anyhow!("invalid checkout update hgid format"))?,
+            )?;
+
+            let time = std::str::from_utf8(
+                split
+                    .next()
+                    .ok_or_else(|| anyhow!("invalid checkout update time format"))?,
+            )?
+            .parse::<u128>()?;
+
+            let size = std::str::from_utf8(
+                split
+                    .next()
+                    .ok_or_else(|| anyhow!("invalid checkout update size format"))?,
+            )?
+            .parse::<u64>()?;
+
+            let path = split
+                .next()
+                .ok_or_else(|| anyhow!("invalid checkout update path format"))?;
+            let path = &path[..path.len() - 1];
+            let path = RepoPathBuf::from_string(std::str::from_utf8(path)?.to_string())?;
+
+            Ok((path, (hgid, time, size)))
+        };
+
         loop {
             reader.read_until(0, &mut buffer)?;
             if buffer.is_empty() {
                 break;
             }
-            let (path, (hgid, time, size)) = match (|| -> Result<_> {
-                let mut split = buffer.splitn(4, |c| *c == b' ');
-                let hgid = HgId::from_hex(
-                    split
-                        .next()
-                        .ok_or_else(|| anyhow!("invalid checkout update hgid format"))?,
-                )?;
-
-                let time = std::str::from_utf8(
-                    split
-                        .next()
-                        .ok_or_else(|| anyhow!("invalid checkout update time format"))?,
-                )?
-                .parse::<u128>()?;
-
-                let size = std::str::from_utf8(
-                    split
-                        .next()
-                        .ok_or_else(|| anyhow!("invalid checkout update size format"))?,
-                )?
-                .parse::<u64>()?;
-
-                let path = split
-                    .next()
-                    .ok_or_else(|| anyhow!("invalid checkout update path format"))?;
-                let path = &path[..path.len() - 1];
-                let path = RepoPathBuf::from_string(std::str::from_utf8(path)?.to_string())?;
-
-                Ok((path, (hgid, time, size)))
-            })() {
+            let (path, (hgid, time, size)) = match deserialize_buffer(&mut buffer) {
                 Ok(entry) => entry,
                 Err(_) => {
                     buffer.clear();
@@ -715,7 +718,7 @@ impl CheckoutProgress {
         }
     }
 
-    fn filter_already_written<'a>(
+    fn filter_already_written(
         &self,
         actions: &HashMap<RepoPathBuf, UpdateContentAction>,
     ) -> HashMap<RepoPathBuf, UpdateContentAction> {
