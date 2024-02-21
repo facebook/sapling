@@ -13,6 +13,7 @@ import type {Json} from 'shared/typeUtils';
 
 import {Internal} from './Internal';
 import {logger} from 'isl/src/logger';
+import {browserPlatformImpl} from 'isl/src/platform/browerPlatformImpl';
 import {tryJsonParse} from 'shared/utils';
 
 declare global {
@@ -96,7 +97,8 @@ export const vscodeWebviewPlatform: Platform = {
   openExternalLink: url => {
     window.clientToServerAPI?.postMessage({type: 'platform/openExternal', url});
   },
-  clipboardCopy: data => navigator.clipboard.writeText(data),
+
+  clipboardCopy: browserPlatformImpl.clipboardCopy,
 
   getPersistedState<T extends Json>(key: string): T | null {
     return persistedState[key] as T;

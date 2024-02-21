@@ -13,6 +13,7 @@ import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {ExternalLink} from '../ExternalLink';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
+import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
 import {T, t} from '../i18n';
 import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
@@ -122,7 +123,7 @@ function DiffInfoInner({
         <provider.DiffLandButtonContent diff={info} commit={commit} />
       )}
       <DiffComments diff={info} />
-      <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
+      <DiffNumber url={info.url}>{provider.formatDiffNumber(diffId)}</DiffNumber>
       {shouldHideActions ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
       ) : syncStatus === SyncStatus.LocalIsNewer ? (
@@ -196,7 +197,7 @@ function ResubmitSyncButton({
   );
 }
 
-function DiffNumber({children}: {children: string}) {
+function DiffNumber({children, url}: {children: string; url?: string}) {
   const [showing, setShowing] = useState(false);
   const showDiffNumber = useAtomValue(showDiffNumberConfig);
   if (!children || !showDiffNumber) {
@@ -208,7 +209,7 @@ function DiffNumber({children}: {children: string}) {
       <span
         className="diff-number"
         onClick={() => {
-          platform.clipboardCopy(children);
+          url == null ? clipboardCopyText(children) : clipboardCopyLink(children, url);
           setShowing(true);
           setTimeout(() => setShowing(false), 2000);
         }}>

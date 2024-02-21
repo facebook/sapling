@@ -46,8 +46,8 @@ class UseShowToast {
   }
 
   /** Show "Copied <text>" toast. Existing "copied' toast will be replaced. */
-  copyAndShowToast(text: string) {
-    platform.clipboardCopy(text);
+  copyAndShowToast(text: string, html?: string) {
+    platform.clipboardCopy(text, html);
     this.show(t('Copied $text', {replace: {$text: text}}), {key: 'copied'});
   }
   /** Hide toasts with the given key. */

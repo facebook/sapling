@@ -32,7 +32,7 @@ export interface Platform {
   openContainingFolder?(path: RepoRelativePath): void;
   openDiff?(path: RepoRelativePath, comparison: Comparison): void;
   openExternalLink(url: string): void;
-  clipboardCopy(value: string): void;
+  clipboardCopy(text: string, html?: string): void;
   chooseFile?(title: string, multi: boolean): Promise<Array<File>>;
   onCommitFormSubmit?: () => void;
   /**

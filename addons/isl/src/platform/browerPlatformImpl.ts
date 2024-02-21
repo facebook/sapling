@@ -30,8 +30,18 @@ export const browserPlatformImpl = {
     window.open(url, '_blank');
   },
 
-  clipboardCopy(data: string): void {
-    navigator.clipboard.writeText(data);
+  clipboardCopy: (text: string, html?: string) => {
+    if (html) {
+      const htmlBlob = new Blob([html], {type: 'text/html'});
+      const textBlob = new Blob([text], {type: 'text/plain'});
+      const clipboardItem = new window.ClipboardItem({
+        'text/html': htmlBlob,
+        'text/plain': textBlob,
+      });
+      navigator.clipboard.write([clipboardItem]);
+    } else {
+      navigator.clipboard.writeText(text);
+    }
   },
 
   getPersistedState<T>(key: string): T | null {

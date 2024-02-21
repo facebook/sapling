@@ -41,8 +41,8 @@ const androidStudioPlatform: Platform = {
     window.open(_url, '_blank');
   },
 
-  clipboardCopy(data: string) {
-    window.__IdeBridge.clipboardCopy?.(data);
+  clipboardCopy(text: string, _html?: string) {
+    window.__IdeBridge.clipboardCopy?.(text);
   },
 
   getPersistedState<T>(_key: string): T | null {

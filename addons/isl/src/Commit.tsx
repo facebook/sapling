@@ -24,7 +24,12 @@ import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
 import {tracker} from './analytics';
-import {codeReviewProvider, latestCommitMessageTitle} from './codeReview/CodeReviewInfo';
+import {clipboardLinkHtml} from './clipboard';
+import {
+  codeReviewProvider,
+  diffSummary,
+  latestCommitMessageTitle,
+} from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
@@ -139,7 +144,8 @@ export const Commit = memo(
     const title = useAtomValue(latestCommitMessageTitle(commit.hash));
 
     const toast = useShowToast();
-    const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
+    const clipboardCopy = (text: string, url?: string) =>
+      toast.copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
@@ -191,7 +197,11 @@ export const Commit = memo(
       if (!isPublic && commit.diffId != null) {
         items.push({
           label: <T replace={{$number: commit.diffId}}>Copy Diff Number "$number"</T>,
-          onClick: () => clipboardCopy(commit.diffId ?? ''),
+          onClick: () => {
+            const info = readAtom(diffSummary(commit.diffId));
+            const url = info?.value?.url;
+            clipboardCopy(commit.diffId ?? '', url);
+          },
         });
       }
       if (!isPublic) {
