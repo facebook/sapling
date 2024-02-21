@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;

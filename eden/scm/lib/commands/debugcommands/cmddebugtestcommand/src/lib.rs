@@ -6,7 +6,6 @@
  */
 
 use std::io::Write;
-use std::sync::Arc;
 
 use clidispatch::abort;
 use clidispatch::ReqCtx;

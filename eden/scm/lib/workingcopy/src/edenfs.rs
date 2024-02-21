@@ -21,7 +21,6 @@ use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use storemodel::FileStore;
-use termlogger::TermLogger;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::HgId;

@@ -7,7 +7,6 @@
 
 use std::io::Write;
 use std::path::Path;
-use std::sync::Arc;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;

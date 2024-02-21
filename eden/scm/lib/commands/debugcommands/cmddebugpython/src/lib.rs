@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;

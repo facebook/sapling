@@ -5,10 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use clidispatch::ReqCtx;
-use cmdutil::Config;
 use cmdutil::NoOpts;
 use cmdutil::Result;
 

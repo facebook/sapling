@@ -81,7 +81,7 @@ py_class!(pub class repo |py| {
     }
 
     def metalog(&self) -> PyResult<PyMetaLog> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).write();
         let path = String::from(repo_ref.metalog_path().to_string_lossy());
         let log_ref = repo_ref.metalog().map_pyerr(py)?;
         PyMetaLog::create_instance(py, log_ref, path)

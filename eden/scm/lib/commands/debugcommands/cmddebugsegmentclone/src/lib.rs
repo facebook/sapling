@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use anyhow::Context;
 use async_runtime::block_on;

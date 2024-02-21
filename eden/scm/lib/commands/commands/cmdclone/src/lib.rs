@@ -598,7 +598,7 @@ fn eager_clone(
         f.write_all(format!("[paths]\ndefault = {}\n", source.path).as_bytes())
     })?;
 
-    let mut repo = Repo::load(
+    let repo = Repo::load(
         dest,
         &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &ctx.global_opts().configfile),
     )?;
