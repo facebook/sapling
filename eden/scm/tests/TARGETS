@@ -7,8 +7,13 @@ load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_run_tests_excluded
 oncall("mercurial_release")
 
 SRCS = dict(
-    [("unittestify.py", "unittestify.py")] +
-    [(f, f) for f in glob(["**/*.t"])],
+    [("unittestify.py", "unittestify.py")],
+)
+
+buck_filegroup(
+    name = "test_files",
+    srcs = [f for f in glob(["**/*.t"])] +
+           [f for f in glob(["**/test*.py"])],
 )
 
 # @unsorted-dict-items
@@ -51,6 +56,7 @@ python_unittest(
         "//eden/scm/tests:dummyssh3": "dummyssh3.par",
         "//eden/scm:hg": "hg.sh",
         "//eden/scm:hgpython": "hgpython.sh",
+        ":test_files": "TEST_FILES",
     },
     supports_static_listing = False,
     runtime_deps = [
@@ -79,6 +85,7 @@ python_unittest(
         "//eden/scm:hg": "hg.sh",
         "//eden/scm:hgpython": "hgpython.sh",
         "//watchman:watchman": "watchman",
+        ":test_files": "TEST_FILES",
     },
     supports_static_listing = False,
     deps = [
