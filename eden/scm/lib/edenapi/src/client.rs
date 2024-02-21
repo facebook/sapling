@@ -632,6 +632,63 @@ impl Client {
         self.fetch::<UploadTokensResponse>(vec![request])
     }
 
+    async fn ephemeral_prepare_attempt(
+        &self,
+        custom_duration: Option<Duration>,
+        labels: Option<Vec<String>>,
+    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
+        tracing::info!("Preparing ephemeral bubble");
+        let url = self.build_url(paths::EPHEMERAL_PREPARE)?;
+        let req = EphemeralPrepareRequest {
+            custom_duration_secs: custom_duration.map(|d| d.as_secs()),
+            labels,
+        }
+        .to_wire();
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        let mut fetch = self.fetch::<EphemeralPrepareResponse>(vec![request])?;
+        fetch.entries = fetch
+            .entries
+            .inspect_ok(|r| tracing::info!("Created bubble {}", r.bubble_id))
+            .boxed();
+
+        Ok(fetch)
+    }
+
+    async fn fetch_snapshot_attempt(
+        &self,
+        request: FetchSnapshotRequest,
+    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+        tracing::info!("Fetching snapshot {}", request.cs_id,);
+        let url = self.build_url(paths::FETCH_SNAPSHOT)?;
+        let req = request.to_wire();
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch::<FetchSnapshotResponse>(vec![request])
+    }
+
+    /// Alter the properties of an existing snapshot
+    async fn alter_snapshot_attempt(
+        &self,
+        request: AlterSnapshotRequest,
+    ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
+        tracing::info!("Altering snapshot {}", request.cs_id,);
+        let url = self.build_url(paths::ALTER_SNAPSHOT)?;
+        let req = request.to_wire();
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch::<AlterSnapshotResponse>(vec![request])
+    }
+
     async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, EdenApiError> {
         let url = self.build_url(paths::CLONE_DATA)?;
         let req = self.configure_request(self.inner.client.post(url))?;
@@ -1318,40 +1375,19 @@ impl EdenApi for Client {
         custom_duration: Option<Duration>,
         labels: Option<Vec<String>>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        tracing::info!("Preparing ephemeral bubble");
-        let url = self.build_url(paths::EPHEMERAL_PREPARE)?;
-        let req = EphemeralPrepareRequest {
-            custom_duration_secs: custom_duration.map(|d| d.as_secs()),
-            labels,
-        }
-        .to_wire();
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        let mut fetch = self.fetch::<EphemeralPrepareResponse>(vec![request])?;
-        fetch.entries = fetch
-            .entries
-            .inspect_ok(|r| tracing::info!("Created bubble {}", r.bubble_id))
-            .boxed();
-
-        Ok(fetch)
+        self.with_retry(|this| {
+            this.ephemeral_prepare_attempt(custom_duration.clone(), labels.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn fetch_snapshot(
         &self,
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
-        tracing::info!("Fetching snapshot {}", request.cs_id,);
-        let url = self.build_url(paths::FETCH_SNAPSHOT)?;
-        let req = request.to_wire();
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        Ok(self.fetch::<FetchSnapshotResponse>(vec![request])?)
+        self.with_retry(|this| this.fetch_snapshot_attempt(request.clone()).boxed())
+            .await
     }
 
     /// Alter the properties of an existing snapshot
@@ -1359,15 +1395,8 @@ impl EdenApi for Client {
         &self,
         request: AlterSnapshotRequest,
     ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
-        tracing::info!("Altering snapshot {}", request.cs_id,);
-        let url = self.build_url(paths::ALTER_SNAPSHOT)?;
-        let req = request.to_wire();
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        Ok(self.fetch::<AlterSnapshotResponse>(vec![request])?)
+        self.with_retry(|this| this.alter_snapshot_attempt(request.clone()).boxed())
+            .await
     }
 
     async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
