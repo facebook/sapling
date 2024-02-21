@@ -7,7 +7,7 @@
 
 import type {LRUWithStats} from '../LRU';
 
-import {cached, LRU, clearTrackedCache} from '../LRU';
+import {cached, LRU, clearTrackedCache, cachedMethod} from '../LRU';
 import {SelfUpdate} from '../immutableExt';
 import {List, Record} from 'immutable';
 
@@ -386,5 +386,64 @@ describe('cached()', () => {
       expect(fCalled).toBe(2);
       expect(gCalled).toBe(1);
     });
+  });
+});
+
+describe('cachedMethod', () => {
+  it('is an alternative to `@cached()` decorator', () => {
+    let calledTimes = 0;
+    class Fib {
+      fib = cachedMethod(this.fibImpl);
+      fibImpl(n: number): number {
+        calledTimes += 1;
+        return n < 2 ? n : this.fib(n - 1) + this.fib(n - 2);
+      }
+    }
+    const f = new Fib();
+    expect(f.fib(20)).toBe(6765);
+    expect(calledTimes).toBe(21);
+    // Note new Fib() instance does not share the cache like the decorator version.
+    const f2 = new Fib();
+    expect(f2.fib(20)).toBe(6765);
+    expect(calledTimes).toBe(42);
+  });
+
+  it('supports shared cache among instances', () => {
+    let calledTimes = 0;
+    const cache: LRUWithStats = new LRU(10);
+    class Fib {
+      fib = cachedMethod(this.fibImpl, {cache});
+      fibImpl(n: number): number {
+        calledTimes += 1;
+        return n < 2 ? n : this.fib(n - 1) + this.fib(n - 2);
+      }
+    }
+    const f1 = new Fib();
+    const f2 = new Fib();
+    expect(f1.fib(20)).toBe(6765);
+    expect(calledTimes).toBe(21);
+    expect(f2.fib(20)).toBe(6765);
+    expect(calledTimes).toBe(21); // f2 reuses f1's cache.
+  });
+
+  it('considers state of `this`', () => {
+    let calledTimes = 0;
+    class Add {
+      constructor(public n: number) {}
+      add: (n: number) => number = cachedMethod(this.addImpl);
+      addImpl(n: number): number {
+        calledTimes += 1;
+        return this.n + n;
+      }
+    }
+    const a = new Add(10);
+    expect(a.add(5)).toBe(15);
+    expect(calledTimes).toBe(1);
+    a.n = 20;
+    expect(a.add(5)).toBe(25); // `this` changed
+    expect(calledTimes).toBe(2);
+    a.n = 10;
+    expect(a.add(5)).toBe(15);
+    expect(calledTimes).toBe(2); // reused cache
   });
 });

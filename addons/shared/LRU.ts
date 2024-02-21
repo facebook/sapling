@@ -289,6 +289,25 @@ function cacheDecorator<T>(opts?: CacheOpts<T>) {
   };
 }
 
+/** Cache an "instance" function like `this.foo`. */
+export function cachedMethod<T, F extends AnyFunction<T>>(originalFunc: F, opts?: CacheOpts<T>): F {
+  const getExtraKeys =
+    opts?.getExtraKeys ??
+    function (this: T): unknown[] {
+      // Use `this` as extra key if it's a value object (hash + eq).
+      if (isValueObject(this)) {
+        return [this];
+      }
+      // Scan through cachable properties.
+      if (this != null && typeof this === 'object') {
+        return Object.values(this).filter(isCachable);
+      }
+      // Give up - do not add extra cache keys.
+      return [];
+    };
+  return cachedFunction(originalFunc, {...opts, getExtraKeys});
+}
+
 const cachableTypeNames = new Set([
   'number',
   'string',
