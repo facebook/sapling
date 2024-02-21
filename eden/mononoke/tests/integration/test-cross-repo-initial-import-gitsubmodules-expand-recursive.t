@@ -35,7 +35,7 @@ Run the x-repo with submodules setup
 # TODO(T174902563): set action to expand and submodule_dependencies
 # $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SMALL_REPO_ID" 3
 # $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
-# > "$SMALL_REPO_ID" '{"git-repo-b": 3, "git-repo-c": 2}'
+# > "$SMALL_REPO_ID" '{"git-repo-b": 3, "git-repo-b/git-repo-c": 2, "repo_c": 2}'
   $ REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
   $ REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
 
@@ -118,17 +118,13 @@ Setup git repo A
   f3ce0ee Added git repo B as submodule in A
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
-  $ git submodule add ../git-repo-c direct_repo_c
-  Cloning into '$TESTTMP/git-repo-a/direct_repo_c'...
+  $ git submodule add ../git-repo-c repo_c
+  Cloning into '$TESTTMP/git-repo-a/repo_c'...
   done.
   $ git add . && git commit -q -am "Added git repo C as submodule directly in A" 
 
   $ tree
   .
-  |-- direct_repo_c
-  |   |-- choo
-  |   `-- hoo
-  |       `-- qux
   |-- duplicates
   |   |-- x
   |   |-- y
@@ -140,6 +136,10 @@ Setup git repo A
   |   `-- git-repo-c
   |-- regular_dir
   |   `-- aardvar
+  |-- repo_c
+  |   |-- choo
+  |   `-- hoo
+  |       `-- qux
   `-- root_file
   
   7 directories, 9 files
@@ -170,9 +170,9 @@ Import repos in reverse dependency order, C, B then A.
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo $SYNCED_HEAD
-  13ea00db2470a166d744c9b6d4d33f6b5157ff7f4fb7528af48f7b79948eb0cd
+  75b0ae763118ac60a15d7b4d267b9d1f0733bc258bad6aa72be297ab5b5a2a4b
   $ clone_and_log_large_repo "$SYNCED_HEAD"
-  o  c90642ec52e9 Added git repo C as submodule directly in A
+  o  a3134c2c36b7 Added git repo C as submodule directly in A
   │   smallrepofolder1/.gitmodules |  3 +++
   │   1 files changed, 3 insertions(+), 0 deletions(-)
   │
@@ -195,27 +195,21 @@ Import repos in reverse dependency order, C, B then A.
   
   Running mononoke_admin to verify mapping
   
-  RewrittenAs([(ChangesetId(Blake2(f48dc81c8b7c7d3b1809843380863d7eae65a6d17acd4e679062d04f8fa14a81)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
 
   $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
-  $ hg show --stat "$HG_SYNCED_HEAD"
-  commit:      c90642ec52e9
-  user:        mononoke <mononoke@mononoke>
-  date:        Sat Jan 01 00:00:00 2000 +0000
-  files:       smallrepofolder1/.gitmodules
-  description:
+  $ hg show --stat -T 'commit: {node}\n{desc}\n' "$HG_SYNCED_HEAD"
+  commit: a3134c2c36b71c5ee995cb23608b39d7a329a653
   Added git repo C as submodule directly in A
-  
-  
    smallrepofolder1/.gitmodules |  3 +++
    1 files changed, 3 insertions(+), 0 deletions(-)
   
 
   $ hg co -q "$HG_SYNCED_HEAD"
 
-  $ tree
+  $ tree | tee ${TESTTMP}/repo_a_tree_1
   .
   `-- smallrepofolder1
       |-- duplicates
@@ -251,7 +245,10 @@ Update those changes in repo B
   Submodule path 'git-repo-c': checked out '810d4f53650b0fd891ad367ccfd8fa6067d93937'
   $ git add .
   $ git commit -q -am "Update submodule C in repo B" 
+  $ rm bar/zoo foo
+  $ git add . && git commit -q -am "Delete files in repo B" 
   $ git log --oneline
+  0597690 Delete files in repo B
   c9e2185 Update submodule C in repo B
   776166f Added git repo C as submodule in B
   b7dc5d8 Add bar/zoo
@@ -262,27 +259,27 @@ Update those changes in repo A
   $ # Make simple change directly in repo A
   $ echo "in A" >> root_file && git add .
   $ git commit -q -am "Change directly in A"
-  $ # Update submodule b in A
+Update submodule b in A
   $ git submodule update --remote
+  From $TESTTMP/git-repo-b
+     776166f..0597690  master     -> origin/master
+  Submodule path 'git-repo-b': checked out '0597690a839ce11a250139dae33ee85d9772a47a'
   From $TESTTMP/git-repo-c
      114b61c..810d4f5  master     -> origin/master
-  Submodule path 'direct_repo_c': checked out '810d4f53650b0fd891ad367ccfd8fa6067d93937'
-  From $TESTTMP/git-repo-b
-     776166f..c9e2185  master     -> origin/master
-  Submodule path 'git-repo-b': checked out 'c9e218553071172339473b3cec7cc18dd5bcd978'
+  Submodule path 'repo_c': checked out '810d4f53650b0fd891ad367ccfd8fa6067d93937'
   $ git commit -q -am "Update submodule B in repo A" 
 Then delete repo C submodule used directly in repo A
-  $ git submodule deinit --force direct_repo_c
-  Cleared directory 'direct_repo_c'
-  Submodule 'direct_repo_c' (../git-repo-c) unregistered for path 'direct_repo_c'
-  $ git rm -r direct_repo_c
-  rm 'direct_repo_c'
+  $ git submodule deinit --force repo_c
+  Cleared directory 'repo_c'
+  Submodule 'repo_c' (../git-repo-c) unregistered for path 'repo_c'
+  $ git rm -r repo_c
+  rm 'repo_c'
   $ git add . && git commit -q -am "Remove repo C submodule from repo A"
   $ git log --oneline
-  7805694 Remove repo C submodule from repo A
-  d98c102 Update submodule B in repo A
-  6b70cf5 Change directly in A
-  9c96b6d Added git repo C as submodule directly in A
+  6775096 Remove repo C submodule from repo A
+  5f6b001 Update submodule B in repo A
+  de77178 Change directly in A
+  3a41dad Added git repo C as submodule directly in A
   f3ce0ee Added git repo B as submodule in A
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
@@ -309,37 +306,38 @@ Then delete repo C submodule used directly in repo A
  
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo "$SYNCED_HEAD" 
-  900a9f7e88eecab109dc91e87df270dc652401bc6fd9b6a744dd9bb0d1f94dca
+  00909c9688915c940c9d35971cdace15770d0ba3eebce788547f551a1ba104ff
   $ with_stripped_logs mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive -i "$SYNCED_HEAD" -T hgchangesets
   $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
   $ hg pull -q -r "$HG_SYNCED_HEAD"
   $ hg co -q "$HG_SYNCED_HEAD"
 
-  $ tree
-  .
-  `-- smallrepofolder1
-      |-- duplicates
-      |   |-- x
-      |   |-- y
-      |   `-- z
-      |-- regular_dir
-      |   `-- aardvar
-      `-- root_file
+  $ tree &> ${TESTTMP}/repo_a_tree_2
+  $ diff -y ${TESTTMP}/repo_a_tree_1 ${TESTTMP}/repo_a_tree_2
+  .								.
+  `-- smallrepofolder1						`-- smallrepofolder1
+      |-- duplicates						    |-- duplicates
+      |   |-- x							    |   |-- x
+      |   |-- y							    |   |-- y
+      |   `-- z							    |   `-- z
+      |-- regular_dir						    |-- regular_dir
+      |   `-- aardvar						    |   `-- aardvar
+      `-- root_file						    `-- root_file
   
-  3 directories, 5 files
+  3 directories, 5 files						3 directories, 5 files
 
 Check that the diff that updates the submodule generates the correct delta
 (i.e. instead of copying the entire working copy of the submodule every time)
-  $ hg show --stat .
-  commit:      0c1b56a1cc6a
-  user:        mononoke <mononoke@mononoke>
-  date:        Sat Jan 01 00:00:00 2000 +0000
-  files:       smallrepofolder1/.gitmodules
-  description:
+  $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
+  commit: 8b7c4f1b65ae850157359d766bb08eaf2ba383f4
+  Update submodule B in repo A
+  
+Check that deletions were made properly, i.e. submodule in repo_c was entirely
+deleted and the files deleted in repo B were deleted inside its copy.
+  $ hg show --stat -T 'commit: {node}\n{desc}\n' .
+  commit: 18eb3be113b86947ac92ae7621d7f7913a2eeda2
   Remove repo C submodule from repo A
-  
-  
    smallrepofolder1/.gitmodules |  3 ---
    1 files changed, 0 insertions(+), 3 deletions(-)
   
