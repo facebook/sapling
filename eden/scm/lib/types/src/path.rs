@@ -393,6 +393,32 @@ impl RepoPath {
     pub fn to_path(&self) -> PathBuf {
         self.components().map(PathComponent::as_str).collect()
     }
+
+    /// Return whether base's components prefix self's components.
+    pub fn starts_with(&self, base: &Self, case_sensitive: bool) -> bool {
+        let mut self_components = self.components();
+        let mut base_components = base.components();
+        loop {
+            match (self_components.next(), base_components.next()) {
+                (Some(s), Some(b)) => {
+                    if s == b {
+                        continue;
+                    }
+
+                    if !case_sensitive
+                        && (s.0.eq_ignore_ascii_case(&b.0)
+                            || s.0.to_lowercase() == b.0.to_lowercase())
+                    {
+                        continue;
+                    }
+
+                    return false;
+                }
+                (Some(_) | None, None) => return true,
+                (None, Some(_)) => return false,
+            }
+        }
+    }
 }
 
 impl Ord for RepoPath {
@@ -1273,5 +1299,31 @@ mod tests {
             "foo/bar.txt",
             os_path(&["..", "..", "zuck", "tfb", "foo", "bar.txt"]),
         );
+    }
+
+    #[test]
+    fn test_starts_with() {
+        assert!(repo_path("").starts_with(repo_path(""), true));
+        assert!(repo_path("").starts_with(repo_path(""), false));
+
+        assert!(!repo_path("").starts_with(repo_path("foo"), true));
+        assert!(!repo_path("").starts_with(repo_path("foo"), false));
+
+        assert!(repo_path("foo").starts_with(repo_path(""), true));
+        assert!(repo_path("foo").starts_with(repo_path(""), false));
+
+        assert!(repo_path("foo").starts_with(repo_path("foo"), true));
+        assert!(repo_path("foo").starts_with(repo_path("foo"), false));
+
+        assert!(!repo_path("foobar").starts_with(repo_path("foo"), true));
+        assert!(!repo_path("foobar").starts_with(repo_path("foo"), false));
+
+        assert!(repo_path("foo/bar/baz").starts_with(repo_path("foo/bar"), true));
+        assert!(!repo_path("foo/bAr/baz").starts_with(repo_path("foo/bar"), true));
+        assert!(repo_path("foo/bAr/baz").starts_with(repo_path("foo/bar"), false));
+        assert!(repo_path("foo/bÄr/baz").starts_with(repo_path("foo/bär"), false));
+
+        assert!(!repo_path("foo/bar/baz").starts_with(repo_path("foo/bar/baz/qux"), true));
+        assert!(!repo_path("foo/bar/baz").starts_with(repo_path("foo/bar/baz/qux"), false));
     }
 }
