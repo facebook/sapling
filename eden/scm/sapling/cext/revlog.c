@@ -1198,6 +1198,7 @@ static PyObject* index_partialmatch(indexObject* self, PyObject* args) {
   switch (rev) {
     case -4:
       raise_revlog_error();
+      return NULL;
     case -3:
       return NULL;
     case -2:
