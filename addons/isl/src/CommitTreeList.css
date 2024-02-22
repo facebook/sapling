@@ -24,8 +24,8 @@
   gap: calc(var(--halfpad) / 2);
 }
 .commit-tree-root {
-  margin-left: calc(3.5 * var(--pad));
-  margin-top: 0;
+  margin-left: calc(1.5 * var(--pad));
+  margin-top: calc(2px + var(--halfpad));
 }
 .commit-tree-stack-actions {
   display: flex;
@@ -33,56 +33,15 @@
   gap: var(--pad);
   align-items: center;
   margin-top: var(--halfpad);
+  margin-bottom: var(--pad);
+  margin-left: var(--halfpad);
 }
 
-.commit-group.with-vertical-line:before {
-  /* branch vertical line */
-  content: ' ';
-  border-left: 2px solid var(--foreground);
-  position: absolute;
-  bottom: 5px;
-  top: 20px;
-  left: -10px;
-  z-index: 1;
-}
 .commit {
   position: relative;
 }
 
-.commit-ellipsis {
-  display: flex;
-  align-items: center;
-  /* funky alignment to get it exactly on top of the branch line, including half pixel to align icon width */
-  margin-left: calc(-3.5 * var(--halfpad) + 0.5px);
-  position: relative;
-  min-height: var(--vscode-icon-button-height);
-}
-
-/*
- * ellipsis is inside the commit tree, so it would have a left border,
- * unless we add a blank :before on top
- */
-.commit-ellipsis::before {
-  display: block;
-  position: absolute;
-  background-color: var(--background);
-  content: ' ';
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1; /* Above border */
-}
-.commit-ellipsis > * {
-  z-index: 2; /* Above :before */
-}
-
-.commit-ellipsis-children {
-  display: flex;
-  gap: var(--pad);
-  align-items: center;
-}
-
+/* used by the split branch selection */
 .commit-avatar {
   position: absolute;
   border: 1px solid var(--foreground);
@@ -100,12 +59,6 @@
   width: 16px;
   box-sizing: border-box;
   transition: transform 0.2s, box-shadow 0.3s;
-}
-
-.commit-avatar img {
-  position: absolute;
-  width: 14px;
-  height: 14px;
 }
 
 /* Avatar may render below the top of the border,
@@ -281,10 +234,10 @@
 .selected-commit-background {
   background-color: var(--selected-commit-background);
   border: var(--selected-commit-border);
-  width: calc(100% + 3.5 * var(--pad));
+  width: calc(100% + var(--halfpad));
   position: absolute;
   height: 100%;
-  left: calc(-3.5 * var(--pad));
+  left: calc(0px - var(--halfpad));
   pointer-events: none;
 }
 
@@ -306,26 +259,6 @@
   padding: 1px 4px;
   font-size: 90%;
   background-color: var(--hover-darken);
-}
-
-.render-dag.commit-tree-root {
-  margin-left: calc(1.5 * var(--pad));
-  margin-top: calc(2px + var(--halfpad));
-}
-
-.render-dag .selected-commit-background {
-  width: calc(100% + var(--halfpad));
-  left: calc(0px - var(--halfpad));
-}
-
-.render-dag .head-commit-info {
-  margin-left: var(--halfpad);
-}
-
-.render-dag,
-.commit-tree-stack-actions {
-  margin-bottom: var(--pad);
-  margin-left: var(--halfpad);
 }
 
 .fetch-additional-commits-row {
