@@ -6,6 +6,7 @@
  */
 
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 
 typedef binary small_binary (
   rust.newtype,
@@ -22,8 +23,8 @@ typedef binary (rust.type = "Bytes") binary_bytes
 // reason the commit is being fetched.
 struct ChangesetInfo {
   // Changeset id of the source Bonsai changeset
-  1: mononoke_types_thrift.ChangesetId changeset_id;
-  2: list<mononoke_types_thrift.ChangesetId> parents;
+  1: id.ChangesetId changeset_id;
+  2: list<id.ChangesetId> parents;
   3: string author;
   4: mononoke_types_thrift.DateTime author_date;
   5: optional string committer;

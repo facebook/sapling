@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 
-typedef mononoke_types_thrift.Sha1 HgNodeHash (rust.newtype)
+typedef id.Sha1 HgNodeHash (rust.newtype)
 
 // Changeset contents are stored inline.
 struct HgChangesetEnvelope {
@@ -39,7 +39,7 @@ struct HgFileEnvelope {
   1: required HgNodeHash node_id;
   2: optional HgNodeHash p1;
   3: optional HgNodeHash p2;
-  4: optional mononoke_types_thrift.ContentId content_id;
+  4: optional id.ContentId content_id;
   // content_size is a u64 stored as an i64, and doesn't include the size of
   // the metadata
   5: required i64 content_size;

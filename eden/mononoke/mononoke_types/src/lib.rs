@@ -114,6 +114,7 @@ mod macros;
 
 pub mod thrift {
     pub use mononoke_types_serialization::data;
+    pub use mononoke_types_serialization::id;
     pub use mononoke_types_thrift::*;
 }
 

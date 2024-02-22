@@ -46,7 +46,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "types"},
     test_deps = [
         "fbsource//third-party/rust:tokio",
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
     ],
     test_srcs = glob([
         "types/src/blobs/*/*.bin",

@@ -21,7 +21,7 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 mutable_rename_thrift__clients = { package = "mutable_rename_thrift_clients", version = "0.1.0", path = "clients" }
 mutable_rename_thrift__services = { package = "mutable_rename_thrift_services", version = "0.1.0", path = "services" }
 mutable_rename_thrift__types = { package = "mutable_rename_thrift_types", version = "0.1.0", path = "types" }

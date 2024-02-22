@@ -16,6 +16,6 @@ thrift_library(
         "//eden/mononoke/bonsai_globalrev_mapping:",
     ],
     deps = [
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
     ],
 )

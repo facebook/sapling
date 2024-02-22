@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 
 # If you change this, you need to bump CODEVAR in caching.rs
 
@@ -15,12 +15,12 @@ struct PathHash {
 } (rust.exhaustive)
 
 struct MutableRenameEntry {
-  1: required mononoke_types_thrift.ChangesetId dst_cs_id;
+  1: required id.ChangesetId dst_cs_id;
   2: required PathHash dst_path_hash;
-  3: required mononoke_types_thrift.ChangesetId src_cs_id;
+  3: required id.ChangesetId src_cs_id;
   4: binary src_path;
   5: required PathHash src_path_hash;
-  6: required mononoke_types_thrift.Blake2 src_unode;
+  6: required id.Blake2 src_unode;
   7: required byte is_tree;
 } (rust.exhaustive)
 
@@ -29,5 +29,5 @@ struct CachedMutableRenameEntry {
 } (rust.exhaustive)
 
 struct ChangesetIdSet {
-  1: required list<mononoke_types_thrift.ChangesetId> cs_ids;
+  1: required list<id.ChangesetId> cs_ids;
 } (rust.exhaustive)

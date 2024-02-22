@@ -11,6 +11,6 @@ thrift_library(
         "commit_graph.thrift": [],
     },
     deps = [
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
     ],
 )

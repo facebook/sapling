@@ -16,8 +16,8 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-mononoke_types_thrift crate
-tmp mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
+id mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+mononoke_types_thrift crate",
     ).expect("Failed to write cratemap");
 
     let conf = {

@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "data crate
-tmp crate",
+id crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -67,7 +67,7 @@ tmp crate",
 
     let srcs: &[&str] = &[
         "data.thrift"
-            , "tmp.thrift"
+            , "id.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

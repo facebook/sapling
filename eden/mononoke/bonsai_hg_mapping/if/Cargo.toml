@@ -25,7 +25,7 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mercurial_thrift = { version = "0.1.0", path = "../../mercurial/types/if" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 thiserror = "1.0.49"

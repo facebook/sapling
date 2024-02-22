@@ -22,8 +22,8 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 megarepo_types_thrift__types = { package = "megarepo_types_thrift_types", version = "0.1.0", path = "../types" }
-mononoke_types_thrift_services = { version = "0.1.0", path = "../../../mononoke_types/if/services" }
-mononoke_types_thrift_types = { version = "0.1.0", path = "../../../mononoke_types/if/types" }
+mononoke_types_serialization_services = { version = "0.1.0", path = "../../../mononoke_types/serialization/services" }
+mononoke_types_serialization_types = { version = "0.1.0", path = "../../../mononoke_types/serialization/types" }
 source_control_services = { version = "0.1.0", path = "../../../scs/if/services" }
 source_control_types = { version = "0.1.0", path = "../../../scs/if/types" }
 tracing = "0.1.40"

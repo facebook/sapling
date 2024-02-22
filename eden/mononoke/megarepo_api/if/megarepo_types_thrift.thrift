@@ -10,42 +10,24 @@
 //! the service interface. They aren't part of of `megarepo_configs.thrift`,
 //! because they aren't configs. Rather, they are service implementation detail.
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/scs/if/source_control.thrift"
 
 // Id types for async service methods params and responses.
 // Param and response types themselves are defined in the source_control.trift
-typedef mononoke_types_thrift.IdType MegarepoAddTargetParamsId (rust.newtype)
-typedef mononoke_types_thrift.IdType MegarepoAddBranchingTargetParamsId (
-  rust.newtype,
-)
-typedef mononoke_types_thrift.IdType MegarepoChangeTargetConfigParamsId (
-  rust.newtype,
-)
-typedef mononoke_types_thrift.IdType MegarepoRemergeSourceParamsId (
-  rust.newtype,
-)
-typedef mononoke_types_thrift.IdType MegarepoSyncChangesetParamsId (
-  rust.newtype,
-)
+typedef id.Id MegarepoAddTargetParamsId (rust.newtype)
+typedef id.Id MegarepoAddBranchingTargetParamsId (rust.newtype)
+typedef id.Id MegarepoChangeTargetConfigParamsId (rust.newtype)
+typedef id.Id MegarepoRemergeSourceParamsId (rust.newtype)
+typedef id.Id MegarepoSyncChangesetParamsId (rust.newtype)
 
-typedef mononoke_types_thrift.IdType MegarepoSyncChangesetResultId (
-  rust.newtype,
-)
-typedef mononoke_types_thrift.IdType MegarepoAddTargetResultId (rust.newtype)
-typedef mononoke_types_thrift.IdType MegarepoAddBranchingTargetResultId (
-  rust.newtype,
-)
-typedef mononoke_types_thrift.IdType MegarepoRemergeSourceResultId (
-  rust.newtype,
-)
-typedef mononoke_types_thrift.IdType MegarepoChangeTargetConfigResultId (
-  rust.newtype,
-)
+typedef id.Id MegarepoSyncChangesetResultId (rust.newtype)
+typedef id.Id MegarepoAddTargetResultId (rust.newtype)
+typedef id.Id MegarepoAddBranchingTargetResultId (rust.newtype)
+typedef id.Id MegarepoRemergeSourceResultId (rust.newtype)
+typedef id.Id MegarepoChangeTargetConfigResultId (rust.newtype)
 
-typedef mononoke_types_thrift.IdType MegarepoAsynchronousRequestResultId (
-  rust.newtype,
-)
+typedef id.Id MegarepoAsynchronousRequestResultId (rust.newtype)
 union MegarepoAsynchronousRequestResult {
   1: source_control.MegarepoAddTargetResult megarepo_add_target_result;
   2: source_control.MegarepoChangeTargetConfigResult megarepo_change_target_result;
@@ -54,9 +36,7 @@ union MegarepoAsynchronousRequestResult {
   5: source_control.MegarepoAddBranchingTargetResult megarepo_add_branching_target_result;
 }
 
-typedef mononoke_types_thrift.IdType MegarepoAsynchronousRequestParamsId (
-  rust.newtype,
-)
+typedef id.Id MegarepoAsynchronousRequestParamsId (rust.newtype)
 union MegarepoAsynchronousRequestParams {
   1: source_control.MegarepoAddTargetParams megarepo_add_target_params;
   2: source_control.MegarepoChangeTargetConfigParams megarepo_change_target_params;

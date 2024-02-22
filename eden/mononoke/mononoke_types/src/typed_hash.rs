@@ -274,15 +274,15 @@ macro_rules! impl_typed_hash_no_context {
                 // This assumes that a null hash is never serialized. This should always be the
                 // case.
                 match h.0 {
-                    $crate::private::thrift::IdType::Blake2(blake2) => Ok(Self::new($crate::private::Blake2::from_thrift(blake2)?)),
-                    $crate::private::thrift::IdType::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::MononokeTypeError::InvalidThrift(
+                    $crate::private::thrift::id::Id::Blake2(blake2) => Ok(Self::new($crate::private::Blake2::from_thrift(blake2)?)),
+                    $crate::private::thrift::id::Id::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::MononokeTypeError::InvalidThrift(
                         stringify!($typed).into(),
                         format!("unknown id type field: {}", x)
                     )),
                 }
             }
             fn into_thrift(self) -> Self::Thrift {
-                $thrift_typed($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
+                $thrift_typed($crate::private::thrift::id::Id::Blake2(self.0.into_thrift()))
             }
             // Ids are special, their bytes serialization is NOT the thrift bytes serialization
             // as that is an union. Instead, it is simply the serialization of their blake2.
@@ -519,7 +519,7 @@ macro_rules! impl_edenapi_hash_convert {
 
 impl_typed_hash! {
     hash_type => ChangesetId,
-    thrift_hash_type => thrift::ChangesetId,
+    thrift_hash_type => thrift::id::ChangesetId,
     value_type => BonsaiChangeset,
     context_type => ChangesetIdContext,
     context_key => "changeset",
@@ -529,7 +529,7 @@ impl_edenapi_hash_convert!(ChangesetId, EdenapiBonsaiChangesetId);
 
 impl_typed_hash! {
     hash_type => ContentId,
-    thrift_hash_type => thrift::ContentId,
+    thrift_hash_type => thrift::id::ContentId,
     value_type => FileContents,
     context_type => ContentIdContext,
     context_key => "content",
@@ -539,7 +539,7 @@ impl_edenapi_hash_convert!(ContentId, EdenapiContentId);
 
 impl_typed_hash! {
     hash_type => ContentChunkId,
-    thrift_hash_type => thrift::ContentChunkId,
+    thrift_hash_type => thrift::id::ContentChunkId,
     value_type => ContentChunk,
     context_type => ContentChunkIdContext,
     context_key => "chunk",
@@ -547,7 +547,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => RawBundle2Id,
-    thrift_hash_type => thrift::RawBundle2Id,
+    thrift_hash_type => thrift::id::RawBundle2Id,
     value_type => RawBundle2,
     context_type => RawBundle2IdContext,
     context_key => "rawbundle2",
@@ -555,7 +555,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => FileUnodeId,
-    thrift_hash_type => thrift::FileUnodeId,
+    thrift_hash_type => thrift::id::FileUnodeId,
     value_type => FileUnode,
     context_type => FileUnodeIdContext,
     context_key => "fileunode",
@@ -563,7 +563,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => ManifestUnodeId,
-    thrift_hash_type => thrift::ManifestUnodeId,
+    thrift_hash_type => thrift::id::ManifestUnodeId,
     value_type => ManifestUnode,
     context_type => ManifestUnodeIdContext,
     context_key => "manifestunode",
@@ -571,7 +571,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => DeletedManifestV2Id,
-    thrift_hash_type => thrift::DeletedManifestV2Id,
+    thrift_hash_type => thrift::id::DeletedManifestV2Id,
     value_type => DeletedManifestV2,
     context_type => DeletedManifestV2Context,
     context_key => "deletedmanifest2",
@@ -579,7 +579,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => ShardedMapNodeDMv2Id,
-    thrift_hash_type => thrift::ShardedMapNodeId,
+    thrift_hash_type => thrift::id::ShardedMapNodeId,
     value_type => ShardedMapNode<DeletedManifestV2Id>,
     context_type => ShardedMapNodeDMv2Context,
     context_key => "deletedmanifest2.mapnode",
@@ -587,7 +587,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => BssmV3DirectoryId,
-    thrift_hash_type => thrift::BssmV3DirectoryId,
+    thrift_hash_type => thrift::id::BssmV3DirectoryId,
     value_type => BssmV3Directory,
     context_type => BssmV3DirectoryContext,
     context_key => "bssm3",
@@ -595,7 +595,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => ShardedMapV2NodeBssmV3Id,
-    thrift_hash_type => thrift::ShardedMapV2NodeId,
+    thrift_hash_type => thrift::id::ShardedMapV2NodeId,
     value_type => ShardedMapV2Node<BssmV3Entry>,
     context_type => ShardedMapV2NodeBssmV3Context,
     context_key => "bssm3.map2node",
@@ -603,7 +603,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => FsnodeId,
-    thrift_hash_type => thrift::FsnodeId,
+    thrift_hash_type => thrift::id::FsnodeId,
     value_type => Fsnode,
     context_type => FsnodeIdContext,
     context_key => "fsnode",
@@ -611,7 +611,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => RedactionKeyListId,
-    thrift_hash_type => thrift::RedactionKeyListId,
+    thrift_hash_type => thrift::id::RedactionKeyListId,
     value_type => RedactionKeyList,
     context_type => RedactionKeyListIdContext,
     context_key => "redactionkeylist",
@@ -621,7 +621,7 @@ impl_edenapi_hash_convert!(FsnodeId, EdenapiFsnodeId);
 
 impl_typed_hash! {
     hash_type => SkeletonManifestId,
-    thrift_hash_type => thrift::SkeletonManifestId,
+    thrift_hash_type => thrift::id::SkeletonManifestId,
     value_type => SkeletonManifest,
     context_type => SkeletonManifestIdContext,
     context_key => "skeletonmanifest",
@@ -629,7 +629,7 @@ impl_typed_hash! {
 
 impl_typed_hash_no_context! {
     hash_type => ContentMetadataV2Id,
-    thrift_type => thrift::ContentMetadataV2Id,
+    thrift_type => thrift::id::ContentMetadataV2Id,
     blobstore_key => "content_metadata2",
 }
 
@@ -640,7 +640,7 @@ impl_typed_hash_loadable! {
 
 impl_typed_hash! {
     hash_type => FastlogBatchId,
-    thrift_hash_type => thrift::FastlogBatchId,
+    thrift_hash_type => thrift::id::FastlogBatchId,
     value_type => FastlogBatch,
     context_type => FastlogBatchIdContext,
     context_key => "fastlogbatch",
@@ -648,7 +648,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => TestManifestId,
-    thrift_hash_type => thrift::TestManifestId,
+    thrift_hash_type => thrift::id::TestManifestId,
     value_type => TestManifest,
     context_type => TestManifestIdContext,
     context_key => "testmanifest",
@@ -656,7 +656,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => TestShardedManifestId,
-    thrift_hash_type => thrift::TestShardedManifestId,
+    thrift_hash_type => thrift::id::TestShardedManifestId,
     value_type => TestShardedManifest,
     context_type => TestShardedManifestIdContext,
     context_key => "testshardedmanifest",
@@ -664,7 +664,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => ShardedMapV2NodeTestShardedManifestId,
-    thrift_hash_type => thrift::ShardedMapV2NodeId,
+    thrift_hash_type => thrift::id::ShardedMapV2NodeId,
     value_type => ShardedMapV2Node<TestShardedManifestEntry>,
     context_type => ShardedMapV2NodeTestShardedManifestContext,
     context_key => "testshardedmanifest.map2node",

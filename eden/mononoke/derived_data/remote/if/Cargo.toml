@@ -29,6 +29,7 @@ filenodes_if = { version = "0.1.0", path = "../../../filenodes/if" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_types_thrift = { version = "0.1.0", path = "../../../git/git_types/if" }
 mercurial_thrift = { version = "0.1.0", path = "../../../mercurial/types/if" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../../mononoke_types/if" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

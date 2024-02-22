@@ -210,7 +210,7 @@ macro_rules! impl_async_svc_stored_type {
 
         impl From<$handle_type> for $handle_thrift_type {
             fn from(other: $handle_type) -> Self {
-                Self(mononoke_types_thrift::IdType::Blake2(other.0.into_thrift()))
+                Self(mononoke_types_serialization::id::Id::Blake2(other.0.into_thrift()))
             }
         }
 

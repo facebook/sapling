@@ -25,6 +25,7 @@ mercurial_thrift = { version = "0.1.0", path = "../../mercurial/types/if" }
 microwave_if__clients = { package = "microwave_if_clients", version = "0.1.0", path = "clients" }
 microwave_if__services = { package = "microwave_if_services", version = "0.1.0", path = "services" }
 microwave_if__types = { package = "microwave_if_types", version = "0.1.0", path = "types" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

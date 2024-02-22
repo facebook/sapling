@@ -33,6 +33,7 @@ gix-object = "0.33"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 multimap = "0.8.1"
 packfile = { version = "0.1.0", path = "../packfile" }
 quickcheck = "1.0"

@@ -48,7 +48,7 @@ use crate::ThriftConvert;
 use crate::TrieMap;
 
 pub trait MapValue: ThriftConvert + Debug + Clone + Send + Sync + 'static {
-    type Id: MononokeId<Thrift = thrift::ShardedMapNodeId, Value = ShardedMapNode<Self>>;
+    type Id: MononokeId<Thrift = thrift::id::ShardedMapNodeId, Value = ShardedMapNode<Self>>;
     type Context: IdContext<Id = Self::Id>;
 }
 
@@ -1152,7 +1152,7 @@ mod test {
 
     impl_typed_hash! {
         hash_type => ShardedMapNodeMyId,
-        thrift_hash_type => thrift::ShardedMapNodeId,
+        thrift_hash_type => thrift::id::ShardedMapNodeId,
         value_type => ShardedMapNode<MyType>,
         context_type => ShardedMapNodeMyContext,
         context_key => "mytype.mapnode",

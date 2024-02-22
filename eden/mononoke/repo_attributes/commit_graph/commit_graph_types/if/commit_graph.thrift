@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 
 # Memcache constants. Should be changed when we want to invalidate memcache
 # entries
@@ -15,7 +15,7 @@ const i32 MC_SITEVER = 0;
 typedef i64 Generation (rust.newtype)
 
 struct ChangesetNode {
-  1: mononoke_types_thrift.ChangesetId cs_id;
+  1: id.ChangesetId cs_id;
   2: Generation generation;
   3: i64 skip_tree_depth;
   4: i64 p1_linear_depth;
@@ -41,7 +41,7 @@ struct PreloadedEdges {
 } (rust.exhaustive)
 
 struct CompactChangesetEdges {
-  1: mononoke_types_thrift.ChangesetId cs_id;
+  1: id.ChangesetId cs_id;
   2: i32 unique_id;
   3: i32 generation;
   4: i32 skip_tree_depth;

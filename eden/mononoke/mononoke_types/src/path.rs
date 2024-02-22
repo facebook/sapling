@@ -1194,18 +1194,18 @@ impl Iterator for ParentDirIterator {
 pub struct MPathHash(Blake2);
 
 impl MPathHash {
-    pub fn from_thrift(thrift_path: thrift::MPathHash) -> Result<MPathHash> {
+    pub fn from_thrift(thrift_path: thrift::id::MPathHash) -> Result<MPathHash> {
         match thrift_path.0 {
-            thrift::IdType::Blake2(blake2) => Ok(MPathHash(Blake2::from_thrift(blake2)?)),
-            thrift::IdType::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
+            thrift::id::Id::Blake2(blake2) => Ok(MPathHash(Blake2::from_thrift(blake2)?)),
+            thrift::id::Id::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "MPathHash".into(),
                 format!("unknown id type field: {}", x)
             )),
         }
     }
 
-    pub fn into_thrift(self) -> thrift::MPathHash {
-        thrift::MPathHash(thrift::IdType::Blake2(self.0.into_thrift()))
+    pub fn into_thrift(self) -> thrift::id::MPathHash {
+        thrift::id::MPathHash(thrift::id::Id::Blake2(self.0.into_thrift()))
     }
 
     pub fn to_hex(&self) -> AsciiString {

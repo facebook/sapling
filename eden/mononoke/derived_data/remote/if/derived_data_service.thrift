@@ -11,6 +11,7 @@ include "eden/mononoke/git/git_types/if/git_types_thrift.thrift"
 include "eden/mononoke/filenodes/if/filenodes.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 
 struct DerivedDataType {
   1: string type_name;
@@ -76,11 +77,11 @@ union DerivedData {
 }
 
 union DerivedDataFsnode {
-  1: mononoke_types_thrift.FsnodeId root_fsnode_id;
+  1: id.FsnodeId root_fsnode_id;
 }
 
 union DerivedDataUnode {
-  1: mononoke_types_thrift.ManifestUnodeId root_unode_manifest_id;
+  1: id.ManifestUnodeId root_unode_manifest_id;
 }
 
 union DerivedDataFilenode {
@@ -93,7 +94,7 @@ struct DerivedDataFilenodePresent {
 } (rust.exhaustive)
 
 union DerivedDataFastlog {
-  1: mononoke_types_thrift.ChangesetId root_fastlog_id;
+  1: id.ChangesetId root_fastlog_id;
 }
 
 union DerivedDataBlame {
@@ -102,7 +103,7 @@ union DerivedDataBlame {
 }
 
 struct DerivedDataRootBlameV2 {
-  1: mononoke_types_thrift.ChangesetId changeset_id;
+  1: id.ChangesetId changeset_id;
   2: DerivedDataUnode unode;
 } (rust.exhaustive)
 
@@ -115,11 +116,11 @@ union DerivedDataChangesetInfo {
 }
 
 union DerivedDataDeletedManifest {
-  1: mononoke_types_thrift.DeletedManifestId root_deleted_manifest_id;
+  1: id.DeletedManifestId root_deleted_manifest_id;
 }
 
 union DerivedDataDeletedManifestV2 {
-  1: mononoke_types_thrift.DeletedManifestV2Id root_deleted_manifest_v2_id;
+  1: id.DeletedManifestV2Id root_deleted_manifest_v2_id;
 }
 
 union DerivedDataBasenameSuffixSkeletonManifest {
@@ -127,7 +128,7 @@ union DerivedDataBasenameSuffixSkeletonManifest {
 }
 
 union DerivedDataBssmV3 {
-  1: mononoke_types_thrift.BssmV3DirectoryId root_bssm_v3_directory_id;
+  1: id.BssmV3DirectoryId root_bssm_v3_directory_id;
 }
 
 union DerivedDataTestManifest {
@@ -139,7 +140,7 @@ union DerivedDataTestShardedManifest {
 }
 
 union DerivedDataSkeletonManifest {
-  1: mononoke_types_thrift.SkeletonManifestId root_skeleton_manifest_id;
+  1: id.SkeletonManifestId root_skeleton_manifest_id;
 }
 
 union DerivedDataTreeHandle {

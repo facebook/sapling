@@ -21,6 +21,6 @@ thrift_library(
     ],
     deps = [
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
     ],
 )

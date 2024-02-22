@@ -22,6 +22,7 @@ thrift_library(
         "//eden/mononoke/git/git_types/if:git-types-thrift",
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
         "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
         "//fb303/thrift:fb303_core",
     ],
 )

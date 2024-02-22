@@ -6,6 +6,7 @@
  */
 
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 
 // Code version constant -- update to invalidate saved state.
@@ -28,8 +29,8 @@ struct CopyInfoSnapshot {
 } (rust.exhaustive)
 
 struct ChangesetSnapshot {
-  1: optional mononoke_types_thrift.ChangesetId cs_id;
-  2: optional list<mononoke_types_thrift.ChangesetId> parents;
+  1: optional id.ChangesetId cs_id;
+  2: optional list<id.ChangesetId> parents;
   3: optional i64 gen;
 } (rust.exhaustive)
 

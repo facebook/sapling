@@ -24,7 +24,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 megarepo_types_thrift__clients = { package = "megarepo_types_thrift_clients", version = "0.1.0", path = "clients" }
 megarepo_types_thrift__services = { package = "megarepo_types_thrift_services", version = "0.1.0", path = "services" }
 megarepo_types_thrift__types = { package = "megarepo_types_thrift_types", version = "0.1.0", path = "types" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 ref-cast = "1.0.18"
 source_control = { version = "0.1.0", path = "../../scs/if" }
 thiserror = "1.0.49"

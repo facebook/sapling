@@ -41,7 +41,7 @@ use crate::TrieMap;
 // More detailed documentation about ShardedMapV2 can be found in mononoke_types_thrift.thrift
 
 pub trait ShardedMapV2Value: ThriftConvert + Debug + Hash + Clone + Send + Sync + 'static {
-    type NodeId: MononokeId<Thrift = thrift::ShardedMapV2NodeId, Value = ShardedMapV2Node<Self>>;
+    type NodeId: MononokeId<Thrift = thrift::id::ShardedMapV2NodeId, Value = ShardedMapV2Node<Self>>;
     type Context: IdContext<Id = Self::NodeId>;
     type RollupData: Rollup<Self>;
 
@@ -641,7 +641,7 @@ mod test {
 
     impl_typed_hash! {
         hash_type => ShardedMapV2NodeTestId,
-        thrift_hash_type => thrift::ShardedMapV2NodeId,
+        thrift_hash_type => thrift::id::ShardedMapV2NodeId,
         value_type => ShardedMapV2Node<TestValue>,
         context_type => ShardedMapV2NodeTestContext,
         context_key => "test.map2node",

@@ -32,6 +32,8 @@ git_types_thrift_services = { version = "0.1.0", path = "../../../../git/git_typ
 git_types_thrift_types = { version = "0.1.0", path = "../../../../git/git_types/if/types" }
 mercurial_thrift_services = { version = "0.1.0", path = "../../../../mercurial/types/if/services" }
 mercurial_thrift_types = { version = "0.1.0", path = "../../../../mercurial/types/if/types" }
+mononoke_types_serialization_services = { version = "0.1.0", path = "../../../../mononoke_types/serialization/services" }
+mononoke_types_serialization_types = { version = "0.1.0", path = "../../../../mononoke_types/serialization/types" }
 mononoke_types_thrift_services = { version = "0.1.0", path = "../../../../mononoke_types/if/services" }
 mononoke_types_thrift_types = { version = "0.1.0", path = "../../../../mononoke_types/if/types" }
 tracing = "0.1.40"

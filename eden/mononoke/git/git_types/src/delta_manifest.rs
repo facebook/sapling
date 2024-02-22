@@ -33,7 +33,6 @@ use mononoke_types::impl_typed_hash_no_context;
 use mononoke_types::path::MPath;
 use mononoke_types::sharded_map::MapValue;
 use mononoke_types::sharded_map::ShardedMapNode;
-use mononoke_types::thrift as mononoke_types_thrift;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
@@ -51,7 +50,7 @@ pub struct ShardedMapNodeGitDeltaManifestId(Blake2);
 
 impl_typed_hash! {
     hash_type => ShardedMapNodeGitDeltaManifestId,
-    thrift_hash_type => mononoke_types_thrift::ShardedMapNodeId,
+    thrift_hash_type => mononoke_types_serialization::id::ShardedMapNodeId,
     value_type => ShardedMapNode<GitDeltaManifestEntry>,
     context_type => ShardedMapNodeGitDeltaManifestContext,
     context_key => "git_delta_manifest.mapnode",
@@ -471,7 +470,7 @@ impl TryFrom<thrift::ObjectEntry> for ObjectEntry {
 
 impl From<ObjectEntry> for thrift::ObjectEntry {
     fn from(value: ObjectEntry) -> Self {
-        let oid = mononoke_types_thrift::GitSha1(value.oid.as_bytes().into());
+        let oid = mononoke_types_serialization::id::GitSha1(value.oid.as_bytes().into());
         let size = value.size as i64;
         let kind = value.kind.into();
         let path = MPath::into_thrift(value.path);

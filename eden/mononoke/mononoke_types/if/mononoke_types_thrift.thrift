@@ -18,49 +18,8 @@
 namespace py3 eden.mononoke.mononoke_types
 
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
+include "eden/mononoke/mononoke_types/serialization/id.thrift"
 
-typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
-
-// Allow the hash type to change in the future.
-union IdType {
-  1: Blake2 Blake2;
-} (rust.ord)
-
-typedef IdType ChangesetId (rust.newtype)
-typedef IdType ContentId (rust.newtype)
-typedef IdType ContentChunkId (rust.newtype)
-typedef IdType RawBundle2Id (rust.newtype)
-typedef IdType FileUnodeId (rust.newtype)
-typedef IdType ManifestUnodeId (rust.newtype)
-typedef IdType DeletedManifestId (rust.newtype)
-typedef IdType DeletedManifestV2Id (rust.newtype)
-typedef IdType ShardedMapNodeId (rust.newtype)
-typedef IdType ShardedMapV2NodeId (rust.newtype)
-typedef IdType FsnodeId (rust.newtype)
-typedef IdType SkeletonManifestId (rust.newtype)
-typedef IdType MPathHash (rust.newtype)
-typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
-typedef IdType BssmV3DirectoryId (rust.newtype)
-typedef IdType TestManifestId (rust.newtype)
-typedef IdType TestShardedManifestId (rust.newtype)
-
-typedef IdType ContentMetadataV2Id (rust.newtype)
-typedef IdType FastlogBatchId (rust.newtype)
-typedef IdType BlameId (rust.newtype)
-typedef IdType BlameV2Id (rust.newtype)
-typedef IdType RedactionKeyListId (rust.newtype)
-// mercurial_types defines Sha1, and it's most convenient to stick this in here.
-// This can be moved away in the future if necessary. Could also be used for
-// raw content sha1 (should this be separated?)
-typedef binary Sha1 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 20]>")
-
-// Other content alias types
-typedef binary Sha256 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
-typedef binary GitSha1 (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 20]>",
-)
-typedef binary Blake3 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on
 // manifests can be applied in a streaming way.
@@ -116,7 +75,7 @@ union RepoPath {
 //   * Corollary: The file list in Mercurial is not pcf, so the Bonsai diff is
 //     computed separately.
 struct BonsaiChangeset {
-  1: required list<ChangesetId> parents;
+  1: required list<id.ChangesetId> parents;
   2: string author;
   3: optional DateTime author_date;
   // Mercurial won't necessarily have a committer, so this is optional.
@@ -140,7 +99,7 @@ struct BonsaiChangeset {
   // SHA1 hash representing a git tree object. If this changeset
   // corresponds to a Git tree object, then this field will have
   // value, otherwise it would be omitted.
-  11: optional GitSha1 git_tree_hash;
+  11: optional id.GitSha1 git_tree_hash;
   // Bonsai counterpart of git annotated tag. If the current changeset
   // represents an annotated tag, then this field will have a value.
   // Otherwise, it would be absent.
@@ -161,8 +120,8 @@ struct BonsaiAnnotatedTag {
 
 // Target of an annotated tag imported from Git into Bonsai format.
 union BonsaiAnnotatedTagTarget {
-  1: ChangesetId Changeset; // Commmit, Tree or another Tag
-  2: ContentId Content; // Blob
+  1: id.ChangesetId Changeset; // Commmit, Tree or another Tag
+  2: id.ContentId Content; // Blob
 } (rust.exhaustive)
 
 struct SnapshotState {
@@ -181,7 +140,7 @@ struct DateTime {
 typedef i64 Timestamp (rust.newtype)
 
 struct ContentChunkPointer {
-  1: ContentChunkId chunk_id;
+  1: id.ContentChunkId chunk_id;
   2: i64 size;
 } (rust.exhaustive)
 
@@ -192,7 +151,7 @@ struct ChunkedFileContents {
   // FileContents reprseentation in Mononoke, which would normally require
   // hashing the contents (but we obviously can't do that here, since we don't
   // have the contents).
-  1: ContentId content_id;
+  1: id.ContentId content_id;
   2: list<ContentChunkPointer> chunks;
 } (rust.exhaustive)
 
@@ -209,7 +168,7 @@ union ContentChunk {
 
 // Payload of object which is an alias
 union ContentAlias {
-  1: ContentId ContentId; // File content alias
+  1: id.ContentId ContentId; // File content alias
 }
 
 // Metadata and properties associated with a file.
@@ -220,15 +179,15 @@ union ContentAlias {
 // values).
 struct ContentMetadataV2 {
   // ContentId we're providing metadata for
-  1: optional ContentId content_id;
+  1: optional id.ContentId content_id;
   // total_size is needed to make GitSha1 meaningful, but generally useful
   2: optional i64 total_size;
   // SHA1 hash of the content
-  3: optional Sha1 sha1;
+  3: optional id.Sha1 sha1;
   // SHA256 hash of the content
-  4: optional Sha256 sha256;
+  4: optional id.Sha256 sha256;
   // Git SHA1 hash of the content
-  5: optional GitSha1 git_sha1;
+  5: optional id.GitSha1 git_sha1;
   // Is the file binary?
   // NOTE: A file is defined as binary if it contains a null byte
   // as part of its content
@@ -251,7 +210,7 @@ struct ContentMetadataV2 {
   // Is the file partially-generated? i.e. does it have the '@'+'partially-generated' tag
   13: optional bool is_partially_generated;
   // Blake3 hash of the file seeded with the global thrift constant in fbcode/blake3.thrift
-  14: optional Blake3 seeded_blake3;
+  14: optional id.Blake3 seeded_blake3;
 } (rust.exhaustive)
 
 union RawBundle2 {
@@ -282,13 +241,13 @@ struct UntrackedDeletion {
 } (rust.exhaustive)
 
 struct UntrackedFileChange {
-  1: ContentId content_id;
+  1: id.ContentId content_id;
   2: FileType file_type;
   3: i64 size;
 } (rust.exhaustive)
 
 struct FileChange {
-  1: required ContentId content_id;
+  1: required id.ContentId content_id;
   2: FileType file_type;
   // size is a u64 stored as an i64
   3: required i64 size;
@@ -299,33 +258,33 @@ struct FileChange {
 struct CopyInfo {
   1: required NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
-  2: required ChangesetId cs_id;
+  2: required id.ChangesetId cs_id;
 } (rust.exhaustive)
 
 struct FileUnode {
-  1: list<FileUnodeId> parents;
-  2: ContentId content_id;
+  1: list<id.FileUnodeId> parents;
+  2: id.ContentId content_id;
   3: FileType file_type;
-  4: MPathHash path_hash;
-  5: ChangesetId linknode;
+  4: id.MPathHash path_hash;
+  5: id.ChangesetId linknode;
 } (rust.exhaustive)
 
 union UnodeEntry {
-  1: FileUnodeId File;
-  2: ManifestUnodeId Directory;
+  1: id.FileUnodeId File;
+  2: id.ManifestUnodeId Directory;
 }
 
 struct ManifestUnode {
-  1: list<ManifestUnodeId> parents;
+  1: list<id.ManifestUnodeId> parents;
   2: map<MPathElement, UnodeEntry> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
-  3: ChangesetId linknode;
+  3: id.ChangesetId linknode;
 } (rust.exhaustive)
 
 struct DeletedManifest {
-  1: optional ChangesetId linknode;
-  2: map<MPathElement, DeletedManifestId> (
+  1: optional id.ChangesetId linknode;
+  2: map<MPathElement, id.DeletedManifestId> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
 } (rust.exhaustive)
@@ -374,7 +333,7 @@ struct ShardedMapEdge {
 // a node to be loaded from the blobstore.
 union ShardedMapChild {
   1: ShardedMapNode inlined;
-  2: ShardedMapNodeId id;
+  2: id.ShardedMapNodeId id;
 }
 
 // A binary -> binary map that may be stored sharded in many different nodes.
@@ -421,7 +380,7 @@ typedef data.LargeBinary ShardedMapV2Value
 typedef data.LargeBinary ShardedMapV2RollupData
 
 struct ShardedMapV2StoredNode {
-  1: ShardedMapV2NodeId id;
+  1: id.ShardedMapV2NodeId id;
   2: i64 weight;
   3: i64 size;
   4: ShardedMapV2RollupData rollup_data;
@@ -461,14 +420,14 @@ struct ShardedMapV2Node {
 } (rust.exhaustive)
 
 struct DeletedManifestV2 {
-  1: optional ChangesetId linknode;
+  1: optional id.ChangesetId linknode;
   // Map of MPathElement -> DeletedManifestV2Id
   2: ShardedMapNode subentries;
 } (rust.exhaustive)
 
 struct BssmFile {} (rust.exhaustive)
 struct BssmDirectory {
-  1: BasenameSuffixSkeletonManifestId id;
+  1: id.BasenameSuffixSkeletonManifestId id;
   // Number of entries in this subtree.
   // This doesn't need to be part of the manifest, but we add it here to
   // speed up ordered manifest operations
@@ -511,7 +470,7 @@ union BssmV3Entry {
 // only the file names and the maximum basename length of all files in each directory.
 struct TestManifestFile {} (rust.exhaustive)
 struct TestManifestDirectory {
-  1: TestManifestId id;
+  1: id.TestManifestId id;
   2: i64 max_basename_length;
 } (rust.exhaustive)
 
@@ -533,7 +492,7 @@ struct TestShardedManifestFile {
   1: i64 basename_length;
 } (rust.exhaustive)
 struct TestShardedManifestDirectory {
-  1: TestShardedManifestId id;
+  1: id.TestShardedManifestId id;
   2: i64 max_basename_length;
 } (rust.exhaustive)
 
@@ -547,22 +506,22 @@ struct TestShardedManifest {
 } (rust.exhaustive)
 
 struct FsnodeFile {
-  1: ContentId content_id;
+  1: id.ContentId content_id;
   2: FileType file_type;
   // size is a u64 stored as an i64
   3: i64 size;
-  4: Sha1 content_sha1;
-  5: Sha256 content_sha256;
+  4: id.Sha1 content_sha1;
+  5: id.Sha256 content_sha256;
 } (rust.exhaustive)
 
 struct FsnodeDirectory {
-  1: FsnodeId id;
+  1: id.FsnodeId id;
   2: FsnodeSummary summary;
 } (rust.exhaustive)
 
 struct FsnodeSummary {
-  1: Sha1 simple_format_sha1;
-  2: Sha256 simple_format_sha256;
+  1: id.Sha1 simple_format_sha1;
+  2: id.Sha256 simple_format_sha256;
   // Counts and sizes are u64s stored as i64s
   3: i64 child_files_count;
   4: i64 child_files_total_size;
@@ -594,7 +553,7 @@ struct Fsnode {
 } (rust.exhaustive)
 
 struct SkeletonManifestDirectory {
-  1: SkeletonManifestId id;
+  1: id.SkeletonManifestId id;
   2: SkeletonManifestSummary summary;
 } (rust.exhaustive)
 
@@ -671,13 +630,13 @@ struct SkeletonManifest {
 // point to batch outside of all previous_batches.
 struct FastlogBatch {
   1: list<CompressedHashAndParents> latest;
-  2: list<FastlogBatchId> previous_batches;
+  2: list<id.FastlogBatchId> previous_batches;
 } (rust.exhaustive)
 
 typedef i32 ParentOffset (rust.newtype)
 
 struct CompressedHashAndParents {
-  1: ChangesetId cs_id;
+  1: id.ChangesetId cs_id;
   # Offsets can be negative!
   2: list<ParentOffset> parent_offsets;
 } (rust.exhaustive)
@@ -694,7 +653,7 @@ enum BlameRejected {
 
 struct BlameRange {
   1: i32 length;
-  2: ChangesetId csid;
+  2: id.ChangesetId csid;
   3: BlamePath path;
   // offset of this range in the origin file (file that introduced this change)
   4: i32 origin_offset;
@@ -812,7 +771,7 @@ struct BlameDataV2 {
   // Changesets are removed from this map when all lines that were added in the
   // changeset are moved and none of the ranges reference it.  This means there
   // are gaps in this mapping, and so a map is used.
-  2: map<i32, ChangesetId> (
+  2: map<i32, id.ChangesetId> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) csids;
 

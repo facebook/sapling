@@ -58,7 +58,7 @@ impl Sha1 {
         }
     }
 
-    pub fn from_thrift(h: thrift::Sha1) -> Result<Self> {
+    pub fn from_thrift(h: thrift::id::Sha1) -> Result<Self> {
         if h.0.len() != SHA1_HASH_LENGTH_BYTES {
             bail!(MononokeTypeError::InvalidThrift(
                 "Sha1".into(),
@@ -105,8 +105,8 @@ impl Sha1 {
         }
     }
 
-    pub fn into_thrift(self) -> thrift::Sha1 {
-        thrift::Sha1(self.0.into())
+    pub fn into_thrift(self) -> thrift::id::Sha1 {
+        thrift::id::Sha1(self.0.into())
     }
 }
 
@@ -418,20 +418,22 @@ mod test {
 
     #[test]
     fn parse_thrift() {
-        let null_thrift = thrift::Sha1(vec![0; SHA1_HASH_LENGTH_BYTES].into());
+        let null_thrift = thrift::id::Sha1(vec![0; SHA1_HASH_LENGTH_BYTES].into());
         assert_eq!(NULL, Sha1::from_thrift(null_thrift.clone()).unwrap());
         assert_eq!(NULL.into_thrift(), null_thrift);
 
-        let nil_thrift = thrift::Sha1(NILHASH.0.into());
+        let nil_thrift = thrift::id::Sha1(NILHASH.0.into());
         assert_eq!(NILHASH, Sha1::from_thrift(nil_thrift.clone()).unwrap());
         assert_eq!(NILHASH.into_thrift(), nil_thrift);
     }
 
     #[test]
     fn parse_thrift_bad() {
-        Sha1::from_thrift(thrift::Sha1(vec![].into())).expect_err("unexpected OK - zero len");
-        Sha1::from_thrift(thrift::Sha1(vec![0; 19].into())).expect_err("unexpected OK - too short");
-        Sha1::from_thrift(thrift::Sha1(vec![0; 21].into())).expect_err("unexpected OK - too long");
+        Sha1::from_thrift(thrift::id::Sha1(vec![].into())).expect_err("unexpected OK - zero len");
+        Sha1::from_thrift(thrift::id::Sha1(vec![0; 19].into()))
+            .expect_err("unexpected OK - too short");
+        Sha1::from_thrift(thrift::id::Sha1(vec![0; 21].into()))
+            .expect_err("unexpected OK - too long");
     }
 
     quickcheck! {
