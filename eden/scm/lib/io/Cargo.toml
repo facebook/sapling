@@ -15,5 +15,5 @@ pipe = "0.2"
 spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 streampager = { version = "0.10.3", path = "../third-party/streampager" }
 terminal_size = "0.3"
-termwiz = { version = "0.18", features = ["widgets"] }
+termwiz = { version = "0.22", features = ["widgets"] }
 time-interval = { version = "0.1.0", path = "../util/time-interval" }
