@@ -5,12 +5,9 @@ oncall("mononoke")
 thrift_library(
     name = "mononoke_types-thrift",
     languages = [
-        "py3",
         "rust",
         "cpp2",
     ],
-    py3_namespace = "eden.mononoke.mononoke_types",
-    py_base_module = "eden.mononoke.mononoke_types",
     rust_deps = [
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:smallvec",
@@ -35,7 +32,6 @@ thrift_library(
         "//eden/mononoke/derived_data/remote/if:",
         "//eden/mononoke/facebook/bookmark_service/if:",
         "//eden/mononoke/facebook/derived_data_service/derivation_queue/if:",
-        "//eden/mononoke/facebook/get_bundle:bundle_store_lib",
         "//eden/mononoke/filenodes/if:",
         "//eden/mononoke/git/git_types/if:",
         "//eden/mononoke/megarepo_api:",
