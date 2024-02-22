@@ -83,21 +83,25 @@ impl<R: Repo> fmt::Debug for CandidateSelectionHint<R> {
             Self::Only => write!(f, "CandidateSelectionHint::Only"),
             Self::Exact(cs_id) => write!(f, "CandidateSelectionHint::Exact({})", cs_id.0),
             Self::OnlyOrAncestorOfBookmark(bn, _) => {
-                write!(f, "DesiredRelationship::OnlyOrAncestorOfBookmark({})", bn.0)
+                write!(
+                    f,
+                    "CandidateSelectionHint::OnlyOrAncestorOfBookmark({})",
+                    bn.0
+                )
             }
             Self::OnlyOrDescendantOfBookmark(bn, _) => write!(
                 f,
-                "DesiredRelationship::OnlyOrDescendantOfBookmark({})",
+                "CandidateSelectionHint::OnlyOrDescendantOfBookmark({})",
                 bn.0
             ),
             Self::OnlyOrAncestorOfCommit(cs_id, _) => write!(
                 f,
-                "DesiredRelationship::OnlyOrAncestorOfCommit({})",
+                "CandidateSelectionHint::OnlyOrAncestorOfCommit({})",
                 cs_id.0
             ),
             Self::OnlyOrDescendantOfCommit(cs_id, _) => write!(
                 f,
-                "DesiredRelationship::OnlyOrDescendantOfCommit({})",
+                "CandidateSelectionHint::OnlyOrDescendantOfCommit({})",
                 cs_id.0
             ),
         }
