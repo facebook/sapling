@@ -775,7 +775,7 @@ impl EdenFsCheckout {
             .collect::<std::io::Result<HashSet<_>>>()
             .with_context(|| {
                 anyhow!(
-                    "Cannot read conents for prefetch profile '{}'",
+                    "Cannot read contents for prefetch profile '{}'",
                     profile_path.display()
                 )
             })?)
