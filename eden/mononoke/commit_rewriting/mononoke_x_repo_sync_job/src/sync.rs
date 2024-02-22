@@ -425,11 +425,29 @@ where
             .timed()
             .await
     } else {
+        // When there are multiple choices for what should be the parent of the commit there's no
+        // right or wrong answers, yet we have to pick something. Let's find something close to
+        // mainline branch if possible.
+        //
+        // XXXX: With current "hinting" infra we can pull of this trick reliably only when there's
+        // one common pushrebase bookmark. That's fine, we don't have more in production and maybe
+        // we shouldn't even allow more than one.
+        // For now let's give privilige to the first one.
+        let parent_mapping_selection_hint: CandidateSelectionHint<R> =
+            if let Some(bookmark) = common_pushrebase_bookmarks.iter().next() {
+                CandidateSelectionHint::AncestorOfBookmark(
+                    Target(bookmark.clone()),
+                    Target(commit_syncer.get_target_repo().clone()),
+                )
+            } else {
+                // XXX: in this case it should be "Any" rather than "Only"
+                CandidateSelectionHint::Only
+            };
         commit_syncer
             .unsafe_sync_commit(
                 ctx,
                 cs_id,
-                CandidateSelectionHint::Only,
+                parent_mapping_selection_hint,
                 CommitSyncContext::XRepoSyncJob,
                 Some(version.clone()),
             )

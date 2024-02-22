@@ -165,7 +165,5 @@
   processing log entry #6
   1 unsynced ancestors of c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   syncing c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
-  Syncing c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0 failed in *ms: Too many rewritten candidates for a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074:* (may be more) (glob)
-  failed to sync bookmark update log #6, Too many rewritten candidates for a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074: 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e, 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 (may be more)
-  Execution error: Too many rewritten candidates for a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074: 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e, 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 (may be more)
-  Error: Execution failed
+  changeset c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0 synced as 5c3f0368dead91cb214d9b3983ae632c160960e35ee91ac6f11ad96e5601849d in * (glob)
+  successful sync bookmark update log #6
