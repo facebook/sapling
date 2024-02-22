@@ -1443,7 +1443,7 @@ where
 
         let source_repo_deps = self.get_submodule_deps();
 
-        let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+        let parent_selection_hint = CandidateSelectionHint::AncestorOfBookmark(
             target_bookmark.clone(),
             Target(self.get_target_repo().clone()),
         );

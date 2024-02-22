@@ -102,25 +102,21 @@ impl FromRequest<thrift::CandidateSelectionHint> for CandidateSelectionHintArgs 
         match hint {
             thrift::CandidateSelectionHint::bookmark_ancestor(bookmark) => {
                 let bookmark = BookmarkKey::from_request(bookmark)?;
-                Ok(CandidateSelectionHintArgs::OnlyOrAncestorOfBookmark(
-                    bookmark,
-                ))
+                Ok(CandidateSelectionHintArgs::AncestorOfBookmark(bookmark))
             }
             thrift::CandidateSelectionHint::bookmark_descendant(bookmark) => {
                 let bookmark = BookmarkKey::from_request(bookmark)?;
-                Ok(CandidateSelectionHintArgs::OnlyOrDescendantOfBookmark(
-                    bookmark,
-                ))
+                Ok(CandidateSelectionHintArgs::DescendantOfBookmark(bookmark))
             }
             thrift::CandidateSelectionHint::commit_ancestor(commit) => {
                 let changeset_specifier = ChangesetSpecifier::from_request(commit)?;
-                Ok(CandidateSelectionHintArgs::OnlyOrAncestorOfCommit(
+                Ok(CandidateSelectionHintArgs::AncestorOfCommit(
                     changeset_specifier,
                 ))
             }
             thrift::CandidateSelectionHint::commit_descendant(commit) => {
                 let changeset_specifier = ChangesetSpecifier::from_request(commit)?;
-                Ok(CandidateSelectionHintArgs::OnlyOrDescendantOfCommit(
+                Ok(CandidateSelectionHintArgs::DescendantOfCommit(
                     changeset_specifier,
                 ))
             }

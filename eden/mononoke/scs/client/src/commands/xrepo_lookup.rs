@@ -41,16 +41,16 @@ pub(super) struct CommandArgs {
     /// For Source Control use only. A commit to use as an Exact CandidateSelectionHint
     hint_exact_commit: Option<String>,
     #[clap(long)]
-    /// For Source Control use only. A commit to use as an OnlyOrAncestorOfCommit CandidateSelectionHint
+    /// For Source Control use only. A commit to use as an AncestorOfCommit CandidateSelectionHint
     hint_ancestor_of_commit: Option<String>,
     #[clap(long)]
-    /// For Source Control use only. A commit to use as an OnlyOrDescendantOfCommit CandidateSelectionHint
+    /// For Source Control use only. A commit to use as an DescendantOfCommit CandidateSelectionHint
     hint_descendant_of_commit: Option<String>,
     #[clap(long)]
-    /// For Source Control use only. A bookmark to use as an OnlyOrAncestorOfBookmark CandidateSelectionHint
+    /// For Source Control use only. A bookmark to use as an AncestorOfBookmark CandidateSelectionHint
     hint_ancestor_of_bookmark: Option<String>,
     #[clap(long)]
-    /// For Source Control use only. A bookmark to use as an OnlyOrDescendantOfBookmark CandidateSelectionHint
+    /// For Source Control use only. A bookmark to use as an DescendantOfBookmark CandidateSelectionHint
     hint_descendant_of_bookmark: Option<String>,
     #[clap(long, short)]
     /// Do not sync the commit between source and target repo on demand. Only return result of

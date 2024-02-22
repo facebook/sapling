@@ -11,9 +11,9 @@ use crate::specifiers::ChangesetSpecifier;
 
 /// An aux struct to build `CandidateSelectionHint`
 pub enum CandidateSelectionHintArgs {
-    OnlyOrAncestorOfBookmark(BookmarkKey),
-    OnlyOrDescendantOfBookmark(BookmarkKey),
-    OnlyOrAncestorOfCommit(ChangesetSpecifier),
-    OnlyOrDescendantOfCommit(ChangesetSpecifier),
+    AncestorOfBookmark(BookmarkKey),
+    DescendantOfBookmark(BookmarkKey),
+    AncestorOfCommit(ChangesetSpecifier),
+    DescendantOfCommit(ChangesetSpecifier),
     Exact(ChangesetSpecifier),
 }

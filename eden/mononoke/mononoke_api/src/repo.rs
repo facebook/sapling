@@ -1543,21 +1543,21 @@ impl RepoContext {
 
         use CandidateSelectionHintArgs::*;
         match args {
-            OnlyOrAncestorOfBookmark(bookmark) => {
+            AncestorOfBookmark(bookmark) => {
                 let repo = other_repo_context.target_repo();
-                Ok(CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+                Ok(CandidateSelectionHint::AncestorOfBookmark(
                     Target(bookmark),
                     repo,
                 ))
             }
-            OnlyOrDescendantOfBookmark(bookmark) => {
+            DescendantOfBookmark(bookmark) => {
                 let repo = other_repo_context.target_repo();
-                Ok(CandidateSelectionHint::OnlyOrDescendantOfBookmark(
+                Ok(CandidateSelectionHint::DescendantOfBookmark(
                     Target(bookmark),
                     repo,
                 ))
             }
-            OnlyOrAncestorOfCommit(specifier) => {
+            AncestorOfCommit(specifier) => {
                 let repo = other_repo_context.target_repo();
                 let cs_id = other_repo_context
                     .resolve_specifier(specifier)
@@ -1568,12 +1568,12 @@ impl RepoContext {
                             specifier
                         ))
                     })?;
-                Ok(CandidateSelectionHint::OnlyOrAncestorOfCommit(
+                Ok(CandidateSelectionHint::AncestorOfCommit(
                     Target(cs_id),
                     repo,
                 ))
             }
-            OnlyOrDescendantOfCommit(specifier) => {
+            DescendantOfCommit(specifier) => {
                 let repo = other_repo_context.target_repo();
                 let cs_id = other_repo_context
                     .resolve_specifier(specifier)
@@ -1584,7 +1584,7 @@ impl RepoContext {
                             specifier
                         ))
                     })?;
-                Ok(CandidateSelectionHint::OnlyOrDescendantOfCommit(
+                Ok(CandidateSelectionHint::DescendantOfCommit(
                     Target(cs_id),
                     repo,
                 ))

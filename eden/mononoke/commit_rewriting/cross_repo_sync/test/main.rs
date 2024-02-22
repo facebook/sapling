@@ -1099,7 +1099,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
         .unsafe_sync_commit(
             &ctx,
             to_sync,
-            CandidateSelectionHint::OnlyOrAncestorOfBookmark(book, Target(megarepo.clone())),
+            CandidateSelectionHint::AncestorOfBookmark(book, Target(megarepo.clone())),
             CommitSyncContext::Tests,
             None,
         )

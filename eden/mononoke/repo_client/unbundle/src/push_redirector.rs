@@ -867,7 +867,7 @@ impl<R: Repo> PushRedirector<R> {
         // to look for its ancestor  if small repo commit rewrites into multiple
         // large repo commits.
         let candidate_selection_hint = match maybe_bookmark {
-            Some(bookmark) => CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+            Some(bookmark) => CandidateSelectionHint::AncestorOfBookmark(
                 Target(bookmark.clone()),
                 Target(self.small_to_large_commit_syncer.get_target_repo().clone()),
             ),
