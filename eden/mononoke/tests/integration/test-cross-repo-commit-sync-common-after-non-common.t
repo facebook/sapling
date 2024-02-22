@@ -25,18 +25,21 @@
   │
   o  message: pre-move commit
 
--- Simultaneously push a non-pushrebase bookmark (other_bookmark) one commit forward to S_C and a pushrebase bookmark master_bookmark) two commits forward to S_D
+-- First, push a non common-pushrebase bookmark (other_bookmark) one commit forward to S_C
   $ testtool_drawdag -R small-mon << EOF
   > S_A-S_B-S_C-S_D
   > # exists: S_A $S_A
   > # exists: S_B $S_B
-  > # bookmark: S_D master_bookmark
   > # bookmark: S_C other_bookmark
   > EOF
   S_A=c74140f562eda7c378d4e8d68e4828239617dd51806f3ccb220433a3ea1a6353
   S_B=1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d
   S_C=6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12
   S_D=542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b
+
+-- Then, push a common pushrebase bookmark two commits forward to S_D
+  $ mononoke_newadmin bookmarks -R small-mon set master_bookmark $S_D
+  Updating publishing bookmark master_bookmark from 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d to 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b
 
 -- The small repo now looks like this
   $ mononoke_newadmin changelog -R small-mon graph -i $S_D -M
@@ -51,7 +54,8 @@
 -- Sync after both bookmark moves happened
 -- The first bookmark move of other_bookmark to S_C is replicated correctly
 -- The second bookmark move of master_bookmark to S_D fails with "No common pushrebase root for master_bookmark". This is a bug.
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 0)";
+  $ mononoke_newadmin mutable-counters -R large-mon set xreposync_from_1 0
+  Value of xreposync_from_1 in repo large-mon(Id: 0) set to 0
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
   * Starting session with id * (glob)
   * queue size is 3 (glob)
