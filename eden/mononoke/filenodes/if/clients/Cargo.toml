@@ -24,8 +24,8 @@ filenodes_if__types = { package = "filenodes_if_types", version = "0.1.0", path 
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mercurial_thrift_clients = { version = "0.1.0", path = "../../../mercurial/types/if/clients" }
 mercurial_thrift_types = { version = "0.1.0", path = "../../../mercurial/types/if/types" }
-mononoke_types_thrift_clients = { version = "0.1.0", path = "../../../mononoke_types/if/clients" }
-mononoke_types_thrift_types = { version = "0.1.0", path = "../../../mononoke_types/if/types" }
+mononoke_types_serialization_clients = { version = "0.1.0", path = "../../../mononoke_types/serialization/clients" }
+mononoke_types_serialization_types = { version = "0.1.0", path = "../../../mononoke_types/serialization/types" }
 tracing = "0.1.40"
 
 [build-dependencies]

@@ -25,7 +25,7 @@ filenodes_if__services = { package = "filenodes_if_services", version = "0.1.0",
 filenodes_if__types = { package = "filenodes_if_types", version = "0.1.0", path = "types" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mercurial_thrift = { version = "0.1.0", path = "../../mercurial/types/if" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 thiserror = "1.0.49"

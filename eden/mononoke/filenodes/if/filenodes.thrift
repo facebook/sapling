@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 
 /// Code version used in memcache keys.  This should be changed whenever
@@ -31,6 +31,6 @@ struct FilenodeInfo {
 } (rust.exhaustive)
 
 struct FilenodeCopyFrom {
-  1: required mononoke_types_thrift.RepoPath path;
+  1: required path.RepoPath path;
   2: required mercurial_thrift.HgNodeHash filenode;
 } (rust.exhaustive)

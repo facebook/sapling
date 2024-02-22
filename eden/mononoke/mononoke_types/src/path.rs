@@ -153,28 +153,32 @@ impl RepoPath {
         Ok(bincode::serialize_into(writer, self)?)
     }
 
-    pub fn from_thrift(path: thrift::RepoPath) -> Result<Self> {
+    pub fn from_thrift(path: thrift::path::RepoPath) -> Result<Self> {
         let path = match path {
-            thrift::RepoPath::RootPath(_) => Self::root(),
-            thrift::RepoPath::DirectoryPath(path) => Self::dir(NonRootMPath::from_thrift(path)?)?,
-            thrift::RepoPath::FilePath(path) => Self::file(NonRootMPath::from_thrift(path)?)?,
-            thrift::RepoPath::UnknownField(unknown) => bail!(
-                "Unknown field encountered when parsing thrift::RepoPath: {}",
+            thrift::path::RepoPath::RootPath(_) => Self::root(),
+            thrift::path::RepoPath::DirectoryPath(path) => {
+                Self::dir(NonRootMPath::from_thrift(path)?)?
+            }
+            thrift::path::RepoPath::FilePath(path) => Self::file(NonRootMPath::from_thrift(path)?)?,
+            thrift::path::RepoPath::UnknownField(unknown) => bail!(
+                "Unknown field encountered when parsing thrift::path::RepoPath: {}",
                 unknown,
             ),
         };
         Ok(path)
     }
 
-    pub fn into_thrift(self) -> thrift::RepoPath {
+    pub fn into_thrift(self) -> thrift::path::RepoPath {
         match self {
             // dummy false here is required because thrift doesn't support mixing enums with and
             // without payload
-            RepoPath::RootPath => thrift::RepoPath::RootPath(false),
+            RepoPath::RootPath => thrift::path::RepoPath::RootPath(false),
             RepoPath::DirectoryPath(path) => {
-                thrift::RepoPath::DirectoryPath(NonRootMPath::into_thrift(path))
+                thrift::path::RepoPath::DirectoryPath(NonRootMPath::into_thrift(path))
             }
-            RepoPath::FilePath(path) => thrift::RepoPath::FilePath(NonRootMPath::into_thrift(path)),
+            RepoPath::FilePath(path) => {
+                thrift::path::RepoPath::FilePath(NonRootMPath::into_thrift(path))
+            }
         }
     }
 }
@@ -235,7 +239,7 @@ impl MPathElement {
     }
 
     #[inline]
-    pub fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
+    pub fn from_thrift(element: thrift::path::MPathElement) -> Result<MPathElement> {
         Self::verify(&element.0).with_context(|| {
             MononokeTypeError::InvalidThrift("MPathElement".into(), "invalid path element".into())
         })?;
@@ -307,8 +311,8 @@ impl MPathElement {
     }
 
     #[inline]
-    pub fn into_thrift(self) -> thrift::MPathElement {
-        thrift::MPathElement(self.0)
+    pub fn into_thrift(self) -> thrift::path::MPathElement {
+        thrift::path::MPathElement(self.0)
     }
 
     /// Returns true if this path element is valid UTF-8.
@@ -441,7 +445,7 @@ impl MPath {
         self.elements.is_empty()
     }
 
-    pub fn from_thrift(mpath: thrift::MPath) -> Result<Self> {
+    pub fn from_thrift(mpath: thrift::path::MPath) -> Result<Self> {
         let elements: Result<Vec<_>> = mpath.0.into_iter().map(MPathElement::from_thrift).collect();
         let elements = elements?;
 
@@ -588,8 +592,8 @@ impl MPath {
             .map(|(first, rest)| (first, Self::from_elements(rest.iter())))
     }
 
-    pub fn into_thrift(self) -> thrift::MPath {
-        thrift::MPath(
+    pub fn into_thrift(self) -> thrift::path::MPath {
+        thrift::path::MPath(
             self.elements
                 .into_iter()
                 .map(|elem| elem.into_thrift())
@@ -854,10 +858,10 @@ impl NonRootMPath {
         }
     }
 
-    pub fn from_thrift(non_root_mpath: thrift::NonRootMPath) -> Result<NonRootMPath> {
+    pub fn from_thrift(non_root_mpath: thrift::path::NonRootMPath) -> Result<NonRootMPath> {
         let mpath = MPath::from_thrift(non_root_mpath.0)?;
         if mpath.is_root() {
-            bail!("Unexpected empty path in thrift::NonRootMPath")
+            bail!("Unexpected empty path in thrift::path::NonRootMPath")
         } else {
             Ok(NonRootMPath(mpath))
         }
@@ -1039,8 +1043,8 @@ impl NonRootMPath {
         }
     }
 
-    pub fn into_thrift(self) -> thrift::NonRootMPath {
-        thrift::NonRootMPath(self.0.into_thrift())
+    pub fn into_thrift(self) -> thrift::path::NonRootMPath {
+        thrift::path::NonRootMPath(self.0.into_thrift())
     }
 
     pub fn display_opt<'a>(path_opt: Option<&'a NonRootMPath>) -> DisplayOpt<'a> {
@@ -1873,10 +1877,12 @@ mod test {
 
     #[test]
     fn bad_path_thrift() {
-        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"abc\0".to_vec().into())]);
+        let bad_thrift =
+            thrift::path::MPath(vec![thrift::path::MPathElement(b"abc\0".to_vec().into())]);
         MPath::from_thrift(bad_thrift).expect_err("unexpected OK - embedded null");
 
-        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"def/ghi".to_vec().into())]);
+        let bad_thrift =
+            thrift::path::MPath(vec![thrift::path::MPathElement(b"def/ghi".to_vec().into())]);
         MPath::from_thrift(bad_thrift).expect_err("unexpected OK - embedded slash");
     }
 

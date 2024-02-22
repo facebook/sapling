@@ -19,26 +19,7 @@ namespace py3 eden.mononoke.mononoke_types
 
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
-
-// A path in a repo is stored as a list of elements. This is so that the sort
-// order of paths is the same as that of a tree traversal, so that deltas on
-// manifests can be applied in a streaming way.
-typedef binary MPathElement (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 24]>",
-)
-/// Type representing all forms of path in Mononoke (i.e. root, directory, file)
-typedef list<MPathElement> MPath (rust.newtype)
-
-/// Type representing non-root paths used in Mononoke
-typedef MPath NonRootMPath (rust.newtype)
-
-union RepoPath {
-  # Thrift language doesn't support void here, so put a dummy bool
-  1: bool RootPath;
-  2: NonRootMPath DirectoryPath;
-  3: NonRootMPath FilePath;
-}
+include "eden/mononoke/mononoke_types/serialization/path.thrift"
 
 // Parent ordering
 // ---------------
@@ -86,7 +67,7 @@ struct BonsaiChangeset {
   7: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) hg_extra;
-  8: map<NonRootMPath, FileChangeOpt> (
+  8: map<path.NonRootMPath, FileChangeOpt> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) file_changes;
   // Changeset is a snapshot iff this field is present
@@ -256,7 +237,7 @@ struct FileChange {
 
 // This is only used optionally so it is OK to use `required` here.
 struct CopyInfo {
-  1: required NonRootMPath file;
+  1: required path.NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: required id.ChangesetId cs_id;
 } (rust.exhaustive)
@@ -276,7 +257,7 @@ union UnodeEntry {
 
 struct ManifestUnode {
   1: list<id.ManifestUnodeId> parents;
-  2: map<MPathElement, UnodeEntry> (
+  2: map<path.MPathElement, UnodeEntry> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
   3: id.ChangesetId linknode;
@@ -284,7 +265,7 @@ struct ManifestUnode {
 
 struct DeletedManifest {
   1: optional id.ChangesetId linknode;
-  2: map<MPathElement, id.DeletedManifestId> (
+  2: map<path.MPathElement, id.DeletedManifestId> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
 } (rust.exhaustive)
@@ -480,7 +461,7 @@ union TestManifestEntry {
 } (rust.exhaustive)
 
 struct TestManifest {
-  1: map<MPathElement, TestManifestEntry> (
+  1: map<path.MPathElement, TestManifestEntry> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
 } (rust.exhaustive)
@@ -546,7 +527,7 @@ union FsnodeEntry {
 // files and manifests, and the number of files and sub-directories within
 // directories.
 struct Fsnode {
-  1: map<MPathElement, FsnodeEntry> (
+  1: map<path.MPathElement, FsnodeEntry> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
   2: FsnodeSummary summary;
@@ -585,7 +566,7 @@ struct SkeletonManifestEntry {
 // represented by a single skeleton manifest.  Skeleton manifest identities
 // change when files are added or removed.
 struct SkeletonManifest {
-  1: map<MPathElement, SkeletonManifestEntry> (
+  1: map<path.MPathElement, SkeletonManifestEntry> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
   2: SkeletonManifestSummary summary;
@@ -661,7 +642,7 @@ struct BlameRange {
 
 struct Blame {
   1: list<BlameRange> ranges;
-  2: list<NonRootMPath> paths;
+  2: list<path.NonRootMPath> paths;
 } (rust.exhaustive)
 
 union BlameMaybeRejected {
@@ -785,7 +766,7 @@ struct BlameDataV2 {
   // reduce repetition of data in ranges.  Since files are not often moved, and
   // for simplicity, this includes all paths the file has ever been located at,
   // even if they are no longer referenced by any of the ranges.
-  4: list<NonRootMPath> paths;
+  4: list<path.NonRootMPath> paths;
 } (rust.exhaustive)
 
 union BlameV2 {

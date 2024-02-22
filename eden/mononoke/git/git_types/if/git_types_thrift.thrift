@@ -8,6 +8,7 @@
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "eden/mononoke/mononoke_types/serialization/path.thrift"
 
 struct BlobHandle {
   1: id.GitSha1 oid;
@@ -31,7 +32,7 @@ union TreeMember {
 
 struct Tree {
   1: TreeHandle handle;
-  2: map<mononoke_types_thrift.MPathElement, TreeMember> members;
+  2: map<path.MPathElement, TreeMember> members;
 } (rust.exhaustive)
 
 /// The kind of Git objects that are allowed as entries in GitDeltaManifest
@@ -45,7 +46,7 @@ struct ObjectEntry {
   1: id.GitSha1 oid;
   2: i64 size;
   3: ObjectKind kind;
-  4: mononoke_types_thrift.MPath path;
+  4: path.MPath path;
 } (rust.exhaustive)
 
 /// Struct representing the information required to generate the new object from the delta
