@@ -681,7 +681,7 @@ impl Client {
     async fn fetch_snapshot_attempt(
         &self,
         request: FetchSnapshotRequest,
-    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<FetchSnapshotResponse, EdenApiError> {
         tracing::info!("Fetching snapshot {}", request.cs_id,);
         let url = self.build_url(paths::FETCH_SNAPSHOT)?;
         let req = request.to_wire();
@@ -690,7 +690,7 @@ impl Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<FetchSnapshotResponse>(vec![request])
+        self.fetch_single::<FetchSnapshotResponse>(request).await
     }
 
     /// Alter the properties of an existing snapshot
@@ -1513,7 +1513,7 @@ impl EdenApi for Client {
     async fn fetch_snapshot(
         &self,
         request: FetchSnapshotRequest,
-    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<FetchSnapshotResponse, EdenApiError> {
         self.with_retry(|this| this.fetch_snapshot_attempt(request.clone()).boxed())
             .await
     }

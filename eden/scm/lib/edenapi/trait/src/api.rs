@@ -316,7 +316,7 @@ pub trait EdenApi: Send + Sync + 'static {
     async fn fetch_snapshot(
         &self,
         request: FetchSnapshotRequest,
-    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<FetchSnapshotResponse, EdenApiError> {
         let _ = request;
         Err(EdenApiError::NotSupported)
     }
