@@ -97,6 +97,10 @@ impl EdenApiError {
                     }
                 // 500-599
                 } else {
+                    // request could be too heavy
+                    if let _status = StatusCode::GATEWAY_TIMEOUT {
+                        return false;
+                    }
                     status.is_server_error()
                 }
             }
