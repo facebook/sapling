@@ -894,6 +894,31 @@ impl Client {
         self.fetch_single::<SetBookmarkResponse>(req).await
     }
 
+    async fn upload_filenodes_batch_attempt(
+        &self,
+        items: Vec<HgFilenodeData>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        tracing::info!("Requesting hg filenodes upload for {} item(s)", items.len());
+
+        if items.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::UPLOAD_FILENODES)?;
+        let requests = self.prepare_requests(
+            &url,
+            items,
+            Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
+            |ids| Batch::<_> {
+                batch: ids
+                    .into_iter()
+                    .map(|item| UploadHgFilenodeRequest { data: item })
+                    .collect(),
+            },
+        )?;
+        self.fetch::<UploadTokensResponse>(requests)
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -1409,31 +1434,12 @@ impl EdenApi for Client {
         })
     }
 
-    // This method doesn't perform retries.
     async fn upload_filenodes_batch(
         &self,
         items: Vec<HgFilenodeData>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        tracing::info!("Requesting hg filenodes upload for {} item(s)", items.len());
-
-        if items.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let url = self.build_url(paths::UPLOAD_FILENODES)?;
-        let requests = self.prepare_requests(
-            &url,
-            items,
-            Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
-            |ids| Batch::<_> {
-                batch: ids
-                    .into_iter()
-                    .map(|item| UploadHgFilenodeRequest { data: item })
-                    .collect(),
-            },
-        )?;
-
-        Ok(self.fetch::<UploadTokensResponse>(requests)?)
+        self.with_retry(|this| this.upload_filenodes_batch_attempt(items.clone()).boxed())
+            .await
     }
 
     // This method doesn't perform retries.
