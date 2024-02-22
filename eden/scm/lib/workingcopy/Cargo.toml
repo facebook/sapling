@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-bitflags = "2.4"
+bitflags = { version = "2.4", features = ["serde"] }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 context = { version = "0.1.0", path = "../context" }

@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 atomicfile = { version = "0.1.0", path = "../atomicfile" }
-bitflags = "2.4"
+bitflags = { version = "2.4", features = ["serde"] }
 byteorder = "1.3"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 fs2 = "0.4"

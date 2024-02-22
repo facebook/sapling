@@ -13,7 +13,7 @@ anyhow = "1.0.75"
 array-init = "0.1"
 async-trait = "0.1.71"
 auto_impl = "1.1.0"
-bitflags = "2.4"
+bitflags = { version = "2.4", features = ["serde"] }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }

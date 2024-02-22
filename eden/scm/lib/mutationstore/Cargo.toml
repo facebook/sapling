@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-bitflags = "2.4"
+bitflags = { version = "2.4", features = ["serde"] }
 dag = { version = "0.1.0", path = "../dag", features = ["render"] }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
