@@ -294,7 +294,7 @@ where
 
         if let Some(to_cs_id) = entry.to_changeset_id {
             let (_, unsynced_ancestors_versions) =
-                find_toposorted_unsynced_ancestors(&ctx, commit_syncer, to_cs_id).await?;
+                find_toposorted_unsynced_ancestors(&ctx, commit_syncer, to_cs_id, None).await?;
 
             if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
                 // Not a single ancestor of to_cs_id was ever synced.

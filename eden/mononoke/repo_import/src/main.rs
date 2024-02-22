@@ -304,7 +304,8 @@ async fn back_sync_commits_to_small_repo(
     let mut synced_bcs_ids = vec![];
     for bcs_id in bcs_ids {
         let (unsynced_ancestors, _) =
-            find_toposorted_unsynced_ancestors(ctx, large_to_small_syncer, bcs_id.clone()).await?;
+            find_toposorted_unsynced_ancestors(ctx, large_to_small_syncer, bcs_id.clone(), None)
+                .await?;
         for ancestor in unsynced_ancestors {
             // It is always safe to use `CandidateSelectionHint::Only` in
             // the large-to-small direction

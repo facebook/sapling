@@ -132,6 +132,7 @@ use topo_sort::sort_topological;
 use types::Source;
 use types::Target;
 
+use crate::commit_sync_outcome::DesiredRelationship;
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
 mod commit_sync_config_utils;
@@ -396,6 +397,7 @@ pub async fn find_toposorted_unsynced_ancestors<M, R>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     start_cs_id: ChangesetId,
+    desired_relationship: Option<DesiredRelationship<R>>,
 ) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -425,6 +427,18 @@ where
         let maybe_plural_outcome = commit_syncer
             .get_plural_commit_sync_outcome(ctx, cs_id)
             .await?;
+        let maybe_plural_outcome = match (maybe_plural_outcome.clone(), &desired_relationship) {
+            (Some(plural), Some(desired_relationship)) => {
+                let outcome = plural
+                    .filter_by_desired_relationship(ctx, desired_relationship)
+                    .await?;
+                match outcome {
+                    PluralCommitSyncOutcome::RewrittenAs(plural) if plural.is_empty() => None,
+                    _ => Some(outcome),
+                }
+            }
+            _ => maybe_plural_outcome,
+        };
 
         match maybe_plural_outcome {
             Some(plural) => {
@@ -1056,7 +1070,7 @@ where
         disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
         let (unsynced_ancestors, synced_ancestors_versions) =
-            find_toposorted_unsynced_ancestors(ctx, self, source_cs_id).await?;
+            find_toposorted_unsynced_ancestors(ctx, self, source_cs_id, None).await?;
 
         let source_repo = self.repos.get_source_repo();
         let target_repo = self.repos.get_target_repo();

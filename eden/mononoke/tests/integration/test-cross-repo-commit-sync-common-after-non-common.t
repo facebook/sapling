@@ -53,37 +53,39 @@
 
 -- Sync after both bookmark moves happened
 -- The first bookmark move of other_bookmark to S_C is replicated correctly
--- The second bookmark move of master_bookmark to S_D fails with "No common pushrebase root for master_bookmark". This is a bug.
+-- The second bookmark move of master_bookmark to S_D also suceeds and thanks to the fact that there were no competing pushrebases
+-- and the date wasn't rewritten there's no divergence between S_C and S_D.
   $ mononoke_newadmin mutable-counters -R large-mon set xreposync_from_1 0
   Value of xreposync_from_1 in repo large-mon(Id: 0) set to 0
-  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
-  * Starting session with id * (glob)
-  * queue size is 3 (glob)
-  * processing log entry #1 (glob)
-  * 0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d (glob)
-  * successful sync bookmark update log #1 (glob)
-  * processing log entry #2 (glob)
-  * 1 unsynced ancestors of 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 (glob)
-  * syncing 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 (glob)
-  * changeset 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 synced as d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411 * (glob)
-  * successful sync bookmark update log #2 (glob)
-  * processing log entry #3 (glob)
-  * 1 unsynced ancestors of 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b (glob)
-  * syncing 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b via pushrebase for master_bookmark (glob)
-  * Syncing 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b failed in *: Pushrebase of synced commit failed - check config for overlaps: Error(No common pushrebase root for master_bookmark, all possible roots: {ChangesetId(Blake2(d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411))}) (glob)
-  * failed to sync bookmark update log #3, Pushrebase of synced commit failed - check config for overlaps: Error(No common pushrebase root for master_bookmark, all possible roots: {ChangesetId(Blake2(d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411))}) (glob)
-  * Execution error: Pushrebase of synced commit failed - check config for overlaps: Error(No common pushrebase root for master_bookmark, all possible roots: {ChangesetId(Blake2(d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411))}) (glob)
-  * Execution failed (glob)
-  [1]
+  $ with_stripped_logs mononoke_x_repo_sync 1 0 tail --catch-up-once
+  Starting session with id * (glob)
+  queue size is 3
+  processing log entry #1
+  0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d
+  successful sync bookmark update log #1
+  processing log entry #2
+  1 unsynced ancestors of 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12
+  syncing 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12
+  changeset 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 synced as d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411 in * (glob)
+  successful sync bookmark update log #2
+  processing log entry #3
+  2 unsynced ancestors of 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b
+  syncing 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 via pushrebase for master_bookmark
+  changeset 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 synced as d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411 in * (glob)
+  syncing 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b via pushrebase for master_bookmark
+  changeset 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b synced as 3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e in * (glob)
+  successful sync bookmark update log #3
 
 -- Show the bookmarks after the sync
   $ mononoke_newadmin bookmarks --repo-name large-mon list
   d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411 bookprefix/other_bookmark
-  3e020372209167db53084d8295a9d94bb1cd654e19711da331d5b05c0467f9a0 master_bookmark
+  3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e master_bookmark
 
 
 -- Show the graph after the sync
-  $ mononoke_newadmin changelog -R large-mon graph -i d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411,$L_C -M
+  $ mononoke_newadmin changelog -R large-mon graph -i d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411,3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e -M
+  o  message: S_D
+  │
   o  message: S_C
   │
   o  message: first post-move commit

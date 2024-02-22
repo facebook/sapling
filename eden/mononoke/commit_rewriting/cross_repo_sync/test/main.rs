@@ -171,7 +171,7 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let (_unsynced_ancestors, unsynced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(ctx, config, source_bcs_id.clone()).await?;
+        find_toposorted_unsynced_ancestors(ctx, config, source_bcs_id.clone(), None).await?;
 
     let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
         panic!("no known version");

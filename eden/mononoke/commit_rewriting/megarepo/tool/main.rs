@@ -1243,7 +1243,7 @@ async fn run_sync_commit_and_ancestors<'a>(
         helpers::csid_resolve(ctx, commit_syncer.get_source_repo(), source_commit_hash).await?;
 
     let (unsynced_ancestors, _) =
-        find_toposorted_unsynced_ancestors(ctx, &commit_syncer, source_cs_id).await?;
+        find_toposorted_unsynced_ancestors(ctx, &commit_syncer, source_cs_id, None).await?;
 
     for ancestor in unsynced_ancestors {
         commit_syncer

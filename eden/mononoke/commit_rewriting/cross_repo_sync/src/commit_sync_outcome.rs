@@ -15,6 +15,7 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
+use futures::TryFutureExt;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
@@ -44,7 +45,7 @@ pub enum CommitSyncOutcome {
 
 /// The state of a source repo commit in a target repo, which
 /// allows for multiple `RewrittenAs` options
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PluralCommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate(CommitSyncConfigVersion),
@@ -113,7 +114,7 @@ impl<R: Repo> CandidateSelectionHint<R> {
     /// a "hard failure", as a hint may be used for bookmark creation, or at the time when
     /// bookmark was already deleted. Instead, for these cases the idea is to just
     /// "downgrade" a hint to be an equivalent of `Only` and fail on multiple candidates.
-    async fn try_into_desired_relationship(
+    pub async fn try_into_desired_relationship(
         self,
         ctx: &CoreContext,
     ) -> Result<Option<DesiredRelationship<R>>, Error> {
@@ -405,8 +406,8 @@ fn get_only_item_selector<'a>(
 /// while iterating over the list of candidate changesets
 /// This struct is a simplified version of `CandidateSelectionHint`:
 /// - it does not deal with bookmarks
-/// - it deos not deal with the expectation of having only one candidate in the list
-enum DesiredRelationship<R: Repo> {
+/// - it does not deal with the expectation of having only one candidate in the list
+pub enum DesiredRelationship<R: Repo> {
     /// Changeset should be an ancestor of this variant's payload
     /// Note: in this case any changeset is an ancestor of itself
     AncestorOf(Target<ChangesetId>, Target<R>),
@@ -604,6 +605,32 @@ impl PluralCommitSyncOutcome {
         let selector = get_only_item_selector(original_source_cs_id);
         self.try_into_commit_sync_outcome_with_selector(selector)
             .await
+    }
+
+    /// Filters the plural sync results to those conforming to desired relationship.
+    pub async fn filter_by_desired_relationship<R: Repo>(
+        self,
+        ctx: &CoreContext,
+        desired_relationship: &DesiredRelationship<R>,
+    ) -> Result<Self, Error> {
+        use PluralCommitSyncOutcome::*;
+        Ok(match self {
+            NotSyncCandidate(version) => Self::NotSyncCandidate(version),
+            EquivalentWorkingCopyAncestor(cs_id, version) => {
+                Self::EquivalentWorkingCopyAncestor(cs_id, version)
+            }
+            RewrittenAs(v) => RewrittenAs(
+                try_join_all(v.into_iter().map(|(cs_id, version)| {
+                    desired_relationship
+                        .holds_for(ctx, Target(cs_id))
+                        .map_ok(move |res| res.then_some((cs_id, version)))
+                }))
+                .await?
+                .into_iter()
+                .filter_map(|x| x)
+                .collect(),
+            ),
+        })
     }
 
     async fn try_into_commit_sync_outcome_with_desired_relationship<R: Repo>(

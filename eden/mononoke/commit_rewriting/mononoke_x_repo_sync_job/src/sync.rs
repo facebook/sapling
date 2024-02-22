@@ -155,8 +155,20 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
 where
     R: Repo,
 {
+    let hint = match target_bookmark {
+        Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
+            CandidateSelectionHint::AncestorOfBookmark(
+                target_bookmark.clone(),
+                Target(commit_syncer.get_target_repo().clone()),
+            )
+            .try_into_desired_relationship(ctx)
+            .await?
+            .ok_or_else(|| anyhow!("ProgrammingError: hint doesn't represent relationship"))?,
+        ),
+        _ => None,
+    };
     let (unsynced_ancestors, unsynced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone()).await?;
+        find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint).await?;
 
     let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
         return Ok(SyncResult::SkippedNoKnownVersion);
