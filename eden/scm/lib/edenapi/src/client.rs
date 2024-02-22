@@ -1098,7 +1098,7 @@ impl EdenApi for Client {
         pushvars: HashMap<String, String>,
     ) -> Result<SetBookmarkResponse, EdenApiError> {
         self.with_retry(|this| {
-            this.set_bookmark_attempt(bookmark.clone(), to.clone(), from.clone(), pushvars.clone())
+            this.set_bookmark_attempt(bookmark.clone(), to, from, pushvars.clone())
                 .boxed()
         })
         .await
@@ -1496,7 +1496,7 @@ impl EdenApi for Client {
         bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         self.with_retry(|this| {
-            this.upload_bonsai_changeset_attempt(changeset.clone(), bubble_id.clone())
+            this.upload_bonsai_changeset_attempt(changeset.clone(), bubble_id)
                 .boxed()
         })
         .await
@@ -1508,7 +1508,7 @@ impl EdenApi for Client {
         labels: Option<Vec<String>>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         self.with_retry(|this| {
-            this.ephemeral_prepare_attempt(custom_duration.clone(), labels.clone())
+            this.ephemeral_prepare_attempt(custom_duration, labels.clone())
                 .boxed()
         })
         .await
