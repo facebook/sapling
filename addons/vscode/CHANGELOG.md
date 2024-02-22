@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.39
+
+### Feb 21 2024
+
+- Copy rich links to Diffs instead of plain text
+- Better error message when no folders are mounted yet
+- Hide drawers when ISL isn't loaded, to avoid showing a spinner forever
+- Detect some files as generated via regex, such as Cargo.lock files. This regex is configurable.
+- Show error notification if opening a file fails
+- Remove "undefined" in tooltip for files
+- Allow specifying a custom command to open files (outside VS Code)
+- Fix some state not persisting, such as drawer collapsed state
+- Fix dragging commits in edit stack being misaligned with the cursor
+
 ## 0.1.38
 
 ### Feb 9 2024
