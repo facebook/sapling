@@ -292,13 +292,7 @@ impl DirLink {
         let mut files = Vec::new();
         let mut dirs = Vec::new();
 
-        let links = match self.link.as_ref() {
-            Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
-            Ephemeral(ref links) => links,
-            Durable(entry) => entry.materialize_links(store, &self.path)?,
-        };
-
-        for (name, link) in links {
+        for (name, link) in self.links(store)? {
             let mut path = self.path.clone();
             path.push(name.as_ref());
             match link.as_ref() {
@@ -310,6 +304,22 @@ impl DirLink {
         }
 
         Ok((files, dirs))
+    }
+
+    /// Iterate over link entries, sorted by name.
+    ///
+    /// Less convenient than `list`, but allows iterating both files and directories at
+    /// the same time.
+    pub fn links(
+        &self,
+        store: &InnerStore,
+    ) -> Result<impl Iterator<Item = (&PathComponentBuf, &Link)>> {
+        let links = match self.link.as_ref() {
+            Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
+            Ephemeral(ref links) => links,
+            Durable(entry) => entry.materialize_links(store, &self.path)?,
+        };
+        Ok(links.iter())
     }
 
     /// Create a `Key` (path/hgid pair) corresponding to this directory. Keys are used
