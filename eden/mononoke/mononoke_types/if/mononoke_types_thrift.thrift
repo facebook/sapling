@@ -20,6 +20,7 @@ namespace py3 eden.mononoke.mononoke_types
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
+include "eden/mononoke/mononoke_types/serialization/time.thrift"
 
 // Parent ordering
 // ---------------
@@ -58,10 +59,10 @@ include "eden/mononoke/mononoke_types/serialization/path.thrift"
 struct BonsaiChangeset {
   1: required list<id.ChangesetId> parents;
   2: string author;
-  3: optional DateTime author_date;
+  3: optional time.DateTime author_date;
   // Mercurial won't necessarily have a committer, so this is optional.
   4: optional string committer;
-  5: optional DateTime committer_date;
+  5: optional time.DateTime committer_date;
   6: string message;
   // Extra headers specifically for mercurial
   7: map<string, binary> (
@@ -108,17 +109,6 @@ union BonsaiAnnotatedTagTarget {
 struct SnapshotState {
 // Additional state for snapshots (if necessary)
 } (rust.exhaustive)
-
-// DateTime fields do not have a reasonable default value! They must
-// always be required or optional.
-struct DateTime {
-  1: required i64 timestamp_secs;
-  // Timezones can go up to UTC+13 (which would be represented as -46800), so
-  // an i16 can't fit them.
-  2: required i32 tz_offset_secs;
-} (rust.exhaustive)
-
-typedef i64 Timestamp (rust.newtype)
 
 struct ContentChunkPointer {
   1: id.ContentChunkId chunk_id;

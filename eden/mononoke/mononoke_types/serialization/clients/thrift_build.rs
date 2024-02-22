@@ -17,7 +17,8 @@ fn main() {
         out_dir.join("cratemap"),
         "data crate
 id crate
-path crate",
+path crate
+time crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -70,6 +71,7 @@ path crate",
         "../data.thrift"
             , "../id.thrift"
             , "../path.thrift"
+            , "../time.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

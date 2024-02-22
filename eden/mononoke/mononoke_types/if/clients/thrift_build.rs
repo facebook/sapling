@@ -18,7 +18,8 @@ fn main() {
         "data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 id mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 mononoke_types_thrift crate
-path mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
+path mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+time mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

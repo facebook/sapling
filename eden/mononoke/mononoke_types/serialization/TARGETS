@@ -17,6 +17,7 @@ thrift_library(
         "data.thrift": [],
         "id.thrift": [],
         "path.thrift": [],
+        "time.thrift": [],
     },
     # The Thrift definitions are private and only used for serialization and for mononoke-internal
     # thrift services -- do not allow other code to use them, except for other private Thrift code.

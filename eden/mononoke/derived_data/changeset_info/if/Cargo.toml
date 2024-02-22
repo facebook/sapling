@@ -26,7 +26,6 @@ derived_data_thrift__types = { package = "derived_data_thrift_types", version = 
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../../mononoke_types/if" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

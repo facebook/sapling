@@ -23,7 +23,6 @@ thrift_library(
         "//eden/mononoke/derived_data/remote/if:",
     ],
     deps = [
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
     ],
 )

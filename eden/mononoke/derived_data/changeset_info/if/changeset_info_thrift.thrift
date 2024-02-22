@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "eden/mononoke/mononoke_types/serialization/time.thrift"
 
 typedef binary small_binary (
   rust.newtype,
@@ -26,9 +26,9 @@ struct ChangesetInfo {
   1: id.ChangesetId changeset_id;
   2: list<id.ChangesetId> parents;
   3: string author;
-  4: mononoke_types_thrift.DateTime author_date;
+  4: time.DateTime author_date;
   5: optional string committer;
-  6: optional mononoke_types_thrift.DateTime committer_date;
+  6: optional time.DateTime committer_date;
   7: ChangesetMessage message;
   8: map_string_binary_3930 hg_extra;
   9: optional map_small_binary_binary_bytes_5953 git_extra_headers;

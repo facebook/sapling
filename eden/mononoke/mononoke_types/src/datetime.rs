@@ -84,7 +84,7 @@ impl DateTime {
         Ok(Self::new(dt))
     }
 
-    pub fn from_thrift(dt: thrift::DateTime) -> Result<Self> {
+    pub fn from_thrift(dt: thrift::time::DateTime) -> Result<Self> {
         Self::from_timestamp(dt.timestamp_secs, dt.tz_offset_secs)
     }
 
@@ -117,8 +117,8 @@ impl DateTime {
         self.0
     }
 
-    pub fn into_thrift(self) -> thrift::DateTime {
-        thrift::DateTime {
+    pub fn into_thrift(self) -> thrift::time::DateTime {
+        thrift::time::DateTime {
             timestamp_secs: self.timestamp_secs(),
             tz_offset_secs: self.tz_offset_secs(),
         }
@@ -201,7 +201,7 @@ impl Timestamp {
         Timestamp(ts)
     }
 
-    pub fn from_thrift(ts: thrift::Timestamp) -> Self {
+    pub fn from_thrift(ts: thrift::time::Timestamp) -> Self {
         Self::from_timestamp_nanos(ts.0)
     }
 
@@ -226,8 +226,8 @@ impl Timestamp {
         self.since_nanos() / SEC_IN_NS
     }
 
-    pub fn into_thrift(self) -> thrift::Timestamp {
-        thrift::Timestamp(self.0)
+    pub fn into_thrift(self) -> thrift::time::Timestamp {
+        thrift::time::Timestamp(self.0)
     }
 }
 
@@ -297,22 +297,22 @@ mod test {
 
     #[test]
     fn bad_thrift() {
-        DateTime::from_thrift(thrift::DateTime {
+        DateTime::from_thrift(thrift::time::DateTime {
             timestamp_secs: 0,
             tz_offset_secs: 86_400,
         })
         .expect_err("unexpected OK - tz_offset_secs out of bounds");
-        DateTime::from_thrift(thrift::DateTime {
+        DateTime::from_thrift(thrift::time::DateTime {
             timestamp_secs: 0,
             tz_offset_secs: -86_400,
         })
         .expect_err("unexpected OK - tz_offset_secs out of bounds");
-        DateTime::from_thrift(thrift::DateTime {
+        DateTime::from_thrift(thrift::time::DateTime {
             timestamp_secs: i64::min_value(),
             tz_offset_secs: 0,
         })
         .expect_err("unexpected OK - timestamp_secs out of bounds");
-        DateTime::from_thrift(thrift::DateTime {
+        DateTime::from_thrift(thrift::time::DateTime {
             timestamp_secs: i64::max_value(),
             tz_offset_secs: 0,
         })
