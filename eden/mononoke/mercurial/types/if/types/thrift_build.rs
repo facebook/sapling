@@ -21,6 +21,8 @@ data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:m
 id mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 mercurial_thrift crate
 path mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+sharded_map mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+test_manifest mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 time mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
     ).expect("Failed to write cratemap");
 

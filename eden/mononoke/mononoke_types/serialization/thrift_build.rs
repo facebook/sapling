@@ -20,6 +20,8 @@ content crate
 data crate
 id crate
 path crate
+sharded_map crate
+test_manifest crate
 time crate",
     ).expect("Failed to write cratemap");
 
@@ -75,6 +77,8 @@ time crate",
             , "data.thrift"
             , "id.thrift"
             , "path.thrift"
+            , "sharded_map.thrift"
+            , "test_manifest.thrift"
             , "time.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");

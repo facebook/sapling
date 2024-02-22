@@ -118,6 +118,8 @@ pub mod thrift {
     pub use mononoke_types_serialization::data;
     pub use mononoke_types_serialization::id;
     pub use mononoke_types_serialization::path;
+    pub use mononoke_types_serialization::sharded_map;
+    pub use mononoke_types_serialization::test_manifest;
     pub use mononoke_types_serialization::time;
     pub use mononoke_types_thrift::*;
 }

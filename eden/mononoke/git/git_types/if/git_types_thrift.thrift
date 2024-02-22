@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
+include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 
 struct BlobHandle {
   1: id.GitSha1 oid;
@@ -82,5 +82,5 @@ struct GitDeltaManifest {
   1: id.ChangesetId commit;
   /// The entries corresponding created / modified Git objects
   /// expressed as a map from null-separated MPath bytes -> GitDeltaManifestEntry
-  2: mononoke_types_thrift.ShardedMapNode entries;
+  2: sharded_map.ShardedMapNode entries;
 } (rust.exhaustive)

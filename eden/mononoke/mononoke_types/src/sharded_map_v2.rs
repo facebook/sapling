@@ -92,7 +92,7 @@ pub struct ShardedMapV2StoredNode<Value: ShardedMapV2Value> {
 }
 
 impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
-    fn from_thrift(t: thrift::ShardedMapV2StoredNode) -> Result<Self> {
+    fn from_thrift(t: thrift::sharded_map::ShardedMapV2StoredNode) -> Result<Self> {
         Ok(Self {
             id: Value::NodeId::from_thrift(t.id)?,
             weight: t.weight as usize,
@@ -101,8 +101,8 @@ impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
         })
     }
 
-    fn into_thrift(self) -> thrift::ShardedMapV2StoredNode {
-        thrift::ShardedMapV2StoredNode {
+    fn into_thrift(self) -> thrift::sharded_map::ShardedMapV2StoredNode {
+        thrift::sharded_map::ShardedMapV2StoredNode {
             id: self.id.into_thrift(),
             weight: self.weight as i64,
             size: self.size as i64,
@@ -209,24 +209,28 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
         }
     }
 
-    fn from_thrift(t: thrift::LoadableShardedMapV2Node) -> Result<Self> {
+    fn from_thrift(t: thrift::sharded_map::LoadableShardedMapV2Node) -> Result<Self> {
         Ok(match t {
-            thrift::LoadableShardedMapV2Node::inlined(inlined) => {
+            thrift::sharded_map::LoadableShardedMapV2Node::inlined(inlined) => {
                 Self::Inlined(ShardedMapV2Node::from_thrift(inlined)?)
             }
-            thrift::LoadableShardedMapV2Node::stored(stored) => {
+            thrift::sharded_map::LoadableShardedMapV2Node::stored(stored) => {
                 Self::Stored(ShardedMapV2StoredNode::from_thrift(stored)?)
             }
-            thrift::LoadableShardedMapV2Node::UnknownField(_) => bail!("Unknown variant"),
+            thrift::sharded_map::LoadableShardedMapV2Node::UnknownField(_) => {
+                bail!("Unknown variant")
+            }
         })
     }
 
-    fn into_thrift(self) -> thrift::LoadableShardedMapV2Node {
+    fn into_thrift(self) -> thrift::sharded_map::LoadableShardedMapV2Node {
         match self {
             Self::Inlined(inlined) => {
-                thrift::LoadableShardedMapV2Node::inlined(inlined.into_thrift())
+                thrift::sharded_map::LoadableShardedMapV2Node::inlined(inlined.into_thrift())
             }
-            Self::Stored(stored) => thrift::LoadableShardedMapV2Node::stored(stored.into_thrift()),
+            Self::Stored(stored) => {
+                thrift::sharded_map::LoadableShardedMapV2Node::stored(stored.into_thrift())
+            }
         }
     }
 }
@@ -236,7 +240,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         if cfg!(test) {
             Ok(5)
         } else {
-            thrift::SHARDED_MAP_V2_WEIGHT_LIMIT
+            thrift::sharded_map::SHARDED_MAP_V2_WEIGHT_LIMIT
                 .try_into()
                 .context("Failed to parse weight limit")
         }
@@ -555,9 +559,9 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
 impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
     const NAME: &'static str = "ShardedMapV2Node";
-    type Thrift = thrift::ShardedMapV2Node;
+    type Thrift = thrift::sharded_map::ShardedMapV2Node;
 
-    fn from_thrift(t: thrift::ShardedMapV2Node) -> Result<Self> {
+    fn from_thrift(t: thrift::sharded_map::ShardedMapV2Node) -> Result<Self> {
         Ok(Self {
             prefix: t.prefix.0,
             value: t
@@ -575,8 +579,8 @@ impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
         })
     }
 
-    fn into_thrift(self) -> thrift::ShardedMapV2Node {
-        thrift::ShardedMapV2Node {
+    fn into_thrift(self) -> thrift::sharded_map::ShardedMapV2Node {
+        thrift::sharded_map::ShardedMapV2Node {
             prefix: thrift::data::SmallBinary(self.prefix),
             value: self.value.map(|v| ThriftConvert::into_bytes(*v)),
             children: self

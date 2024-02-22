@@ -45,7 +45,7 @@ pub struct TestManifestDirectory {
 
 impl ThriftConvert for TestManifestDirectory {
     const NAME: &'static str = "TestManifestDirectory";
-    type Thrift = thrift::TestManifestDirectory;
+    type Thrift = thrift::test_manifest::TestManifestDirectory;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(Self {
@@ -55,7 +55,7 @@ impl ThriftConvert for TestManifestDirectory {
     }
 
     fn into_thrift(self) -> Self::Thrift {
-        thrift::TestManifestDirectory {
+        thrift::test_manifest::TestManifestDirectory {
             id: self.id.into_thrift(),
             max_basename_length: self.max_basename_length as i64,
         }
@@ -77,15 +77,15 @@ impl Loadable for TestManifestDirectory {
 
 impl ThriftConvert for TestManifestEntry {
     const NAME: &'static str = "TestManifestEntry";
-    type Thrift = thrift::TestManifestEntry;
+    type Thrift = thrift::test_manifest::TestManifestEntry;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(match t {
-            thrift::TestManifestEntry::file(_) => Self::File,
-            thrift::TestManifestEntry::directory(dir) => {
+            thrift::test_manifest::TestManifestEntry::file(_) => Self::File,
+            thrift::test_manifest::TestManifestEntry::directory(dir) => {
                 Self::Directory(ThriftConvert::from_thrift(dir)?)
             }
-            thrift::TestManifestEntry::UnknownField(variant) => {
+            thrift::test_manifest::TestManifestEntry::UnknownField(variant) => {
                 anyhow::bail!("Unknown variant: {}", variant)
             }
         })
@@ -93,15 +93,19 @@ impl ThriftConvert for TestManifestEntry {
 
     fn into_thrift(self) -> Self::Thrift {
         match self {
-            Self::File => thrift::TestManifestEntry::file(thrift::TestManifestFile {}),
-            Self::Directory(dir) => thrift::TestManifestEntry::directory(dir.into_thrift()),
+            Self::File => thrift::test_manifest::TestManifestEntry::file(
+                thrift::test_manifest::TestManifestFile {},
+            ),
+            Self::Directory(dir) => {
+                thrift::test_manifest::TestManifestEntry::directory(dir.into_thrift())
+            }
         }
     }
 }
 
 impl ThriftConvert for TestManifest {
     const NAME: &'static str = "TestManifest";
-    type Thrift = thrift::TestManifest;
+    type Thrift = thrift::test_manifest::TestManifest;
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(Self {
             subentries: t
@@ -118,7 +122,7 @@ impl ThriftConvert for TestManifest {
     }
 
     fn into_thrift(self) -> Self::Thrift {
-        thrift::TestManifest {
+        thrift::test_manifest::TestManifest {
             subentries: self
                 .subentries
                 .into_iter()

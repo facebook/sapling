@@ -19,6 +19,8 @@ thrift_library(
         "data.thrift": [],
         "id.thrift": [],
         "path.thrift": [],
+        "sharded_map.thrift": [],
+        "test_manifest.thrift": [],
         "time.thrift": [],
     },
     # The Thrift definitions are private and only used for serialization and for mononoke-internal

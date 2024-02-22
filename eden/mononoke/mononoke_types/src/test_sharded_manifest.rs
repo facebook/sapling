@@ -52,7 +52,7 @@ pub struct TestShardedManifestDirectory {
 
 impl ThriftConvert for TestShardedManifestDirectory {
     const NAME: &'static str = "TestShardedManifestDirectory";
-    type Thrift = thrift::TestShardedManifestDirectory;
+    type Thrift = thrift::test_manifest::TestShardedManifestDirectory;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(Self {
@@ -62,7 +62,7 @@ impl ThriftConvert for TestShardedManifestDirectory {
     }
 
     fn into_thrift(self) -> Self::Thrift {
-        thrift::TestShardedManifestDirectory {
+        thrift::test_manifest::TestShardedManifestDirectory {
             id: self.id.into_thrift(),
             max_basename_length: self.max_basename_length.0 as i64,
         }
@@ -89,7 +89,7 @@ pub struct TestShardedManifestFile {
 
 impl ThriftConvert for TestShardedManifestFile {
     const NAME: &'static str = "TestShardedManifestFile";
-    type Thrift = thrift::TestShardedManifestFile;
+    type Thrift = thrift::test_manifest::TestShardedManifestFile;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(Self {
@@ -98,7 +98,7 @@ impl ThriftConvert for TestShardedManifestFile {
     }
 
     fn into_thrift(self) -> Self::Thrift {
-        thrift::TestShardedManifestFile {
+        thrift::test_manifest::TestShardedManifestFile {
             basename_length: self.basename_length as i64,
         }
     }
@@ -147,17 +147,17 @@ impl Rollup<TestShardedManifestEntry> for MaxBasenameLength {
 
 impl ThriftConvert for TestShardedManifestEntry {
     const NAME: &'static str = "TestShardedManifestEntry";
-    type Thrift = thrift::TestShardedManifestEntry;
+    type Thrift = thrift::test_manifest::TestShardedManifestEntry;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(match t {
-            thrift::TestShardedManifestEntry::file(file) => {
+            thrift::test_manifest::TestShardedManifestEntry::file(file) => {
                 Self::File(ThriftConvert::from_thrift(file)?)
             }
-            thrift::TestShardedManifestEntry::directory(dir) => {
+            thrift::test_manifest::TestShardedManifestEntry::directory(dir) => {
                 Self::Directory(ThriftConvert::from_thrift(dir)?)
             }
-            thrift::TestShardedManifestEntry::UnknownField(variant) => {
+            thrift::test_manifest::TestShardedManifestEntry::UnknownField(variant) => {
                 anyhow::bail!("Unknown variant: {}", variant)
             }
         })
@@ -165,15 +165,19 @@ impl ThriftConvert for TestShardedManifestEntry {
 
     fn into_thrift(self) -> Self::Thrift {
         match self {
-            Self::File(file) => thrift::TestShardedManifestEntry::file(file.into_thrift()),
-            Self::Directory(dir) => thrift::TestShardedManifestEntry::directory(dir.into_thrift()),
+            Self::File(file) => {
+                thrift::test_manifest::TestShardedManifestEntry::file(file.into_thrift())
+            }
+            Self::Directory(dir) => {
+                thrift::test_manifest::TestShardedManifestEntry::directory(dir.into_thrift())
+            }
         }
     }
 }
 
 impl ThriftConvert for TestShardedManifest {
     const NAME: &'static str = "TestShardedManifest";
-    type Thrift = thrift::TestShardedManifest;
+    type Thrift = thrift::test_manifest::TestShardedManifest;
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(Self {
             subentries: ShardedMapV2Node::from_thrift(t.subentries)?,
@@ -181,7 +185,7 @@ impl ThriftConvert for TestShardedManifest {
     }
 
     fn into_thrift(self) -> Self::Thrift {
-        thrift::TestShardedManifest {
+        thrift::test_manifest::TestShardedManifest {
             subentries: self.subentries.into_thrift(),
         }
     }

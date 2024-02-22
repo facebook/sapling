@@ -24,8 +24,6 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_types_thrift__types = { package = "git_types_thrift_types", version = "0.1.0", path = "../types" }
 mononoke_types_serialization_clients = { version = "0.1.0", path = "../../../../mononoke_types/serialization/clients" }
 mononoke_types_serialization_types = { version = "0.1.0", path = "../../../../mononoke_types/serialization/types" }
-mononoke_types_thrift_clients = { version = "0.1.0", path = "../../../../mononoke_types/if/clients" }
-mononoke_types_thrift_types = { version = "0.1.0", path = "../../../../mononoke_types/if/types" }
 tracing = "0.1.40"
 
 [build-dependencies]

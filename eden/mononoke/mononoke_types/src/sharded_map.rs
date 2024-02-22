@@ -93,15 +93,15 @@ impl<Value: MapValue> ShardedMapEdge<Value> {
         self.child.load(ctx, blobstore).await
     }
 
-    fn from_thrift(t: thrift::ShardedMapEdge) -> Result<Self> {
+    fn from_thrift(t: thrift::sharded_map::ShardedMapEdge) -> Result<Self> {
         Ok(Self {
             size: t.size.try_into().context("Failed to parse size to usize")?,
             child: ShardedMapChild::from_thrift(t.child)?,
         })
     }
 
-    fn into_thrift(self) -> thrift::ShardedMapEdge {
-        thrift::ShardedMapEdge {
+    fn into_thrift(self) -> thrift::sharded_map::ShardedMapEdge {
+        thrift::sharded_map::ShardedMapEdge {
             size: self.size as i64,
             child: self.child.into_thrift(),
         }
@@ -125,20 +125,22 @@ impl<Value: MapValue> ShardedMapChild<Value> {
         }
     }
 
-    fn from_thrift(t: thrift::ShardedMapChild) -> Result<Self> {
+    fn from_thrift(t: thrift::sharded_map::ShardedMapChild) -> Result<Self> {
         Ok(match t {
-            thrift::ShardedMapChild::inlined(inlined) => {
+            thrift::sharded_map::ShardedMapChild::inlined(inlined) => {
                 Self::Inlined(ShardedMapNode::from_thrift(inlined)?)
             }
-            thrift::ShardedMapChild::id(id) => Self::Id(Value::Id::from_thrift(id)?),
-            thrift::ShardedMapChild::UnknownField(_) => bail!("Unknown variant"),
+            thrift::sharded_map::ShardedMapChild::id(id) => Self::Id(Value::Id::from_thrift(id)?),
+            thrift::sharded_map::ShardedMapChild::UnknownField(_) => bail!("Unknown variant"),
         })
     }
 
-    fn into_thrift(self) -> thrift::ShardedMapChild {
+    fn into_thrift(self) -> thrift::sharded_map::ShardedMapChild {
         match self {
-            Self::Inlined(inlined) => thrift::ShardedMapChild::inlined(inlined.into_thrift()),
-            Self::Id(id) => thrift::ShardedMapChild::id(id.into_thrift()),
+            Self::Inlined(inlined) => {
+                thrift::sharded_map::ShardedMapChild::inlined(inlined.into_thrift())
+            }
+            Self::Id(id) => thrift::sharded_map::ShardedMapChild::id(id.into_thrift()),
         }
     }
 
@@ -420,7 +422,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         if cfg!(test) {
             Ok(5)
         } else {
-            thrift::MAP_SHARD_SIZE
+            thrift::sharded_map::MAP_SHARD_SIZE
                 .try_into()
                 .context("Failed to parse shard size")
         }
@@ -1048,11 +1050,11 @@ pub enum ShardedTraversalOutput<'a, Value: MapValue> {
 
 impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
     const NAME: &'static str = "ShardedMapNode";
-    type Thrift = thrift::ShardedMapNode;
+    type Thrift = thrift::sharded_map::ShardedMapNode;
 
-    fn from_thrift(t: thrift::ShardedMapNode) -> Result<Self> {
+    fn from_thrift(t: thrift::sharded_map::ShardedMapNode) -> Result<Self> {
         Ok(match t {
-            thrift::ShardedMapNode::intermediate(intermediate) => Self::Intermediate {
+            thrift::sharded_map::ShardedMapNode::intermediate(intermediate) => Self::Intermediate {
                 prefix: intermediate.prefix.0,
                 value: intermediate
                     .value
@@ -1066,40 +1068,44 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
                     .collect::<Result<_>>()?,
                 size: Default::default(),
             },
-            thrift::ShardedMapNode::terminal(terminal) => Self::Terminal {
+            thrift::sharded_map::ShardedMapNode::terminal(terminal) => Self::Terminal {
                 values: terminal
                     .values
                     .into_iter()
                     .map(|(k, v)| Ok((k.0, Value::from_bytes(&v)?)))
                     .collect::<Result<_>>()?,
             },
-            thrift::ShardedMapNode::UnknownField(_) => bail!("Unknown map node variant"),
+            thrift::sharded_map::ShardedMapNode::UnknownField(_) => {
+                bail!("Unknown map node variant")
+            }
         })
     }
 
-    fn into_thrift(self) -> thrift::ShardedMapNode {
+    fn into_thrift(self) -> thrift::sharded_map::ShardedMapNode {
         match self {
             Self::Intermediate {
                 prefix,
                 value,
                 edges,
                 ..
-            } => thrift::ShardedMapNode::intermediate(thrift::ShardedMapIntermediateNode {
-                prefix: thrift::data::SmallBinary(prefix),
-                value: value.map(ThriftConvert::into_bytes),
-                edges: edges
-                    .into_iter()
-                    .map(|(k, e)| (k as i8, e.into_thrift()))
-                    .collect(),
-            }),
-            Self::Terminal { values } => {
-                thrift::ShardedMapNode::terminal(thrift::ShardedMapTerminalNode {
+            } => thrift::sharded_map::ShardedMapNode::intermediate(
+                thrift::sharded_map::ShardedMapIntermediateNode {
+                    prefix: thrift::data::SmallBinary(prefix),
+                    value: value.map(ThriftConvert::into_bytes),
+                    edges: edges
+                        .into_iter()
+                        .map(|(k, e)| (k as i8, e.into_thrift()))
+                        .collect(),
+                },
+            ),
+            Self::Terminal { values } => thrift::sharded_map::ShardedMapNode::terminal(
+                thrift::sharded_map::ShardedMapTerminalNode {
                     values: values
                         .into_iter()
                         .map(|(k, v)| (thrift::data::SmallBinary(k), v.into_bytes()))
                         .collect(),
-                })
-            }
+                },
+            ),
         }
     }
 }
