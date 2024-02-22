@@ -41,24 +41,28 @@ impl FileContents {
         FileContents::Bytes(b.into())
     }
 
-    pub(crate) fn from_thrift(fc: thrift::FileContents) -> Result<Self> {
+    pub(crate) fn from_thrift(fc: thrift::content::FileContents) -> Result<Self> {
         match fc {
-            thrift::FileContents::Bytes(bytes) => Ok(FileContents::Bytes(bytes)),
-            thrift::FileContents::Chunked(chunked) => {
+            thrift::content::FileContents::Bytes(bytes) => Ok(FileContents::Bytes(bytes)),
+            thrift::content::FileContents::Chunked(chunked) => {
                 let contents = ChunkedFileContents::from_thrift(chunked)?;
                 Ok(FileContents::Chunked(contents))
             }
-            thrift::FileContents::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
-                "FileContents".into(),
-                format!("unknown file contents field: {}", x)
-            )),
+            thrift::content::FileContents::UnknownField(x) => {
+                bail!(MononokeTypeError::InvalidThrift(
+                    "FileContents".into(),
+                    format!("unknown file contents field: {}", x)
+                ))
+            }
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FileContents {
+    pub(crate) fn into_thrift(self) -> thrift::content::FileContents {
         match self {
-            FileContents::Bytes(bytes) => thrift::FileContents::Bytes(bytes),
-            FileContents::Chunked(chunked) => thrift::FileContents::Chunked(chunked.into_thrift()),
+            FileContents::Bytes(bytes) => thrift::content::FileContents::Bytes(bytes),
+            FileContents::Chunked(chunked) => {
+                thrift::content::FileContents::Chunked(chunked.into_thrift())
+            }
         }
     }
 
@@ -179,7 +183,7 @@ impl ChunkedFileContents {
         Self::from_thrift(thrift_chunked)
     }
 
-    pub fn from_thrift(thrift_chunked: thrift::ChunkedFileContents) -> Result<Self> {
+    pub fn from_thrift(thrift_chunked: thrift::content::ChunkedFileContents) -> Result<Self> {
         let content_id = ContentId::from_thrift(thrift_chunked.content_id)?;
         let chunks = thrift_chunked
             .chunks
@@ -190,14 +194,14 @@ impl ChunkedFileContents {
         Ok(Self::new(content_id, chunks))
     }
 
-    pub fn into_thrift(self) -> thrift::ChunkedFileContents {
+    pub fn into_thrift(self) -> thrift::content::ChunkedFileContents {
         let content_id = self.content_id.into_thrift();
         let chunks = self
             .chunks
             .into_iter()
             .map(ContentChunkPointer::into_thrift)
             .collect();
-        thrift::ChunkedFileContents { content_id, chunks }
+        thrift::content::ChunkedFileContents { content_id, chunks }
     }
 
     pub fn into_chunks(self) -> Vec<ContentChunkPointer> {
@@ -250,19 +254,19 @@ impl ContentChunkPointer {
         Self::from_thrift(thrift_chunk)
     }
 
-    pub fn from_thrift(thrift_chunk: thrift::ContentChunkPointer) -> Result<Self> {
+    pub fn from_thrift(thrift_chunk: thrift::content::ContentChunkPointer) -> Result<Self> {
         let chunk_id = ContentChunkId::from_thrift(thrift_chunk.chunk_id)?;
         let size: u64 = thrift_chunk.size.try_into()?;
         Ok(Self::new(chunk_id, size))
     }
 
-    pub fn into_thrift(self) -> thrift::ContentChunkPointer {
+    pub fn into_thrift(self) -> thrift::content::ContentChunkPointer {
         // NOTE: unwrap() will fail here if we are dealing with a chunk whose size doesn't fit an
         // i64 but does fit a u64. This isn't something we meaningfully seek to support at the
         // moment.
         let chunk_id = self.chunk_id.into_thrift();
         let size: i64 = self.size.try_into().unwrap();
-        thrift::ContentChunkPointer { chunk_id, size }
+        thrift::content::ContentChunkPointer { chunk_id, size }
     }
 
     pub fn chunk_id(&self) -> ContentChunkId {
@@ -307,7 +311,7 @@ mod test {
 
     #[test]
     fn bad_thrift() {
-        let thrift_fc = thrift::FileContents::UnknownField(-1);
+        let thrift_fc = thrift::content::FileContents::UnknownField(-1);
         FileContents::from_thrift(thrift_fc).expect_err("unexpected OK - unknown field");
     }
 }

@@ -16,6 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "changeset_info_thrift derived_data_thrift //eden/mononoke/derived_data/changeset_info/if:derived_data-thrift-rust
+content mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 derived_data_service crate
 fb303_core fb303_core //fb303/thrift:fb303_core-rust

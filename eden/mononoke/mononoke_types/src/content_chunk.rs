@@ -35,18 +35,20 @@ impl ContentChunk {
         ContentChunk(b.into())
     }
 
-    pub(crate) fn from_thrift(fc: thrift::ContentChunk) -> Result<Self> {
+    pub(crate) fn from_thrift(fc: thrift::content::ContentChunk) -> Result<Self> {
         match fc {
-            thrift::ContentChunk::Bytes(bytes) => Ok(ContentChunk(bytes)),
-            thrift::ContentChunk::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
-                "ContentChunk".into(),
-                format!("unknown ContentChunk variant: {}", x)
-            )),
+            thrift::content::ContentChunk::Bytes(bytes) => Ok(ContentChunk(bytes)),
+            thrift::content::ContentChunk::UnknownField(x) => {
+                bail!(MononokeTypeError::InvalidThrift(
+                    "ContentChunk".into(),
+                    format!("unknown ContentChunk variant: {}", x)
+                ))
+            }
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::ContentChunk {
-        thrift::ContentChunk::Bytes(self.0)
+    pub(crate) fn into_thrift(self) -> thrift::content::ContentChunk {
+        thrift::content::ContentChunk::Bytes(self.0)
     }
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
@@ -147,7 +149,7 @@ mod test {
 
     #[test]
     fn bad_thrift() {
-        let thrift_fc = thrift::ContentChunk::UnknownField(-1);
+        let thrift_fc = thrift::content::ContentChunk::UnknownField(-1);
         ContentChunk::from_thrift(thrift_fc).expect_err("unexpected OK - unknown field");
     }
 }

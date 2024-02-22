@@ -16,6 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "bonsai_hg_mapping crate
+content mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 id mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 mercurial_thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust

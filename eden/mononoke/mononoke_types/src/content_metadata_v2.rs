@@ -43,20 +43,22 @@ impl ContentAlias {
         Self::from_thrift(thrift_tc)
     }
 
-    pub fn from_thrift(ca: thrift::ContentAlias) -> Result<Self> {
+    pub fn from_thrift(ca: thrift::content::ContentAlias) -> Result<Self> {
         match ca {
-            thrift::ContentAlias::ContentId(id) => {
+            thrift::content::ContentAlias::ContentId(id) => {
                 Ok(Self::from_content_id(ContentId::from_thrift(id)?))
             }
-            thrift::ContentAlias::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
-                "ContentAlias".into(),
-                format!("unknown content alias field: {}", x)
-            )),
+            thrift::content::ContentAlias::UnknownField(x) => {
+                bail!(MononokeTypeError::InvalidThrift(
+                    "ContentAlias".into(),
+                    format!("unknown content alias field: {}", x)
+                ))
+            }
         }
     }
 
     pub fn into_blob(self) -> BlobstoreBytes {
-        let alias = thrift::ContentAlias::ContentId(self.0.into_thrift());
+        let alias = thrift::content::ContentAlias::ContentId(self.0.into_thrift());
         let data = compact_protocol::serialize(&alias);
         BlobstoreBytes::from_bytes(data)
     }
@@ -91,7 +93,7 @@ impl ContentMetadataV2 {
         Self::from_thrift(thrift_tc)
     }
 
-    pub fn from_thrift(metadata: thrift::ContentMetadataV2) -> Result<Self> {
+    pub fn from_thrift(metadata: thrift::content::ContentMetadataV2) -> Result<Self> {
         let newline_count = thrift_field!(ContentMetadataV2, metadata, newline_count)?;
         let newline_count: u64 = newline_count.try_into()?;
 
@@ -136,8 +138,8 @@ impl ContentMetadataV2 {
         Ok(res)
     }
 
-    fn into_thrift(self) -> thrift::ContentMetadataV2 {
-        thrift::ContentMetadataV2 {
+    fn into_thrift(self) -> thrift::content::ContentMetadataV2 {
+        thrift::content::ContentMetadataV2 {
             content_id: Some(self.content_id.into_thrift()),
             newline_count: Some(self.newline_count as i64),
             total_size: Some(self.total_size as i64),

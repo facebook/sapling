@@ -14,6 +14,7 @@ thrift_library(
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
     ],
     thrift_srcs = {
+        "content.thrift": [],
         "data.thrift": [],
         "id.thrift": [],
         "path.thrift": [],
