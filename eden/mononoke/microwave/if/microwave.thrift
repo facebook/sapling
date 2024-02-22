@@ -13,8 +13,8 @@ include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 const i32 CODEVER = 1;
 
 struct FilenodeSnapshot {
-  // Note: required fields are enforced at runtime here (to prevent Thift from
-  // giving us garbage values and calling those acceptable).
+  // Note:  All fields must be present.  They are marked as optional so that we
+  // can detect if they are missing.
   1: optional path.RepoPath path;
   2: optional mercurial_thrift.HgNodeHash filenode;
   3: optional mercurial_thrift.HgNodeHash p1;

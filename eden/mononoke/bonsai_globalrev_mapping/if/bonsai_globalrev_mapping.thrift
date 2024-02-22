@@ -13,7 +13,7 @@ const i32 MC_CODEVER = 1;
 const i32 MC_SITEVER = 0;
 
 struct BonsaiGlobalrevMappingEntry {
-  1: required i32 repo_id;
+  1: i32 repo_id;
   2: optional id.ChangesetId bcs_id;
-  3: required i64 globalrev;
+  3: i64 globalrev;
 } (rust.exhaustive)

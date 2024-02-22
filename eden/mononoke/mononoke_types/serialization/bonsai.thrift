@@ -41,8 +41,6 @@ include "eden/mononoke/mononoke_types/serialization/time.thrift"
 // * Added and modified files are both part of file_changes.
 // * file_changes is at the end of the struct so that a deserializer that just
 //   wants to read metadata can stop early.
-// * The "required" fields are only for data that is absolutely core to the
-//   model. Note that Thrift does allow changing "required" to unqualified.
 // * NonRootMPath, Id and DateTime fields do not have a reasonable default value, so
 //   they must always be either "required" or "optional".
 // * The set of keys in file_changes is path-conflict-free (pcf): no changed
@@ -56,7 +54,7 @@ include "eden/mononoke/mononoke_types/serialization/time.thrift"
 //     computed separately.
 
 struct BonsaiChangeset {
-  1: required list<id.ChangesetId> parents;
+  1: list<id.ChangesetId> parents;
   2: string author;
   3: optional time.DateTime author_date;
   // Mercurial won't necessarily have a committer, so this is optional.
@@ -67,6 +65,7 @@ struct BonsaiChangeset {
   7: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) hg_extra;
+  // @lint-ignore THRIFTCHECKS bad-key-type
   8: map<path.NonRootMPath, FileChangeOpt> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) file_changes;
@@ -139,16 +138,16 @@ struct UntrackedFileChange {
 } (rust.exhaustive)
 
 struct FileChange {
-  1: required id.ContentId content_id;
+  1: id.ContentId content_id;
   2: FileType file_type;
   // size is a u64 stored as an i64
-  3: required i64 size;
+  3: i64 size;
   4: optional CopyInfo copy_from;
 } (rust.exhaustive)
 
 // This is only used optionally so it is OK to use `required` here.
 struct CopyInfo {
-  1: required path.NonRootMPath file;
+  1: path.NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
-  2: required id.ChangesetId cs_id;
+  2: id.ChangesetId cs_id;
 } (rust.exhaustive)

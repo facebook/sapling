@@ -17,7 +17,7 @@ const i32 MC_CODEVER = 0;
 typedef i32 RepoId (rust.newtype)
 
 struct BonsaiHgMappingCacheEntry {
-  1: required RepoId repo_id;
-  2: required id.ChangesetId bcs_id;
-  3: required mercurial_thrift.HgNodeHash hg_cs_id;
+  1: RepoId repo_id;
+  2: id.ChangesetId bcs_id;
+  3: mercurial_thrift.HgNodeHash hg_cs_id;
 } (rust.exhaustive)

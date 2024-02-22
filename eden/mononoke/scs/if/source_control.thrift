@@ -21,9 +21,9 @@ typedef binary small_binary (
 
 struct DateTime {
   /// UNIX timestamp
-  1: required i64 timestamp;
+  1: i64 timestamp;
   /// Time zone offsets in seconds
-  2: required i32 tz;
+  2: i32 tz;
 }
 
 /// Specifiers

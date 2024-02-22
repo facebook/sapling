@@ -20,11 +20,11 @@
 /// The timezone is defined as seconds after (west of) UTC, so UTC-8 is encoded
 /// as 28800 and UTC+13 is encoded as -46800.
 ///
-/// DateTime fields do not have a reasonable default value.  They must
-/// always be required or optional.
+/// Note: DateTime fields do not have a reasonable default value.  They must
+/// always be present or qualified as optional.
 struct DateTime {
-  1: required i64 timestamp_secs;
-  2: required i32 tz_offset_secs;
+  1: i64 timestamp_secs;
+  2: i32 tz_offset_secs;
 } (rust.exhaustive)
 
 /// Timestamp without timezone information.

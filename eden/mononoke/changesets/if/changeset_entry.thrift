@@ -18,8 +18,8 @@ typedef i32 RepoId (rust.newtype)
 typedef i64 GenerationNum (rust.newtype)
 
 struct ChangesetEntry {
-  1: required RepoId repo_id;
-  2: required id.ChangesetId cs_id;
-  3: required list<id.ChangesetId> parents;
-  4: required GenerationNum gen;
+  1: RepoId repo_id;
+  2: id.ChangesetId cs_id;
+  3: list<id.ChangesetId> parents;
+  4: GenerationNum gen;
 } (rust.exhaustive)
