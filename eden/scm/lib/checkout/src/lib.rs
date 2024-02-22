@@ -49,7 +49,6 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
 use types::HgId;
 use types::Key;
@@ -872,7 +871,7 @@ pub fn checkout(
     if update_mode == CheckoutMode::AbortIfUncommittedChanges {
         let status = wc.status(ctx, Arc::new(AlwaysMatcher::new()), false)?;
         if status.dirty() {
-            bail!("uncommited changes");
+            bail!("uncommitted changes");
         }
     }
 
@@ -1004,6 +1003,7 @@ pub fn filesystem_checkout(
     )?;
 
     let status = wc.status(ctx, sparse_matcher.clone(), false)?;
+    let ts = wc.treestate();
 
     if revert_conflicts {
         // With --clean, overlay working copy changes so they are "undone" by
@@ -1012,6 +1012,23 @@ pub fn filesystem_checkout(
 
         // --clean clears out any merge state
         wc.clear_merge_state()?;
+
+        // Turn added files into untracked files so they don't get deleted unless
+        // necessary. If we included them in overlay_working_changes they would always be
+        // deleted.
+        let mut ts = ts.lock();
+        for add in status.added() {
+            ts.insert(
+                add,
+                &FileStateV2 {
+                    state: StateFlags::NEED_CHECK,
+                    mode: 0,
+                    size: 0,
+                    mtime: 0,
+                    copied: None,
+                },
+            )?;
+        }
     }
 
     let progress_path: Option<PathBuf> = if repo.config().get_or_default("checkout", "resumable")? {
@@ -1054,14 +1071,8 @@ pub fn filesystem_checkout(
 
     // 5. Update the treestate parents, dirstate
     wc.set_parents(vec![target_commit], None)?;
-    record_updates(&plan, wc.vfs(), &mut wc.treestate().lock())?;
-    dirstate::flush(
-        wc.vfs().root(),
-        &mut wc.treestate().lock(),
-        repo.locker(),
-        None,
-        None,
-    )?;
+    record_updates(&plan, wc.vfs(), &mut ts.lock())?;
+    dirstate::flush(wc.vfs().root(), &mut ts.lock(), repo.locker(), None, None)?;
 
     util::file::unlink_if_exists(&updatestate_path)?;
 
@@ -1072,25 +1083,21 @@ pub fn filesystem_checkout(
 // the working copy changes in the diff between the working copy manifest and
 // the checkout target manifest.
 fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) -> Result<()> {
+    // Handle deletes first to avoid path conflicts inserting into manifest.
     for (p, s) in status.iter() {
-        match s {
-            FileStatus::Deleted | FileStatus::Removed => mf.remove(p).map(|_| ())?,
-            FileStatus::Added => mf.insert(
-                p.to_owned(),
-                FileMetadata {
-                    hgid: MF_ADDED_NODE_ID,
-                    file_type: file_type(vfs, p),
-                },
-            )?,
-            FileStatus::Modified => mf.insert(
-                p.to_owned(),
-                FileMetadata {
-                    hgid: MF_MODIFIED_NODE_ID,
-                    file_type: file_type(vfs, p),
-                },
-            )?,
-            FileStatus::Unknown | FileStatus::Ignored | FileStatus::Clean => (),
+        if matches!(s, FileStatus::Deleted | FileStatus::Removed) {
+            mf.remove(p).map(|_| ())?;
         }
+    }
+
+    for p in status.modified() {
+        mf.insert(
+            p.to_owned(),
+            FileMetadata {
+                hgid: MF_MODIFIED_NODE_ID,
+                file_type: file_type(vfs, p),
+            },
+        )?;
     }
 
     Ok(())

@@ -196,6 +196,24 @@ Various invalid arg combos:
   $ cat foo
   two (no-eol)
 
+--clean doesn't delete added files:
+  $ newclientrepo
+  $ touch a b c d
+  $ hg commit -Aqm foo
+  $ touch foo
+  $ hg add foo
+  $ rm a
+  $ hg rm b
+  $ echo c > c
+  $ hg st
+  M c
+  A foo
+  R b
+  ! a
+  $ hg go -qC .
+  $ hg st
+  ? foo
+
 Non --clean keeps unconflicting changes:
   $ newclientrepo
   $ drawdag <<'EOS'
@@ -285,7 +303,7 @@ Test --check
   $ rm A
   $ SL_LOG=checkout_info=debug hg go --check -q null
   DEBUG checkout_info: checkout_mode="rust"
-  abort: uncommited changes
+  abort: uncommitted changes
   [255]
   $ hg go --clean --check -q null
   abort: can only specify one of --check, --clean, or --merge
