@@ -47,7 +47,4 @@ thrift_library(
         "//eden/mononoke/reachabilityindex/if:",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:",
     ],
-    deps = [
-        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
-    ],
 )

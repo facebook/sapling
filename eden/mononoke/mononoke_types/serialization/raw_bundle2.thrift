@@ -15,4 +15,6 @@
 //! IMPORTANT!!!
 //! ------------
 
-namespace py3 eden.mononoke.mononoke_types
+union RawBundle2 {
+  1: binary Bytes;
+}

@@ -21,8 +21,6 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-mononoke_types_serialization_services = { version = "0.1.0", path = "../../serialization/services" }
-mononoke_types_serialization_types = { version = "0.1.0", path = "../../serialization/types" }
 mononoke_types_thrift__types = { package = "mononoke_types_thrift_types", version = "0.1.0", path = "../types" }
 tracing = "0.1.40"
 

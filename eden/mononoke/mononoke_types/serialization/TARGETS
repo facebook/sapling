@@ -31,6 +31,7 @@ thrift_library(
         "//eden/mononoke/derived_data/remote/if:",
         "//eden/mononoke/facebook/bookmark_service/if:",
         "//eden/mononoke/facebook/derived_data_service/derivation_queue/if:",
+        "//eden/mononoke/facebook/get_bundle:bundle_store_lib",
         "//eden/mononoke/filenodes/if:",
         "//eden/mononoke/git/git_types:",
         "//eden/mononoke/git/git_types/if:",

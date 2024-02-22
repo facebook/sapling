@@ -36,13 +36,15 @@ impl RawBundle2 {
         RawBundle2::Bytes(b.into())
     }
 
-    pub(crate) fn from_thrift(fc: thrift::RawBundle2) -> Result<Self> {
+    pub(crate) fn from_thrift(fc: thrift::raw_bundle2::RawBundle2) -> Result<Self> {
         match fc {
-            thrift::RawBundle2::Bytes(bytes) => Ok(RawBundle2::Bytes(bytes.into())),
-            thrift::RawBundle2::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
-                "RawBundle2".into(),
-                format!("unknown rawbundle2 field: {}", x)
-            )),
+            thrift::raw_bundle2::RawBundle2::Bytes(bytes) => Ok(RawBundle2::Bytes(bytes.into())),
+            thrift::raw_bundle2::RawBundle2::UnknownField(x) => {
+                bail!(MononokeTypeError::InvalidThrift(
+                    "RawBundle2".into(),
+                    format!("unknown rawbundle2 field: {}", x)
+                ))
+            }
         }
     }
 
@@ -72,10 +74,10 @@ impl RawBundle2 {
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::RawBundle2 {
+    pub(crate) fn into_thrift(self) -> thrift::raw_bundle2::RawBundle2 {
         match self {
             // TODO (T26959816) -- allow Thrift to represent binary as Bytes
-            RawBundle2::Bytes(bytes) => thrift::RawBundle2::Bytes(bytes.to_vec()),
+            RawBundle2::Bytes(bytes) => thrift::raw_bundle2::RawBundle2::Bytes(bytes.to_vec()),
         }
     }
 
@@ -147,7 +149,7 @@ mod test {
 
     #[test]
     fn bad_thrift() {
-        let thrift_fc = thrift::RawBundle2::UnknownField(-1);
+        let thrift_fc = thrift::raw_bundle2::RawBundle2::UnknownField(-1);
         RawBundle2::from_thrift(thrift_fc).expect_err("unexpected OK - unknown field");
     }
 }

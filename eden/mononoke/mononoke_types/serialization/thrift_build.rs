@@ -25,6 +25,8 @@ fastlog crate
 fsnodes crate
 id crate
 path crate
+raw_bundle2 crate
+redaction crate
 sharded_map crate
 skeleton_manifest crate
 test_manifest crate
@@ -89,6 +91,8 @@ unodes crate",
             , "fsnodes.thrift"
             , "id.thrift"
             , "path.thrift"
+            , "raw_bundle2.thrift"
+            , "redaction.thrift"
             , "sharded_map.thrift"
             , "skeleton_manifest.thrift"
             , "test_manifest.thrift"

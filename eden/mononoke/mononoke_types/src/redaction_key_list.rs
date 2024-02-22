@@ -23,11 +23,11 @@ pub struct RedactionKeyList {
 }
 
 impl RedactionKeyList {
-    fn into_thrift(self) -> thrift::RedactionKeyList {
-        thrift::RedactionKeyList { keys: self.keys }
+    fn into_thrift(self) -> thrift::redaction::RedactionKeyList {
+        thrift::redaction::RedactionKeyList { keys: self.keys }
     }
 
-    fn from_thrift(t: thrift::RedactionKeyList) -> Result<Self> {
+    fn from_thrift(t: thrift::redaction::RedactionKeyList) -> Result<Self> {
         Ok(Self { keys: t.keys })
     }
 

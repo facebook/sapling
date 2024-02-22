@@ -15,4 +15,7 @@
 //! IMPORTANT!!!
 //! ------------
 
-namespace py3 eden.mononoke.mononoke_types
+struct RedactionKeyList {
+  // List of keys to be redacted
+  1: list<string> keys;
+} (rust.exhaustive)
