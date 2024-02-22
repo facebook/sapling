@@ -1379,7 +1379,6 @@ impl EdenApi for Client {
         self.fetch_vec_with_retry::<LookupResponse>(requests).await
     }
 
-    // This method doesn't perform retries.
     async fn process_files_upload(
         &self,
         data: Vec<(AnyFileContentId, Bytes)>,
@@ -1425,17 +1424,20 @@ impl EdenApi for Client {
                     })
                 })
                 .map(|(id, content)| async move {
-                    self.process_single_file_upload(id, content, bubble_id)
-                        .await?
-                        .entries
-                        .next()
-                        .await
-                        .ok_or_else(|| {
-                            EdenApiError::Other(format_err!(
-                                "token data is missing from the reponse body for {}",
-                                id
-                            ))
-                        })?
+                    self.with_retry(|this| {
+                        this.process_single_file_upload(id, content.clone(), bubble_id)
+                            .boxed()
+                    })
+                    .await?
+                    .entries
+                    .next()
+                    .await
+                    .ok_or_else(|| {
+                        EdenApiError::Other(format_err!(
+                            "token data is missing from the reponse body for {}",
+                            id
+                        ))
+                    })?
                 }),
         )
         .buffer_unordered(MAX_CONCURRENT_FILE_UPLOADS)
