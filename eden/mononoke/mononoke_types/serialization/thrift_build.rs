@@ -15,7 +15,8 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "content crate
+        "bonsai crate
+content crate
 data crate
 id crate
 path crate
@@ -69,7 +70,8 @@ time crate",
     };
 
     let srcs: &[&str] = &[
-        "content.thrift"
+        "bonsai.thrift"
+            , "content.thrift"
             , "data.thrift"
             , "id.thrift"
             , "path.thrift"

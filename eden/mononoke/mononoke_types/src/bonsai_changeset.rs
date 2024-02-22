@@ -73,7 +73,7 @@ impl Default for BonsaiChangesetMut {
 
 impl BonsaiChangesetMut {
     /// Create from a thrift `BonsaiChangeset`.
-    fn from_thrift(tc: thrift::BonsaiChangeset) -> Result<Self> {
+    fn from_thrift(tc: thrift::bonsai::BonsaiChangeset) -> Result<Self> {
         Ok(BonsaiChangesetMut {
             parents: tc
                 .parents
@@ -116,8 +116,8 @@ impl BonsaiChangesetMut {
     }
 
     /// Convert into a thrift `BonsaiChangeset`.
-    fn into_thrift(self) -> thrift::BonsaiChangeset {
-        thrift::BonsaiChangeset {
+    fn into_thrift(self) -> thrift::bonsai::BonsaiChangeset {
+        thrift::bonsai::BonsaiChangeset {
             parents: self
                 .parents
                 .into_iter()
@@ -140,7 +140,7 @@ impl BonsaiChangesetMut {
                 .into_iter()
                 .map(|(f, c)| (f.into_thrift(), c.into_thrift()))
                 .collect(),
-            snapshot_state: self.is_snapshot.then_some(thrift::SnapshotState {}),
+            snapshot_state: self.is_snapshot.then_some(thrift::bonsai::SnapshotState {}),
             git_tree_hash: self.git_tree_hash.map(|hash| hash.into_thrift()),
             git_annotated_tag: self.git_annotated_tag.map(BonsaiAnnotatedTag::into_thrift),
         }
@@ -272,7 +272,7 @@ impl BonsaiChangeset {
         Ok(bcs)
     }
 
-    fn from_thrift_with_id(tc: thrift::BonsaiChangeset, id: ChangesetId) -> Result<Self> {
+    fn from_thrift_with_id(tc: thrift::bonsai::BonsaiChangeset, id: ChangesetId) -> Result<Self> {
         let catch_block = || -> Result<_> {
             let inner = BonsaiChangesetMut::from_thrift(tc)?;
             inner.verify()?;
@@ -505,15 +505,15 @@ pub enum BonsaiAnnotatedTagTarget {
 
 impl BonsaiAnnotatedTagTarget {
     /// Create from a thrift `BonsaiAnnotatedTagTarget`.
-    fn from_thrift(thrift_tag: thrift::BonsaiAnnotatedTagTarget) -> Result<Self> {
+    fn from_thrift(thrift_tag: thrift::bonsai::BonsaiAnnotatedTagTarget) -> Result<Self> {
         match thrift_tag {
-            thrift::BonsaiAnnotatedTagTarget::Changeset(id) => Ok(
+            thrift::bonsai::BonsaiAnnotatedTagTarget::Changeset(id) => Ok(
                 BonsaiAnnotatedTagTarget::Changeset(ChangesetId::from_thrift(id)?),
             ),
-            thrift::BonsaiAnnotatedTagTarget::Content(id) => Ok(BonsaiAnnotatedTagTarget::Content(
-                ContentId::from_thrift(id)?,
-            )),
-            thrift::BonsaiAnnotatedTagTarget::UnknownField(x) => {
+            thrift::bonsai::BonsaiAnnotatedTagTarget::Content(id) => Ok(
+                BonsaiAnnotatedTagTarget::Content(ContentId::from_thrift(id)?),
+            ),
+            thrift::bonsai::BonsaiAnnotatedTagTarget::UnknownField(x) => {
                 bail!(MononokeTypeError::InvalidThrift(
                     "BonsaiAnnotatedTagTarget".into(),
                     format!("unknown bonsai annotated tag target field: {}", x)
@@ -523,13 +523,13 @@ impl BonsaiAnnotatedTagTarget {
     }
 
     /// Convert into a thrift `BonsaiAnnotatedTagTarget`.
-    fn into_thrift(self) -> thrift::BonsaiAnnotatedTagTarget {
+    fn into_thrift(self) -> thrift::bonsai::BonsaiAnnotatedTagTarget {
         match self {
             BonsaiAnnotatedTagTarget::Changeset(id) => {
-                thrift::BonsaiAnnotatedTagTarget::Changeset(id.into_thrift())
+                thrift::bonsai::BonsaiAnnotatedTagTarget::Changeset(id.into_thrift())
             }
             BonsaiAnnotatedTagTarget::Content(id) => {
-                thrift::BonsaiAnnotatedTagTarget::Content(id.into_thrift())
+                thrift::bonsai::BonsaiAnnotatedTagTarget::Content(id.into_thrift())
             }
         }
     }
@@ -555,7 +555,7 @@ pub struct BonsaiAnnotatedTag {
 
 impl BonsaiAnnotatedTag {
     /// Create from a thrift `BonsaiAnnotatedTag`.
-    fn from_thrift(thrift_tag: thrift::BonsaiAnnotatedTag) -> Result<Self> {
+    fn from_thrift(thrift_tag: thrift::bonsai::BonsaiAnnotatedTag) -> Result<Self> {
         Ok(Self {
             target: BonsaiAnnotatedTagTarget::from_thrift(thrift_tag.target)?,
             pgp_signature: thrift_tag.pgp_signature,
@@ -563,8 +563,8 @@ impl BonsaiAnnotatedTag {
     }
 
     /// Convert into a thrift `BonsaiAnnotatedTag`.
-    fn into_thrift(self) -> thrift::BonsaiAnnotatedTag {
-        thrift::BonsaiAnnotatedTag {
+    fn into_thrift(self) -> thrift::bonsai::BonsaiAnnotatedTag {
+        thrift::bonsai::BonsaiAnnotatedTag {
             target: self.target.into_thrift(),
             pgp_signature: self.pgp_signature,
         }

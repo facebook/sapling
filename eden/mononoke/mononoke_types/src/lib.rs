@@ -113,6 +113,7 @@ pub use typed_hash::TestShardedManifestId;
 mod macros;
 
 pub mod thrift {
+    pub use mononoke_types_serialization::bonsai;
     pub use mononoke_types_serialization::content;
     pub use mononoke_types_serialization::data;
     pub use mononoke_types_serialization::id;

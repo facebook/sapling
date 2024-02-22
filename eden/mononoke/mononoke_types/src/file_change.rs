@@ -73,15 +73,17 @@ impl TrackedFileChange {
         )
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FileChange {
-        thrift::FileChange {
+    pub(crate) fn into_thrift(self) -> thrift::bonsai::FileChange {
+        thrift::bonsai::FileChange {
             content_id: self.inner.content_id.into_thrift(),
             file_type: self.inner.file_type.into_thrift(),
             size: self.inner.size as i64,
-            copy_from: self.copy_from.map(|(file, cs_id)| thrift::CopyInfo {
-                file: file.into_thrift(),
-                cs_id: cs_id.into_thrift(),
-            }),
+            copy_from: self
+                .copy_from
+                .map(|(file, cs_id)| thrift::bonsai::CopyInfo {
+                    file: file.into_thrift(),
+                    cs_id: cs_id.into_thrift(),
+                }),
         }
     }
 
@@ -105,7 +107,10 @@ impl TrackedFileChange {
         self.copy_from.as_mut()
     }
 
-    pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &NonRootMPath) -> Result<Self> {
+    pub(crate) fn from_thrift(
+        fc: thrift::bonsai::FileChange,
+        mpath: &NonRootMPath,
+    ) -> Result<Self> {
         let catch_block = || -> Result<_> {
             Ok(Self {
                 inner: BasicFileChange {
@@ -153,15 +158,15 @@ impl BasicFileChange {
         self.size
     }
 
-    pub(crate) fn into_thrift_untracked(self) -> thrift::UntrackedFileChange {
-        thrift::UntrackedFileChange {
+    pub(crate) fn into_thrift_untracked(self) -> thrift::bonsai::UntrackedFileChange {
+        thrift::bonsai::UntrackedFileChange {
             content_id: self.content_id.into_thrift(),
             file_type: self.file_type.into_thrift(),
             size: self.size as i64,
         }
     }
 
-    pub(crate) fn from_thrift_untracked(uc: thrift::UntrackedFileChange) -> Result<Self> {
+    pub(crate) fn from_thrift_untracked(uc: thrift::bonsai::UntrackedFileChange) -> Result<Self> {
         Ok(Self {
             content_id: ContentId::from_thrift(uc.content_id)?,
             file_type: FileType::from_thrift(uc.file_type)?,
@@ -229,7 +234,10 @@ impl FileChange {
         }
     }
 
-    pub(crate) fn from_thrift(fc_opt: thrift::FileChangeOpt, mpath: &NonRootMPath) -> Result<Self> {
+    pub(crate) fn from_thrift(
+        fc_opt: thrift::bonsai::FileChangeOpt,
+        mpath: &NonRootMPath,
+    ) -> Result<Self> {
         match (
             fc_opt.change,
             fc_opt.untracked_change,
@@ -246,8 +254,8 @@ impl FileChange {
     }
 
     #[inline]
-    pub(crate) fn into_thrift(self) -> thrift::FileChangeOpt {
-        let mut fco = thrift::FileChangeOpt {
+    pub(crate) fn into_thrift(self) -> thrift::bonsai::FileChangeOpt {
+        let mut fco = thrift::bonsai::FileChangeOpt {
             change: None,
             untracked_change: None,
             untracked_deletion: None,
@@ -260,7 +268,7 @@ impl FileChange {
                 fco.untracked_change = Some(uc.into_thrift_untracked());
             }
             Self::UntrackedDeletion => {
-                fco.untracked_deletion = Some(thrift::UntrackedDeletion {});
+                fco.untracked_deletion = Some(thrift::bonsai::UntrackedDeletion {});
             }
             Self::Deletion => {}
         }
@@ -372,13 +380,13 @@ impl FileType {
         }
     }
 
-    pub fn from_thrift(ft: thrift::FileType) -> Result<Self> {
+    pub fn from_thrift(ft: thrift::bonsai::FileType) -> Result<Self> {
         let file_type = match ft {
-            thrift::FileType::Regular => FileType::Regular,
-            thrift::FileType::Executable => FileType::Executable,
-            thrift::FileType::Symlink => FileType::Symlink,
-            thrift::FileType::GitSubmodule => FileType::GitSubmodule,
-            thrift::FileType(x) => bail!(MononokeTypeError::InvalidThrift(
+            thrift::bonsai::FileType::Regular => FileType::Regular,
+            thrift::bonsai::FileType::Executable => FileType::Executable,
+            thrift::bonsai::FileType::Symlink => FileType::Symlink,
+            thrift::bonsai::FileType::GitSubmodule => FileType::GitSubmodule,
+            thrift::bonsai::FileType(x) => bail!(MononokeTypeError::InvalidThrift(
                 "FileType".into(),
                 format!("unknown file type '{}'", x)
             )),
@@ -386,12 +394,12 @@ impl FileType {
         Ok(file_type)
     }
 
-    pub fn into_thrift(self) -> thrift::FileType {
+    pub fn into_thrift(self) -> thrift::bonsai::FileType {
         match self {
-            FileType::Regular => thrift::FileType::Regular,
-            FileType::Executable => thrift::FileType::Executable,
-            FileType::Symlink => thrift::FileType::Symlink,
-            FileType::GitSubmodule => thrift::FileType::GitSubmodule,
+            FileType::Regular => thrift::bonsai::FileType::Regular,
+            FileType::Executable => thrift::bonsai::FileType::Executable,
+            FileType::Symlink => thrift::bonsai::FileType::Symlink,
+            FileType::GitSubmodule => thrift::bonsai::FileType::GitSubmodule,
         }
     }
 }
@@ -486,17 +494,17 @@ mod test {
 
     #[test]
     fn bad_filetype_thrift() {
-        let thrift_ft = thrift::FileType(42);
+        let thrift_ft = thrift::bonsai::FileType(42);
         FileType::from_thrift(thrift_ft).expect_err("unexpected OK - unknown file type");
     }
 
     #[test]
     fn bad_filechange_thrift() {
-        let thrift_fc = thrift::FileChange {
+        let thrift_fc = thrift::bonsai::FileChange {
             content_id: thrift::id::ContentId(thrift::id::Id::Blake2(thrift::id::Blake2(
                 vec![0; 16].into(),
             ))),
-            file_type: thrift::FileType::Regular,
+            file_type: thrift::bonsai::FileType::Regular,
             size: 0,
             copy_from: None,
         };

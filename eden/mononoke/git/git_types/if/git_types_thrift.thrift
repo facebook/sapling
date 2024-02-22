@@ -6,6 +6,7 @@
  */
 
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
@@ -13,7 +14,7 @@ include "eden/mononoke/mononoke_types/serialization/path.thrift"
 struct BlobHandle {
   1: id.GitSha1 oid;
   2: i64 size;
-  3: mononoke_types_thrift.FileType file_type;
+  3: bonsai.FileType file_type;
 } (rust.exhaustive)
 
 struct TreeHandle {
