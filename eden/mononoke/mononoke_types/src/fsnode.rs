@@ -90,7 +90,7 @@ impl Fsnode {
         &self.summary
     }
 
-    pub(crate) fn from_thrift(t: thrift::Fsnode) -> Result<Fsnode> {
+    pub(crate) fn from_thrift(t: thrift::fsnodes::Fsnode) -> Result<Fsnode> {
         let subentries = t
             .subentries
             .into_iter()
@@ -107,14 +107,14 @@ impl Fsnode {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::Fsnode {
+    pub(crate) fn into_thrift(self) -> thrift::fsnodes::Fsnode {
         let subentries: SortedVectorMap<_, _> = self
             .subentries
             .into_iter()
             .map(|(basename, fsnode_entry)| (basename.into_thrift(), fsnode_entry.into_thrift()))
             .collect();
         let summary = self.summary.into_thrift();
-        thrift::Fsnode {
+        thrift::fsnodes::Fsnode {
             subentries,
             summary,
         }
@@ -134,28 +134,30 @@ pub enum FsnodeEntry {
 }
 
 impl FsnodeEntry {
-    pub(crate) fn from_thrift(t: thrift::FsnodeEntry) -> Result<FsnodeEntry> {
+    pub(crate) fn from_thrift(t: thrift::fsnodes::FsnodeEntry) -> Result<FsnodeEntry> {
         match t {
-            thrift::FsnodeEntry::File(fsnode_file) => {
+            thrift::fsnodes::FsnodeEntry::File(fsnode_file) => {
                 let fsnode_file = FsnodeFile::from_thrift(fsnode_file)?;
                 Ok(FsnodeEntry::File(fsnode_file))
             }
-            thrift::FsnodeEntry::Directory(fsnode_directory) => {
+            thrift::fsnodes::FsnodeEntry::Directory(fsnode_directory) => {
                 let fsnode_directory = FsnodeDirectory::from_thrift(fsnode_directory)?;
                 Ok(FsnodeEntry::Directory(fsnode_directory))
             }
-            thrift::FsnodeEntry::UnknownField(unknown) => bail!(
-                "Unknown field encountered when parsing thrift::FsnodeEntry: {}",
+            thrift::fsnodes::FsnodeEntry::UnknownField(unknown) => bail!(
+                "Unknown field encountered when parsing thrift::fsnodes::FsnodeEntry: {}",
                 unknown,
             ),
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FsnodeEntry {
+    pub(crate) fn into_thrift(self) -> thrift::fsnodes::FsnodeEntry {
         match self {
-            FsnodeEntry::File(fsnode_file) => thrift::FsnodeEntry::File(fsnode_file.into_thrift()),
+            FsnodeEntry::File(fsnode_file) => {
+                thrift::fsnodes::FsnodeEntry::File(fsnode_file.into_thrift())
+            }
             FsnodeEntry::Directory(fsnode_directory) => {
-                thrift::FsnodeEntry::Directory(fsnode_directory.into_thrift())
+                thrift::fsnodes::FsnodeEntry::Directory(fsnode_directory.into_thrift())
             }
         }
     }
@@ -213,7 +215,7 @@ impl FsnodeFile {
         &self.content_sha256
     }
 
-    pub(crate) fn from_thrift(t: thrift::FsnodeFile) -> Result<FsnodeFile> {
+    pub(crate) fn from_thrift(t: thrift::fsnodes::FsnodeFile) -> Result<FsnodeFile> {
         let content_id = ContentId::from_thrift(t.content_id)?;
         let file_type = FileType::from_thrift(t.file_type)?;
         let size = t.size as u64;
@@ -228,8 +230,8 @@ impl FsnodeFile {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FsnodeFile {
-        thrift::FsnodeFile {
+    pub(crate) fn into_thrift(self) -> thrift::fsnodes::FsnodeFile {
+        thrift::fsnodes::FsnodeFile {
             content_id: self.content_id.into_thrift(),
             file_type: self.file_type.into_thrift(),
             size: self.size as i64,
@@ -258,14 +260,14 @@ impl FsnodeDirectory {
         &self.summary
     }
 
-    pub(crate) fn from_thrift(t: thrift::FsnodeDirectory) -> Result<FsnodeDirectory> {
+    pub(crate) fn from_thrift(t: thrift::fsnodes::FsnodeDirectory) -> Result<FsnodeDirectory> {
         let id = FsnodeId::from_thrift(t.id)?;
         let summary = FsnodeSummary::from_thrift(t.summary)?;
         Ok(FsnodeDirectory { id, summary })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FsnodeDirectory {
-        thrift::FsnodeDirectory {
+    pub(crate) fn into_thrift(self) -> thrift::fsnodes::FsnodeDirectory {
+        thrift::fsnodes::FsnodeDirectory {
             id: self.id.into_thrift(),
             summary: self.summary.into_thrift(),
         }
@@ -284,7 +286,7 @@ pub struct FsnodeSummary {
 }
 
 impl FsnodeSummary {
-    pub(crate) fn from_thrift(t: thrift::FsnodeSummary) -> Result<FsnodeSummary> {
+    pub(crate) fn from_thrift(t: thrift::fsnodes::FsnodeSummary) -> Result<FsnodeSummary> {
         let simple_format_sha1 = Sha1::from_bytes(t.simple_format_sha1.0)?;
         let simple_format_sha256 = Sha256::from_bytes(t.simple_format_sha256.0)?;
         let child_files_count = t.child_files_count as u64;
@@ -303,8 +305,8 @@ impl FsnodeSummary {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FsnodeSummary {
-        thrift::FsnodeSummary {
+    pub(crate) fn into_thrift(self) -> thrift::fsnodes::FsnodeSummary {
+        thrift::fsnodes::FsnodeSummary {
             simple_format_sha1: self.simple_format_sha1.into_thrift(),
             simple_format_sha256: self.simple_format_sha256.into_thrift(),
             child_files_count: self.child_files_count as i64,

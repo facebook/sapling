@@ -15,14 +15,21 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "bonsai crate
+        "blame crate
+bonsai crate
+bssm crate
 content crate
 data crate
+deleted_manifest crate
+fastlog crate
+fsnodes crate
 id crate
 path crate
 sharded_map crate
+skeleton_manifest crate
 test_manifest crate
-time crate",
+time crate
+unodes crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -72,14 +79,21 @@ time crate",
     };
 
     let srcs: &[&str] = &[
-        "bonsai.thrift"
+        "blame.thrift"
+            , "bonsai.thrift"
+            , "bssm.thrift"
             , "content.thrift"
             , "data.thrift"
+            , "deleted_manifest.thrift"
+            , "fastlog.thrift"
+            , "fsnodes.thrift"
             , "id.thrift"
             , "path.thrift"
             , "sharded_map.thrift"
+            , "skeleton_manifest.thrift"
             , "test_manifest.thrift"
             , "time.thrift"
+            , "unodes.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

@@ -12,6 +12,7 @@ include "eden/mononoke/filenodes/if/filenodes.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "eden/mononoke/mononoke_types/serialization/bssm.thrift"
 include "eden/mononoke/mononoke_types/serialization/test_manifest.thrift"
 
 struct DerivedDataType {
@@ -125,7 +126,7 @@ union DerivedDataDeletedManifestV2 {
 }
 
 union DerivedDataBasenameSuffixSkeletonManifest {
-  1: mononoke_types_thrift.BssmDirectory root_basename_suffix_skeleton_manifest;
+  1: bssm.BssmDirectory root_basename_suffix_skeleton_manifest;
 }
 
 union DerivedDataBssmV3 {

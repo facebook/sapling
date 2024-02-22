@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mononoke")
 
@@ -14,14 +15,8 @@ thrift_library(
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
     ],
     thrift_srcs = {
-        "bonsai.thrift": [],
-        "content.thrift": [],
-        "data.thrift": [],
-        "id.thrift": [],
-        "path.thrift": [],
-        "sharded_map.thrift": [],
-        "test_manifest.thrift": [],
-        "time.thrift": [],
+        thrift_file: []
+        for thrift_file in glob(["*.thrift"])
     },
     # The Thrift definitions are private and only used for serialization and for mononoke-internal
     # thrift services -- do not allow other code to use them, except for other private Thrift code.

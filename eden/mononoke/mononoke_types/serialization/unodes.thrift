@@ -15,20 +15,27 @@
 //! IMPORTANT!!!
 //! ------------
 
-namespace py3 eden.mononoke.mononoke_types
-
-include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
-include "eden/mononoke/mononoke_types/serialization/time.thrift"
 include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
-include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 
-union RawBundle2 {
-  1: binary Bytes;
+struct FileUnode {
+  1: list<id.FileUnodeId> parents;
+  2: id.ContentId content_id;
+  3: bonsai.FileType file_type;
+  4: id.MPathHash path_hash;
+  5: id.ChangesetId linknode;
+} (rust.exhaustive)
+
+union UnodeEntry {
+  1: id.FileUnodeId File;
+  2: id.ManifestUnodeId Directory;
 }
 
-struct RedactionKeyList {
-  // List of keys to be redacted
-  1: list<string> keys;
+struct ManifestUnode {
+  1: list<id.ManifestUnodeId> parents;
+  2: map<path.MPathElement, UnodeEntry> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) subentries;
+  3: id.ChangesetId linknode;
 } (rust.exhaustive)

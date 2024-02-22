@@ -312,7 +312,9 @@ impl SkeletonManifest {
         })
     }
 
-    pub(crate) fn from_thrift(t: thrift::SkeletonManifest) -> Result<SkeletonManifest> {
+    pub(crate) fn from_thrift(
+        t: thrift::skeleton_manifest::SkeletonManifest,
+    ) -> Result<SkeletonManifest> {
         let subentries = t
             .subentries
             .into_iter()
@@ -329,14 +331,14 @@ impl SkeletonManifest {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::SkeletonManifest {
+    pub(crate) fn into_thrift(self) -> thrift::skeleton_manifest::SkeletonManifest {
         let subentries: SortedVectorMap<_, _> = self
             .subentries
             .into_iter()
             .map(|(basename, fsnode_entry)| (basename.into_thrift(), fsnode_entry.into_thrift()))
             .collect();
         let summary = self.summary.into_thrift();
-        thrift::SkeletonManifest {
+        thrift::skeleton_manifest::SkeletonManifest {
             subentries,
             summary,
         }
@@ -356,7 +358,9 @@ pub enum SkeletonManifestEntry {
 }
 
 impl SkeletonManifestEntry {
-    pub(crate) fn from_thrift(t: thrift::SkeletonManifestEntry) -> Result<SkeletonManifestEntry> {
+    pub(crate) fn from_thrift(
+        t: thrift::skeleton_manifest::SkeletonManifestEntry,
+    ) -> Result<SkeletonManifestEntry> {
         match t.directory {
             None => Ok(SkeletonManifestEntry::File),
             Some(skeleton_directory) => {
@@ -367,14 +371,14 @@ impl SkeletonManifestEntry {
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::SkeletonManifestEntry {
+    pub(crate) fn into_thrift(self) -> thrift::skeleton_manifest::SkeletonManifestEntry {
         let directory = match self {
             SkeletonManifestEntry::File => None,
             SkeletonManifestEntry::Directory(skeleton_directory) => {
                 Some(skeleton_directory.into_thrift())
             }
         };
-        thrift::SkeletonManifestEntry { directory }
+        thrift::skeleton_manifest::SkeletonManifestEntry { directory }
     }
 }
 
@@ -402,15 +406,15 @@ impl SkeletonManifestDirectory {
     }
 
     pub(crate) fn from_thrift(
-        t: thrift::SkeletonManifestDirectory,
+        t: thrift::skeleton_manifest::SkeletonManifestDirectory,
     ) -> Result<SkeletonManifestDirectory> {
         let id = SkeletonManifestId::from_thrift(t.id)?;
         let summary = SkeletonManifestSummary::from_thrift(t.summary)?;
         Ok(SkeletonManifestDirectory { id, summary })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::SkeletonManifestDirectory {
-        thrift::SkeletonManifestDirectory {
+    pub(crate) fn into_thrift(self) -> thrift::skeleton_manifest::SkeletonManifestDirectory {
+        thrift::skeleton_manifest::SkeletonManifestDirectory {
             id: self.id.into_thrift(),
             summary: self.summary.into_thrift(),
         }
@@ -435,7 +439,7 @@ pub struct SkeletonManifestSummary {
 
 impl SkeletonManifestSummary {
     pub(crate) fn from_thrift(
-        t: thrift::SkeletonManifestSummary,
+        t: thrift::skeleton_manifest::SkeletonManifestSummary,
     ) -> Result<SkeletonManifestSummary> {
         Ok(SkeletonManifestSummary {
             child_files_count: t.child_files_count as u64,
@@ -453,8 +457,8 @@ impl SkeletonManifestSummary {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::SkeletonManifestSummary {
-        thrift::SkeletonManifestSummary {
+    pub(crate) fn into_thrift(self) -> thrift::skeleton_manifest::SkeletonManifestSummary {
+        thrift::skeleton_manifest::SkeletonManifestSummary {
             child_files_count: self.child_files_count as i64,
             descendant_files_count: self.descendant_files_count as i64,
             child_dirs_count: self.child_dirs_count as i64,

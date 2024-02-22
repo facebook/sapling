@@ -75,7 +75,7 @@ impl Loadable for BssmV3Directory {
 
 impl ThriftConvert for BssmV3Directory {
     const NAME: &'static str = "BssmV3Directory";
-    type Thrift = thrift::BssmV3Directory;
+    type Thrift = thrift::bssm::BssmV3Directory;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(Self {
@@ -84,7 +84,7 @@ impl ThriftConvert for BssmV3Directory {
     }
 
     fn into_thrift(self) -> Self::Thrift {
-        thrift::BssmV3Directory {
+        thrift::bssm::BssmV3Directory {
             subentries: self.subentries.into_thrift(),
         }
     }
@@ -92,15 +92,15 @@ impl ThriftConvert for BssmV3Directory {
 
 impl ThriftConvert for BssmV3Entry {
     const NAME: &'static str = "BssmV3Entry";
-    type Thrift = thrift::BssmV3Entry;
+    type Thrift = thrift::bssm::BssmV3Entry;
 
     fn from_thrift(t: Self::Thrift) -> Result<Self> {
         Ok(match t {
-            thrift::BssmV3Entry::file(thrift::BssmV3File {}) => Self::File,
-            thrift::BssmV3Entry::directory(dir) => {
+            thrift::bssm::BssmV3Entry::file(thrift::bssm::BssmV3File {}) => Self::File,
+            thrift::bssm::BssmV3Entry::directory(dir) => {
                 Self::Directory(ThriftConvert::from_thrift(dir)?)
             }
-            thrift::BssmV3Entry::UnknownField(variant) => {
+            thrift::bssm::BssmV3Entry::UnknownField(variant) => {
                 anyhow::bail!("Unknown variant: {}", variant)
             }
         })
@@ -108,8 +108,8 @@ impl ThriftConvert for BssmV3Entry {
 
     fn into_thrift(self) -> Self::Thrift {
         match self {
-            Self::File => thrift::BssmV3Entry::file(thrift::BssmV3File {}),
-            Self::Directory(dir) => thrift::BssmV3Entry::directory(dir.into_thrift()),
+            Self::File => thrift::bssm::BssmV3Entry::file(thrift::bssm::BssmV3File {}),
+            Self::Directory(dir) => thrift::bssm::BssmV3Entry::directory(dir.into_thrift()),
         }
     }
 }

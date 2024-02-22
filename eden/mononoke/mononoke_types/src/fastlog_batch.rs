@@ -144,12 +144,13 @@ impl FastlogBatch {
     }
 
     pub fn from_bytes(serialized: &Bytes) -> Result<FastlogBatch> {
-        let thrift_entry: Result<thrift::FastlogBatch> = compact_protocol::deserialize(serialized)
-            .map_err(|err| MononokeTypeError::BlobDeserializeError(format!("{}", err)).into());
+        let thrift_entry: Result<thrift::fastlog::FastlogBatch> =
+            compact_protocol::deserialize(serialized)
+                .map_err(|err| MononokeTypeError::BlobDeserializeError(format!("{}", err)).into());
         thrift_entry.and_then(Self::from_thrift)
     }
 
-    pub fn from_thrift(th: thrift::FastlogBatch) -> Result<FastlogBatch> {
+    pub fn from_thrift(th: thrift::fastlog::FastlogBatch) -> Result<FastlogBatch> {
         let latest: Result<VecDeque<_>> = th
             .latest
             .into_iter()
@@ -182,17 +183,17 @@ impl FastlogBatch {
         compact_protocol::serialize(&self.into_thrift())
     }
 
-    pub fn into_thrift(self) -> thrift::FastlogBatch {
+    pub fn into_thrift(self) -> thrift::fastlog::FastlogBatch {
         let latest_thrift = self
             .latest
             .into_iter()
             .map(|(cs_id, offsets)| {
                 let parent_offsets = offsets
                     .into_iter()
-                    .map(|offset| thrift::ParentOffset(offset.0))
+                    .map(|offset| thrift::fastlog::ParentOffset(offset.0))
                     .collect();
 
-                thrift::CompressedHashAndParents {
+                thrift::fastlog::CompressedHashAndParents {
                     cs_id: cs_id.into_thrift(),
                     parent_offsets,
                 }
@@ -204,7 +205,7 @@ impl FastlogBatch {
             .into_iter()
             .map(|previous_batch| previous_batch.into_thrift())
             .collect();
-        thrift::FastlogBatch {
+        thrift::fastlog::FastlogBatch {
             latest: latest_thrift,
             previous_batches,
         }

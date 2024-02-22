@@ -118,18 +118,18 @@ pub enum BlameRejected {
 }
 
 impl BlameRejected {
-    pub fn into_thrift(self) -> thrift::BlameRejected {
+    pub fn into_thrift(self) -> thrift::blame::BlameRejected {
         match self {
-            BlameRejected::TooBig => thrift::BlameRejected::TooBig,
-            BlameRejected::Binary => thrift::BlameRejected::Binary,
+            BlameRejected::TooBig => thrift::blame::BlameRejected::TooBig,
+            BlameRejected::Binary => thrift::blame::BlameRejected::Binary,
         }
     }
 
-    pub fn from_thrift(rejected: thrift::BlameRejected) -> Result<Self, Error> {
+    pub fn from_thrift(rejected: thrift::blame::BlameRejected) -> Result<Self, Error> {
         match rejected {
-            thrift::BlameRejected::TooBig => Ok(BlameRejected::TooBig),
-            thrift::BlameRejected::Binary => Ok(BlameRejected::Binary),
-            thrift::BlameRejected(id) => {
+            thrift::blame::BlameRejected::TooBig => Ok(BlameRejected::TooBig),
+            thrift::blame::BlameRejected::Binary => Ok(BlameRejected::Binary),
+            thrift::blame::BlameRejected(id) => {
                 Err(anyhow!("BlameRejected contains unknown variant: {}", id))
             }
         }
@@ -180,15 +180,15 @@ impl BlameV2 {
         BlameV2::Rejected(rejected)
     }
 
-    pub fn from_thrift(blame: thrift::BlameV2) -> Result<Self> {
+    pub fn from_thrift(blame: thrift::blame::BlameV2) -> Result<Self> {
         match blame {
-            thrift::BlameV2::rejected(rejected) => {
+            thrift::blame::BlameV2::rejected(rejected) => {
                 Ok(BlameV2::Rejected(BlameRejected::from_thrift(rejected)?))
             }
-            thrift::BlameV2::full_blame(blame_data) => {
+            thrift::blame::BlameV2::full_blame(blame_data) => {
                 Ok(BlameV2::Blame(BlameData::from_thrift(blame_data)?))
             }
-            thrift::BlameV2::UnknownField(id) => {
+            thrift::blame::BlameV2::UnknownField(id) => {
                 Err(anyhow!("BlameV2 contains unknown variant with id: {}", id))
             }
         }
@@ -200,10 +200,12 @@ impl BlameV2 {
         )
     }
 
-    pub fn into_thrift(self) -> thrift::BlameV2 {
+    pub fn into_thrift(self) -> thrift::blame::BlameV2 {
         match self {
-            BlameV2::Blame(blame_data) => thrift::BlameV2::full_blame(blame_data.into_thrift()),
-            BlameV2::Rejected(rejected) => thrift::BlameV2::rejected(rejected.into_thrift()),
+            BlameV2::Blame(blame_data) => {
+                thrift::blame::BlameV2::full_blame(blame_data.into_thrift())
+            }
+            BlameV2::Rejected(rejected) => thrift::blame::BlameV2::rejected(rejected.into_thrift()),
         }
     }
 
@@ -649,7 +651,7 @@ impl BlameData {
             .retain(|index, _| seen_csid_indexes.contains(index));
     }
 
-    fn from_thrift(blame: thrift::BlameDataV2) -> Result<BlameData> {
+    fn from_thrift(blame: thrift::blame::BlameDataV2) -> Result<BlameData> {
         let paths = blame
             .paths
             .into_iter()
@@ -710,20 +712,20 @@ impl BlameData {
         })
     }
 
-    fn into_thrift(self) -> thrift::BlameDataV2 {
+    fn into_thrift(self) -> thrift::blame::BlameDataV2 {
         let ranges = self
             .ranges
             .into_iter()
-            .map(|range| thrift::BlameRangeV2 {
+            .map(|range| thrift::blame::BlameRangeV2 {
                 length: range.length as i32,
-                csid_index: thrift::BlameChangeset(range.csid_index as i32),
-                path_index: thrift::BlamePath(range.path_index as i32),
+                csid_index: thrift::blame::BlameChangeset(range.csid_index as i32),
+                path_index: thrift::blame::BlamePath(range.path_index as i32),
                 origin_offset: range.origin_offset as i32,
                 parent_offset: range.parent.as_ref().map(|p| p.offset as i32),
                 parent_length: range.parent.as_ref().map(|p| p.length as i32),
                 renamed_from_path_index: range.parent.as_ref().and_then(|p| {
                     p.renamed_from_path_index
-                        .map(|i| thrift::BlamePath(i as i32))
+                        .map(|i| thrift::blame::BlamePath(i as i32))
                 }),
                 parent_index: range.parent.as_ref().and_then(|p| {
                     if p.parent_index != 0 {
@@ -739,14 +741,14 @@ impl BlameData {
             .into_iter()
             .map(|(index, csid)| (index as i32, csid.into_thrift()))
             .collect();
-        let max_csid_index = thrift::BlameChangeset(self.max_csid_index as i32);
+        let max_csid_index = thrift::blame::BlameChangeset(self.max_csid_index as i32);
         let paths = self
             .paths
             .into_iter()
             .map(NonRootMPath::into_thrift)
             .collect();
 
-        thrift::BlameDataV2 {
+        thrift::blame::BlameDataV2 {
             ranges,
             csids,
             max_csid_index,

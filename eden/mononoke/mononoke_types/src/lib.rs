@@ -113,14 +113,21 @@ pub use typed_hash::TestShardedManifestId;
 mod macros;
 
 pub mod thrift {
+    pub use mononoke_types_serialization::blame;
     pub use mononoke_types_serialization::bonsai;
+    pub use mononoke_types_serialization::bssm;
     pub use mononoke_types_serialization::content;
     pub use mononoke_types_serialization::data;
+    pub use mononoke_types_serialization::deleted_manifest;
+    pub use mononoke_types_serialization::fastlog;
+    pub use mononoke_types_serialization::fsnodes;
     pub use mononoke_types_serialization::id;
     pub use mononoke_types_serialization::path;
     pub use mononoke_types_serialization::sharded_map;
+    pub use mononoke_types_serialization::skeleton_manifest;
     pub use mononoke_types_serialization::test_manifest;
     pub use mononoke_types_serialization::time;
+    pub use mononoke_types_serialization::unodes;
     pub use mononoke_types_thrift::*;
 }
 

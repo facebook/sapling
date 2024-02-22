@@ -176,16 +176,16 @@ impl DeletedManifestCommon for DeletedManifestV2 {
 impl ThriftConvert for DeletedManifestV2 {
     const NAME: &'static str = "DeletedManifestV2";
 
-    type Thrift = thrift::DeletedManifestV2;
-    fn from_thrift(t: thrift::DeletedManifestV2) -> Result<DeletedManifestV2> {
+    type Thrift = thrift::deleted_manifest::DeletedManifestV2;
+    fn from_thrift(t: thrift::deleted_manifest::DeletedManifestV2) -> Result<DeletedManifestV2> {
         Ok(Self {
             linknode: t.linknode.map(ChangesetId::from_thrift).transpose()?,
             subentries: ShardedMapNode::from_thrift(t.subentries)?,
         })
     }
 
-    fn into_thrift(self) -> thrift::DeletedManifestV2 {
-        thrift::DeletedManifestV2 {
+    fn into_thrift(self) -> thrift::deleted_manifest::DeletedManifestV2 {
+        thrift::deleted_manifest::DeletedManifestV2 {
             linknode: self.linknode.map(ChangesetId::into_thrift),
             subentries: self.subentries.into_thrift(),
         }

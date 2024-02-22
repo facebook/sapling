@@ -133,7 +133,7 @@ impl FileUnode {
         &self.linknode
     }
 
-    pub(crate) fn from_thrift(t: thrift::FileUnode) -> Result<FileUnode> {
+    pub(crate) fn from_thrift(t: thrift::unodes::FileUnode) -> Result<FileUnode> {
         let parents: Result<Vec<_>> = t
             .parents
             .into_iter()
@@ -153,10 +153,10 @@ impl FileUnode {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FileUnode {
+    pub(crate) fn into_thrift(self) -> thrift::unodes::FileUnode {
         let parents: Vec<_> = self.parents.into_iter().map(|p| p.into_thrift()).collect();
 
-        thrift::FileUnode {
+        thrift::unodes::FileUnode {
             parents,
             content_id: self.content_id.into_thrift(),
             file_type: self.file_type.into_thrift(),
@@ -236,7 +236,7 @@ impl ManifestUnode {
         *self.clone().into_blob().id()
     }
 
-    pub(crate) fn from_thrift(t: thrift::ManifestUnode) -> Result<ManifestUnode> {
+    pub(crate) fn from_thrift(t: thrift::unodes::ManifestUnode) -> Result<ManifestUnode> {
         let parents: Result<Vec<_>> = t
             .parents
             .into_iter()
@@ -263,7 +263,7 @@ impl ManifestUnode {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::ManifestUnode {
+    pub(crate) fn into_thrift(self) -> thrift::unodes::ManifestUnode {
         let parents: Vec<_> = self.parents.into_iter().map(|p| p.into_thrift()).collect();
 
         let subentries: SortedVectorMap<_, _> = self
@@ -272,7 +272,7 @@ impl ManifestUnode {
             .map(|(basename, unode_entry)| (basename.into_thrift(), unode_entry.into_thrift()))
             .collect();
 
-        thrift::ManifestUnode {
+        thrift::unodes::ManifestUnode {
             parents,
             subentries,
             linknode: self.linknode.into_thrift(),
@@ -293,30 +293,30 @@ pub enum UnodeEntry {
 }
 
 impl UnodeEntry {
-    pub(crate) fn from_thrift(t: thrift::UnodeEntry) -> Result<UnodeEntry> {
+    pub(crate) fn from_thrift(t: thrift::unodes::UnodeEntry) -> Result<UnodeEntry> {
         match t {
-            thrift::UnodeEntry::File(file_unode_id) => {
+            thrift::unodes::UnodeEntry::File(file_unode_id) => {
                 let file_unode_id = FileUnodeId::from_thrift(file_unode_id)?;
                 Ok(UnodeEntry::File(file_unode_id))
             }
-            thrift::UnodeEntry::Directory(manifest_unode_id) => {
+            thrift::unodes::UnodeEntry::Directory(manifest_unode_id) => {
                 let manifest_unode_id = ManifestUnodeId::from_thrift(manifest_unode_id)?;
                 Ok(UnodeEntry::Directory(manifest_unode_id))
             }
-            thrift::UnodeEntry::UnknownField(unknown) => bail!(
-                "Unknown field encountered when parsing thrift::UnodeEntry: {}",
+            thrift::unodes::UnodeEntry::UnknownField(unknown) => bail!(
+                "Unknown field encountered when parsing thrift::unodes::UnodeEntry: {}",
                 unknown,
             ),
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::UnodeEntry {
+    pub(crate) fn into_thrift(self) -> thrift::unodes::UnodeEntry {
         match self {
             UnodeEntry::File(file_unode_id) => {
-                thrift::UnodeEntry::File(file_unode_id.into_thrift())
+                thrift::unodes::UnodeEntry::File(file_unode_id.into_thrift())
             }
             UnodeEntry::Directory(manifest_unode_id) => {
-                thrift::UnodeEntry::Directory(manifest_unode_id.into_thrift())
+                thrift::unodes::UnodeEntry::Directory(manifest_unode_id.into_thrift())
             }
         }
     }

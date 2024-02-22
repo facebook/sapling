@@ -15,20 +15,19 @@
 //! IMPORTANT!!!
 //! ------------
 
-namespace py3 eden.mononoke.mononoke_types
-
-include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
-include "eden/mononoke/mononoke_types/serialization/time.thrift"
-include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 
-union RawBundle2 {
-  1: binary Bytes;
-}
+struct DeletedManifest {
+  1: optional id.ChangesetId linknode;
+  2: map<path.MPathElement, id.DeletedManifestId> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) subentries;
+} (rust.exhaustive)
 
-struct RedactionKeyList {
-  // List of keys to be redacted
-  1: list<string> keys;
+struct DeletedManifestV2 {
+  1: optional id.ChangesetId linknode;
+  // Map of MPathElement -> DeletedManifestV2Id
+  2: sharded_map.ShardedMapNode subentries;
 } (rust.exhaustive)
