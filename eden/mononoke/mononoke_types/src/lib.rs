@@ -116,6 +116,7 @@ pub mod thrift {
     pub use mononoke_types_serialization::blame;
     pub use mononoke_types_serialization::bonsai;
     pub use mononoke_types_serialization::bssm;
+    pub use mononoke_types_serialization::changeset_info;
     pub use mononoke_types_serialization::content;
     pub use mononoke_types_serialization::data;
     pub use mononoke_types_serialization::deleted_manifest;

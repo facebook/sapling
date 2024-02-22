@@ -11,7 +11,6 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
-use derived_data_thrift as thrift;
 use fbthrift::compact_protocol;
 use mononoke_types::errors::MononokeTypeError;
 use mononoke_types::BlobstoreBytes;
@@ -19,6 +18,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use mononoke_types_serialization as thrift;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use unicode_segmentation::UnicodeSegmentation;
@@ -81,18 +81,22 @@ pub enum ChangesetMessage {
 }
 
 impl ChangesetMessage {
-    pub(crate) fn from_thrift(tc: thrift::ChangesetMessage) -> Result<Self> {
+    pub(crate) fn from_thrift(tc: thrift::changeset_info::ChangesetMessage) -> Result<Self> {
         match tc {
-            thrift::ChangesetMessage::message(message) => Ok(ChangesetMessage::Message(message)),
-            thrift::ChangesetMessage::UnknownField(other) => {
+            thrift::changeset_info::ChangesetMessage::message(message) => {
+                Ok(ChangesetMessage::Message(message))
+            }
+            thrift::changeset_info::ChangesetMessage::UnknownField(other) => {
                 Err(format_err!("Unknown ChangesetMessage field: {}", other))
             }
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::ChangesetMessage {
+    pub(crate) fn into_thrift(self) -> thrift::changeset_info::ChangesetMessage {
         match self {
-            ChangesetMessage::Message(msg) => thrift::ChangesetMessage::message(msg),
+            ChangesetMessage::Message(msg) => {
+                thrift::changeset_info::ChangesetMessage::message(msg)
+            }
         }
     }
 }
@@ -184,7 +188,7 @@ impl ChangesetInfo {
             .map(|extra| extra.iter().map(|(k, v)| (k.as_slice(), v.as_ref())))
     }
 
-    pub(crate) fn from_thrift(tc: thrift::ChangesetInfo) -> Result<Self> {
+    pub(crate) fn from_thrift(tc: thrift::changeset_info::ChangesetInfo) -> Result<Self> {
         let catch_block = || -> Result<_> {
             Ok(ChangesetInfo {
                 changeset_id: ChangesetId::from_thrift(tc.changeset_id)?,
@@ -216,8 +220,8 @@ impl ChangesetInfo {
         })
     }
 
-    pub fn into_thrift(self) -> thrift::ChangesetInfo {
-        thrift::ChangesetInfo {
+    pub fn into_thrift(self) -> thrift::changeset_info::ChangesetInfo {
+        thrift::changeset_info::ChangesetInfo {
             changeset_id: self.changeset_id.into_thrift(),
             parents: self
                 .parents
@@ -233,7 +237,7 @@ impl ChangesetInfo {
             git_extra_headers: self.git_extra_headers.map(|extra| {
                 extra
                     .into_iter()
-                    .map(|(k, v)| (thrift::small_binary(k), v))
+                    .map(|(k, v)| (thrift::data::SmallBinary(k), v))
                     .collect()
             }),
         }

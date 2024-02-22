@@ -6,11 +6,11 @@
  */
 
 include "fb303/thrift/fb303_core.thrift"
-include "eden/mononoke/derived_data/changeset_info/if/changeset_info_thrift.thrift"
 include "eden/mononoke/git/git_types/if/git_types_thrift.thrift"
 include "eden/mononoke/filenodes/if/filenodes.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "eden/mononoke/mononoke_types/serialization/changeset_info.thrift"
 include "eden/mononoke/mononoke_types/serialization/bssm.thrift"
 include "eden/mononoke/mononoke_types/serialization/test_manifest.thrift"
 
@@ -113,7 +113,7 @@ union DerivedDataHgChangeset {
 }
 
 union DerivedDataChangesetInfo {
-  1: changeset_info_thrift.ChangesetInfo changeset_info;
+  1: changeset_info.ChangesetInfo changeset_info;
 }
 
 union DerivedDataDeletedManifest {

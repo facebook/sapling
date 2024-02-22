@@ -18,6 +18,7 @@ fn main() {
         "blame crate
 bonsai crate
 bssm crate
+changeset_info crate
 content crate
 data crate
 deleted_manifest crate
@@ -84,6 +85,7 @@ unodes crate",
         "../blame.thrift"
             , "../bonsai.thrift"
             , "../bssm.thrift"
+            , "../changeset_info.thrift"
             , "../content.thrift"
             , "../data.thrift"
             , "../deleted_manifest.thrift"

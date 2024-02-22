@@ -17,7 +17,6 @@ thrift_library(
         "derived_data_service.thrift": ["DerivedDataService"],
     },
     deps = [
-        "//eden/mononoke/derived_data/changeset_info/if:derived_data-thrift",
         "//eden/mononoke/filenodes/if:filenodes-if",
         "//eden/mononoke/git/git_types/if:git-types-thrift",
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
