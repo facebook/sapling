@@ -214,7 +214,7 @@ py_class!(class sptui |py| {
                         ));
                     }
                 };
-                let mods = Modifiers::from_bits(mods).ok_or_else(|| {
+                let mods = Modifiers::from_bits(mods.into()).ok_or_else(|| {
                     PyErr::new::<exc::ValueError, _>(py, format!("Invalid modifiers '0x{:x}'", mods))
                 })?;
                 let keycode = if key.chars().count() == 1 {
