@@ -6,7 +6,6 @@
  */
 
 import serverAPI from './ClientToServerAPI';
-import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
 import {useAtomValue} from 'jotai';
 
@@ -23,18 +22,6 @@ const avatarUrl = atomFamilyWeak((author: string) => {
     return result.avatars.get(author);
   }, undefined);
 });
-
-export function Avatar({username}: {username: string}) {
-  const img = useAtomValue(avatarUrl(username));
-
-  return (
-    <div className="commit-avatar">
-      {img == null ? null : (
-        <img src={img} width={14} height={14} alt={t("$user's avatar photo")} />
-      )}
-    </div>
-  );
-}
 
 /** Render as a SVG pattern */
 export function AvatarPattern({

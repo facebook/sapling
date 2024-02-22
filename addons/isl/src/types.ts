@@ -494,8 +494,6 @@ export const allConfigNames = [
   'github.preferred_submit_command',
   'isl.open-file-cmd',
   'isl.generated-files-regex',
-  // which graph renderer to use (0: tree; 1: dag; 2: show both).
-  'isl.experimental-graph-renderer',
 ] as const;
 
 /** sl configs read by ISL */
