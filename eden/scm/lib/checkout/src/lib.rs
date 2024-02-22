@@ -1093,10 +1093,7 @@ fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) ->
     for p in status.modified() {
         mf.insert(
             p.to_owned(),
-            FileMetadata {
-                hgid: MF_MODIFIED_NODE_ID,
-                file_type: file_type(vfs, p),
-            },
+            FileMetadata::new(MF_MODIFIED_NODE_ID, file_type(vfs, p)),
         )?;
     }
 

@@ -17,8 +17,6 @@ pub mod testutil;
 
 use anyhow::Result;
 use pathmatcher::Matcher;
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck_arbitrary_derive::Arbitrary;
 pub use types::tree::FileType;
 use types::HgId;
 use types::PathComponentBuf;
@@ -177,18 +175,35 @@ impl File {
 }
 
 /// The contents of the Manifest for a file.
-/// * hgid: used to determine the revision of the file in the repository.
-/// * file_type: determines the type of the file.
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
+    /// Used to determine the revision of the file in the repository.
     pub hgid: HgId,
+    /// The type of the file.
     pub file_type: FileType,
+    /// Only used during manifest diff. It instructs diff to ignore this file unless it
+    /// conflicts with something on the other side.
+    pub ignore_unless_conflict: bool,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for FileMetadata {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        Self {
+            hgid: HgId::arbitrary(g),
+            file_type: FileType::arbitrary(g),
+            ignore_unless_conflict: false,
+        }
+    }
 }
 
 impl FileMetadata {
     pub fn new(hgid: HgId, file_type: FileType) -> Self {
-        Self { hgid, file_type }
+        Self {
+            hgid,
+            file_type,
+            ignore_unless_conflict: false,
+        }
     }
 
     /// Creates `FileMetadata` with file_type set to `FileType::Regular`.

@@ -18,7 +18,6 @@ rust_library(
             "extra_buck_dependencies": {
                 "dev-dependencies": [
                     "fbsource//third-party/rust:quickcheck",
-                    "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
                     "//eden/scm/lib/types:types",
                 ],
             },
@@ -26,7 +25,6 @@ rust_library(
                 "default": [],
                 "for-tests": [
                     "quickcheck",
-                    "quickcheck_arbitrary_derive",
                 ],
             },
             "package": {
@@ -39,7 +37,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:quickcheck",
-        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/types:types",
     ],

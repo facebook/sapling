@@ -46,7 +46,8 @@ enum Side {
 /// path) whose content is different on either side of the diff.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum DiffItem {
-    Single(DirLink, Side),
+    // bool is whether this diff was the result of a path conflict
+    Single(DirLink, Side, bool),
     Changed(DirLink, DirLink),
 }
 
@@ -60,9 +61,16 @@ impl DiffItem {
         output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
     ) -> Result<Vec<DiffEntry>> {
         match self {
-            DiffItem::Single(dir, side) => {
-                diff_single(dir, fetcher, side, store, matcher, pending, output_dirs)
-            }
+            DiffItem::Single(dir, side, path_conflict) => diff_single(
+                dir,
+                fetcher,
+                side,
+                path_conflict,
+                store,
+                matcher,
+                pending,
+                output_dirs,
+            ),
             DiffItem::Changed(left, right) => {
                 diff(left, right, fetcher, store, matcher, pending, output_dirs)
             }
@@ -71,17 +79,9 @@ impl DiffItem {
 
     fn path(&self) -> &RepoPath {
         match self {
-            DiffItem::Single(d, _) => &d.path,
+            DiffItem::Single(d, _, _) => &d.path,
             DiffItem::Changed(d, _) => &d.path,
         }
-    }
-
-    fn left(dir: DirLink) -> Self {
-        DiffItem::Single(dir, Side::Left)
-    }
-
-    fn right(dir: DirLink) -> Self {
-        DiffItem::Single(dir, Side::Right)
     }
 }
 
@@ -191,7 +191,7 @@ impl<'a> Diff<'a> {
     }
 }
 
-fn prefetch_thread<'a>(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, store: InnerStore) {
+fn prefetch_thread(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, store: InnerStore) {
     let limit = 100000;
     let timeout = Duration::from_millis(1);
     let mut received = Vec::with_capacity(limit);
@@ -221,7 +221,7 @@ fn prefetch_thread<'a>(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, s
         let mut keys = Vec::with_capacity(received.len());
         for item in received.iter() {
             match item {
-                DiffItem::Single(dir, side) => {
+                DiffItem::Single(dir, side, _) => {
                     match side {
                         Side::Left => dir.key().map(|key| keys.push(key)),
                         Side::Right => dir.key().map(|key| keys.push(key)),
@@ -299,6 +299,7 @@ fn diff_single(
     dir: DirLink,
     fetcher: &mut Sender<DiffItem>,
     side: Side,
+    path_conflict: bool,
     store: &InnerStore,
     matcher: &dyn Matcher,
     pending: &mut u64,
@@ -317,11 +318,15 @@ fn diff_single(
     for d in dirs.into_iter() {
         if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
             *pending += 1;
-            fetcher.send(DiffItem::Single(d, side))?;
+            fetcher.send(DiffItem::Single(d, side, path_conflict))?;
         }
     }
     let mut entries = Vec::new();
     for f in files.into_iter() {
+        if !path_conflict && f.meta.ignore_unless_conflict {
+            continue;
+        }
+
         if matcher.matches_file(&f.path)? {
             let entry = match side {
                 Side::Left => DiffEntry::left(f),
@@ -440,6 +445,7 @@ fn diff_links(
     let mut modified: bool = false;
 
     match (left.map(|l| l.as_ref()), right.map(|r| r.as_ref())) {
+        // Both are files - compare file metadata (including id).
         (Some(Leaf(lmeta)), Some(Leaf(rmeta))) => {
             if lmeta != rmeta {
                 file_diff = Some(DiffEntry::new(
@@ -448,6 +454,7 @@ fn diff_links(
                 ));
             }
         }
+        // Both are directories - short circuit diff if ids match.
         (Some(ldata @ (Durable(_) | Ephemeral(_))), Some(rdata @ (Durable(_) | Ephemeral(_)))) => {
             let mut equal = false;
             if let (Durable(left), Durable(right)) = (ldata, rdata) {
@@ -461,14 +468,19 @@ fn diff_links(
                 ));
             }
         }
+        // Differing types.
         _ => {
-            modified = true;
-
-            let mut single_diff = |link: &Link, is_left: bool| match link.as_ref() {
+            let mut single_diff = |link: &Link, side: Side| match link.as_ref() {
                 Leaf(meta) => {
+                    if meta.ignore_unless_conflict && side == Side::Left && right.is_none() {
+                        return;
+                    }
+
+                    modified = true;
+
                     file_diff = Some(DiffEntry::new(
                         path(),
-                        if is_left {
+                        if side == Side::Left {
                             DiffType::LeftOnly(meta.clone())
                         } else {
                             DiffType::RightOnly(meta.clone())
@@ -476,22 +488,24 @@ fn diff_links(
                     ));
                 }
                 Durable(_) | Ephemeral(_) => {
+                    modified = true;
+
                     let dir_link = DirLink::from_link(link, path())
                         .expect("non-leaf node must be a valid directory");
-                    if is_left {
-                        dir_diff = Some(DiffItem::left(dir_link));
-                    } else {
-                        dir_diff = Some(DiffItem::right(dir_link));
-                    }
+
+                    // If we don't have a path conflict here, we don't want to mark
+                    // unknown files under us as conflicts.
+                    let is_conflict = side != Side::Left || right.is_some();
+                    dir_diff = Some(DiffItem::Single(dir_link, side, is_conflict));
                 }
             };
 
             if let Some(left) = left {
-                single_diff(left, true);
+                single_diff(left, Side::Left);
             }
 
             if let Some(right) = right {
-                single_diff(right, false);
+                single_diff(right, Side::Right);
             }
         }
     };
@@ -511,6 +525,7 @@ mod tests {
     use manifest::Manifest;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
+    use types::hgid::MF_UNTRACKED_NODE_ID;
     use types::testutil::*;
 
     use super::*;
@@ -559,6 +574,7 @@ mod tests {
             dir,
             &mut sender,
             Side::Left,
+            false,
             &tree.store,
             &matcher,
             &mut pending,
@@ -569,17 +585,11 @@ mod tests {
         let expected_entries = vec![
             DiffEntry::new(
                 repo_path_buf("a"),
-                DiffType::LeftOnly(FileMetadata {
-                    hgid: hgid("1"),
-                    file_type: FileType::Regular,
-                }),
+                DiffType::LeftOnly(FileMetadata::new(hgid("1"), FileType::Regular)),
             ),
             DiffEntry::new(
                 repo_path_buf("c"),
-                DiffType::LeftOnly(FileMetadata {
-                    hgid: hgid("3"),
-                    file_type: FileType::Regular,
-                }),
+                DiffType::LeftOnly(FileMetadata::new(hgid("3"), FileType::Regular)),
             ),
         ];
         assert_eq!(entries, expected_entries);
@@ -590,10 +600,12 @@ mod tests {
             DiffItem::Single(
                 DirLink::from_link(&dummy, repo_path_buf("b")).unwrap(),
                 Side::Left,
+                false,
             ),
             DiffItem::Single(
                 DirLink::from_link(&dummy, repo_path_buf("d")).unwrap(),
                 Side::Left,
+                false,
             ),
         ];
 
@@ -1033,6 +1045,81 @@ mod tests {
                 "A modified/4/a"
             ]
         );
+    }
+
+    #[test]
+    fn test_ignore_unless_conflict() -> Result<()> {
+        let store = Arc::new(TestStore::new());
+
+        let untracked_meta = FileMetadata {
+            hgid: MF_UNTRACKED_NODE_ID,
+            file_type: FileType::Regular,
+            ignore_unless_conflict: true,
+        };
+
+        let mut left = TreeManifest::ephemeral(store.clone());
+        left.insert(repo_path_buf("foo/untracked"), untracked_meta.clone())?;
+
+        // foo/untracked doesn't show in diff since it doesn't conflict
+
+        let right = make_tree_manifest(store.clone(), &[("foo/tracked", "1")]);
+        assert_eq!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            vec![DiffEntry::new(
+                repo_path_buf("foo/tracked"),
+                DiffType::RightOnly(make_meta("1"))
+            )],
+        );
+
+        // foo/untracked does show in diff since it doesn't conflict
+
+        // "foo/untracked" conflicts with new file "foo/untracked".
+        let right = make_tree_manifest(store.clone(), &[("foo/untracked", "1")]);
+        assert_eq!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            vec![DiffEntry::new(
+                repo_path_buf("foo/untracked"),
+                DiffType::Changed(untracked_meta, make_meta("1")),
+            )],
+        );
+
+        // Parent directory "foo" conflicts with new file "foo".
+        let right = make_tree_manifest(store.clone(), &[("foo", "1")]);
+        assert_eq!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            vec![
+                DiffEntry::new(repo_path_buf("foo"), DiffType::RightOnly(make_meta("1"))),
+                DiffEntry::new(
+                    repo_path_buf("foo/untracked"),
+                    DiffType::LeftOnly(untracked_meta),
+                )
+            ],
+        );
+
+        // File name "foo/untracked" conflicts with new directory "foo/untracked".
+        let right = make_tree_manifest(store.clone(), &[("foo/untracked/bar", "1")]);
+        assert_eq!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            vec![
+                DiffEntry::new(
+                    repo_path_buf("foo/untracked"),
+                    DiffType::LeftOnly(untracked_meta),
+                ),
+                DiffEntry::new(
+                    repo_path_buf("foo/untracked/bar"),
+                    DiffType::RightOnly(make_meta("1"))
+                ),
+            ],
+        );
+
+        // Should not conflict here.
+        let right = make_tree_manifest(store, &[]);
+        assert_eq!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            vec![],
+        );
+
+        Ok(())
     }
 
     fn dir_diff_entry_to_string(entry: DirDiffEntry) -> String {

@@ -98,10 +98,7 @@ impl TestHistory {
             if content_int == 0 {
                 tree.remove(&path).unwrap();
             } else {
-                let meta = FileMetadata {
-                    hgid: hgid_from_int(content_int),
-                    file_type,
-                };
+                let meta = FileMetadata::new(hgid_from_int(content_int), file_type);
                 tree.insert(path, meta).unwrap();
             }
         }

@@ -84,6 +84,12 @@ pub const MF_MODIFIED_NODE_ID: HgId = HgId::from_byte_array([
     b'f', b'i', b'e', b'd',
 ]);
 
+/// The hard-coded 'untracked file' manifest node id.
+pub const MF_UNTRACKED_NODE_ID: HgId = HgId::from_byte_array([
+    b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'u', b'n', b't', b'r', b'a',
+    b'c', b'k', b'e', b'd',
+]);
+
 impl HgId {
     pub const fn null_id() -> &'static Self {
         &NULL_ID
