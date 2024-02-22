@@ -712,10 +712,7 @@ impl Client {
     async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, EdenApiError> {
         let url = self.build_url(paths::CLONE_DATA)?;
         let req = self.configure_request(self.inner.client.post(url))?;
-        let mut fetch = self.fetch::<CloneData<HgId>>(vec![req])?;
-        fetch.entries.next().await.ok_or_else(|| {
-            EdenApiError::Other(format_err!("clone data missing from reponse body"))
-        })?
+        self.fetch_single::<CloneData<HgId>>(req).await
     }
 
     async fn pull_lazy_attempt(
@@ -727,10 +724,7 @@ impl Client {
             .configure_request(self.inner.client.post(url))?
             .cbor(&req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
-        let mut fetch = self.fetch::<CloneData<HgId>>(vec![req])?;
-        fetch.entries.next().await.ok_or_else(|| {
-            EdenApiError::Other(format_err!("clone data missing from reponse body"))
-        })?
+        self.fetch_single::<CloneData<HgId>>(req).await
     }
 
     async fn fast_forward_pull_attempt(
@@ -742,10 +736,7 @@ impl Client {
             .configure_request(self.inner.client.post(url))?
             .cbor(&req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
-        let mut fetch = self.fetch::<CloneData<HgId>>(vec![req])?;
-        fetch.entries.next().await.ok_or_else(|| {
-            EdenApiError::Other(format_err!("clone data missing from reponse body"))
-        })?
+        self.fetch_single::<CloneData<HgId>>(req).await
     }
 
     async fn history_attempt(
