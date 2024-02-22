@@ -894,6 +894,45 @@ impl Client {
         self.fetch_single::<SetBookmarkResponse>(req).await
     }
 
+    /// Land a stack of commits, rebasing them onto the specified bookmark
+    /// and updating the bookmark to the top of the rebased stack
+    async fn land_stack_attempt(
+        &self,
+        bookmark: String,
+        head: HgId,
+        base: HgId,
+        pushvars: HashMap<String, String>,
+    ) -> Result<LandStackResponse, EdenApiError> {
+        tracing::info!(
+            "Landing stack between head {} and base {} to bookmark '{}'",
+            head,
+            base,
+            &bookmark
+        );
+        let url = self.build_url(paths::LAND_STACK)?;
+
+        let land_stack_req = LandStackRequest {
+            bookmark,
+            head,
+            base,
+            pushvars: pushvars
+                .into_iter()
+                .map(|(k, v)| PushVar { key: k, value: v })
+                .collect(),
+        };
+        self.log_request(&land_stack_req, "land");
+
+        // Currently, server sends the land_stack response once it is fully completed,
+        // disable min speed transfer check to avoid premature termination of requests.
+        let req = self
+            .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
+            .cbor(&land_stack_req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<LandStackResponse>(req).await
+    }
+
     async fn upload_filenodes_batch_attempt(
         &self,
         items: Vec<HgFilenodeData>,
@@ -1104,9 +1143,6 @@ impl EdenApi for Client {
         .await
     }
 
-    /// Land a stack of commits, rebasing them onto the specified bookmark
-    /// and updating the bookmark to the top of the rebased stack
-    /// This method doesn't perform retries.
     async fn land_stack(
         &self,
         bookmark: String,
@@ -1114,34 +1150,11 @@ impl EdenApi for Client {
         base: HgId,
         pushvars: HashMap<String, String>,
     ) -> Result<LandStackResponse, EdenApiError> {
-        tracing::info!(
-            "Landing stack between head {} and base {} to bookmark '{}'",
-            head,
-            base,
-            &bookmark
-        );
-        let url = self.build_url(paths::LAND_STACK)?;
-
-        let land_stack_req = LandStackRequest {
-            bookmark,
-            head,
-            base,
-            pushvars: pushvars
-                .into_iter()
-                .map(|(k, v)| PushVar { key: k, value: v })
-                .collect(),
-        };
-        self.log_request(&land_stack_req, "land");
-
-        // Currently, server sends the land_stack response once it is fully completed,
-        // disable min speed transfer check to avoid premature termination of requests.
-        let req = self
-            .configure_request(self.inner.client.post(url))?
-            .min_transfer_speed(None)
-            .cbor(&land_stack_req.to_wire())
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<LandStackResponse>(req).await
+        self.with_retry(|this| {
+            this.land_stack_attempt(bookmark.clone(), head, base, pushvars.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn clone_data(&self) -> Result<CloneData<HgId>, EdenApiError> {
