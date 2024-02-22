@@ -545,7 +545,7 @@ impl Client {
         item: AnyFileContentId,
         raw_content: Bytes,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<UploadToken>, EdenApiError> {
+    ) -> Result<UploadToken, EdenApiError> {
         let mut url = self.build_url(paths::UPLOAD)?;
         url = url.join("file/")?;
         match item {
@@ -574,10 +574,11 @@ impl Client {
         let msg = format!("Requesting upload for {}", url);
         tracing::info!("{}", &msg);
 
-        self.fetch::<UploadToken>(vec![{
+        self.fetch_single::<UploadToken>({
             self.configure_request(self.inner.client.put(url.clone()))?
                 .body(raw_content.to_vec())
-        }])
+        })
+        .await
     }
 
     // the request isn't batched, batching should be done outside if needed
@@ -1441,16 +1442,7 @@ impl EdenApi for Client {
                         this.process_single_file_upload(id, content.clone(), bubble_id)
                             .boxed()
                     })
-                    .await?
-                    .entries
-                    .next()
                     .await
-                    .ok_or_else(|| {
-                        EdenApiError::Other(format_err!(
-                            "token data is missing from the reponse body for {}",
-                            id
-                        ))
-                    })?
                 }),
         )
         .buffer_unordered(MAX_CONCURRENT_FILE_UPLOADS)
