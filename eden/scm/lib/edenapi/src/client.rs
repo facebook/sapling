@@ -633,7 +633,7 @@ impl Client {
         &self,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<UploadTokensResponse, EdenApiError> {
         tracing::info!("Requesting changeset upload");
 
         let mut url = self.build_url(paths::UPLOAD_BONSAI_CHANGESET)?;
@@ -648,7 +648,7 @@ impl Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<UploadTokensResponse>(vec![request])
+        self.fetch_single::<UploadTokensResponse>(request).await
     }
 
     async fn ephemeral_prepare_attempt(
@@ -1507,7 +1507,7 @@ impl EdenApi for Client {
         &self,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<UploadTokensResponse, EdenApiError> {
         self.with_retry(|this| {
             this.upload_bonsai_changeset_attempt(changeset.clone(), bubble_id)
                 .boxed()

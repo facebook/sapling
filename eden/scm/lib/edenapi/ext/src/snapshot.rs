@@ -153,7 +153,7 @@ pub async fn upload_snapshot(
             })
             .collect::<Result<BTreeMap<_, _>, _>>()?
     };
-    let mut response = api
+    let changeset_response = api
         .upload_bonsai_changeset(
             BonsaiChangesetContent {
                 hg_parents,
@@ -202,12 +202,9 @@ pub async fn upload_snapshot(
             },
             Some(bubble_id),
         )
-        .await?;
-    let changeset_response = response
-        .entries
-        .next()
         .await
-        .context("Failed to create changeset")??;
+        .context("Failed to create changeset")?;
+
     Ok(UploadSnapshotResponse {
         changeset_token: changeset_response.token,
         bubble_id,

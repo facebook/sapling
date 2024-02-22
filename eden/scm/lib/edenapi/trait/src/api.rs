@@ -298,7 +298,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<UploadTokensResponse, EdenApiError> {
         let _ = (changeset, bubble_id);
         Err(EdenApiError::NotSupported)
     }
