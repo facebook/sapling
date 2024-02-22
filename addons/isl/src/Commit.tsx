@@ -9,13 +9,11 @@ import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
-import {Avatar} from './Avatar';
-import {BranchIndicator} from './BranchIndicator';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {FlexRow} from './ComponentUtils';
 import {EducationInfoTip} from './Education';
-import {HighlightCommitsWhileHovering, isHighlightedCommit} from './HighlightedCommits';
+import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -49,7 +47,6 @@ import {
   inlineProgressByHash,
   isFetchingUncommittedChanges,
   latestDag,
-  latestUncommittedChanges,
   operationBeingPreviewed,
   useRunOperation,
   useRunPreviewedOperation,
@@ -118,12 +115,10 @@ export const Commit = memo(
     commit,
     previewType,
     hasChildren,
-    bodyOnly = false,
   }: {
     commit: DagCommitInfo | CommitInfo;
     previewType?: CommitPreview;
     hasChildren: boolean;
-    bodyOnly?: boolean;
   }) => {
     const isPublic = commit.phase === 'public';
     const isObsoleted = commit.successorInfo != null;
@@ -131,8 +126,6 @@ export const Commit = memo(
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
     const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
-
-    const isHighlighted = useAtomValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
 
     const inlineProgress = useAtomValue(inlineProgressByHash(commit.hash));
 
@@ -146,8 +139,6 @@ export const Commit = memo(
     const toast = useShowToast();
     const clipboardCopy = (text: string, url?: string) =>
       toast.copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));
-
-    const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
     const onDoubleClickToShowDrawer = useCallback(() => {
       // Select the commit if it was deselected.
@@ -228,7 +219,6 @@ export const Commit = memo(
         }
       }
       if (!isPublic && !actionsPrevented) {
-        bodyOnly || items.push({type: 'divider'});
         const suggestedRebases = readAtom(suggestedRebaseDestinations);
         items.push({
           label: 'Rebase onto',
@@ -366,7 +356,7 @@ export const Commit = memo(
       );
     }
 
-    if (bodyOnly && (commit as DagCommitInfo).isYouAreHere) {
+    if ((commit as DagCommitInfo).isYouAreHere) {
       return (
         <div className="head-commit-info">
           <UncommittedChanges place="main" />
@@ -379,17 +369,10 @@ export const Commit = memo(
         className={
           'commit' +
           (commit.isHead ? ' head-commit' : '') +
-          (commit.successorInfo != null ? ' obsolete' : '') +
-          (isHighlighted ? ' highlighted' : '') +
-          (isPublic || hasChildren || bodyOnly ? '' : ' topmost')
+          (commit.successorInfo != null ? ' obsolete' : '')
         }
         onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
-        {!isNonActionable &&
-        !bodyOnly &&
-        (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
-          <HeadCommitInfo commit={commit} previewType={previewType} hasChildren={hasChildren} />
-        ) : null}
         <div className={'commit-rows' + (isSelected ? ' selected-commit' : '')}>
           {isSelected ? (
             <div className="selected-commit-background" data-testid="selected-commit" />
@@ -402,7 +385,6 @@ export const Commit = memo(
             draggable={!isPublic && isDraggablePreview(previewType)}
             onClick={onClickToSelect}
             onDoubleClick={onDoubleClickToShowDrawer}>
-            {bodyOnly || <Avatar username={commit.author} />}
             {isPublic ? null : (
               <span className="commit-title">
                 <span>{title}</span>
@@ -456,7 +438,6 @@ export const Commit = memo(
     return (
       commitEqual &&
       nextProps.previewType === prevProps.previewType &&
-      nextProps.bodyOnly === prevProps.bodyOnly &&
       nextProps.hasChildren === prevProps.hasChildren
     );
   },
@@ -543,39 +524,6 @@ function UnsavedEditedMessageIndicator({commit}: {commit: CommitInfo}) {
           <Icon icon="circle-large-filled" />
         </IconStack>
       </Tooltip>
-    </div>
-  );
-}
-
-function HeadCommitInfo({
-  commit,
-  previewType,
-  hasChildren,
-}: {
-  commit: CommitInfo;
-  previewType?: CommitPreview;
-  hasChildren: boolean;
-}) {
-  const uncommittedChanges = useAtomValue(latestUncommittedChanges);
-
-  // render head info indented when:
-  //  - we have uncommitted changes, so we're showing files
-  // and EITHER
-  //    - we're on a public commit (you'll create a new "branch" by committing)
-  //    - the commit we're rendering has children (we'll render the current child as new branch after committing)
-  const indent = uncommittedChanges.length > 0 && (commit.phase === 'public' || hasChildren);
-
-  return (
-    <div className={`head-commit-info-container${indent ? ' head-commit-info-indented' : ''}`}>
-      <YouAreHere previewType={previewType} />
-      {
-        commit.isHead ? (
-          <div className="head-commit-info">
-            <UncommittedChanges place="main" />
-          </div>
-        ) : null // don't show uncommitted changes twice while checking out
-      }
-      {indent ? <BranchIndicator /> : null}
     </div>
   );
 }
