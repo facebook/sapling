@@ -697,7 +697,7 @@ impl Client {
     async fn alter_snapshot_attempt(
         &self,
         request: AlterSnapshotRequest,
-    ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
+    ) -> Result<AlterSnapshotResponse, EdenApiError> {
         tracing::info!("Altering snapshot {}", request.cs_id,);
         let url = self.build_url(paths::ALTER_SNAPSHOT)?;
         let req = request.to_wire();
@@ -706,7 +706,7 @@ impl Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<AlterSnapshotResponse>(vec![request])
+        self.fetch_single::<AlterSnapshotResponse>(request).await
     }
 
     async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, EdenApiError> {
@@ -1522,7 +1522,7 @@ impl EdenApi for Client {
     async fn alter_snapshot(
         &self,
         request: AlterSnapshotRequest,
-    ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
+    ) -> Result<AlterSnapshotResponse, EdenApiError> {
         self.with_retry(|this| this.alter_snapshot_attempt(request.clone()).boxed())
             .await
     }

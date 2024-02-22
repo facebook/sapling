@@ -325,7 +325,7 @@ pub trait EdenApi: Send + Sync + 'static {
     async fn alter_snapshot(
         &self,
         request: AlterSnapshotRequest,
-    ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
+    ) -> Result<AlterSnapshotResponse, EdenApiError> {
         let _ = request;
         Err(EdenApiError::NotSupported)
     }

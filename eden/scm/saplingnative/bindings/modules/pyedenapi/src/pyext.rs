@@ -771,11 +771,8 @@ pub trait EdenApiPyExt: EdenApi {
             block_unless_interrupted(async move {
                 let cs_id = data.0.cs_id;
                 self.alter_snapshot(data.0)
-                    .await?
-                    .entries
-                    .next()
                     .await
-                    .with_context(|| format_err!("Failed to alter snapshot {}", cs_id))?
+                    .with_context(|| format_err!("Failed to alter snapshot {}", cs_id))
             })
         })
         .map_pyerr(py)?
