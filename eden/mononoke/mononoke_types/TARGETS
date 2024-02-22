@@ -54,7 +54,6 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/lfs_protocol:lfs_protocol",
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/edenapi/types:edenapi_types",

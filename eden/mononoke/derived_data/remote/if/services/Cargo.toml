@@ -34,8 +34,6 @@ mercurial_thrift_services = { version = "0.1.0", path = "../../../../mercurial/t
 mercurial_thrift_types = { version = "0.1.0", path = "../../../../mercurial/types/if/types" }
 mononoke_types_serialization_services = { version = "0.1.0", path = "../../../../mononoke_types/serialization/services" }
 mononoke_types_serialization_types = { version = "0.1.0", path = "../../../../mononoke_types/serialization/types" }
-mononoke_types_thrift_services = { version = "0.1.0", path = "../../../../mononoke_types/if/services" }
-mononoke_types_thrift_types = { version = "0.1.0", path = "../../../../mononoke_types/if/types" }
 tracing = "0.1.40"
 
 [build-dependencies]

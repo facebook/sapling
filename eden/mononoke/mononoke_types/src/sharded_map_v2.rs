@@ -38,7 +38,7 @@ use crate::typed_hash::MononokeId;
 use crate::ThriftConvert;
 use crate::TrieMap;
 
-// More detailed documentation about ShardedMapV2 can be found in mononoke_types_thrift.thrift
+// More detailed documentation about ShardedMapV2 can be found in serialization/sharded_map.thrift
 
 pub trait ShardedMapV2Value: ThriftConvert + Debug + Hash + Clone + Send + Sync + 'static {
     type NodeId: MononokeId<Thrift = thrift::id::ShardedMapV2NodeId, Value = ShardedMapV2Node<Self>>;

@@ -30,7 +30,7 @@ use crate::BlobstoreValue;
 use crate::MPathElement;
 use crate::ThriftConvert;
 
-// See docs/basename_suffix_skeleton_manifest.md and mononoke_types_thrift.thrift
+// See docs/basename_suffix_skeleton_manifest.md and serialization/bssm.thrift
 // for more documentation on this.
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

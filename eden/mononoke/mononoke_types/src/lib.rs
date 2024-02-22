@@ -130,7 +130,6 @@ pub mod thrift {
     pub use mononoke_types_serialization::test_manifest;
     pub use mononoke_types_serialization::time;
     pub use mononoke_types_serialization::unodes;
-    pub use mononoke_types_thrift::*;
 }
 
 pub mod private {
