@@ -27,7 +27,7 @@
 
 -- First, push a non common-pushrebase bookmark (other_bookmark) one commit forward to S_C
   $ testtool_drawdag -R small-mon << EOF
-  > S_A-S_B-S_C-S_D
+  > S_A-S_B-S_C-S_D-S_E-S_F
   > # exists: S_A $S_A
   > # exists: S_B $S_B
   > # bookmark: S_C other_bookmark
@@ -36,6 +36,8 @@
   S_B=1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d
   S_C=6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12
   S_D=542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b
+  S_E=a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
+  S_F=c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
 
 -- Then, push a common pushrebase bookmark two commits forward to S_D
   $ mononoke_newadmin bookmarks -R small-mon set master_bookmark $S_D
@@ -93,3 +95,77 @@
   o  message: move commit
   │
   o  message: pre-move commit
+
+
+-- Sync after both bookmark moves happened
+-- This time we inject some commits into large repo simulating direct, unrelated pushes
+-- there's no other way to do the sync than to diverge now.
+  $ mononoke_newadmin bookmarks -R small-mon set other_bookmark $S_E
+  Updating publishing bookmark other_bookmark from 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
+  Starting session with id * (glob)
+  queue size is 1
+  processing log entry #4
+  1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
+  syncing a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
+  changeset a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 synced as 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 in * (glob)
+  successful sync bookmark update log #4
+
+  $ testtool_drawdag -R large-mon << EOF
+  > S_D-L_A-L_B
+  > # exists: S_D 3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e
+  > # bookmark: L_B master_bookmark
+  > EOF
+  L_A=98f43915d8e880b609a40da0ee6c737bf7732283fa19d6e7c796644c63495b0f
+  L_B=e0c0d1d403651620aa2d9cbe2f706a4a30f9e910e0986102eb350dcd3300755e
+  S_D=3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e
+
+  $ mononoke_newadmin bookmarks -R small-mon set master_bookmark $S_E
+  Updating publishing bookmark master_bookmark from 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
+  Starting session with id * (glob)
+  queue size is 1
+  processing log entry #5
+  1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
+  syncing a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 via pushrebase for master_bookmark
+  changeset a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 synced as 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e in * (glob)
+  successful sync bookmark update log #5
+
+  $ mononoke_newadmin bookmarks --repo-name large-mon list
+  7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 bookprefix/other_bookmark
+  6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e master_bookmark
+
+  $ mononoke_newadmin changelog -R large-mon graph -i 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072,6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e -M
+  o  message: S_E
+  │
+  o  message: L_B
+  │
+  o  message: L_A
+  │
+  │ o  message: S_E
+  ├─╯
+  o  message: S_D
+  │
+  o  message: S_C
+  │
+  o  message: first post-move commit
+  │
+  o  message: move commit
+  │
+  o  message: pre-move commit
+
+
+-- Sync a change to other bookmark showing how now the choice for a base is tricky as
+-- the S_F commit is based on S_E so there are two possible choices here.
+  $ mononoke_newadmin bookmarks -R small-mon set other_bookmark $S_F
+  Updating publishing bookmark other_bookmark from a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 to c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
+  * (glob)
+  queue size is 1
+  processing log entry #6
+  1 unsynced ancestors of c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
+  syncing c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
+  Syncing c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0 failed in *ms: Too many rewritten candidates for a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074:* (may be more) (glob)
+  failed to sync bookmark update log #6, Too many rewritten candidates for a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074: 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e, 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 (may be more)
+  Execution error: Too many rewritten candidates for a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074: 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e, 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 (may be more)
+  Error: Execution failed
