@@ -919,6 +919,32 @@ impl Client {
         self.fetch::<UploadTokensResponse>(requests)
     }
 
+    async fn upload_trees_batch_attempt(
+        &self,
+        items: Vec<UploadTreeEntry>,
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
+        tracing::info!("Requesting trees upload for {} item(s)", items.len());
+
+        if items.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::UPLOAD_TREES)?;
+        let requests = self.prepare_requests(
+            &url,
+            items,
+            Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
+            |ids| Batch::<_> {
+                batch: ids
+                    .into_iter()
+                    .map(|item| UploadTreeRequest { entry: item })
+                    .collect(),
+            },
+        )?;
+
+        self.fetch::<UploadTreeResponse>(requests)
+    }
+
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -1442,31 +1468,12 @@ impl EdenApi for Client {
             .await
     }
 
-    // This method doesn't perform retries.
     async fn upload_trees_batch(
         &self,
         items: Vec<UploadTreeEntry>,
     ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
-        tracing::info!("Requesting trees upload for {} item(s)", items.len());
-
-        if items.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let url = self.build_url(paths::UPLOAD_TREES)?;
-        let requests = self.prepare_requests(
-            &url,
-            items,
-            Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
-            |ids| Batch::<_> {
-                batch: ids
-                    .into_iter()
-                    .map(|item| UploadTreeRequest { entry: item })
-                    .collect(),
-            },
-        )?;
-
-        Ok(self.fetch::<UploadTreeResponse>(requests)?)
+        self.with_retry(|this| this.upload_trees_batch_attempt(items.clone()).boxed())
+            .await
     }
 
     async fn upload_changesets(
