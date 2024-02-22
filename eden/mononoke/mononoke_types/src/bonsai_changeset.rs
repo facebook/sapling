@@ -132,7 +132,7 @@ impl BonsaiChangesetMut {
             git_extra_headers: self.git_extra_headers.map(|extra| {
                 extra
                     .into_iter()
-                    .map(|(k, v)| (thrift::small_binary(k), v))
+                    .map(|(k, v)| (thrift::data::SmallBinary(k), v))
                     .collect()
             }),
             file_changes: self

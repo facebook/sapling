@@ -6,6 +6,7 @@
  */
 
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
+include "eden/mononoke/mononoke_types/serialization/data.thrift"
 
 struct BlobHandle {
   1: mononoke_types_thrift.GitSha1 oid;
@@ -63,7 +64,7 @@ struct GitDeltaManifestEntry {
 } (rust.exhaustive)
 
 /// The byte content of an individual chunk of DeltaInstructions
-typedef mononoke_types_thrift.binary_bytes DeltaInstructionChunk (rust.newtype)
+typedef data.LargeBinary DeltaInstructionChunk (rust.newtype)
 
 /// Identifier for accessing a specific delta instruction chunk
 typedef mononoke_types_thrift.IdType DeltaInstructionChunkId (rust.newtype)

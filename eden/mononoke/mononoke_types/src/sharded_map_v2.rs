@@ -577,7 +577,7 @@ impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
 
     fn into_thrift(self) -> thrift::ShardedMapV2Node {
         thrift::ShardedMapV2Node {
-            prefix: thrift::small_binary(self.prefix),
+            prefix: thrift::data::SmallBinary(self.prefix),
             value: self.value.map(|v| ThriftConvert::into_bytes(*v)),
             children: self
                 .children

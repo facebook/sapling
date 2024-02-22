@@ -15,16 +15,14 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-git_types_thrift crate
-mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust
-tmp mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
+        "data crate
+tmp crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
-        let mut conf = Config::from_env(GenContext::Services).expect("Failed to instantiate thrift_compiler::Config");
+        let mut conf = Config::from_env(GenContext::Lib).expect("Failed to instantiate thrift_compiler::Config");
 
-        let path_from_manifest_to_base: &Path = "../../../../../..".as_ref();
+        let path_from_manifest_to_base: &Path = "../../../..".as_ref();
         let cargo_manifest_dir =
             env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not provided");
         let cargo_manifest_dir: &Path = cargo_manifest_dir.as_ref();
@@ -46,11 +44,11 @@ tmp mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mo
 
         conf.base_path(base_path);
 
-        conf.types_crate("git-types-thrift__types");
-        conf.clients_crate("git-types-thrift__clients");
-        conf.services_crate("git-types-thrift__services");
+        conf.types_crate("mononoke_types_serialization__types");
+        conf.clients_crate("mononoke_types_serialization__clients");
+        conf.services_crate("mononoke_types_serialization__services");
 
-        let options = "deprecated_default_enum_min_i32";
+        let options = "";
         if !options.is_empty() {
             conf.options(options);
         }
@@ -68,7 +66,8 @@ tmp mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mo
     };
 
     let srcs: &[&str] = &[
-        "../git_types_thrift.thrift"
+        "data.thrift"
+            , "tmp.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

@@ -17,16 +17,9 @@
 
 namespace py3 eden.mononoke.mononoke_types
 
-typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
+include "eden/mononoke/mononoke_types/serialization/data.thrift"
 
-// NB don't call the type bytes as py3 bindings don't like it
-// NB (SF, 23-12-04) It can't be called bytes::Bytes because that is the syntax
-// of a nonstandard type which this isn't.
-typedef binary (rust.type = "Bytes") binary_bytes
-typedef binary small_binary (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 24]>",
-)
+typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 // Allow the hash type to change in the future.
 union IdType {
@@ -141,7 +134,7 @@ struct BonsaiChangeset {
   9: optional SnapshotState snapshot_state;
   // Extra headers specifically for git. Both the key and the value
   // in these headers can be byte strings
-  10: optional map<small_binary, binary_bytes> (
+  10: optional map<data.SmallBinary, data.LargeBinary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) git_extra_headers;
   // SHA1 hash representing a git tree object. If this changeset
@@ -163,7 +156,7 @@ struct BonsaiChangeset {
 // bookmark in Mononoke.
 struct BonsaiAnnotatedTag {
   1: BonsaiAnnotatedTagTarget target;
-  2: optional binary_bytes pgp_signature;
+  2: optional data.LargeBinary pgp_signature;
 } (rust.exhaustive)
 
 // Target of an annotated tag imported from Git into Bonsai format.
@@ -205,13 +198,13 @@ struct ChunkedFileContents {
 
 union FileContents {
   // Plain uncompressed bytes - WYSIWYG.
-  1: binary_bytes Bytes;
+  1: data.LargeBinary Bytes;
   // References to Chunks (stored as FileContents, too).
   2: ChunkedFileContents Chunked;
 }
 
 union ContentChunk {
-  1: binary_bytes Bytes;
+  1: data.LargeBinary Bytes;
 }
 
 // Payload of object which is an alias
@@ -341,7 +334,7 @@ const i32 MAP_SHARD_SIZE = 2000;
 // Since thrift has no "generics", we store the values of the map as arbitrary
 // byte arrays. When parsing this, we will make sure they have the correct type.
 // When non-trivial, the MapValue will be a Thrift serialized form of the true value.
-typedef binary_bytes MapValue
+typedef data.LargeBinary MapValue
 
 // When the number of values in a subtree is at most MAP_SHARD_SIZE
 // We inline all of them on a single node. Notice we don't use prefix here for
@@ -349,7 +342,7 @@ typedef binary_bytes MapValue
 struct ShardedMapTerminalNode {
   // The key is the original map key minus the prefixes and edges from all
   // intermediate nodes in the path to this node.
-  1: map<small_binary, MapValue> (
+  1: map<data.SmallBinary, MapValue> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) values;
 } (rust.exhaustive)
@@ -359,7 +352,7 @@ struct ShardedMapTerminalNode {
 struct ShardedMapIntermediateNode {
   // Having this non-empty means this node was merged with its parents
   // since they had a single child only.
-  1: small_binary prefix;
+  1: data.SmallBinary prefix;
   // An intermediate node may have a single value.
   2: optional MapValue value;
   // Children of this node. We only store the first byte of the edge,
@@ -424,8 +417,8 @@ union ShardedMapNode {
 
 const i32 SHARDED_MAP_V2_WEIGHT_LIMIT = 2000;
 
-typedef binary_bytes ShardedMapV2Value
-typedef binary_bytes ShardedMapV2RollupData
+typedef data.LargeBinary ShardedMapV2Value
+typedef data.LargeBinary ShardedMapV2RollupData
 
 struct ShardedMapV2StoredNode {
   1: ShardedMapV2NodeId id;
@@ -460,7 +453,7 @@ union LoadableShardedMapV2Node {
 // would've have become a terminal node in ShardedMap will all be inlined in ShardedMapV2,
 // with the added upside that they could potentially be stored inlined in their parent.
 struct ShardedMapV2Node {
-  1: small_binary prefix;
+  1: data.SmallBinary prefix;
   2: optional ShardedMapV2Value value;
   3: map<byte, LoadableShardedMapV2Node> (
     rust.type = "sorted_vector_map::SortedVectorMap",

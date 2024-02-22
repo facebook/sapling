@@ -34,6 +34,7 @@ gix-hash = "0.11"
 itertools = "0.11.0"
 lazy_static = "1.4"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
+mononoke_types_serialization = { version = "0.1.0", path = "serialization" }
 mononoke_types_thrift = { version = "0.1.0", path = "if" }
 nonzero_ext = "0.2"
 quickcheck = "1.0"

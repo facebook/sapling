@@ -1085,7 +1085,7 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
                 edges,
                 ..
             } => thrift::ShardedMapNode::intermediate(thrift::ShardedMapIntermediateNode {
-                prefix: thrift::small_binary(prefix),
+                prefix: thrift::data::SmallBinary(prefix),
                 value: value.map(ThriftConvert::into_bytes),
                 edges: edges
                     .into_iter()
@@ -1096,7 +1096,7 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
                 thrift::ShardedMapNode::terminal(thrift::ShardedMapTerminalNode {
                     values: values
                         .into_iter()
-                        .map(|(k, v)| (thrift::small_binary(k), v.into_bytes()))
+                        .map(|(k, v)| (thrift::data::SmallBinary(k), v.into_bytes()))
                         .collect(),
                 })
             }

@@ -25,6 +25,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_types_thrift__clients = { package = "git_types_thrift_clients", version = "0.1.0", path = "clients" }
 git_types_thrift__services = { package = "git_types_thrift_services", version = "0.1.0", path = "services" }
 git_types_thrift__types = { package = "git_types_thrift_types", version = "0.1.0", path = "types" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../../mononoke_types/if" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
