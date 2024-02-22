@@ -71,12 +71,6 @@ Move bookmark backwards
 
 Restart mononoke, this way we drop in-memory segmented changelog representations.
   $ killandwait $MONONOKE_PID
-  $ start_and_wait_for_mononoke_server
-
-Check that bookmark moved correctly
-  $ hgedenapi debugapi -e bookmarks -i '["master_bookmark", "master"]'
-  {"master": None,
-   "master_bookmark": "26805aba1e600a82e93661149f2313866a221a7b"}
 
   $ merge_just_knobs <<EOF
   > {
@@ -85,6 +79,12 @@ Check that bookmark moved correctly
   >    }
   > }
   > EOF
+  $ start_and_wait_for_mononoke_server
+
+Check that bookmark moved correctly
+  $ hgedenapi debugapi -e bookmarks -i '["master_bookmark", "master"]'
+  {"master": None,
+   "master_bookmark": "26805aba1e600a82e93661149f2313866a221a7b"}
 
 Pull should succeed and local bookmark should be moved back.
   $ LOG=pull::fastpath=debug hgedenapi pull
