@@ -15,16 +15,22 @@ use std::time::Duration;
 
 use anyhow::Result;
 use manifest::DiffEntry;
+use manifest::DiffType;
 use manifest::DirDiffEntry;
-use manifest::File;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
+use types::PathComponentBuf;
 use types::RepoPath;
+use types::RepoPathBuf;
 
+use crate::link::Durable;
+use crate::link::Ephemeral;
+use crate::link::Leaf;
 use crate::store::InnerStore;
 use crate::DirLink;
+use crate::Link;
 use crate::TreeManifest;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -341,179 +347,156 @@ fn diff(
     pending: &mut u64,
     output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
 ) -> Result<Vec<DiffEntry>> {
-    let (lfiles, ldirs) = left.list(store)?;
-    let (rfiles, rdirs) = right.list(store)?;
-    let (dirs, dir_modified_by_dirs) = diff_dirs(ldirs, rdirs, matcher)?;
-    for item in dirs {
-        *pending += 1;
-        fetcher.send(item)?;
+    let mut file_diffs: Vec<DiffEntry> = Vec::new();
+
+    let mut self_modified: bool = false;
+
+    let mut add_diffs = |l, r| -> Result<()> {
+        let (file_diff, dir_diff, modified) = diff_links(&left.path, l, r);
+
+        if modified {
+            self_modified = true;
+        }
+
+        if let Some(file_diff) = file_diff {
+            if matcher.matches_file(&file_diff.path)? {
+                file_diffs.push(file_diff);
+            }
+        }
+
+        if let Some(dir_diff) = dir_diff {
+            if matcher.matches_directory(dir_diff.path())? != DirectoryMatch::Nothing {
+                *pending += 1;
+                fetcher.send(dir_diff)?;
+            }
+        }
+
+        Ok(())
+    };
+
+    let mut llinks = left.links(store)?.peekable();
+    let mut rlinks = right.links(store)?.peekable();
+
+    loop {
+        match (llinks.peek(), rlinks.peek()) {
+            (Some((lname, _)), Some((rname, _))) => match lname.cmp(rname) {
+                Ordering::Less => {
+                    add_diffs(llinks.next(), None)?;
+                }
+                Ordering::Equal => {
+                    add_diffs(llinks.next(), rlinks.next())?;
+                }
+                Ordering::Greater => {
+                    add_diffs(None, rlinks.next())?;
+                }
+            },
+            (Some(_), None) | (None, Some(_)) => add_diffs(llinks.next(), rlinks.next())?,
+            (None, None) => break,
+        }
     }
 
-    let (files, dir_modified_by_files) = diff_files(lfiles, rfiles, matcher)?;
-    if let Some(output_dirs) = output_dirs {
-        if dir_modified_by_dirs || dir_modified_by_files {
+    if self_modified {
+        if let Some(output_dirs) = output_dirs {
             output_dirs.push_back(DirDiffEntry {
-                path: left.path,
+                path: left.path.clone(),
                 left: true,
                 right: true,
-            })
+            });
         }
     }
 
-    Ok(files)
+    Ok(file_diffs)
 }
 
-/// Given two sorted file lists, return diff entries for non-matching files.
-/// Also return whether the parent directory is considered as "modified" (i.e. file added or
-/// removed).
-fn diff_files(
-    lfiles: Vec<File>,
-    rfiles: Vec<File>,
-    matcher: &dyn Matcher,
-) -> Result<(Vec<DiffEntry>, bool)> {
-    let mut output = Vec::new();
-
-    let mut add_to_output = |entry: DiffEntry| -> Result<()> {
-        if matcher.matches_file(&entry.path)? {
-            output.push(entry);
+// Diff two items (can be directory, file, or None). If both are present, they must have the same name.
+// Returns a file diff, directory diff, and whether the parent dir was modified (i.e. entry added or removed).
+// There can be no diffs returned, just a file diff, just a directory diff, or both.
+fn diff_links(
+    parent_path: &RepoPath,
+    left: Option<(&PathComponentBuf, &Link)>,
+    right: Option<(&PathComponentBuf, &Link)>,
+) -> (Option<DiffEntry>, Option<DiffItem>, bool) {
+    let name = match (left, right) {
+        (Some((lname, _)), Some((rname, _))) => {
+            assert_eq!(lname, rname);
+            lname
         }
-        Ok(())
+        (Some((lname, _)), None) => lname,
+        (None, Some((rname, _))) => rname,
+        (None, None) => return (None, None, false),
     };
 
-    debug_assert!(is_sorted(&lfiles));
-    debug_assert!(is_sorted(&rfiles));
+    let left = left.map(|l| l.1);
+    let right = right.map(|l| l.1);
 
-    let mut lfiles = lfiles.into_iter();
-    let mut rfiles = rfiles.into_iter();
-    let mut lfile = lfiles.next();
-    let mut rfile = rfiles.next();
-    let mut dir_modified = false;
-
-    loop {
-        match (lfile, rfile) {
-            (Some(l), Some(r)) => match l.path.cmp(&r.path) {
-                Ordering::Less => {
-                    add_to_output(DiffEntry::left(l))?;
-                    lfile = lfiles.next();
-                    rfile = Some(r);
-                    dir_modified = true;
-                }
-                Ordering::Greater => {
-                    add_to_output(DiffEntry::right(r))?;
-                    lfile = Some(l);
-                    rfile = rfiles.next();
-                    dir_modified = true;
-                }
-                Ordering::Equal => {
-                    if l.meta != r.meta {
-                        add_to_output(DiffEntry::changed(l, r))?;
-                    }
-                    lfile = lfiles.next();
-                    rfile = rfiles.next();
-                }
-            },
-            (Some(l), None) => {
-                add_to_output(DiffEntry::left(l))?;
-                lfile = lfiles.next();
-                rfile = None;
-                dir_modified = true;
-            }
-            (None, Some(r)) => {
-                add_to_output(DiffEntry::right(r))?;
-                lfile = None;
-                rfile = rfiles.next();
-                dir_modified = true;
-            }
-            (None, None) => break,
-        }
-    }
-
-    Ok((output, dir_modified))
-}
-
-/// Given two sorted directory lists, return diff items for non-matching directories.
-/// Also return whether the parent directory is considered as "modified" (i.e. sub-dir added or
-/// removed).
-fn diff_dirs(
-    ldirs: Vec<DirLink>,
-    rdirs: Vec<DirLink>,
-    matcher: &dyn Matcher,
-) -> Result<(Vec<DiffItem>, bool)> {
-    let mut output = Vec::new();
-
-    let mut add_to_output = |item: DiffItem| -> Result<()> {
-        if matcher.matches_directory(item.path())? != DirectoryMatch::Nothing {
-            output.push(item);
-        }
-        Ok(())
+    let path = || -> RepoPathBuf {
+        let mut p = parent_path.to_owned();
+        p.push(name.as_ref());
+        p
     };
 
-    debug_assert!(is_sorted(&ldirs));
-    debug_assert!(is_sorted(&rdirs));
+    let (mut dir_diff, mut file_diff) = (None, None);
 
-    let mut ldirs = ldirs.into_iter();
-    let mut rdirs = rdirs.into_iter();
-    let mut ldir = ldirs.next();
-    let mut rdir = rdirs.next();
-    let mut dir_modified = false;
+    let mut modified: bool = false;
 
-    loop {
-        match (ldir, rdir) {
-            (Some(l), Some(r)) => match l.path.cmp(&r.path) {
-                Ordering::Less => {
-                    add_to_output(DiffItem::left(l))?;
-                    ldir = ldirs.next();
-                    rdir = Some(r);
-                    dir_modified = true;
+    match (left.map(|l| l.as_ref()), right.map(|r| r.as_ref())) {
+        (Some(Leaf(lmeta)), Some(Leaf(rmeta))) => {
+            if lmeta != rmeta {
+                file_diff = Some(DiffEntry::new(
+                    path(),
+                    DiffType::Changed(lmeta.clone(), rmeta.clone()),
+                ));
+            }
+        }
+        (Some(ldata @ (Durable(_) | Ephemeral(_))), Some(rdata @ (Durable(_) | Ephemeral(_)))) => {
+            let mut equal = false;
+            if let (Durable(left), Durable(right)) = (ldata, rdata) {
+                equal = left.hgid == right.hgid;
+            }
+
+            if !equal {
+                dir_diff = Some(DiffItem::Changed(
+                    DirLink::from_link(left.unwrap(), path()).unwrap(),
+                    DirLink::from_link(right.unwrap(), path()).unwrap(),
+                ));
+            }
+        }
+        _ => {
+            modified = true;
+
+            let mut single_diff = |link: &Link, is_left: bool| match link.as_ref() {
+                Leaf(meta) => {
+                    file_diff = Some(DiffEntry::new(
+                        path(),
+                        if is_left {
+                            DiffType::LeftOnly(meta.clone())
+                        } else {
+                            DiffType::RightOnly(meta.clone())
+                        },
+                    ));
                 }
-                Ordering::Greater => {
-                    add_to_output(DiffItem::right(r))?;
-                    ldir = Some(l);
-                    rdir = rdirs.next();
-                    dir_modified = true;
-                }
-                Ordering::Equal => {
-                    // We only need to diff the directories if their hashes don't match.
-                    // The exception is if both hashes are None (indicating the trees
-                    // have not yet been persisted), in which case we must manually compare
-                    // all of the entries since we can't tell if they are the same.
-                    if l.hgid() != r.hgid() || l.hgid().is_none() {
-                        add_to_output(DiffItem::Changed(l, r))?;
+                Durable(_) | Ephemeral(_) => {
+                    let dir_link = DirLink::from_link(link, path())
+                        .expect("non-leaf node must be a valid directory");
+                    if is_left {
+                        dir_diff = Some(DiffItem::left(dir_link));
+                    } else {
+                        dir_diff = Some(DiffItem::right(dir_link));
                     }
-                    ldir = ldirs.next();
-                    rdir = rdirs.next();
                 }
-            },
-            (Some(l), None) => {
-                add_to_output(DiffItem::left(l))?;
-                ldir = ldirs.next();
-                rdir = None;
-                dir_modified = true;
-            }
-            (None, Some(r)) => {
-                add_to_output(DiffItem::right(r))?;
-                ldir = None;
-                rdir = rdirs.next();
-                dir_modified = true;
-            }
-            (None, None) => break,
-        }
-    }
+            };
 
-    Ok((output, dir_modified))
-}
-
-fn is_sorted<T: Ord>(iter: impl IntoIterator<Item = T>) -> bool {
-    let mut iter = iter.into_iter();
-    if let Some(mut prev) = iter.next() {
-        for i in iter {
-            if i < prev {
-                return false;
+            if let Some(left) = left {
+                single_diff(left, true);
             }
-            prev = i;
+
+            if let Some(right) = right {
+                single_diff(right, false);
+            }
         }
-    }
-    true
+    };
+
+    (file_diff, dir_diff, modified)
 }
 
 #[cfg(test)]
@@ -522,6 +505,7 @@ mod tests {
 
     use manifest::testutil::*;
     use manifest::DiffType;
+    use manifest::File;
     use manifest::FileMetadata;
     use manifest::FileType;
     use manifest::Manifest;
@@ -614,56 +598,6 @@ mod tests {
         ];
 
         assert_eq!(next, expected_next);
-    }
-
-    #[test]
-    fn test_diff_files() {
-        let lfiles = vec![
-            make_file("a", "1"),
-            make_file("b", "2"),
-            make_file("c", "3"),
-            make_file("e", "4"),
-        ];
-        let rfiles = vec![
-            make_file("a", "1"),
-            make_file("c", "3"),
-            make_file("d", "5"),
-            make_file("e", "6"),
-        ];
-
-        let matcher = AlwaysMatcher::new();
-        let entries = diff_files(lfiles, rfiles, &matcher).unwrap().0;
-        let expected = vec![
-            DiffEntry::new(
-                repo_path_buf("b"),
-                DiffType::LeftOnly(FileMetadata {
-                    hgid: hgid("2"),
-                    file_type: FileType::Regular,
-                }),
-            ),
-            DiffEntry::new(
-                repo_path_buf("d"),
-                DiffType::RightOnly(FileMetadata {
-                    hgid: hgid("5"),
-                    file_type: FileType::Regular,
-                }),
-            ),
-            DiffEntry::new(
-                repo_path_buf("e"),
-                DiffType::Changed(
-                    FileMetadata {
-                        hgid: hgid("4"),
-                        file_type: FileType::Regular,
-                    },
-                    FileMetadata {
-                        hgid: hgid("6"),
-                        file_type: FileType::Regular,
-                    },
-                ),
-            ),
-        ];
-
-        assert_eq!(entries, expected);
     }
 
     #[test]
