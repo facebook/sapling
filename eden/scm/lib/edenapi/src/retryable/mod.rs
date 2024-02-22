@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::time::Duration;
-
 use async_trait::async_trait;
 use edenapi_trait::Entries;
 use edenapi_trait::Response;
