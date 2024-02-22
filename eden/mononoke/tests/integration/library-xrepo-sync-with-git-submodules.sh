@@ -81,11 +81,11 @@ function set_git_submodules_action_in_config_version {
   MOD_SMALL_REPO=$2
   NEW_ACTION=$3
 
-  TEMP_FILE="/tmp/COMMIT_SYNC_CONF_all"
+  TEMP_FILE="$TESTTMP/COMMIT_SYNC_CONF_all"
 
   jq ".repos.large_repo.versions |= map(if .version_name != \"$VERSION_NAME\" then . else  .small_repos |= map(if .repoid == $MOD_SMALL_REPO then . + {\"git_submodules_action\": $NEW_ACTION} else . end) end)" "$COMMIT_SYNC_CONF/all" > "$TEMP_FILE"
 
-  cat "$TEMP_FILE" > "$COMMIT_SYNC_CONF/all"
+  mv "$TEMP_FILE" "$COMMIT_SYNC_CONF/all"
 }
 
 function set_git_submodule_dependencies_in_config_version {
@@ -93,11 +93,11 @@ function set_git_submodule_dependencies_in_config_version {
   MOD_SMALL_REPO=$2
   NEW_VALUE=$3
 
-  TEMP_FILE="/tmp/COMMIT_SYNC_CONF_all"
+  TEMP_FILE="$TESTTMP/COMMIT_SYNC_CONF_all"
 
   jq ".repos.large_repo.versions |= map(if .version_name != \"$VERSION_NAME\" then . else  .small_repos |= map(if .repoid == $MOD_SMALL_REPO then . + {\"submodule_dependencies\": $NEW_VALUE} else . end) end)" "$COMMIT_SYNC_CONF/all" > "$TEMP_FILE"
 
-  cat "$TEMP_FILE" > "$COMMIT_SYNC_CONF/all"
+  mv "$TEMP_FILE" "$COMMIT_SYNC_CONF/all"
 }
 
 function setup_sync_config_stripping_git_submodules {
