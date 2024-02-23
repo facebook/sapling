@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
@@ -45,13 +43,7 @@ pub struct BlockCommitMessagePatternHook {
 
 impl BlockCommitMessagePatternHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        match &config.options {
-            Some(options) => {
-                let config = serde_json::from_str(options).context("Invalid hook config")?;
-                Self::with_config(config)
-            }
-            None => bail!("Missing hook options"),
-        }
+        Self::with_config(config.parse_options()?)
     }
 
     pub fn with_config(config: BlockCommitMessagePatternConfig) -> Result<Self> {

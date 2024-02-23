@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
@@ -77,12 +75,7 @@ pub struct LimitCommitSizeHook {
 
 impl LimitCommitSizeHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        let options = config
-            .options
-            .as_ref()
-            .ok_or_else(|| anyhow!("Missing hook options"))?;
-        let config = serde_json::from_str(options).context("Invalid hook config")?;
-        Self::with_config(config)
+        Self::with_config(config.parse_options()?)
     }
 
     pub fn with_config(config: LimitCommitSizeConfig) -> Result<Self> {
@@ -177,6 +170,7 @@ impl ChangesetHook for LimitCommitSizeHook {
 
 #[cfg(test)]
 mod test {
+    use anyhow::anyhow;
     use anyhow::Error;
     use blobstore::Loadable;
     use borrowed::borrowed;

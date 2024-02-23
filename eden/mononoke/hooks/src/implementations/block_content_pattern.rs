@@ -7,8 +7,6 @@
 
 use std::fmt::Write;
 
-use anyhow::bail;
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -54,13 +52,7 @@ pub struct BlockContentPatternHook {
 
 impl BlockContentPatternHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        match &config.options {
-            Some(options) => {
-                let config = serde_json::from_str(options).context("Invalid hook config")?;
-                Self::with_config(config)
-            }
-            None => bail!("Missing hook options"),
-        }
+        Self::with_config(config.parse_options()?)
     }
 
     pub fn with_config(config: BlockContentPatternConfig) -> Result<Self> {

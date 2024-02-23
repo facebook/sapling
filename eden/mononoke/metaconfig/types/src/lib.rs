@@ -22,6 +22,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
@@ -596,6 +597,17 @@ pub struct HookConfig {
     pub int_lists: HashMap<String, Vec<i32>>,
     /// Map of config to it's value. Values here are lists of 64bit integers
     pub int_64_lists: HashMap<String, Vec<i64>>,
+}
+
+impl HookConfig {
+    /// Parse hook config options into a deserializable struct.
+    pub fn parse_options<'a, T: serde::Deserialize<'a>>(&'a self) -> Result<T> {
+        let options = self
+            .options
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing hook options"))?;
+        serde_json::from_str(options).context("Invalid hook config")
+    }
 }
 
 /// Configuration for a hook
