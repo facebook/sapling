@@ -178,7 +178,11 @@ impl MetadataDiffLinesCount {
         Self {
             added_lines_count: new_text_file.lines(),
             significant_added_lines_count: new_text_file.significant_lines_count(),
-            first_added_line_number: Some(1),
+            first_added_line_number: if new_text_file.lines() > 0 {
+                Some(1)
+            } else {
+                None
+            },
             ..Default::default()
         }
     }
@@ -285,8 +289,11 @@ impl TextFile {
         if self.metadata.ends_in_newline {
             // For files that end in newline, the number of lines is equal to the number of newlines.
             self.metadata.newline_count as usize
+        } else if self.metadata.total_size == 0 {
+            // For empty files, the number of lines is zero.
+            0
         } else {
-            // For files that don't end in a newline, the number of lines is equal to the number of newlines plus one for the last line.
+            // For non-empty files that don't end in a newline, the number of lines is equal to the number of newlines plus one for the last line.
             (self.metadata.newline_count + 1) as usize
         }
     }
