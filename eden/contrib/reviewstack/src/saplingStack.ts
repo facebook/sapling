@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-const _STACK_SECTION_START = 'Stack created with [Sapling]';
+const _STACK_SECTION_START = '[//]: # (BEGIN SAPLING FOOTER)';
 
 /**
  * `prefix`: body starts with _STACK_SECTION_START, followed by stack info

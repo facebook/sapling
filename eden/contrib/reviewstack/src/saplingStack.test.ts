@@ -10,6 +10,7 @@ import {parseSaplingStackBody} from './saplingStack';
 describe('parseSaplingStackBody', () => {
   test('extract all sections', () => {
     const parsedBody = parseSaplingStackBody(`\
+[//]: # (BEGIN SAPLING FOOTER)
 Stack created with [Sapling](https://sapling-scm.com/github).
 
 Stacks created by Sapling are best viewed using ReviewStack
@@ -45,6 +46,7 @@ so that each commit in the stack can be reviewed individually.
     const parsedBody = parseSaplingStackBody(`\
 This would be the original commit message of this fictitious commit.
 ---
+[//]: # (BEGIN SAPLING FOOTER)
 Stack created with [Sapling](https://sapling-scm.com/github).
 
 Stacks created by Sapling are best viewed using ReviewStack
@@ -77,6 +79,7 @@ so that each commit in the stack can be reviewed individually.
   test('horizontal rule with empty commit message', () => {
     const parsedBody = parseSaplingStackBody(`\
 ---
+[//]: # (BEGIN SAPLING FOOTER)
 Stack created with [Sapling](https://sapling-scm.com/github).
 
 * #1
@@ -97,6 +100,7 @@ Stack created with [Sapling](https://sapling-scm.com/github).
 
   test('pull request body with no bullet points does not parse', () => {
     const parsedBody = parseSaplingStackBody(`\
+[//]: # (BEGIN SAPLING FOOTER)
 Stack created with [Sapling](https://sapling-scm.com/github).
 `);
     expect(parsedBody).toBe(null);
@@ -104,6 +108,7 @@ Stack created with [Sapling](https://sapling-scm.com/github).
 
   test('pull request body with no selected PR does not parse', () => {
     const parsedBody = parseSaplingStackBody(`\
+[//]: # (BEGIN SAPLING FOOTER)
 Stack created with [Sapling](https://sapling-scm.com/github).
 
 * #1
@@ -116,6 +121,7 @@ Stack created with [Sapling](https://sapling-scm.com/github).
 
   test('pull request body with multiple PRs selected does not parse', () => {
     const parsedBody = parseSaplingStackBody(`\
+[//]: # (BEGIN SAPLING FOOTER)
 Stack created with [Sapling](https://sapling-scm.com/github).
 
 * __->__ #1
