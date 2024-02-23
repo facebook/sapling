@@ -86,10 +86,10 @@ bdir/README.md
 
         self.initial_commit = repo.commit("Initial commit.")
 
-    def set_active_filter(self, path: str):
+    def set_active_filter(self, path: str) -> None:
         self.hg("filteredfs", "enable", path)
 
-    def remove_active_filter(self):
+    def remove_active_filter(self) -> None:
         self.hg("filteredfs", "disable")
 
     def _get_relative_filter_config_path(self) -> str:
@@ -253,7 +253,7 @@ bdir/README.md
         self.set_active_filter("top_level_filter")
         self.assertIn("~ top_level_filter", self.show_active_filter())
 
-    def test_filtered_file_not_in_status(self):
+    def test_filtered_file_not_in_status(self) -> None:
         self.assert_status_empty()
 
         # write to a filtered file
@@ -263,7 +263,7 @@ bdir/README.md
         # Ensure the filtered file isn't reflected in status
         self.assert_status_empty()
 
-    def test_filtered_merge(self):
+    def test_filtered_merge(self) -> None:
         # Set up two commits that will conflict when rebased
         self.write_file("foo", "a separate change\n")
         new1 = self.repo.commit("Change contents of foo")
