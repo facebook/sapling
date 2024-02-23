@@ -25,6 +25,7 @@ ref-cast = "1.0.18"
 repos__clients = { package = "repos_clients", version = "0.1.0", path = "clients" }
 repos__services = { package = "repos_services", version = "0.1.0", path = "services" }
 repos__types = { package = "repos_types", version = "0.1.0", path = "types" }
+rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 thiserror = "1.0.49"
 tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }

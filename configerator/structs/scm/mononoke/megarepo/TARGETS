@@ -25,6 +25,9 @@ thrift_library(
     thrift_srcs = {
         "megarepo_configs.thrift": [],
     },
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )
 
 thrift_library(

@@ -12,4 +12,8 @@ thrift_library(
         "serde",
     ],
     thrift_srcs = {"ratelimits.thrift": None},
+    deps = [
+        "//thrift/annotation:cpp",
+        "//thrift/annotation:rust",
+    ],
 )

@@ -18,6 +18,9 @@ thrift_library(
         "serde",
     ],
     thrift_srcs = {"repos.thrift": None},
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )
 
 thrift_library(
@@ -33,5 +36,6 @@ thrift_library(
     thrift_srcs = {"commitsync.thrift": None},
     deps = [
         ":repos",
+        "//thrift/annotation:rust",
     ],
 )

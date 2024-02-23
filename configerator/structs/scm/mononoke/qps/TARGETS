@@ -13,4 +13,7 @@ thrift_library(
     thrift_py_options = "json",
     thrift_rust_options = "serde",
     thrift_srcs = {"qps_config.thrift": None},
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )

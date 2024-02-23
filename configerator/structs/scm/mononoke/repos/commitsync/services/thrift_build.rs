@@ -16,7 +16,8 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "commitsync crate
-repos repos //configerator/structs/scm/mononoke/repos:repos-rust",
+repos repos //configerator/structs/scm/mononoke/repos:repos-rust
+rust rust //thrift/annotation:rust-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

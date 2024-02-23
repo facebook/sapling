@@ -12,4 +12,7 @@ thrift_library(
     thrift_py_options = "json",
     thrift_rust_options = "serde",
     thrift_srcs = {"enable.thrift": None},
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )

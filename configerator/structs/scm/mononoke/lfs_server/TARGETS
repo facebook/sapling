@@ -9,5 +9,8 @@ thrift_library(
     ],
     thrift_rust_options = "serde",
     thrift_srcs = {"lfs_server.thrift": None},
-    deps = ["//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config"],
+    deps = [
+        "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config",
+        "//thrift/annotation:rust",
+    ],
 )

@@ -16,4 +16,7 @@ thrift_library(
         "serde",
     ],
     thrift_srcs = {"observability_config.thrift": None},
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )

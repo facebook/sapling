@@ -24,6 +24,8 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 repos_clients = { version = "0.1.0", path = "../../repos/clients" }
 repos_types = { version = "0.1.0", path = "../../repos/types" }
+rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_types = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = "0.1.40"
 
 [build-dependencies]
