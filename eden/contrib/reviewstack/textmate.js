@@ -51,7 +51,7 @@ rm_rf(manifestFolder);
 mkdir_p(manifestFolder);
 const manifestPath = `${manifestFolder}/TextMateGrammarManifest.ts`;
 
-const node = 'node --experimental-specifier-resolution=node';
+const node = 'node';
 child_process.execSync(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
 
 fs.copyFileSync(

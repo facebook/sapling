@@ -5,12 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {languages} from 'monaco-editor';
-
 import yaml from 'js-yaml';
 import jsonc from 'jsonc-parser';
 
 /* eslint-disable no-console */
+
+// Subset of monaco-editor's 'languages.ILanguageExtensionPoint': no `configuration`.
+interface LiteILanguageExtensionPoint {
+  id: string;
+  extensions?: string[];
+  filenames?: string[];
+  filenamePatterns?: string[];
+  firstLine?: string;
+  aliases?: string[];
+  mimetypes?: string[];
+}
+
+// Small subset of monaco-editor's 'languages.LanguageConfiguration'.
+type LiteLanguageConfiguration = {
+  autoClosingPairs?: Array<{open: string; close: string} | [string, string]>;
+};
 
 export type GrammarSource =
   | {type: 'json'; definition: Record<string, unknown>}
@@ -25,16 +39,12 @@ export type GrammarContribution = {
   injectTo?: string[];
 };
 
-type Override<T1, T2> = Omit<T1, keyof T2> & T2;
-
 /**
  * `languages.ILanguageExtensionPoint` defines `configuration` as a URI, but we
  * just parse the manifest as JSON and just leave `configuration` as a raw
  * string rather than a more structured type.
  */
-export type LanguageExtensionPoint =
-  | Override<languages.ILanguageExtensionPoint, {configuration: string}>
-  | Omit<languages.ILanguageExtensionPoint, 'configuration'>;
+export type LanguageExtensionPoint = LiteILanguageExtensionPoint & {configuration: string};
 
 /**
  * This is an entry in `contributes.languages` from the extension's
@@ -42,9 +52,9 @@ export type LanguageExtensionPoint =
  * path to the `xxx-configuration.json` file with the parsed contents of that
  * file.
  */
-export type NormalizedLanguageExtensionPoint =
-  | Override<languages.ILanguageExtensionPoint, {configuration: languages.LanguageConfiguration}>
-  | Omit<languages.ILanguageExtensionPoint, 'configuration'>;
+export type NormalizedLanguageExtensionPoint = LiteILanguageExtensionPoint & {
+  configuration?: LiteLanguageConfiguration;
+};
 
 /**
  * Parsed package.json for a VS Code extension.
@@ -102,7 +112,7 @@ export default abstract class AbstractLanguageExtension {
    * @param configPath relative path within the extension to the config file
    * @return the parsed config file as an Object
    */
-  getLanguageConfiguration(configPath: string): Promise<languages.LanguageConfiguration> {
+  getLanguageConfiguration(configPath: string): Promise<LiteLanguageConfiguration> {
     return this.getContents(configPath)
       .then(text => jsonc.parse(text))
       .catch(e => {
