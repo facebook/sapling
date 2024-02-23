@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <time.h>
+#include <ctime>
 
 namespace facebook::eden {
 
@@ -16,7 +16,7 @@ namespace facebook::eden {
  */
 class Clock {
  public:
-  virtual ~Clock() {}
+  virtual ~Clock() = default;
 
   /**
    * Returns the real time elapsed since the Epoch.

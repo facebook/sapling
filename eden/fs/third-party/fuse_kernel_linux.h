@@ -177,7 +177,7 @@
 #ifndef _LINUX_FUSE_H
 #define _LINUX_FUSE_H
 
-#include <stdint.h>
+#include <cstdint>
 
 /*
  * Version negotiation:
