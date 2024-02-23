@@ -24,7 +24,7 @@ namespace sapling {
 
 SaplingNativeBackingStore::SaplingNativeBackingStore(
     std::string_view repository,
-    const BackingStoreOptions& options)
+    const SaplingNativeBackingStoreOptions& options)
     : store_{
           sapling_backingstore_new(
               rust::Slice<const char>{repository.data(), repository.size()},

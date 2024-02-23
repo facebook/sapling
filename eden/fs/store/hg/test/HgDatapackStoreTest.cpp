@@ -45,8 +45,8 @@ struct TestRepo {
   }
 };
 
-HgDatapackStore::RustOptions computeTestRustOptions() {
-  HgDatapackStore::RustOptions options{};
+HgDatapackStore::SaplingNativeOptions computeTestSaplingOptions() {
+  HgDatapackStore::SaplingNativeOptions options{};
   options.allow_retries = false;
   return options;
 }
@@ -72,7 +72,7 @@ std::vector<PathComponent> getTreeNames(
 struct HgDatapackStoreTestBase : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
 
-  HgDatapackStore::RustOptions options{computeTestRustOptions()};
+  HgDatapackStore::SaplingNativeOptions options{computeTestSaplingOptions()};
 
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};

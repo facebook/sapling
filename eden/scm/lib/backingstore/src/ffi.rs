@@ -21,7 +21,7 @@ use crate::FetchMode;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
-    pub struct BackingStoreOptions {
+    pub struct SaplingNativeBackingStoreOptions {
         allow_retries: bool,
     }
 
@@ -108,7 +108,7 @@ pub(crate) mod ffi {
 
         pub unsafe fn sapling_backingstore_new(
             repository: &[c_char],
-            options: &BackingStoreOptions,
+            options: &SaplingNativeBackingStoreOptions,
         ) -> Result<Box<BackingStore>>;
 
         pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
@@ -173,7 +173,7 @@ impl From<ffi::FetchMode> for FetchMode {
 
 pub unsafe fn sapling_backingstore_new(
     repository: &[c_char],
-    options: &ffi::BackingStoreOptions,
+    options: &ffi::SaplingNativeBackingStoreOptions,
 ) -> Result<Box<BackingStore>> {
     super::init::backingstore_global_init();
 

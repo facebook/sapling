@@ -57,7 +57,7 @@ class SaplingNativeBackingStore {
  public:
   SaplingNativeBackingStore(
       std::string_view repository,
-      const BackingStoreOptions& options);
+      const SaplingNativeBackingStoreOptions& options);
 
   std::string_view getRepoName() const {
     return repoName_;

@@ -48,7 +48,7 @@ class HgDatapackStoreOptions {
 
 class HgDatapackStore {
  public:
-  using RustOptions = sapling::BackingStoreOptions;
+  using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
   using CppOptions = HgDatapackStoreOptions;
   using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
 
@@ -60,12 +60,12 @@ class HgDatapackStore {
    */
   HgDatapackStore(
       AbsolutePathPiece repository,
-      const RustOptions& rustOptions,
+      const SaplingNativeOptions& saplingNativeOptions,
       std::unique_ptr<CppOptions> cppOptions,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector)
-      : store_{repository.view(), rustOptions},
+      : store_{repository.view(), saplingNativeOptions},
         cppOptions_{std::move(cppOptions)},
         config_{std::move(config)},
         logger_{std::move(logger)},

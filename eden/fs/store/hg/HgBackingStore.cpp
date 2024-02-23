@@ -92,14 +92,14 @@ class SaplingRetryThreadFactory : public folly::InitThreadFactory {
             [] {}) {}
 };
 
-HgDatapackStore::RustOptions computeRustOptions() {
-  HgDatapackStore::RustOptions options{};
+HgDatapackStore::SaplingNativeOptions computeRustOptions() {
+  HgDatapackStore::SaplingNativeOptions options{};
   options.allow_retries = false;
   return options;
 }
 
-HgDatapackStore::RustOptions computeTestRustOptions() {
-  HgDatapackStore::RustOptions options{};
+HgDatapackStore::SaplingNativeOptions computeTestRustOptions() {
+  HgDatapackStore::SaplingNativeOptions options{};
   options.allow_retries = false;
   return options;
 }
