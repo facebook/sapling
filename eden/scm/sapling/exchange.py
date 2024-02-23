@@ -1846,7 +1846,7 @@ def _pullcommitgraph(pullop, version):
                 )
                 for m in mutations
             ]
-            mutation.recordentries(repo, mutations)
+            mutation.recordentries(repo, mutations, raw=True)
     else:
         pullop.cgresult = 1  # unchanged
 
