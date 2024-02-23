@@ -10,9 +10,9 @@
 #include <folly/Try.h>
 #include <folly/Utility.h>
 #include <folly/portability/SysStat.h>
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 

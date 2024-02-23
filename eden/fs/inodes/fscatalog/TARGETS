@@ -16,10 +16,10 @@ cpp_library(
             "InodePath.h",
         ],
     deps = [
+        "//eden/common/utils:throw",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/utils:eden_error",
         "//eden/fs/utils:file_utils",
-        "//eden/fs/utils:throw",
         "//folly:exception",
         "//folly:file_util",
         "//folly/io:iobuf",

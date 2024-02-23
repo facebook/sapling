@@ -15,9 +15,9 @@
 #include <folly/logging/xlog.h>
 #include <cstddef>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 

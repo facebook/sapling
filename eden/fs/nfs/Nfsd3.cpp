@@ -14,6 +14,7 @@
 #include <folly/futures/Future.h>
 #include <folly/portability/Stdlib.h>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/nfs/NfsdRpc.h"
@@ -27,7 +28,6 @@
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/SystemError.h"
-#include "eden/fs/utils/Throw.h"
 
 #ifdef __linux__
 #include <sys/sysmacros.h>

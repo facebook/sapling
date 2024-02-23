@@ -193,7 +193,7 @@ cpp_library(
         "FilterUtils.h",
     ],
     deps = [
-        ":throw",
+        "//eden/common/utils:throw",
         "//folly:varint",
         "//folly/logging:logging",
     ],
@@ -266,14 +266,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "throw",
-    headers = ["Throw.h"],
-    exported_deps = [
-        "fbsource//third-party/fmt:fmt",
-    ],
-)
-
-cpp_library(
     name = "try",
     headers = [
         "Try.h",
@@ -341,7 +333,7 @@ cpp_library(
         ":case_sensitivity",
         ":immediate_future",
         ":path",
-        ":throw",
+        "//eden/common/utils:throw",
         "//eden/common/utils:win_error",
         "//folly:cpp_attributes",
         "//folly:exception",
@@ -383,9 +375,9 @@ cpp_library(
         ":case_sensitivity",
         ":memory",
         ":string",
-        ":throw",
         ":utf8",
         "//eden/common/utils:stringconv",
+        "//eden/common/utils:throw",
         "//folly:expected",
         "//folly:fbstring",
         "//folly:fbvector",

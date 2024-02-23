@@ -32,8 +32,8 @@ cpp_library(
     srcs = ["PrivHelperConn.cpp"],
     headers = ["PrivHelperConn.h"],
     deps = [
+        "//eden/common/utils:throw",
         "//eden/fs/utils:system_error",
-        "//eden/fs/utils:throw",
         "//eden/fs/utils:utils",
         "//folly:demangle",
         "//folly:exception",
@@ -71,10 +71,10 @@ cpp_library(
     )],
     deps = [
         ":nfs_rpc",
+        "//eden/common/utils:throw",
         "//eden/fs/utils:path",
         "//eden/fs/utils:process",
         "//eden/fs/utils:sysctl_util",
-        "//eden/fs/utils:throw",
         "//folly:conv",
         "//folly:exception",
         "//folly:expected",

@@ -12,7 +12,7 @@
 #include <folly/logging/xlog.h>
 #include <tuple>
 
-#include "eden/fs/utils/Throw.h"
+#include "eden/common/utils/Throw.h"
 
 namespace facebook::eden {
 std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {

@@ -22,9 +22,9 @@
 #include <type_traits>
 
 #include "eden/common/utils/StringConv.h"
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/String.h"
-#include "eden/fs/utils/Throw.h"
 #include "eden/fs/utils/Utf8.h"
 
 namespace facebook::eden {

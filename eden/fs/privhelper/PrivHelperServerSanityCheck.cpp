@@ -16,7 +16,7 @@
 #include <folly/String.h>
 #include <cerrno>
 #include <string>
-#include "eden/fs/utils/Throw.h"
+#include "eden/common/utils/Throw.h"
 
 #ifndef __APPLE__
 #include <sys/statfs.h>

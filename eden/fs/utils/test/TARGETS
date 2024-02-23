@@ -329,16 +329,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "throw",
-    srcs = ["ThrowTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:throw",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "try",
     srcs = ["TryTest.cpp"],
     supports_static_listing = False,

@@ -10,7 +10,7 @@
 #include <folly/Conv.h>
 #include <folly/Unicode.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/utils/Throw.h"
+#include "eden/common/utils/Throw.h"
 
 namespace {
 void validateUtf8(folly::StringPiece sp) {

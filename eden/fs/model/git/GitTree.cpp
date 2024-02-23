@@ -10,10 +10,10 @@
 #include <folly/io/Cursor.h>
 #include <cstdio>
 #include <cstring>
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/utils/Throw.h"
 
 using folly::IOBuf;
 using std::invalid_argument;

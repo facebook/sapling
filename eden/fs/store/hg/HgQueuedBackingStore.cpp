@@ -21,6 +21,7 @@
 #include <folly/portability/GFlags.h>
 #include <folly/system/ThreadName.h>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -38,7 +39,6 @@
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
-#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 

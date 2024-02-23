@@ -14,6 +14,7 @@
 #include <stdexcept>
 
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
@@ -25,7 +26,6 @@
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/ImmediateFuture.h"
-#include "eden/fs/utils/Throw.h"
 
 using folly::Future;
 using folly::makeFuture;

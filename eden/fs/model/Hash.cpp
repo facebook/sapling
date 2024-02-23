@@ -13,8 +13,8 @@
 #include <folly/io/IOBuf.h>
 #include <folly/ssl/OpenSSLHash.h>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/digest/Blake3.h"
-#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::range;

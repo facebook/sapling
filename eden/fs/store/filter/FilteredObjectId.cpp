@@ -10,7 +10,7 @@
 #include <folly/Varint.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/utils/Throw.h"
+#include "eden/common/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::Endian;

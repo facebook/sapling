@@ -111,8 +111,8 @@ cpp_library(
         "SessionInfo.h",
     ],
     deps = [
+        "//eden/common/utils:throw",
         "//eden/fs/utils:sysctl_util",
-        "//eden/fs/utils:throw",
         "//folly:conv",
         "//folly:exception",
         "//folly:unicode",

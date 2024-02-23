@@ -11,15 +11,15 @@ cpp_library(
         "ovr_config//os:linux",
     ],
     deps = [
-        "//eden/fs/model:model",
+        "//eden/common/utils:throw",
         "//eden/fs/model/git:git",
+        "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//eden/fs/utils:enum",
-        "//eden/fs/utils:throw",
-        "//folly:conv",
-        "//folly:string",
         "//folly/futures:core",
         "//folly/logging:logging",
+        "//folly:conv",
+        "//folly:string",
         # TODO(T168360028): This dependency comes from third-party/rust/BUCK
         # which includes a bunch of buck-built libgit2 targets for each
         # platform. We are only using Linux for now. See task for the real fix.

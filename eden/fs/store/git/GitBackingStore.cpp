@@ -13,6 +13,7 @@
 // TODO(T168360028)
 #include <git2.h> // @manual
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/EnumValue.h"
-#include "eden/fs/utils/Throw.h"
 #include "folly/String.h"
 
 #if defined(__has_feature)

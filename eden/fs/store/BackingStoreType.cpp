@@ -6,7 +6,7 @@
  */
 
 #include "BackingStoreType.h"
-#include "eden/fs/utils/Throw.h"
+#include "eden/common/utils/Throw.h"
 
 namespace facebook::eden {
 

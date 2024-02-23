@@ -14,9 +14,9 @@
 #include <string_view>
 #include <typeindex>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/config/FieldConverter.h"
 #include "eden/fs/config/gen-cpp2/eden_config_types.h"
-#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 

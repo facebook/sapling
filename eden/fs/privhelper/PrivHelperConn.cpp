@@ -25,9 +25,9 @@
 #include <folly/portability/Unistd.h>
 #include <sys/types.h>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/SystemError.h"
-#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::checkUnixError;

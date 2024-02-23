@@ -14,8 +14,8 @@
 #include <folly/ssl/OpenSSLHash.h>
 #include <string>
 
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::range;

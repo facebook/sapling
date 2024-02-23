@@ -9,9 +9,9 @@
 
 #include <folly/Conv.h>
 #include <sys/stat.h>
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 

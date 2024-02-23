@@ -7,7 +7,7 @@ cpp_library(
     srcs = ["FilteredObjectId.cpp"],
     headers = ["FilteredObjectId.h"],
     deps = [
-        "//eden/fs/utils:throw",
+        "//eden/common/utils:throw",
         "//folly:varint",
         "//folly/logging:logging",
     ],

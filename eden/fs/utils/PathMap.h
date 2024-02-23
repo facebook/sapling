@@ -12,9 +12,9 @@
 #include <functional>
 #include <iterator>
 #include <utility>
+#include "eden/common/utils/Throw.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 

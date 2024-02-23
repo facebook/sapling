@@ -46,6 +46,7 @@ cpp_library(
     deps = [
         ":nfs_utils",
         ":nfsd_rpc",
+        "//eden/common/utils:throw",
         "//eden/fs/privhelper:interface",
         "//eden/fs/store:context",
         "//eden/fs/telemetry:fs_event_logger",
@@ -54,7 +55,6 @@ cpp_library(
         "//eden/fs/utils:clock",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:system_error",
-        "//eden/fs/utils:throw",
         "//eden/fs/utils:utils",
         "//folly:utility",
         "//folly/executors:serial_executor",
@@ -138,7 +138,7 @@ cpp_library(
     headers = ["NfsUtils.h"],
     exported_deps = [
         ":nfsd_rpc",
-        "//eden/fs/utils:throw",
+        "//eden/common/utils:throw",
         "//eden/fs/utils:utils",
         "//folly:try",
         "//folly:utility",

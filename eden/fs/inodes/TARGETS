@@ -267,9 +267,9 @@ cpp_library(
         "InodeTimestamps.h",
     ],
     deps = [
+        "//eden/common/utils:throw",
         "//eden/fs/utils:clock",
         "//eden/fs/utils:fs_channel_types",
-        "//eden/fs/utils:throw",
         "//folly:conv",
     ],
     exported_deps = [

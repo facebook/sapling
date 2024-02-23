@@ -14,8 +14,8 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:throw",
         "//eden/fs/model:model",
-        "//eden/fs/utils:throw",
         "//folly:conv",
     ],
     exported_deps = [

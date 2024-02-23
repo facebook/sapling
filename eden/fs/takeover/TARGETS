@@ -27,8 +27,8 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:throw",
         "//eden/fs/utils:event_base_state",
-        "//eden/fs/utils:throw",
         "//folly:file_util",
         "//folly:likely",
         "//folly:network_address",
