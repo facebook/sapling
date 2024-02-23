@@ -89,27 +89,6 @@ class PrjFSTestBase(testcase.EdenRepoTest):
         finally:
             self.make_eden_start_processing_notifications_again()
 
-    def wait_on_fault_unblock(
-        self,
-        numToUnblock: int = 1,
-        keyClass: str = "PrjfsDispatcherImpl::fileNotification",
-        keyValueRegex: str = ".*",
-    ) -> None:
-        def unblock() -> Optional[bool]:
-            with self.eden.get_thrift_client_legacy() as client:
-                unblocked = client.unblockFault(
-                    UnblockFaultArg(
-                        keyClass=keyClass,
-                        keyValueRegex=keyValueRegex,
-                    )
-                )
-            if unblocked == 1:
-                return True
-            return None
-
-        for _ in range(numToUnblock):
-            util.poll_until(unblock, timeout=30)
-
     def getAllMaterialized(self, waitTime: int = 5) -> Set[Tuple[Path, int]]:
         """Return all the materialized files/directories minus .hg and .eden"""
         res = set()
@@ -151,34 +130,3 @@ class PrjFSTestBase(testcase.EdenRepoTest):
     ) -> None:
         materialized = self.getAllMaterialized(waitTime)
         self.assertSetEqual(materialized, {(Path(path), mode) for path, mode in paths})
-
-    @contextmanager
-    def run_with_blocking_fault(
-        self,
-        keyClass: str = "PrjfsDispatcherImpl::fileNotification",
-        keyValueRegex: str = ".*",
-    ) -> Generator[None, None, None]:
-        with self.eden.get_thrift_client_legacy() as client:
-            client.injectFault(
-                FaultDefinition(
-                    keyClass=keyClass,
-                    keyValueRegex=keyValueRegex,
-                    block=True,
-                )
-            )
-
-            try:
-                yield
-            finally:
-                client.removeFault(
-                    RemoveFaultArg(
-                        keyClass=keyClass,
-                        keyValueRegex=keyValueRegex,
-                    )
-                )
-                client.unblockFault(
-                    UnblockFaultArg(
-                        keyClass=keyClass,
-                        keyValueRegex=keyValueRegex,
-                    )
-                )

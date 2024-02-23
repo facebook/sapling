@@ -16,12 +16,14 @@ import sys
 import time
 import typing
 import unittest
+from contextlib import contextmanager
 
 from pathlib import Path
 from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     Iterable,
     List,
     Optional,
@@ -33,10 +35,11 @@ from typing import (
 )
 
 import eden.config
+from eden.fs.cli import util
 from eden.test_support.testcase import EdenTestCaseBase
 from eden.thrift import legacy
 
-from facebook.eden.ttypes import SourceControlType
+from facebook.eden.ttypes import FaultDefinition, RemoveFaultArg, UnblockFaultArg
 
 from . import edenclient, gitrepo, hgrepo, repobase, skip
 from .find_executables import FindExe
@@ -399,6 +402,71 @@ class EdenTestCase(EdenTestCaseBase):
         from running with NFS via skip lists in eden/integration/lib/skip.py.
         """
         return sys.platform == "darwin"
+
+    def remove_fault(
+        self,
+        keyClass: str,
+        keyValueRegex: str = ".*",
+    ) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.removeFault(
+                RemoveFaultArg(
+                    keyClass=keyClass,
+                    keyValueRegex=keyValueRegex,
+                )
+            )
+
+    def wait_on_fault_unblock(
+        self,
+        keyClass: str,
+        keyValueRegex: str = ".*",
+        numToUnblock: int = 1,
+    ) -> None:
+        def unblock() -> Optional[bool]:
+            with self.eden.get_thrift_client_legacy() as client:
+                unblocked = client.unblockFault(
+                    UnblockFaultArg(
+                        keyClass=keyClass,
+                        keyValueRegex=keyValueRegex,
+                    )
+                )
+            if unblocked == 1:
+                return True
+            return None
+
+        for _ in range(numToUnblock):
+            util.poll_until(unblock, timeout=30)
+
+    @contextmanager
+    def run_with_blocking_fault(
+        self,
+        keyClass: str,
+        keyValueRegex: str = ".*",
+    ) -> Generator[None, None, None]:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass=keyClass,
+                    keyValueRegex=keyValueRegex,
+                    block=True,
+                )
+            )
+
+            try:
+                yield
+            finally:
+                client.removeFault(
+                    RemoveFaultArg(
+                        keyClass=keyClass,
+                        keyValueRegex=keyValueRegex,
+                    )
+                )
+                client.unblockFault(
+                    UnblockFaultArg(
+                        keyClass=keyClass,
+                        keyValueRegex=keyValueRegex,
+                    )
+                )
 
 
 # pyre-ignore[13]: T62487924

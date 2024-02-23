@@ -37,67 +37,89 @@ class PrjFSStress(PrjFSStressBase):
         return result
 
     def test_create_and_remove_file(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.touch("foo")
             # EdenFS will now block due to the fault above
-            self.wait_on_fault_unblock()
+            self.wait_on_fault_unblock(keyClass="PrjfsDispatcherImpl::fileNotification")
             self.rm("foo")
-            self.wait_on_fault_unblock()
+            self.wait_on_fault_unblock(keyClass="PrjfsDispatcherImpl::fileNotification")
 
             self.assertNotMaterialized("foo")
 
     def test_create_already_removed(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.touch("foo")
             # EdenFS will now block due to the fault above, remove the file to
             # force it down the removal path.
             self.rm("foo")
-            self.wait_on_fault_unblock(2)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=2
+            )
 
             self.assertNotMaterialized("foo")
 
     def test_create_file_to_directory(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.touch("foo")
             # EdenFS will now block due to the fault above, remove the file to
             # force it down the removal path.
             self.rm("foo")
             # And then create the directory
             self.mkdir("foo")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.assertMaterialized("foo", stat.S_IFDIR)
 
     def test_create_directory_to_file(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("foo")
             self.rmdir("foo")
             self.touch("foo")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.assertMaterialized("foo", stat.S_IFREG)
 
     def test_rename_hierarchy(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("foo")
             self.touch("foo/bar")
             self.touch("foo/baz")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.rename("foo", "bar")
             self.wait_on_fault_unblock(
-                2
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=2
             )  # A rename is a total removal and a total creation
 
             self.assertMaterialized("bar", stat.S_IFDIR)
             self.assertNotMaterialized("foo")
 
     def test_rename_to_file(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("foo")
             self.touch("foo/bar")
             self.touch("foo/baz")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.rename("foo", "bar")
             self.rm("bar/bar")
@@ -105,23 +127,31 @@ class PrjFSStress(PrjFSStressBase):
             self.rmdir("bar")
             self.touch("bar")
 
-            self.wait_on_fault_unblock(6)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=6
+            )
 
             self.assertMaterialized("bar", stat.S_IFREG)
             self.assertNotMaterialized("foo")
 
     def test_rename_and_replace(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("foo")
             self.touch("foo/bar")
             self.touch("foo/baz")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.rename("foo", "bar")
             self.mkdir("foo")
             self.mkdir("foo/hello")
 
-            self.wait_on_fault_unblock(4)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=4
+            )
 
             self.assertAllMaterialized(
                 {
@@ -136,13 +166,17 @@ class PrjFSStress(PrjFSStressBase):
             )
 
     def test_out_of_order_file_removal(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("a/b")
             self.touch("a/b/c")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.rm("a/b/c")
-            # A wait_on_fault_unblock(1) below will just wait for the rm to be
+            # A wait_on_fault_unblock(keyClass = "PrjfsDispatcherImpl::fileNotification", numToUnblock=1) below will just wait for the rm to be
             # unblocked, not for it to terminate. This is usually not an issue
             # due to Thrift APIs waiting on all IO when a positive SyncBehavior
             # is used, but since we'll need to pass a SyncBehavior of 0
@@ -155,7 +189,9 @@ class PrjFSStress(PrjFSStressBase):
             self.touch("a/b")
 
             # Unblock rm("a/b/c") touch("foo") and rm("foo")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.assertAllMaterialized(
                 {
@@ -167,7 +203,9 @@ class PrjFSStress(PrjFSStressBase):
                 waitTime=0,
             )
 
-            self.wait_on_fault_unblock(2)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=2
+            )
             self.assertAllMaterialized(
                 {
                     ("a/b", stat.S_IFREG),
@@ -178,13 +216,17 @@ class PrjFSStress(PrjFSStressBase):
             )
 
     def test_out_of_order_file_removal_to_renamed(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("a/b")
             self.touch("a/b/c")
             self.mkdir("z")
             self.touch("z/y")
             self.touch("z/x")
-            self.wait_on_fault_unblock(6)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=6
+            )
 
             self.rm("a/b/c")
             # A wait_on_fault_unblock(1) below will just wait for the rm to be
@@ -200,7 +242,9 @@ class PrjFSStress(PrjFSStressBase):
             self.rename("z", "a/b")
 
             # Unblock rm("a/b/c") touch("foo") and rm("foo")
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
 
             self.assertAllMaterialized(
                 {
@@ -215,7 +259,9 @@ class PrjFSStress(PrjFSStressBase):
                 waitTime=0,
             )
 
-            self.wait_on_fault_unblock(3)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=3
+            )
             self.assertAllMaterialized(
                 {
                     ("a/b/x", stat.S_IFREG),
@@ -228,7 +274,9 @@ class PrjFSStress(PrjFSStressBase):
             )
 
     def test_rename_twice(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.mkdir("first")
             self.touch("first/a")
             self.mkdir("first/b")
@@ -241,7 +289,9 @@ class PrjFSStress(PrjFSStressBase):
             self.rename("second", "first")
             self.rename("third", "second")
 
-            self.wait_on_fault_unblock(12)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=12
+            )
 
             self.assertAllMaterialized(
                 {
@@ -273,14 +323,18 @@ class PrjFSStress(PrjFSStressBase):
                 break
 
     def test_unmount_with_ongoing_notification(self) -> None:
-        with self.run_with_blocking_fault():
+        with self.run_with_blocking_fault(
+            keyClass="PrjfsDispatcherImpl::fileNotification"
+        ):
             self.touch("adir/a")
 
             unmount_thread = Thread(target=self.unmount)
             unmount_thread.start()
 
             self.wait_until_unmount_started()
-            self.wait_on_fault_unblock(1)
+            self.wait_on_fault_unblock(
+                keyClass="PrjfsDispatcherImpl::fileNotification", numToUnblock=1
+            )
 
             unmount_thread.join(timeout=30.0)
 
