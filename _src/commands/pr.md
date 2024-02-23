@@ -4,7 +4,7 @@ sidebar_position: 26
 
 ## pr
 <!--
-  @generated SignedSource<<98437250a67550c314c43ca03953d47c>>
+  @generated SignedSource<<e46805d6e8254145afa6487d46a2d334>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -36,9 +36,7 @@ Returns 0 on success.
 &#x69;mport a pull request into your working copy
 
 The PULL_REQUEST can be specified as either a URL:
-
-https://github.com/facebook/sapling/pull/321
-
+`https://github.com/facebook/sapling/pull/321`
 or just the PR number within the GitHub repository identified by
 `sl config paths.default`.
 

@@ -4,7 +4,7 @@ sidebar_position: 29
 
 ## push
 <!--
-  @generated SignedSource<<c2680bfcbd97fcef0938f62fec3e9a78>>
+  @generated SignedSource<<bc486b5c75e310fa81d8033e6bfe2086>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -56,5 +56,5 @@ Returns 0 on success.
 | `-f`| `--force`| | force push|
 | `-r`| `--rev`| | a commit to push|
 | `-t`| `--to`| | push commits to this bookmark|
-| `-d`| `--delete`| | delete remote bookmark|
+| | `--delete`| | delete remote bookmark|
 | | `--create`| | create a new remote bookmark|
