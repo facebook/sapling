@@ -416,6 +416,19 @@ class EdenTestCase(EdenTestCaseBase):
                 )
             )
 
+    def unblock_fault(
+        self,
+        keyClass: str,
+        keyValueRegex: str = ".*",
+    ) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.unblockFault(
+                UnblockFaultArg(
+                    keyClass=keyClass,
+                    keyValueRegex=keyValueRegex,
+                )
+            )
+
     def wait_on_fault_unblock(
         self,
         keyClass: str,

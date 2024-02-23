@@ -44,6 +44,10 @@ class PrjfsRequestContext : public RequestContext {
         channel_(std::move(channel)),
         commandId_(prjfsData.CommandId) {}
 
+  folly::ReadMostlyWeakPtr<PrjfsChannelInner> getChannelForAsyncUse() {
+    return folly::ReadMostlyWeakPtr<PrjfsChannelInner>{channel_};
+  }
+
   ImmediateFuture<folly::Unit> catchErrors(ImmediateFuture<folly::Unit>&& fut) {
     return std::move(fut).thenTry([this](folly::Try<folly::Unit>&& try_) {
       auto result = tryToHResult(try_);

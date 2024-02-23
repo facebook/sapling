@@ -2067,10 +2067,12 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                          serverState_->getReloadableConfig(),
                          &getStraceLogger(),
                          serverState_->getStructuredLogger(),
+                         serverState_->getFaultInjector(),
                          serverState_->getProcessInfoCache(),
                          getCheckoutConfig()->getRepoGuid(),
                          getCheckoutConfig()->getEnableWindowsSymlinks(),
-                         this->getServerState()->getNotifier()));
+                         this->getServerState()->getNotifier(),
+                         this->getInvalidationThreadPool()));
                  return FsChannelPtr{std::move(channel)};
                })
             .thenTry([this, mountPromise](Try<FsChannelPtr>&& channel) {

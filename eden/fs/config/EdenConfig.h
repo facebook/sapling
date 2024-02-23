@@ -651,6 +651,11 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds{10},
       this};
 
+  ConfigSetting<std::chrono::nanoseconds> tornReadCleanupDelay{
+      "prjfs:torn-read-cleanup-delay",
+      std::chrono::seconds{1},
+      this};
+
   // [fschannel]
 
   /**

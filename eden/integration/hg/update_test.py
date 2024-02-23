@@ -1276,10 +1276,8 @@ class PrjFSStressTornReads(EdenHgTestCase):
         )
         read_thread.join()
         self.assertIsNotNone(read_exception)
-        # ugh pyre I just asserted it's non none :| I want this to error
-        # anyways if the error does not have errno set.
-        # pyre-ignore[16]: `None` has no attribute `errno`.
-        self.assertEqual(read_exception.errno, 22)  # invalid argument error
+        if read_exception is not None:  # pyre :(
+            self.assertEqual(read_exception.errno, 22)  # invalid argument error
 
     def test_torn_read_short_to_long(self) -> None:
         self.repo.update(self.short_file_commit)
@@ -1318,3 +1316,121 @@ class PrjFSStressTornReads(EdenHgTestCase):
         # This case requires a larger fix.
         # TODO(kmancini): fix torn reads.
         self.assertEqual(read_contents, b"123456")
+
+    def test_torn_read_invalidation(self) -> None:
+        self.repo.update(self.long_file_commit)
+        rel_path = "file"
+        path = self.mount_path / rel_path
+
+        read_exception: Optional[OSError] = None
+
+        def read_file() -> None:
+            nonlocal read_exception
+            with self.run_with_blocking_fault(
+                keyClass="PrjfsDispatcherImpl::read",
+                keyValueRegex="file",
+            ):
+                try:
+                    with path.open("rb") as f:
+                        f.read()
+                except Exception as err:
+                    read_exception = err
+
+        read_thread = Thread(target=read_file)
+        read_thread.start()
+
+        try:
+            self.repo.update(self.short_file_commit)
+        except Exception:
+            pass
+
+        self.remove_fault(keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file")
+        self.wait_on_fault_unblock(
+            keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file"
+        )
+        read_thread.join()
+        self.assertIsNotNone(read_exception)
+        if read_exception is not None:  # pyre :(
+            self.assertEqual(read_exception.errno, 22)  # invalid argument error
+
+        def read_file_without_error() -> Optional[str]:
+            try:
+                with path.open("rb") as f:
+                    return f.read()
+            except Exception:
+                return None
+
+        contents = util.poll_until(
+            read_file_without_error,
+            timeout=30,
+            interval=2,
+            timeout_ex=Exception(
+                f"path: {path} did not become readable. Invalidation didn't happen?"
+            ),
+        )
+
+        self.assertEqual(contents, b"54321\n")
+
+    def test_torn_read_invalidation_shutdown(self) -> None:
+        self.repo.update(self.long_file_commit)
+        rel_path = "file"
+        path = self.mount_path / rel_path
+
+        read_exception: Optional[OSError] = None
+
+        def read_file() -> None:
+            nonlocal read_exception
+            with self.run_with_blocking_fault(
+                keyClass="PrjfsDispatcherImpl::read",
+                keyValueRegex="file",
+            ):
+                try:
+                    with path.open("rb") as f:
+                        f.read()
+                except Exception as err:
+                    read_exception = err
+
+        read_thread = Thread(target=read_file)
+        read_thread.start()
+
+        try:
+            self.repo.update(self.short_file_commit)
+        except Exception:
+            pass
+
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="PrjFSChannelInner::getFileData-invalidation",
+                    keyValueRegex="file",
+                    block=True,
+                )
+            )
+
+        self.remove_fault(keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file")
+        self.wait_on_fault_unblock(
+            keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file"
+        )
+        read_thread.join()
+
+        def stop_eden() -> None:
+            self.eden.shutdown()
+
+        shutdown_thread = Thread(target=stop_eden)
+        shutdown_thread.start()
+
+        try:
+            self.remove_fault(
+                keyClass="PrjFSChannelInner::getFileData-invalidation",
+                keyValueRegex="file",
+            )
+            self.unblock_fault(
+                keyClass="PrjFSChannelInner::getFileData-invalidation",
+                keyValueRegex="file",
+            )
+        finally:
+            # we can't let shutdown be on going when the test trys to
+            # clean up or we might hide the actual error.
+            # throws if eden exits uncleanly - which it does if there is some
+            # sort of crash.
+            shutdown_thread.join()

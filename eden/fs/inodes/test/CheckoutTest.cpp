@@ -1895,10 +1895,12 @@ class FakePrjfsChannel final : public PrjfsChannel {
             mount->getServerState()->getReloadableConfig(),
             &mount->getStraceLogger(),
             mount->getServerState()->getStructuredLogger(),
+            mount->getServerState()->getFaultInjector(),
             mount->getServerState()->getProcessInfoCache(),
             mount->getCheckoutConfig()->getRepoGuid(),
             mount->getCheckoutConfig()->getEnableWindowsSymlinks(),
-            nullptr),
+            nullptr,
+            mount->getInvalidationThreadPool()),
         actions_{std::move(actions)} {}
 
   static void initializeFakePrjfsChannel(

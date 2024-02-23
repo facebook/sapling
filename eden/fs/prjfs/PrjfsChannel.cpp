@@ -21,6 +21,7 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -431,14 +432,18 @@ PrjfsChannelInner::PrjfsChannelInner(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     const std::shared_ptr<StructuredLogger>& structuredLogger,
+    FaultInjector& faultInjector,
     ProcessAccessLog& processAccessLog,
     std::shared_ptr<ReloadableConfig>& config,
     folly::Promise<folly::Unit> deletedPromise,
     std::shared_ptr<Notifier> notifier,
-    size_t prjfsTraceBusCapacity)
+    size_t prjfsTraceBusCapacity,
+    const std::shared_ptr<folly::Executor>& invalidationThreadPool)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       structuredLogger_(structuredLogger),
+      faultInjector_(faultInjector),
+      invalidationThreadPool_(invalidationThreadPool),
       lastTornReadLog_(
           std::make_shared<
               folly::Synchronized<std::chrono::steady_clock::time_point>>()),
@@ -852,6 +857,58 @@ uint64_t BlockAlignTruncate(uint64_t ptr, uint32_t alignment) {
 constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KiB
 constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 
+folly::Try<folly::Unit> removeCachedFileImpl(
+    folly::ReadMostlySharedPtr<PrjfsChannelInner>& inner,
+    RelativePathPiece path) {
+  if (!inner) {
+    // TODO: The mount is being unmounted but the caller is still manipulating
+    // it. This is unexpected. Not totally unexpected for background
+    // invalidations, but strange for checkout.
+    return folly::Try<folly::Unit>{std::runtime_error{fmt::format(
+        FMT_STRING("Couldn't delete file {}: PrjfsChannel is stopped"), path)}};
+  }
+
+  DurationScope statScope{inner->getStats(), &PrjfsStats::removeCachedFile};
+
+  if (path.empty()) {
+    return folly::Try<folly::Unit>{folly::unit};
+  }
+
+  auto winPath = path.wide();
+
+  XLOG(DBG6) << "Invalidating: " << path;
+
+  PRJ_UPDATE_FAILURE_CAUSES failureReason;
+  auto result = PrjDeleteFile(
+      inner->getMountChannel(),
+      winPath.c_str(),
+      PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
+          PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE,
+      &failureReason);
+  if (FAILED(result)) {
+    if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
+      // We've attempted to call PrjDeleteFile on a directory. That isn't
+      // supported, let's just ignore.
+    } else if (
+        result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
+        result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
+      // The file or a directory in the path is not cached, ignore.
+    } else if (result == HRESULT_FROM_WIN32(ERROR_DIR_NOT_EMPTY)) {
+      return folly::Try<folly::Unit>{
+          std::system_error(ENOTEMPTY, std::generic_category())};
+    } else {
+      return folly::Try<folly::Unit>{makeHResultErrorExplicit(
+          result,
+          fmt::format(
+              FMT_STRING("Couldn't delete file {}: {:#x}"),
+              path,
+              static_cast<uint32_t>(result)))};
+    }
+  }
+
+  return folly::Try<folly::Unit>{folly::unit};
+}
+
 } // namespace
 
 HRESULT PrjfsChannelInner::getFileData(
@@ -860,158 +917,245 @@ HRESULT PrjfsChannelInner::getFileData(
     std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     UINT64 byteOffset,
     UINT32 length) {
-  auto fut = makeImmediateFutureWith(
-      [this,
-       context,
-       path = RelativePath(callbackData->FilePathName),
-       virtualizationContext = callbackData->NamespaceVirtualizationContext,
-       dataStreamId = Guid(callbackData->DataStreamId),
-       clientProcessName =
-           std::wstring{callbackData->TriggeringProcessImageFileName},
-       byteOffset,
-       length]() mutable {
-        auto requestWatch =
-            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                nullptr);
-        auto stat = &PrjfsStats::read;
-        context->startRequest(getStats().copy(), stat, requestWatch);
+  auto fut = makeImmediateFutureWith([this,
+                                      context,
+                                      path = RelativePath(
+                                          callbackData->FilePathName),
+                                      virtualizationContext =
+                                          callbackData
+                                              ->NamespaceVirtualizationContext,
+                                      dataStreamId =
+                                          Guid(callbackData->DataStreamId),
+                                      clientProcessName =
+                                          std::wstring{
+                                              callbackData
+                                                  ->TriggeringProcessImageFileName},
+                                      byteOffset,
+                                      length]() mutable {
+    auto requestWatch =
+        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+    auto stat = &PrjfsStats::read;
+    context->startRequest(getStats().copy(), stat, requestWatch);
 
-        FB_LOGF(
-            getStraceLogger(),
-            DBG7,
-            "read({}, off={}, len={})",
-            path,
-            byteOffset,
-            length);
-        return dispatcher_->read(path, context->getObjectFetchContext())
-            .thenValue([context = std::move(context),
-                        virtualizationContext = virtualizationContext,
-                        dataStreamId = std::move(dataStreamId),
-                        byteOffset = byteOffset,
-                        length = length,
-                        path,
-                        structuredLogger = structuredLogger_,
-                        clientProcessName = std::move(clientProcessName),
-                        lastTornReadLog = lastTornReadLog_,
-                        config = config_,
-                        mountChannel =
-                            getMountChannel()](const std::string content) {
-              if ((content.length() - byteOffset) < length) {
-                auto now = std::chrono::steady_clock::now();
+    FB_LOGF(
+        getStraceLogger(),
+        DBG7,
+        "read({}, off={}, len={})",
+        path,
+        byteOffset,
+        length);
+    return dispatcher_->read(path, context->getObjectFetchContext())
+        .thenValue([context = std::move(context),
+                    virtualizationContext = virtualizationContext,
+                    dataStreamId = std::move(dataStreamId),
+                    byteOffset = byteOffset,
+                    length = length,
+                    path,
+                    structuredLogger = structuredLogger_,
+                    clientProcessName = std::move(clientProcessName),
+                    lastTornReadLog = lastTornReadLog_,
+                    config = config_,
+                    mountChannel = getMountChannel(),
+                    invalidationThreadPool = this->invalidationThreadPool_](
+                       const std::string content) {
+          if ((content.length() - byteOffset) < length) {
+            auto now = std::chrono::steady_clock::now();
 
-                // These most likely come fround background tooling reads, so
-                // it's likely that there will be many at once. During one
-                // checkout operation we might see a bunch of torn reads all at
-                // once. We only log one per 10s to avoid spamming logs/scuba.
-                bool shouldLog = false;
-                {
-                  auto last = lastTornReadLog->wlock();
-                  if (now >= *last +
-                          config->getEdenConfig()
-                              ->prjfsTornReadLogInterval.getValue()) {
-                    shouldLog = true;
-                    *last = now;
-                  }
-                }
-                if (shouldLog) {
-                  auto client = wideToMultibyteString<std::string>(
-                      basenameFromAppName(clientProcessName.c_str()));
-                  XLOGF(
-                      DBG2,
-                      "PrjFS asked us to read {} bytes out of {}, but there are only"
-                      "{} bytes available in this file. Reading the file likely raced"
-                      "with checkout/reset. Client process: {}. ",
-                      length,
-                      path,
-                      content.length(),
-                      client);
-                  structuredLogger->logEvent(
-                      PrjFSCheckoutReadRace{std::move(client)});
-                }
-
-                // This error currently gets propagated to the user. Ideally, we
-                // don't want to fail this read. However, if the requested
-                // length is larger than the actual size of the file and we give
-                // PrjFS less data than it expects, PrjFs/Windows going to add 0
-                // bytes to the end of the file. The file will then be corrupted
-                // and out of sync. The only way we can prevent the file from
-                // being out of sync and corrupted is to error in this case.
-                context->sendError(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
-                return;
+            // These most likely come fround background tooling reads, so
+            // it's likely that there will be many at once. During one
+            // checkout operation we might see a bunch of torn reads all at
+            // once. We only log one per 10s to avoid spamming logs/scuba.
+            bool shouldLog = false;
+            {
+              auto last = lastTornReadLog->wlock();
+              if (now >= *last +
+                      config->getEdenConfig()
+                          ->prjfsTornReadLogInterval.getValue()) {
+                shouldLog = true;
+                *last = now;
               }
-              // Note it's possible that PrjFs could be out of sync with
-              // EdenFS in the opposite way from above (PrjFS thinks the file
-              // length is shorter than EdenFS). That is still going to result
-              // in a corrupt file (truncated). That case is indistinguishable
-              // from ProjFs just requesting a portion of the file, so we
-              // can't raise an error here. We need to prevent that corruption
-              // elsewhere - failing the checkout that de-syncs Eden and
-              // ProjFs or storing the version of the file in the placeholder.
+            }
+            if (shouldLog) {
+              auto client = wideToMultibyteString<std::string>(
+                  basenameFromAppName(clientProcessName.c_str()));
+              XLOGF(
+                  DBG2,
+                  "PrjFS asked us to read {} bytes out of {}, but there are only"
+                  "{} bytes available in this file. Reading the file likely raced"
+                  "with checkout/reset. Client process: {}. ",
+                  length,
+                  path,
+                  content.length(),
+                  client);
+              structuredLogger->logEvent(
+                  PrjFSCheckoutReadRace{std::move(client)});
+            }
 
-              //
-              // We should return file data which is smaller than
-              // our kMaxChunkSize and meets the memory alignment
-              // requirements of the virtualization instance's storage
-              // device.
-              //
+            // This error currently gets propagated to the user. Ideally, we
+            // don't want to fail this read. However, if the requested
+            // length is larger than the actual size of the file and we give
+            // PrjFS less data than it expects, PrjFs/Windows going to add 0
+            // bytes to the end of the file. The file will then be corrupted
+            // and out of sync. The only way we can prevent the file from
+            // being out of sync and corrupted is to error in this case.
+            context->sendError(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
 
-              HRESULT result;
-              if (content.length() <= kMinChunkSize) {
-                //
-                // If the file is small - copy the whole file in one shot.
-                //
-                result = readSingleFileChunk(
-                    virtualizationContext,
-                    dataStreamId,
-                    content,
-                    /*startOffset=*/0,
-                    /*writeLength=*/content.length());
+            // All future reads will run into this error until the kernel's
+            // cache of the file size is cleared. That means one poorly timed
+            // read during checkout of a file makes the file inaccessible to
+            // future reads. We trigger an invalidation of the file here to
+            // ensure that future reads will succeed.
+            auto timeToSleep =
+                std::chrono::duration_cast<folly::HighResDuration>(
+                    config->getEdenConfig()->tornReadCleanupDelay.getValue());
+            // Clients will hold file handles open until we return the above
+            // error. From manual testing, handles are still held at this point.
+            // The invalidation fails if the handle is still open,  so we
+            // artificially delay invalidation in hopes that the handle is
+            // closed.
+            //
+            // We also run the invalidation on a separate thread to protect Eden
+            // against PrjFS re-entrancy. i.e. If PrjFS makes a callback to
+            // Eden during the invalidation, we don't want to be blocking the
+            // same thread pool that needs to handle that callback. PrjFS
+            // is probably not re-entrant in that way, but better safe than
+            // sorry.
+            //
+            // lifetime note: we need to capture the thread pool to ensure that
+            // it lives long enough to execute this callback because otherwise
+            // it might be destroyed before the callback runs on eden shutdown.
+            folly::futures::detachOn(
+                invalidationThreadPool.get(),
+                folly::futures::sleep(timeToSleep)
+                    .deferValue(
+                        [prjfsInner = context->getChannelForAsyncUse(), path](
+                            auto&&) mutable -> folly::SemiFuture<folly::Unit> {
+                          // Lifetimes are a bit tricky. Since the pointer is
+                          // weak, it does not keep the mount alive like a
+                          // shared pointer would. We don't wanna block shutdown
+                          // on this invalidation because FSCK can fix it. That
+                          // means we should handle the case where we can't
+                          // acquire the pointer gracefully.
+                          auto inner = prjfsInner.lock();
+                          if (!inner) {
+                            // This means the mount has been shutdown, there is
+                            // not much we can do other than skip the
+                            // invalidation. FSCK should fix it on the next
+                            // startup.
+                            return folly::unit;
+                          }
+                          // From here on out, we would block shutdown, so we
+                          // better be quick.
+                          return inner->faultInjector_
+                              .checkAsync(
+                                  "PrjFSChannelInner::getFileData-invalidation",
+                                  path)
+                              .semi()
+                              .deferValue([inner, path](auto&&) mutable {
+                                XLOG(DBG2)
+                                    << "Invalidating file with torn read.";
+                                // this might fail for example if there is an
+                                // open handle to the file still. The file will
+                                // stay in the bad state and the user will have
+                                // to run eden doctor to fix it.
 
-              } else if (length <= kMaxChunkSize) {
-                //
-                // If the request is with in our kMaxChunkSize - copy the
-                // entire request.
-                //
-                result = readSingleFileChunk(
-                    virtualizationContext,
-                    dataStreamId,
-                    content,
-                    /*startOffset=*/byteOffset,
-                    /*writeLength=*/length);
-              } else {
-                //
-                // When the request is larger than kMaxChunkSize we split
-                // the request into multiple chunks.
-                //
-                PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
-                result = PrjGetVirtualizationInstanceInfo(
-                    virtualizationContext, &instanceInfo);
+                                // Just like during checkout:
+                                // TODO: In the case where the file becomes
+                                // materialized on disk now,
+                                // invalidateChannelEntryCache will happily
+                                // remove it, leading to a potential loss of
+                                // user data. To avoid this, we could try not
+                                // passing PRJ_UPDATE_ALLOW_DIRTY_DATA and
+                                // dealing with the side effects to close that
+                                // race.
+                                try {
+                                  removeCachedFileImpl(inner, path);
+                                } catch (std::exception& ex) {
+                                  XLOG(DBG3) << fmt::format(
+                                      "Failed to invalidate file post torn "
+                                      "read {} : {}",
+                                      path,
+                                      folly::exceptionStr(ex));
+                                }
+                              });
+                        })
+                    .deferEnsure([invalidationThreadPool]() {}));
 
-                if (SUCCEEDED(result)) {
-                  uint64_t startOffset = byteOffset;
-                  uint64_t endOffset = BlockAlignTruncate(
-                      startOffset + kMaxChunkSize, instanceInfo.WriteAlignment);
-                  XDCHECK_GT(endOffset, 0ul);
-                  XDCHECK_GT(endOffset, startOffset);
+            return;
+          }
+          // Note it's possible that PrjFs could be out of sync with EdenFS in
+          // the opposite way from above (PrjFS thinks the file length is
+          // shorter than EdenFS). That is still going to result in a corrupt
+          // file (truncated). That case is indistinguishable from ProjFs just
+          // requesting a portion of the file, so we can't raise an error here.
+          // We need to prevent that corruption elsewhere - failing the checkout
+          // that de-syncs Eden and ProjFs or storing the version of the file in
+          // the placeholder.
 
-                  uint64_t chunkSize = endOffset - startOffset;
-                  result = readMultipleFileChunks(
-                      virtualizationContext,
-                      dataStreamId,
-                      content,
-                      /*startOffset=*/startOffset,
-                      /*length=*/length,
-                      /*chunkSize=*/chunkSize);
-                }
-              }
+          //
+          // We should return file data which is smaller than
+          // our kMaxChunkSize and meets the memory alignment
+          // requirements of the virtualization instance's storage
+          // device.
+          //
 
-              if (FAILED(result)) {
-                context->sendError(result);
-              } else {
-                context->sendSuccess();
-              }
-            });
-      });
+          HRESULT result;
+          if (content.length() <= kMinChunkSize) {
+            //
+            // If the file is small - copy the whole file in one shot.
+            //
+            result = readSingleFileChunk(
+                virtualizationContext,
+                dataStreamId,
+                content,
+                /*startOffset=*/0,
+                /*writeLength=*/content.length());
+
+          } else if (length <= kMaxChunkSize) {
+            //
+            // If the request is with in our kMaxChunkSize - copy the
+            // entire request.
+            //
+            result = readSingleFileChunk(
+                virtualizationContext,
+                dataStreamId,
+                content,
+                /*startOffset=*/byteOffset,
+                /*writeLength=*/length);
+          } else {
+            //
+            // When the request is larger than kMaxChunkSize we split
+            // the request into multiple chunks.
+            //
+            PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
+            result = PrjGetVirtualizationInstanceInfo(
+                virtualizationContext, &instanceInfo);
+
+            if (SUCCEEDED(result)) {
+              uint64_t startOffset = byteOffset;
+              uint64_t endOffset = BlockAlignTruncate(
+                  startOffset + kMaxChunkSize, instanceInfo.WriteAlignment);
+              XDCHECK_GT(endOffset, 0ul);
+              XDCHECK_GT(endOffset, startOffset);
+
+              uint64_t chunkSize = endOffset - startOffset;
+              result = readMultipleFileChunks(
+                  virtualizationContext,
+                  dataStreamId,
+                  content,
+                  /*startOffset=*/startOffset,
+                  /*length=*/length,
+                  /*chunkSize=*/chunkSize);
+            }
+          }
+
+          if (FAILED(result)) {
+            context->sendError(result);
+          } else {
+            context->sendSuccess();
+          }
+        });
+  });
 
   detachAndCompleteCallback(
       std::move(fut), std::move(context), std::move(liveRequest));
@@ -1389,10 +1533,12 @@ PrjfsChannel::PrjfsChannel(
     std::shared_ptr<ReloadableConfig> config,
     const folly::Logger* straceLogger,
     const std::shared_ptr<StructuredLogger>& structuredLogger,
+    FaultInjector& faultInjector,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     Guid guid,
     bool enableWindowsSymlinks,
-    std::shared_ptr<Notifier> notifier)
+    std::shared_ptr<Notifier> notifier,
+    const std::shared_ptr<folly::Executor>& invalidationThreadPool)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
       enableSymlinks_(enableWindowsSymlinks),
@@ -1405,11 +1551,13 @@ PrjfsChannel::PrjfsChannel(
       std::move(dispatcher),
       straceLogger,
       structuredLogger,
+      faultInjector,
       processAccessLog_,
       config_,
       std::move(innerDeletedPromise),
       std::move(notifier),
-      config_->getEdenConfig()->PrjfsTraceBusCapacity.getValue()));
+      config_->getEdenConfig()->PrjfsTraceBusCapacity.getValue(),
+      invalidationThreadPool));
 }
 
 PrjfsChannel::~PrjfsChannel() {
@@ -1552,52 +1700,7 @@ FsChannel::StopFuture PrjfsChannel::getStopFuture() {
 
 folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
   auto inner = getInner();
-  if (!inner) {
-    // TODO: The mount is being unmounted but the caller is still manipulating
-    // it. This is unexpected.
-    return folly::Try<folly::Unit>{std::runtime_error{fmt::format(
-        FMT_STRING("Couldn't delete file {}: PrjfsChannel is stopped"), path)}};
-  }
-
-  DurationScope statScope{inner->getStats(), &PrjfsStats::removeCachedFile};
-
-  if (path.empty()) {
-    return folly::Try<folly::Unit>{folly::unit};
-  }
-
-  auto winPath = path.wide();
-
-  XLOG(DBG6) << "Invalidating: " << path;
-
-  PRJ_UPDATE_FAILURE_CAUSES failureReason;
-  auto result = PrjDeleteFile(
-      inner->getMountChannel(),
-      winPath.c_str(),
-      PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
-          PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE,
-      &failureReason);
-  if (FAILED(result)) {
-    if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
-      // We've attempted to call PrjDeleteFile on a directory. That isn't
-      // supported, let's just ignore.
-    } else if (
-        result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
-        result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
-      // The file or a directory in the path is not cached, ignore.
-    } else if (result == HRESULT_FROM_WIN32(ERROR_DIR_NOT_EMPTY)) {
-      return folly::Try<folly::Unit>{
-          std::system_error(ENOTEMPTY, std::generic_category())};
-    } else {
-      return folly::Try<folly::Unit>{makeHResultErrorExplicit(
-          result,
-          fmt::format(
-              FMT_STRING("Couldn't delete file {}: {:#x}"),
-              path,
-              static_cast<uint32_t>(result)))};
-    }
-  }
-
-  return folly::Try<folly::Unit>{folly::unit};
+  return removeCachedFileImpl(inner, path);
 }
 
 folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
