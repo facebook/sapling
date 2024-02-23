@@ -16,9 +16,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class FilterTest(EdenHgTestCase):
-    hidden_files: Set[str] = {"foo/foo.cpp", "foo/bar/baz/file", "hello"}
-    symlink_to_hidden: Set[str] = {"fooslink", "foofooslink"}
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("foo/foo.cpp", "foo\n")
         repo.write_file("foo/bar/baz/file", "foo\n")
@@ -38,31 +35,71 @@ class FilterTest(EdenHgTestCase):
         )
         return result
 
+    def hidden_files(self) -> Set[str]:
+        if self.backing_store_type == "filteredhg":
+            return set()
+        else:
+            return {"foo/foo.cpp", "foo/bar/baz/file", "hello"}
+
+    def expected_toplevel_readdir_result(self) -> Set[str]:
+        if self.backing_store_type == "filteredhg":
+            return {
+                "bar",
+                "baz",
+                ".eden",
+                "foo",
+                "foofooslink",
+                "fooslink",
+                "hello",
+                ".hg",
+            }
+        else:
+            return {"bar", "baz", "foofooslink", "fooslink", ".eden", ".hg"}
+
+    def expected_baz_readdir_result(self) -> Set[str]:
+        if self.backing_store_type == "filteredhg":
+            return {"baz.cpp", "baz2.cpp"}
+        else:
+            return {"baz2.cpp"}
+
+    def symlink_to_hidden(self) -> Set[str]:
+        if self.backing_store_type == "filteredhg":
+            return set()
+        else:
+            return {"fooslink", "foofooslink"}
+
     def test_read_dir(self) -> None:
         listing = set(self.read_dir(""))
         if sys.platform == "win32":
-            self.assertEqual(listing, {"bar", "baz", ".eden", ".hg"})
-        else:
+            # On Windows we don't expect symlinked files to exist. Note: this
+            # could change if symlinks are rolled out to Windows in the future.
             self.assertEqual(
-                listing, {"bar", "baz", "foofooslink", "fooslink", ".eden", ".hg"}
+                listing,
+                set(
+                    filter(
+                        lambda e: "link" in e, self.expected_toplevel_readdir_result()
+                    )
+                ),
             )
+        else:
+            self.assertEqual(listing, self.expected_toplevel_readdir_result())
 
-        listing = self.read_dir("baz")
-        self.assertEqual(listing, ["baz2.cpp"])
+        listing = set(self.read_dir("baz"))
+        self.assertEqual(listing, self.expected_baz_readdir_result())
 
     def test_read_hidden_file(self) -> None:
-        for path in self.hidden_files:
+        for path in self.hidden_files():
             with self.assertRaisesRegex(IOError, ""):
                 self.read_file(path)
 
         if sys.platform != "win32":
-            for path in self.symlink_to_hidden:
+            for path in self.symlink_to_hidden():
                 with self.assertRaisesRegex(IOError, ""):
                     self.read_file(path)
 
     def test_get_sha1_thrift(self) -> None:
         with self.get_thrift_client_legacy() as client:
-            for path in self.hidden_files:
+            for path in self.hidden_files():
                 result = client.getSHA1(
                     self.mount_path_bytes, [path.encode()], sync=SyncBehavior()
                 )

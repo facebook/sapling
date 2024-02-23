@@ -69,7 +69,7 @@ std::vector<PathComponent> getTreeNames(
 }
 } // namespace
 
-struct HgDatapackStoreTest : TestRepo, ::testing::Test {
+struct HgDatapackStoreTestBase : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
 
   HgDatapackStore::RustOptions options{computeTestRustOptions()};
@@ -90,6 +90,11 @@ struct HgDatapackStoreTest : TestRepo, ::testing::Test {
       std::make_shared<ReloadableConfig>(rawEdenConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
 
+  std::shared_ptr<MemoryLocalStore> localStore{
+      std::make_shared<MemoryLocalStore>(stats.copy())};
+};
+
+struct HgDatapackStoreTest : HgDatapackStoreTestBase {
   HgDatapackStore datapackStore{
       repo.path(),
       options,
@@ -98,8 +103,17 @@ struct HgDatapackStoreTest : TestRepo, ::testing::Test {
       edenConfig,
       nullptr,
       &faultInjector};
-  std::shared_ptr<MemoryLocalStore> localStore{
-      std::make_shared<MemoryLocalStore>(stats.copy())};
+};
+
+struct HgDatapackStoreTestIgnoreConfig : HgDatapackStoreTestBase {
+  HgDatapackStore datapackStore{
+      repo.path(),
+      options,
+      std::make_unique<HgDatapackStore::CppOptions>(
+          /*ignoreFilteredPathsConfig=*/true),
+      edenConfig,
+      nullptr,
+      &faultInjector};
 };
 
 TEST_F(HgDatapackStoreTest, getTreeBatch) {
@@ -151,6 +165,42 @@ TEST_F(HgDatapackStoreTest, getTreeBatch) {
 
   std::move(tree1fut).get(10s);
   auto tree1 = request->getPromise<TreePtr>()->getFuture().get(10s);
+
+  ASSERT_THAT(
+      getTreeNames(tree1),
+      ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
+}
+
+TEST_F(HgDatapackStoreTestIgnoreConfig, getTreeBatch) {
+  // force a reload
+  updateTestEdenConfig(
+      testConfigSource,
+      edenConfig,
+      {
+          {"hg:filtered-paths", "['foo']"},
+      });
+
+  auto tree1Hash = HgProxyHash::makeEmbeddedProxyHash1(
+      datapackStore.getManifestNode(ObjectId::fromHex(commit1.value())).value(),
+      RelativePathPiece{});
+
+  HgProxyHash proxyHash =
+      HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
+
+  auto request = HgImportRequest::makeTreeImportRequest(
+      tree1Hash,
+      proxyHash,
+      ObjectFetchContext::getNullContext()->getPriority(),
+      ObjectFetchContext::getNullContext()->getCause(),
+      ObjectFetchContext::getNullContext()->getClientPid());
+
+  auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
+  auto tree1fut = via(executor.get(), [&]() {
+    this->datapackStore.getTreeBatch(std::vector{request});
+  });
+
+  std::move(tree1fut).get();
+  auto tree1 = request->getPromise<TreePtr>()->getFuture().get();
 
   ASSERT_THAT(
       getTreeNames(tree1),

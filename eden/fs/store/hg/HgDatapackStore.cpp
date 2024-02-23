@@ -83,12 +83,21 @@ Tree::value_type fromRawTreeEntry(
   return {std::move(name), std::move(treeEntry)};
 }
 
+bool doFilteredPathsApply(
+    bool ignoreFilteredPathsConfig,
+    const std::unordered_set<RelativePath>& filteredPaths,
+    const RelativePath& path) {
+  return ignoreFilteredPathsConfig || filteredPaths.empty() ||
+      filteredPaths.count(path) == 0;
+}
+
 TreePtr fromRawTree(
     const sapling::Tree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat,
-    const std::unordered_set<RelativePath>& filteredPaths) {
+    const std::unordered_set<RelativePath>& filteredPaths,
+    bool ignoreFilteredPathsConfig) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
 
   entries.reserve(tree->entries.size());
@@ -97,8 +106,8 @@ TreePtr fromRawTree(
       auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
       // TODO(xavierd): In the case where this checks becomes too hot, we may
       // need to change to a Trie like datastructure for fast filtering.
-      if (filteredPaths.empty() ||
-          filteredPaths.count(path + entry.first) == 0) {
+      if (doFilteredPathsApply(
+              ignoreFilteredPathsConfig, filteredPaths, path + entry.first)) {
         entries.emplace(entry.first, std::move(entry.second));
       }
     } catch (const PathComponentContainsDirectorySeparator& ex) {
@@ -183,7 +192,8 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
                     treeRequest->hash,
                     treeRequest->proxyHash.path(),
                     hgObjectIdFormat,
-                    *filteredPaths)};
+                    *filteredPaths,
+                    cppOptions_->ignoreConfigFilter())};
               });
         }
 
@@ -227,7 +237,8 @@ folly::Try<TreePtr> HgDatapackStore::getTree(
         edenTreeId,
         path,
         std::move(hgObjectIdFormat),
-        std::move(*filteredPaths))};
+        std::move(*filteredPaths),
+        cppOptions_->ignoreConfigFilter())};
   } else {
     return GetTreeResult{tree.exception()};
   }
@@ -247,7 +258,8 @@ TreePtr HgDatapackStore::getTreeLocal(
         edenTreeId,
         proxyHash.path(),
         hgObjectIdFormat,
-        *filteredPaths);
+        *filteredPaths,
+        cppOptions_->ignoreConfigFilter());
   }
 
   return nullptr;
