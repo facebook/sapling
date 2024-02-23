@@ -679,7 +679,7 @@ const languages: {[language: string]: LanguageConfiguration} = {
       '.cu',
       '.cuh',
     ],
-    aliases: ['C++', 'Cpp', 'cpp'],
+    aliases: ['C++', 'Cpp', 'cpp', 'c++'],
   },
   csharp: {
     id: 'csharp',
