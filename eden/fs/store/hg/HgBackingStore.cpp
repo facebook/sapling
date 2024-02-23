@@ -92,14 +92,14 @@ class SaplingRetryThreadFactory : public folly::InitThreadFactory {
             [] {}) {}
 };
 
-HgDatapackStore::Options computeOptions() {
-  HgDatapackStore::Options options{};
+HgDatapackStore::RustOptions computeRustOptions() {
+  HgDatapackStore::RustOptions options{};
   options.allow_retries = false;
   return options;
 }
 
-HgDatapackStore::Options testOptions() {
-  HgDatapackStore::Options options{};
+HgDatapackStore::RustOptions computeTestRustOptions() {
+  HgDatapackStore::RustOptions options{};
   options.allow_retries = false;
   return options;
 }
@@ -141,7 +141,7 @@ HgBackingStore::HgBackingStore(
       logger_(std::move(logger)),
       datapackStore_(
           repository,
-          computeOptions(),
+          computeRustOptions(),
           config_,
           logger_,
           faultInjector) {}
@@ -165,7 +165,7 @@ HgBackingStore::HgBackingStore(
       logger_(nullptr),
       datapackStore_(
           repository,
-          testOptions(),
+          computeTestRustOptions(),
           config_,
           logger_,
           faultInjector) {}

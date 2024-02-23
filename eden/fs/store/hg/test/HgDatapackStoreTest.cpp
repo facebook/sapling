@@ -45,8 +45,8 @@ struct TestRepo {
   }
 };
 
-HgDatapackStore::Options testOptions() {
-  HgDatapackStore::Options options{};
+HgDatapackStore::RustOptions computeTestRustOptions() {
+  HgDatapackStore::RustOptions options{};
   options.allow_retries = false;
   return options;
 }
@@ -65,7 +65,7 @@ std::vector<PathComponent> getTreeNames(
 struct HgDatapackStoreTest : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
 
-  HgDatapackStore::Options options{testOptions()};
+  HgDatapackStore::RustOptions options{computeTestRustOptions()};
 
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};

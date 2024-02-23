@@ -35,7 +35,7 @@ using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 class HgDatapackStore {
  public:
-  using Options = sapling::BackingStoreOptions;
+  using RustOptions = sapling::BackingStoreOptions;
   using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
 
   /**
@@ -46,11 +46,11 @@ class HgDatapackStore {
    */
   HgDatapackStore(
       AbsolutePathPiece repository,
-      const Options& options,
+      const RustOptions& rustOptions,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector)
-      : store_{repository.view(), options},
+      : store_{repository.view(), rustOptions},
         config_{std::move(config)},
         logger_{std::move(logger)},
         faultInjector_{*faultInjector} {}
