@@ -81,11 +81,9 @@ pub fn make_file_hook(
         "limit_path_length" => Some(Box::new(limit_path_length::LimitPathLengthHook::new(
             &params.config,
         )?)),
-        "no_bad_filenames" => Some(Box::new(
-            no_bad_filenames::NoBadFilenames::builder()
-                .set_from_config(&params.config)
-                .build()?,
-        )),
+        "no_bad_filenames" => Some(Box::new(no_bad_filenames::NoBadFilenamesHook::legacy(
+            &params.config,
+        )?)),
         "no_bad_extensions" => Some(Box::new(
             no_bad_extensions::NoBadExtensions::builder()
                 .set_from_config(&params.config)

@@ -7,6 +7,7 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 #![cfg_attr(test, feature(trait_alias))]
+#![feature(let_chains)]
 
 pub mod errors;
 #[cfg(fbcode_build)]
