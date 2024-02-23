@@ -30,11 +30,11 @@ export default function NetlifyLoginDialog(props: CustomLoginDialogProps): React
       <Box flex="1 1 auto" overflowY="auto">
         <Box
           display="flex"
-          flexDirection="row"
+          flexDirection={["column", "row"]}
           justifyContent="space-between"
           paddingX={3}
           paddingY={2}>
-          <Box minWidth={600} maxWidth={800}>
+          <Box minWidth={300} maxWidth={800}>
             <EndUserInstructions {...props} />
           </Box>
           <Box>

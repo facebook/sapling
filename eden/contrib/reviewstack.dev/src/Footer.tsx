@@ -62,8 +62,8 @@ export default function Footer(): React.ReactElement {
       paddingTop={4}
       bottom={0}
       width="100%">
-      <Box margin="auto" width={800} paddingTop={2}>
-        <Box display="flex" flexDirection="row" justifyContent="space-between">
+      <Box margin="auto" width={[500,800]} paddingTop={2} paddingLeft={4}>
+        <Box display="flex" flexDirection={["row"]} justifyContent="space-between">
           <Box>
             <LinkListHeader text="Project Links" />
             {projectLinks.map(props => (
@@ -77,7 +77,7 @@ export default function Footer(): React.ReactElement {
             ))}
           </Box>
         </Box>
-        <Box textAlign="center">
+        <Box textAlign={["left", "center"]}>
           <Text sx={logoLinkStyle}>
             <a href="https://opensource.fb.com" target="_blank">
               <img src={metaOpenSourceLogo} width="480px" alt="Meta Open Source Logo" />
