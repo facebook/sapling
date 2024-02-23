@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import AbstractLanguageExtension from './AbstractLanguageExtension';
+import AbstractLanguageExtension from './AbstractLanguageExtension.js';
 import {promises as fs} from 'fs';
 import pathMod from 'path';
 

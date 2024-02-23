@@ -18,8 +18,11 @@
  * This script is expected to be run from the isl/ folder.
  */
 
-const child_process = require('child_process');
-const fs = require('fs');
+import * as child_process from 'node:child_process';
+import * as fs from 'node:fs';
+import * as url from 'url';
+
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 process.chdir(__dirname); // always run relative to isl/
 
@@ -51,7 +54,7 @@ rm_rf(manifestFolder);
 mkdir_p(manifestFolder);
 const manifestPath = `${manifestFolder}/TextMateGrammarManifest.ts`;
 
-const node = 'node --experimental-specifier-resolution=node';
+const node = 'node';
 child_process.execSync(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
 
 fs.copyFileSync(

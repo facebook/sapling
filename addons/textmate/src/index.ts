@@ -10,13 +10,13 @@ import type {
   GrammarContribution,
   GrammarSource,
   NormalizedLanguageExtensionPoint,
-} from './AbstractLanguageExtension';
-import type AbstractLanguageExtension from './AbstractLanguageExtension';
-import type {LanguageExtensionAmendment} from './languageExtensionAmendments';
+} from './AbstractLanguageExtension.js';
+import type AbstractLanguageExtension from './AbstractLanguageExtension.js';
+import type {LanguageExtensionAmendment} from './languageExtensionAmendments.js';
 
-import LanguageExtensionOnDisk from './LanguageExtensionOnDisk';
-import builtInExtensions from './extensions';
-import languageExtensionAmendments from './languageExtensionAmendments';
+import LanguageExtensionOnDisk from './LanguageExtensionOnDisk.js';
+import builtInExtensions from './extensions.js';
+import languageExtensionAmendments from './languageExtensionAmendments.js';
 import assert from 'assert';
 import {promises as fs} from 'fs';
 import minimist from 'minimist';
