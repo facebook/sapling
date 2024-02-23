@@ -73,7 +73,7 @@ def setup_hg_dir(
     # .hg/sparse file that indicates no filter is active.
     if checkout.get_config().scm_type == "filteredhg":
         (checkout_hg_dir / "sparse").write_text(
-            filter_path if filter_path is not None else ""
+            f"%include {filter_path}" if filter_path is not None else ""
         )
 
 
