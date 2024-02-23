@@ -603,8 +603,11 @@ impl Client {
         }
         .to_wire();
 
+        // Currently, server sends the "upload_changesets" response once it is fully completed,
+        // disable min speed transfer check to avoid premature termination of requests.
         let request = self
             .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
