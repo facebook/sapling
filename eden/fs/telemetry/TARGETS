@@ -101,11 +101,12 @@ cpp_library(
 cpp_library(
     name = "log_info",
     srcs = [
-        "LogEvent.cpp",
+        "DynamicEvent.cpp",
         "SessionId.cpp",
         "SessionInfo.cpp",
     ],
     headers = [
+        "DynamicEvent.h",
         "LogEvent.h",
         "SessionId.h",
         "SessionInfo.h",

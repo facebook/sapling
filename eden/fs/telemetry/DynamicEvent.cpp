@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/telemetry/LogEvent.h"
+#include "eden/fs/telemetry/DynamicEvent.h"
 
 #include <folly/Conv.h>
 #include <folly/Unicode.h>
