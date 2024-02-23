@@ -104,6 +104,20 @@ HgDatapackStore::RustOptions computeTestRustOptions() {
   return options;
 }
 
+std::unique_ptr<HgDatapackStore::CppOptions> computeCppOptions(
+    std::unique_ptr<HgDatapackStore::CppOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
+
+std::unique_ptr<HgDatapackStore::CppOptions> computeTestCppOptions(
+    std::unique_ptr<HgDatapackStore::CppOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
+
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -111,6 +125,7 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<LocalStore> localStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
+    std::unique_ptr<HgDatapackStore::CppOptions> options,
     EdenStatsPtr stats,
     std::shared_ptr<StructuredLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
@@ -142,6 +157,7 @@ HgBackingStore::HgBackingStore(
       datapackStore_(
           repository,
           computeRustOptions(),
+          computeCppOptions(std::move(options)),
           config_,
           logger_,
           faultInjector) {}
@@ -155,6 +171,7 @@ HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
+    std::unique_ptr<HgDatapackStore::CppOptions> options,
     EdenStatsPtr stats,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_{std::move(localStore)},
@@ -166,6 +183,7 @@ HgBackingStore::HgBackingStore(
       datapackStore_(
           repository,
           computeTestRustOptions(),
+          computeTestCppOptions(std::move(options)),
           config_,
           logger_,
           faultInjector) {}

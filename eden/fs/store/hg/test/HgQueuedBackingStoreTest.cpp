@@ -62,6 +62,8 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
       repo.path(),
       edenConfig,
       localStore,
+      std::make_unique<HgDatapackStore::CppOptions>(
+          /*ignoreFilteredPathsConfig=*/false),
       stats.copy(),
       &faultInjector)};
 

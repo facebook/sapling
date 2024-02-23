@@ -49,6 +49,7 @@ class HgBackingStore {
       std::shared_ptr<LocalStore> localStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
+      std::unique_ptr<HgDatapackStore::CppOptions> options,
       EdenStatsPtr edenStats,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
@@ -62,6 +63,7 @@ class HgBackingStore {
       AbsolutePathPiece repository,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
+      std::unique_ptr<HgDatapackStore::CppOptions> options,
       EdenStatsPtr,
       FaultInjector* FOLLY_NONNULL faultInjector);
 

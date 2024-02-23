@@ -33,9 +33,23 @@ class RefPtr;
 class ObjectFetchContext;
 using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
+class HgDatapackStoreOptions {
+ public:
+  /* implicit */ HgDatapackStoreOptions(
+      std::optional<bool> ignoreFilteredPathsConfig)
+      : ignoreFilteredPathsConfig{ignoreFilteredPathsConfig} {}
+
+  bool ignoreConfigFilter() {
+    return ignoreFilteredPathsConfig.value_or(false);
+  }
+
+  std::optional<bool> ignoreFilteredPathsConfig;
+};
+
 class HgDatapackStore {
  public:
   using RustOptions = sapling::BackingStoreOptions;
+  using CppOptions = HgDatapackStoreOptions;
   using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
 
   /**
@@ -47,10 +61,12 @@ class HgDatapackStore {
   HgDatapackStore(
       AbsolutePathPiece repository,
       const RustOptions& rustOptions,
+      std::unique_ptr<CppOptions> cppOptions,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector)
       : store_{repository.view(), rustOptions},
+        cppOptions_{std::move(cppOptions)},
         config_{std::move(config)},
         logger_{std::move(logger)},
         faultInjector_{*faultInjector} {}
@@ -156,6 +172,7 @@ class HgDatapackStore {
       const std::string& requestType);
 
   sapling::SaplingNativeBackingStore store_;
+  std::unique_ptr<HgDatapackStoreOptions> cppOptions_;
   std::shared_ptr<ReloadableConfig> config_;
   std::shared_ptr<StructuredLogger> logger_;
   FaultInjector& faultInjector_;

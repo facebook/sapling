@@ -139,12 +139,14 @@ namespace {
 std::shared_ptr<HgQueuedBackingStore> createHgQueuedBackingStore(
     const BackingStoreFactory::CreateParams& params,
     const AbsolutePath& repoPath,
-    std::shared_ptr<ReloadableConfig> reloadableConfig) {
+    std::shared_ptr<ReloadableConfig> reloadableConfig,
+    std::unique_ptr<HgDatapackStore::CppOptions> cppOptions) {
   auto underlyingStore = std::make_unique<HgBackingStore>(
       repoPath,
       params.localStore,
       params.serverState->getThreadPool().get(),
       reloadableConfig,
+      std::move(cppOptions),
       params.sharedStats.copy(),
       params.serverState->getStructuredLogger(),
       &params.serverState->getFaultInjector());
@@ -172,8 +174,10 @@ void EdenMain::registerStandardBackingStores() {
     const auto repoPath = realpath(params.name);
     auto reloadableConfig = params.serverState->getReloadableConfig();
 
-    auto hgQueuedBackingStore =
-        createHgQueuedBackingStore(params, repoPath, reloadableConfig);
+    auto cppOptions = std::make_unique<HgDatapackStore::CppOptions>(
+        /*ignoreFilteredPathsConfig=*/false);
+    auto hgQueuedBackingStore = createHgQueuedBackingStore(
+        params, repoPath, reloadableConfig, std::move(cppOptions));
 
     auto localStoreCaching = reloadableConfig->getEdenConfig()
                                  ->hgEnableBlobMetaLocalStoreCaching.getValue()
@@ -198,8 +202,10 @@ void EdenMain::registerStandardBackingStores() {
             : LocalStoreCachedBackingStore::CachingPolicy::Trees;
         auto hgSparseFilter = std::make_unique<HgSparseFilter>(repoPath);
 
-        auto hgQueuedBackingStore =
-            createHgQueuedBackingStore(params, repoPath, reloadableConfig);
+        auto cppOptions = std::make_unique<HgDatapackStore::CppOptions>(
+            /*ignoreFilteredPathsConfig=*/true);
+        auto hgQueuedBackingStore = createHgQueuedBackingStore(
+            params, repoPath, reloadableConfig, std::move(cppOptions));
         auto wrappedStore = std::make_shared<FilteredBackingStore>(
             std::move(hgQueuedBackingStore), std::move(hgSparseFilter));
         return std::make_shared<LocalStoreCachedBackingStore>(

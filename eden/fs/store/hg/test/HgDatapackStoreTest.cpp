@@ -51,6 +51,13 @@ HgDatapackStore::RustOptions computeTestRustOptions() {
   return options;
 }
 
+std::unique_ptr<HgDatapackStore::CppOptions> computeTestCppOptions(
+    std::unique_ptr<HgDatapackStore::CppOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
+
 namespace {
 std::vector<PathComponent> getTreeNames(
     const std::shared_ptr<const Tree>& tree) {
@@ -86,6 +93,8 @@ struct HgDatapackStoreTest : TestRepo, ::testing::Test {
   HgDatapackStore datapackStore{
       repo.path(),
       options,
+      std::make_unique<HgDatapackStore::CppOptions>(
+          /*ignoreFilteredPathsConfig=*/false),
       edenConfig,
       nullptr,
       &faultInjector};
