@@ -62,6 +62,7 @@ use commit_transformation::MultiMover;
 pub use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use either::Either;
 use environment::Caching;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -133,10 +134,12 @@ use types::Source;
 use types::Target;
 
 use crate::commit_sync_outcome::DesiredRelationship;
+use crate::git_submodules::expand_git_submodule_file_changes;
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
 mod commit_sync_config_utils;
 pub mod commit_sync_outcome;
+mod git_submodules;
 mod pushrebase_hook;
 mod reporting;
 mod sync_config_version_utils;
@@ -275,14 +278,11 @@ pub async fn rewrite_commit<'a, R: Repo>(
     mover: Mover,
     source_repo: &'a R,
     // TODO(T174902563): support expansion of git submodules
-    _source_repo_deps: &'a SubmoduleDeps<R>,
+    submodule_deps: &'a SubmoduleDeps<R>,
     rewrite_opts: RewriteOpts,
     git_submodules_action: GitSubmodulesChangesAction,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     // TODO(T169695293): add filter to only keep submodules for implicit deletes?
-
-    // Based on the submodule action, create the file change filters and modify
-    // the bonsai (e.g. expand submodule file changes).
     let (file_changes_filters, cs): (Vec<FileChangeFilter<'a>>, BonsaiChangesetMut) =
         match git_submodules_action {
             GitSubmodulesChangesAction::Strip => {
@@ -301,7 +301,19 @@ pub async fn rewrite_commit<'a, R: Repo>(
             GitSubmodulesChangesAction::Keep => (vec![], cs),
             // Expand submodules -> no filters, but modify the file change
             // file types in the bonsai
-            GitSubmodulesChangesAction::Expand => (vec![], cs),
+            GitSubmodulesChangesAction::Expand => {
+                let submodule_deps_map = match submodule_deps {
+                    SubmoduleDeps::ForSync(sm_deps_map) => Ok(sm_deps_map),
+                    SubmoduleDeps::NotNeeded => Err(anyhow!(
+                        "Submodule dependencies map needed to expand git submodules was not provided"
+                    )),
+                }?;
+
+                let new_cs =
+                    expand_git_submodule_file_changes(ctx, cs, source_repo, submodule_deps_map)
+                        .await?;
+                (vec![], new_cs)
+            }
         };
 
     rewrite_commit_with_file_changes_filter(
