@@ -2066,6 +2066,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                          EdenDispatcherFactory::makePrjfsDispatcher(this),
                          serverState_->getReloadableConfig(),
                          &getStraceLogger(),
+                         serverState_->getStructuredLogger(),
                          serverState_->getProcessInfoCache(),
                          getCheckoutConfig()->getRepoGuid(),
                          getCheckoutConfig()->getEnableWindowsSymlinks(),

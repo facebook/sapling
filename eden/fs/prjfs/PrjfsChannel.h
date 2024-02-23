@@ -36,6 +36,7 @@ class Notifier;
 class ReloadableConfig;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
+class StructuredLogger;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
@@ -164,7 +165,9 @@ class PrjfsChannelInner {
   PrjfsChannelInner(
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
       ProcessAccessLog& processAccessLog,
+      std::shared_ptr<ReloadableConfig>& config,
       folly::Promise<folly::Unit> deletedPromise,
       std::shared_ptr<Notifier> notifier,
       size_t prjfsTraceBusCapacity);
@@ -451,11 +454,21 @@ class PrjfsChannelInner {
   std::unique_ptr<PrjfsDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_{nullptr};
 
+  // scuba logger
+  const std::shared_ptr<StructuredLogger> structuredLogger_;
+
+  // The last time we logged a about a torn read the interval at which
+  // we log is set by EdenConfig::tornReadLogInterval.
+  std::shared_ptr<folly::Synchronized<std::chrono::steady_clock::time_point>>
+      lastTornReadLog_;
+
   std::shared_ptr<Notifier> notifier_;
 
   // The processAccessLog_ is owned by PrjfsChannel which is guaranteed to have
   // its lifetime be longer than that of PrjfsChannelInner.
   ProcessAccessLog& processAccessLog_;
+
+  std::shared_ptr<ReloadableConfig> config_;
 
   // Set of currently active directory enumerations.
   folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
@@ -490,6 +503,7 @@ class PrjfsChannel : public FsChannel {
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       std::shared_ptr<ReloadableConfig> config,
       const folly::Logger* straceLogger,
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       Guid guid,
       bool enableWindowsSymlinks,

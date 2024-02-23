@@ -18,6 +18,8 @@
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -428,14 +430,21 @@ void detachAndCompleteCallback(
 PrjfsChannelInner::PrjfsChannelInner(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
     ProcessAccessLog& processAccessLog,
+    std::shared_ptr<ReloadableConfig>& config,
     folly::Promise<folly::Unit> deletedPromise,
     std::shared_ptr<Notifier> notifier,
     size_t prjfsTraceBusCapacity)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
+      structuredLogger_(structuredLogger),
+      lastTornReadLog_(
+          std::make_shared<
+              folly::Synchronized<std::chrono::steady_clock::time_point>>()),
       notifier_(std::move(notifier)),
       processAccessLog_(processAccessLog),
+      config_(config),
       deletedPromise_(std::move(deletedPromise)),
       traceDetailedArguments_(std::atomic<size_t>(0)),
       traceBus_(TraceBus<PrjfsTraceEvent>::create(
@@ -857,6 +866,8 @@ HRESULT PrjfsChannelInner::getFileData(
        path = RelativePath(callbackData->FilePathName),
        virtualizationContext = callbackData->NamespaceVirtualizationContext,
        dataStreamId = Guid(callbackData->DataStreamId),
+       clientProcessName =
+           std::wstring{callbackData->TriggeringProcessImageFileName},
        byteOffset,
        length]() mutable {
         auto requestWatch =
@@ -872,13 +883,71 @@ HRESULT PrjfsChannelInner::getFileData(
             path,
             byteOffset,
             length);
-        return dispatcher_
-            ->read(std::move(path), context->getObjectFetchContext())
+        return dispatcher_->read(path, context->getObjectFetchContext())
             .thenValue([context = std::move(context),
                         virtualizationContext = virtualizationContext,
                         dataStreamId = std::move(dataStreamId),
                         byteOffset = byteOffset,
-                        length = length](const std::string content) {
+                        length = length,
+                        path,
+                        structuredLogger = structuredLogger_,
+                        clientProcessName = std::move(clientProcessName),
+                        lastTornReadLog = lastTornReadLog_,
+                        config = config_,
+                        mountChannel =
+                            getMountChannel()](const std::string content) {
+              if ((content.length() - byteOffset) < length) {
+                auto now = std::chrono::steady_clock::now();
+
+                // These most likely come fround background tooling reads, so
+                // it's likely that there will be many at once. During one
+                // checkout operation we might see a bunch of torn reads all at
+                // once. We only log one per 10s to avoid spamming logs/scuba.
+                bool shouldLog = false;
+                {
+                  auto last = lastTornReadLog->wlock();
+                  if (now >= *last +
+                          config->getEdenConfig()
+                              ->prjfsTornReadLogInterval.getValue()) {
+                    shouldLog = true;
+                    *last = now;
+                  }
+                }
+                if (shouldLog) {
+                  auto client = wideToMultibyteString<std::string>(
+                      basenameFromAppName(clientProcessName.c_str()));
+                  XLOGF(
+                      DBG2,
+                      "PrjFS asked us to read {} bytes out of {}, but there are only"
+                      "{} bytes available in this file. Reading the file likely raced"
+                      "with checkout/reset. Client process: {}. ",
+                      length,
+                      path,
+                      content.length(),
+                      client);
+                  structuredLogger->logEvent(
+                      PrjFSCheckoutReadRace{std::move(client)});
+                }
+
+                // This error currently gets propagated to the user. Ideally, we
+                // don't want to fail this read. However, if the requested
+                // length is larger than the actual size of the file and we give
+                // PrjFS less data than it expects, PrjFs/Windows going to add 0
+                // bytes to the end of the file. The file will then be corrupted
+                // and out of sync. The only way we can prevent the file from
+                // being out of sync and corrupted is to error in this case.
+                context->sendError(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
+                return;
+              }
+              // Note it's possible that PrjFs could be out of sync with
+              // EdenFS in the opposite way from above (PrjFS thinks the file
+              // length is shorter than EdenFS). That is still going to result
+              // in a corrupt file (truncated). That case is indistinguishable
+              // from ProjFs just requesting a portion of the file, so we
+              // can't raise an error here. We need to prevent that corruption
+              // elsewhere - failing the checkout that de-syncs Eden and
+              // ProjFs or storing the version of the file in the placeholder.
+
               //
               // We should return file data which is smaller than
               // our kMaxChunkSize and meets the memory alignment
@@ -1319,6 +1388,7 @@ PrjfsChannel::PrjfsChannel(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     std::shared_ptr<ReloadableConfig> config,
     const folly::Logger* straceLogger,
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     Guid guid,
     bool enableWindowsSymlinks,
@@ -1334,7 +1404,9 @@ PrjfsChannel::PrjfsChannel(
   inner_.store(std::make_shared<PrjfsChannelInner>(
       std::move(dispatcher),
       straceLogger,
+      structuredLogger,
       processAccessLog_,
+      config_,
       std::move(innerDeletedPromise),
       std::move(notifier),
       config_->getEdenConfig()->PrjfsTraceBusCapacity.getValue()));

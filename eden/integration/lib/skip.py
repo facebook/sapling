@@ -305,6 +305,8 @@ elif sys.platform.startswith("darwin"):
 
 
 # Windows specific tests
+# we keep them in the build graph on linux so pyre will run and disable them
+# here
 if sys.platform != "win32":
     TEST_DISABLED.update(
         {
@@ -319,6 +321,7 @@ if sys.platform != "win32":
             "projfs_enumeration.ProjFSEnumerationInsufficientBuffer": True,
             "prjfs_match_fs.PrjfsMatchFsTest": True,
             "hg.symlink_test.SymlinkWindowsDisabledTest": True,
+            "hg.update_test.PrjFSStressTornReads": True,
         }
     )
 

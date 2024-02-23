@@ -641,6 +641,16 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * Controls how frequently we log to the EdenFS log file and scuba tables
+   * about torn reads - i.e. when Prjfs attempts to read a file that was
+   * modified in the middle of an operation.
+   */
+  ConfigSetting<std::chrono::nanoseconds> prjfsTornReadLogInterval{
+      "prjfs:torn-read-log-interval",
+      std::chrono::seconds{10},
+      this};
+
   // [fschannel]
 
   /**

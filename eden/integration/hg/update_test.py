@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from enum import Enum
 from multiprocessing import Process
 from textwrap import dedent
+from threading import Thread
 from typing import Dict, Generator, List, Optional, Set
 
 from eden.fs.cli import util
@@ -1223,3 +1224,97 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             self.assertEqual(self.read_file("dir/file3"), "three")
             with self.assertRaises(hgrepo.HgError):
                 self.repo.status()
+
+
+@hg_test
+# pyre-ignore[13]: T62487924
+class PrjFSStressTornReads(EdenHgTestCase):
+    long_file_commit: str = ""
+    short_file_commit: str = ""
+
+    enable_fault_injection: bool = True
+
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
+        repo.write_file("file", "1234567890\n")
+        self.long_file_commit = repo.commit("Initial commit.")
+        repo.write_file("file", "54321\n")
+        self.short_file_commit = repo.commit("Shorter file commit.")
+
+    def edenfs_logging_settings(self) -> Dict[str, str]:
+        return {"eden.strace": "DBG7"}
+
+    def test_torn_read_long_to_short(self) -> None:
+        self.repo.update(self.long_file_commit)
+        rel_path = "file"
+        path = self.mount_path / rel_path
+
+        read_exception: Optional[OSError] = None
+
+        def read_file() -> None:
+            nonlocal read_exception
+            with self.run_with_blocking_fault(
+                keyClass="PrjfsDispatcherImpl::read",
+                keyValueRegex="file",
+            ):
+                try:
+                    with path.open("rb") as f:
+                        f.read()
+                except Exception as err:
+                    read_exception = err
+
+        read_thread = Thread(target=read_file)
+        read_thread.start()
+
+        try:
+            self.repo.update(self.short_file_commit)
+        except Exception:
+            pass
+
+        self.remove_fault(keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file")
+        self.wait_on_fault_unblock(
+            keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file"
+        )
+        read_thread.join()
+        self.assertIsNotNone(read_exception)
+        # ugh pyre I just asserted it's non none :| I want this to error
+        # anyways if the error does not have errno set.
+        # pyre-ignore[16]: `None` has no attribute `errno`.
+        self.assertEqual(read_exception.errno, 22)  # invalid argument error
+
+    def test_torn_read_short_to_long(self) -> None:
+        self.repo.update(self.short_file_commit)
+
+        rel_path = "file"
+        path = self.mount_path / rel_path
+
+        read_contents = None
+
+        def read_file() -> None:
+            nonlocal read_contents
+            with self.run_with_blocking_fault(
+                keyClass="PrjfsDispatcherImpl::read",
+                keyValueRegex="file",
+            ):
+                with path.open("rb") as f:
+                    read_contents = f.read()
+
+        read_thread = Thread(target=read_file)
+        read_thread.start()
+
+        try:
+            self.repo.update(self.long_file_commit)
+        except Exception:
+            pass
+
+        self.remove_fault(keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file")
+        self.wait_on_fault_unblock(
+            keyClass="PrjfsDispatcherImpl::read", keyValueRegex="file"
+        )
+        read_thread.join()
+        self.assertIsNotNone(read_contents)
+        # This is not correct behavior, we want the contents to be either
+        # the contents from the first or second commit, not this inconsitent
+        # mashup. This test is for not documenting the behavior of torn reads.
+        # This case requires a larger fix.
+        # TODO(kmancini): fix torn reads.
+        self.assertEqual(read_contents, b"123456")

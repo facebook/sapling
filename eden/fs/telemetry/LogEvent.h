@@ -343,6 +343,16 @@ struct PrjFSFileNotificationFailure {
   }
 };
 
+struct PrjFSCheckoutReadRace {
+  static constexpr const char* type = "prjfs_checkout_read_race";
+
+  std::string client_cmdline;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("client_cmdline", client_cmdline);
+  }
+};
+
 struct WorkingCopyGc {
   static constexpr const char* type = "working_copy_gc";
 
