@@ -14,6 +14,7 @@ import type {Comparison} from 'shared/Comparison';
 import type {Writable} from 'shared/typeUtils';
 
 import {encodeSaplingDiffUri} from './DiffContentProvider';
+import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
 import {getCLICommand} from './config';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
@@ -105,6 +106,12 @@ export class VSCodeReposList {
   }
 }
 
+type SaplingResourceState = vscode.SourceControlResourceState & {
+  status?: string;
+};
+export type SaplingResourceGroup = vscode.SourceControlResourceGroup & {
+  resourceStates: SaplingResourceState[];
+};
 /**
  * vscode-API-compatible repository.
  * This handles vscode-api integrations, but defers to Repository for any actual work.
@@ -114,7 +121,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
   private sourceControl?: vscode.SourceControl;
   private resourceGroups?: Record<
     'changes' | 'untracked' | 'unresolved' | 'resolved',
-    vscode.SourceControlResourceGroup
+    SaplingResourceGroup
   >;
   public rootUri: vscode.Uri;
   public rootPath: string;
@@ -154,6 +161,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
       group.hideWhenEmpty = true;
     }
 
+    const fileDecorationProvider = new SaplingFileDecorationProvider(this, logger);
     this.disposables.push(
       repo.subscribeToUncommittedChanges(() => {
         this.updateResourceGroups();
@@ -161,6 +169,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
       repo.onChangeConflictState(() => {
         this.updateResourceGroups();
       }),
+      fileDecorationProvider,
     );
     this.updateResourceGroups();
   }
@@ -175,14 +184,14 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
     // only show merge conflicts if they are given
     const fileChanges = conflicts ?? data?.files?.value ?? [];
 
-    const changes: Array<vscode.SourceControlResourceState> = [];
-    const untracked: Array<vscode.SourceControlResourceState> = [];
-    const unresolved: Array<vscode.SourceControlResourceState> = [];
-    const resolved: Array<vscode.SourceControlResourceState> = [];
+    const changes: Array<SaplingResourceState> = [];
+    const untracked: Array<SaplingResourceState> = [];
+    const unresolved: Array<SaplingResourceState> = [];
+    const resolved: Array<SaplingResourceState> = [];
 
     for (const change of fileChanges) {
       const uri = vscode.Uri.joinPath(this.rootUri, change.path);
-      const resource: vscode.SourceControlResourceState = {
+      const resource: SaplingResourceState = {
         command: {
           command: 'vscode.open',
           title: 'Open',
@@ -190,6 +199,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
         },
         resourceUri: uri,
         decorations: this.decorationForChange(change),
+        status: change.status,
       };
       switch (change.status) {
         case '?':
@@ -214,6 +224,10 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
 
     // don't include resolved files in count
     this.sourceControl.count = changes.length + untracked.length + unresolved.length;
+  }
+
+  public getResourceGroups() {
+    return this.resourceGroups;
   }
 
   public dispose() {
