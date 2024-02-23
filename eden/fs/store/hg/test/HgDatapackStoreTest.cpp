@@ -14,6 +14,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
@@ -51,8 +52,8 @@ HgDatapackStore::SaplingNativeOptions computeTestSaplingOptions() {
   return options;
 }
 
-std::unique_ptr<HgDatapackStore::CppOptions> computeTestCppOptions(
-    std::unique_ptr<HgDatapackStore::CppOptions> options) {
+std::unique_ptr<HgBackingStoreOptions> computeTestOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
   options->ignoreFilteredPathsConfig =
       options->ignoreFilteredPathsConfig.value_or(false);
   return options;
@@ -73,7 +74,6 @@ struct HgDatapackStoreTestBase : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
 
   HgDatapackStore::SaplingNativeOptions options{computeTestSaplingOptions()};
-
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
 
@@ -98,7 +98,7 @@ struct HgDatapackStoreTest : HgDatapackStoreTestBase {
   HgDatapackStore datapackStore{
       repo.path(),
       options,
-      std::make_unique<HgDatapackStore::CppOptions>(
+      std::make_unique<HgBackingStoreOptions>(
           /*ignoreFilteredPathsConfig=*/false),
       edenConfig,
       nullptr,
@@ -109,7 +109,7 @@ struct HgDatapackStoreTestIgnoreConfig : HgDatapackStoreTestBase {
   HgDatapackStore datapackStore{
       repo.path(),
       options,
-      std::make_unique<HgDatapackStore::CppOptions>(
+      std::make_unique<HgBackingStoreOptions>(
           /*ignoreFilteredPathsConfig=*/true),
       edenConfig,
       nullptr,

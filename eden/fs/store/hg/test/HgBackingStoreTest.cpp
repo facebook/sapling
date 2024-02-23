@@ -21,6 +21,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
@@ -91,7 +92,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
               repo.path(),
               edenConfig,
               localStore,
-              std::make_unique<HgDatapackStore::CppOptions>(
+              std::make_unique<HgBackingStoreOptions>(
                   /*ignoreFilteredPathsConfig=*/false),
               stats.copy(),
               &faultInjector),

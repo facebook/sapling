@@ -17,6 +17,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -49,7 +50,7 @@ class HgBackingStore {
       std::shared_ptr<LocalStore> localStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::unique_ptr<HgDatapackStore::CppOptions> options,
+      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
       EdenStatsPtr edenStats,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
@@ -63,7 +64,7 @@ class HgBackingStore {
       AbsolutePathPiece repository,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
-      std::unique_ptr<HgDatapackStore::CppOptions> options,
+      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
       EdenStatsPtr,
       FaultInjector* FOLLY_NONNULL faultInjector);
 

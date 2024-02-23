@@ -14,6 +14,7 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
@@ -62,7 +63,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
       repo.path(),
       edenConfig,
       localStore,
-      std::make_unique<HgDatapackStore::CppOptions>(
+      std::make_unique<HgBackingStoreOptions>(
           /*ignoreFilteredPathsConfig=*/false),
       stats.copy(),
       &faultInjector)};

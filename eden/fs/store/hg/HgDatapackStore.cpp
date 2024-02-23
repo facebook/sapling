@@ -193,7 +193,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
                     treeRequest->proxyHash.path(),
                     hgObjectIdFormat,
                     *filteredPaths,
-                    cppOptions_->ignoreConfigFilter())};
+                    runtimeOptions_->ignoreConfigFilter())};
               });
         }
 
@@ -238,7 +238,7 @@ folly::Try<TreePtr> HgDatapackStore::getTree(
         path,
         std::move(hgObjectIdFormat),
         std::move(*filteredPaths),
-        cppOptions_->ignoreConfigFilter())};
+        runtimeOptions_->ignoreConfigFilter())};
   } else {
     return GetTreeResult{tree.exception()};
   }
@@ -259,7 +259,7 @@ TreePtr HgDatapackStore::getTreeLocal(
         proxyHash.path(),
         hgObjectIdFormat,
         *filteredPaths,
-        cppOptions_->ignoreConfigFilter());
+        runtimeOptions_->ignoreConfigFilter());
   }
 
   return nullptr;

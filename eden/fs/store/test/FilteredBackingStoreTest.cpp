@@ -21,6 +21,7 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeFilter.h"
@@ -121,7 +122,7 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
       repo.path(),
       edenConfig,
       localStore,
-      std::make_unique<HgDatapackStore::CppOptions>(
+      std::make_unique<HgBackingStoreOptions>(
           /*ignoreFilteredPathsConfig=*/true),
       stats.copy(),
       &faultInjector)};

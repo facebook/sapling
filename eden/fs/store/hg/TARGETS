@@ -28,6 +28,7 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        ":hg_backing_store_options",
         ":hg_datapack_store",
         "//eden/fs:config",
         "//eden/fs/store:backing_store_interface",
@@ -143,6 +144,7 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        ":hg_backing_store_options",
         "//eden/fs/model:model-fwd",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:path",
@@ -152,6 +154,11 @@ cpp_library(
         "//folly:range",
         "//folly/futures:core",
     ],
+)
+
+cpp_library(
+    name = "hg_backing_store_options",
+    headers = ["HgBackingStoreOptions.h"],
 )
 
 cpp_library(

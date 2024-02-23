@@ -15,6 +15,7 @@
 #include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
@@ -33,24 +34,10 @@ class RefPtr;
 class ObjectFetchContext;
 using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
-class HgDatapackStoreOptions {
- public:
-  /* implicit */ HgDatapackStoreOptions(
-      std::optional<bool> ignoreFilteredPathsConfig)
-      : ignoreFilteredPathsConfig{ignoreFilteredPathsConfig} {}
-
-  bool ignoreConfigFilter() {
-    return ignoreFilteredPathsConfig.value_or(false);
-  }
-
-  std::optional<bool> ignoreFilteredPathsConfig;
-};
-
 class HgDatapackStore {
  public:
-  using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
-  using CppOptions = HgDatapackStoreOptions;
   using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
+  using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
 
   /**
    * FaultInjector must be valid for the lifetime of the HgDatapackStore.
@@ -61,12 +48,12 @@ class HgDatapackStore {
   HgDatapackStore(
       AbsolutePathPiece repository,
       const SaplingNativeOptions& saplingNativeOptions,
-      std::unique_ptr<CppOptions> cppOptions,
+      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector)
       : store_{repository.view(), saplingNativeOptions},
-        cppOptions_{std::move(cppOptions)},
+        runtimeOptions_{std::move(runtimeOptions)},
         config_{std::move(config)},
         logger_{std::move(logger)},
         faultInjector_{*faultInjector} {}
@@ -172,7 +159,7 @@ class HgDatapackStore {
       const std::string& requestType);
 
   sapling::SaplingNativeBackingStore store_;
-  std::unique_ptr<HgDatapackStoreOptions> cppOptions_;
+  std::unique_ptr<HgBackingStoreOptions> runtimeOptions_;
   std::shared_ptr<ReloadableConfig> config_;
   std::shared_ptr<StructuredLogger> logger_;
   FaultInjector& faultInjector_;

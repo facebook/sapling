@@ -32,6 +32,7 @@ cpp_unittest(
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/store/hg:hg_backing_store",
+        "//eden/fs/store/hg:hg_backing_store_options",
         "//eden/fs/store/hg:hg_datapack_store",
         "//eden/fs/store/hg:hg_import_request",
         "//eden/fs/store/hg:hg_import_request_queue",

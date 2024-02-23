@@ -92,27 +92,27 @@ class SaplingRetryThreadFactory : public folly::InitThreadFactory {
             [] {}) {}
 };
 
-HgDatapackStore::SaplingNativeOptions computeRustOptions() {
+HgDatapackStore::SaplingNativeOptions computeSaplingOptions() {
   HgDatapackStore::SaplingNativeOptions options{};
   options.allow_retries = false;
   return options;
 }
 
-HgDatapackStore::SaplingNativeOptions computeTestRustOptions() {
+HgDatapackStore::SaplingNativeOptions computeTestSaplingOptions() {
   HgDatapackStore::SaplingNativeOptions options{};
   options.allow_retries = false;
   return options;
 }
 
-std::unique_ptr<HgDatapackStore::CppOptions> computeCppOptions(
-    std::unique_ptr<HgDatapackStore::CppOptions> options) {
+std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
   options->ignoreFilteredPathsConfig =
       options->ignoreFilteredPathsConfig.value_or(false);
   return options;
 }
 
-std::unique_ptr<HgDatapackStore::CppOptions> computeTestCppOptions(
-    std::unique_ptr<HgDatapackStore::CppOptions> options) {
+std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
   options->ignoreFilteredPathsConfig =
       options->ignoreFilteredPathsConfig.value_or(false);
   return options;
@@ -125,7 +125,7 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<LocalStore> localStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
-    std::unique_ptr<HgDatapackStore::CppOptions> options,
+    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
     EdenStatsPtr stats,
     std::shared_ptr<StructuredLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
@@ -156,8 +156,8 @@ HgBackingStore::HgBackingStore(
       logger_(std::move(logger)),
       datapackStore_(
           repository,
-          computeRustOptions(),
-          computeCppOptions(std::move(options)),
+          computeSaplingOptions(),
+          computeRuntimeOptions(std::move(runtimeOptions)),
           config_,
           logger_,
           faultInjector) {}
@@ -171,7 +171,7 @@ HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
-    std::unique_ptr<HgDatapackStore::CppOptions> options,
+    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
     EdenStatsPtr stats,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_{std::move(localStore)},
@@ -182,8 +182,8 @@ HgBackingStore::HgBackingStore(
       logger_(nullptr),
       datapackStore_(
           repository,
-          computeTestRustOptions(),
-          computeTestCppOptions(std::move(options)),
+          computeTestSaplingOptions(),
+          computeTestRuntimeOptions(std::move(runtimeOptions)),
           config_,
           logger_,
           faultInjector) {}
