@@ -289,6 +289,7 @@ cpp_library(
     srcs = [
         "Bug.cpp",
         "CoverageSet.cpp",
+        "DirType.cpp",
         "FaultInjector.cpp",
         "Guid.cpp",
         "IDGen.cpp",
@@ -323,10 +324,12 @@ cpp_library(
         ],
     )],
     deps = [
+        "//eden/fs/service:thrift-cpp2-types",
         "//folly:exception_wrapper",
         "//folly:likely",
         "//folly:overload",
         "//folly:string",
+        "//folly:utility",
         "//folly/executors:cpu_thread_pool_executor",
         "//folly/executors:manual_executor",
         "//folly/executors/task_queue:unbounded_blocking_queue",
