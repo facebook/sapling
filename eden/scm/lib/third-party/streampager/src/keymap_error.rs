@@ -25,7 +25,7 @@ pub enum KeymapError {
 
     /// Parsing error.
     #[cfg(feature = "keymap-file")]
-    #[error("parse error")]
+    #[error("parse error: {0}")]
     Parse(#[from] pest::error::Error<crate::keymap_file::Rule>),
 
     /// Error related to parsing a binding within a keymap.
