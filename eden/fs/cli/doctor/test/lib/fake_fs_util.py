@@ -24,3 +24,6 @@ class FakeFsUtil(FsUtil):
         # A made up filesystem with 50% free, but with other fields
         # defaulted from an EdenFS mount on Linux.
         return shutil._ntuple_diskusage(self.total, self.used, self.free)
+
+    def rmdir(self, path: str, keep_root: bool) -> bool:
+        return True

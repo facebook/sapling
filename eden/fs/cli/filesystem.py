@@ -9,6 +9,7 @@
 import abc
 import os
 import shutil
+from pathlib import Path
 
 from . import util
 
@@ -22,6 +23,10 @@ class FsUtil(abc.ABC):
     def disk_usage(self, path: str) -> shutil._ntuple_diskusage:
         """Calls os.statvfs on the mount"""
 
+    @abc.abstractmethod
+    def rmdir(self, path: str, keep_root: bool) -> bool:
+        """Removes a directory recursively. Raises exception on failure, otherwise completes normally."""
+
 
 class RealFsUtil(FsUtil):
     def mkdir_p(self, path: str) -> str:
@@ -29,6 +34,18 @@ class RealFsUtil(FsUtil):
 
     def disk_usage(self, path: str) -> shutil._ntuple_diskusage:
         return shutil.disk_usage(path)
+
+    def rmdir(self, path: str, keep_root: bool) -> bool:
+        dir: Path = Path(path)
+        dir.chmod(0o755)
+        for child in dir.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        if not keep_root:
+            dir.rmdir()
+        return True
 
 
 def new() -> FsUtil:

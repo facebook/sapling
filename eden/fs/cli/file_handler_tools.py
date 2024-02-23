@@ -23,14 +23,14 @@ class FileHandlerReleaser(ABC):
         pass
 
     @abstractmethod
-    def check_handle(self, mount: Path) -> None:
+    def check_handle(self, mount: Path) -> bool:
         """Displays processes keeping an open handle to files and if possible, offers to terminate them."""
-        pass
+        return False
 
     @abstractmethod
-    def try_release(self, mount: Path) -> None:
+    def try_release(self, mount: Path) -> bool:
         """If a handle tool exist, use it to display info to the user with check handle."""
-        pass
+        return False
 
 
 if sys.platform == "win32":
@@ -40,18 +40,15 @@ if sys.platform == "win32":
 
     class WinFileHandlerReleaser(FileHandlerReleaser):
         def get_handle_path(self) -> Optional[Path]:
-            return None
-
             handle = shutil.which(WINDOWS_HANDLE_BIN)
             if handle:
                 return Path(handle)
             return None
 
-        def check_handle(self, mount: Path) -> None:
+        def check_handle(self, mount: Path) -> bool:
             handle = self.get_handle_path()
-
             if not handle:
-                return
+                return False
 
             print(
                 f"Checking handle.exe for processes using '{mount}'. This can take a while..."
@@ -72,7 +69,7 @@ if sys.platform == "win32":
                     "If you want to find out which process is still using the repo, run:"
                 )
                 print(f"    handle.exe {mount}\n")
-                return
+                return False
             parsed = [
                 line.split()
                 for line in output.decode(errors="ignore").splitlines()
@@ -87,7 +84,10 @@ if sys.platform == "win32":
             if not non_edenfs_process or not parsed or len(parsed[0]) == 4:
                 # Nothing other than edenfs.exe is holding handles to files from
                 # the repo, we can proceed with the removal
-                return
+                print(
+                    "No processes found. They may be running under a different user.\n"
+                )
+                return False
 
             print("The following processes are still using the repo.\n")
 
@@ -103,18 +103,21 @@ if sys.platform == "win32":
                     try:
                         proc = psutil.Process(pid)
                         proc.kill()
+                        proc.wait()
                     except Exception as e:
                         print(f"Failed to kill process {pid}: {e}")
+                        return False
             else:
                 print(
                     f"Once you have exited those processes, delete {mount} manually.\n"
                 )
+                return False
             print()
-            return
+            return True
 
-        def try_release(self, mount: Path) -> None:
+        def try_release(self, mount: Path) -> bool:
             if self.get_handle_path():
-                self.check_handle(mount)
+                return self.check_handle(mount)
             else:
                 print(
                     f"""\
@@ -129,3 +132,4 @@ if sys.platform == "win32":
                     f"After terminating the processes, please manually delete {mount}.\n"
                 )
                 print()
+                return False

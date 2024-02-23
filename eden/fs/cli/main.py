@@ -51,6 +51,7 @@ from . import (
     daemon_util,
     debug as debug_mod,
     doctor as doctor_mod,
+    filesystem as fs_mod,
     hg_util,
     mtab,
     prefetch as prefetch_mod,
@@ -1477,10 +1478,13 @@ class MountCmd(Subcmd):
 # its configuration.
 # * CLEANUP_ONLY: removing an unknown directory, it might be an old EdenFS
 # mount that failed to clean up. We try to clean it up again in this case.
+# NON_EDEN: removing a non-EdenFS directory or file using eden rm - in this
+# case we want to skip the Eden housekeeping after removing it
 class RemoveType(enum.Enum):
     ACTIVE_MOUNT = 0
     INACTIVE_MOUNT = 1
     CLEANUP_ONLY = 2
+    NON_EDEN = 3
 
 
 @subcmd("remove", "Remove an EdenFS checkout", aliases=["rm"])
@@ -1566,6 +1570,7 @@ Do you still want to delete {path}?"""
                 mount_path = util.get_eden_mount_name(path)
                 remove_type = RemoveType.ACTIVE_MOUNT
             except util.NotAnEdenMountError as ex:
+                remove_type = RemoveType.NON_EDEN
                 # This is not an active mount point.
                 # Check for it by name in the config file anyway, in case it is
                 # listed in the config file but not currently mounted.
@@ -1587,15 +1592,7 @@ Do you still want to delete {path}?"""
                             return 2
                         else:
                             try:
-                                path = Path(path)
-                                path.chmod(0o755)
-                                for child in path.iterdir():
-                                    if child.is_dir():
-                                        shutil.rmtree(child)
-                                    else:
-                                        child.unlink()
-                                if not args.preserve_mount_point:
-                                    path.rmdir()
+                                fs_mod.new().rmdir(path, args.preserve_mount_point)
                                 return 0
                             except Exception as ex:
                                 if sys.platform != "win32":
@@ -1605,8 +1602,18 @@ Do you still want to delete {path}?"""
                                     return 1
                                 else:
                                     winhr = WinFileHandlerReleaser()
-                                    winhr.try_release(path)
-                                    return 0
+                                    maybe_succeeded = winhr.try_release(path)
+                                    try:
+                                        # Try again after try_release
+                                        if maybe_succeeded:
+                                            fs_mod.new().rmdir(
+                                                path, args.preserve_mount_point
+                                            )
+                                    except Exception as ex:
+                                        print(
+                                            f"Error: cannot remove contents of {path} even after trying to kill processes holding resources: {ex}"
+                                        )
+                                        return 1
                     else:
                         # We can't ask the user what their true intentions are,
                         # so let's fail by default.
@@ -1623,10 +1630,11 @@ Do you still want to delete {path}?"""
                     f"{mount_path}, not deleting"
                 )
                 return 1
-            mounts.append((mount_path, remove_type))
+            if remove_type != RemoveType.NON_EDEN:
+                mounts.append((mount_path, remove_type))
 
         # Warn the user since this operation permanently destroys data
-        if args.prompt and sys.stdin.isatty():
+        if args.prompt and sys.stdin.isatty() and len(mounts) > 0:
             mounts_list = "\n  ".join(path for path, _ in mounts)
             print(
                 f"""\
