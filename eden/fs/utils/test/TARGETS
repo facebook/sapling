@@ -402,6 +402,7 @@ cpp_benchmark(
         "IDGenBenchmark.cpp",
         "ImmediateFutureBenchmark.cpp",
         "ProcessAccessLogBenchmark.cpp",
+        "RefPtrBenchmark.cpp",
     ],
     deps = [
         "fbsource//third-party/benchmark:benchmark",
@@ -409,6 +410,7 @@ cpp_benchmark(
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:process_access_log",
+        "//eden/fs/utils:ref_ptr",
         "//eden/fs/utils:utils",
         "//folly:c_portability",
     ],
