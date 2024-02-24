@@ -15,6 +15,7 @@ import type {Writable} from 'shared/typeUtils';
 
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
+import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
@@ -84,6 +85,15 @@ export class VSCodeReposList {
       repo?.unref();
       this.knownRepos.delete(fsPath);
     }
+
+    executeVSCodeCommand('setContext', 'sapling:hasRepo', this.knownRepos.size > 0);
+
+    Promise.all(Array.from(this.knownRepos.values()).map(repo => repo.promise)).then(repos => {
+      const hasRemoteLinkRepo = repos.some(
+        repo => repo instanceof Repository && repo.codeReviewProvider?.getRemoteFileURL,
+      );
+      executeVSCodeCommand('setContext', 'sapling:hasRemoteLinkRepo', hasRemoteLinkRepo);
+    });
   }
 
   /** return the VSCodeRepo that contains the given path */
