@@ -532,7 +532,11 @@ cpp_library(
 
 cpp_library(
     name = "thrift_util",
+    srcs = ["ThriftUtil.cpp"],
     headers = ["ThriftUtil.h"],
+    deps = [
+        "//folly:string",
+    ],
     exported_deps = [
         "//eden/fs/model:model",
         "//eden/fs/utils:eden_error",
