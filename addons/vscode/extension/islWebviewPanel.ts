@@ -366,8 +366,8 @@ function htmlForISLWebview(
     `style-src-elem ${webview.cspSource} 'unsafe-inline'`,
     `font-src ${webview.cspSource} data:`,
     `img-src ${webview.cspSource} https: data:`,
-    `script-src ${webview.cspSource} 'wasm-unsafe-eval'`,
-    `script-src-elem ${webview.cspSource}`,
+    `script-src ${webview.cspSource} 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    `script-src-elem ${webview.cspSource} 'nonce-${nonce}'`,
   ].join('; ');
 
   return `<!DOCTYPE html>
