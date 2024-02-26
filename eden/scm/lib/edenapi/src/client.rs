@@ -659,7 +659,7 @@ impl Client {
         &self,
         custom_duration: Option<Duration>,
         labels: Option<Vec<String>>,
-    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
+    ) -> Result<EphemeralPrepareResponse, EdenApiError> {
         tracing::info!("Preparing ephemeral bubble");
         let url = self.build_url(paths::EPHEMERAL_PREPARE)?;
         let req = EphemeralPrepareRequest {
@@ -672,13 +672,11 @@ impl Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        let mut fetch = self.fetch::<EphemeralPrepareResponse>(vec![request])?;
-        fetch.entries = fetch
-            .entries
-            .inspect_ok(|r| tracing::info!("Created bubble {}", r.bubble_id))
-            .boxed();
-
-        Ok(fetch)
+        let resp = self.fetch_single::<EphemeralPrepareResponse>(request).await;
+        if let Ok(ref r) = resp {
+            tracing::info!("Created bubble {}", r.bubble_id);
+        }
+        resp
     }
 
     async fn fetch_snapshot_attempt(
@@ -1505,7 +1503,7 @@ impl EdenApi for Client {
         &self,
         custom_duration: Option<Duration>,
         labels: Option<Vec<String>>,
-    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
+    ) -> Result<EphemeralPrepareResponse, EdenApiError> {
         self.with_retry(|this| {
             this.ephemeral_prepare_attempt(custom_duration, labels.clone())
                 .boxed()

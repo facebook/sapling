@@ -30,4 +30,4 @@ Start up EdenAPI server.
   $ start_and_wait_for_mononoke_server
 Check response.
   $ hgedenapi debugapi -e ephemeralprepare -i None -i "['some', 'label']"
-  [{"bubble_id": 1}]
+  {"bubble_id": 1}

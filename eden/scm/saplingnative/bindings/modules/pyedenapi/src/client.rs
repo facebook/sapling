@@ -477,15 +477,14 @@ py_class!(pub class client |py| {
     }
 
     def ephemeralprepare(&self, custom_duration: Option<u64>, labels: Option<Vec<String>>)
-        -> PyResult<TStream<anyhow::Result<Serde<EphemeralPrepareResponse>>>>
+        -> PyResult<Serde<EphemeralPrepareResponse>>
     {
         let api = self.inner(py).as_ref();
-        let entries = py
+        py
             .allow_threads(|| block_unless_interrupted(api.ephemeral_prepare(custom_duration.map(Duration::from_secs), labels)))
             .map_pyerr(py)?
-            .map_pyerr(py)?
-            .entries;
-        Ok(entries.map_ok(Serde).map_err(Into::into).into())
+            .map_pyerr(py)
+            .map(Serde)
     }
 
     /// uploadfilecontents(data: [(AnyFileContentId, Bytes)], bubbleid: int | None)

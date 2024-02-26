@@ -25,7 +25,6 @@ use edenapi_types::RepoPathBuf;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::SnapshotRawFiles;
 use edenapi_types::UploadSnapshotResponse;
-use futures::StreamExt;
 use futures::TryStreamExt;
 use minibytes::Bytes;
 
@@ -128,11 +127,8 @@ pub async fn upload_snapshot(
         id
     } else {
         api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs), labels)
-            .await?
-            .entries
-            .next()
             .await
-            .context("Failed to create ephemeral bubble")??
+            .context("Failed to create ephemeral bubble")?
             .bubble_id
     };
     let file_content_tokens = {
