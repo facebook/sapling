@@ -8,7 +8,15 @@
 import type {AtomFamilyWeak} from '../jotaiUtils';
 import type {Atom} from 'jotai';
 
-import {atomFamilyWeak, lazyAtom, readAtom, writeAtom, useAtomGet, useAtomHas} from '../jotaiUtils';
+import {
+  atomFamilyWeak,
+  lazyAtom,
+  readAtom,
+  writeAtom,
+  useAtomGet,
+  useAtomHas,
+  atomResetOnDepChange,
+} from '../jotaiUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
 import {Provider, atom, createStore, useAtomValue} from 'jotai';
@@ -328,5 +336,34 @@ describe('useAtomGet and useAtomSet', () => {
     expect(findRerender({insertMap: [['b', 5]]})).toEqual(['b']);
     expect(findRerender({replaceSet})).toEqual(['c']);
     expect(findRerender({insertMap: [['b', 5]], replaceSet})).toEqual(['b', 'c']);
+  });
+});
+
+describe('atomResetOnDepChange', () => {
+  it('works like a primitive atom', () => {
+    const depAtom = atom(0);
+    const testAtom = atomResetOnDepChange(1, depAtom);
+    const doubleAtom = atom(get => get(testAtom) * 2);
+    expect(readAtom(doubleAtom)).toBe(2);
+    expect(readAtom(testAtom)).toBe(1);
+    writeAtom(testAtom, 2);
+    expect(readAtom(doubleAtom)).toBe(4);
+    expect(readAtom(testAtom)).toBe(2);
+  });
+
+  it('gets reset on dependency change', () => {
+    const depAtom = atom(0);
+    const testAtom = atomResetOnDepChange(1, depAtom);
+
+    writeAtom(testAtom, 2);
+
+    // Change depAtom should reset testAtom.
+    writeAtom(depAtom, 10);
+    expect(readAtom(testAtom)).toBe(1);
+
+    // Set depAtom to the same value does not reset testAtom.
+    writeAtom(testAtom, 3);
+    writeAtom(depAtom, 10);
+    expect(readAtom(testAtom)).toBe(3);
   });
 });

@@ -11,6 +11,7 @@ import type {Json} from 'shared/typeUtils';
 
 import serverAPI from './ClientToServerAPI';
 import platform from './platform';
+import {assert} from './utils';
 import {atom, getDefaultStore, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useMemo} from 'react';
@@ -218,6 +219,29 @@ export function resetOnCwdChange<T>(atom: WritableAtom<T, [T], unknown>, default
   return serverAPI.onCwdChanged(() => {
     store.set(atom, defaultValue);
   });
+}
+
+/** Create an atom that is automatically reset when the depAtom is changed. */
+export function atomResetOnDepChange<T>(defaultValue: T, depAtom: Atom<unknown>): MutAtom<T> {
+  assert(
+    typeof depAtom !== 'undefined',
+    'depAtom should not be undefined (is there a circular dependency?)',
+  );
+  const primitiveAtom = atom<T>(defaultValue);
+  let lastDep = readAtom(depAtom);
+  return atom(
+    get => {
+      const dep = get(depAtom);
+      if (dep !== lastDep) {
+        lastDep = dep;
+        writeAtom(primitiveAtom, defaultValue);
+      }
+      return get(primitiveAtom);
+    },
+    (_get, set, update) => {
+      set(primitiveAtom, update);
+    },
+  );
 }
 
 /**
