@@ -82,6 +82,15 @@ pub async fn expand_git_submodule_file_changes<'a, R: Repo>(
                     }
                     _ => Ok(vec![(p, fc)]),
                 },
+                FileChange::Deletion => {
+                    let paths_to_delete =
+                        handle_submodule_deletion(ctx, source_repo, source_repo_deps, parents, p)
+                            .await?;
+                    Ok(paths_to_delete
+                        .into_iter()
+                        .map(|p| (p, FileChange::Deletion))
+                        .collect())
+                }
                 _ => Ok(vec![(p, fc)]),
             }
         })
@@ -586,4 +595,113 @@ async fn id_to_fsnode_manifest_id(
         .await?;
 
     Ok(root_fsnode_id.into_fsnode_id())
+}
+
+/// If a submodule is being deleted from the source repo, we should delete its
+/// entire expanded copy in the large repo.
+async fn handle_submodule_deletion<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    source_repo: &'a R,
+    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    parents: &'a [ChangesetId],
+    submodule_file_path: NonRootMPath,
+) -> Result<Vec<NonRootMPath>> {
+    // If the path is in the source_repo_deps keys, it's almost
+    // certainly a submodule being deleted.
+    if source_repo_deps.contains_key(&submodule_file_path) {
+        // However, to be certain, let's verify that this file
+        // was indeed of type `GitSubmodule` by getting the parent fsnodes
+        // and checking the FileType of the submodule file path.
+        let parent_fsnode_ids: Vec<_> = stream::iter(parents)
+            .then(|cs_id| id_to_fsnode_manifest_id(ctx, source_repo, *cs_id))
+            .try_collect()
+            .await?;
+
+        // Checks if in any of the parents that path corresponds
+        // to a file of type `GitSubmodule`.
+        let is_git_submodule_file = stream::iter(parent_fsnode_ids)
+            .then(|fsnode_id| {
+                cloned!(ctx, submodule_file_path);
+                let source_repo_blobstore = source_repo.repo_blobstore_arc();
+
+                async move {
+                    let entry = fsnode_id
+                        .find_entry(ctx, source_repo_blobstore, submodule_file_path.into())
+                        .await?;
+                    match entry {
+                        Some(manifest::Entry::Leaf(fsnode_file)) => {
+                            Ok(*fsnode_file.file_type() == FileType::GitSubmodule)
+                        }
+                        _ => anyhow::Ok(false),
+                    }
+                }
+            })
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .any(|is_git_submodule| is_git_submodule);
+
+        // Not a submodule file, just a file at the same path
+        // where a git submodule used to be, so just delete the file normally.
+        if !is_git_submodule_file {
+            return Ok(vec![submodule_file_path]);
+        }
+
+        // This is a submodule file, so delete its entire expanded directory.
+        return delete_submodule_expansion(
+            ctx,
+            source_repo,
+            source_repo_deps,
+            parents,
+            submodule_file_path,
+        )
+        .await;
+    };
+
+    Ok(vec![submodule_file_path])
+}
+
+/// After confirming that the path being deleted is indeed a submodule file,
+/// generate the deletion for its entire expanded directory.
+async fn delete_submodule_expansion<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    source_repo: &'a R,
+    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    parents: &'a [ChangesetId],
+    submodule_file_path: NonRootMPath,
+) -> Result<Vec<NonRootMPath>> {
+    let submodule_path = SubmodulePath(submodule_file_path.clone());
+    let submodule_repo = get_submodule_repo(&submodule_path, source_repo_deps)?;
+
+    // Gets the submodule revision that the source repo is currently pointing to.
+    let sm_parents = get_previous_submodule_commits(
+        ctx,
+        parents,
+        source_repo,
+        submodule_path.clone(),
+        submodule_repo,
+    )
+    .await?;
+
+    let parent_fsnode_ids: Vec<_> = stream::iter(sm_parents)
+        .then(|cs_id| id_to_fsnode_manifest_id(ctx, submodule_repo, cs_id))
+        .try_collect()
+        .await?;
+
+    let submodule_blobstore = submodule_repo.repo_blobstore_arc().clone();
+
+    // Get the entire working copy of the submodule in those revisions, so we
+    // can generate the proper paths to be deleted.
+    let submodule_leaves = stream::iter(parent_fsnode_ids)
+        .map(|fsnode_id| fsnode_id.list_leaf_entries(ctx.clone(), submodule_blobstore.clone()))
+        .flatten_unordered(None)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let paths_to_delete: Vec<_> = submodule_leaves
+        .into_iter()
+        .map(|(path, _)| submodule_file_path.join(&path))
+        .collect();
+
+    Ok(paths_to_delete)
 }

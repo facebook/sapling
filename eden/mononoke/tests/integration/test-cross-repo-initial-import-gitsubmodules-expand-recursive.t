@@ -326,7 +326,7 @@ Then delete repo C submodule used directly in repo A
  
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
   $ echo "$SYNCED_HEAD" 
-  b3410922e391b0f66dbfbb18bc476bab248877706a5e8539dfa9a7a3d103add6
+  810a54fb9eca92f42b3473b91a91590535896978b2cfaba457647471e1878b95
   $ with_stripped_logs mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive -i "$SYNCED_HEAD" -T hgchangesets
   $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
@@ -336,11 +336,16 @@ Then delete repo C submodule used directly in repo A
 Check that deletions were made properly, i.e. submodule in repo_c was entirely
 deleted and the files deleted in repo B were deleted inside its copy.
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .
-  commit: a176528e53d4a2cd09c4c05543392e18f8955558
+  commit: a8d716d8af176467acac2c6550c15ec2bcc88221
   Remove repo C submodule from repo A
-   smallrepofolder1/.gitmodules |  3 ---
-   1 files changed, 0 insertions(+), 3 deletions(-)
+   smallrepofolder1/.gitmodules    |  3 ---
+   smallrepofolder1/repo_c/choo    |  1 -
+   smallrepofolder1/repo_c/choo3   |  1 -
+   smallrepofolder1/repo_c/choo4   |  1 -
+   smallrepofolder1/repo_c/hoo/qux |  1 -
+   5 files changed, 0 insertions(+), 7 deletions(-)
   
+
 
 TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   $ tree &> ${TESTTMP}/repo_a_tree_2
@@ -363,15 +368,13 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
       |           `-- qux                                                |           `-- qux
       |-- regular_dir                                                    |-- regular_dir
       |   `-- aardvar                                                    |   `-- aardvar
-      |-- repo_c                                                         |-- repo_c
-      |   |-- choo                                                       |   |-- choo
-                                                                  >      |   |-- choo3
-                                                                  >      |   |-- choo4
-      |   `-- hoo                                                        |   `-- hoo
-      |       `-- qux                                                    |       `-- qux
+      |-- repo_c                                                  <
+      |   |-- choo                                                <
+      |   `-- hoo                                                 <
+      |       `-- qux                                             <
       `-- root_file                                                      `-- root_file
   
-  9 directories, 11 files                                         |  8 directories, 13 files
+  9 directories, 11 files                                         |  6 directories, 9 files
   [1]
 
 Check that the diff that updates the submodule generates the correct delta
