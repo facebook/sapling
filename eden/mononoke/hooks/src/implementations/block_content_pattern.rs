@@ -238,4 +238,123 @@ mod tests {
 
         Ok(())
     }
+    #[fbinit::test]
+    async fn test_blocks_pattern_for_detecting_conflict_markers(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb).await?;
+
+        let changesets = create_from_dag_with_changes(
+            &ctx,
+            &repo,
+            r##"
+                Z-A-B-C-D-E
+            "##,
+            changes! {
+                "B" => |c| c.add_file("file", "<<<<<<< this is a closing conflict marker\n"),
+                "C" => |c| c.add_file("file", "Here, this is not the first line\n>>>>>>> this is an opening conflict marker\n"),
+                "E" => |c| c.add_file("allowed_file.md", ">>>>>>> this is a conflict marker\n<<<<<<< and so is this\nbut it is a markdown file\n"),
+            },
+        )
+        .await?;
+        bookmark(&ctx, &repo, "main")
+            .create_publishing(changesets["Z"])
+            .await?;
+
+        let hook = BlockContentPatternHook::with_config(BlockContentPatternConfig {
+            pattern: Regex::new(r"(?m)^(<<<<<<< |>>>>>>> )")?,
+            ignore_path_regexes: vec![Regex::new(r"\.md$")?],
+            message: String::from("Conflict marker found: {$1}"),
+        })?;
+
+        // Normal files are fine.
+        assert_eq!(
+            test_file_hook(
+                &ctx,
+                &repo,
+                &hook,
+                changesets["A"],
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?,
+            vec![("A".try_into()?, HookExecution::Accepted),]
+        );
+        assert_eq!(
+            test_file_hook(
+                &ctx,
+                &repo,
+                &hook,
+                changesets["B"],
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?,
+            vec![
+                ("B".try_into()?, HookExecution::Accepted),
+                (
+                    "file".try_into()?,
+                    HookExecution::Rejected(HookRejectionInfo {
+                        description: "File contains blocked pattern".into(),
+                        long_description: "Conflict marker found: {<<<<<<< }: file".into(),
+                    })
+                )
+            ],
+        );
+        assert_eq!(
+            test_file_hook(
+                &ctx,
+                &repo,
+                &hook,
+                changesets["C"],
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?,
+            vec![
+                ("C".try_into()?, HookExecution::Accepted),
+                (
+                    "file".try_into()?,
+                    HookExecution::Rejected(HookRejectionInfo {
+                        description: "File contains blocked pattern".into(),
+                        long_description: "Conflict marker found: {>>>>>>> }: file".into(),
+                    })
+                )
+            ],
+        );
+
+        // Only modified files are checked, so D is fine despite B and C
+        // adding files that contain the marker.
+        assert_eq!(
+            test_file_hook(
+                &ctx,
+                &repo,
+                &hook,
+                changesets["D"],
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?,
+            vec![("D".try_into()?, HookExecution::Accepted)],
+        );
+
+        // Test ignore_path_regexes: E is allowed because the modified file
+        // matches the allowlist despite containing the marker.
+        assert_eq!(
+            test_file_hook(
+                &ctx,
+                &repo,
+                &hook,
+                changesets["E"],
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?,
+            vec![
+                ("E".try_into()?, HookExecution::Accepted),
+                ("allowed_file.md".try_into()?, HookExecution::Accepted),
+            ],
+        );
+
+        Ok(())
+    }
 }
