@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.40
+
+### Feb 26 2024
+
+- Fix persisted state not loading correctly
+- Some visual fixes for new commit rendering
+- Improve keyboard shortcuts on windows by using ctrl instead of meta
+- Thanks to [@alex-statsig](https://github.com/alex-statsig) for several contributions in this release:
+  - Add file decorations ([#717](https://github.com/facebook/sapling/issues/717))
+  - Don't auto-close drawer when window isn't loaded ([#768](https://github.com/facebook/sapling/issues/768))
+  - Add "open in code review" context menu action ([#816](https://github.com/facebook/sapling/issues/816))
+  - Show blame by default ([#817](https://github.com/facebook/sapling/issues/817))
+  - Fix commit template loading ([#821](https://github.com/facebook/sapling/issues/821))
+
 ## 0.1.39
 
 ### Feb 21 2024
