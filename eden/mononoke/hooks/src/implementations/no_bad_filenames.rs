@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -44,33 +43,12 @@ pub struct NoBadFilenamesHook {
     config: NoBadFilenamesConfig,
 }
 
-fn get_regex(config: &HookConfig, regex_name: &str) -> Result<Option<Regex>> {
-    config
-        .strings
-        .get(regex_name)
-        .map(|regex| Regex::new(regex))
-        .transpose()
-        .with_context(|| format!("Failed to create regex for {}", regex_name))
-}
-
 impl NoBadFilenamesHook {
-    #[allow(dead_code)]
     pub fn new(config: &HookConfig) -> Result<Self> {
-        let options = config
-            .options
-            .as_ref()
-            .ok_or_else(|| anyhow!("Missing hook options"))?;
-        let config = serde_json::from_str(options).context("Invalid hook config")?;
+        let config = config
+            .parse_options()
+            .context("Missing or invalid JSON hook configuration for no-bad-filenames hook")?;
         Ok(Self::with_config(config))
-    }
-
-    pub fn legacy(config: &HookConfig) -> Result<Self> {
-        let new_config = NoBadFilenamesConfig {
-            allowlist_regex: get_regex(config, "allowlist_regex")?,
-            illegal_regex: get_regex(config, "illegal_regex")?.ok_or_else(|| anyhow!("Missing illegal_regex config"))?,
-            illegal_filename_message: "ABORT: Illegal filename: '${filename}'. Filenames must not match '${illegal_pattern}'.".to_string(),
-        };
-        Ok(Self::with_config(new_config))
     }
 
     pub fn with_config(config: NoBadFilenamesConfig) -> Self {
@@ -118,6 +96,7 @@ impl FileHook for NoBadFilenamesHook {
 
 #[cfg(test)]
 mod test {
+    use anyhow::anyhow;
     use anyhow::Error;
     use blobstore::Loadable;
     use borrowed::borrowed;

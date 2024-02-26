@@ -102,7 +102,7 @@ pub fn make_file_hook(
             };
             Some(Box::new(hook))
         }
-        "no_bad_filenames" => Some(Box::new(no_bad_filenames::NoBadFilenamesHook::legacy(
+        "no_bad_filenames" => Some(Box::new(no_bad_filenames::NoBadFilenamesHook::new(
             &params.config,
         )?)),
         "no_bad_extensions" => Some(Box::new(
