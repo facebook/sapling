@@ -119,9 +119,7 @@ def reposetup(ui, repo) -> None:
     if not interval or interval <= 0:
         return
 
-    knownlongruning = (
-        ui.cmdname in {"debugedenimporthelper", "web"} and not util.istest()
-    )
+    knownlongruning = ui.cmdname in {"web"} and not util.istest()
 
     def writesigtracethread(path, interval):
         try:
