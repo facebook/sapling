@@ -44,7 +44,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
           const uri = vscode.Uri.file(path);
           if (looksLikeImageUri(uri)) {
             vscode.commands.executeCommand('vscode.open', uri).then(undefined, err => {
-              vscode.window.showErrorMessage('cannot open file' + err.message ?? String(err));
+              vscode.window.showErrorMessage('cannot open file' + (err.message ?? String(err)));
             });
             return;
           }
