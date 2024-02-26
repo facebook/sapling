@@ -489,7 +489,6 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     // Submodule repo in Mononoke
     submodule_repo: &'a R,
 ) -> Result<Vec<ChangesetId>> {
-    let src_derived_data = source_repo.repo_derived_data();
     let source_repo_blobstore = source_repo.repo_blobstore_arc().clone();
 
     let parents_vec = parents
@@ -505,9 +504,7 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
             cloned!(ctx, submodule_path, source_repo_blobstore);
 
             async move {
-                let derive_error_msg = format!("Failed to derive RootFsnodeId from repo {}", &source_repo.repo_identity().name());
-                let root_fsnode_id = src_derived_data.derive::<RootFsnodeId>(&ctx, cs_id).await.context(derive_error_msg)?;
-                let fsnode_id = root_fsnode_id.into_fsnode_id();
+                let fsnode_id = id_to_fsnode_manifest_id(&ctx, source_repo, cs_id).await?;
                 let entry = fsnode_id
                     .find_entry(ctx.clone(), source_repo_blobstore, submodule_path.0.clone().into())
                     .await?;
