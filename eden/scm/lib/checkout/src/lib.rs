@@ -1074,7 +1074,7 @@ pub fn filesystem_checkout(
 
     if !revert_conflicts {
         // 2. Check if status is dirty
-        check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
+        check_conflicts(repo, wc, &plan, &target_mf, &status)?;
     }
 
     // 3. Signal that an update is being performed
@@ -1179,38 +1179,43 @@ fn overlay_working_changes(
 }
 
 pub(crate) fn check_conflicts(
-    ctx: &CoreContext,
     repo: &Repo,
     wc: &LockedWorkingCopy,
     plan: &CheckoutPlan,
     target_mf: &TreeManifest,
     status: &Status,
 ) -> Result<()> {
-    let unknown_conflicts = plan.check_unknown_files(
+    let mut conflicts = plan.check_unknown_files(
         target_mf,
         repo.file_store()?.as_ref(),
         &mut wc.treestate().lock(),
         status,
     )?;
-    if !unknown_conflicts.is_empty() {
-        for unknown in unknown_conflicts {
-            ctx.logger
-                .warn(format!("{unknown}: untracked file differs"));
-        }
-        bail!("untracked files in working directory differ from files in requested revision");
-    }
 
-    let conflicts = plan.check_conflicts(status);
+    conflicts.extend(
+        plan.check_conflicts(status)
+            .into_iter()
+            .map(|c| c.to_owned()),
+    );
+
     if !conflicts.is_empty() {
+        let limit = 5;
+
+        let len = conflicts.len();
+        conflicts.truncate(limit);
+        let mut conflicts = conflicts
+            .into_iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>();
+        if len > limit {
+            conflicts.push(format!("...and {} more", len - limit));
+        }
+
         bail!(
-            "{:?} conflicting file changes:\n {}",
-            conflicts.len(),
-            conflicts
-                .iter()
-                .take(5)
-                .map(|p| p.as_str())
-                .collect::<Vec<_>>()
-                .join("\n "),
+            "{:?} conflicting file changes:\n {}\n{}",
+            len,
+            conflicts.join("\n "),
+            "(commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)",
         );
     }
     Ok(())

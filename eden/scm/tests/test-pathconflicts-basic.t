@@ -56,6 +56,7 @@ Basic update - local directory conflicts with remote file
   $ hg up file
   abort: 1 conflicting file changes:
    a/b
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up --clean file
   (activating bookmark file)
@@ -77,13 +78,15 @@ Basic update - untracked file conflicts with remote directory
   $ hg up dir
   abort: 1 conflicting file changes:
    a
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
 Basic clean update - local directory conflicts with changed remote file
 
   $ hg up -q file
-  a: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision
+  abort: 1 conflicting file changes:
+   a
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ rm a
   $ mkdir a
@@ -94,6 +97,7 @@ Basic clean update - local directory conflicts with changed remote file
   ($TESTTMP/repo/a: mode 0o52, uid 42, gid 42) (?)
   ($TESTTMP/repo: mode 0o52, uid 42, gid 42) (?)
    a/b
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up --clean file2
   (activating bookmark file2)

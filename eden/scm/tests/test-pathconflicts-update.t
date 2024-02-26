@@ -47,6 +47,7 @@ Update - local file conflicts with remote directory:
   $ hg up dir
   abort: 1 conflicting file changes:
    a/b
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up dir --config experimental.checkout.rust-path-conflicts=false
   (activating bookmark dir)
@@ -64,6 +65,7 @@ Update - local symlink conflicts with remote directory:
   $ hg up dir
   abort: 1 conflicting file changes:
    a/b
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up dir --config experimental.checkout.rust-path-conflicts=false
   (activating bookmark dir)
@@ -77,6 +79,7 @@ Update - local directory conflicts with remote file
   $ hg up file
   abort: 1 conflicting file changes:
    a/b/c/d
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up file --config experimental.checkout.rust-path-conflicts=false
   (activating bookmark file)
@@ -92,6 +95,7 @@ Update - local directory conflicts with remote symlink
   $ hg up link
   abort: 1 conflicting file changes:
    a/b/c/d
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up link --config experimental.checkout.rust-path-conflicts=false
   (activating bookmark link)

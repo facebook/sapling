@@ -201,7 +201,7 @@ fn edenfs_noconflict_checkout(
     )?;
     let (plan, status) = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
-    check_conflicts(ctx, repo, wc, &plan, &target_mf, &status)?;
+    check_conflicts(repo, wc, &plan, &target_mf, &status)?;
 
     // Signal that an update is being performed
     let updatestate_path = wc.dot_hg_path().join("updatestate");

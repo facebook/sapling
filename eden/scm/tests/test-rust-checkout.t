@@ -13,8 +13,9 @@
 Unknown file w/ different content - conflict:
   $ echo nope > foo
   $ hg go $A
-  foo: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision
+  abort: 1 conflicting file changes:
+   foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
 
@@ -157,6 +158,7 @@ Various invalid arg combos:
   $ hg go $A
   abort: 1 conflicting file changes:
    foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
   $ echo untracked > bar
@@ -164,8 +166,10 @@ Various invalid arg combos:
   M foo
   ? bar
   $ hg go $A
-  bar: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision
+  abort: 2 conflicting file changes:
+   bar
+   foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
   $ hg go -q --clean $A
@@ -329,6 +333,7 @@ Bail on dir/path conflict with added file:
   $ hg go $B
   abort: 1 conflicting file changes:
    dir
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
 Bail on untracked file conflict only if contents differ:
@@ -341,8 +346,9 @@ Bail on untracked file conflict only if contents differ:
   $ hg go -q $A
   $ echo bar > foo
   $ hg go $B
-  foo: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision
+  abort: 1 conflicting file changes:
+   foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ echo foo > foo
   $ hg go -q $B
@@ -359,6 +365,7 @@ Bail on untracked file path conflict:
   $ hg go $B
   abort: 1 conflicting file changes:
    foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ rm foo
   $ mkdir -p foo/bar
@@ -366,6 +373,7 @@ Bail on untracked file path conflict:
   $ hg go $B
   abort: 1 conflicting file changes:
    foo/bar/baz
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg go -q $B --config experimental.checkout.rust-path-conflicts=false
   $ hg st
@@ -387,6 +395,7 @@ Deleted file replaced by untracked directory:
   $ hg go $B
   abort: 1 conflicting file changes:
    foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg rm foo --mark
   $ hg add foo/bar
@@ -396,6 +405,30 @@ Deleted file replaced by untracked directory:
   $ hg go $B
   abort: 1 conflicting file changes:
    foo
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg go -qC $B
   $ hg st
+
+Don't output too many conflicts:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/foo=bar\n
+  > |
+  > A
+  > EOS
+  $ hg go -q $A
+  $ mkdir foo
+  $ for i in `seq 100`; do
+  >   touch foo/file$i
+  > done
+  $ hg go -q $B
+  abort: 100 conflicting file changes:
+   foo/file* (glob)
+   foo/file* (glob)
+   foo/file* (glob)
+   foo/file* (glob)
+   foo/file* (glob)
+   ...and 95 more
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
+  [255]
