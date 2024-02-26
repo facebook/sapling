@@ -6,6 +6,7 @@
  */
 
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
+import {isMac, isWindows} from 'shared/OperatingSystem';
 
 import './Kbd.css';
 
@@ -44,13 +45,21 @@ function keycodeToString(keycode: KeyCode): string {
   }
 }
 
-const modifierToIcon = {
-  [Modifier.ALT]: '⌥',
-  [Modifier.CMD]: '⌘',
-  [Modifier.SHIFT]: '⇧',
-  [Modifier.CTRL]: '⌃',
-  [Modifier.NONE]: '',
-} as const;
+const modifierToIcon = isMac
+  ? ({
+      [Modifier.ALT]: '⌥',
+      [Modifier.CMD]: '⌘',
+      [Modifier.SHIFT]: '⇧',
+      [Modifier.CTRL]: '⌃',
+      [Modifier.NONE]: '',
+    } as const)
+  : ({
+      [Modifier.ALT]: 'Alt',
+      [Modifier.CMD]: isWindows ? 'Win' : 'Super',
+      [Modifier.SHIFT]: 'Shift',
+      [Modifier.CTRL]: 'Ctrl',
+      [Modifier.NONE]: '',
+    } as const);
 
 const modifierToString = {
   [Modifier.ALT]: 'Alt',
