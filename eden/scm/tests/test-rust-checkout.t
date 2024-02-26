@@ -223,11 +223,18 @@ Non --clean keeps unconflicting changes:
   > EOS
   $ hg go -q $A
   $ echo foo >> A
+  $ touch foo
+  $ mkdir bar
+  $ echo bar > bar/bar
   $ hg st
   M A
+  ? bar/bar
+  ? foo
   $ hg go -q $B
   $ hg st
   M A
+  ? bar/bar
+  ? foo
 
 Update active bookmark
   $ newclientrepo
@@ -308,3 +315,87 @@ Test --check
   $ hg go --clean --check -q null
   abort: can only specify one of --check, --clean, or --merge
   [255]
+
+Bail on dir/path conflict with added file:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/dir/foo=foo
+  > |
+  > A
+  > EOS
+  $ hg go -q $A
+  $ touch dir
+  $ hg add dir
+  $ hg go $B
+  abort: 1 conflicting file changes:
+   dir
+  [255]
+
+Bail on untracked file conflict only if contents differ:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/foo=foo\n
+  > |
+  > A
+  > EOS
+  $ hg go -q $A
+  $ echo bar > foo
+  $ hg go $B
+  foo: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ echo foo > foo
+  $ hg go -q $B
+
+Bail on untracked file path conflict:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/foo/bar=foo\n
+  > |
+  > A
+  > EOS
+  $ hg go -q $A
+  $ echo foo > foo
+  $ hg go $B
+  abort: 1 conflicting file changes:
+   foo
+  [255]
+  $ rm foo
+  $ mkdir -p foo/bar
+  $ echo foo > foo/bar/baz
+  $ hg go $B
+  abort: 1 conflicting file changes:
+   foo/bar/baz
+  [255]
+  $ hg go -q $B --config experimental.checkout.rust-path-conflicts=false
+  $ hg st
+
+Deleted file replaced by untracked directory:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/foo=bar\n
+  > |
+  > A  # A/foo=foo\n
+  > EOS
+  $ hg go -q $A
+  $ rm foo
+  $ mkdir foo
+  $ echo foo > foo/bar
+  $ hg st
+  ! foo
+  ? foo/bar
+  $ hg go $B
+  abort: 1 conflicting file changes:
+   foo
+  [255]
+  $ hg rm foo --mark
+  $ hg add foo/bar
+  $ hg st
+  A foo/bar
+  R foo
+  $ hg go $B
+  abort: 1 conflicting file changes:
+   foo
+  [255]
+  $ hg go -qC $B
+  $ hg st

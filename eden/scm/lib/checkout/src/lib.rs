@@ -49,7 +49,9 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
+use types::hgid::MF_UNTRACKED_NODE_ID;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -434,7 +436,21 @@ impl CheckoutPlan {
 
     pub fn check_conflicts(&self, status: &Status) -> Vec<&RepoPath> {
         let mut conflicts = vec![];
-        for file in self.all_files() {
+
+        for file in self.removed_files() {
+            if status.status(file).is_some() {
+                // Include "unknown" files as conflicts. When generating the diff, we skip
+                // unknown files that don't conflict. So, if the diff said to remove an
+                // unknown file, it must have had a path conflict.
+                conflicts.push(file.as_repo_path());
+            }
+        }
+
+        for file in self
+            .update_content
+            .keys()
+            .chain(self.update_meta.iter().map(|u| &u.path))
+        {
             // Unknown files are handled separately in check_unknown_files
             if !matches!(status.status(file), None | Some(FileStatus::Unknown)) {
                 conflicts.push(file.as_repo_path());
@@ -990,6 +1006,10 @@ pub fn filesystem_checkout(
 ) -> Result<(usize, usize)> {
     let current_commit = wc.first_parent()?;
 
+    if !revert_conflicts && target_commit == current_commit {
+        return Ok((0, 0));
+    }
+
     let tree_resolver = repo.tree_resolver()?;
     let mut current_mf = tree_resolver.get(&current_commit)?;
     let target_mf = tree_resolver.get(&target_commit)?;
@@ -1005,17 +1025,21 @@ pub fn filesystem_checkout(
     let status = wc.status(ctx, sparse_matcher.clone(), false)?;
     let ts = wc.treestate();
 
-    if revert_conflicts {
-        // With --clean, overlay working copy changes so they are "undone" by
-        // the diff w/ target manifest.
-        overlay_working_changes(wc.vfs(), &mut current_mf, &status)?;
+    // Overlay working copy changes so they are "undone" by the diff w/ target manifest.
+    overlay_working_changes(
+        &ctx.config,
+        wc.vfs(),
+        &mut current_mf,
+        &status,
+        revert_conflicts,
+    )?;
 
+    if revert_conflicts {
         // --clean clears out any merge state
         wc.clear_merge_state()?;
 
-        // Turn added files into untracked files so they don't get deleted unless
-        // necessary. If we included them in overlay_working_changes they would always be
-        // deleted.
+        // Downgrade added files into untracked files. We keep them around for "--clean"
+        // to avoid accidental data loss.
         let mut ts = ts.lock();
         for add in status.added() {
             ts.insert(
@@ -1082,19 +1106,73 @@ pub fn filesystem_checkout(
 // Apply outstanding working copy changes to the given manifest. This includes
 // the working copy changes in the diff between the working copy manifest and
 // the checkout target manifest.
-fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) -> Result<()> {
-    // Handle deletes first to avoid path conflicts inserting into manifest.
-    for (p, s) in status.iter() {
-        if matches!(s, FileStatus::Deleted | FileStatus::Removed) {
-            mf.remove(p).map(|_| ())?;
+fn overlay_working_changes(
+    config: &dyn Config,
+    vfs: &VFS,
+    mf: &mut TreeManifest,
+    status: &Status,
+    clean: bool,
+) -> Result<()> {
+    use FileStatus::*;
+
+    if clean {
+        // Handle deletes first to avoid path conflicts inserting into manifest.
+        for (p, s) in status.iter() {
+            if matches!(s, Deleted | Removed) {
+                mf.remove(p).map(|_| ())?;
+            }
         }
     }
 
-    for p in status.modified() {
-        mf.insert(
-            p.to_owned(),
-            FileMetadata::new(MF_MODIFIED_NODE_ID, file_type(vfs, p)),
-        )?;
+    for (p, s) in status.iter() {
+        match s {
+            Modified => {
+                if clean {
+                    mf.insert(
+                        p.to_owned(),
+                        FileMetadata::new(MF_MODIFIED_NODE_ID, file_type(vfs, p)),
+                    )?;
+                }
+            }
+            Added => {
+                // Ignore "path already a directory" insertion errors. They happen for
+                // non-clean updates after removing file "foo" and then adding file
+                // "foo/bar". The update will conflict on the removed file, so it isn't
+                // important to have a path conflict for the added file as well.
+                let _ = mf.insert(
+                    p.to_owned(),
+                    FileMetadata {
+                        hgid: MF_ADDED_NODE_ID,
+                        file_type: file_type(vfs, p),
+                        // When doing "sl go -C", we don't want to delete pending adds unless necessary.
+                        // This flag makes the manifest diff skip this file unless it conflicts.
+                        ignore_unless_conflict: clean,
+                    },
+                );
+            }
+            Unknown => {
+                if config.get_or("experimental", "checkout.rust-path-conflicts", || true)? {
+                    let _ = mf.insert(
+                        p.to_owned(),
+                        FileMetadata {
+                            hgid: MF_UNTRACKED_NODE_ID,
+                            file_type: file_type(vfs, p),
+                            ignore_unless_conflict: true,
+                        },
+                    );
+                }
+            }
+
+            // Handled above.
+            Removed | Deleted => {}
+
+            // We could support path conflicts for ignored files, but we would have to
+            // generate status including ignored files (which can be expensive).
+            Ignored => {}
+
+            // Nothing to do (and shouldn't happen since we don't request clean files).
+            Clean => {}
+        }
     }
 
     Ok(())

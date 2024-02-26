@@ -3796,6 +3796,7 @@ def debugwatchmansubscribe(ui, repo, **opts) -> None:
     )
 
     root = watchmanclient.getcanonicalpath(repo.root)
+    client.query("watch", root)
     client.query(
         "subscribe",
         root,

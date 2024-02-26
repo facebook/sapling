@@ -5,9 +5,9 @@
 
 A warning is printed for the first use
   $ newclientrepo repo
-  warning: watchman has recently started (pid *) - operation will be slower than usual (glob)
 
   $ hg status --debug
+  warning: watchman has recently started (pid *) - operation will be slower than usual (glob)
 
 Force waiting for the lock
 
