@@ -133,6 +133,26 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       this.codeReviewSystem.owner
     }/${this.codeReviewSystem.repo}/commit/${hash})`;
   }
+
+  getRemoteFileURL(
+    path: string,
+    publicCommitHash: string | null,
+    selectionStart?: {line: number; char: number},
+    selectionEnd?: {line: number; char: number},
+  ): string {
+    const {hostname, owner, repo} = this.codeReviewSystem;
+    let url = `https://${hostname}/${owner}/${repo}/blob/${publicCommitHash ?? 'HEAD'}/${path}`;
+    if (selectionStart != null) {
+      url += `#L${selectionStart.line + 1}`;
+      if (
+        selectionEnd &&
+        (selectionEnd.line !== selectionStart.line || selectionEnd.char !== selectionStart.char)
+      ) {
+        url += `C${selectionStart.char + 1}-L${selectionEnd.line + 1}C${selectionEnd.char + 1}`;
+      }
+    }
+    return url;
+  }
 }
 
 function githubStatusRollupStateToCIStatus(state: StatusState | undefined): DiffSignalSummary {

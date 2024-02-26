@@ -677,9 +677,14 @@ export class Repository {
     }
   });
 
+  /** Get the current head commit if loaded */
+  getHeadCommit(): CommitInfo | undefined {
+    return this.smartlogCommits?.commits.value?.find(commit => commit.isHead);
+  }
+
   /** Watch for changes to the head commit, e.g. from checking out a new commit */
   subscribeToHeadCommit(callback: (head: CommitInfo) => unknown) {
-    let headCommit = this.smartlogCommits?.commits.value?.find(commit => commit.isHead);
+    let headCommit = this.getHeadCommit();
     if (headCommit != null) {
       callback(headCommit);
     }

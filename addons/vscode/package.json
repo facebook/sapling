@@ -106,9 +106,39 @@
       {
         "command": "sapling.isl.focus",
         "title": "Focus Sapling ISL Sidebar"
+      },
+      {
+        "command": "sapling.open-remote-file-link",
+        "title": "Open in Code Review",
+        "enablement": "sapling:hasRemoteLinkRepo"
+      },
+      {
+        "command": "sapling.copy-remote-file-link",
+        "title": "Copy Code Review Link",
+        "enablement": "sapling:hasRemoteLinkRepo"
       }
     ],
     "menus": {
+      "editor/context": [
+        {
+          "command": "sapling.open-remote-file-link",
+          "when": "sapling:hasRemoteLinkRepo"
+        },
+        {
+          "command": "sapling.copy-remote-file-link",
+          "when": "sapling:hasRemoteLinkRepo"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sapling.open-remote-file-link",
+          "when": "sapling:hasRemoteLinkRepo && isFileSystemResource && resourceScheme =~ /^(?!output$|vscode-(?!remote|vfs$)).*$/"
+        },
+        {
+          "command": "sapling.copy-remote-file-link",
+          "when": "sapling:hasRemoteLinkRepo && isFileSystemResource && resourceScheme =~ /^(?!output$|vscode-(?!remote|vfs$)).*$/"
+        }
+      ],
       "commandPalette": [
         {
           "command": "sapling.isl.focus",

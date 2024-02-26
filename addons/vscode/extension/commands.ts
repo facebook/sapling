@@ -17,6 +17,7 @@ import {t} from './i18n';
 import fs from 'fs';
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
+import {findPublicAncestor} from 'isl-server/src/utils';
 import {RevertOperation} from 'isl/src/operations/RevertOperation';
 import path from 'path';
 import {ComparisonType, labelForComparison} from 'shared/Comparison';
@@ -37,6 +38,13 @@ export const vscodeCommands = {
   ),
   ['sapling.open-file-diff']: (uri: vscode.Uri, comparison: Comparison) =>
     openDiffView(uri, comparison),
+
+  ['sapling.open-remote-file-link']: commandWithUriOrResourceState(
+    (repo: Repository, uri, path: RepoRelativePath) => openRemoteFileLink(repo, uri, path),
+  ),
+  ['sapling.copy-remote-file-link']: commandWithUriOrResourceState(
+    (repo: Repository, uri, path: RepoRelativePath) => openRemoteFileLink(repo, uri, path, true),
+  ),
 
   ['sapling.revert-file']: commandWithUriOrResourceState(async function (
     this: Context,
@@ -64,6 +72,7 @@ type ExternalVSCodeCommands = {
   'sapling.open-isl': () => Thenable<void>;
   'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;
+  setContext: (key: string, value: unknown) => Thenable<void>;
   'fb-hg.open-or-focus-interactive-smartlog': (
     _: unknown,
     __?: unknown,
@@ -83,7 +92,8 @@ export function executeVSCodeCommand<K extends keyof VSCodeCommand>(
   id: K,
   ...args: Parameters<VSCodeCommand[K]>
 ): ReturnType<VSCodeCommand[K]> {
-  return vscode.commands.executeCommand(id, ...args) as ReturnType<VSCodeCommand[K]>;
+  // In tests 'vscode.commands' is not defined.
+  return vscode.commands?.executeCommand(id, ...args) as ReturnType<VSCodeCommand[K]>;
 }
 
 type Context = {
@@ -151,6 +161,51 @@ async function openDiffView(uri: vscode.Uri, comparison: Comparison): Promise<un
   return executeVSCodeCommand('vscode.diff', uriForComparisonParent, uriForComparison, title);
 }
 
+function openRemoteFileLink(
+  repo: Repository,
+  uri: vscode.Uri,
+  path: RepoRelativePath,
+  copyToClipboard = false,
+): void {
+  {
+    if (!repo.codeReviewProvider?.getRemoteFileURL) {
+      vscode.window.showErrorMessage(
+        t(`Remote link unsupported for this code review provider ($provider)`).replace(
+          '$provider',
+          repo.codeReviewProvider?.getSummaryName() ?? t('none'),
+        ),
+      );
+      return;
+    }
+
+    // Grab the selection if the command is for the active file (may not be true if triggered via file explorer)
+    const selection =
+      vscode.window.activeTextEditor?.document.uri.fsPath === uri.fsPath
+        ? vscode.window.activeTextEditor?.selection
+        : null;
+
+    const commits = repo.getSmartlogCommits()?.commits.value;
+    const head = repo.getHeadCommit();
+    if (!commits || !head) {
+      vscode.window.showErrorMessage(t(`No commits loaded in this repository yet`));
+      return;
+    }
+    const publicCommit = findPublicAncestor(commits, head);
+    const url = repo.codeReviewProvider.getRemoteFileURL(
+      path,
+      publicCommit?.hash ?? null,
+      selection ? {line: selection.start.line, char: selection.start.character} : undefined,
+      selection ? {line: selection.end.line, char: selection.end.character} : undefined,
+    );
+
+    if (copyToClipboard) {
+      vscode.env.clipboard.writeText(url);
+    } else {
+      vscode.env.openExternal(vscode.Uri.parse(url));
+    }
+  }
+}
+
 /**
  * Wrap a command implementation so it can be called with any of:
  * - current active file Uri for use from the command palette
@@ -162,7 +217,7 @@ function commandWithUriOrResourceState<Ctx>(
     repo: Repository,
     uri: vscode.Uri,
     path: RepoRelativePath,
-  ) => undefined | Thenable<unknown>,
+  ) => unknown | Thenable<unknown>,
 ) {
   return function (
     this: Ctx,
