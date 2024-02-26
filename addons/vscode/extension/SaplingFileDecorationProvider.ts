@@ -27,7 +27,7 @@ export default class SaplingFileDecorationProvider implements FileDecorationProv
 
   constructor(private repository: VSCodeRepo, private logger: Logger) {
     this.disposables.push(
-      window.registerFileDecorationProvider(this),
+      window?.registerFileDecorationProvider?.(this),
       repository.repo.subscribeToUncommittedChanges(this.onDidRunStatus.bind(this)),
       repository.repo.onChangeConflictState(this.onDidRunStatus.bind(this)),
     );
@@ -67,6 +67,6 @@ export default class SaplingFileDecorationProvider implements FileDecorationProv
   }
 
   dispose(): void {
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach(d => d?.dispose());
   }
 }

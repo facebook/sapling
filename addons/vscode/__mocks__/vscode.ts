@@ -56,3 +56,15 @@ function proxyMissingFieldsWithJestFn<T extends object>(t: T): T {
     }) as unknown as ProxyHandler<T>['get'],
   });
 }
+
+interface Event<T> {
+  (listener: (e: T) => unknown): unknown;
+}
+
+export class EventEmitter<T> {
+  event: Event<T> = () => undefined;
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  fire(_data: T): void {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  dispose(): void {}
+}
