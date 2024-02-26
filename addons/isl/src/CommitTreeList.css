@@ -37,6 +37,16 @@
   margin-left: var(--halfpad);
 }
 
+.commit-group.with-vertical-line:before {
+  /* branch vertical line - used by split range selector */
+  content: ' ';
+  border-left: 2px solid var(--foreground);
+  position: absolute;
+  bottom: 5px;
+  top: 20px;
+  left: -10px;
+  z-index: 1;
+}
 .commit {
   position: relative;
 }
