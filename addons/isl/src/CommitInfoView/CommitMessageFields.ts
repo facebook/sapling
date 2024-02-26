@@ -10,9 +10,8 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 
 import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
-import {resetOnCwdChange} from '../jotaiUtils';
-import {arraysEqual, registerCleanup} from '../utils';
-import {atom} from 'jotai';
+import {atomResetOnCwdChange} from '../repositoryData';
+import {arraysEqual} from '../utils';
 import {notEmpty} from 'shared/utils';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
@@ -307,11 +306,8 @@ export const OSSDefaultFieldSchema: Array<FieldConfig> = [
  * and some information about those fields.
  * This is determined by an sl config on the server, hence it lives as an atom.
  */
-export const commitMessageFieldsSchema = atom<Array<FieldConfig>>(getDefaultCommitMessageSchema());
-registerCleanup(
-  commitMessageFieldsSchema,
-  resetOnCwdChange(commitMessageFieldsSchema, getDefaultCommitMessageSchema()),
-  import.meta.hot,
+export const commitMessageFieldsSchema = atomResetOnCwdChange<Array<FieldConfig>>(
+  getDefaultCommitMessageSchema(),
 );
 
 export function getDefaultCommitMessageSchema() {

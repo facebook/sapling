@@ -103,6 +103,7 @@ describe('cwd', () => {
     const dropdown = screen.getByTestId('cwd-details-dropdown');
     act(() => {
       fireEvent.click(within(dropdown).getByText('repo2'));
+      simulateRepoConnected('/path/to/repo2');
     });
 
     expect(screen.queryByText('sl goto --rev a')).not.toBeInTheDocument();

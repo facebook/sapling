@@ -11,13 +11,13 @@ import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
-import {resetOnCwdChange} from './jotaiUtils';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {atomResetOnCwdChange} from './repositoryData';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
 import Immutable from 'immutable';
-import {atom, useAtom, useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {RateLimiter} from 'shared/RateLimiter';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -246,9 +246,9 @@ const defaultUncommittedPartialSelection = PartialSelection.empty({
 });
 
 /** PartialSelection for `wdir()`. See `UseUncommittedSelection` for the public API. */
-export const uncommittedSelection = atom(defaultUncommittedPartialSelection);
-
-resetOnCwdChange(uncommittedSelection, defaultUncommittedPartialSelection);
+export const uncommittedSelection = atomResetOnCwdChange<PartialSelection>(
+  defaultUncommittedPartialSelection,
+);
 
 const wdirRev = 'wdir()';
 

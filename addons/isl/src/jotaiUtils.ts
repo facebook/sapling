@@ -213,14 +213,6 @@ export function refreshAtom<T>(atom: WritableAtom<T, [], void>) {
   store.set(atom);
 }
 
-// Once we are pure Jotai, consider adding a `cwd` atom then update `resetOnCwdChange`
-// to be something that depends on the `cwd` atom.
-export function resetOnCwdChange<T>(atom: WritableAtom<T, [T], unknown>, defaultValue: T) {
-  return serverAPI.onCwdChanged(() => {
-    store.set(atom, defaultValue);
-  });
-}
-
 /** Create an atom that is automatically reset when the depAtom is changed. */
 export function atomResetOnDepChange<T>(defaultValue: T, depAtom: Atom<unknown>): MutAtom<T> {
   assert(

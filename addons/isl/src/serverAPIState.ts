@@ -27,14 +27,8 @@ import messageBus from './MessageBus';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
-import {
-  atomFamilyWeak,
-  configBackedAtom,
-  readAtom,
-  resetOnCwdChange,
-  writeAtom,
-} from './jotaiUtils';
-import {repositoryData} from './repositoryData';
+import {atomFamilyWeak, configBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import {atomResetOnCwdChange, repositoryData} from './repositoryData';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom} from 'jotai';
@@ -43,7 +37,6 @@ import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
 export {repositoryData};
-export {serverCwd} from './repositoryData';
 
 registerDisposable(
   repositoryData,
@@ -339,11 +332,8 @@ registerDisposable(
   import.meta.hot,
 );
 
-export const commitsShownRange = atom<number | undefined>(DEFAULT_DAYS_OF_COMMITS_TO_LOAD);
-registerCleanup(
-  commitsShownRange,
-  resetOnCwdChange(commitsShownRange, DEFAULT_DAYS_OF_COMMITS_TO_LOAD),
-  import.meta.hot,
+export const commitsShownRange = atomResetOnCwdChange<number | undefined>(
+  DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
 );
 registerDisposable(
   applicationinfo,
@@ -373,8 +363,7 @@ export const haveCommitsLoadedYet = atom(get => {
   return data.commits.length > 0 || data.error != null;
 });
 
-export const operationBeingPreviewed = atom<Operation | undefined>(undefined);
-resetOnCwdChange(operationBeingPreviewed, undefined);
+export const operationBeingPreviewed = atomResetOnCwdChange<Operation | undefined>(undefined);
 
 export const haveRemotePath = atom(get => {
   const info = get(repositoryInfo);
@@ -436,8 +425,7 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
   }
 }
 
-export const operationList = atom<OperationList>(defaultOperationList());
-resetOnCwdChange(operationList, defaultOperationList());
+export const operationList = atomResetOnCwdChange<OperationList>(defaultOperationList());
 registerDisposable(
   operationList,
   serverAPI.onMessageOfType('operationProgress', progress => {
@@ -580,8 +568,7 @@ const operationsById = new Map<string, Operation>();
 /** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
 const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 
-export const queuedOperations = atom<Array<Operation>>([]);
-resetOnCwdChange(queuedOperations, []);
+export const queuedOperations = atomResetOnCwdChange<Array<Operation>>([]);
 registerDisposable(
   queuedOperations,
   serverAPI.onMessageOfType('operationProgress', progress => {

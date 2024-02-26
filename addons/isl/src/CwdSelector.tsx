@@ -15,7 +15,8 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
 import {lazyAtom, writeAtom} from './jotaiUtils';
-import {repositoryInfo, serverCwd} from './serverAPIState';
+import {serverCwd} from './repositoryData';
+import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
 import {
   VSCodeBadge,
