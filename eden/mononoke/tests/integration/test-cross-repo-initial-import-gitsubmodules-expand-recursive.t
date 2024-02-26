@@ -333,37 +333,45 @@ Then delete repo C submodule used directly in repo A
   $ hg pull -q -r "$HG_SYNCED_HEAD"
   $ hg co -q "$HG_SYNCED_HEAD"
 
+Check that deletions were made properly, i.e. submodule in repo_c was entirely
+deleted and the files deleted in repo B were deleted inside its copy.
+  $ hg show --stat -T 'commit: {node}\n{desc}\n' .
+  commit: a176528e53d4a2cd09c4c05543392e18f8955558
+  Remove repo C submodule from repo A
+   smallrepofolder1/.gitmodules |  3 ---
+   1 files changed, 0 insertions(+), 3 deletions(-)
+  
 
 TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   $ tree &> ${TESTTMP}/repo_a_tree_2
-  $ diff -y ${TESTTMP}/repo_a_tree_1 ${TESTTMP}/repo_a_tree_2
-  .								.
-  `-- smallrepofolder1						`-- smallrepofolder1
-      |-- duplicates						    |-- duplicates
-      |   |-- x							    |   |-- x
-      |   |-- y							    |   |-- y
-      |   `-- z							    |   `-- z
-      |-- git-repo-b						    |-- git-repo-b
-      |   |-- bar						      <
-      |   |   `-- zoo					      <
-      |   |-- foo						      <
-      |   `-- git-repo-c						    |   `-- git-repo-c
-      |       |-- choo						    |       |-- choo
-  							      >	    |       |-- choo3
-  							      >	    |       |-- choo4
-      |       `-- hoo						    |       `-- hoo
-      |           `-- qux						    |           `-- qux
-      |-- regular_dir						    |-- regular_dir
-      |   `-- aardvar						    |   `-- aardvar
-      |-- repo_c							    |-- repo_c
-      |   |-- choo						    |   |-- choo
-  							      >	    |   |-- choo3
-  							      >	    |   |-- choo4
-      |   `-- hoo							    |   `-- hoo
-      |       `-- qux						    |       `-- qux
-      `-- root_file						    `-- root_file
+  $ diff -y -t -T ${TESTTMP}/repo_a_tree_1 ${TESTTMP}/repo_a_tree_2
+  .                                                                  .
+  `-- smallrepofolder1                                               `-- smallrepofolder1
+      |-- duplicates                                                     |-- duplicates
+      |   |-- x                                                          |   |-- x
+      |   |-- y                                                          |   |-- y
+      |   `-- z                                                          |   `-- z
+      |-- git-repo-b                                                     |-- git-repo-b
+      |   |-- bar                                                 <
+      |   |   `-- zoo                                             <
+      |   |-- foo                                                 <
+      |   `-- git-repo-c                                                 |   `-- git-repo-c
+      |       |-- choo                                                   |       |-- choo
+                                                                  >      |       |-- choo3
+                                                                  >      |       |-- choo4
+      |       `-- hoo                                                    |       `-- hoo
+      |           `-- qux                                                |           `-- qux
+      |-- regular_dir                                                    |-- regular_dir
+      |   `-- aardvar                                                    |   `-- aardvar
+      |-- repo_c                                                         |-- repo_c
+      |   |-- choo                                                       |   |-- choo
+                                                                  >      |   |-- choo3
+                                                                  >      |   |-- choo4
+      |   `-- hoo                                                        |   `-- hoo
+      |       `-- qux                                                    |       `-- qux
+      `-- root_file                                                      `-- root_file
   
-  9 directories, 11 files					      |	8 directories, 13 files
+  9 directories, 11 files                                         |  8 directories, 13 files
   [1]
 
 Check that the diff that updates the submodule generates the correct delta
@@ -378,12 +386,4 @@ Check that the diff that updates the submodule generates the correct delta
    smallrepofolder1/repo_c/choo3                |  1 +
    smallrepofolder1/repo_c/choo4                |  1 +
    6 files changed, 4 insertions(+), 2 deletions(-)
-  
-Check that deletions were made properly, i.e. submodule in repo_c was entirely
-deleted and the files deleted in repo B were deleted inside its copy.
-  $ hg show --stat -T 'commit: {node}\n{desc}\n' .
-  commit: a176528e53d4a2cd09c4c05543392e18f8955558
-  Remove repo C submodule from repo A
-   smallrepofolder1/.gitmodules |  3 ---
-   1 files changed, 0 insertions(+), 3 deletions(-)
   
