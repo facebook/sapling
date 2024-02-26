@@ -33,7 +33,8 @@
   margin-left: var(--file-tree-indent);
   position: relative;
 }
-.file-tree > .file-tree-level {
+.changed-files > .file-tree > .file-tree-level {
+  /* Override the top-level to not have indent */
   margin-left: 0;
 }
 .file-tree-level > .changed-file {
