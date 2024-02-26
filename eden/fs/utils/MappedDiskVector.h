@@ -443,7 +443,7 @@ class MappedDiskVector {
     // InodeTable needs to traverse every record immediately after opening.
 
     auto map = mmap(
-        0,
+        nullptr,
         desiredSize,
         PROT_READ | PROT_WRITE,
         MAP_SHARED
