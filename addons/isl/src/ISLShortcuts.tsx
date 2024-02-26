@@ -10,16 +10,19 @@ import {t} from './i18n';
 import {useModal} from './useModal';
 import {useMemo} from 'react';
 import {makeCommandDispatcher, KeyCode, Modifier} from 'shared/KeyboardShortcuts';
+import {isMac} from 'shared/OperatingSystem';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 import './ISLShortcuts.css';
 
+const CMD = isMac ? Modifier.CMD : Modifier.CTRL;
+
 /* eslint-disable no-bitwise */
 export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = makeCommandDispatcher({
   OpenShortcutHelp: [Modifier.SHIFT, KeyCode.QuestionMark],
-  ToggleSidebar: [Modifier.CMD, KeyCode.Period],
-  OpenUncommittedChangesComparisonView: [Modifier.CMD, KeyCode.SingleQuote],
-  OpenHeadChangesComparisonView: [[Modifier.CMD, Modifier.SHIFT], KeyCode.SingleQuote],
+  ToggleSidebar: [CMD, KeyCode.Period],
+  OpenUncommittedChangesComparisonView: [CMD, KeyCode.SingleQuote],
+  OpenHeadChangesComparisonView: [[CMD, Modifier.SHIFT], KeyCode.SingleQuote],
   Escape: [Modifier.NONE, KeyCode.Escape],
   SelectUpwards: [Modifier.NONE, KeyCode.UpArrow],
   SelectDownwards: [Modifier.NONE, KeyCode.DownArrow],
