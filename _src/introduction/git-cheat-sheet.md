@@ -116,7 +116,7 @@ See `sl help revset` for more ways of referencing commits.
 | Listing branches | `git branch` | `sl bookmark` |
 | Create branch/bookmark | `git branch NAME` | `sl book NAME` |
 | Switch to branch | `git checkout NAME` | `sl goto NAME` |
-| Delete a branch | `git branch -d NAME` | `sl book -d NAME (deletes just the bookmark name)` / `sl book -D NAME` (deletes the bookmark name and hides the commits) |
+| Delete a branch | `git branch -d NAME` | `sl book -d NAME` (deletes just the bookmark name) / `sl book -D NAME` (deletes the bookmark name and hides the commits) |
 
 ### Resolving conflicts
 
