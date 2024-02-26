@@ -76,7 +76,7 @@ pub struct FetchArgs {
     /// Requests that the shallow clone/fetch should be cut at a specific time,
     /// instead of depth. The timestamp provided should be in the same format
     /// as is expected for git rev-list --max-age <timestamp>
-    deepen_since: Option<String>,
+    deepen_since: Option<gix_date::Time>,
     /// Requests that the shallow clone/fetch should be cut at a specific revision
     /// instead of a depth, i.e. the specified oid becomes the boundary at which the
     /// fetch or clone should stop at
@@ -161,8 +161,9 @@ impl FetchArgs {
                     })?);
                 } else if let Some(time_depth) = data.strip_prefix(DEEPEN_SINCE_PREFIX) {
                     let time_depth = bytes_to_str(time_depth, "depth", "deepen since")?.to_owned();
-                    // TODO(rajshar): Parse timestamp for different Git formats
-                    fetch_args.deepen_since = Some(time_depth);
+                    let parsed_time = gix_date::parse(time_depth.as_str(), Some(std::time::SystemTime::now()))
+                        .with_context(|| format!("Invalid time {:?} received for deepen since during fetch command args parsing", time_depth))?;
+                    fetch_args.deepen_since = Some(parsed_time);
                 } else if let Some(oid_depth) = data.strip_prefix(DEEPEN_NOT_PREFIX) {
                     fetch_args.deepen_not = Some(parse_oid(oid_depth, DEEPEN_NOT_PREFIX)?);
                 } else if let Some(filter) = data.strip_prefix(FILTER_PREFIX) {
@@ -282,6 +283,26 @@ mod tests {
         flush_to_write(&mut inner_writer)?;
 
         assert!(FetchArgs::parse_from_packetline(&inner_writer).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_fetch_command_args_time_parsing() -> anyhow::Result<()> {
+        let inner_writer = Vec::new();
+        let mut packetline_writer = Writer::new(inner_writer);
+        packetline_writer.write_all(b"deepen-since 1979-02-26 18:30:00\n")?;
+        let mut inner_writer = packetline_writer.into_inner();
+        flush_to_write(&mut inner_writer)?;
+
+        assert!(FetchArgs::parse_from_packetline(&inner_writer).is_ok());
+
+        let inner_writer = Vec::new();
+        let mut packetline_writer = Writer::new(inner_writer);
+        packetline_writer.write_all(b"deepen-since 10 weeks ago\n")?;
+        let mut inner_writer = packetline_writer.into_inner();
+        flush_to_write(&mut inner_writer)?;
+
+        assert!(FetchArgs::parse_from_packetline(&inner_writer).is_ok());
         Ok(())
     }
 }
