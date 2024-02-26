@@ -617,8 +617,4 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
   EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
 
-void HgBackingStore::periodicManagementTask() {
-  datapackStore_.flush();
-}
-
 } // namespace facebook::eden

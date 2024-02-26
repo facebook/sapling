@@ -76,8 +76,6 @@ class HgBackingStore {
   folly::SemiFuture<TreePtr> getTree(
       const std::shared_ptr<HgImportRequest>& request);
 
-  void periodicManagementTask();
-
   /**
    * Import the root manifest for the specied revision using mercurial
    * treemanifest data.  This is called when the root manifest is provided

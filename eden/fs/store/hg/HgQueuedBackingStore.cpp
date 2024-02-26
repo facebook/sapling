@@ -805,7 +805,7 @@ ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {
-  backingStore_->periodicManagementTask();
+  backingStore_->getDatapackStore().flush();
 }
 
 namespace {
