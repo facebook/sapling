@@ -7,10 +7,12 @@
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
+use serde::Deserialize;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
@@ -22,20 +24,20 @@ use crate::PushAuthoredBy;
 
 const DEFAULT_TITLE_LENGTH: usize = 80;
 
-#[derive(Clone, Debug)]
-pub struct LimitCommitMessageLength {
-    display_title_length: usize,
+#[derive(Clone, Debug, Deserialize)]
+pub struct LimitCommitMessageLengthConfig {
+    display_title_length: Option<usize>,
     length_limit: usize,
 }
 
-impl LimitCommitMessageLength {
-    pub fn new(config: &HookConfig) -> Result<Self, Error> {
+impl LimitCommitMessageLengthConfig {
+    // TODO(T163510846): delete legacy LimitCommitMessageLengthConfig code
+    pub fn from_legacy_config(config: &HookConfig) -> Result<Self, Error> {
         let display_title_length = config
             .strings
             .get("display_title_length")
             .map(|l| l.parse().context("While parsing display_title_length"))
-            .transpose()?
-            .unwrap_or(DEFAULT_TITLE_LENGTH);
+            .transpose()?;
 
         let length_limit = config
             .strings
@@ -51,8 +53,24 @@ impl LimitCommitMessageLength {
     }
 }
 
+/// Hook to block commits with messages that exceed a length limit.
+#[derive(Clone, Debug)]
+pub struct LimitCommitMessageLengthHook {
+    config: LimitCommitMessageLengthConfig,
+}
+
+impl LimitCommitMessageLengthHook {
+    pub fn new(config: &HookConfig) -> Result<Self> {
+        Self::with_config(config.parse_options()?)
+    }
+
+    pub fn with_config(config: LimitCommitMessageLengthConfig) -> Result<Self> {
+        Ok(Self { config })
+    }
+}
+
 #[async_trait]
-impl ChangesetHook for LimitCommitMessageLength {
+impl ChangesetHook for LimitCommitMessageLengthHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
@@ -68,15 +86,20 @@ impl ChangesetHook for LimitCommitMessageLength {
         let message = changeset.message();
         let len = message.len();
 
-        let execution = if len >= self.length_limit {
+        let execution = if len >= self.config.length_limit {
             // Try to find a title to show.
-            let title = extract_title(message, self.display_title_length);
+            let title = extract_title(
+                message,
+                self.config
+                    .display_title_length
+                    .unwrap_or(DEFAULT_TITLE_LENGTH),
+            );
 
             HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Commit message too long",
                 format!(
                     "Commit message length for '{}' ({}) exceeds length limit (>= {})",
-                    title, len, self.length_limit
+                    title, len, self.config.length_limit
                 ),
             ))
         } else {
