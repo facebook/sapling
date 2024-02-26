@@ -34,7 +34,7 @@ import {
   resetOnCwdChange,
   writeAtom,
 } from './jotaiUtils';
-import {initialParams} from './urlParams';
+import {repositoryData} from './repositoryData';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom} from 'jotai';
@@ -42,7 +42,8 @@ import {useCallback} from 'react';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
-export const repositoryData = atom<{info?: RepoInfo; cwd?: string}>({});
+export {repositoryData};
+export {serverCwd} from './repositoryData';
 
 registerDisposable(
   repositoryData,
@@ -105,14 +106,6 @@ registerDisposable(
   }),
   import.meta.hot,
 );
-
-export const serverCwd = atom(get => {
-  const data = get(repositoryData);
-  if (data.info?.type === 'cwdNotARepository') {
-    return data.info.cwd;
-  }
-  return data?.cwd ?? initialParams.get('cwd') ?? '';
-});
 
 export async function forceFetchCommit(revset: string): Promise<CommitInfo> {
   serverAPI.postMessage({
