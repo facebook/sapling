@@ -8,11 +8,13 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use mercurial_types::simple_fsencode;
 use mononoke_types::BasicFileChange;
 use mononoke_types::NonRootMPath;
+use serde::Deserialize;
 
 use crate::CrossRepoPushSource;
 use crate::FileHook;
@@ -25,13 +27,14 @@ use crate::PushAuthoredBy;
 // The filesystem max is 255.
 const MAX_PATH_COMPONENT_LIMIT: usize = 255;
 
-#[derive(Clone, Debug)]
-pub struct LimitPathLengthHook {
+#[derive(Clone, Debug, Deserialize)]
+pub struct LimitPathLengthConfig {
     length_limit: usize,
 }
 
-impl LimitPathLengthHook {
-    pub fn new(config: &HookConfig) -> Result<Self, Error> {
+impl LimitPathLengthConfig {
+    // TODO(T163510936): delete legacy LimitPathLengthConfig code
+    pub fn from_legacy_config(config: &HookConfig) -> Result<Self, Error> {
         let length_limit = config
             .strings
             .get("length_limit")
@@ -40,6 +43,24 @@ impl LimitPathLengthHook {
         let length_limit = length_limit.parse().context("While parsing length_limit")?;
 
         Ok(Self { length_limit })
+    }
+}
+
+/// Hook to block commits changing file paths above a certain length.
+/// This is needed because Mercurial has these limits and we shouldn't allow
+/// commits that can't be synced to mercurial.
+#[derive(Clone, Debug)]
+pub struct LimitPathLengthHook {
+    config: LimitPathLengthConfig,
+}
+
+impl LimitPathLengthHook {
+    pub fn new(config: &HookConfig) -> Result<Self> {
+        Self::with_config(config.parse_options()?)
+    }
+
+    pub fn with_config(config: LimitPathLengthConfig) -> Result<Self> {
+        Ok(Self { config })
     }
 }
 
@@ -70,12 +91,12 @@ impl FileHook for LimitPathLengthHook {
 
         let len = path.len();
 
-        let execution = if len >= self.length_limit {
+        let execution = if len >= self.config.length_limit {
             HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Path too long",
                 format!(
                     "Path length for '{}' ({}) exceeds length limit (>= {})",
-                    path, len, self.length_limit
+                    path, len, self.config.length_limit
                 ),
             ))
         } else {

@@ -90,9 +90,18 @@ pub fn make_file_hook(
                 .set_from_config(&params.config)
                 .build()?,
         )),
-        "limit_path_length" => Some(Box::new(limit_path_length::LimitPathLengthHook::new(
-            &params.config,
-        )?)),
+        "limit_path_length" => {
+            let hook = if let Some(_json_options) = &params.config.options {
+                limit_path_length::LimitPathLengthHook::new(&params.config)?
+            } else {
+                // TODO(T163510936): delete legacy LimitPathLengthConfig code
+                let legacy_hook_config =
+                    limit_path_length::LimitPathLengthConfig::from_legacy_config(&params.config)?;
+
+                limit_path_length::LimitPathLengthHook::with_config(legacy_hook_config)?
+            };
+            Some(Box::new(hook))
+        }
         "no_bad_filenames" => Some(Box::new(no_bad_filenames::NoBadFilenamesHook::legacy(
             &params.config,
         )?)),

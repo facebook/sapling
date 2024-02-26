@@ -7,12 +7,11 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8
 
+# TODO(T163510936): delete legacy LimitPathLengthConfig code
   $ hook_test_setup \
   > limit_path_length <(
   >   cat <<CONF
-  > config_json='''{
-  >   "length_limit": 10
-  > }'''
+  > config_strings={length_limit="10"}
   > CONF
   > )
 

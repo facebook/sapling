@@ -6,13 +6,11 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-
+# TODO(T163510936): delete legacy LimitPathLengthConfig code
   $ hook_test_setup \
   > limit_path_length <(
   >   cat <<CONF
-  > config_json='''{
-  >   "length_limit": 490
-  > }'''
+  > config_strings={length_limit="490"}
   > CONF
   > )
 
