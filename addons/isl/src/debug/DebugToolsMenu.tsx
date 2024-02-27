@@ -14,6 +14,7 @@ import {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {FlexRow} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
+import messageBus from '../MessageBus';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
@@ -65,6 +66,7 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
         <ServerClientMessageLogging />
+        <ForceDisconnectButton />
       </DropdownField>
       <DropdownField title={<T>Component Explorer</T>}>
         <ComponentExplorerButton dismiss={dismiss} />
@@ -270,5 +272,32 @@ function DebugDagInfo() {
         <br />
       </>
     </div>
+  );
+}
+
+const forceDisconnectDuration = atom<number>(3000);
+
+function ForceDisconnectButton() {
+  const [duration, setDuration] = useAtom(forceDisconnectDuration);
+  const forceDisconnect = messageBus.forceDisconnect?.bind(messageBus);
+  if (forceDisconnect == null) {
+    return null;
+  }
+  return (
+    <VSCodeButton
+      onClick={() => forceDisconnect(duration)}
+      onWheel={e => {
+        // deltaY is usually -100 +100 per event.
+        const dy = e.deltaY;
+        const scale = duration < 20000 ? 10 : 100;
+        if (dy > 0) {
+          setDuration(v => Math.max(v - dy * scale, 1000));
+        } else if (dy < 0) {
+          setDuration(v => Math.min(v - dy * scale, 300000));
+        }
+      }}
+      appearance="secondary">
+      <T replace={{$sec: (duration / 1000).toFixed(1)}}>Force disconnect for $sec seconds</T>
+    </VSCodeButton>
   );
 }

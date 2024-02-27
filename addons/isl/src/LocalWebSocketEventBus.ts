@@ -150,4 +150,10 @@ export class LocalWebSocketEventBus {
     };
     return {dispose};
   }
+
+  forceDisconnect(durationMs = 1000) {
+    this.websocket.close();
+    this.exponentialReconnectDelay = durationMs;
+    this.scheduleReconnect();
+  }
 }

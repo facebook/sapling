@@ -23,6 +23,9 @@ export interface MessageBus {
   // post message accepts string or ArrayBuffer (to send binary data)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   postMessage(message: any): void;
+
+  /** Force disconnect (for debugging), for supported implementations. */
+  forceDisconnect?(durationMs?: number): void;
 }
 
 class VSCodeMessageBus {
