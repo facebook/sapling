@@ -29,11 +29,11 @@
   
   positional_args: ['st']
   option_names: ['modified', 'exclude']
-  option_values: [True, ['**.go', '**.rs']]
+  option_values: ['true', '**.go,**.rs']
   
   positional_args: ['st']
   option_names: ['root-relative', 'quiet', 'pager', 'include']
-  option_values: [False, True, 'never', ['']]
+  option_values: ['false', 'true', 'never', '']
   
   option_names: ['print0', 'exclude']
   option_values: [True, ['abc', 'def']]

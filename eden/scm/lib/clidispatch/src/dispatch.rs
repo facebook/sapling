@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::env;
 use std::path::Path;
 use std::sync::Arc;
@@ -16,6 +17,7 @@ use cliparser::parser::ParseError;
 use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
+use cliparser::parser::Value;
 use configloader::config::ConfigSet;
 use configloader::hg::set_pinned;
 use configmodel::Config;
@@ -389,7 +391,10 @@ impl Dispatcher {
         let opt_names = parsed.specified_opts();
         sampling::append_sample("command_info", "option_names", opt_names);
 
-        let opt_values: Vec<_> = opt_names.iter().map(|n| parsed.opts().get(n)).collect();
+        let opt_values: Vec<_> = opt_names
+            .iter()
+            .map(|n| opt_value_to_str(parsed.opts().get(n)))
+            .collect();
         sampling::append_sample("command_info", "option_values", &opt_values);
 
         let res = || -> Result<u8> {
@@ -452,4 +457,19 @@ impl Dispatcher {
             OptionalRepo::None(old) => *old = new,
         }
     }
+}
+
+fn opt_value_to_str(value: Option<&Value>) -> Cow<str> {
+    let opt_str: Option<Cow<str>> = value.and_then(|v| match v {
+        Value::Bool(b) => b.map(|b| Cow::Borrowed(if b { "true" } else { "false" })),
+        Value::Str(s) => s.as_ref().map(|s| Cow::Borrowed(s.as_ref())),
+        Value::Int(i) => i.map(|i| Cow::Owned(i.to_string())),
+        Value::List(l) => match l.len() {
+            0 => None,
+            1 => Some(Cow::Borrowed(&l[0])),
+            _ => Some(Cow::Owned(l.join(","))),
+        },
+    });
+
+    opt_str.unwrap_or(Cow::Borrowed("<unset>"))
 }
