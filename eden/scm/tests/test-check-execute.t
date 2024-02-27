@@ -31,5 +31,6 @@
   >     elif not isexec and interpreter and not isrs:
   >         print("%s is not an executable but does have #!" % path)
   > EOF
+  run_buck_hgpython.sh is a Shell script but does not have Shell interpreter specified
   tests/infinitepush/library.sh is not an executable but does have #!
   tests/stresstest-atomicreplace.py is not an executable but does have #!

@@ -3,6 +3,7 @@
 # fix the mercurial code to use fbcode-relative includes.
 #
 
+load("@fbcode//eden/scm:targets.bzl", "gen_hgpython")
 load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
@@ -103,13 +104,7 @@ buck_filegroup(
 
 # Similar to "hg".
 # The main executable uses argv[0] to decide to run as a Python interpreter.
-buck_sh_binary(
-    name = "hgpython",
-    main = "fb/run_buck_hgpython.sh",
-    resources = [
-        ":hg",
-    ],
-)
+gen_hgpython()
 
 export_file(
     name = "windows-manifest",

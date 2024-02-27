@@ -82,6 +82,8 @@ fn main() {
             return;
         }
         Some(name) => {
+            #[cfg(windows)]
+            let name = name.strip_suffix(".exe").unwrap_or(name);
             if name.ends_with("python") || name.ends_with("python3") {
                 // Translate to the "debugpython" command.
                 // ex. "python foo.py" => "hg debugpython -- foo.py"
