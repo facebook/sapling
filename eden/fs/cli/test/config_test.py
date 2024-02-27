@@ -185,7 +185,7 @@ class TomlConfigTest(EdenTestCaseBase):
             cfg._loadConfig()
         self.assertTrue(
             re.search(
-                "toml config file .* is either missing or corrupted",
+                "toml config file .* not valid",
                 "\n".join(logs_assertion.output),
             )
         )

@@ -14,6 +14,7 @@ import functools
 import json
 import logging
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -1885,11 +1886,43 @@ def _verify_mount_point(mount_point: str) -> None:
 TomlConfigDict = Mapping[str, Mapping[str, Any]]
 
 
+def get_line_by_number(contents: str, line_num: int) -> Optional[str]:
+    lines = contents.splitlines()
+    if len(lines) < line_num or line_num < 1:
+        return None
+    return lines[line_num - 1]
+
+
+def get_line_number_from_exception_message(s: str) -> int:
+    match = re.search(r"line (\d+)", s)
+    if match:
+        return int(match.group(1))
+    else:
+        return -1
+
+
 def load_toml_config(path: Path) -> TomlConfigDict:
+    data: str = ""
+    hint: str = ""
     try:
-        return typing.cast(TomlConfigDict, toml.load(str(path)))
+        with open(path, "r") as file:
+            data = file.read()
+            return typing.cast(TomlConfigDict, toml.loads(data))
     except FileNotFoundError:
         raise
+    except ValueError as e:
+        print(f"Value error: {e}")
+        if e.args[0].startswith(
+            "Reserved escape sequence used"
+        ):  # OK to hardcode this text; it's hardcoded in toml lib too
+            hint = "\nHint: Check that you don't have single backslashes.\n"
+        line_num = get_line_number_from_exception_message(e.args[0])
+        if line_num != -1:
+            line = get_line_by_number(data, line_num)
+            if line is not None:
+                hint += f"Detected here (line {line_num}): \n\n{line}\n"
+
+        raise FileError(f"toml config file {str(path)} not valid: {str(e)}{hint}")
     except Exception as e:
         raise FileError(
             f"toml config file {str(path)} is either missing or corrupted: {str(e)}"
