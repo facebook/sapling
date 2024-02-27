@@ -425,10 +425,10 @@ mod tests {
     use fs_err::remove_file;
     use minibytes::Bytes;
     use tempfile::TempDir;
+    use types::fetch_mode::FetchMode;
     use types::testutil::*;
 
     use super::*;
-    use crate::scmstore::FetchMode;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;

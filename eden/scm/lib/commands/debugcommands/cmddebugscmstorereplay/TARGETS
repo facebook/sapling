@@ -11,5 +11,6 @@ rust_library(
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/revisionstore:revisionstore",
+        "//eden/scm/lib/types:types",
     ],
 )

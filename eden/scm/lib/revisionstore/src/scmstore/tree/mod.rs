@@ -9,6 +9,7 @@ use std::borrow::Borrow;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use ::types::fetch_mode::FetchMode;
 use ::types::tree::TreeItemFlag;
 use ::types::HgId;
 use ::types::Key;
@@ -40,7 +41,6 @@ use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
-use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::FileStore;
@@ -121,34 +121,41 @@ impl TreeStore {
         } else {
             (None, None)
         };
+        let (fetch_local, fetch_remote) = match fetch_mode {
+            FetchMode::AllowRemote => (true, true),
+            FetchMode::RemoteOnly => (false, true),
+            FetchMode::LocalOnly => (true, false),
+        };
         let process_func = move || -> Result<()> {
-            if let Some(ref indexedlog_cache) = indexedlog_cache {
-                let pending: Vec<_> = common
-                    .pending(TreeAttributes::CONTENT, false)
-                    .map(|(key, _attrs)| key.clone())
-                    .collect();
-                for key in pending.into_iter() {
-                    if let Some(entry) = indexedlog_cache.get_entry(key)? {
-                        tracing::trace!("{:?} found in cache", &entry.key());
-                        common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+            if fetch_local {
+                if let Some(ref indexedlog_cache) = indexedlog_cache {
+                    let pending: Vec<_> = common
+                        .pending(TreeAttributes::CONTENT, false)
+                        .map(|(key, _attrs)| key.clone())
+                        .collect();
+                    for key in pending.into_iter() {
+                        if let Some(entry) = indexedlog_cache.get_entry(key)? {
+                            tracing::trace!("{:?} found in cache", &entry.key());
+                            common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                        }
+                    }
+                }
+
+                if let Some(ref indexedlog_local) = indexedlog_local {
+                    let pending: Vec<_> = common
+                        .pending(TreeAttributes::CONTENT, false)
+                        .map(|(key, _attrs)| key.clone())
+                        .collect();
+                    for key in pending.into_iter() {
+                        if let Some(entry) = indexedlog_local.get_entry(key)? {
+                            tracing::trace!("{:?} found in local", &entry.key());
+                            common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                        }
                     }
                 }
             }
 
-            if let Some(ref indexedlog_local) = indexedlog_local {
-                let pending: Vec<_> = common
-                    .pending(TreeAttributes::CONTENT, false)
-                    .map(|(key, _attrs)| key.clone())
-                    .collect();
-                for key in pending.into_iter() {
-                    if let Some(entry) = indexedlog_local.get_entry(key)? {
-                        tracing::trace!("{:?} found in local", &entry.key());
-                        common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                    }
-                }
-            }
-
-            if let FetchMode::AllowRemote = fetch_mode {
+            if fetch_remote {
                 if let Some(ref edenapi) = edenapi {
                     let pending: Vec<_> = common
                         .pending(TreeAttributes::CONTENT, false)
@@ -210,6 +217,8 @@ impl TreeStore {
                 }
             }
 
+            // Contentstore is the legacy pathway and shouldn't be needed if TreeStore is implemented correctly
+            // TODO: Not handling RemoteOnly for now due to legacy, reinvestigate when refactoring the datastores
             if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref contentstore) = contentstore {
                     let pending: Vec<_> = common
@@ -550,13 +559,18 @@ impl storemodel::KeyStore for TreeStore {
         }
     }
 
-    fn get_content(&self, path: &RepoPath, node: Node) -> Result<minibytes::Bytes> {
+    fn get_content(
+        &self,
+        path: &RepoPath,
+        node: Node,
+        fetch_mode: FetchMode,
+    ) -> Result<minibytes::Bytes> {
         if node.is_null() {
             return Ok(Default::default());
         }
         let key = Key::new(path.to_owned(), node);
         match self
-            .fetch_batch(std::iter::once(key.clone()), FetchMode::AllowRemote)
+            .fetch_batch(std::iter::once(key.clone()), fetch_mode)
             .single()?
         {
             Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
@@ -567,8 +581,9 @@ impl storemodel::KeyStore for TreeStore {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
+        fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let fetched = self.fetch_batch(keys.into_iter(), fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, Bytes)> {
@@ -654,8 +669,9 @@ impl storemodel::TreeStore for TreeStore {
     fn get_tree_iter(
         &self,
         keys: Vec<Key>,
+        fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let fetched = self.fetch_batch(keys.into_iter(), fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, Box<dyn TreeEntry>)> {

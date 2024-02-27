@@ -17,10 +17,10 @@ use cmdutil::Result;
 use cmdutil::IO;
 use repo::repo::Repo;
 use revisionstore::scmstore::file_to_async_key_stream;
-use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
+use types::fetch_mode::FetchMode;
 use types::Key;
 
 define_flags! {

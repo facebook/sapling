@@ -14,18 +14,11 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Sender;
+use types::fetch_mode::FetchMode;
 use types::Key;
 
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
-
-#[derive(Debug, Copy, Clone)]
-pub enum FetchMode {
-    /// The fetch may hit remote servers.
-    AllowRemote,
-    /// The fetch is limited to RAM and disk.
-    LocalOnly,
-}
 
 pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.
@@ -122,6 +115,7 @@ impl<T: StoreValue> CommonFetchState<T> {
                     FetchMode::LocalOnly => "not found locally and not contacting server",
                     // This should really never happen. If a key fails to fetch, it should've been
                     // associated with a keyed error and put in incomplete already.
+                    FetchMode::RemoteOnly => "server did not provide content",
                     FetchMode::AllowRemote => "server did not provide content",
                 };
                 vec![anyhow!("{}", msg)]

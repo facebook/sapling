@@ -23,6 +23,7 @@ use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::TreeEntry;
 use manifest_tree::TreeStore;
+use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::Key;
 use types::PathComponentBuf;
@@ -183,7 +184,7 @@ impl<'a> State<'a> {
             Some(Some(item)) => item,
         };
         if item.loaded.is_none() {
-            let entry = tree_store.get_content(item.path, item.id)?;
+            let entry = tree_store.get_content(item.path, item.id, FetchMode::AllowRemote)?;
             let format = tree_store.format();
             item.loaded = Some(TreeEntry(entry, format));
         }

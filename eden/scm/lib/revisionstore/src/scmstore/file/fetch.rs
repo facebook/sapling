@@ -25,6 +25,7 @@ use progress_model::AggregatingProgressBar;
 use tracing::debug;
 use tracing::field;
 use types::errors::NetworkError;
+use types::fetch_mode::FetchMode;
 use types::Key;
 use types::Sha256;
 
@@ -48,7 +49,6 @@ use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
-use crate::scmstore::FetchMode;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
 use crate::scmstore::FileStore;

@@ -17,6 +17,7 @@ use progress_model::ProgressBar;
 use storemodel::minibytes::Bytes;
 use storemodel::FileStore;
 use treestate::filestate::StateFlags;
+use types::fetch_mode::FetchMode;
 use types::Key;
 use types::RepoPathBuf;
 use vfs::VFS;
@@ -415,7 +416,7 @@ impl IntoIterator for FileChangeDetector {
         // switch this to use that (rather than pulling down the entire contents of each
         // file).
         let _span = tracing::info_span!("get_content_stream").entered();
-        match self.store.get_content_iter(keys) {
+        match self.store.get_content_iter(keys, FetchMode::AllowRemote) {
             Err(e) => results_send.send(Err(e)).unwrap(),
             Ok(v) => {
                 for entry in v {

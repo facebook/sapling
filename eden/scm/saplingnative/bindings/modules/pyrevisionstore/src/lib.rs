@@ -28,7 +28,6 @@ use cpython_ext::ResultPyErrExt;
 use parking_lot::RwLock;
 use pyconfigloader::config;
 use revisionstore::repack;
-use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::FileStoreBuilder;
@@ -69,6 +68,7 @@ use revisionstore::RepackLocation;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
+use types::fetch_mode::FetchMode;
 use types::Key;
 use types::NodeInfo;
 

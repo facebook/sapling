@@ -24,11 +24,11 @@ use std::sync::atomic::Ordering;
 use std::sync::OnceLock;
 
 use backingstore::BackingStore;
-use backingstore::FetchMode;
 use minibench::bench;
 use minibench::bench_enabled;
 use minibench::measure;
 use minibench::Measure;
+use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;

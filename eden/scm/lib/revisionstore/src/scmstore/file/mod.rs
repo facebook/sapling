@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::types::fetch_mode::FetchMode;
 use ::types::HgId;
 use ::types::Key;
 use anyhow::anyhow;
@@ -50,7 +51,6 @@ use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
-use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::fetch::FetchResults;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
@@ -170,6 +170,12 @@ impl FileStore {
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
+        let (fetch_local, fetch_remote) = match fetch_mode {
+            FetchMode::AllowRemote => (true, true),
+            FetchMode::RemoteOnly => (false, true),
+            FetchMode::LocalOnly => (true, false),
+        };
+
         let process_func = move || {
             let start_instant = Instant::now();
 
@@ -181,46 +187,47 @@ impl FileStore {
             );
             let _enter = span.enter();
 
-            if let Some(ref aux_cache) = aux_cache {
-                state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
+            if fetch_local {
+                if let Some(ref aux_cache) = aux_cache {
+                    state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
+                }
+
+                if let Some(ref aux_local) = aux_local {
+                    state.fetch_aux_indexedlog(aux_local, StoreType::Local);
+                }
+
+                if let Some(ref indexedlog_cache) = indexedlog_cache {
+                    state.fetch_indexedlog(
+                        indexedlog_cache,
+                        lfs_cache.as_ref().map(|v| v.as_ref()),
+                        StoreType::Shared,
+                    );
+                }
+
+                if let Some(ref indexedlog_local) = indexedlog_local {
+                    state.fetch_indexedlog(
+                        indexedlog_local,
+                        lfs_local.as_ref().map(|v| v.as_ref()),
+                        StoreType::Local,
+                    );
+                }
+
+                if let Some(ref lfs_cache) = lfs_cache {
+                    state.fetch_lfs(lfs_cache, StoreType::Shared);
+                }
+
+                if let Some(ref lfs_local) = lfs_local {
+                    state.fetch_lfs(lfs_local, StoreType::Local);
+                }
+                if prefer_computing_aux_data {
+                    state.derive_computable(
+                        aux_cache.as_ref().map(|s| s.as_ref()),
+                        aux_local.as_ref().map(|s| s.as_ref()),
+                    );
+                }
             }
 
-            if let Some(ref aux_local) = aux_local {
-                state.fetch_aux_indexedlog(aux_local, StoreType::Local);
-            }
-
-            if let Some(ref indexedlog_cache) = indexedlog_cache {
-                state.fetch_indexedlog(
-                    indexedlog_cache,
-                    lfs_cache.as_ref().map(|v| v.as_ref()),
-                    StoreType::Shared,
-                );
-            }
-
-            if let Some(ref indexedlog_local) = indexedlog_local {
-                state.fetch_indexedlog(
-                    indexedlog_local,
-                    lfs_local.as_ref().map(|v| v.as_ref()),
-                    StoreType::Local,
-                );
-            }
-
-            if let Some(ref lfs_cache) = lfs_cache {
-                state.fetch_lfs(lfs_cache, StoreType::Shared);
-            }
-
-            if let Some(ref lfs_local) = lfs_local {
-                state.fetch_lfs(lfs_local, StoreType::Local);
-            }
-
-            if prefer_computing_aux_data {
-                state.derive_computable(
-                    aux_cache.as_ref().map(|s| s.as_ref()),
-                    aux_local.as_ref().map(|s| s.as_ref()),
-                );
-            }
-
-            if let FetchMode::AllowRemote = fetch_mode {
+            if fetch_remote {
                 if let Some(ref edenapi) = edenapi {
                     state.fetch_edenapi(
                         edenapi,
@@ -229,9 +236,7 @@ impl FileStore {
                         aux_cache.clone(),
                     );
                 }
-            }
 
-            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref lfs_remote) = lfs_remote {
                     state.fetch_lfs_remote(
                         &lfs_remote.remote,
@@ -239,9 +244,7 @@ impl FileStore {
                         lfs_cache.clone(),
                     );
                 }
-            }
 
-            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref contentstore) = contentstore {
                     state.fetch_contentstore(contentstore);
                 }

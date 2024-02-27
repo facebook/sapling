@@ -29,11 +29,10 @@ use storemodel::FileStore;
 use storemodel::TreeEntry;
 use storemodel::TreeStore;
 use tracing::instrument;
+use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
-
-use crate::FetchMode;
 
 pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
@@ -331,8 +330,12 @@ where
     IntermediateType: Into<OutputType>,
 {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<IntermediateType>>;
-    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<IntermediateType>;
-    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<IntermediateType>;
+    fn get_single(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+        fetch_mode: FetchMode,
+    ) -> Result<IntermediateType>;
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
@@ -347,12 +350,9 @@ where
                 .get_local_single(RepoPath::empty(), hgid)?
                 .map(|v| v.into());
             Ok(maybe_value)
-        } else if fetch_mode.is_remote() {
-            let value = self.get_remote_single(RepoPath::empty(), hgid)?;
-            let value = value.into();
-            Ok(Some(value))
         } else {
-            let value = self.get_single(RepoPath::empty(), hgid)?;
+            // FetchMode::RemoteOnly and FetchMode::AllowRemote
+            let value = self.get_single(RepoPath::empty(), hgid, fetch_mode)?;
             let value = value.into();
             Ok(Some(value))
         }
@@ -420,14 +420,11 @@ impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Bytes>> {
         self.get_local_content(path, id)
     }
-    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<Bytes> {
-        self.get_remote_content(path, id)
-    }
-    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<Bytes> {
-        self.get_content(path, id)
+    fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
+        self.get_content(path, id, fetch_mode)
     }
     fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.get_content_iter(keys)
+        self.get_content_iter(keys, FetchMode::AllowRemote)
     }
 }
 
@@ -436,14 +433,11 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<FileAuxData>> {
         self.get_local_aux(path, id)
     }
-    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<FileAuxData> {
-        self.get_remote_aux(path, id)
-    }
-    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<FileAuxData> {
-        self.get_aux(path, id)
+    fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<FileAuxData> {
+        self.get_aux(path, id, fetch_mode)
     }
     fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, FileAuxData)>>> {
-        self.get_aux_iter(keys)
+        self.get_aux_iter(keys, FetchMode::AllowRemote)
     }
 }
 
@@ -452,12 +446,14 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Box<dyn TreeEntry>>> {
         self.get_local_tree(path, id)
     }
-    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<Box<dyn TreeEntry>> {
-        self.get_remote_tree(path, id)
-    }
-    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<Box<dyn TreeEntry>> {
+    fn get_single(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+        fetch_mode: FetchMode,
+    ) -> Result<Box<dyn TreeEntry>> {
         match self
-            .get_tree_iter(vec![Key::new(path.to_owned(), id)])?
+            .get_tree_iter(vec![Key::new(path.to_owned(), id)], fetch_mode)?
             .next()
         {
             Some(Ok((_key, tree))) => Ok(tree),
@@ -469,7 +465,7 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
         &self,
         keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
-        self.get_tree_iter(keys)
+        self.get_tree_iter(keys, FetchMode::AllowRemote)
     }
 }
 

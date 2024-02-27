@@ -216,6 +216,7 @@ mod tests {
     use edenapi_types::Sha1;
     use maplit::hashmap;
     use tempfile::TempDir;
+    use types::fetch_mode::FetchMode;
     use types::testutil::*;
     use types::Sha256;
 
@@ -227,7 +228,6 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
-    use crate::scmstore::FetchMode;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileAuxData;
     use crate::scmstore::FileStore;
@@ -281,6 +281,52 @@ mod tests {
     }
 
     #[test]
+    fn test_get_file_remote_only() -> Result<()> {
+        // Set up mocked EdenAPI file and tree stores.
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let d = delta("1234", None, k.clone());
+        let files = hashmap! { k.clone() => d.data.clone() };
+
+        let client = FakeEdenApi::new().files(files).into_arc();
+        let remote_files = EdenApiRemoteStore::<File>::new(client);
+
+        // Set up local cache store to write received data.
+        let mut store = FileStore::empty();
+
+        let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
+        let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &tmp,
+            ExtStoredPolicy::Ignore,
+            &config,
+            StoreType::Shared,
+        )?);
+        store.indexedlog_cache = Some(cache.clone());
+        store.edenapi = Some(remote_files);
+
+        // Attempt fetch.
+        let mut fetched = store
+            .fetch(
+                std::iter::once(k.clone()),
+                FileAttributes::CONTENT,
+                FetchMode::RemoteOnly,
+            )
+            .single()?
+            .expect("key not found");
+        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+
+        // Check that data was written to the local store.
+        let fetched = cache.get_entry(k)?.expect("key not found");
+        assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
+
+        Ok(())
+    }
+
+    #[test]
     fn test_get_tree() -> Result<()> {
         // Set up mocked EdenAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
@@ -311,6 +357,51 @@ mod tests {
         // Attempt fetch.
         let mut fetched = store
             .fetch_batch(std::iter::once(k.clone()), FetchMode::AllowRemote)
+            .single()?
+            .expect("key not found");
+        assert_eq!(
+            fetched.manifest_tree_entry()?.0.to_vec(),
+            d.data.as_ref().to_vec()
+        );
+
+        // Check that data was written to the local store.
+        let fetched = cache.get_entry(k)?.expect("key not found");
+        assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_tree_remote_only() -> Result<()> {
+        // Set up mocked EdenAPI file and tree stores.
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let d = delta("1234", None, k.clone());
+        let trees = hashmap! { k.clone() => d.data.clone() };
+
+        let client = FakeEdenApi::new().trees(trees).into_arc();
+        let remote_trees = EdenApiRemoteStore::<Tree>::new(client);
+
+        // Set up local cache store to write received data.
+        let mut store = TreeStore::empty();
+
+        let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
+        let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &tmp,
+            ExtStoredPolicy::Ignore,
+            &config,
+            StoreType::Shared,
+        )?);
+        store.indexedlog_cache = Some(cache.clone());
+        store.edenapi = Some(remote_trees);
+
+        // Attempt fetch.
+        let mut fetched = store
+            .fetch_batch(std::iter::once(k.clone()), FetchMode::RemoteOnly)
             .single()?
             .expect("key not found");
         assert_eq!(

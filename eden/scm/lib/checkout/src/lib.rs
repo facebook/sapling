@@ -49,6 +49,7 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::fetch_mode::FetchMode;
 use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
 use types::hgid::MF_UNTRACKED_NODE_ID;
@@ -256,7 +257,7 @@ impl CheckoutPlan {
             .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
-        let fetch_data_iter = store.get_content_iter(keys)?;
+        let fetch_data_iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
 
         let stats = thread::scope(|s| -> Result<CheckoutStats> {
             let (tx, rx) = channel::unbounded::<Work>();
@@ -425,7 +426,7 @@ impl CheckoutPlan {
             .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()));
         let keys: Vec<_> = keys.collect();
         let (mut count, mut size) = (0, 0);
-        let iter = store.get_content_iter(keys)?;
+        let iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
         for result in iter {
             let (_key, data) = result?;
             count += 1;
@@ -530,7 +531,7 @@ impl CheckoutPlan {
         }
 
         let mut paths = Vec::new();
-        for entry in store.get_content_iter(check_content)? {
+        for entry in store.get_content_iter(check_content, FetchMode::AllowRemote)? {
             let (key, data) = entry?;
             if let Some(path) = Self::check_content(vfs, key, data) {
                 paths.push(path);

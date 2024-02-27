@@ -16,6 +16,7 @@ use minibytes::Bytes;
 use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::KeyStore;
+use types::fetch_mode::FetchMode;
 use types::Key;
 
 pub struct PythonFileScmStore {
@@ -38,6 +39,7 @@ impl KeyStore for PythonFileScmStore {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
+        _fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
         let iter = keys.into_iter().map(|k| {
             let gil = Python::acquire_gil();

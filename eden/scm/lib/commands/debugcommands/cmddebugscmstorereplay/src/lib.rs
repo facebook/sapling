@@ -13,8 +13,8 @@ use cmdutil::define_flags;
 use cmdutil::Result;
 use repo::repo::Repo;
 use revisionstore::scmstore::activitylogger;
-use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileStoreBuilder;
+use types::fetch_mode::FetchMode;
 
 define_flags! {
     pub struct DebugScmStoreReplayOpts {

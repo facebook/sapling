@@ -14,10 +14,10 @@ use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
+use types::fetch_mode::FetchMode;
 use types::Key;
 
 use crate::backingstore::BackingStore;
-use crate::FetchMode;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {

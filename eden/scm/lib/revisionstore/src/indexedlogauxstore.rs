@@ -195,12 +195,12 @@ mod tests {
     use edenapi_types::Sha256;
     use fs_err::remove_file;
     use tempfile::TempDir;
+    use types::fetch_mode::FetchMode;
     use types::testutil::*;
 
     use super::*;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
-    use crate::scmstore::FetchMode;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;
