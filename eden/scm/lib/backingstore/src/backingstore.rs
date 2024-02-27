@@ -331,6 +331,7 @@ where
     IntermediateType: Into<OutputType>,
 {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<IntermediateType>>;
+    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<IntermediateType>;
     fn get_single(&self, path: &RepoPath, id: HgId) -> Result<IntermediateType>;
     fn get_batch_iter(
         &self,
@@ -346,6 +347,10 @@ where
                 .get_local_single(RepoPath::empty(), hgid)?
                 .map(|v| v.into());
             Ok(maybe_value)
+        } else if fetch_mode.is_remote() {
+            let value = self.get_remote_single(RepoPath::empty(), hgid)?;
+            let value = value.into();
+            Ok(Some(value))
         } else {
             let value = self.get_single(RepoPath::empty(), hgid)?;
             let value = value.into();
@@ -415,6 +420,9 @@ impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Bytes>> {
         self.get_local_content(path, id)
     }
+    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<Bytes> {
+        self.get_remote_content(path, id)
+    }
     fn get_single(&self, path: &RepoPath, id: HgId) -> Result<Bytes> {
         self.get_content(path, id)
     }
@@ -428,6 +436,9 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<FileAuxData>> {
         self.get_local_aux(path, id)
     }
+    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<FileAuxData> {
+        self.get_remote_aux(path, id)
+    }
     fn get_single(&self, path: &RepoPath, id: HgId) -> Result<FileAuxData> {
         self.get_aux(path, id)
     }
@@ -440,6 +451,9 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
 impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Box<dyn TreeEntry>>> {
         self.get_local_tree(path, id)
+    }
+    fn get_remote_single(&self, path: &RepoPath, id: HgId) -> Result<Box<dyn TreeEntry>> {
+        self.get_remote_tree(path, id)
     }
     fn get_single(&self, path: &RepoPath, id: HgId) -> Result<Box<dyn TreeEntry>> {
         match self

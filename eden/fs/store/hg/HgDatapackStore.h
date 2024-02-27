@@ -81,6 +81,16 @@ class HgDatapackStore {
       const HgProxyHash& proxyHash);
 
   /**
+   * Imports the tree identified by the given hash from the remote store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<TreePtr> getTreeRemote(
+      const RelativePath& path,
+      const Hash20& manifestId,
+      const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context);
+
+  /**
    * Import multiple blobs at once. The vector parameters have to be the same
    * length. Promises passed in will be resolved if a blob is successfully
    * imported. Otherwise the promise will be left untouched.
@@ -94,14 +104,24 @@ class HgDatapackStore {
    *
    * Returns nullptr if not found.
    */
-  folly::Try<BlobPtr> getBlob(const HgProxyHash& hgInfo, bool localOnly);
+  folly::Try<BlobPtr> getBlob(
+      const HgProxyHash& hgInfo,
+      sapling::FetchMode fetchMode);
 
   /**
    * Imports the blob identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
-    return getBlob(hgInfo, /*localOnly=*/true);
+    return getBlob(hgInfo, sapling::FetchMode::LocalOnly);
+  }
+
+  /**
+   * Imports the blob identified by the given hash from the remote store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<BlobPtr> getBlobRemote(const HgProxyHash& hgInfo) {
+    return getBlob(hgInfo, sapling::FetchMode::RemoteOnly);
   }
 
   /**

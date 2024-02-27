@@ -547,7 +547,8 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
 
                // Retry using datapackStore (SaplingNativeBackingStore).
                auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
-               auto blob = datapackStore_.getBlob(hgInfo, /*localOnly=*/false);
+               auto blob = datapackStore_.getBlob(
+                   hgInfo, sapling::FetchMode::AllowRemote);
                if (blob.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
                  result = blob.value();

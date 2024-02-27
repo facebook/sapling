@@ -31,6 +31,8 @@ pub enum FetchMode {
     AllowRemote,
     /// The fetch is limited to RAM and disk.
     LocalOnly,
+    /// The fetch is only hits remote servers.
+    RemoteOnly,
 }
 
 impl FetchMode {
@@ -41,6 +43,18 @@ impl FetchMode {
     pub fn from_local(local: bool) -> Self {
         if local {
             Self::LocalOnly
+        } else {
+            Self::AllowRemote
+        }
+    }
+
+    pub fn is_remote(self) -> bool {
+        matches!(self, FetchMode::RemoteOnly)
+    }
+
+    pub fn from_remote(remote: bool) -> Self {
+        if remote {
+            Self::RemoteOnly
         } else {
             Self::AllowRemote
         }

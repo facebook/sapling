@@ -62,12 +62,7 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
-    bool local) {
-  FetchMode fetch_mode = FetchMode::AllowRemote;
-  if (local) {
-    fetch_mode = FetchMode::LocalOnly;
-  }
-
+    FetchMode fetch_mode) {
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
   return folly::makeTryWith([&] {
@@ -114,11 +109,7 @@ void SaplingNativeBackingStore::getTreeBatch(
 
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
-    bool local) {
-  FetchMode fetch_mode = FetchMode::AllowRemote;
-  if (local) {
-    fetch_mode = FetchMode::LocalOnly;
-  }
+    FetchMode fetch_mode) {
   XLOG(DBG7) << "Importing blob node=" << folly::hexlify(node)
              << " from hgcache";
   return folly::makeTryWith([&] {

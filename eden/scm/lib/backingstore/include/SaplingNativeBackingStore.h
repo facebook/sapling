@@ -65,7 +65,9 @@ class SaplingNativeBackingStore {
 
   std::optional<ManifestId> getManifestNode(NodeId node);
 
-  folly::Try<std::shared_ptr<Tree>> getTree(NodeId node, bool local);
+  folly::Try<std::shared_ptr<Tree>> getTree(
+      NodeId node,
+      sapling::FetchMode fetch_mode);
 
   void getTreeBatch(
       NodeIdRange requests,
@@ -73,7 +75,9 @@ class SaplingNativeBackingStore {
       folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
           resolve);
 
-  folly::Try<std::unique_ptr<folly::IOBuf>> getBlob(NodeId node, bool local);
+  folly::Try<std::unique_ptr<folly::IOBuf>> getBlob(
+      NodeId node,
+      sapling::FetchMode fetchMode);
 
   void getBlobBatch(
       NodeIdRange requests,

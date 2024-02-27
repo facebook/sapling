@@ -213,16 +213,17 @@ folly::Try<TreePtr> HgDatapackStore::getTree(
   // this for all trees, as it would cause a lot of additional work on every
   // cache miss, and just doing it for root trees is sufficient to detect the
   // scenario where Mercurial just wrote a brand new tree.
-  bool local_only = path.empty();
-  auto tree = store_.getTree(
-      manifestId.getBytes(),
-      local_only /*, sapling::ClientRequestInfo(context)*/);
-  if (tree.hasException() && local_only) {
+  sapling::FetchMode fetchMode = sapling::FetchMode::AllowRemote;
+  if (path.empty()) {
+    fetchMode = sapling::FetchMode::LocalOnly;
+  }
+  auto tree = store_.getTree(manifestId.getBytes(), fetchMode);
+  if (tree.hasException() && fetchMode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
-    tree = store_.getTree(
-        manifestId.getBytes(), false /*, sapling::ClientRequestInfo(context)*/);
+    tree =
+        store_.getTree(manifestId.getBytes(), sapling::FetchMode::AllowRemote);
   }
 
   using GetTreeResult = folly::Try<TreePtr>;
@@ -247,7 +248,8 @@ folly::Try<TreePtr> HgDatapackStore::getTree(
 TreePtr HgDatapackStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
-  auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
+  auto tree =
+      store_.getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
   if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -263,6 +265,34 @@ TreePtr HgDatapackStore::getTreeLocal(
   }
 
   return nullptr;
+}
+
+folly::Try<TreePtr> HgDatapackStore::getTreeRemote(
+    const RelativePath& path,
+    const Hash20& manifestId,
+    const ObjectId& edenTreeId,
+    const ObjectFetchContextPtr& /*context*/) {
+  auto tree = store_.getTree(
+      manifestId.getBytes(),
+      sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
+
+  using GetTreeResult = folly::Try<TreePtr>;
+
+  if (tree.hasValue()) {
+    auto hgObjectIdFormat =
+        config_->getEdenConfig()->hgObjectIdFormat.getValue();
+    const auto filteredPaths =
+        config_->getEdenConfig()->hgFilteredPaths.getValue();
+    return GetTreeResult{fromRawTree(
+        tree.value().get(),
+        edenTreeId,
+        path,
+        std::move(hgObjectIdFormat),
+        std::move(*filteredPaths),
+        runtimeOptions_->ignoreConfigFilter())};
+  } else {
+    return GetTreeResult{tree.exception()};
+  }
 }
 
 void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
@@ -324,8 +354,8 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
 
 folly::Try<BlobPtr> HgDatapackStore::getBlob(
     const HgProxyHash& hgInfo,
-    bool localOnly) {
-  auto blob = store_.getBlob(hgInfo.byteHash(), localOnly);
+    sapling::FetchMode fetchMode) {
+  auto blob = store_.getBlob(hgInfo.byteHash(), fetchMode);
 
   using GetBlobResult = folly::Try<BlobPtr>;
 

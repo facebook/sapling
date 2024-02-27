@@ -31,6 +31,8 @@ pub(crate) mod ffi {
         AllowRemote,
         /// The fetch is limited to RAM and disk.
         LocalOnly,
+        /// The fetch is only hits remote servers.
+        RemoteOnly,
     }
 
     #[repr(u8)]

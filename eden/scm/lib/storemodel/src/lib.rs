@@ -82,6 +82,15 @@ pub trait KeyStore: Send + Sync {
         Ok(None)
     }
 
+    fn get_remote_content(
+        &self,
+        _path: &RepoPath,
+        _hgid: HgId,
+    ) -> anyhow::Result<minibytes::Bytes> {
+        // Implement in later diff
+        unimplemented!();
+    }
+
     /// Read the content of the specified file. Ask a remote server on demand.
     /// When fetching many files, use `get_content_iter` instead of calling
     /// this in a loop.
@@ -184,6 +193,11 @@ pub trait FileStore: KeyStore + 'static {
         Ok(self
             .get_local_content(path, id)?
             .map(|data| FileAuxData::from_content(&data)))
+    }
+
+    fn get_remote_aux(&self, path: &RepoPath, _id: HgId) -> anyhow::Result<FileAuxData> {
+        // Implement in later diff
+        unimplemented!();
     }
 
     /// Get auxiliary metadata for the given files.
@@ -294,6 +308,11 @@ pub trait TreeStore: KeyStore {
             Some(v) => v,
         };
         Ok(Some(basic_parse_tree(data, self.format())?))
+    }
+
+    fn get_remote_tree(&self, path: &RepoPath, _id: HgId) -> anyhow::Result<Box<dyn TreeEntry>> {
+        // Implement in later diff
+        unimplemented!();
     }
 
     /// List trees with optional auxiliary metadata.
