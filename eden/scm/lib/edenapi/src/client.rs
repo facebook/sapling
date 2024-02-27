@@ -116,7 +116,6 @@ use crate::errors::EdenApiError;
 use crate::response::Response;
 use crate::response::ResponseMeta;
 use crate::retryable::RetryableFileAttrs;
-use crate::retryable::RetryableFiles;
 use crate::retryable::RetryableStreamRequest;
 use crate::retryable::RetryableTrees;
 use crate::types::wire::pull::PullFastForwardRequest;
@@ -131,7 +130,6 @@ const MAX_CONCURRENT_BLAMES_PER_REQUEST: usize = 10;
 const MAX_ERROR_MSG_LEN: usize = 500;
 
 static REQUESTS_INFLIGHT: Counter = Counter::new("edenapi.req_inflight");
-static FILES_INFLIGHT: Counter = Counter::new("edenapi.files_inflight");
 static FILES_ATTRS_INFLIGHT: Counter = Counter::new("edenapi.files_attrs_inflight");
 
 mod paths {
@@ -440,37 +438,6 @@ impl Client {
                 tracing::warn!("Failed to log request: {:?}", &e);
             }
         });
-    }
-
-    pub(crate) async fn fetch_files(
-        &self,
-        keys: Vec<Key>,
-    ) -> Result<Response<FileResponse>, EdenApiError> {
-        tracing::info!("Requesting content for {} file(s)", keys.len());
-
-        if keys.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
-
-        let mut url = self.build_url(paths::FILES2)?;
-
-        if self.config().try_route_consistently && keys.len() == 1 {
-            url.set_query(Some(&format!(
-                "routing_file={}",
-                keys.first().unwrap().hgid
-            )));
-            tracing::debug!("Requesting file with a routing key: {}", url);
-        }
-
-        let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
-            let req = FileRequest { keys, reqs: vec![] };
-            self.log_request(&req, "files");
-            req
-        })?;
-
-        self.fetch_guard::<FileResponse>(requests, guards)
     }
 
     pub(crate) async fn fetch_trees(
@@ -1012,22 +979,6 @@ impl EdenApi for Client {
         let caps = serde_json::from_slice(&body)
             .map_err(|e| EdenApiError::ParseResponse(e.to_string()))?;
         Ok(caps)
-    }
-
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, EdenApiError> {
-        tracing::info!("Requesting content for {} file(s)", keys.len());
-
-        let prog = self.inner.file_progress.create_or_extend(keys.len() as u64);
-
-        RetryableFiles::new(keys)
-            .perform_with_retries(self.clone())
-            .and_then(|r| async {
-                Ok(r.then(move |r| {
-                    prog.increase_position(1);
-                    ready(r)
-                }))
-            })
-            .await
     }
 
     async fn files_attrs(

@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use async_trait::async_trait;
 use types::Key;
@@ -17,31 +16,6 @@ use crate::errors::EdenApiError;
 use crate::response::Response;
 use crate::types::FileResponse;
 use crate::types::FileSpec;
-
-pub(crate) struct RetryableFiles {
-    keys: HashSet<Key>,
-}
-
-impl RetryableFiles {
-    pub(crate) fn new(keys: impl IntoIterator<Item = Key>) -> Self {
-        let keys = keys.into_iter().collect();
-        Self { keys }
-    }
-}
-
-#[async_trait]
-impl RetryableStreamRequest for RetryableFiles {
-    type Item = FileResponse;
-
-    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
-        let keys = self.keys.iter().cloned().collect();
-        client.fetch_files(keys).await
-    }
-
-    fn received_item(&mut self, item: &Self::Item) {
-        self.keys.remove(&item.key);
-    }
-}
 
 pub(crate) struct RetryableFileAttrs {
     reqs: HashMap<Key, FileSpec>,

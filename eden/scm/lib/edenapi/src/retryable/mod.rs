@@ -19,7 +19,6 @@ mod files;
 mod trees;
 
 pub(crate) use files::RetryableFileAttrs;
-pub(crate) use files::RetryableFiles;
 pub(crate) use trees::RetryableTrees;
 
 #[async_trait]
