@@ -988,6 +988,7 @@ enum InstrumentFieldValue {
 pub enum FieldValue {
     Str(String),
     Int(i64),
+    Bool(bool),
     None,
 }
 
@@ -996,6 +997,7 @@ impl FieldValue {
         match self {
             FieldValue::Str(s) => Some(Box::new(s.as_str())),
             FieldValue::Int(i) => Some(Box::new(i)),
+            FieldValue::Bool(b) => Some(Box::new(b)),
             FieldValue::None => None,
         }
     }
@@ -1003,7 +1005,9 @@ impl FieldValue {
 
 impl<'a> FromPyObject<'a> for FieldValue {
     fn extract(py: Python, obj: &PyObject) -> PyResult<FieldValue> {
-        if let Ok(i) = obj.extract::<i64>(py) {
+        if let Ok(b) = obj.extract::<bool>(py) {
+            Ok(FieldValue::Bool(b))
+        } else if let Ok(i) = obj.extract::<i64>(py) {
             Ok(FieldValue::Int(i))
         } else if obj == &py.None() {
             Ok(FieldValue::None)
