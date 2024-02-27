@@ -303,8 +303,7 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
         self.assertIn(
-            b"bar/some_new_file.txt: untracked file differs\n"
-            b"abort: untracked files in working directory differ from files in requested revision\n",
+            b"1 conflicting file changes:\n" b" bar/some_new_file.txt",
             context.exception.stderr,
         )
         self.assertEqual(
@@ -471,8 +470,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertRegex(
             result.stderr.decode("utf-8"),
             re.compile(
-                "foo/new_file.txt: untracked file differs\n"
-                "abort: untracked files in working directory differ from files in requested revision\n",
+                "abort: 1 conflicting file changes:\n" " foo/new_file.txt",
                 re.MULTILINE,
             ),
         )
