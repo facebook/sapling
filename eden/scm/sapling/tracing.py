@@ -65,7 +65,7 @@ else:
 
 
 def event(
-    message, name=None, target=None, level=LEVEL_INFO, depth: int = 0, **meta
+    message=None, name=None, target=None, level=LEVEL_INFO, depth: int = 0, **meta
 ) -> None:
     """Log an event to the Rust tracing eco-system
 
