@@ -21,6 +21,7 @@ import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
 import {atomWithOnChange, localStorageBackedAtom, readAtom} from '../jotaiUtils';
+import {NopOperation} from '../operations/NopOperation';
 import platform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
@@ -29,6 +30,7 @@ import {
   latestUncommittedChangesData,
   mergeConflicts,
   repositoryInfo,
+  useRunOperation,
 } from '../serverAPIState';
 import {useShowToast} from '../toast';
 import {isDev} from '../utils';
@@ -66,7 +68,10 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
         <ServerClientMessageLogging />
-        <ForceDisconnectButton />
+        <FlexRow>
+          <ForceDisconnectButton />
+          <NopOperationButtons />
+        </FlexRow>
       </DropdownField>
       <DropdownField title={<T>Component Explorer</T>}>
         <ComponentExplorerButton dismiss={dismiss} />
@@ -299,5 +304,21 @@ function ForceDisconnectButton() {
       appearance="secondary">
       <T replace={{$sec: (duration / 1000).toFixed(1)}}>Force disconnect for $sec seconds</T>
     </VSCodeButton>
+  );
+}
+
+function NopOperationButtons() {
+  const runOperation = useRunOperation();
+  return (
+    <>
+      {[2, 5, 10].map(durationSeconds => (
+        <VSCodeButton
+          key={durationSeconds}
+          onClick={() => runOperation(new NopOperation(durationSeconds))}
+          appearance="secondary">
+          <T replace={{$sec: durationSeconds}}>Nop $sec s</T>
+        </VSCodeButton>
+      ))}
+    </>
   );
 }

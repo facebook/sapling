@@ -71,6 +71,7 @@ export type TrackEventName =
   | 'LandSyncWarningShown'
   | 'LandSyncWarningChoseUseRemote'
   | 'LandSyncWarningChoseSyncLocal'
+  | 'NopOperation'
   | 'PartialCommitOperation'
   | 'PartialAmendOperation'
   | 'PartialDiscardOperation'
