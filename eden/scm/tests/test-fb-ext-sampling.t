@@ -244,3 +244,17 @@ Invalid format strings don't crash Mercurial
   category: invalid
     metrics_type=invalid
     msg=invalid format %s %s single
+
+Test command name:
+  $ newclientrepo
+  atexit handler executed
+  $ enable sparse
+Both Rust and Python use canonical "update" name:
+  $ SL_LOG=command_info=debug hg go . 2>&1 | grep command=
+  DEBUG command_info: command="update"
+  DEBUG command_info: command="update"
+Sub commands work:
+  $ SL_LOG=command_info=debug hg sparse 2>&1 | grep command=
+  DEBUG command_info: command="sparse"
+  $ SL_LOG=command_info=debug hg sparse refresh 2>&1 | grep command=
+  DEBUG command_info: command="sparse refresh"

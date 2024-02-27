@@ -44,6 +44,7 @@ from . import (
     pycompat,
     registrar,
     scmutil,
+    tracing,
     ui as uimod,
     util,
 )
@@ -931,6 +932,9 @@ def _dispatch(req):
         fullargs = args
 
         cmd, func, args, options, cmdoptions, foundaliases = _parse(lui, args)
+
+        tracing.debug(target="command_info", command=cmd)
+
         lui.cmdname = ui.cmdname = cmd
         lui.cmdtype = ui.cmdtype = getattr(func, "cmdtype", None)
 

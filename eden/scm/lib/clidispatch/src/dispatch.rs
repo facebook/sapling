@@ -386,16 +386,21 @@ impl Dispatcher {
             Err(e) => return (None, Err(e)),
         };
 
-        sampling::append_sample("command_info", "positional_args", parsed.args());
+        // Logged directly to sampling since `tracing` doesn't support structured data.
+        {
+            sampling::append_sample("command_info", "positional_args", parsed.args());
 
-        let opt_names = parsed.specified_opts();
-        sampling::append_sample("command_info", "option_names", opt_names);
+            let opt_names = parsed.specified_opts();
+            sampling::append_sample("command_info", "option_names", opt_names);
 
-        let opt_values: Vec<_> = opt_names
-            .iter()
-            .map(|n| opt_value_to_str(parsed.opts().get(n)))
-            .collect();
-        sampling::append_sample("command_info", "option_values", &opt_values);
+            let opt_values: Vec<_> = opt_names
+                .iter()
+                .map(|n| opt_value_to_str(parsed.opts().get(n)))
+                .collect();
+            sampling::append_sample("command_info", "option_values", &opt_values);
+        }
+
+        tracing::debug!(target: "command_info", command=handler.legacy_alias().unwrap_or_else(|| handler.main_alias()));
 
         let res = || -> Result<u8> {
             // This may trigger Python fallback if there are Python hooks.
