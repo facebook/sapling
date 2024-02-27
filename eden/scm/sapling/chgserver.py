@@ -52,7 +52,7 @@ import time
 from typing import BinaryIO, Callable, Dict, List, Optional
 
 from bindings import commands, hgtime
-from sapling import prefork
+from sapling import prefork, tracing
 
 from . import commandserver, encoding, error, pycompat, ui as uimod, util
 from .i18n import _
@@ -253,6 +253,7 @@ class chgcmdserver(commandserver.server):
         uimod.ui = self.ui.__class__
         try:
             ret = commands.run([pycompat.sysargv[0]] + args)
+            tracing.debug(target="command_info", chg="on")
             self.cresult.write(struct.pack(">i", int(ret & 255)))
         finally:
             uimod.ui = origui

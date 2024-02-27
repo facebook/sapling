@@ -125,6 +125,7 @@ fn main() {
     }
 
     tracing::debug!(target: "atexit", "calling atexit from main()");
+    tracing::debug!(target: "command_info", chg="off");
 
     // Run atexit handlers.
     atexit::drop_queued();
