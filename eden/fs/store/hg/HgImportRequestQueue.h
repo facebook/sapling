@@ -15,10 +15,11 @@
 #include <vector>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
-#include "folly/futures/Future.h"
 
 namespace facebook::eden {
 
+template <typename T>
+class ImmediateFuture;
 class ReloadableConfig;
 
 class HgImportRequestQueue {
@@ -31,21 +32,23 @@ class HgImportRequestQueue {
    *
    * Return a future that will complete when the blob request completes.
    */
-  folly::Future<BlobPtr> enqueueBlob(std::shared_ptr<HgImportRequest> request);
+  ImmediateFuture<BlobPtr> enqueueBlob(
+      std::shared_ptr<HgImportRequest> request);
 
   /**
    * Enqueue a tree request to the queue.
    *
    * Return a future that will complete when the blob request completes.
    */
-  folly::Future<TreePtr> enqueueTree(std::shared_ptr<HgImportRequest> request);
+  ImmediateFuture<TreePtr> enqueueTree(
+      std::shared_ptr<HgImportRequest> request);
 
   /**
    * Enqueue an aux data request to the queue.
    *
    * Return a future that will complete when the aux data request completes.
    */
-  folly::Future<BlobMetadataPtr> enqueueBlobMeta(
+  ImmediateFuture<BlobMetadataPtr> enqueueBlobMeta(
       std::shared_ptr<HgImportRequest> request);
 
   /**
@@ -85,7 +88,7 @@ class HgImportRequestQueue {
    * Puts an item into the queue.
    */
   template <typename T, typename ImportType>
-  folly::Future<std::shared_ptr<const T>> enqueue(
+  ImmediateFuture<std::shared_ptr<const T>> enqueue(
       std::shared_ptr<HgImportRequest> request);
 
   HgImportRequestQueue(HgImportRequestQueue&&) = delete;

@@ -418,15 +418,15 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
   }
 
   return getTreeImpl(id, proxyHash, context)
-      .deferEnsure([scope = std::move(scope)] {});
+      .ensure([scope = std::move(scope)] {})
+      .semi();
 }
 
-folly::SemiFuture<BackingStore::GetTreeResult>
-HgQueuedBackingStore::getTreeImpl(
+ImmediateFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTreeImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
-  auto getTreeFuture = folly::makeFutureWith([&] {
+  auto getTreeFuture = makeImmediateFutureWith([&] {
     auto request = HgImportRequest::makeTreeImportRequest(
         id,
         proxyHash,
@@ -495,15 +495,15 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
   }
 
   return getBlobImpl(id, proxyHash, context)
-      .deferEnsure([scope = std::move(scope)] {});
+      .ensure([scope = std::move(scope)] {})
+      .semi();
 }
 
-folly::SemiFuture<BackingStore::GetBlobResult>
-HgQueuedBackingStore::getBlobImpl(
+ImmediateFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlobImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
-  auto getBlobFuture = folly::makeFutureWith([&] {
+  auto getBlobFuture = makeImmediateFutureWith([&] {
     XLOG(DBG4) << "make blob import request for " << proxyHash.path()
                << ", hash is:" << id;
 
@@ -579,10 +579,11 @@ HgQueuedBackingStore::getBlobMetadata(
   }
 
   return getBlobMetadataImpl(id, proxyHash, context)
-      .deferEnsure([scope = std::move(scope)] {});
+      .ensure([scope = std::move(scope)] {})
+      .semi();
 }
 
-folly::SemiFuture<BackingStore::GetBlobMetaResult>
+ImmediateFuture<BackingStore::GetBlobMetaResult>
 HgQueuedBackingStore::getBlobMetadataImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
@@ -592,7 +593,7 @@ HgQueuedBackingStore::getBlobMetadataImpl(
         nullptr, ObjectFetchContext::Origin::NotFetched};
   }
 
-  auto getBlobMetaFuture = folly::makeFutureWith([&] {
+  auto getBlobMetaFuture = makeImmediateFutureWith([&] {
     XLOG(DBG4) << "make blob meta import request for " << proxyHash.path()
                << ", hash is:" << id;
 
@@ -670,7 +671,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         // oriented ones. Mercurial will anyway not re-fetch a blob that is
         // already present locally, so the check for local blob is pure overhead
         // when prefetching.
-        std::vector<folly::SemiFuture<GetBlobResult>> futures;
+        std::vector<ImmediateFuture<GetBlobResult>> futures;
         futures.reserve(ids.size());
 
         for (size_t i = 0; i < ids.size(); i++) {
@@ -680,11 +681,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
           futures.emplace_back(getBlobImpl(id, proxyHash, context));
         }
 
-        return folly::collectAll(futures).deferValue([](const auto& tries) {
-          for (const auto& t : tries) {
-            t.throwUnlessValue();
-          }
-        });
+        return collectAllSafe(std::move(futures)).unit();
       })
       .semi();
 }

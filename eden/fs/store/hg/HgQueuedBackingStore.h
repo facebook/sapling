@@ -234,7 +234,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * the blob is present locally, as this function will always push the request
    * at the end of the queue.
    */
-  folly::SemiFuture<GetBlobResult> getBlobImpl(
+  ImmediateFuture<GetBlobResult> getBlobImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
@@ -251,7 +251,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * used by anybody but HgQueuedBackingStore and debugGetBlobMetadata Thrift
    * handler.
    */
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadataImpl(
+  ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
@@ -264,7 +264,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * the tree is present locally, as this function will always push the request
    * at the end of the queue.
    */
-  folly::SemiFuture<GetTreeResult> getTreeImpl(
+  ImmediateFuture<GetTreeResult> getTreeImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);

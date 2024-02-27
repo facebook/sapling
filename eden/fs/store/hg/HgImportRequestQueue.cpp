@@ -7,9 +7,9 @@
 
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include <folly/MapUtil.h>
-#include <folly/futures/Future.h>
 #include <algorithm>
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -21,24 +21,24 @@ void HgImportRequestQueue::stop() {
   }
 }
 
-folly::Future<BlobPtr> HgImportRequestQueue::enqueueBlob(
+ImmediateFuture<BlobPtr> HgImportRequestQueue::enqueueBlob(
     std::shared_ptr<HgImportRequest> request) {
   return enqueue<Blob, HgImportRequest::BlobImport>(std::move(request));
 }
 
-folly::Future<TreePtr> HgImportRequestQueue::enqueueTree(
+ImmediateFuture<TreePtr> HgImportRequestQueue::enqueueTree(
     std::shared_ptr<HgImportRequest> request) {
   return enqueue<Tree, HgImportRequest::TreeImport>(std::move(request));
 }
 
-folly::Future<BlobMetadataPtr> HgImportRequestQueue::enqueueBlobMeta(
+ImmediateFuture<BlobMetadataPtr> HgImportRequestQueue::enqueueBlobMeta(
     std::shared_ptr<HgImportRequest> request) {
   return enqueue<BlobMetadata, HgImportRequest::BlobMetaImport>(
       std::move(request));
 }
 
 template <typename T, typename ImportType>
-folly::Future<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
+ImmediateFuture<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
     std::shared_ptr<HgImportRequest> request) {
   auto state = state_.lock();
   auto* importQueue = getImportQueue<const T>(state);
@@ -71,7 +71,7 @@ folly::Future<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
           });
     }
 
-    return std::move(future).toUnsafeFuture();
+    return std::move(future);
   }
 
   requestQueue->emplace_back(request);
@@ -89,7 +89,7 @@ folly::Future<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
 
   queueCV_.notify_one();
 
-  return promise->getFuture();
+  return promise->getSemiFuture();
 }
 
 std::vector<std::shared_ptr<HgImportRequest>>
