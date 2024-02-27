@@ -7,6 +7,7 @@
 
 #include "eden/fs/telemetry/SubprocessScribeLogger.h"
 
+#include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>

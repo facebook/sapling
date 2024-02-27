@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/init/Init.h>

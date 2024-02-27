@@ -55,6 +55,7 @@ cpp_unittest(
     ],
     deps = [
         "//eden/fs/telemetry:scribe_logger",
+        "//folly:exception",
         "//folly:file_util",
         "//folly/experimental:test_util",
         "//folly/portability:gtest",
@@ -83,6 +84,7 @@ cpp_benchmark(
     ],
     deps = [
         "//eden/fs/utils:process",
+        "//folly:exception",
         "//folly:file",
         "//folly:stop_watch",
         "//folly/init:init",

@@ -126,6 +126,7 @@ cpp_binary(
         "//eden/fs/privhelper:flags",
         "//eden/fs/privhelper:server",
         "//eden/fs/utils:user_info",
+        "//folly:exception",
         "//folly:file",
         "//folly:file_util",
         "//folly/init:init",
