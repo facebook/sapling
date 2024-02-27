@@ -105,9 +105,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   std::unique_ptr<apache::thrift::AsyncProcessor> getProcessor() override;
 
-  void mount(std::unique_ptr<MountArgument> mount) override;
+  folly::SemiFuture<folly::Unit> semifuture_mount(
+      std::unique_ptr<MountArgument> mount) override;
 
-  void unmount(std::unique_ptr<std::string> mountPoint) override;
+  folly::SemiFuture<folly::Unit> semifuture_unmount(
+      std::unique_ptr<std::string> mountPoint) override;
 
   void listMounts(std::vector<MountInfo>& results) override;
 

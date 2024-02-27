@@ -601,35 +601,41 @@ EdenServiceHandler::getProcessor() {
   return processor;
 }
 
-void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
+folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
+    std::unique_ptr<MountArgument> argument) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, (*argument->mountPoint()));
-  try {
-    auto mountPoint = absolutePathFromThrift(*argument->mountPoint_ref());
-    auto edenClientPath =
-        absolutePathFromThrift(*argument->edenClientPath_ref());
-    auto initialConfig =
-        CheckoutConfig::loadFromClientDirectory(mountPoint, edenClientPath);
+  return wrapImmediateFuture(
+             std::move(helper),
+             makeImmediateFutureWith([&] {
+               auto mountPoint =
+                   absolutePathFromThrift(*argument->mountPoint_ref());
+               auto edenClientPath =
+                   absolutePathFromThrift(*argument->edenClientPath_ref());
+               auto initialConfig = CheckoutConfig::loadFromClientDirectory(
+                   mountPoint, edenClientPath);
 
-    server_->mount(std::move(initialConfig), *argument->readOnly_ref()).get();
-  } catch (const EdenError& ex) {
-    XLOG(ERR) << "Error: " << ex.what();
-    throw;
-  } catch (const std::exception& ex) {
-    XLOG(ERR) << "Error: " << ex.what();
-    throw newEdenError(ex);
-  }
+               return server_
+                   ->mount(std::move(initialConfig), *argument->readOnly_ref())
+                   .unit();
+             }).thenError([](const folly::exception_wrapper& ex) {
+               XLOG(ERR) << "Error: " << ex.what();
+               throw newEdenError(ex);
+             }))
+      .semi();
 }
 
-void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
+folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmount(
+    std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
-  try {
-    auto mountPath = absolutePathFromThrift(*mountPoint);
-    server_->unmount(mountPath).get();
-  } catch (const EdenError&) {
-    throw;
-  } catch (const std::exception& ex) {
-    throw newEdenError(ex);
-  }
+  return wrapImmediateFuture(
+             std::move(helper),
+             makeImmediateFutureWith([&] {
+               auto mountPath = absolutePathFromThrift(*mountPoint);
+               return server_->unmount(mountPath);
+             }).thenError([](const folly::exception_wrapper& ex) {
+               throw newEdenError(ex);
+             }))
+      .semi();
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
