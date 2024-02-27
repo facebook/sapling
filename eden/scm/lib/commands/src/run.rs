@@ -749,6 +749,7 @@ fn log_end(
         exit_code=exit_code,
         max_rss=max_rss,
         total_blocked_ms=util::math::truncate_int(total_blocked_ms, 3),
+        is_plain=hgplain::is_plain(None),
     );
 
     blackbox::log(&blackbox::event::Event::Finish {
