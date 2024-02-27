@@ -167,6 +167,7 @@ impl From<ffi::FetchMode> for FetchMode {
     fn from(fetch_mode: ffi::FetchMode) -> Self {
         match fetch_mode {
             ffi::FetchMode::AllowRemote => FetchMode::AllowRemote,
+            ffi::FetchMode::RemoteOnly => FetchMode::RemoteOnly,
             ffi::FetchMode::LocalOnly => FetchMode::LocalOnly,
             _ => panic!("unknown fetch mode"),
         }

@@ -3448,13 +3448,19 @@ EdenServiceHandler::semifuture_debugGetBlob(
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    // TODO(kmancini): implement
+    auto proxyHash = HgProxyHash::load(
+        server_->getLocalStore().get(),
+        id,
+        "debugGetScmBlob",
+        *server_->getServerState()->getStats());
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
+        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        folly::Try<std::unique_ptr<Blob>>(newEdenError(
-            EdenErrorType::GENERIC_ERROR,
-            "remote only fetching not yet supported.")),
+        hgBackingStore->getHgBackingStore().getDatapackStore().getBlobRemote(
+            proxyHash),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
