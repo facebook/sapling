@@ -4083,10 +4083,41 @@ def ensureenv():
     """
     hgdir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     envpath = os.path.join(hgdir, "build", "env")
-    if not os.path.exists(envpath):
+    skipensureenv = "HGRUNTEST_SKIP_ENV" in os.environ
+    iswindows = os.name == "nt"
+    if (skipensureenv and not iswindows) or not os.path.exists(envpath):
         return
     with open(envpath, "r") as f:
         env = dict(l.split("=", 1) for l in f.read().splitlines() if "=" in l)
+
+    # A minority of our old non-debugruntest tests still rely on being able to
+    # run bash commands plus having commands like `less` available. On our CI
+    # this is not an issue, since those are already part of our path there.
+    # However, locally we usually don't have those on our path so let's try
+    # to get them from the list of env bars in ../build/env and relaunch this
+    # with that appended to our path. Note that in this case we cannot simply
+    # keep loading all the environment variables from `build/env`, since running
+    # run-tests.py as a Buck target generates a .par file. When this
+    # run-tests.py is built and run as a par, the par logic will modify PATH and
+    # other library and Python-related environment variables at startup.
+    # Changing the Python-related and library ones can prevent the .par from
+    # properly running in the first place, while the PATH one can make it loop.
+    # The modified PATH will trick ensureenv to relaunch with a different PATH,
+    # and enter an infinite loop of (par modifies PATH, ensureenv modifies PATH
+    # and relaunch). To avoid the loop we use a separate env var to tell
+    # ensureenv to skip.
+    if skipensureenv and iswindows:
+        esep = ";"
+        ppath = os.path.join("fbcode", "eden", "scm", "build", "bin")
+        k = "PATH"
+        origpath = os.environ[k]
+        newpath = esep.join([p for p in env[k].split(esep) if ppath in p])
+        if newpath and newpath not in origpath:
+            newpath += esep + origpath
+        else:
+            newpath = origpath
+        env = {k: newpath}
+
     if all(os.environ.get(k) == v for k, v in env.items()):
         # No restart needed
         return
