@@ -11,13 +11,10 @@ use std::collections::HashSet;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
-use futures::future;
-use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -37,6 +34,10 @@ use crate::HgMutationStore;
 /// To avoid overloading the database with too many changesets in a single
 /// select, we chunk selects to this size.
 const SELECT_CHUNK_SIZE: usize = 100;
+
+/// To avoid overloading the database with too many changesets in a single
+/// select, we chunk selects of chains to this size.
+const SELECT_CHAIN_CHUNK_SIZE: usize = 10;
 
 pub struct SqlHgMutationStore {
     repo_id: RepositoryId,
@@ -389,65 +390,34 @@ impl SqlHgMutationStore {
         connection: &Connection,
         entry_set: &mut HgMutationEntrySet,
     ) -> Result<()> {
-        let mut fetched_primordials = HashSet::new();
-        loop {
-            let mut to_fetch = HashSet::new();
-            for primordial in entry_set.changeset_primordials.values() {
-                if !fetched_primordials.contains(primordial) {
-                    to_fetch.insert(primordial.clone());
-                }
-            }
-            if to_fetch.is_empty() {
-                break;
-            }
-            fetched_primordials.extend(to_fetch.iter().copied());
+        if entry_set.entries.is_empty() {
+            return Ok(());
+        }
+        let chunks = entry_set
+            .entries
+            .keys()
+            .chunks(SELECT_CHAIN_CHUNK_SIZE)
+            .into_iter()
+            .map(|chunk| chunk.copied().collect::<Vec<_>>())
+            .collect::<Vec<_>>();
 
-            let obtained_rows = stream::iter(to_fetch.into_iter().map(|changeset| async move {
-                let (mut primordial_rows, successor_rows) = future::try_join(
-                    SelectByPrimordial::query(
-                        connection,
-                        &self.repo_id,
-                        &self.mutation_chain_limit,
-                        &[changeset],
-                    )
-                    .map(|r| {
-                        r.with_context(|| format!("Error fetching primordials: {:?}", &changeset))
-                    }),
-                    SelectBySuccessor::query(connection, &self.repo_id, &[changeset]).map(|r| {
-                        r.with_context(|| format!("Error fetching successors: {:?}", &changeset))
-                    }),
-                )
-                .await?;
-                // If we reach the limit and ended up cutting some predecessors of a mutation
-                // then remove the mutation all together.
-                if primordial_rows.len() == self.mutation_chain_limit {
-                    if let Some(last) = primordial_rows.iter().last() {
-                        let (pred_count, seq) = (last.2, last.3);
-                        if seq + 1 != pred_count {
-                            // we don't have the whole of the last entry, remove it
-                            let last_count = primordial_rows
-                                .iter()
-                                .rev()
-                                .take_while(|row| row.0 == last.0) //0 -> successor
-                                .count();
-                            primordial_rows.truncate(primordial_rows.len() - last_count)
-                        }
-                    }
-                }
-                Ok::<_, Error>(
-                    primordial_rows
-                        .into_iter()
-                        .chain(successor_rows.into_iter())
-                        .collect::<Vec<_>>(),
-                )
-            }))
-            .buffered(100)
-            .try_collect::<Vec<_>>()
+        let rows = stream::iter(chunks.into_iter().map(|changesets| async move {
+            SelectBySuccessorChain::query(
+                connection,
+                &self.repo_id,
+                &self.mutation_chain_limit,
+                &changesets,
+            )
+            .await
+            .with_context(|| format!("Error fetching mutation chains for: {:?}", changesets))
+        }))
+        .buffered(10)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+        self.collect_entries(connection, entry_set, rows.into_iter().flatten())
             .await?;
 
-            self.collect_entries(connection, entry_set, obtained_rows.into_iter().flatten())
-                .await?;
-        }
         Ok(())
     }
 }
@@ -712,7 +682,7 @@ mononoke_queries! {
         ORDER BY m.successor, p.seq ASC"
     }
 
-    read SelectByPrimordial(repo_id: RepositoryId, mut_lim: usize, >list cs_id: HgChangesetId) -> (
+    read SelectBySuccessorChain(repo_id: RepositoryId, mut_lim: usize, >list cs_id: HgChangesetId) -> (
         HgChangesetId,
         HgChangesetId,
         u64,
@@ -726,17 +696,38 @@ mononoke_queries! {
         i32,
         String
     ) {
-        "SELECT
-            m.successor, m.primordial,
-            m.pred_count, p.seq, p.predecessor, p.primordial,
-            m.split_count,
-            m.op, m.user, m.timestamp, m.tz, m.extra
-        FROM
-            hg_mutation_info m LEFT JOIN hg_mutation_preds p
-            ON m.repo_id = p.repo_id AND m.successor = p.successor
-        WHERE m.repo_id = {repo_id} AND m.primordial IN {cs_id}
-        ORDER BY m.id DESC, p.seq ASC
-        LIMIT {mut_lim}"
+        "WITH RECURSIVE mp AS (
+            SELECT
+                m.successor, m.primordial,
+                m.pred_count, p.seq, p.predecessor, p.primordial AS pred_primordial,
+                m.split_count,
+                m.op, m.user, m.timestamp, m.tz, m.extra,
+                1 AS step
+            FROM
+                hg_mutation_info m LEFT JOIN hg_mutation_preds p
+                ON m.repo_id = p.repo_id AND m.successor = p.successor
+            WHERE m.repo_id = {repo_id} AND m.successor IN {cs_id}
+            UNION ALL
+            SELECT
+                m.successor, m.primordial,
+                m.pred_count, p.seq, p.predecessor, p.primordial AS pred_primordial,
+                m.split_count,
+                m.op, m.user, m.timestamp, m.tz, m.extra,
+                mp.step + 1
+            FROM
+                mp INNER JOIN hg_mutation_info m
+                ON m.successor = mp.predecessor
+                LEFT JOIN hg_mutation_preds p
+                ON m.repo_id = p.repo_id AND m.successor = p.successor
+            WHERE m.repo_id = {repo_id} AND mp.step < {mut_lim}
+        )
+        SELECT
+            mp.successor, mp.primordial,
+            mp.pred_count, mp.seq, mp.predecessor, mp.pred_primordial,
+            mp.split_count,
+            mp.op, mp.user, mp.timestamp, mp.tz, mp.extra
+        FROM mp
+        ORDER BY mp.successor, mp.seq ASC"
     }
 
     read SelectSplitsBySuccessor(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (

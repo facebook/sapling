@@ -365,8 +365,7 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
         &ctx,
         hashset![make_hg_cs_id(12)],
         &entries,
-        // BUG! Only 3 entries are returned
-        &(10..13).collect::<Vec<_>>(),
+        &(3..13).collect::<Vec<_>>(),
     )
     .await?;
 
@@ -407,17 +406,18 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
 
     entries.extend((24..32).zip(new_entries));
 
-    // The fetch is truncated at the fold, and the fold is not returned.
+    // The fetch is truncated at 10 entries, and the fold is included.
     let fetched_entries = store
         .all_predecessors(&ctx, hashset![make_hg_cs_id(31)])
         .await?;
-    assert_eq!(fetched_entries.len(), 7);
+    assert_eq!(fetched_entries.len(), 10);
+
     check_entries(
         &store,
         &ctx,
         hashset![make_hg_cs_id(31)],
         &entries,
-        &(25..32).collect::<Vec<_>>(),
+        &(18..32).collect::<Vec<_>>(),
     )
     .await?;
 
