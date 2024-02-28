@@ -24,12 +24,12 @@ watchman = os.environ.get("HGTEST_WATCHMAN")
 mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
 dummyssh = os.environ.get("HGTEST_DUMMYSSH")
 get_free_socket = os.environ.get("HGTEST_GET_FREE_SOCKET")
+# We want to make the one below a hard requirement for running tests
+run_tests_py = os.environ["HGTEST_RUN_TESTS_PY"]
 
 
 if watchman is not None and not os.path.exists(str(watchman)):
     watchman = None
-
-os.environ["PYTHON_SYS_EXECUTABLE"] = pythonbinpath
 
 try:
     shlex_quote = shlex.quote  # Python 3.3 and up
@@ -53,10 +53,12 @@ def chdir(path):
 
 def prepareargsenv(runtestsdir, port=None):
     """return (args, env) for running run-tests.py"""
-    if not os.path.exists(os.path.join(runtestsdir, "run-tests.py")):
-        raise SystemExit("cannot find run-tests.py from %s" % runtestsdir)
     env = os.environ.copy()
-    args = [pythonbinpath, "run-tests.py", "--maxdifflines=1000"]
+    # We need Python to run .par files on Windows
+    args = ([pythonbinpath] if os.name == "nt" else []) + [
+        run_tests_py,
+        "--maxdifflines=1000",
+    ]
     if port:
         args += ["--port", "%s" % port]
 

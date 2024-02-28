@@ -1860,7 +1860,8 @@ class TTest(Test):
 
     def _computehghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
-        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        if (runtestdir := os.environ.get("RUNTESTDIR", None)) is None:
+            runtestdir = os.path.abspath(os.path.dirname(__file__))
         tdir = runtestdir.replace("\\", "/")
         proc = Popen4(
             '%s debugpython -- "%s/hghave" %s'
@@ -3503,8 +3504,13 @@ class TestRunner:
         os.environ["TMPBINDIR"] = self._tmpbindir
         os.environ["PYTHON"] = PYTHON
 
-        runtestdir = os.path.abspath(os.path.dirname(__file__))
-        os.environ["RUNTESTDIR"] = runtestdir
+        # One of our Buck targets sets this env var pointing to all the misc.
+        # files under tests/ including the .t tests themselves. run-tests.py
+        # directly tries to launch files like tinit.sh, so we need to help
+        # it to find these files.
+        if (runtestdir := os.environ.get("RUNTESTDIR", None)) is None:
+            runtestdir = os.path.abspath(os.path.dirname(__file__))
+            os.environ["RUNTESTDIR"] = runtestdir
         path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
         if os.path.islink(__file__):
             # test helper will likely be at the end of the symlink

@@ -79,7 +79,7 @@ def get_hg_watchman_run_tests_excluded():
     return "test_(%s)" % "|".join(excluded)
 
 def get_blocklist():
-    blocklist_prefix = "../fb/tests/core.tests.blacklist."
+    blocklist_prefix = "$(location //eden/scm/fb/tests:blocklists)/core.tests.blacklist."
     if read_bool("fbcode", "mode_win_enabled", False):
         return blocklist_prefix + "win"
     elif read_bool("fbcode", "mode_mac_enabled", False):

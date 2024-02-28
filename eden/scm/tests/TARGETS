@@ -10,10 +10,32 @@ SRCS = dict(
     [("unittestify.py", "unittestify.py")],
 )
 
+OTHER_FILES = [
+    "unittestify.py",
+    "TARGETS",
+]
+
+RUN_TEST_PY_FILES = [
+    "run-tests.py",
+    "watchman.py",
+    "killdaemons.py",
+    "default_hgrc.py",
+]
+
+TEST_FILES = [f for f in glob(["**/*"]) if f not in RUN_TEST_PY_FILES and f not in OTHER_FILES]
+
 buck_filegroup(
     name = "test_files",
-    srcs = [f for f in glob(["**/*.t"])] +
-           [f for f in glob(["**/test*.py"])],
+    srcs = TEST_FILES,
+)
+
+python_binary(
+    name = "run_tests_py",
+    srcs = RUN_TEST_PY_FILES,
+    main_module = "eden.scm.tests.run-tests",
+    # The line below is necessary as we have some extensions (e.g., autodiff.py) in the tests directory
+    # which include modules like sapling.*, and that makes the linter confused about it
+    tags = ["noautodeps"],
 )
 
 # @unsorted-dict-items
@@ -28,6 +50,9 @@ ENV = {
     "HGTEST_BLOCKLIST": get_blocklist(),
     # used by unittestify.py
     "HGTEST_DIR": "eden/scm/tests",
+    # The one below determines the location of all misc. files required by run-tests.py but not directly
+    # imported by it. This is especially important when running in opt mode.
+    "RUNTESTDIR": "$(location :test_files)",
     "HGTEST_DUMMYSSH": "$(location :dummyssh3)",
     "HGTEST_GETDB_SH": "$(location //eden/scm/fb/tests:getdb_sh)",
     "HGTEST_HG": "$(location //eden/scm:hg)",
@@ -36,6 +61,7 @@ ENV = {
     "HGTEST_NORMAL_LAYOUT": "0",
     "HGRUNTEST_SKIP_ENV": "1",
     "HGTEST_PYTHON": "$(location //eden/scm:hgpython)",
+    "HGTEST_RUN_TESTS_PY": "$(location :run_tests_py)",
     "HGTEST_SLOWTIMEOUT": "2147483647",
     # used by run-tests.py
     # buck test has its own timeout so just disable run-tests.py
@@ -57,7 +83,6 @@ python_unittest(
         "//eden/scm/tests:dummyssh3": "dummyssh3.par",
         "//eden/scm:hg": "hg.sh",
         "//eden/scm:hgpython": "hgpython.sh",
-        ":test_files": "TEST_FILES",
     },
     supports_static_listing = False,
     runtime_deps = [
@@ -86,7 +111,6 @@ python_unittest(
         "//eden/scm:hg": "hg.sh",
         "//eden/scm:hgpython": "hgpython.sh",
         "//watchman:watchman": "watchman",
-        ":test_files": "TEST_FILES",
     },
     supports_static_listing = False,
     deps = [

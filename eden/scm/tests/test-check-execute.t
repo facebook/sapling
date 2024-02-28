@@ -11,7 +11,7 @@
   $ python << EOF
   > import os, stat
   > for path in open(os.path.join(os.environ["TESTTMP"], "filelist")).read().splitlines():
-  >     if path.startswith("fb/"):
+  >     if path.startswith("fb/") or path.startswith("tests/sapling"):
   >         continue
   >     content = open(path, "rb").read()
   >     isexec = bool(stat.S_IEXEC & os.stat(path).st_mode)

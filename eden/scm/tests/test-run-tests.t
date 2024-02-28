@@ -1333,34 +1333,6 @@ Mercurial source tree.
   ----------------------------------------------------------------------
   # Ran 1 tests, 0 skipped, 0 failed.
 
-test that RUNTESTDIR refers the directory, in which `run-tests.py` now
-running is placed.
-
-  $ cat > test-runtestdir.t <<EOF
-  > - $TESTDIR, in which test-run-tests.t is placed
-  > - \$TESTDIR, in which test-runtestdir.t is placed (expanded at runtime)
-  > - \$RUNTESTDIR, in which run-tests.py is placed (expanded at runtime)
-  > 
-  > #if windows
-  >   $ test "\$TESTDIR" = "$TESTTMP\anothertests"
-  > #else
-  >   $ test "\$TESTDIR" = "$TESTTMP"/anothertests
-  > #endif
-  > If this prints a path, that means RUNTESTDIR didn't equal
-  > TESTDIR as it should have.
-  >   $ test "\$RUNTESTDIR" = "$TESTDIR" || echo "\$RUNTESTDIR"
-  > Make sure we can find check-code.py relative to $RUNTESTDIR
-  > If this passes but the previous check failed, that means we found a copy of
-  > check-code at whatever RUNTESTSDIR ended up containing, even though it
-  > doesn't match TESTDIR.
-  >   $ grep 'a style and portability checker' "\$RUNTESTDIR"/../contrib/check-code.py
-  >   # check-code - a style and portability checker for Mercurial
-  > EOF
-  $ rt test-runtestdir.t
-  .
-  ----------------------------------------------------------------------
-  # Ran 1 tests, 0 skipped, 0 failed.
-
 #if execbit
 
 test that TESTDIR is referred in PATH
