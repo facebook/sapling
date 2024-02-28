@@ -65,7 +65,7 @@ export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSumm
 
 export type DiffCommentReaction = {
   name: string;
-  reaction: 'ANGER' | 'HAHA' | 'LIKE' | 'LOVE' | 'NONE' | 'WOW' | 'SORRY';
+  reaction: 'ANGER' | 'HAHA' | 'LIKE' | 'LOVE' | 'WOW' | 'SORRY' | 'SAD';
 };
 
 export type DiffComment = {

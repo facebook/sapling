@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffComment} from '../types';
+import type {DiffId, DiffComment, DiffCommentReaction} from '../types';
 
 import {AvatarImg} from '../Avatar';
 import serverAPI from '../ClientToServerAPI';
@@ -13,6 +13,7 @@ import {Column, FlexRow} from '../ComponentUtils';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Subtle} from '../Subtle';
+import {Tooltip} from '../Tooltip';
 import {t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import foundPlatform from '../platform';
@@ -23,6 +24,7 @@ import * as stylex from '@stylexjs/stylex';
 import {useAtom} from 'jotai';
 import {useEffect} from 'react';
 import {Icon} from 'shared/Icon';
+import {group} from 'shared/utils';
 
 const diffCommentData = atomFamilyWeak((diffId: DiffId) =>
   atomLoadableWithRefresh(async () => {
@@ -79,6 +81,11 @@ const styles = stylex.create({
     borderColor: colors.fg,
     marginBlock: spacing.half,
   },
+  byline: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: spacing.half,
+  },
 });
 
 function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: boolean}) {
@@ -108,14 +115,48 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
             <div className="rendered-markup" dangerouslySetInnerHTML={{__html: comment.html}} />
           </div>
         </div>
-        <Subtle>
+        <Subtle {...stylex.props(styles.byline)}>
           <RelativeDate date={comment.created} />
+          <Reactions reactions={comment.reactions} />
         </Subtle>
         {comment.replies.map((reply, i) => (
           <Comment key={i} comment={reply} />
         ))}
       </Column>
     </FlexRow>
+  );
+}
+
+const emoji: Record<DiffCommentReaction['reaction'], string> = {
+  LIKE: '👍',
+  WOW: '😮',
+  SORRY: '🤗',
+  LOVE: '❤️',
+  HAHA: '😆',
+  ANGER: '😡',
+  SAD: '😢',
+};
+
+function Reactions({reactions}: {reactions: Array<DiffCommentReaction>}) {
+  if (reactions.length === 0) {
+    return null;
+  }
+  const groups = Object.entries(group(reactions, r => r.reaction)).filter(
+    (group): group is [DiffCommentReaction['reaction'], DiffCommentReaction[]] =>
+      (group[1]?.length ?? 0) > 0,
+  );
+  groups.sort((a, b) => b[1].length - a[1].length);
+  const total = groups.reduce((last, g) => last + g[1].length, 0);
+  // Show only the 3 most used reactions as emoji, even if more are used
+  const icons = groups.slice(0, 2).map(g => <span>{emoji[g[0]]}</span>);
+  const names = reactions.map(r => r.name);
+  return (
+    <Tooltip title={names.join(', ')}>
+      <FlexRow style={{gap: spacing.half}}>
+        <span style={{letterSpacing: '-2px'}}>{icons}</span>
+        <span>{total}</span>
+      </FlexRow>
+    </Tooltip>
   );
 }
 
