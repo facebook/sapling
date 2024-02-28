@@ -320,9 +320,7 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
 
     let mut new_entries = Vec::with_capacity(20);
 
-    let mut amend_count: u64 = 20;
-
-    for index in 1..amend_count {
+    for index in 1..20 {
         new_entries.push(HgMutationEntry::new(
             make_hg_cs_id(index),
             vec![make_hg_cs_id(index - 1)],
@@ -361,33 +359,35 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
     )
     .await?;
 
-    // What we want to do here is make multiple folds with 3 amends each.
-    // This way, we reach the maximum number of changes (10*) BUT made specially
-    // for the case where the limit cuts a fold in half. The expected behaviour is
-    // for the half that wasn't cut by the limit to be removed.
-    //
-    // *In this case the maximum number is 10 because we are overriding it
-    // in the `.with_mutation_limit(TEST_MUTATION_LIMIT)` call
-    //
-    // Add a lot of entries
-    //
-    //                             30-.
-    //                                 \ <--- Here it is exceding the limit
-    //                               29-.
-    //                                   \
-    //                                 28-.
-    //                                     \
-    //   19 --> 20 --> 21 --> 22 --> ... --> 27
-    new_entries = Vec::with_capacity(11);
+    // This should apply even if we're fetching an earlier commit
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(12)],
+        &entries,
+        // BUG! Only 3 entries are returned
+        &(10..13).collect::<Vec<_>>(),
+    )
+    .await?;
 
-    amend_count = 7;
-    // We add 7 amend operations and then create a fold that
-    // will exceed the limit to check that it is actually removing
-    // the mutation.
-    for index in 0..amend_count {
+    // Next check that folds are included in their entirety, even when they are
+    // at the end of the limit, and never get cut in half.
+    // We attach to the existing chain a fold of 5 commits followed by 7 amends.
+    let mut new_entries = Vec::with_capacity(8);
+    new_entries.push(HgMutationEntry::new(
+        make_hg_cs_id(24),
+        (19..24).map(make_hg_cs_id).collect(),
+        vec![],
+        String::from("fold"),
+        String::from("testuser"),
+        0,
+        0,
+        vec![],
+    ));
+    for index in 25..32 {
         new_entries.push(HgMutationEntry::new(
-            make_hg_cs_id(20 + index),
-            vec![make_hg_cs_id(20 + index - 1)],
+            make_hg_cs_id(index),
+            vec![make_hg_cs_id(index - 1)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
@@ -397,22 +397,6 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
         ));
     }
 
-    new_entries.push(HgMutationEntry::new(
-        make_hg_cs_id(20 + amend_count),
-        vec![
-            make_hg_cs_id(20 + amend_count - 1),
-            make_hg_cs_id(20 + amend_count + 1),
-            make_hg_cs_id(20 + amend_count + 2),
-            make_hg_cs_id(20 + amend_count + 3),
-        ],
-        vec![],
-        String::from("combine"),
-        String::from("testuser"),
-        0,
-        0,
-        vec![],
-    ));
-
     store
         .add_entries(
             &ctx,
@@ -421,17 +405,21 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
         )
         .await?;
 
-    entries.extend((20..32).zip(new_entries));
+    entries.extend((24..32).zip(new_entries));
 
-    // First we want to make sure that we are not fetching the entire history
+    // The fetch is truncated at the fold, and the fold is not returned.
     let fetched_entries = store
-        .all_predecessors(&ctx, hashset![make_hg_cs_id(20 + amend_count)])
+        .all_predecessors(&ctx, hashset![make_hg_cs_id(31)])
         .await?;
-
-    // The last fold should be erased because it exceeds the maximum (10 in this case) and it is then
-    // cut in half. So only amends stay (7)
-    assert_ne!(fetched_entries.len(), 10);
     assert_eq!(fetched_entries.len(), 7);
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(31)],
+        &entries,
+        &(25..32).collect::<Vec<_>>(),
+    )
+    .await?;
 
     Ok(())
 }
