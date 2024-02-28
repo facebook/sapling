@@ -14,7 +14,7 @@ use sql_ext::SqlConnections;
 
 use crate::store::SqlHgMutationStore;
 
-const DEFAULT_MUTATION_CHAIN_LIMIT: usize = 500;
+const DEFAULT_MUTATION_CHAIN_LIMIT: usize = 20;
 
 #[allow(unused)]
 pub struct SqlHgMutationStoreBuilder {

@@ -31,6 +31,7 @@
     "scm/mononoke:derivation_worker_sleep_duration_ms": 250,
     "scm/mononoke:commit_graph_prefetch_step_limit": 4,
     "scm/mononoke:megarepo_override_squashing_limit": 0,
+    "scm/mononoke:mutation_chain_length_limit": 20,
     "scm/mononoke:repo_client_gettreepack_buffer_size": 1000,
     "scm/mononoke:repo_client_max_nodes_in_known_method": 100000,
     "scm/mononoke:repo_client_concurrent_blob_uploads": 1000,
