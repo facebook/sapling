@@ -54,7 +54,6 @@ Clone can create a ".sl" repo.
   requires
   store
   treestate
-  updateprogress
   wlock.data
   wlock.lock
 

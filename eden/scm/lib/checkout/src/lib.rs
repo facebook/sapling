@@ -1098,7 +1098,7 @@ pub fn filesystem_checkout(
         &target_mf,
         &sparse_matcher,
         sparse_change,
-        progress_path,
+        progress_path.clone(),
     )?;
 
     if !revert_conflicts {
@@ -1128,6 +1128,9 @@ pub fn filesystem_checkout(
     dirstate::flush(wc.vfs().root(), &mut ts.lock(), repo.locker(), None, None)?;
 
     util::file::unlink_if_exists(&updatestate_path)?;
+    if let Some(progress_path) = progress_path {
+        util::file::unlink_if_exists(progress_path)?;
+    }
 
     Ok(plan.stats())
 }
