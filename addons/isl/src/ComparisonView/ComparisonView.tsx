@@ -365,6 +365,7 @@ function ComparisonViewFile({
       : undefined,
     collapsed,
     setCollapsed,
+    supportsExpandingContext: true,
   };
   return (
     <div className="comparison-view-file" key={path}>

@@ -28,6 +28,7 @@ export type Context = {
   openFileToLine?: (line: OneIndexedLineNumber) => unknown;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  supportsExpandingContext: boolean;
 };
 
 export type OneIndexedLineNumber = Exclude<number, 0>;
