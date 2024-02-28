@@ -16,6 +16,7 @@ target_link_libraries(
     eden_config
     eden_service_thrift_util
     eden_utils
+    edencommon::edencommon_telemetry
     fb303::fb303
     Folly::folly
 )

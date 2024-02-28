@@ -13,7 +13,7 @@
 #include <string>
 
 #include "eden/common/os/ProcessId.h"
-#include "eden/fs/telemetry/DynamicEvent.h"
+#include "eden/common/telemetry/DynamicEvent.h"
 
 namespace facebook::eden {
 

@@ -101,27 +101,23 @@ cpp_library(
 cpp_library(
     name = "log_info",
     srcs = [
-        "DynamicEvent.cpp",
         "SessionId.cpp",
         "SessionInfo.cpp",
     ],
     headers = [
-        "DynamicEvent.h",
         "LogEvent.h",
         "SessionId.h",
         "SessionInfo.h",
     ],
     deps = [
-        "//eden/common/utils:throw",
         "//eden/fs/utils:sysctl_util",
         "//folly:conv",
         "//folly:exception",
-        "//folly:unicode",
-        "//folly/logging:logging",
         "//folly/portability:unistd",
     ],
     exported_deps = [
         "//eden/common/os:os",
+        "//eden/common/telemetry:log_info",
         "//folly/portability:sys_types",
     ],
 )
