@@ -96,7 +96,7 @@ export const SplitDiffTable = React.memo(
         const isLast = index === lastHunkIndex;
         const nextHunk = hunks[index + 1];
         const key = `s${hunk.oldStart}`;
-        const canExpand = !isLast || !(isAdded || isDeleted); // added and deleted files are already expanded
+        const canExpand = !isLast || !(isAdded || isDeleted || isHunkProbablyAtEndOfFile(hunk)); // added and deleted files are already expanded
         if (canExpand) {
           if (expandedSeparators.has(key)) {
             const start = hunk.oldStart + hunk.oldLines;
@@ -168,6 +168,18 @@ export const SplitDiffTable = React.memo(
     );
   },
 );
+
+/**
+ * If the last hunk of a file doesn't have as many context lines as it should,
+ * it's because it's at the end of the file. This is a clue we can skip showing
+ * the expander.
+ * This util should only be called on the last hunk in the file.
+ */
+function isHunkProbablyAtEndOfFile(hunk: Hunk): boolean {
+  // we could conceivably check if the initial context length matches the end length, but that's not true in short files.
+  const CONTEXT_LENGTH = 4;
+  return !hunk.lines.slice(-CONTEXT_LENGTH).every(line => line.startsWith(' '));
+}
 
 /**
  * Adds new rows to the supplied `rows` array.
