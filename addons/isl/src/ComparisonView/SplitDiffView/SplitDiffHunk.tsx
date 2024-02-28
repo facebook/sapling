@@ -136,7 +136,9 @@ export const SplitDiffTable = React.memo(
     if (unified) {
       return (
         <table
-          className={'split-diff-view-hunk-table ' + (tableSelectionClassName ?? '')}
+          className={
+            'split-diff-view-hunk-table display-unified ' + (tableSelectionClassName ?? '')
+          }
           {...tableSelectionProps}>
           <colgroup>
             <col width={50} />
@@ -149,7 +151,7 @@ export const SplitDiffTable = React.memo(
     }
     return (
       <table
-        className={'split-diff-view-hunk-table ' + (tableSelectionClassName ?? '')}
+        className={'split-diff-view-hunk-table display-split ' + (tableSelectionClassName ?? '')}
         {...tableSelectionProps}>
         <colgroup>
           <col width={50} />

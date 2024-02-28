@@ -147,10 +147,15 @@
   padding-right: 10px;
   text-align: right;
   white-space: nowrap;
+  background-color: var(--subtle-hover-darken);
 }
 
-.split-diff-view-hunk-table td.lineNumber-RIGHT {
+.split-diff-view-hunk-table.display-split td:nth-child(3) {
   border-left: 1px solid var(--tooltip-border);
+}
+
+.split-diff-view-hunk-table.display-unified td:nth-child(1) {
+  border-right: 1px solid var(--hover-darken);
 }
 
 .split-diff-view-hunk-table tr.separator-row {
@@ -188,7 +193,7 @@
   background-color: var(--diffEditor-insertedLineBackground);
 }
 
-.patch-add-line-number,
+td.lineNumber.patch-add-line-number,
 .patch-add-word {
   background-color: var(--diffEditor-insertedLineHighlightBackground);
 }
@@ -197,17 +202,17 @@
   background-color: var(--diffEditor-removedLineBackground);
 }
 
-.patch-remove-line-number,
+td.lineNumber.patch-remove-line-number,
 .patch-remove-word {
   background-color: var(--diffEditor-removedLineHighlightBackground);
 }
 
 .patch-expanded,
-.patch-expanded-number {
+td.lineNumber.patch-expanded-number {
   background-color: var(--background);
 }
 
-.patch-expanded-number {
+td.lineNumber.patch-expanded-number {
   color: var(--foreground);
 }
 

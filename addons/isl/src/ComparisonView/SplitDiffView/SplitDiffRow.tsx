@@ -129,5 +129,13 @@ function LineNumber({
 }
 
 export function BlankLineNumber({before}: ExclusiveOr<{before: true}, {after: true}>) {
-  return <td className={before ? 'patch-remove-line-number' : 'patch-add-line-number'} />;
+  return (
+    <td
+      className={
+        before
+          ? 'patch-remove-line-number lineNumber lineNumber-LEFT'
+          : 'patch-add-line-number lineNumber lineNumber-RIGHT'
+      }
+    />
+  );
 }
