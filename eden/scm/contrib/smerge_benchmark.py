@@ -8,9 +8,8 @@ import re
 import time
 from dataclasses import dataclass
 
-from sapling import error, mdiff, registrar, scmutil, ui
+from sapling import error, mdiff, registrar, scmutil
 from sapling.i18n import _
-from sapling.node import short
 from sapling.simplemerge import Merge3Text, render_mergediff2, render_minimized
 
 cmdtable = {}
@@ -20,16 +19,10 @@ command = registrar.command(cmdtable)
 WHITE_SPACE_PATTERN = re.compile(b"\\s+")
 
 
-class SmartMerge3Text(Merge3Text):
-    """
-    SmergeMerge3Text uses vairable automerge algorithms to resolve conflicts.
-    """
-
-    def __init__(self, basetext, atext, btext):
-        lui = ui.ui()
-        lui.setconfig("automerge", "mode", "accept")
-        lui.setconfig("automerge", "merge-algos", "adjacent-changes,subset-changes")
-        Merge3Text.__init__(self, basetext, atext, btext, ui=lui)
+def gen_3way_merger(ui, basetext, atext, btext, algos=()):
+    ui.setconfig("automerge", "mode", "accept")
+    ui.setconfig("automerge", "merge-algos", ",".join(algos))
+    return Merge3Text(basetext, atext, btext, ui=ui)
 
 
 @dataclass
@@ -42,7 +35,14 @@ class BenchStats:
 
 @command(
     "debugsmerge",
-    [],
+    [
+        (
+            "",
+            "algos",
+            "",
+            _("automerge algorithms (e.g.: 'adjacent-changes,subset-changes')."),
+        )
+    ],
     _("[OPTION]... <DEST_FILE> <SRC_FILE> <BASE_FILE>"),
 )
 def debugsmerge(ui, repo, *args, **opts):
@@ -52,8 +52,9 @@ def debugsmerge(ui, repo, *args, **opts):
     if len(args) != 3:
         raise error.CommandError("debugsmerge", _("invalid arguments"))
 
+    algos = str_to_tuple(opts.get("algos"))
     desttext, srctext, basetext = [readfile(p) for p in args]
-    m3 = SmartMerge3Text(basetext, desttext, srctext)
+    m3 = gen_3way_merger(ui, basetext, desttext, srctext, algos)
     lines = render_mergediff2(m3, b"dest", b"source", b"base")[0]
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
@@ -63,10 +64,10 @@ def debugsmerge(ui, repo, *args, **opts):
     "sresolve",
     [
         (
-            "s",
-            "smart",
-            None,
-            _("use the smart merge for resolving conflicts"),
+            "",
+            "algos",
+            "",
+            _("automerge algorithms (e.g.: 'adjacent-changes,subset-changes')."),
         ),
         (
             "o",
@@ -94,11 +95,9 @@ def sresolve(ui, repo, *args, **opts):
     desttext = repo[dest][filepath].data()
     srctext = repo[src][filepath].data()
     basetext = repo[base][filepath].data()
+    algos = str_to_tuple(opts.get("algos"))
 
-    if opts.get("smart"):
-        m3 = SmartMerge3Text(basetext, desttext, srctext)
-    else:
-        m3 = Merge3Text(basetext, desttext, srctext)
+    m3 = gen_3way_merger(ui, basetext, desttext, srctext, algos)
 
     def gen_label(prefix, ctx):
         s = f"{prefix}: {ctx} - " + ctx.description().split("\n")[0]
@@ -122,7 +121,15 @@ def sresolve(ui, repo, *args, **opts):
 
 @command(
     "smerge_bench",
-    [("f", "file", "", _("a file that contains merge commits (csv file)."))],
+    [
+        ("f", "file", "", _("a file that contains merge commits (csv file).")),
+        (
+            "",
+            "algos",
+            "",
+            _("automerge algorithms (e.g.: 'adjacent-changes,subset-changes')."),
+        ),
+    ],
 )
 def smerge_bench(ui, repo, *args, **opts):
     path = opts.get("file")
@@ -130,30 +137,32 @@ def smerge_bench(ui, repo, *args, **opts):
         merge_ctxs = get_merge_ctxs_from_file(ui, repo, path)
     else:
         merge_ctxs = get_merge_ctxs_from_repo(ui, repo)
-    for m3merger in [SmartMerge3Text, Merge3Text]:
-        ui.write(f"\n============== {m3merger.__name__} ==============\n")
-        start = time.time()
-        bench_stats = BenchStats(m3merger.__name__)
 
-        for i, (p1ctx, p2ctx, basectx, mergectx) in enumerate(merge_ctxs, start=1):
-            for filepath in mergectx.files():
-                if all(filepath in ctx for ctx in [basectx, p1ctx, p2ctx, mergectx]):
-                    merge_file(
-                        repo,
-                        p1ctx,
-                        p2ctx,
-                        basectx,
-                        mergectx,
-                        filepath,
-                        m3merger,
-                        bench_stats,
-                    )
+    algos = str_to_tuple(opts.get("algos"))
+    m3merger_name = f"Merge3Text(algos={algos})"
+    ui.write(f"\n============== {m3merger_name} ==============\n")
+    start = time.time()
+    bench_stats = BenchStats(m3merger_name)
 
-            if i % 100 == 0:
-                ui.write(f"{i} {bench_stats}\n")
+    for i, (p1ctx, p2ctx, basectx, mergectx) in enumerate(merge_ctxs, start=1):
+        for filepath in mergectx.files():
+            if all(filepath in ctx for ctx in [basectx, p1ctx, p2ctx, mergectx]):
+                merge_file(
+                    repo,
+                    p1ctx,
+                    p2ctx,
+                    basectx,
+                    mergectx,
+                    filepath,
+                    algos,
+                    bench_stats,
+                )
 
-        ui.write(f"\nSummary: {bench_stats}\n")
-        ui.write(f"Execution time: {time.time() - start:.2f} seconds\n")
+        if i % 100 == 0:
+            ui.write(f"{i} {bench_stats}\n")
+
+    ui.write(f"\nSummary: {bench_stats}\n")
+    ui.write(f"Execution time: {time.time() - start:.2f} seconds\n")
 
 
 def get_merge_ctxs_from_repo(ui, repo):
@@ -256,9 +265,7 @@ def get_merge_ctxs_from_file(ui, repo, filepath):
     return ctxs
 
 
-def merge_file(
-    repo, dstctx, srcctx, basectx, mergectx, filepath, m3merger, bench_stats
-):
+def merge_file(repo, dstctx, srcctx, basectx, mergectx, filepath, algos, bench_stats):
     srctext = srcctx[filepath].data()
     dsttext = dstctx[filepath].data()
     basetext = basectx[filepath].data()
@@ -268,7 +275,7 @@ def merge_file(
 
     bench_stats.changed_files += 1
 
-    m3 = m3merger(basetext, dsttext, srctext)
+    m3 = gen_3way_merger(repo.ui, basetext, dsttext, srctext, algos)
     mergedlines, conflictscount = render_minimized(m3)
     mergedtext = b"".join(mergedlines)
 
@@ -280,7 +287,7 @@ def merge_file(
             bench_stats.unmatched_files += 1
             mergedtext_baseline = b""
 
-            if m3merger != Merge3Text:
+            if algos:
                 m3_baseline = Merge3Text(basetext, dsttext, srctext)
                 mergedtext_baseline = b"".join(render_minimized(m3_baseline)[0])
 
@@ -321,6 +328,10 @@ def readfile(path):
 
 def remove_white_space(text):
     return re.sub(WHITE_SPACE_PATTERN, b"", text)
+
+
+def str_to_tuple(csv, sep=","):
+    return tuple(csv.split(sep) if csv else ())
 
 
 if __name__ == "__main__":
