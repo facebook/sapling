@@ -3,6 +3,7 @@
   $ eagerepo
 This is needed to avoid filelog() revset in "log", which isn't compatible w/ eagerepo.
   $ setconfig experimental.pathhistory=true
+  $ setconfig checkout.use-rust=true
 
 commit date test
 
@@ -668,10 +669,15 @@ verify pathauditor blocks evil filepaths
   [255]
 #else
   $ hg co --clean tip
-  abort: path contains illegal component: .h\xe2\x80\x8cg/hgrc (esc)
+  abort: Can't write 'RepoPath(".h\u{200c}g/hgrc")' after handling error "Can't write into .h‌g/hgrc
+  
+  Caused by:
+      0: Invalid component in ".h‌g/hgrc"
+      1: Invalid path component ".hg"": Invalid path component ".hg"
   [255]
 #endif
 
+#if windows
   $ cd $TESTTMP/audit2
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
@@ -709,6 +715,7 @@ verify pathauditor blocks evil filepaths
   $ hg co --clean tip
   abort: path contains illegal component: HG8B6C~2/hgrc
   [255]
+#endif
 
 # test that an unmodified commit template message aborts
 

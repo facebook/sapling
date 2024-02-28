@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::fs::symlink_metadata;
 use std::path::Path;
 use std::path::PathBuf;
@@ -42,6 +43,13 @@ static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
         .chain(identity::all().iter().map(|i| i.dot_dir()))
         .collect()
 });
+
+// From encoding.py: These unicode characters are ignored by HFS+ (Apple Technote 1150,
+// "Unicode Subtleties"), so we need to ignore them in some places for sanity.
+const IGNORED_HFS_CHARS: [char; 16] = [
+    '\u{200c}', '\u{200d}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
+    '\u{202e}', '\u{206a}', '\u{206b}', '\u{206c}', '\u{206d}', '\u{206e}', '\u{206f}', '\u{feff}',
+];
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuditError {
@@ -135,14 +143,19 @@ fn valid_windows_component(component: &str) -> bool {
 /// It also checks that no trailing dots are part of the component and checks that shortnames
 /// on Windows are valid.
 fn audit_invalid_components(path: &str) -> Result<(), AuditError> {
-    let path = if cfg!(not(windows)) {
-        path.to_owned()
+    let path: Cow<str> = if cfg!(not(windows)) {
+        Cow::Borrowed(path)
     } else {
-        path.to_lowercase()
+        Cow::Owned(path.to_lowercase())
     };
     for s in path.split(SEPARATORS) {
-        if s.is_empty() || INVALID_COMPONENTS.contains(&s) || !valid_windows_component(s) {
-            return Err(AuditError::InvalidComponent(s.to_owned()));
+        let s = if s.contains(IGNORED_HFS_CHARS) {
+            Cow::Owned(s.replace(IGNORED_HFS_CHARS, ""))
+        } else {
+            Cow::Borrowed(s)
+        };
+        if s.is_empty() || INVALID_COMPONENTS.contains(&&*s) || !valid_windows_component(&s) {
+            return Err(AuditError::InvalidComponent(s.into_owned()));
         }
     }
     Ok(())
