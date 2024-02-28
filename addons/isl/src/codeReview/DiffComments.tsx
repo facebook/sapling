@@ -6,9 +6,11 @@
  */
 
 import type {DiffId, DiffComment, DiffCommentReaction} from '../types';
+import type {ParsedDiff} from 'shared/patch/parse';
 
 import {AvatarImg} from '../Avatar';
 import serverAPI from '../ClientToServerAPI';
+import {SplitDiffTable} from '../ComparisonView/SplitDiffView/SplitDiffHunk';
 import {Column, FlexRow} from '../ComponentUtils';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
@@ -23,6 +25,7 @@ import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useAtom} from 'jotai';
 import {useEffect} from 'react';
+import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {group} from 'shared/utils';
 
@@ -86,6 +89,9 @@ const styles = stylex.create({
     flexDirection: 'row',
     gap: spacing.half,
   },
+  diffView: {
+    marginBlock: spacing.pad,
+  },
 });
 
 function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: boolean}) {
@@ -114,6 +120,7 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
           <div {...stylex.props(styles.commentContent)}>
             <div className="rendered-markup" dangerouslySetInnerHTML={{__html: comment.html}} />
           </div>
+          {comment.suggestedChange != null && <InlineDiff patch={comment.suggestedChange} />}
         </div>
         <Subtle {...stylex.props(styles.byline)}>
           <RelativeDate date={comment.created} />
@@ -124,6 +131,28 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
         ))}
       </Column>
     </FlexRow>
+  );
+}
+
+function InlineDiff({patch}: {patch: ParsedDiff}) {
+  const path = patch.newFileName ?? '';
+  return (
+    <div {...stylex.props(styles.diffView)}>
+      <div className="split-diff-view">
+        <SplitDiffTable
+          patch={patch}
+          path={path}
+          ctx={{
+            collapsed: false,
+            id: {
+              comparison: {type: ComparisonType.HeadChanges},
+              path,
+            },
+            setCollapsed: () => null,
+          }}
+        />
+      </div>
+    </div>
   );
 }
 

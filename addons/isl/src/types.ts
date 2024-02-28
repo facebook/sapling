@@ -12,6 +12,7 @@ import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
+import type {ParsedDiff} from 'shared/patch/parse';
 import type {AllUndefined, Json} from 'shared/typeUtils';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
@@ -78,7 +79,8 @@ export type DiffComment = {
   /** If it's an inline comment, this is the line it was added */
   line?: number;
   reactions: Array<DiffCommentReaction>;
-  suggestedChange?: Array<{diff: string}>;
+  /** Suggestion for how to change the code, as a patch */
+  suggestedChange?: ParsedDiff;
   replies: Array<DiffComment>;
 };
 

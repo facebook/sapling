@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export interface Hunk {
+export type Hunk = {
   oldStart: number;
   oldLines: number;
   newStart: number;
   newLines: number;
   lines: string[];
   linedelimiters: string[];
-}
+};
 
 export enum DiffType {
   Modified = 'Modified',
@@ -22,14 +22,14 @@ export enum DiffType {
   Copied = 'Copied',
 }
 
-export interface ParsedDiff {
+export type ParsedDiff = {
   type?: DiffType;
   oldFileName?: string;
   newFileName?: string;
   oldMode?: string;
   newMode?: string;
   hunks: Hunk[];
-}
+};
 
 const DIFF = /^diff --git (.*) (.*)$/;
 const RENAME_FROM = /^rename from (.*)$/;
