@@ -143,6 +143,7 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/zeus:zeus_client",
         "//eden/mononoke/blobrepo:changeset_fetcher",
