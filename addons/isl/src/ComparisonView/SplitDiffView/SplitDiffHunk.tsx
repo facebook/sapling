@@ -12,7 +12,7 @@ import type {ReactNode} from 'react';
 
 import {t} from '../../i18n';
 import {lineRange} from '../ComparisonView';
-import SplitDiffRow from './SplitDiffRow';
+import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
@@ -232,6 +232,7 @@ function addRowsForHunk(
           after,
           rowType: 'modify',
           path,
+          unified,
           openFileToLine,
         });
 
@@ -239,13 +240,13 @@ function addRowsForHunk(
           linesA.push(
             <tr key={`${beforeLineNumber}/${afterLineNumber}:b`}>
               {beforeLine}
-              <td />
+              <BlankLineNumber before />
               {beforeChange}
             </tr>,
           );
           linesB.push(
             <tr key={`${beforeLineNumber}/${afterLineNumber}:a`}>
-              <td />
+              <BlankLineNumber after />
               {afterLine}
               {afterChange}
             </tr>,
@@ -275,6 +276,7 @@ function addRowsForHunk(
           after: null,
           rowType: 'remove',
           path,
+          unified,
           openFileToLine,
         });
 
@@ -282,8 +284,8 @@ function addRowsForHunk(
           linesA.push(
             <tr key={`${beforeLineNumber}/`}>
               {beforeLine}
-              <td />
-              {afterChange}
+              <BlankLineNumber before />
+              {beforeChange}
             </tr>,
           );
         } else {
@@ -309,13 +311,14 @@ function addRowsForHunk(
               : applyTokenizationToLine(addedLine, tokenization[1][afterTokenizedIndex]),
           rowType: 'add',
           path,
+          unified,
           openFileToLine,
         });
 
         if (unified) {
           linesB.push(
             <tr key={`/${afterLineNumber}`}>
-              <td />
+              <BlankLineNumber after />
               {afterLine}
               {afterChange}
             </tr>,
@@ -381,6 +384,7 @@ function addUnmodifiedRows(
           : applyTokenizationToLine(lineContent, tokenizationAfter[i]),
       rowType,
       path,
+      unified,
       openFileToLine,
     });
     if (unified) {
