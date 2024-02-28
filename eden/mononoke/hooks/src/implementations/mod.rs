@@ -21,6 +21,7 @@ pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
 pub(crate) mod no_questionable_filenames;
 pub(crate) mod no_windows_filenames;
+pub(crate) mod require_commit_message_pattern;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
@@ -68,6 +69,9 @@ pub async fn make_changeset_hook(
         "limit_commit_size" => Some(b(limit_commit_size::LimitCommitSizeHook::new(
             &params.config,
         )?)),
+        "require_commit_message_pattern" => Some(b(
+            require_commit_message_pattern::RequireCommitMessagePatternHook::new(&params.config)?,
+        )),
         _ => None,
     })
 }
