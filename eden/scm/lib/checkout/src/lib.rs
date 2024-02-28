@@ -468,9 +468,28 @@ impl CheckoutPlan {
         status: &Status,
     ) -> Result<Vec<RepoPathBuf>> {
         let vfs = &self.checkout.vfs;
-        let mut check_content = vec![];
 
         let unknown: Vec<&RepoPathBuf> = status.unknown().collect();
+        if unknown.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let case_sensitive = vfs.case_sensitive();
+
+        // If case insensitive, the case of files in `unknown` might be different from
+        // that of `filtered_update_content`. When we look up the file in the manifest, we
+        // need to use case of `filtered_update_content`. So, create a map of normalized
+        // (lower case) name to manifest name.
+        let mut update_content_lower_case = HashMap::new();
+        if !case_sensitive {
+            update_content_lower_case = self
+                .filtered_update_content
+                .keys()
+                .map(|p| (p.to_lower_case(), p))
+                .collect::<HashMap<_, _>>();
+        }
+
+        let mut check_content = vec![];
 
         let bar = ProgressBar::new_adhoc("Checking untracked", unknown.len() as u64, "files");
 
@@ -478,7 +497,16 @@ impl CheckoutPlan {
             bar.increase_position(1);
             bar.set_message(file.to_string());
 
-            if !self.filtered_update_content.contains_key(file) {
+            let (going_to_overwrite, file) = if case_sensitive {
+                (self.filtered_update_content.contains_key(file), file)
+            } else {
+                match update_content_lower_case.get(&file.to_lower_case()) {
+                    Some(file) => (true, *file),
+                    None => (false, file),
+                }
+            };
+
+            if !going_to_overwrite {
                 continue;
             }
 

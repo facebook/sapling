@@ -2,6 +2,7 @@
 #require icasefs
 
   $ configure modernclient
+  $ setconfig checkout.use-rust=true
   $ hg debugfsinfo | grep 'case-sensitive:'
   case-sensitive: no
 
@@ -117,8 +118,9 @@ no clobbering of untracked files with wrong casing
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo gold > b
   $ hg up tip
-  B: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision
+  abort: 1 conflicting file changes:
+   B
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ cat b
   gold
