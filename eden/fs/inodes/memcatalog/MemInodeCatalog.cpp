@@ -181,15 +181,15 @@ InodeNumber MemInodeCatalog::nextInodeNumber() {
 }
 
 std::optional<fsck::InodeInfo> MemInodeCatalog::loadInodeInfo(
-    FOLLY_MAYBE_UNUSED InodeNumber number) {
+    [[maybe_unused]] InodeNumber number) {
   return std::nullopt;
 }
 
 InodeNumber MemInodeCatalog::scanLocalChanges(
-    FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
-    FOLLY_MAYBE_UNUSED AbsolutePathPiece mountPath,
-    FOLLY_MAYBE_UNUSED bool windowsSymlinksEnabled,
-    FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& callback) {
+    [[maybe_unused]] std::shared_ptr<const EdenConfig> config,
+    [[maybe_unused]] AbsolutePathPiece mountPath,
+    [[maybe_unused]] bool windowsSymlinksEnabled,
+    [[maybe_unused]] InodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(
       config,

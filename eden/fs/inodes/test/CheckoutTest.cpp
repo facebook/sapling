@@ -74,7 +74,7 @@ inline void PrintTo(
 
 namespace {
 
-bool isExecutable(FOLLY_MAYBE_UNUSED int perms) {
+bool isExecutable([[maybe_unused]] int perms) {
 #ifndef _WIN32
   return perms & S_IXUSR;
 #else
@@ -156,7 +156,7 @@ void loadInodes(
     RelativePathPiece path,
     LoadBehavior loadType,
     std::optional<folly::StringPiece> expectedContents,
-    FOLLY_MAYBE_UNUSED mode_t expectedPerms) {
+    [[maybe_unused]] mode_t expectedPerms) {
   switch (loadType) {
     case LoadBehavior::NONE:
       return;
@@ -390,7 +390,7 @@ void testModifyFile(
   }
 
   testMount.getClock().advance(10min);
-  FOLLY_MAYBE_UNUSED auto checkoutStart = testMount.getClock().getTimePoint();
+  [[maybe_unused]] auto checkoutStart = testMount.getClock().getTimePoint();
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult = testMount.getEdenMount()
                             ->checkout(

@@ -42,7 +42,7 @@ InodeBase::InodeBase(EdenMount* mount)
 InodeBase::InodeBase(
     InodeNumber ino,
     mode_t initialMode,
-    FOLLY_MAYBE_UNUSED const std::optional<InodeTimestamps>& initialTimestamps,
+    [[maybe_unused]] const std::optional<InodeTimestamps>& initialTimestamps,
     TreeInodePtr parent,
     PathComponentPiece name)
     : ino_{ino},
@@ -347,7 +347,7 @@ void InodeBase::updateAtime() {
 #endif
 }
 
-void InodeBase::updateMtimeAndCtime(FOLLY_MAYBE_UNUSED EdenTimestamp now) {
+void InodeBase::updateMtimeAndCtime([[maybe_unused]] EdenTimestamp now) {
 #ifndef _WIN32
   XLOG(DBG9) << "Updating timestamps for : " << ino_;
   getMount()->getInodeMetadataTable()->modifyOrThrow(

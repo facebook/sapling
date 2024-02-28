@@ -204,7 +204,7 @@ DaemonStartupLogger::ChildHandler::~ChildHandler() {
 
 DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
     StringPiece logPath,
-    FOLLY_MAYBE_UNUSED PrivHelper* privHelper,
+    [[maybe_unused]] PrivHelper* privHelper,
     const std::vector<std::string>& argv) {
   XDCHECK(!logPath.empty());
 

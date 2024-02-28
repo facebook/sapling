@@ -87,7 +87,7 @@ InodeNumber LMDBInodeCatalog::scanLocalChanges(
     std::shared_ptr<const EdenConfig> /*config*/,
     AbsolutePathPiece /*mountPath*/,
     bool /*windowsSymlinksEnabled*/,
-    FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& /*callback*/) {
+    [[maybe_unused]] InodeCatalog::LookupCallback& /*callback*/) {
   NOT_IMPLEMENTED();
 }
 } // namespace facebook::eden

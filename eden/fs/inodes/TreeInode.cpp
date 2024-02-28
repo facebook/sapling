@@ -1104,7 +1104,7 @@ FileInodePtr TreeInode::createImpl(
     folly::Synchronized<TreeInodeState>::LockedPtr contents,
     PathComponentPiece name,
     mode_t mode,
-    FOLLY_MAYBE_UNUSED ByteRange fileContents,
+    [[maybe_unused]] ByteRange fileContents,
     InvalidationRequired invalidate,
     std::chrono::system_clock::time_point startTime) {
 #ifndef _WIN32
@@ -3835,7 +3835,7 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
-    FOLLY_MAYBE_UNUSED std::optional<InodeNumber> ino) {
+    [[maybe_unused]] std::optional<InodeNumber> ino) {
   auto faultTry = getMount()->getServerState()->getFaultInjector().checkTry(
       "invalidateChannelEntryCache", name);
   if (faultTry.hasException()) {

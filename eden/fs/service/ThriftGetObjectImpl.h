@@ -103,7 +103,7 @@ folly::Try<BlobMetadata> transformToTryMetadata(
       edenMount->getObjectStore()->renderObjectId(id))};
 }
 
-// FOLLY_MAYBE_UNUSED: This specialization is used and nessecary, but clang's
+// [[maybe_unused]]: This specialization is used and nessecary, but clang's
 // maybe unused thing thinks that the templated transformToTryMetadata above
 // will over shadow this specialization. So clang will think this is unused.
 // Apparently, clang does not bother trying to instantate a templated thing.
@@ -112,7 +112,7 @@ folly::Try<BlobMetadata> transformToTryMetadata(
 // https://stackoverflow.com/questions/66986718/c-clang-emit-warning-about-unused-template-variable)
 // Maybe concepts in C++20 will clear this up, but we aren't there yet.
 template <>
-FOLLY_MAYBE_UNUSED folly::Try<BlobMetadata> transformToTryMetadata(
+[[maybe_unused]] folly::Try<BlobMetadata> transformToTryMetadata(
     folly::Try<std::optional<BlobMetadata>> metadata,
     std::shared_ptr<EdenMount> edenMount,
     ObjectId id);

@@ -237,7 +237,7 @@ std::optional<size_t> calculatePrivateBytes() {
 #endif
 }
 
-ProcessList readProcessIdsForPath(FOLLY_MAYBE_UNUSED const AbsolutePath& path) {
+ProcessList readProcessIdsForPath([[maybe_unused]] const AbsolutePath& path) {
   ProcessList pids;
 #ifdef __APPLE__
   // Obtain the number of bytes to allocate for the pids buffer.

@@ -170,10 +170,10 @@ class InodeCatalog {
    * directory when EdenFS is not running.
    */
   virtual InodeNumber scanLocalChanges(
-      FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
-      FOLLY_MAYBE_UNUSED AbsolutePathPiece mountPath,
-      FOLLY_MAYBE_UNUSED bool windowsSymlinksEnabled,
-      FOLLY_MAYBE_UNUSED LookupCallback& callback) {
+      [[maybe_unused]] std::shared_ptr<const EdenConfig> config,
+      [[maybe_unused]] AbsolutePathPiece mountPath,
+      [[maybe_unused]] bool windowsSymlinksEnabled,
+      [[maybe_unused]] LookupCallback& callback) {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 

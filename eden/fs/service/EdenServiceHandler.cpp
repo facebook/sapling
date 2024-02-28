@@ -3161,9 +3161,9 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
 }
 
 folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
-    FOLLY_MAYBE_UNUSED int32_t uid,
-    FOLLY_MAYBE_UNUSED int32_t gid) {
+    [[maybe_unused]] std::unique_ptr<std::string> mountPoint,
+    [[maybe_unused]] int32_t uid,
+    [[maybe_unused]] int32_t gid) {
 #ifndef _WIN32
   auto handle = lookupMount(mountPoint);
   return handle.getEdenMount().chown(uid, gid).ensure([handle] {}).semi();
@@ -3765,8 +3765,8 @@ void EdenServiceHandler::debugInodeStatus(
 }
 
 void EdenServiceHandler::debugOutstandingFuseCalls(
-    FOLLY_MAYBE_UNUSED std::vector<FuseCall>& outstandingCalls,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
+    [[maybe_unused]] std::vector<FuseCall>& outstandingCalls,
+    [[maybe_unused]] std::unique_ptr<std::string> mountPoint) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
@@ -3802,8 +3802,8 @@ void EdenServiceHandler::debugOutstandingNfsCalls(
 }
 
 void EdenServiceHandler::debugOutstandingPrjfsCalls(
-    FOLLY_MAYBE_UNUSED std::vector<PrjfsCall>& outstandingCalls,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
+    [[maybe_unused]] std::vector<PrjfsCall>& outstandingCalls,
+    [[maybe_unused]] std::unique_ptr<std::string> mountPoint) {
 #ifdef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
@@ -4026,9 +4026,9 @@ int64_t EdenServiceHandler::debugDropAllPendingRequests() {
 }
 
 int64_t EdenServiceHandler::unloadInodeForPath(
-    FOLLY_MAYBE_UNUSED unique_ptr<string> mountPoint,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<TimeSpec> age) {
+    [[maybe_unused]] unique_ptr<string> mountPoint,
+    [[maybe_unused]] std::unique_ptr<std::string> path,
+    [[maybe_unused]] std::unique_ptr<TimeSpec> age) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, *path);
   auto mountHandle = lookupMount(mountPoint);
@@ -4237,8 +4237,8 @@ void EdenServiceHandler::flushStatsNow() {
 
 folly::SemiFuture<Unit>
 EdenServiceHandler::semifuture_invalidateKernelInodeCache(
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
-    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path) {
+    [[maybe_unused]] std::unique_ptr<std::string> mountPoint,
+    [[maybe_unused]] std::unique_ptr<std::string> path) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
   auto mountHandle = lookupMount(mountPoint);
 #ifndef _WIN32

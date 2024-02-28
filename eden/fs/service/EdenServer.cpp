@@ -1509,8 +1509,8 @@ void EdenServer::unregisterInodePopulationReportsCallback() {
 }
 
 Future<Unit> EdenServer::performTakeoverStart(
-    FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
-    FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
+    [[maybe_unused]] std::shared_ptr<EdenMount> edenMount,
+    [[maybe_unused]] TakeoverData::MountInfo&& info) {
 #ifndef _WIN32
   auto mountPath = info.mountPath;
 
@@ -1531,8 +1531,8 @@ Future<Unit> EdenServer::performTakeoverStart(
 }
 
 Future<Unit> EdenServer::completeTakeoverStart(
-    FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
-    FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
+    [[maybe_unused]] std::shared_ptr<EdenMount> edenMount,
+    [[maybe_unused]] TakeoverData::MountInfo&& info) {
   if (auto channelData = std::get_if<FuseChannelData>(&info.channelInfo)) {
     // Start up the fuse workers.
     return folly::makeFutureWith(

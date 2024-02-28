@@ -313,8 +313,8 @@ folly::SemiFuture<Unit> Overlay::initialize(
 void Overlay::initOverlay(
     std::shared_ptr<const EdenConfig> config,
     std::optional<AbsolutePath> mountPath,
-    FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
-    FOLLY_MAYBE_UNUSED InodeCatalog::LookupCallback& lookupCallback) {
+    [[maybe_unused]] const OverlayChecker::ProgressCallback& progressCallback,
+    [[maybe_unused]] InodeCatalog::LookupCallback& lookupCallback) {
   IORequest req{this};
   auto optNextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);

@@ -828,7 +828,7 @@ void InodeMap::setUnmounted() {
 }
 
 Future<SerializedInodeMap> InodeMap::shutdown(
-    FOLLY_MAYBE_UNUSED bool doTakeover) {
+    [[maybe_unused]] bool doTakeover) {
   // Record that we are in the process of shutting down.
   auto future = Future<folly::Unit>::makeEmpty();
   {
