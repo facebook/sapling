@@ -8,6 +8,7 @@ cpp_library(
     headers = ["FilteredObjectId.h"],
     deps = [
         "//eden/common/utils:throw",
+        "//eden/fs/store:backing_store_interface",
         "//folly:varint",
         "//folly/logging:logging",
     ],

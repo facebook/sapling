@@ -14,6 +14,8 @@
 
 namespace facebook::eden {
 
+class BackingStore;
+
 // FilteredObjectId types start at 0x10 so that they can be distinguished
 // from HgProxyHash types that start at 0x01 and extend until 0x02. In the
 // future, this could help migrate HgProxyHash-based ObjectIds to
@@ -187,6 +189,44 @@ class FilteredObjectId {
   const std::string& getValue() const {
     return value_;
   }
+
+  /**
+   * Render a FilteredObjectId for consumption by users. Takes a string that
+   * corresponds to the pre-rendered underlying ObjectId.
+   * The format of rendered FilteredObjectIds varies by FilteredObjectIdType.
+   * For blobs and unfiltered trees, the format is simple:
+   *
+   * [type]:[underlyingObject]
+   *
+   * - Type is a stringified int that represents the type of the
+   * FilteredObjectId
+   * - UnderlyingObject is the ObjectId rendered by the underlyingBackingStore
+   *
+   * For trees, the format is more complicated:
+   *
+   * [type]:[filterLength]:[filter][pathLength]:[path][underlyingObject]
+   *
+   * - Type is a stringified int that represents the type of the
+   * FilteredObjectId
+   * - FilterLength is the number of characters in the stringified filter
+   * - Filter is the stringified filter
+   * - PathLength is the number of characters in the stringified path
+   * - Path is the stringified path
+   * - UnderlyingObject is the ObjectId rendered by the underlyingBackingStore
+   */
+  static std::string renderFilteredObjectId(
+      const FilteredObjectId& object,
+      std::string underlyingObjectString);
+
+  /**
+   * Parse a rendered FilteredObjectId back into a FilteredObjectId.
+   *
+   * The renderFilteredObjectId method documentation details how arguments to
+   * this method are expected to be formatted.
+   */
+  static FilteredObjectId parseFilteredObjectId(
+      std::string_view object,
+      std::shared_ptr<BackingStore> underlyingBackingStore);
 
  private:
   static std::string constructFromByteRange(folly::ByteRange bytes) {

@@ -403,18 +403,16 @@ std::string FilteredBackingStore::renderRootId(const RootId& rootId) {
 }
 
 ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
-  auto oid = ObjectId{objectId};
-  auto foid = FilteredObjectId::fromObjectId(oid);
+  auto foid = FilteredObjectId::parseFilteredObjectId(objectId, backingStore_);
   return ObjectId{foid.getValue()};
 }
 
 std::string FilteredBackingStore::renderObjectId(const ObjectId& id) {
+  XLOGF(DBG8, "Rendering FilteredObjectId: {}", id.asString());
   auto filteredId = FilteredObjectId::fromObjectId(id);
   auto object = filteredId.object();
   auto underlyingOid = backingStore_->renderObjectId(object);
-  auto filterIdString = filteredId.getValue();
-  auto prefix = filterIdString.substr(filterIdString.size() - object.size());
-  return fmt::format("{}{}", folly::hexlify(prefix), underlyingOid);
+  return FilteredObjectId::renderFilteredObjectId(filteredId, underlyingOid);
 }
 
 std::optional<folly::StringPiece> FilteredBackingStore::getRepoName() {

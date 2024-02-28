@@ -11,6 +11,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/store/BackingStore.h"
 
 using folly::ByteRange;
 using folly::Endian;
@@ -39,7 +40,7 @@ std::string serializeBlobOrUnfilteredTree(
   // need to serialize two components: <type_byte><ObjectId>
   std::string buf;
   buf.reserve(1 + sizeof(object));
-  uint8_t oType = folly::to_underlying(objectType);
+  auto oType = folly::to_underlying(objectType);
 
   buf.append(reinterpret_cast<const char*>(&oType), sizeof(objectType));
   buf.append(object.getBytes().begin(), object.getBytes().end());
@@ -71,7 +72,7 @@ std::string FilteredObjectId::serializeTree(
   size_t filterLen = filterId.length();
   uint8_t filterVarint[folly::kMaxVarintLength64] = {};
   size_t filterVarintLen = folly::encodeVarint(filterLen, filterVarint);
-  uint8_t objectType = FilteredObjectIdType::OBJECT_TYPE_TREE;
+  auto objectType = FilteredObjectIdType::OBJECT_TYPE_TREE;
 
   buf.reserve(
       sizeof(objectType) + pathVarintLen + pathLen + filterVarintLen +
@@ -198,7 +199,7 @@ void FilteredObjectId::validate() {
   XLOGF(DBG9, "{}", value_);
 
   // Ensure the type byte is valid
-  uint8_t typeByte = infoBytes.front();
+  auto typeByte = infoBytes.front();
   if (typeByte != FilteredObjectIdType::OBJECT_TYPE_BLOB &&
       typeByte != FilteredObjectIdType::OBJECT_TYPE_TREE &&
       typeByte != FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
@@ -242,6 +243,93 @@ void FilteredObjectId::validate() {
         fmt::underlying(expectedSize.error()));
     throw std::invalid_argument(msg);
   }
+}
+
+std::string FilteredObjectId::renderFilteredObjectId(
+    const FilteredObjectId& object,
+    std::string underlyingObjectString) {
+  // Render the type as an integer (currently ranges from 16 - 18)
+  auto foidType = folly::to_underlying(object.objectType());
+  auto typeString = folly::to<std::string>(foidType);
+
+  // Blobs and unfiltered tree ids have no filter or path information
+  if (foidType == FilteredObjectIdType::OBJECT_TYPE_BLOB ||
+      foidType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
+    return fmt::format("{}:{}", typeString, std::move(underlyingObjectString));
+  }
+
+  // Trees have filter and path information. We need to render these as well.
+  // As mentioned in the method docs, we need to provide lengths for each
+  // component of the ID so that the parse method can correctly parse the
+  // rendered IDs back into the original FilteredObjectId.
+  auto objectPath = object.path().asString();
+  auto renderedId = fmt::format(
+      "{}:{}:{}{}:{}{}",
+      typeString,
+      object.filter().size(),
+      object.filter().str(),
+      objectPath.size(),
+      objectPath,
+      std::move(underlyingObjectString));
+  XLOGF(DBG8, "Rendered FilteredObjectId: {}", renderedId);
+  return renderedId;
+}
+
+FilteredObjectId FilteredObjectId::parseFilteredObjectId(
+    std::string_view object,
+    std::shared_ptr<BackingStore> underlyingBackingStore) {
+  // Parse the foid type and convert it to an int. This also asserts that the
+  // rendered object we're parsing
+  auto foidTypeEndIdx = object.find(":");
+  XCHECK_NE(foidTypeEndIdx, string::npos);
+  auto typeInt = folly::to<decltype(FilteredObjectIdType::OBJECT_TYPE_BLOB)>(
+      object.substr(0, foidTypeEndIdx));
+  auto foidType = static_cast<FilteredObjectIdType>(typeInt);
+
+  if (foidType == FilteredObjectIdType::OBJECT_TYPE_BLOB ||
+      foidType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
+    // Blobs and unfiltered tree ids have no filter or path information.
+    // The remainder of the string is the underlying object id.
+    auto underlyingObjectStartIdx = foidTypeEndIdx + 1;
+    return FilteredObjectId(
+        underlyingBackingStore->parseObjectId(
+            object.substr(underlyingObjectStartIdx)),
+        foidType);
+  }
+
+  // Guards against future additions to FilteredObjectIdType
+  XCHECK_EQ(foidType, FilteredObjectIdType::OBJECT_TYPE_TREE);
+
+  // Tree objects have filter and path information we must extract. We first
+  // extract the filter length from the string.
+  auto filterLenStartIdx = foidTypeEndIdx + 1;
+  auto filterLenEndIdx = object.find(":", filterLenStartIdx);
+  XCHECK_NE(filterLenEndIdx, string::npos);
+  auto filterLength =
+      folly::to<size_t>(object.substr(filterLenStartIdx, filterLenEndIdx));
+
+  // We can then extract the filter itself using the filter length info
+  auto filterStartIdx = filterLenEndIdx + 1;
+  auto filterEndIdx /* also pathLenStartIdx */ =
+      filterLenEndIdx + filterLength + 1;
+  auto filter = object.substr(filterStartIdx, filterEndIdx);
+
+  // We now have enough info to determine the path length and extract it.
+  auto pathLenEndIdx = object.find(":", filterEndIdx);
+  XCHECK_NE(pathLenEndIdx, string::npos);
+  auto pathLength =
+      folly::to<size_t>(object.substr(filterEndIdx, pathLenEndIdx));
+
+  // We now can extract the path itself
+  auto pathStartIdx = pathLenEndIdx + 1;
+  auto pathEndIdx = pathLenEndIdx + pathLength + 1;
+  auto path = RelativePath{object.substr(pathStartIdx, pathEndIdx)};
+
+  // Render the underlying object using the underlyingBackingStore
+  auto underlyingObject =
+      underlyingBackingStore->parseObjectId(object.substr(pathEndIdx));
+
+  return FilteredObjectId(path, filter, underlyingObject);
 }
 
 } // namespace facebook::eden
