@@ -5,11 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactNode} from 'react';
+import type {ExclusiveOr} from 'shared/typeUtils';
 
 import platform from './platform';
 import {VSCodeLink} from '@vscode/webview-ui-toolkit/react';
 
-export function Link({children, href}: {children: ReactNode; href: string}) {
-  return <VSCodeLink onClick={() => platform.openExternalLink(href)}>{children}</VSCodeLink>;
+export function Link(
+  props: React.ComponentProps<typeof VSCodeLink> &
+    ExclusiveOr<{href: string}, {onClick: () => unknown}>,
+) {
+  const {children, href, onClick, ...rest} = props;
+  return (
+    <VSCodeLink {...rest} onClick={href != null ? () => platform.openExternalLink(href) : onClick}>
+      {children}
+    </VSCodeLink>
+  );
 }

@@ -11,9 +11,11 @@ import {AvatarImg} from '../Avatar';
 import serverAPI from '../ClientToServerAPI';
 import {Column, FlexRow} from '../ComponentUtils';
 import {ErrorNotice} from '../ErrorNotice';
+import {Link} from '../Link';
 import {Subtle} from '../Subtle';
 import {t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
+import foundPlatform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
@@ -59,6 +61,9 @@ const styles = stylex.create({
     gap: spacing.half,
     marginBlock: spacing.half,
   },
+  inlineCommentFilename: {
+    marginBottom: spacing.half,
+  },
   commentContent: {
     whiteSpace: 'pre-wrap',
   },
@@ -76,7 +81,7 @@ const styles = stylex.create({
   },
 });
 
-function Comment({comment}: {comment: DiffComment}) {
+function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: boolean}) {
   return (
     <FlexRow {...stylex.props(styles.comment)}>
       <Column {...stylex.props(styles.left)}>
@@ -85,12 +90,20 @@ function Comment({comment}: {comment: DiffComment}) {
           url={comment.authorAvatarUri}
           {...stylex.props(styles.avatar)}
         />
-        {comment.filename && comment.line}
       </Column>
       <Column {...stylex.props(styles.commentInfo)}>
         <b {...stylex.props(styles.author)}>{comment.author}</b>
         <div>
-          {comment.filename && <div>{comment.filename}</div>}
+          {isTopLevel && comment.filename && (
+            <Link
+              {...stylex.props(styles.inlineCommentFilename)}
+              onClick={() =>
+                comment.filename && foundPlatform.openFile(comment.filename, {line: comment.line})
+              }>
+              {comment.filename}
+              {comment.line == null ? '' : ':' + comment.line}
+            </Link>
+          )}
           <div {...stylex.props(styles.commentContent)}>
             <div className="rendered-markup" dangerouslySetInnerHTML={{__html: comment.html}} />
           </div>
@@ -130,7 +143,7 @@ export function DiffCommentsDetails({diffId}: {diffId: DiffId}) {
   return (
     <div {...stylex.props(layout.flexCol, styles.list)}>
       {comments.data.map((comment, i) => (
-        <Comment key={i} comment={comment} />
+        <Comment key={i} comment={comment} isTopLevel />
       ))}
     </div>
   );
