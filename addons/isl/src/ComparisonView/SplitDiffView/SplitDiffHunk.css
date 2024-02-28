@@ -207,11 +207,6 @@ td.lineNumber.patch-remove-line-number,
   background-color: var(--diffEditor-removedLineHighlightBackground);
 }
 
-.patch-expanded,
-td.lineNumber.patch-expanded-number {
-  background-color: var(--background);
-}
-
 td.lineNumber.patch-expanded-number {
   color: var(--foreground);
 }

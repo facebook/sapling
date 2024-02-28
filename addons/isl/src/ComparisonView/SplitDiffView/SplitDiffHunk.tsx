@@ -7,8 +7,8 @@
 
 import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlighting';
 import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
-import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
+import type {Hunk, ParsedDiff} from 'shared/patch/parse';
 
 import {t} from '../../i18n';
 import {lineRange} from '../ComparisonView';
@@ -53,6 +53,7 @@ export const SplitDiffTable = React.memo(
     const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
 
     const isDeleted = patch.newFileName === '/dev/null';
+    const isAdded = patch.type === 'Added';
 
     const unified = ctx.display === 'unified';
 
@@ -92,12 +93,15 @@ export const SplitDiffTable = React.memo(
 
         addRowsForHunk(unified, hunk, path, rows, tokenization?.[index], ctx.openFileToLine);
 
-        if (index !== lastHunkIndex) {
-          const nextHunk = hunks[index + 1];
-          const key = `s${hunk.oldStart}`;
+        const isLast = index === lastHunkIndex;
+        const nextHunk = hunks[index + 1];
+        const key = `s${hunk.oldStart}`;
+        const canExpand = !isLast || !(isAdded || isDeleted); // added and deleted files are already expanded
+        if (canExpand) {
           if (expandedSeparators.has(key)) {
             const start = hunk.oldStart + hunk.oldLines;
-            const numLines = nextHunk.oldStart - start;
+            const MAX_LINES_FETCH = 10000; // We don't know the total number of lines, so for the last hunk we just request a lot of lines.
+            const numLines = isLast ? MAX_LINES_FETCH : nextHunk.oldStart - start;
             const range = {
               id: ctx.id,
               start,
@@ -114,7 +118,7 @@ export const SplitDiffTable = React.memo(
               />,
             );
           } else if (ctx.supportsExpandingContext) {
-            const numLines = nextHunk.oldStart - hunk.oldLines - hunk.oldStart;
+            const numLines = isLast ? null : nextHunk.oldStart - hunk.oldLines - hunk.oldStart;
             rows.push(
               <HunkSeparator key={key} numLines={numLines} onExpand={() => onExpand(key)} t={t} />,
             );
@@ -456,7 +460,7 @@ function HunkSeparator({
   onExpand,
   t,
 }: {
-  numLines: number;
+  numLines: number | null;
   onExpand: () => unknown;
   t: (s: string) => string;
 }): React.ReactElement | null {
@@ -466,7 +470,14 @@ function HunkSeparator({
   // TODO: Ensure numLines is never below a certain threshold: it takes up more
   // space to display the separator than it does to display the text (though
   // admittedly fetching the collapsed text is an async operation).
-  const label = numLines === 1 ? t('Expand 1 line') : t(`Expand ${numLines} lines`);
+  const label =
+    numLines == null
+      ? // to expand the remaining lines at the end of the file, we don't know the size ahead of time,
+        // just omit the amount to be expanded
+        t('Expand lines')
+      : numLines === 1
+      ? t('Expand 1 line')
+      : t(`Expand ${numLines} lines`);
   return (
     <SeparatorRow>
       <InlineRowButton label={label} onClick={onExpand} />
