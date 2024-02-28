@@ -151,6 +151,7 @@ function InlineDiff({patch}: {patch: ParsedDiff}) {
             setCollapsed: () => null,
             // we don't have the rest of the contents of the suggestion
             supportsExpandingContext: false,
+            display: 'unified',
           }}
         />
       </div>

@@ -366,6 +366,7 @@ function ComparisonViewFile({
     collapsed,
     setCollapsed,
     supportsExpandingContext: true,
+    display: 'split',
   };
   return (
     <div className="comparison-view-file" key={path}>

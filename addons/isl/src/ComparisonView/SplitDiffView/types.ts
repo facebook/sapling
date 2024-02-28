@@ -29,6 +29,11 @@ export type Context = {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
   supportsExpandingContext: boolean;
+  /**
+   * Whether to render as a side-by-side diff view, or a unified view where deleted and added lines are interleaved.
+   * TODO: make this controllable / configurable / responsive based on screen width
+   */
+  display: 'split' | 'unified';
 };
 
 export type OneIndexedLineNumber = Exclude<number, 0>;

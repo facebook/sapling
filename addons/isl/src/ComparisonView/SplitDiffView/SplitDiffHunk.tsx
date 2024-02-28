@@ -54,6 +54,8 @@ export const SplitDiffTable = React.memo(
 
     const isDeleted = patch.newFileName === '/dev/null';
 
+    const unified = ctx.display === 'unified';
+
     const {hunks} = patch;
     const lastHunkIndex = hunks.length - 1;
     const rows: React.ReactElement[] = [];
@@ -88,7 +90,7 @@ export const SplitDiffTable = React.memo(
           }
         }
 
-        addRowsForHunk(hunk, path, rows, tokenization?.[index], ctx.openFileToLine);
+        addRowsForHunk(unified, hunk, path, rows, tokenization?.[index], ctx.openFileToLine);
 
         if (index !== lastHunkIndex) {
           const nextHunk = hunks[index + 1];
@@ -131,6 +133,20 @@ export const SplitDiffTable = React.memo(
       );
     }
 
+    if (unified) {
+      return (
+        <table
+          className={'split-diff-view-hunk-table ' + (tableSelectionClassName ?? '')}
+          {...tableSelectionProps}>
+          <colgroup>
+            <col width={50} />
+            <col width={50} />
+            <col width={'100%'} />
+          </colgroup>
+          <tbody>{rows}</tbody>
+        </table>
+      );
+    }
     return (
       <table
         className={'split-diff-view-hunk-table ' + (tableSelectionClassName ?? '')}
@@ -151,6 +167,7 @@ export const SplitDiffTable = React.memo(
  * Adds new rows to the supplied `rows` array.
  */
 function addRowsForHunk(
+  unified: boolean,
   hunk: Hunk,
   path: string,
   rows: React.ReactElement[],
@@ -168,6 +185,7 @@ function addRowsForHunk(
   groups.forEach(group => {
     const {common, removed, added} = group;
     addUnmodifiedRows(
+      unified,
       common,
       path,
       'common',
@@ -182,6 +200,11 @@ function addRowsForHunk(
     afterLineNumber += common.length;
     beforeTokenizedIndex += common.length;
     afterTokenizedIndex += common.length;
+
+    // split content, or before lines when unified
+    const linesA = [];
+    // after lines when unified, or empty when using "split"
+    const linesB = [];
 
     const maxIndex = Math.max(removed.length, added.length);
     for (let index = 0; index < maxIndex; ++index) {
@@ -202,62 +225,117 @@ function addRowsForHunk(
         }
 
         const [before, after] = beforeAndAfter;
-        rows.push(
-          <SplitDiffRow
-            key={`${beforeLineNumber}/${afterLineNumber}`}
-            beforeLineNumber={beforeLineNumber}
-            before={before}
-            afterLineNumber={afterLineNumber}
-            after={after}
-            rowType="modify"
-            path={path}
-            openFileToLine={openFileToLine}
-          />,
-        );
+        const [beforeLine, beforeChange, afterLine, afterChange] = SplitDiffRow({
+          beforeLineNumber,
+          before,
+          afterLineNumber,
+          after,
+          rowType: 'modify',
+          path,
+          openFileToLine,
+        });
+
+        if (unified) {
+          linesA.push(
+            <tr key={`${beforeLineNumber}/${afterLineNumber}:b`}>
+              {beforeLine}
+              <td />
+              {beforeChange}
+            </tr>,
+          );
+          linesB.push(
+            <tr key={`${beforeLineNumber}/${afterLineNumber}:a`}>
+              <td />
+              {afterLine}
+              {afterChange}
+            </tr>,
+          );
+        } else {
+          linesA.push(
+            <tr key={`${beforeLineNumber}/${afterLineNumber}`}>
+              {beforeLine}
+              {beforeChange}
+              {afterLine}
+              {afterChange}
+            </tr>,
+          );
+        }
         ++beforeLineNumber;
         ++afterLineNumber;
         ++beforeTokenizedIndex;
         ++afterTokenizedIndex;
       } else if (removedLine != null) {
-        rows.push(
-          <SplitDiffRow
-            key={`${beforeLineNumber}/`}
-            beforeLineNumber={beforeLineNumber}
-            before={
-              tokenization?.[0] == null
-                ? removedLine
-                : applyTokenizationToLine(removedLine, tokenization[0][beforeTokenizedIndex])
-            }
-            afterLineNumber={null}
-            after={null}
-            rowType="remove"
-            path={path}
-            openFileToLine={openFileToLine}
-          />,
-        );
+        const [beforeLine, beforeChange, afterLine, afterChange] = SplitDiffRow({
+          beforeLineNumber,
+          before:
+            tokenization?.[0] == null
+              ? removedLine
+              : applyTokenizationToLine(removedLine, tokenization[0][beforeTokenizedIndex]),
+          afterLineNumber: null,
+          after: null,
+          rowType: 'remove',
+          path,
+          openFileToLine,
+        });
+
+        if (unified) {
+          linesA.push(
+            <tr key={`${beforeLineNumber}/`}>
+              {beforeLine}
+              <td />
+              {afterChange}
+            </tr>,
+          );
+        } else {
+          linesA.push(
+            <tr key={`${beforeLineNumber}/`}>
+              {beforeLine}
+              {beforeChange}
+              {afterLine}
+              {afterChange}
+            </tr>,
+          );
+        }
         ++beforeLineNumber;
         ++beforeTokenizedIndex;
       } else {
-        rows.push(
-          <SplitDiffRow
-            key={`/${afterLineNumber}`}
-            beforeLineNumber={null}
-            before={null}
-            afterLineNumber={afterLineNumber}
-            after={
-              tokenization?.[1] == null
-                ? addedLine
-                : applyTokenizationToLine(addedLine, tokenization[1][afterTokenizedIndex])
-            }
-            rowType="add"
-            path={path}
-            openFileToLine={openFileToLine}
-          />,
-        );
+        const [beforeLine, beforeChange, afterLine, afterChange] = SplitDiffRow({
+          beforeLineNumber: null,
+          before: null,
+          afterLineNumber,
+          after:
+            tokenization?.[1] == null
+              ? addedLine
+              : applyTokenizationToLine(addedLine, tokenization[1][afterTokenizedIndex]),
+          rowType: 'add',
+          path,
+          openFileToLine,
+        });
+
+        if (unified) {
+          linesB.push(
+            <tr key={`/${afterLineNumber}`}>
+              <td />
+              {afterLine}
+              {afterChange}
+            </tr>,
+          );
+        } else {
+          linesA.push(
+            <tr key={`/${afterLineNumber}`}>
+              {beforeLine}
+              {beforeChange}
+              {afterLine}
+              {afterChange}
+            </tr>,
+          );
+        }
         ++afterLineNumber;
         ++afterTokenizedIndex;
       }
     }
+
+    rows.push(...linesA, ...linesB);
   });
 }
 
@@ -276,6 +354,7 @@ function InlineRowButton({onClick, label}: {onClick: () => unknown; label: React
  * Adds new rows to the supplied `rows` array.
  */
 function addUnmodifiedRows(
+  unified: boolean,
   lines: string[],
   path: string,
   rowType: 'common' | 'expanded',
@@ -289,26 +368,39 @@ function addUnmodifiedRows(
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
   lines.forEach((lineContent, i) => {
-    rows.push(
-      <SplitDiffRow
-        key={`${beforeLineNumber}/${afterLineNumber}`}
-        beforeLineNumber={beforeLineNumber}
-        before={
-          tokenizationBefore?.[i] == null
-            ? lineContent
-            : applyTokenizationToLine(lineContent, tokenizationBefore[i])
-        }
-        afterLineNumber={afterLineNumber}
-        after={
-          tokenizationAfter?.[i] == null
-            ? lineContent
-            : applyTokenizationToLine(lineContent, tokenizationAfter[i])
-        }
-        rowType={rowType}
-        path={path}
-        openFileToLine={openFileToLine}
-      />,
-    );
+    const [beforeLine, beforeChange, afterLine, afterChange] = SplitDiffRow({
+      beforeLineNumber,
+      before:
+        tokenizationBefore?.[i] == null
+          ? lineContent
+          : applyTokenizationToLine(lineContent, tokenizationBefore[i]),
+      afterLineNumber,
+      after:
+        tokenizationAfter?.[i] == null
+          ? lineContent
+          : applyTokenizationToLine(lineContent, tokenizationAfter[i]),
+      rowType,
+      path,
+      openFileToLine,
+    });
+    if (unified) {
+      rows.push(
+        <tr key={`${beforeLineNumber}/${afterLineNumber}`}>
+          {beforeLine}
+          {afterLine}
+          {beforeChange}
+        </tr>,
+      );
+    } else {
+      rows.push(
+        <tr key={`${beforeLineNumber}/${afterLineNumber}`}>
+          {beforeLine}
+          {beforeChange}
+          {afterLine}
+          {afterChange}
+        </tr>,
+      );
+    }
     ++beforeLineNumber;
     ++afterLineNumber;
   });
@@ -406,6 +498,7 @@ function ExpandingSeparator({
       const rows: React.ReactElement[] = [];
       const lines = loadable.data;
       addUnmodifiedRows(
+        ctx.display === 'unified',
         lines,
         path,
         'expanded',

@@ -27,7 +27,7 @@ export default function SplitDiffRow({
   rowType,
   path,
   openFileToLine,
-}: Props): React.ReactElement {
+}: Props): [JSX.Element, JSX.Element, JSX.Element, JSX.Element] {
   let beforeClass;
   let afterClass;
   switch (rowType) {
@@ -64,27 +64,25 @@ export default function SplitDiffRow({
   // doesn't work, so this seems to be some quirk in the underlying data model.
   const canComment = rowType !== 'expanded';
 
-  return (
-    <tr>
-      <SplitDiffRowSide
-        className={beforeClass}
-        content={before}
-        lineNumber={beforeLineNumber}
-        path={path}
-        side={'LEFT'}
-        canComment={canComment}
-      />
-      <SplitDiffRowSide
-        className={afterClass}
-        content={after}
-        lineNumber={afterLineNumber}
-        path={path}
-        side={'RIGHT'}
-        canComment={canComment}
-        openFileToLine={openFileToLine} // opening to a line number only makes sense on the "right" comparison side
-      />
-    </tr>
-  );
+  return [
+    ...SplitDiffRowSide({
+      className: beforeClass,
+      content: before,
+      lineNumber: beforeLineNumber,
+      path,
+      side: 'LEFT',
+      canComment,
+    }),
+    ...SplitDiffRowSide({
+      className: afterClass,
+      content: after,
+      lineNumber: afterLineNumber,
+      path,
+      side: 'RIGHT',
+      canComment,
+      openFileToLine, // opening to a line number only makes sense on the "right" comparison side
+    }),
+  ];
 }
 
 type SideProps = {
@@ -97,24 +95,29 @@ type SideProps = {
   openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
 };
 
-function SplitDiffRowSide({className, content, lineNumber, path, side, openFileToLine}: SideProps) {
+function SplitDiffRowSide({
+  className,
+  content,
+  lineNumber,
+  path,
+  side,
+  openFileToLine,
+}: SideProps): [JSX.Element, JSX.Element] {
   const clickableLineNumber = openFileToLine != null && lineNumber != null;
   const extraClassName =
     (className != null ? ` ${className}-number` : '') + (clickableLineNumber ? ' clickable' : '');
-  return (
-    <>
-      <td
-        className={`lineNumber${extraClassName} lineNumber-${side}`}
-        data-line-number={lineNumber}
-        data-path={path}
-        data-side={side}
-        data-column={side === 'LEFT' ? '0' : '2'}
-        onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}>
-        {lineNumber}
-      </td>
-      <td data-column={side === 'LEFT' ? '1' : '3'} className={className}>
-        {content}
-      </td>
-    </>
-  );
+  return [
+    <td
+      className={`lineNumber${extraClassName} lineNumber-${side}`}
+      data-line-number={lineNumber}
+      data-path={path}
+      data-side={side}
+      data-column={side === 'LEFT' ? '0' : '2'}
+      onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}>
+      {lineNumber}
+    </td>,
+    <td data-column={side === 'LEFT' ? '1' : '3'} className={className}>
+      {content}
+    </td>,
+  ];
 }
