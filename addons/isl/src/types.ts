@@ -63,6 +63,25 @@ export type DiffId = string;
  */
 export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSummary'];
 
+export type DiffCommentReaction = {
+  name: string;
+  reaction: 'ANGER' | 'HAHA' | 'LIKE' | 'LOVE' | 'NONE' | 'WOW' | 'SORRY';
+};
+
+export type DiffComment = {
+  author: string;
+  authorAvatarUri?: string;
+  html: string;
+  created: Date;
+  /** If it's an inline comment, this is the file path with the comment */
+  filename?: string;
+  /** If it's an inline comment, this is the line it was added */
+  line?: number;
+  reactions: Array<DiffCommentReaction>;
+  suggestedChange?: Array<{diff: string}>;
+  replies: Array<DiffComment>;
+};
+
 /**
  * Summary of CI test results for a Diff.
  * 'pass' if ALL signals succeed and not still running.
@@ -558,6 +577,7 @@ export type ClientToServerMessage =
   | {type: 'fetchAvatars'; authors: Array<string>}
   | {type: 'fetchCommitCloudState'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
+  | {type: 'fetchDiffComments'; diffId: DiffId}
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
@@ -627,6 +647,7 @@ export type ServerToClientMessage =
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedAvatars'; avatars: Map<string, string>; authors: Array<string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'fetchedDiffComments'; diffId: DiffId; comments: Result<Array<DiffComment>>}
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}

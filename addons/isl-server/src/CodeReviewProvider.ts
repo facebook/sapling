@@ -16,6 +16,7 @@ import type {
   LandConfirmationInfo,
   CodeReviewProviderSpecificClientToServerMessages,
   ClientToServerMessage,
+  DiffComment,
 } from 'isl/src/types';
 
 type DiffSummaries = Map<DiffId, DiffSummary>;
@@ -58,6 +59,9 @@ export interface CodeReviewProvider {
 
   /** Convert usernames/emails to avatar URIs */
   fetchAvatars?(authors: Array<string>): Promise<Map<string, string>>;
+
+  /** Convert usernames/emails to avatar URIs */
+  fetchComments?(diffId: DiffId): Promise<Array<DiffComment>>;
 
   renderMarkup?: (markup: string) => Promise<string>;
 
