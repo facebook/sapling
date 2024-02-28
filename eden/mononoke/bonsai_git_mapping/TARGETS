@@ -17,6 +17,7 @@ rust_library(
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/facet:facet",

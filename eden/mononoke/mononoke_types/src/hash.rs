@@ -512,6 +512,12 @@ impl GitSha1 {
         })
     }
 
+    pub fn from_object_id(oid: &gix_hash::oid) -> Result<Self> {
+        use anyhow::Context;
+        Self::from_bytes(oid.as_bytes())
+            .with_context(|| format!("Error in converting Git ObjectId {:?} to GitSha1", oid))
+    }
+
     pub fn from_thrift(b: thrift::id::GitSha1) -> Result<Self> {
         Self::from_bytes(b.0)
     }

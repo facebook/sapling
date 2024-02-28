@@ -46,6 +46,13 @@ pub enum BonsaisOrGitShas {
 }
 
 impl BonsaisOrGitShas {
+    pub fn from_object_ids(oids: impl Iterator<Item = impl AsRef<gix_hash::oid>>) -> Result<Self> {
+        let shas = oids
+            .map(|oid| GitSha1::from_object_id(oid.as_ref()))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(BonsaisOrGitShas::GitSha1(shas))
+    }
+
     pub fn is_empty(&self) -> bool {
         match self {
             BonsaisOrGitShas::Bonsai(v) => v.is_empty(),
