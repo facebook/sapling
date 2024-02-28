@@ -544,14 +544,16 @@ impl Repo {
         treestate: Option<&TreeState>,
         change_id: &str,
     ) -> Result<HgId> {
-        let id_map = self.dag_commits()?.read().id_map_snapshot()?;
+        let dag = self.dag_commits()?;
+        let dag = dag.read();
         let metalog = self.metalog()?;
         let metalog = metalog.read();
         let edenapi = self.optional_eden_api()?;
         revset_utils::resolve_single(
             &self.config,
             change_id,
-            &id_map,
+            &dag.id_map_snapshot()?,
+            &dag.dag_snapshot()?,
             &metalog,
             treestate,
             edenapi.as_deref(),

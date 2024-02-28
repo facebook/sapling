@@ -102,3 +102,21 @@ Test remote/lazy hash prefix lookup:
 
   $ hg debugrevset 11
   112478962961147124edd43549aedd1a335e44bf
+
+
+Fall back to changelog if "tip" isn't available in metalog:
+  $ newclientrepo
+  $ hg debugrevset tip
+  0000000000000000000000000000000000000000
+  $ drawdag << 'EOS'
+  > A
+  > EOS
+  $ hg dbsh -c 'del ml["tip"]; ml.commit("no tip")'
+  $ hg dbsh -c 'print(ml["tip"] or "no tip")'
+  no tip
+  $ hg debugrevset tip
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+Don't propagate a bad ml "tip":
+  $ hg dbsh -c 'ml["tip"] = bin("112478962961147124edd43549aedd1a335e44bf"); ml.commit("bad tip")'
+  $ hg debugrevset tip
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0

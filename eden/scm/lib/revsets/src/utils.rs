@@ -9,15 +9,18 @@ use std::collections::BTreeMap;
 
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use dag::ops::IdConvert;
+use dag::DagAlgorithm;
 use dag::Vertex;
 use edenapi::EdenApi;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
 use refencode::decode_remotenames;
 use treestate::treestate::TreeState;
+use types::hgid::NULL_ID;
 use types::HgId;
 
 use crate::errors::RevsetLookupError;
@@ -25,6 +28,7 @@ use crate::errors::RevsetLookupError;
 struct LookupArgs<'a> {
     change_id: &'a str,
     id_map: &'a dyn IdConvert,
+    dag: &'a dyn DagAlgorithm,
     metalog: &'a MetaLog,
     treestate: Option<&'a TreeState>,
     config: &'a dyn Config,
@@ -35,6 +39,7 @@ pub fn resolve_single(
     config: &dyn Config,
     change_id: &str,
     id_map: &dyn IdConvert,
+    dag: &dyn DagAlgorithm,
     metalog: &MetaLog,
     treestate: Option<&TreeState>,
     edenapi: Option<&dyn EdenApi>,
@@ -43,6 +48,7 @@ pub fn resolve_single(
         config,
         change_id,
         id_map,
+        dag,
         metalog,
         treestate,
         edenapi,
@@ -70,19 +76,19 @@ fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>> {
     if args.change_id != "tip" {
         return Ok(None);
     }
-    args.metalog
-        .get(args.change_id)?
-        .map(|tip| {
-            if tip.is_empty() {
-                Ok(HgId::null_id().clone())
-            } else {
-                HgId::from_slice(&tip).map_err(|err| {
-                    let tip = String::from_utf8_lossy(&tip).to_string();
-                    RevsetLookupError::CommitHexParseError(tip, err.into()).into()
-                })
-            }
-        })
-        .transpose()
+
+    if let Some(tip) = args.metalog.get(args.change_id)? {
+        if async_runtime::block_on(async {
+            args.id_map.contains_vertex_name(&tip.clone().into()).await
+        })? {
+            return Ok(Some(HgId::from_slice(&tip).context("metalog tip")?));
+        }
+    }
+
+    Ok(Some(
+        async_runtime::block_on(async { args.dag.all().await?.first().await })?
+            .map_or_else(|| Ok(NULL_ID), |v| HgId::from_slice(v.as_ref()))?,
+    ))
 }
 
 fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>> {
