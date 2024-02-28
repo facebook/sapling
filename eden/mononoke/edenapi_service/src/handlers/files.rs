@@ -104,22 +104,13 @@ impl EdenApiHandler for Files2Handler {
         let repo = ectx.repo();
         let ctx = repo.ctx().clone();
 
-        let len = request.keys.len() + request.reqs.len();
-        let reqs = request
-            .keys
-            .into_iter()
-            .map(|key| FileSpec {
-                key,
-                attrs: FileAttributes {
-                    content: true,
-                    aux_data: false,
-                },
-            })
-            .chain(request.reqs);
+        let len = request.reqs.len();
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
-        let fetches =
-            reqs.map(move |FileSpec { key, attrs }| fetch_file_response(repo.clone(), key, attrs));
+        let fetches = request
+            .reqs
+            .into_iter()
+            .map(move |FileSpec { key, attrs }| fetch_file_response(repo.clone(), key, attrs));
 
         Ok(stream::iter(fetches)
             .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
