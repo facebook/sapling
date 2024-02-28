@@ -10,6 +10,7 @@ import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {ReactNode} from 'react';
 
+import {t} from '../../i18n';
 import {lineRange} from '../ComparisonView';
 import SplitDiffRow from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
@@ -51,8 +52,6 @@ export const SplitDiffTable = React.memo(
 
     const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
 
-    const t = ctx.translate ?? (s => s);
-
     const isDeleted = patch.newFileName === '/dev/null';
 
     const {hunks} = patch;
@@ -79,7 +78,6 @@ export const SplitDiffTable = React.memo(
                 path={path}
                 beforeLineStart={1}
                 afterLineStart={1}
-                t={t}
               />,
             );
           } else {
@@ -111,7 +109,6 @@ export const SplitDiffTable = React.memo(
                 path={path}
                 beforeLineStart={hunk.oldStart + hunk.oldLines}
                 afterLineStart={hunk.newStart + hunk.newLines}
-                t={t}
               />,
             );
           } else {
@@ -385,7 +382,6 @@ type ExpandingSeparatorProps = {
   range: LineRangeParams<Context['id']>;
   beforeLineStart: number;
   afterLineStart: number;
-  t: (s: string) => string;
 };
 
 /**
@@ -398,7 +394,6 @@ function ExpandingSeparator({
   range,
   beforeLineStart,
   afterLineStart,
-  t,
 }: ExpandingSeparatorProps): React.ReactElement {
   const loadable = useAtomValue(lineRange(range));
 

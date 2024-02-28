@@ -23,7 +23,6 @@ export type Context = {
    * information like a hash or revset + path.
    */
   id: {path: string; comparison: Comparison};
-  translate?: (s: string) => string;
   copy?: (s: string) => void;
   openFile?: () => unknown;
   openFileToLine?: (line: OneIndexedLineNumber) => unknown;

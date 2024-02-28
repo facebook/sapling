@@ -13,7 +13,7 @@ import type {ParsedDiff} from 'shared/patch/parse';
 
 import {generatedStatusDescription} from '../../GeneratedFile';
 import {Tooltip} from '../../Tooltip';
-import {T} from '../../i18n';
+import {T, t} from '../../i18n';
 import platform from '../../platform';
 import {GeneratedStatus} from '../../types';
 import {FileHeader, diffTypeToIconType} from './SplitDiffFileHeader';
@@ -39,8 +39,6 @@ export function SplitDiffView({
 
   // Type hack to get a templatized version of a React.memo-ized component
   const TypedSplitDiffTable = SplitDiffTable as unknown as React.FC<SplitDiffTableProps>;
-
-  const t = ctx.translate ?? (s => s);
 
   const isGenerated = generatedStatus != null && generatedStatus === GeneratedStatus.Generated;
   // whether the file content is collapsed due to being generated

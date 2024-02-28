@@ -357,7 +357,6 @@ function ComparisonViewFile({
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context: Context = {
     id: {path, comparison},
-    translate: t,
     copy: platform.clipboardCopy,
     openFile: () => platform.openFile(path),
     // only offer clickable line numbers for comparisons against head, otherwise line numbers will be inaccurate
