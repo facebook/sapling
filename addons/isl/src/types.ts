@@ -554,6 +554,7 @@ export type LocalStorageName =
   | 'isl.amend-autorestack'
   | 'isl.dismissed-alerts'
   | 'isl.debug-redux-tools'
+  | 'isl.comparison-display-mode'
   | 'isl-color-theme';
 
 export type ClientToServerMessage =

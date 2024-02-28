@@ -16,14 +16,21 @@ import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {RadioGroup} from '../components/Radio';
 import {T, t} from '../i18n';
-import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
+import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
-import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
+import {
+  VSCodeButton,
+  VSCodeDropdown,
+  VSCodeOption,
+  VSCodeRadio,
+  VSCodeRadioGroup,
+} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useEffect, useMemo, useState} from 'react';
@@ -86,8 +93,16 @@ export const lineRange = atomFamilyWeak(
     ),
 );
 
+type ComparisonDisplayMode = 'unified' | 'split';
+const comparisonDisplayMode = localStorageBackedAtom<ComparisonDisplayMode | 'responsive'>(
+  'isl.comparison-display-mode',
+  'responsive',
+);
+
 export default function ComparisonView({comparison}: {comparison: Comparison}) {
   const compared = useAtomValue(currentComparisonData(comparison));
+
+  const displayMode = useComparisonDisplayMode();
 
   const data = compared.state === 'hasData' ? compared.data : null;
 
@@ -137,6 +152,7 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
               setCollapsedFile(parsed.newFileName ?? '', collapsed)
             }
             generatedStatus={GeneratedStatus.Manual}
+            displayMode={displayMode}
           />
         ))}
         {fileGroups[GeneratedStatus.PartiallyGenerated]?.map((parsed, i) => (
@@ -149,6 +165,7 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
               setCollapsedFile(parsed.newFileName ?? '', collapsed)
             }
             generatedStatus={GeneratedStatus.PartiallyGenerated}
+            displayMode={displayMode}
           />
         ))}
         {fileGroups[GeneratedStatus.Generated]?.map((parsed, i) => (
@@ -161,6 +178,7 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
               setCollapsedFile(parsed.newFileName ?? '', collapsed)
             }
             generatedStatus={GeneratedStatus.Generated}
+            displayMode={displayMode}
           />
         ))}
       </>
@@ -268,6 +286,11 @@ function ComparisonViewHeader({
             <Icon icon="fold" slot="start" />
             <T>Collapse all files</T>
           </VSCodeButton>
+          <Tooltip trigger="click" component={() => <ComparisonSettingsDropdown />}>
+            <VSCodeButton appearance="icon">
+              <Icon icon="ellipsis" />
+            </VSCodeButton>
+          </Tooltip>
           {isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
         </span>
         <VSCodeButton
@@ -278,6 +301,24 @@ function ComparisonViewHeader({
         </VSCodeButton>
       </div>
     </>
+  );
+}
+
+function ComparisonSettingsDropdown() {
+  const [mode, setMode] = useAtom(comparisonDisplayMode);
+  return (
+    <div className="dropdown-field">
+      <RadioGroup
+        title={t('Comparison Display Mode')}
+        choices={[
+          {value: 'responsive', title: <T>Responsive</T>},
+          {value: 'split', title: <T>Split</T>},
+          {value: 'unified', title: <T>Unified</T>},
+        ]}
+        current={mode}
+        onChange={setMode}
+      />
+    </div>
   );
 }
 
@@ -341,18 +382,44 @@ function useCollapsedFilesState(data: {
   return [collapsedFiles, setCollapsed];
 }
 
+function splitOrUnifiedBasedOnWidth() {
+  return window.innerWidth > 600 ? 'split' : 'unified';
+}
+function useComparisonDisplayMode(): ComparisonDisplayMode {
+  const underlyingMode = useAtomValue(comparisonDisplayMode);
+  const [mode, setMode] = useState(
+    underlyingMode === 'responsive' ? splitOrUnifiedBasedOnWidth() : underlyingMode,
+  );
+  useEffect(() => {
+    if (underlyingMode !== 'responsive') {
+      setMode(underlyingMode);
+      return;
+    }
+    const update = () => {
+      setMode(splitOrUnifiedBasedOnWidth());
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [underlyingMode, setMode]);
+
+  return mode;
+}
+
 function ComparisonViewFile({
   diff,
   comparison,
   collapsed,
   setCollapsed,
   generatedStatus,
+  displayMode,
 }: {
   diff: ParsedDiff;
   comparison: Comparison;
   collapsed: boolean;
   setCollapsed: (isCollapsed: boolean) => void;
   generatedStatus: GeneratedStatus;
+  displayMode: ComparisonDisplayMode;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context: Context = {
@@ -366,7 +433,7 @@ function ComparisonViewFile({
     collapsed,
     setCollapsed,
     supportsExpandingContext: true,
-    display: 'split',
+    display: displayMode,
   };
   return (
     <div className="comparison-view-file" key={path}>
