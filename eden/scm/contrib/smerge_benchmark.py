@@ -159,7 +159,7 @@ def smerge_bench(ui, repo, *args, **opts):
                 )
 
         if i % 100 == 0:
-            ui.write(f"{i} {bench_stats}\n")
+            ui.note(f"{i} {bench_stats}\n")
 
     ui.write(f"\nSummary: {bench_stats}\n")
     ui.write(f"Execution time: {time.time() - start:.2f} seconds\n")
