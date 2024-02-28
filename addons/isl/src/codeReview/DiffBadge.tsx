@@ -23,6 +23,7 @@ import platform from '../platform';
 import {useRunOperation} from '../serverAPIState';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
+import {DiffCommentsDetails} from './DiffComments';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -122,7 +123,7 @@ function DiffInfoInner({
       {provider.DiffLandButtonContent && (
         <provider.DiffLandButtonContent diff={info} commit={commit} />
       )}
-      <DiffComments diff={info} />
+      <DiffComments diffId={diffId} diff={info} />
       <DiffNumber url={info.url}>{provider.formatDiffNumber(diffId)}</DiffNumber>
       {shouldHideActions ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
@@ -219,15 +220,19 @@ function DiffNumber({children, url}: {children: string; url?: string}) {
   );
 }
 
-function DiffComments({diff}: {diff: DiffSummary}) {
+function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
   if (!diff.commentCount) {
     return null;
   }
   return (
-    <div className="diff-comments-count">
-      {diff.commentCount}
-      <Icon icon={diff.anyUnresolvedComments ? 'comment-unresolved' : 'comment'} />
-    </div>
+    <Tooltip trigger="click" component={() => <DiffCommentsDetails diffId={diffId} />}>
+      <VSCodeButton appearance="icon">
+        <span className="diff-comments-count">
+          {diff.commentCount}
+          <Icon icon={diff.anyUnresolvedComments ? 'comment-unresolved' : 'comment'} />
+        </span>
+      </VSCodeButton>
+    </Tooltip>
   );
 }
 

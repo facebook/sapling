@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DetailedHTMLProps} from 'react';
+
 import serverAPI from './ClientToServerAPI';
+import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
 import {useAtomValue} from 'jotai';
 
@@ -22,6 +25,25 @@ const avatarUrl = atomFamilyWeak((author: string) => {
     return result.avatars.get(author);
   }, undefined);
 });
+
+export function AvatarImg({
+  url,
+  username,
+  ...rest
+}: {url?: string; username: string} & DetailedHTMLProps<
+  React.ImgHTMLAttributes<HTMLImageElement>,
+  HTMLImageElement
+>) {
+  return url == null ? null : (
+    <img
+      src={url}
+      width={14}
+      height={14}
+      alt={t("$user's avatar photo", {replace: {$user: username}})}
+      {...rest}
+    />
+  );
+}
 
 /** Render as a SVG pattern */
 export function AvatarPattern({

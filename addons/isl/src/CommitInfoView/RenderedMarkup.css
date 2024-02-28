@@ -24,7 +24,7 @@
   --quote-fg: #8c98b8;
 }
 
-.rendered-markup div {
+.commit-info-view .rendered-markup div {
   margin-block: calc(2 * var(--pad));
 }
 

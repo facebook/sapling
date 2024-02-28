@@ -96,6 +96,7 @@ export const radius = stylex.defineVars({
   small: '2.5px',
   round: '5px',
   extraround: '5px',
+  full: '50%',
 });
 
 export const font = stylex.defineVars({

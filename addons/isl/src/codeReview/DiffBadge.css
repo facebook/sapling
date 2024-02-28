@@ -40,6 +40,7 @@
   align-items: center;
   display: flex;
   gap: 2px;
+  width: 100%;
 }
 
 .diff-signal-summary {
