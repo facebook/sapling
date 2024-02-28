@@ -20,13 +20,14 @@
   margin-bottom: var(--pad);
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
 }
 .comparison-view-header-group {
   display: flex;
   gap: var(--pad);
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .comparison-view-header vscode-dropdown {
