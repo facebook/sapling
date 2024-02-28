@@ -6,13 +6,13 @@
  */
 
 import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
-import type {ReactNode} from 'react';
 
 import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
 import {VSCodeCheckbox} from '../VSCodeCheckbox';
+import {RadioGroup} from '../components/Radio';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
@@ -23,11 +23,11 @@ import {
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
-  VSCodeRadio,
   VSCodeTag,
   VSCodeTextArea,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
+import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 
 const basicBgs = ['bg', 'subtleHoverDarken', 'hoverDarken'] as const;
@@ -38,6 +38,7 @@ const paddings = ['none', 'quarter', 'half', 'pad', 'double', 'xlarge'] as const
 const fontSizes = ['smaller', 'small', 'normal', 'big', 'bigger'] as const;
 
 export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown}) {
+  const [radioChoice, setRadioChoice] = useState('radio');
   return (
     <div {...stylex.props(styles.container)}>
       <h2>
@@ -104,9 +105,14 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           <VSCodeCheckbox>Checkbox</VSCodeCheckbox>
           <VSCodeCheckbox checked>Checked</VSCodeCheckbox>
           <VSCodeCheckbox disabled>Disabled</VSCodeCheckbox>
-          <VSCodeRadio>Radio</VSCodeRadio>
-          <VSCodeRadio checked>Selected</VSCodeRadio>
-          <VSCodeRadio disabled>Disabled</VSCodeRadio>
+          <RadioGroup
+            choices={[
+              {title: 'Radio', value: 'radio'},
+              {title: 'Another', value: 'another'},
+            ]}
+            current={radioChoice}
+            onChange={setRadioChoice}
+          />
         </Row>
         <Row>
           <VSCodeBadge>Badge</VSCodeBadge>
