@@ -308,8 +308,6 @@ Test extension help:
        debugnetwork  test network connections to the server
        dialect       replace terms with more widely used equivalents
        dirsync
-       disablesymlinks
-                     disables symlink support when enabled
        drop          drop specified changeset from the stack
        edensparse    allow sparse EdenFS checkouts
        extdiff       command to allow external programs to compare revisions
