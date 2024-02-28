@@ -3,6 +3,84 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+"""
+This script is for evaluating the performance of automerge (smart merge) algorithms.
+
+The script supports both git repsotiories and interal sapling repositories. Below
+are the steps to use this script for the `git/git` repository, since it has many merge
+commits and it's faster to run the script on a local git repository.
+
+1. Clone the `git/git` repository
+
+```
+$ sl clone https://github.com/git/git.git
+```
+
+2. Run following command to evaluate the performance of automerge algorithms
+
+```
+$ sl smerge_bench --algos=adjacent-changes,subset-changes,word-merge -q > ~/data/git_automerge_wordmerge.txt
+$ tail -2 ~/data/git_automerge_wordmerge.txt
+Summary: BenchStats(merger_name="Merge3Text(algos=('adjacent-changes', 'subset-changes', 'word-merge'))", changed_files=26177, unresolved_files=1538, unmatched_files=251)
+Execution time: 277.87 seconds
+
+# baseline
+$ sl smerge_bench -q > ~/data/git_no_automerge.txt
+$ tail -2 ~/data/git_no_automerge.txt
+Summary: BenchStats(merger_name='Merge3Text(algos=())', changed_files=26177, unresolved_files=2438, unmatched_files=102)
+Execution time: 273.72 seconds
+```
+
+3. Analyze the results
+
+Below is an example of a "bad" automerge result:
+
+```
+Unmatched_file: commit.h 2a2ad0c0007b 6bf4f1b4c9d7 a0b54e7b7341 267123b4299e
+--- a/commit.h
++++ b/commit.h
+@@ -80,7 +80,7 @@
+       const char *subject,
+       const char *after_subject,
+       const char *encoding,
+-      int plain_non_ascii);
++      int need_8bit_cte);
+ void pp_remainder(enum cmit_fmt fmt,
+      const char **msg_p,
+      struct strbuf *sb,
+```
+
+then we can run below command to see the conflict
+
+```
+$ sl sresolve commit.h 2a2ad0c0007b 6bf4f1b4c9d7 a0b54e7b7341
+writing to file: /tmp/sresolve.txt
+$ open the file /tmp/sresolve.txt and search conflict markers
+...
+<<<<<<< dest: 2a2ad0c0007b - Merge branch 'maint'
+        int non_ascii_present);
++void pp_user_info(const char *what, enum cmit_fmt fmt, struct strbuf *sb,
++      const char *line, enum date_mode dmode,
++      const char *encoding);
++void pp_title_line(enum cmit_fmt fmt,
++      const char **msg_p,
++      struct strbuf *sb,
++      const char *subject,
++      const char *after_subject,
++      const char *encoding,
++      int plain_non_ascii);
++void pp_remainder(enum cmit_fmt fmt,
++     const char **msg_p,
++     struct strbuf *sb,
++     int indent);
++
+======= base: a0b54e7b7341 - Make man page building quiet when DOCBOOK_XSL_172 is defined
+-       int non_ascii_present);
++       int need_8bit_cte);
+>>>>>>> source: 6bf4f1b4c9d7 - format-patch: generate MIME header as needed even when there is format.header
+```
+"""
+
 import csv
 import re
 import time
