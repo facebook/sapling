@@ -13,6 +13,7 @@ pub mod constants;
 mod errors;
 mod export;
 mod metalog;
+mod resolve;
 
 pub use errors::Error;
 pub use errors::Result;
