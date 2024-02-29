@@ -402,7 +402,9 @@ export type OperationProgress =
   // progress information for a specific commit, shown inline. Null hash means to apply the messasge to all hashes. Null message means to clear the message.
   | {id: string; kind: 'inlineProgress'; hash?: string; message?: string}
   | {id: string; kind: 'exit'; exitCode: number; timestamp: number}
-  | {id: string; kind: 'error'; error: string};
+  | {id: string; kind: 'error'; error: string}
+  // used by requestMissedOperationProgress, client thinks this operation is running but server no longer knows about it.
+  | {id: string; kind: 'forgot'};
 
 export type ProgressStep = {
   message: string;
@@ -578,6 +580,7 @@ export type ClientToServerMessage =
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
+  | {type: 'requestMissedOperationProgress'; operationId: string}
   | {type: 'fetchAvatars'; authors: Array<string>}
   | {type: 'fetchCommitCloudState'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}

@@ -367,6 +367,12 @@ export default class ServerToClientAPI {
     }
   }
 
+  private handleMaybeForgotOperation(operationId: string, repo: Repository) {
+    if (repo.getRunningOperation()?.id !== operationId) {
+      this.postMessage({type: 'operationProgress', id: operationId, kind: 'forgot'});
+    }
+  }
+
   /**
    * Handle messages which require a repository to have been successfully set up to run
    */
@@ -549,6 +555,11 @@ export default class ServerToClientAPI {
             path: relativePath,
           }),
         );
+        break;
+      }
+      case 'requestMissedOperationProgress': {
+        const {operationId} = data;
+        this.handleMaybeForgotOperation(operationId, repo);
         break;
       }
       case 'refresh': {
