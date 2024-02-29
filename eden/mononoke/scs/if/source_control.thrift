@@ -1068,9 +1068,6 @@ struct RepoLandStackParams {
 /// for an exhaustive list of derived data types.  For convenience, keep the variant numbers matching.
 enum DerivedDataType {
   /// Derive fsnode data
-  /// DEPRECATED: Thrift enums should not start at 0.
-  FSNODE_OLD = 0,
-  /// Derive fsnode data
   FSNODE = 1,
   /// Derive skeleton manifest data
   SKELETON_MANIFEST = 9,
