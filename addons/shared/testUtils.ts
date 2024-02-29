@@ -7,6 +7,9 @@
 
 import type {Logger} from '../isl-server/src/logger';
 import type {Json} from './typeUtils';
+import type {MeasureMemoryOptions} from 'node:vm';
+
+import {measureMemory} from 'node:vm';
 
 export const mockLogger: Logger = {
   log: jest.fn(),
@@ -25,4 +28,23 @@ export function clone<T extends Json>(o: T): T {
  */
 export function nextTick(): Promise<void> {
   return new Promise(res => setTimeout(res, 0));
+}
+
+export async function gc() {
+  // 'node --expose-gc' defines 'global.gc'.
+  // To run with yarn: yarn node --expose-gc ./node_modules/.bin/jest ...
+  const globalGc = global.gc;
+  if (globalGc != null) {
+    await new Promise<void>(r =>
+      setTimeout(() => {
+        globalGc();
+        r();
+      }, 0),
+    );
+  } else {
+    // measureMemory with 'eager' has a side effect of running the GC.
+    // This exists since node 14.
+    // 'as' used since `MeasureMemoryOptions` is outdated (node 13?).
+    await measureMemory({execution: 'eager'} as MeasureMemoryOptions);
+  }
 }

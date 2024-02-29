@@ -20,11 +20,10 @@ import {
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
 import {Provider, atom, createStore, useAtomValue} from 'jotai';
-import {type MeasureMemoryOptions, measureMemory} from 'node:vm';
 import {StrictMode} from 'react';
 import {act} from 'react-dom/test-utils';
 import {SelfUpdate} from 'shared/immutableExt';
-import {nextTick} from 'shared/testUtils';
+import {gc, nextTick} from 'shared/testUtils';
 
 class Foo extends SelfUpdate<List<number>> {}
 
@@ -123,25 +122,6 @@ describe('atomFamilyWeak', () => {
     recalcFamilyCount = 0;
     recalcAtomCount = 0;
   });
-
-  async function gc() {
-    // 'node --expose-gc' defines 'global.gc'.
-    // To run with yarn: yarn node --expose-gc ./node_modules/.bin/jest ...
-    const globalGc = global.gc;
-    if (globalGc != null) {
-      await new Promise<void>(r =>
-        setTimeout(() => {
-          globalGc();
-          r();
-        }, 0),
-      );
-    } else {
-      // measureMemory with 'eager' has a side effect of running the GC.
-      // This exists since node 14.
-      // 'as' used since `MeasureMemoryOptions` is outdated (node 13?).
-      await measureMemory({execution: 'eager'} as MeasureMemoryOptions);
-    }
-  }
 
   it('with "strong" cache enabled (default), unmount/remount skips re-calculate', async () => {
     const rendered = render(<TestApp keys={[1, 2, 3]} />);
