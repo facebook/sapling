@@ -259,7 +259,7 @@ impl SqlHgMutationStore {
     /// successors of a commit, the replica may still lag behind.
     async fn read_connection_for_changesets(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         changeset_ids: &HashSet<HgChangesetId>,
     ) -> Result<&Connection> {
         // Check if the replica is up-to-date with respect to all changesets we
@@ -269,12 +269,25 @@ impl SqlHgMutationStore {
             // There are no interesting changesets, so just use the replica.
             return Ok(&self.connections.read_connection);
         }
-        let count = CountChangesets::query(
-            &self.connections.read_connection,
-            &self.repo_id,
-            changeset_ids.as_slice(),
-        )
-        .await?;
+        let count = match ctx.metadata().client_request_info() {
+            Some(cri) => {
+                CountChangesets::traced_query(
+                    &self.connections.read_connection,
+                    cri,
+                    &self.repo_id,
+                    changeset_ids.as_slice(),
+                )
+                .await
+            }
+            None => {
+                CountChangesets::query(
+                    &self.connections.read_connection,
+                    &self.repo_id,
+                    changeset_ids.as_slice(),
+                )
+                .await
+            }
+        }?;
         if let Some((count,)) = count.into_iter().next() {
             if count as usize == changeset_ids.len() {
                 // The replica knows all of the changesets, so use it.
@@ -289,7 +302,7 @@ impl SqlHgMutationStore {
     /// Collect entries from the database into an entry set.
     async fn collect_entries<I>(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         connection: &Connection,
         entry_set: &mut HgMutationEntrySet,
         rows: I,
@@ -349,12 +362,25 @@ impl SqlHgMutationStore {
                 })?;
         }
         if !to_fetch_split.is_empty() {
-            let rows = SelectSplitsBySuccessor::query(
-                connection,
-                &self.repo_id,
-                to_fetch_split.as_slice(),
-            )
-            .await?;
+            let rows = match ctx.metadata().client_request_info() {
+                Some(cri) => {
+                    SelectSplitsBySuccessor::traced_query(
+                        connection,
+                        cri,
+                        &self.repo_id,
+                        to_fetch_split.as_slice(),
+                    )
+                    .await
+                }
+                None => {
+                    SelectSplitsBySuccessor::query(
+                        connection,
+                        &self.repo_id,
+                        to_fetch_split.as_slice(),
+                    )
+                    .await
+                }
+            }?;
             for (successor, seq, split_successor) in rows {
                 if let Some(entry) = entry_set.entries.get_mut(&successor) {
                     entry.add_split(seq, split_successor).with_context(|| {
@@ -387,10 +413,21 @@ impl SqlHgMutationStore {
             .map(|chunk| chunk.collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
+        let cri = ctx.metadata().client_request_info();
         let chunk_rows = stream::iter(chunks.into_iter().map(move |chunk| async move {
-            SelectBySuccessor::query(connection, &self.repo_id, chunk.as_slice())
-                .await
-                .with_context(|| format!("Error fetching successors: {:?}", chunk))
+            match cri {
+                Some(cri) => {
+                    SelectBySuccessor::traced_query(
+                        connection,
+                        cri,
+                        &self.repo_id,
+                        chunk.as_slice(),
+                    )
+                    .await
+                }
+                None => SelectBySuccessor::query(connection, &self.repo_id, chunk.as_slice()).await,
+            }
+            .with_context(|| format!("Error fetching successors: {:?}", chunk))
         }))
         .buffered(10)
         .try_collect::<Vec<_>>()
@@ -419,14 +456,29 @@ impl SqlHgMutationStore {
             .map(|chunk| chunk.copied().collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
+        let cri = ctx.metadata().client_request_info();
         let rows = stream::iter(chunks.into_iter().map(|changesets| async move {
-            SelectBySuccessorChain::query(
-                connection,
-                &self.repo_id,
-                &self.mutation_chain_limit,
-                &changesets,
-            )
-            .await
+            match cri {
+                Some(cri) => {
+                    SelectBySuccessorChain::traced_query(
+                        connection,
+                        cri,
+                        &self.repo_id,
+                        &self.mutation_chain_limit,
+                        &changesets,
+                    )
+                    .await
+                }
+                None => {
+                    SelectBySuccessorChain::query(
+                        connection,
+                        &self.repo_id,
+                        &self.mutation_chain_limit,
+                        &changesets,
+                    )
+                    .await
+                }
+            }
             .with_context(|| format!("Error fetching mutation chains for: {:?}", changesets))
         }))
         .buffered(10)
