@@ -29,6 +29,7 @@ import {Dag, DagCommitInfo} from './dag/dag';
 import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
 import {atomFamilyWeak, configBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {atomResetOnCwdChange, repositoryData} from './repositoryData';
+import {Timer} from './timer';
 import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom} from 'jotai';
@@ -662,8 +663,21 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
     writeAtom(operationList, list => startNewOperation(operation, list));
   }
 
+  // Check periodically with the server that the process is still running.
+  // This is a fallback in case the server cannot send us "exit" messages.
+  // This timer will auto disable when currentOperation becomes null.
+  currentOperationHeartbeatTimer.enabled = true;
+
   return defered.promise;
 }
+
+const currentOperationHeartbeatTimer = new Timer(() => {
+  if (readAtom(operationList).currentOperation == null) {
+    // Stop the timer.
+    return false;
+  }
+  maybeRemoveForgottenOperation();
+}, 5000);
 
 /**
  * Returns callback to run an operation.
