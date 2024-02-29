@@ -291,6 +291,11 @@ impl MetaLog {
         self.root.map.keys().map(AsRef::as_ref).collect()
     }
 
+    /// Internal use.
+    pub(crate) fn keys_iter<'a>(&'a self) -> impl Iterator<Item = String> + 'a {
+        self.root.map.keys().map(ToOwned::to_owned)
+    }
+
     /// Attempt to write pending changes to disk.
     ///
     /// Return the Id20 that can be passed to `open` for the new (or old) root.
@@ -626,20 +631,21 @@ pub mod resolver {
     pub fn simple(this: &mut MetaLog, other: &MetaLog, ancestor: &MetaLog) -> Result<()> {
         let mut conflicts = BTreeSet::new();
         let mut resolved: Vec<(String, Option<Id20>)> = Vec::new();
-        for key in other.keys().iter().chain(this.keys().iter()) {
-            let ancestor_id = ancestor.root.map.get(&key.to_string()).map(|t| t.0);
-            let other_id = other.root.map.get(&key.to_string()).map(|t| t.0);
-            let this_id = this.root.map.get(&key.to_string()).map(|t| t.0);
+        let keys: BTreeSet<String> = other.keys_iter().chain(this.keys_iter()).collect();
+        for key in keys {
+            let ancestor_id = ancestor.root.map.get(&key).map(|t| t.0);
+            let other_id = other.root.map.get(&key).map(|t| t.0);
+            let this_id = this.root.map.get(&key).map(|t| t.0);
             match (
                 ancestor_id == this_id,
                 ancestor_id == other_id,
                 this_id == other_id,
             ) {
                 (false, false, false) => {
-                    conflicts.insert(key.to_string());
+                    conflicts.insert(key);
                 }
                 (true, false, _) => {
-                    resolved.push((key.to_string(), other_id));
+                    resolved.push((key, other_id));
                 }
                 _ => {}
             }
