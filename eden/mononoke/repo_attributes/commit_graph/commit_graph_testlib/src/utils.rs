@@ -606,3 +606,24 @@ pub async fn assert_minimize_frontier(
 
     Ok(())
 }
+
+pub async fn assert_ancestors_within_distance(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    cs_ids: Vec<&str>,
+    distance: u64,
+    expected_ancestors: Vec<&str>,
+) -> Result<()> {
+    let cs_ids: Vec<_> = cs_ids.into_iter().map(name_cs_id).collect();
+    let ancestors = graph
+        .ancestors_within_distance(ctx, cs_ids, distance)
+        .await?
+        .try_collect::<HashSet<_>>()
+        .await?;
+
+    let expected_ancestors: HashSet<_> = expected_ancestors.into_iter().map(name_cs_id).collect();
+
+    assert_eq!(ancestors, expected_ancestors);
+
+    Ok(())
+}

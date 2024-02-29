@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::Extend;
 use std::iter::IntoIterator;
@@ -126,5 +127,53 @@ impl Extend<(ChangesetId, Generation)> for ChangesetFrontier {
         for (cs_id, gen) in iter {
             self.entry(gen).or_default().insert(cs_id);
         }
+    }
+}
+
+/// A frontier of changesets ordered by generation number, keeping track of the
+/// number of edges it took to reach each changeset in order to enforce staying
+/// within a distance.
+#[derive(Clone, Debug)]
+pub struct ChangesetFrontierWithinDistance(BTreeMap<Generation, HashMap<ChangesetId, u64>>);
+
+impl ChangesetFrontierWithinDistance {
+    pub fn new() -> Self {
+        Self(Default::default())
+    }
+
+    pub fn highest_generation_contains(&self, cs_id: ChangesetId, generation: Generation) -> bool {
+        match self.last_key_value() {
+            None => false,
+            Some((highest_frontier_generation, cs_ids)) => {
+                *highest_frontier_generation == generation && cs_ids.contains_key(&cs_id)
+            }
+        }
+    }
+}
+
+impl Deref for ChangesetFrontierWithinDistance {
+    type Target = BTreeMap<Generation, HashMap<ChangesetId, u64>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ChangesetFrontierWithinDistance {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl FromIterator<(ChangesetId, Generation, u64)> for ChangesetFrontierWithinDistance {
+    fn from_iter<T: IntoIterator<Item = (ChangesetId, Generation, u64)>>(iter: T) -> Self {
+        let mut frontier = Self::new();
+
+        for (cs_id, gen, distance) in iter {
+            let entry = frontier.entry(gen).or_default().entry(cs_id).or_default();
+            *entry = std::cmp::max(*entry, distance);
+        }
+
+        frontier
     }
 }

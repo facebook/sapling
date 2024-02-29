@@ -18,8 +18,11 @@ use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetParents;
+use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
+use commit_graph_types::storage::PrefetchEdge;
+use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -34,6 +37,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
+use mononoke_types::FIRST_GENERATION;
 
 pub use crate::ancestors_stream::AncestorsStreamBuilder;
 
@@ -225,6 +229,88 @@ impl CommitGraph {
             .await?
             .try_collect()
             .await
+    }
+
+    /// Returns all ancestors of any changeset in `heads` that's reachable
+    /// by taking no more than `distance` edges from some changeset in `heads`.
+    pub async fn ancestors_within_distance(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        distance: u64,
+    ) -> Result<BoxStream<'static, Result<ChangesetId>>> {
+        let frontier = self.frontier_within_distance(ctx, heads, distance).await?;
+
+        struct AncestorsWithinDistanceState {
+            commit_graph: CommitGraph,
+            ctx: CoreContext,
+            frontier: ChangesetFrontierWithinDistance,
+        }
+
+        Ok(stream::try_unfold(
+            Box::new(AncestorsWithinDistanceState {
+                commit_graph: self.clone(),
+                ctx: ctx.clone(),
+                frontier,
+            }),
+            move |mut state| async move {
+                let AncestorsWithinDistanceState {
+                    commit_graph,
+                    ctx,
+                    frontier,
+                } = &mut *state;
+
+                if let Some((_generation, cs_ids_and_remaining_distance)) = frontier.pop_last() {
+                    let output_cs_ids = cs_ids_and_remaining_distance
+                        .keys()
+                        .copied()
+                        .collect::<Vec<_>>();
+
+                    let max_remaining_distance = cs_ids_and_remaining_distance.values().copied()
+                        .max()
+                        .unwrap_or_default();
+
+                    let cs_ids_to_lower = cs_ids_and_remaining_distance
+                        .iter()
+                        .filter(|(_, distance)| **distance >= 1)
+                        .map(|(cs_id, _)| *cs_id)
+                        .collect::<Vec<_>>();
+
+                    let all_edges = commit_graph
+                        .storage
+                        .fetch_many_edges(
+                            ctx,
+                            &cs_ids_to_lower,
+                            Prefetch::Hint(PrefetchTarget {
+                                edge: PrefetchEdge::FirstParent,
+                                generation: FIRST_GENERATION,
+                                steps: max_remaining_distance + 1,
+                            }),
+                        )
+                        .await?;
+
+                    for (cs_id, edges) in all_edges.into_iter() {
+                        let distance = *cs_ids_and_remaining_distance
+                            .get(&cs_id)
+                            .ok_or_else(|| anyhow!("missing distance for changeset {} (in CommitGraph::ancestors_within_distance)", cs_id))?;
+                        for parent in edges.parents.iter() {
+                            let parent_distance = frontier
+                                .entry(parent.generation)
+                                .or_default()
+                                .entry(parent.cs_id)
+                                .or_default();
+                            *parent_distance = std::cmp::max(*parent_distance, distance - 1);
+                        }
+                    }
+
+                    anyhow::Ok(Some((stream::iter(output_cs_ids).map(Ok), state)))
+                } else {
+                    Ok(None)
+                }
+            },
+        )
+        .try_flatten()
+        .boxed())
     }
 
     /// Returns a stream of all changesets that are both descendants of

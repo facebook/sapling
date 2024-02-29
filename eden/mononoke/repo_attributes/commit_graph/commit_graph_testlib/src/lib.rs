@@ -62,6 +62,7 @@ macro_rules! impl_commit_graph_tests {
             test_changeset_ids_to_locations,
             test_process_topologically,
             test_minimize_frontier,
+            test_ancestors_within_distance,
         );
     };
 }
@@ -1355,6 +1356,83 @@ pub async fn test_minimize_frontier(
         vec!["H", "M", "N"],
     )
     .await?;
+
+    Ok(())
+}
+
+pub async fn test_ancestors_within_distance(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A-B-C-D-E-L------N
+           \       \    /
+            F-G-H   M  /
+             \     /  /
+              I-J-K--/
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 0, vec!["N"]).await?;
+    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 1, vec!["N", "L", "K"]).await?;
+    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 2, vec!["N", "L", "K", "E", "J"])
+        .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        3,
+        vec!["N", "L", "K", "E", "J", "I", "D"],
+    )
+    .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        4,
+        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C"],
+    )
+    .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        5,
+        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C", "B"],
+    )
+    .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        6,
+        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C", "B", "A"],
+    )
+    .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        100,
+        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C", "B", "A"],
+    )
+    .await?;
+    assert_ancestors_within_distance(&ctx, &graph, vec!["N", "M", "H"], 0, vec!["N", "M", "H"])
+        .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N", "M", "H"],
+        1,
+        vec!["N", "M", "H", "L", "K", "G"],
+    )
+    .await?;
+    assert_ancestors_within_distance(&ctx, &graph, vec![], 100, vec![]).await?;
 
     Ok(())
 }
