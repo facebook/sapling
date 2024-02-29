@@ -19,6 +19,7 @@ import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {Internal} from './Internal';
+import {SuspenseBoundary} from './SuspenseBoundary';
 import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
 import {TopLevelAlerts} from './TopLevelAlert';
@@ -35,9 +36,9 @@ import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
-import {useAtomsDevtools} from './third-party/jotai-devtools/utils';
 import {light} from './tokens.stylex';
 import {ModalContainer} from './useModal';
+import {usePromise} from './usePromise';
 import {isDev, isTest} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -92,12 +93,21 @@ function MaybeWithJotaiRoot({children}: {children: JSX.Element}) {
   }
 }
 
+const jotaiDevtools = import('./third-party/jotai-devtools/utils');
+
 function MaybeAtomsDevtools({children}: {children: JSX.Element}) {
   const enabled = useAtomValue(enableReduxTools);
-  return enabled ? <AtomsDevtools>{children}</AtomsDevtools> : children;
+  return enabled ? (
+    <SuspenseBoundary>
+      <AtomsDevtools>{children}</AtomsDevtools>
+    </SuspenseBoundary>
+  ) : (
+    children
+  );
 }
 
 function AtomsDevtools({children}: {children: JSX.Element}) {
+  const {useAtomsDevtools} = usePromise(jotaiDevtools);
   useAtomsDevtools('jotai');
   return children;
 }
