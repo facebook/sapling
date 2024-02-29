@@ -25,7 +25,7 @@ import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {TopLevelToast} from './TopLevelToast';
 import {tracker} from './analytics';
-import {enableReduxTools} from './debug/DebugToolsMenu';
+import {enableReduxTools} from './atoms/debugToolAtoms';
 import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';

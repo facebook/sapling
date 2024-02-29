@@ -17,10 +17,11 @@ import {InlineErrorBadge} from '../ErrorNotice';
 import messageBus from '../MessageBus';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {enableReduxTools} from '../atoms/debugToolAtoms';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
-import {atomWithOnChange, localStorageBackedAtom, readAtom} from '../jotaiUtils';
+import {atomWithOnChange, readAtom} from '../jotaiUtils';
 import {NopOperation} from '../operations/NopOperation';
 import platform from '../platform';
 import {dagWithPreviews} from '../previews';
@@ -79,8 +80,6 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
     </DropdownFields>
   );
 }
-
-export const enableReduxTools = localStorageBackedAtom<boolean>('isl.debug-redux-tools', false);
 
 function InternalState() {
   const [reduxTools, setReduxTools] = useAtom(enableReduxTools);
