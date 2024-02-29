@@ -28,7 +28,7 @@ use serde_json::Value;
 pub use zstore::Id20;
 use zstore::Zstore;
 
-use crate::constants::*;
+use crate::constants::METALOG_TRACKED;
 use crate::Error;
 use crate::Result;
 
