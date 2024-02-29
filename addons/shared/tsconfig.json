@@ -17,5 +17,5 @@
     "jsx": "react-jsx"
   },
   "include": [".", "github"],
-  "exclude": ["**/node_modules", "third-party"]
+  "exclude": ["**/node_modules", "third-party", "**/*.js"]
 }

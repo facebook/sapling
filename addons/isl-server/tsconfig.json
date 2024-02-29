@@ -15,5 +15,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src", "rollup.config.mjs", "proxy"]
+  "include": ["src", "proxy"],
+  "exclude": ["src/**/*.js"]
 }
