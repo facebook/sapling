@@ -269,7 +269,7 @@ shorttraceback() {
 
 # Set config items like --config way, instead of using cat >> $HGRCPATH
 setconfig() {
-  python "$RUNTESTDIR/setconfig.py" "$@"
+  hg debugpython -- "$RUNTESTDIR/setconfig.py" "$@"
 }
 
 # Set config item, but always in the main hgrc
