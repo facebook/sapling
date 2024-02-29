@@ -392,6 +392,12 @@ export type OperationInfo = {
 }>;
 
 /**
+ * The process has exited but exit code is unknown. Usually exit code is one byte.
+ * '-1024' is unlikely to conflict with a valid exit code.
+ */
+export const EXIT_CODE_FORGET = -1024;
+
+/**
  * Bundle history of previous operations together with the current operation,
  * so we can easily manipulate operations together in one piece of state.
  */
@@ -425,7 +431,29 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
   }
 }
 
+/**
+ * Ask the server if the current operation is still running.
+ * The server might send back a "forgot" progress and we can mark
+ * the operation as exited. This is useful when the operation exited
+ * during disconnection.
+ */
+export function maybeRemoveForgottenOperation() {
+  const list = readAtom(operationList);
+  const operationId = list.currentOperation?.operation.id;
+  if (operationId != null) {
+    serverAPI.postMessage({
+      type: 'requestMissedOperationProgress',
+      operationId,
+    });
+  }
+}
+
 export const operationList = atomResetOnCwdChange<OperationList>(defaultOperationList());
+registerCleanup(
+  operationList,
+  serverAPI.onSetup(() => maybeRemoveForgottenOperation()),
+  import.meta.hot,
+);
 registerDisposable(
   operationList,
   serverAPI.onMessageOfType('operationProgress', progress => {
@@ -519,13 +547,17 @@ registerDisposable(
         });
         break;
       case 'exit':
+      case 'forgot':
         writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
           if (currentOperation == null) {
             return current;
           }
 
-          const exitCode = progress.exitCode;
+          const {exitCode, timestamp} =
+            progress.kind === 'exit'
+              ? progress
+              : {exitCode: EXIT_CODE_FORGET, timestamp: Date.now()};
           const complete = operationCompletionCallbacks.get(currentOperation.operation.id);
           complete?.(
             exitCode === 0 ? undefined : new Error(`Process exited with code ${exitCode}`),
@@ -537,7 +569,7 @@ registerDisposable(
             currentOperation: {
               ...currentOperation,
               exitCode,
-              endTime: new Date(progress.timestamp),
+              endTime: new Date(timestamp),
               inlineProgress: undefined, // inline progress never lasts after exiting
             },
           };

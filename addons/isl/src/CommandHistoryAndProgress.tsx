@@ -14,6 +14,7 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {
+  EXIT_CODE_FORGET,
   operationList,
   queuedOperations,
   repositoryInfo,
@@ -143,6 +144,14 @@ export function CommandHistoryAndProgress() {
     // Exited (tested above) by abort.
     label = <T replace={{$command: command}}>Aborted $command</T>;
     icon = <Icon icon="stop-circle" aria-label={t('Command aborted')} />;
+  } else if (progress.exitCode === EXIT_CODE_FORGET) {
+    label = <span>{command}</span>;
+    icon = (
+      <Icon
+        icon="question"
+        aria-label={t('Command ran during disconnection. Exit status is lost.')}
+      />
+    );
   } else {
     label = <span>{command}</span>;
     icon = <Icon icon="error" aria-label={t('Command exited unsuccessfully')} />;
