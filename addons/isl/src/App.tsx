@@ -26,7 +26,7 @@ import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {TopLevelToast} from './TopLevelToast';
 import {tracker} from './analytics';
-import {enableReduxTools} from './atoms/debugToolAtoms';
+import {enableReactTools, enableReduxTools} from './atoms/debugToolAtoms';
 import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
@@ -86,7 +86,7 @@ function MaybeWithJotaiRoot({children}: {children: JSX.Element}) {
       </Provider>
     );
   } else if (isDev) {
-    return <MaybeAtomsDevtools>{children}</MaybeAtomsDevtools>;
+    return <MaybeJotaiDebugTools>{children}</MaybeJotaiDebugTools>;
   } else {
     // Such scoped Provider or store complexity is not needed outside tests or dev.
     return children;
@@ -95,11 +95,13 @@ function MaybeWithJotaiRoot({children}: {children: JSX.Element}) {
 
 const jotaiDevtools = import('./third-party/jotai-devtools/utils');
 
-function MaybeAtomsDevtools({children}: {children: JSX.Element}) {
-  const enabled = useAtomValue(enableReduxTools);
-  return enabled ? (
+function MaybeJotaiDebugTools({children}: {children: JSX.Element}) {
+  const enabledRedux = useAtomValue(enableReduxTools);
+  const enabledReact = useAtomValue(enableReactTools);
+  return enabledRedux || enabledReact ? (
     <SuspenseBoundary>
-      <AtomsDevtools>{children}</AtomsDevtools>
+      {enabledRedux ? <AtomsDevtools>{children}</AtomsDevtools> : children}
+      {enabledReact && <DebugAtoms />}
     </SuspenseBoundary>
   ) : (
     children
@@ -110,6 +112,12 @@ function AtomsDevtools({children}: {children: JSX.Element}) {
   const {useAtomsDevtools} = usePromise(jotaiDevtools);
   useAtomsDevtools('jotai');
   return children;
+}
+
+function DebugAtoms() {
+  const {useAtomsDebugValue} = usePromise(jotaiDevtools);
+  useAtomsDebugValue();
+  return null;
 }
 
 function AccessJotaiRoot() {

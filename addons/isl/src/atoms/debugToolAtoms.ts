@@ -8,3 +8,5 @@
 import {localStorageBackedAtom} from '../jotaiUtils';
 
 export const enableReduxTools = localStorageBackedAtom<boolean>('isl.debug-redux-tools', false);
+
+export const enableReactTools = localStorageBackedAtom<boolean>('isl.debug-react-tools', false);

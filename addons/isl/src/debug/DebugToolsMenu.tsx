@@ -17,7 +17,7 @@ import {InlineErrorBadge} from '../ErrorNotice';
 import messageBus from '../MessageBus';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
-import {enableReduxTools} from '../atoms/debugToolAtoms';
+import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
@@ -83,6 +83,8 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
 
 function InternalState() {
   const [reduxTools, setReduxTools] = useAtom(enableReduxTools);
+  const [reactTools, setReactTools] = useAtom(enableReactTools);
+
   const showToast = useShowToast();
   const generate = () => {
     // No need for useAtomValue - no need to re-render or recalculate this function.
@@ -136,9 +138,15 @@ function InternalState() {
         </Tooltip>
       </FlexRow>
       {isDev && (
-        <VSCodeCheckbox checked={reduxTools} onChange={() => setReduxTools(v => !v)}>
-          Integrate with Redux DevTools
-        </VSCodeCheckbox>
+        <FlexRow>
+          <T>Integrate with: </T>
+          <VSCodeCheckbox checked={reduxTools} onChange={() => setReduxTools(v => !v)}>
+            <T>Redux DevTools</T>
+          </VSCodeCheckbox>
+          <VSCodeCheckbox checked={reactTools} onChange={() => setReactTools(v => !v)}>
+            {t('React <DebugAtoms/>')}
+          </VSCodeCheckbox>
+        </FlexRow>
       )}
     </div>
   );

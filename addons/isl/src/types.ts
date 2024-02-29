@@ -553,6 +553,7 @@ export type LocalStorageName =
   | 'isl.has-shown-getting-started'
   | 'isl.amend-autorestack'
   | 'isl.dismissed-alerts'
+  | 'isl.debug-react-tools'
   | 'isl.debug-redux-tools'
   | 'isl.comparison-display-mode'
   | 'isl-color-theme';
