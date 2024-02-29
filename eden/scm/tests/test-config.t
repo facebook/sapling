@@ -192,6 +192,20 @@ Read multiple values with -Tjson
   }
   ]
 
+Config order is preserved:
+
+  $ cat <<EOF >> $HGRCPATH
+  > [ordertest]
+  > a = 1
+  > c = 3
+  > b = 2
+  > EOF
+
+  $ hg config ordertest
+  ordertest.a=1
+  ordertest.c=3
+  ordertest.b=2
+
 Test exit code when no config matches
 
   $ hg config Section.idontexist

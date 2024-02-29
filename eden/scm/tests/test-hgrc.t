@@ -64,18 +64,18 @@ issue1829: wrong indentation
 make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet ui
+  ui.timeout=600
   ui.color=auto
-  ui.debug=false
-  ui.ignore.test=$RUNTESTDIR/gitignore
-  ui.interactive=False
-  ui.mergemarkers=detailed
   ui.paginate=true
-  ui.promptecho=True
+  ui.verbose=false
+  ui.debug=false
   ui.quiet=true
   ui.slash=True
+  ui.interactive=False
+  ui.mergemarkers=detailed
+  ui.promptecho=True
+  ui.ignore.test=$RUNTESTDIR/gitignore
   ui.ssh=* (glob)
-  ui.timeout=600
-  ui.verbose=false
 
   $ touch foobar/untracked
   $ cat >> foobar/.hg/hgrc <<EOF

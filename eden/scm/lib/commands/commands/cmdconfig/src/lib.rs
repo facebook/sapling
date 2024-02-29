@@ -255,9 +255,7 @@ fn show_configs(ctx: ReqCtx<ConfigOpts>, formatter: &mut dyn ListFormatter) -> R
     if args.is_empty() {
         // Print all (non-builtin) configs.
         for section in config.sections().iter() {
-            let mut keys = config.keys(&section);
-            keys.sort();
-            for key in keys {
+            for key in config.keys(section) {
                 if let Some(item) = get_config_item(&config, section, &key, false, debug) {
                     if !verbose && item.builtin {
                         continue;
@@ -281,9 +279,7 @@ fn show_configs(ctx: ReqCtx<ConfigOpts>, formatter: &mut dyn ListFormatter) -> R
                 None => {
                     // arg is a section.
                     let section = arg;
-                    let mut keys = config.keys(section);
-                    keys.sort();
-                    for key in keys {
+                    for key in config.keys(section) {
                         if let Some(item) = get_config_item(&config, section, &key, false, debug) {
                             formatter.format_item(&item)?;
                             present_config_count += 1;
