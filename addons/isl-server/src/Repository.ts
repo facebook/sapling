@@ -195,6 +195,7 @@ export class Repository {
       if (pollKind !== 'force' && shouldWait()) {
         // Do nothing. This is fine because after the operation
         // there will be a refresh.
+        this.logger.info('polling prevented from shouldWait');
         return;
       }
       if (kind === 'uncommitted changes') {
@@ -465,6 +466,7 @@ export class Repository {
    * Run long-lived command which mutates the repository state.
    * Progress is streamed back as it comes in.
    * Operations are run immediately. For queueing, see OperationQueue.
+   * This promise resolves when the operation exits.
    */
   async runOrQueueOperation(
     operation: RunnableOperation,
@@ -472,11 +474,18 @@ export class Repository {
     tracker: ServerSideTracker,
     cwd: string,
   ): Promise<void> {
-    await this.operationQueue.runOrQueueOperation(operation, onProgress, tracker, cwd);
+    const result = await this.operationQueue.runOrQueueOperation(
+      operation,
+      onProgress,
+      tracker,
+      cwd,
+    );
 
-    // After any operation finishes, make sure we poll right away,
-    // so the UI is guarnateed to get the latest data.
-    this.watchForChanges.poll('force');
+    if (result !== 'skipped') {
+      // After any operation finishes, make sure we poll right away,
+      // so the UI is guarnateed to get the latest data.
+      this.watchForChanges.poll('force');
+    }
   }
 
   /**

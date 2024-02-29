@@ -43,7 +43,8 @@ describe('OperationQueue', () => {
     expect(runCallback).toHaveBeenCalledTimes(1);
 
     p.resolve(undefined);
-    await runPromise;
+    const result = await runPromise;
+    expect(result).toEqual('ran');
 
     expect(runCallback).toHaveBeenCalledTimes(1);
 
@@ -76,7 +77,8 @@ describe('OperationQueue', () => {
       'cwd',
     );
 
-    await runPromise;
+    const result = await runPromise;
+    expect(result).toEqual('ran');
 
     expect(onProgress).toHaveBeenCalledWith(
       expect.objectContaining({id: '1', kind: 'spawn', queue: []}),
@@ -113,7 +115,9 @@ describe('OperationQueue', () => {
     queue.abortRunningOperation('wrong-id');
     expect(onProgress).not.toHaveBeenCalled();
     queue.abortRunningOperation(id);
-    await op;
+    const result = await op;
+    expect(result).toEqual('ran');
+
     expect(onProgress).toHaveBeenCalledWith(
       expect.objectContaining({id, kind: 'exit', exitCode: 130}),
     );
@@ -162,13 +166,15 @@ describe('OperationQueue', () => {
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({kind: 'queue', queue: ['2']}));
 
     p1.resolve(undefined);
-    await runPromise1;
+    const result1 = await runPromise1;
+    expect(result1).toEqual('ran');
 
     // now it's dequeued
     expect(runP2).toHaveBeenCalled();
 
     p2.resolve(undefined);
-    await runPromise2;
+    const result2 = await runPromise2;
+    expect(result2).toEqual('ran');
 
     expect(runCallback).toHaveBeenCalledTimes(2);
   });
@@ -214,14 +220,16 @@ describe('OperationQueue', () => {
 
     p1.reject(new Error('fake error'));
     // run promise still resolves, but error message was sent
-    await runPromise1;
+    const result1 = await runPromise1;
+    expect(result1).toEqual('ran');
     expect(onProgress).toHaveBeenCalledWith(
       expect.objectContaining({id: '1', kind: 'error', error: 'Error: fake error'}),
     );
 
     // p2 was cancelled by p1 failing
     expect(runP2).not.toHaveBeenCalled();
-    await runPromise2;
+    const result2 = await runPromise2;
+    expect(result2).toEqual('skipped');
     expect(runCallback).toHaveBeenCalledTimes(1);
   });
 
