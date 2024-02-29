@@ -97,6 +97,10 @@ pub trait ListFormatter {
     fn format_item(&mut self, item: &dyn Formattable) -> FormatResult<()>;
     fn begin_list(&mut self) -> FormatResult<()>;
     fn end_list(&mut self) -> FormatResult<()>;
+    /// Whether this is the "plain" formatter.
+    fn is_plain(&self) -> bool {
+        false
+    }
 }
 
 pub struct PlainFormatter {
@@ -135,6 +139,10 @@ impl ListFormatter for PlainFormatter {
 
     fn end_list(&mut self) -> FormatResult<()> {
         Ok(())
+    }
+
+    fn is_plain(&self) -> bool {
+        true
     }
 }
 

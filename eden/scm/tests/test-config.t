@@ -143,13 +143,28 @@ Test "%unset"
   $ hg showconfig unsettest.both -Tjson
   [
   ]
-  [1]
   $ hg showconfig unsettest.both -Tjson --debug
   [
   {
     "name": "unsettest.both",
     "source": "*", (glob)
     "value": null
+  }
+  ]
+
+Read multiple values with -Tjson
+
+  $ hg config --config=a.1=1 --config=a.2=2 --config=a.3=3 a.1 a.3 -Tjson
+  [
+  {
+    "name": "a.1",
+    "source": "--config",
+    "value": "1"
+  },
+  {
+    "name": "a.3",
+    "source": "--config",
+    "value": "3"
   }
   ]
 

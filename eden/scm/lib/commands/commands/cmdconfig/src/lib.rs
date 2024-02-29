@@ -257,22 +257,33 @@ fn show_configs(ctx: ReqCtx<ConfigOpts>, formatter: &mut dyn ListFormatter) -> R
         })
         .collect();
 
-    abort_if!(requested_items.len() > 1, "only one config item permitted");
+    abort_if!(
+        requested_items.len() > 1 && formatter.is_plain(),
+        "only one config item permitted"
+    );
     abort_if!(
         !requested_items.is_empty() && !requested_sections.is_empty(),
         "combining sections and items not permitted"
     );
 
-    if requested_items.len() == 1 {
-        let item = &requested_items[0];
-        let parts: Vec<_> = item.splitn(2, '.').collect();
+    if !requested_items.is_empty() {
+        let mut present_config_count = 0;
+        for item in requested_items {
+            let parts: Vec<_> = item.splitn(2, '.').collect();
 
-        if let Some(item) = get_config_item(&config, parts[0], parts[1], true, debug) {
-            formatter.format_item(&item)?;
-            return Ok(0);
+            if let Some(item) = get_config_item(&config, parts[0], parts[1], true, debug) {
+                formatter.format_item(&item)?;
+                present_config_count += 1;
+            }
         }
+
         // Config is expected to return an empty string if anything goes wrong
-        return Ok(1);
+        let exit_code = if formatter.is_plain() && present_config_count == 0 {
+            1
+        } else {
+            0
+        };
+        return Ok(exit_code);
     }
 
     let config_sections: BTreeSet<Text> = config.sections().as_ref().iter().cloned().collect();
