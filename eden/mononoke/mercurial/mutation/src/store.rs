@@ -259,6 +259,7 @@ impl SqlHgMutationStore {
     /// successors of a commit, the replica may still lag behind.
     async fn read_connection_for_changesets(
         &self,
+        _ctx: &CoreContext,
         changeset_ids: &HashSet<HgChangesetId>,
     ) -> Result<&Connection> {
         // Check if the replica is up-to-date with respect to all changesets we
@@ -288,6 +289,7 @@ impl SqlHgMutationStore {
     /// Collect entries from the database into an entry set.
     async fn collect_entries<I>(
         &self,
+        _ctx: &CoreContext,
         connection: &Connection,
         entry_set: &mut HgMutationEntrySet,
         rows: I,
@@ -371,6 +373,7 @@ impl SqlHgMutationStore {
     /// successor and add it to the entry set.
     async fn fetch_by_successor(
         &self,
+        ctx: &CoreContext,
         connection: &Connection,
         entry_set: &mut HgMutationEntrySet,
         changesets: &HashSet<HgChangesetId>,
@@ -393,7 +396,7 @@ impl SqlHgMutationStore {
         .try_collect::<Vec<_>>()
         .await?;
 
-        self.collect_entries(connection, entry_set, chunk_rows.into_iter().flatten())
+        self.collect_entries(ctx, connection, entry_set, chunk_rows.into_iter().flatten())
             .await?;
         Ok(())
     }
@@ -401,6 +404,7 @@ impl SqlHgMutationStore {
     /// Fetch all predecessor entries for the entries in the entry set.
     async fn fetch_all_predecessors(
         &self,
+        ctx: &CoreContext,
         connection: &Connection,
         entry_set: &mut HgMutationEntrySet,
     ) -> Result<()> {
@@ -429,7 +433,7 @@ impl SqlHgMutationStore {
         .try_collect::<Vec<_>>()
         .await?;
 
-        self.collect_entries(connection, entry_set, rows.into_iter().flatten())
+        self.collect_entries(ctx, connection, entry_set, rows.into_iter().flatten())
             .await?;
 
         Ok(())
@@ -479,6 +483,7 @@ impl HgMutationStore for SqlHgMutationStore {
             }
         }
         self.fetch_by_successor(
+            ctx,
             &self.connections.read_master_connection,
             &mut entry_set,
             &changeset_ids,
@@ -528,6 +533,7 @@ impl HgMutationStore for SqlHgMutationStore {
             );
 
             self.fetch_by_successor(
+                ctx,
                 &self.connections.read_master_connection,
                 &mut entry_set,
                 &predecessor_ids,
@@ -562,10 +568,12 @@ impl HgMutationStore for SqlHgMutationStore {
         }
 
         let mut entry_set = HgMutationEntrySet::new();
-        let connection = self.read_connection_for_changesets(&changeset_ids).await?;
-        self.fetch_by_successor(connection, &mut entry_set, &changeset_ids)
+        let connection = self
+            .read_connection_for_changesets(ctx, &changeset_ids)
             .await?;
-        self.fetch_all_predecessors(connection, &mut entry_set)
+        self.fetch_by_successor(ctx, connection, &mut entry_set, &changeset_ids)
+            .await?;
+        self.fetch_all_predecessors(ctx, connection, &mut entry_set)
             .await?;
         let changeset_count = changeset_ids.len();
         let entries = entry_set.into_all_predecessors_by_changeset(changeset_ids);
