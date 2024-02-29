@@ -613,9 +613,12 @@ pub(crate) struct SerId20(#[serde(with = "types::serde_with::hgid::tuple")] pub(
 pub mod resolver {
     use std::collections::BTreeSet;
 
+    use minibytes::Bytes;
+
     use super::Id20;
     use super::MetaLog;
     use super::SerId20;
+    use crate::resolve::try_resolve_metalog_conflict;
     use crate::Result;
 
     /// Simple merge strategy: Only reject conflicted changes.
@@ -642,7 +645,18 @@ pub mod resolver {
                 this_id == other_id,
             ) {
                 (false, false, false) => {
-                    conflicts.insert(key);
+                    let this_data = this.get(&key)?.unwrap_or_else(Bytes::new);
+                    let other_data = other.get(&key)?.unwrap_or_else(Bytes::new);
+                    let ancestor_data = ancestor.get(&key)?.unwrap_or_else(Bytes::new);
+                    match try_resolve_metalog_conflict(&key, this_data, &other_data, &ancestor_data)
+                    {
+                        None => {
+                            conflicts.insert(key);
+                        }
+                        Some(data) => {
+                            this.set(&key, &data)?;
+                        }
+                    }
                 }
                 (true, false, _) => {
                     resolved.push((key, other_id));
@@ -854,6 +868,36 @@ mod tests {
                 assert_eq!(this.get(name).unwrap().unwrap(), &[expected as u8]);
             }
         }
+    }
+
+    #[test]
+    fn test_default_resolver_application_conflict() {
+        let dir = TempDir::new().unwrap();
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+
+        let key = "visibleheads";
+
+        // Create ancestor
+        let ancestor_id = metalog.commit(commit_opt("ancestor", 0)).unwrap();
+
+        // Prepare "this" - uncommitted
+        let mut this = metalog.checkout(ancestor_id).unwrap();
+        this.set(key, b"v1\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
+            .unwrap();
+
+        // Prepare "other" - committed
+        let mut other = metalog.checkout(ancestor_id).unwrap();
+        other
+            .set(key, b"v1\nbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n")
+            .unwrap();
+        other.commit(commit_opt("other", 1)).unwrap();
+
+        // Commit "this" to trigger conflict resolution.
+        this.commit(commit_opt("this", 2)).unwrap();
+
+        // Check resolved content.
+        let resolved = this.get(key).unwrap().unwrap();
+        assert_eq!(resolved, b"v1\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n");
     }
 
     #[test]
