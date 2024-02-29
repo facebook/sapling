@@ -36,7 +36,6 @@ export default defineConfig({
     react({
       babel: {
         plugins: [
-          ['@babel/plugin-proposal-decorators', {legacy: true}],
           [
             'jotai/babel/plugin-debug-label',
             {

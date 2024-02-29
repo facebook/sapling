@@ -29,7 +29,6 @@
     "vscode-textmate": "^6.0.0"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "^7.23.9",
     "@types/jest": "27.5.2",
     "execa": "5.1.1",
     "resize-observer-polyfill": "^1.5.1",
