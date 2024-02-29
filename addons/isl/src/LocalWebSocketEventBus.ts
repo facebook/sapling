@@ -20,6 +20,14 @@ export class LocalWebSocketEventBus {
   private exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
   private queuedMessages: Array<string | ArrayBuffer> = [];
 
+  // A sub-state of "status", used by `startConnection` to avoid creating multiple
+  // websockets while connecting.
+  //
+  // status.type: | 'initializing' | 'open' | 'reconnecting' | 'open'
+  //     opening: | true           | false  | false | true   | false
+  //                                         ^^^^^^^ reconnect setTimeout
+  private opening = false;
+
   private handlers: Array<(event: MessageEvent<string>) => void | Promise<void>> = [];
   private statusChangeHandlers: Array<(newStatus: MessageBusStatus) => unknown> = [];
 
@@ -43,6 +51,9 @@ export class LocalWebSocketEventBus {
   }
 
   private startConnection(): WebSocket {
+    if (this.disposed || this.opening || this.status.type === 'open') {
+      return this.websocket;
+    }
     const wsUrl = new URL(`ws://${this.host}/ws`);
     const token = initialParams.get('token');
     if (token) {
@@ -63,8 +74,10 @@ export class LocalWebSocketEventBus {
       wsUrl.searchParams.append('platform', platformName);
     }
     this.websocket = new this.WebSocketType(wsUrl.href);
+    this.opening = true;
     this.websocket.addEventListener('open', event => {
       logger.info('websocket open', event);
+      this.opening = false;
       this.exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
 
       this.websocket.addEventListener('message', e => {
@@ -86,6 +99,7 @@ export class LocalWebSocketEventBus {
     });
 
     this.websocket.addEventListener('close', event => {
+      this.opening = false;
       if (event.code === CLOSED_AND_SHOULD_NOT_RECONNECT_CODE) {
         // Don't schedule reconnect if the server told us this is a permanent failure,
         // e.g. invalid token
