@@ -21,6 +21,7 @@ import {
   haveCommitsLoadedYet,
   haveRemotePath,
   isFetchingCommits,
+  maybeRemoveForgottenOperation,
   useClearAllOptimisticState,
 } from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -73,6 +74,7 @@ function RefreshButton() {
         onClick={() => {
           tracker.track('ClickedRefresh');
           clearOptimisticState();
+          maybeRemoveForgottenOperation();
           serverAPI.postMessage({type: 'refresh'});
           clearTrackedCache();
         }}
