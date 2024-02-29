@@ -493,6 +493,7 @@ export default class ServerToClientAPI {
       case 'abortRunningOperation': {
         const {operationId} = data;
         repo.abortRunningOpeation(operationId);
+        this.handleMaybeForgotOperation(operationId, repo);
         break;
       }
       case 'getConfig': {
