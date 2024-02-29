@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "eden thrift //eden/fs/service:thrift-rust
-streamingeden crate",
+streamingeden crate //eden/fs/service:thrift-streaming-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

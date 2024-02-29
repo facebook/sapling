@@ -17,7 +17,7 @@ fn main() {
         out_dir.join("cratemap"),
         "blame mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 bonsai mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-bonsai_svnrev_mapping crate
+bonsai_svnrev_mapping crate //eden/mononoke/bonsai_svnrev_mapping/if:bonsai_svnrev_mapping_thrift-rust
 bssm mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 changeset_info mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 content mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust

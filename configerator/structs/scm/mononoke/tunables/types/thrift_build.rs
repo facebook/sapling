@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "rust rust //thrift/annotation:rust-rust
-tunables crate",
+tunables crate //configerator/structs/scm/mononoke/tunables:tunables_structs-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

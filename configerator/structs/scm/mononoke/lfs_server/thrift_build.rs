@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "lfs_server crate
+        "lfs_server crate //configerator/structs/scm/mononoke/lfs_server:lfs_server_config-rust
 ratelimits rate_limiting_config //configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust
 rust rust //thrift/annotation:rust-rust",
     ).expect("Failed to write cratemap");

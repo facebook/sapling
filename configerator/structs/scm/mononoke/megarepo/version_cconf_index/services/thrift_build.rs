@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "megarepo_configs megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
-version_cconf_index crate",
+version_cconf_index crate //configerator/structs/scm/mononoke/megarepo:version_cconf_index-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

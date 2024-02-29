@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "memcache_lock crate",
+        "memcache_lock crate //eden/mononoke/blobstore/if:memcache-lock-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

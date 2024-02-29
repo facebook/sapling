@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "hg_mutation_entry crate
+        "hg_mutation_entry crate //eden/mononoke/mercurial/mutation/if:hg_mutation_entry_thrift-rust
 mercurial_thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust",
     ).expect("Failed to write cratemap");
 

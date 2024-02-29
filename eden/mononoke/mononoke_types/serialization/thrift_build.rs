@@ -15,24 +15,24 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "blame crate
-bonsai crate
-bssm crate
-changeset_info crate
-content crate
-data crate
-deleted_manifest crate
-fastlog crate
-fsnodes crate
-id crate
-path crate
-raw_bundle2 crate
-redaction crate
-sharded_map crate
-skeleton_manifest crate
-test_manifest crate
-time crate
-unodes crate",
+        "blame crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+bonsai crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+bssm crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+changeset_info crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+content crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+data crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+deleted_manifest crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+fastlog crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+fsnodes crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+id crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+path crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+raw_bundle2 crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+redaction crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+sharded_map crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+skeleton_manifest crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+test_manifest crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+time crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+unodes crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "overlay crate",
+        "overlay crate //eden/fs/inodes/overlay:serialization-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

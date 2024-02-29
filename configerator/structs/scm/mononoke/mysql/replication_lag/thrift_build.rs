@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "config crate
+        "config crate //configerator/structs/scm/mononoke/mysql/replication_lag:replication_lag_config-rust
 rust rust //thrift/annotation:rust-rust",
     ).expect("Failed to write cratemap");
 

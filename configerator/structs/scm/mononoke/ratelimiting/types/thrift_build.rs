@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "cpp cpp //thrift/annotation:cpp-rust
-ratelimits crate
+ratelimits crate //configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust
 rust rust //thrift/annotation:rust-rust",
     ).expect("Failed to write cratemap");
 

@@ -22,7 +22,7 @@ changeset_info mononoke_types_serialization //eden/mononoke/mononoke_types/seria
 content mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 data mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 deleted_manifest mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-derived_data_service crate
+derived_data_service crate //eden/mononoke/derived_data/remote/if:derived_data_service_if-rust
 fastlog mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 fb303_core fb303_core //fb303/thrift:fb303_core-rust
 filenodes filenodes_if //eden/mononoke/filenodes/if:filenodes-if-rust

@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "packblob crate",
+        "packblob crate //eden/mononoke/blobstore/packblob/if:packblob-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

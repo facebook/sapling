@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "eden_config crate",
+        "eden_config crate //eden/fs/config:config_thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

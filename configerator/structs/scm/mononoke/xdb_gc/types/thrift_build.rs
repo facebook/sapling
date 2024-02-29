@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "rust rust //thrift/annotation:rust-rust
-xdb_gc crate",
+xdb_gc crate //configerator/structs/scm/mononoke/xdb_gc:xdb_gc_structs-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "redaction_set crate
+        "redaction_set crate //configerator/structs/scm/mononoke/redaction:redaction_set-rust
 rust rust //thrift/annotation:rust-rust",
     ).expect("Failed to write cratemap");
 
