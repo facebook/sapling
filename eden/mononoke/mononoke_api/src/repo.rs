@@ -11,6 +11,7 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
@@ -48,6 +49,7 @@ use bookmarks::BookmarksRef;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
+use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
@@ -83,7 +85,6 @@ use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 pub use filestore::StoreRequest;
-use fsnodes::RootFsnodeId;
 use futures::compat::Stream01CompatExt;
 use futures::stream;
 use futures::stream::Stream;
@@ -150,7 +151,6 @@ use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
 use segmented_changelog::SegmentedChangelog;
 use segmented_changelog::SegmentedChangelogRef;
-use skeleton_manifest::RootSkeletonManifestId;
 use slog::debug;
 use slog::error;
 use sql_construct::SqlConstruct;
@@ -1840,36 +1840,22 @@ impl RepoContext {
         Ok(pull_data)
     }
 
-    pub async fn prepare_derived_data(
+    pub async fn derive_bulk(
         &self,
-        derivable_type: DerivableType,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> Result<(), MononokeError> {
-        // Simple initial implementation: does not support types with
-        // dependencies, and only supports a single type at a time.
-        match derivable_type {
-            DerivableType::Fsnodes => {
-                self.repo
-                    .repo_derived_data()
-                    .manager()
-                    .derive_exactly_batch::<RootFsnodeId>(self.ctx(), csids, None)
-                    .await?;
-            }
-            DerivableType::SkeletonManifests => {
-                self.repo
-                    .repo_derived_data()
-                    .manager()
-                    .derive_exactly_batch::<RootSkeletonManifestId>(self.ctx(), csids, None)
-                    .await?;
-            }
-            _ => {
-                return Err(MononokeError::InvalidRequest(format!(
-                    "Unsupported derived data type for preparation: {}",
-                    derivable_type
-                )));
-            }
-        }
-        Ok(())
+        derivable_types: &[DerivableType],
+    ) -> Result<Duration, MononokeError> {
+        // We don't need to expose rederivation to users of the repo api
+        // That's a lower level concept that clients like the derived data backfiller
+        // can get straight from the derived data manager
+        let rederivation = None;
+        Ok(self
+            .repo
+            .repo_derived_data()
+            .manager()
+            .derive_bulk(ctx, csids, rederivation, derivable_types)
+            .await?)
     }
 }
 

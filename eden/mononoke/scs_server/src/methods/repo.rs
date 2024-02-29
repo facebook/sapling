@@ -462,7 +462,7 @@ impl SourceControlServiceImpl {
         params: thrift::RepoCreateStackParams,
     ) -> Result<thrift::RepoCreateStackResponse, errors::ServiceError> {
         let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .repo_for_service(ctx.clone(), &repo, params.service_identity.clone())
             .await?;
         let repo = &repo;
 
@@ -489,15 +489,14 @@ impl SourceControlServiceImpl {
             .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
             .await?;
 
-        // Prepare derived data if we were asked to.  Simple implementation
-        // that doesn't support parallel derivation or dependencies between types.
+        // Prepare derived data if we were asked to.
         if let Some(prepare_types) = &params.prepare_derived_data_types {
             let csids = stack.iter().map(|c| c.id()).collect::<Vec<_>>();
-            for derived_data_type in prepare_types {
-                let derivable_type = DerivableType::from_request(derived_data_type)?;
-                repo.prepare_derived_data(derivable_type, csids.clone())
-                    .await?;
-            }
+            let derived_data_types = prepare_types
+                .iter()
+                .map(DerivableType::from_request)
+                .collect::<Result<Vec<_>, _>>()?;
+            repo.derive_bulk(&ctx, csids, &derived_data_types).await?;
         }
 
         // If you ask for a git identity back, then we'll assume that you supplied one to us
@@ -752,7 +751,7 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoPrepareCommitsParams,
     ) -> Result<thrift::RepoPrepareCommitsResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self.repo(ctx.clone(), &repo).await?;
         // Convert thrift commit ids to bonsai changeset ids
         let changesets = try_join_all(
             params
@@ -764,7 +763,7 @@ impl SourceControlServiceImpl {
                 .map(|specifier| repo.changeset(specifier)),
         )
         .await?;
-        let cs_ids = std::iter::zip(params.commits, changesets)
+        let csids = std::iter::zip(params.commits, changesets)
             .map(|(commit, cs)| {
                 cs.map(|cs| cs.id())
                     .ok_or_else(|| errors::commit_not_found(commit.to_string()))
@@ -772,8 +771,8 @@ impl SourceControlServiceImpl {
             .collect::<Result<Vec<_>, _>>()?;
 
         // Derive data of the requested type for the batch of desired commits
-        let derivable_type = DerivableType::from_request(&params.derived_data_type)?;
-        repo.prepare_derived_data(derivable_type, cs_ids).await?;
+        let derived_data_type = DerivableType::from_request(&params.derived_data_type)?;
+        repo.derive_bulk(&ctx, csids, &[derived_data_type]).await?;
 
         Ok(thrift::RepoPrepareCommitsResponse {
             ..Default::default()

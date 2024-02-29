@@ -27,6 +27,7 @@ bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
+bulk_derivation = { version = "0.1.0", path = "../derived_data/bulk_derivation" }
 bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }

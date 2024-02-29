@@ -8,6 +8,7 @@
 use std::backtrace::BacktraceStatus;
 use std::error::Error as StdError;
 
+use derived_data_manager::DerivationError;
 use git_types::GitError;
 use megarepo_error::MegarepoError;
 use mononoke_api::MononokeError;
@@ -196,6 +197,13 @@ impl From<MononokeError> for ServiceError {
                 })
             }
         }
+    }
+}
+
+impl From<DerivationError> for ServiceError {
+    fn from(e: DerivationError) -> Self {
+        let mononoke_error: MononokeError = e.into();
+        mononoke_error.into()
     }
 }
 
