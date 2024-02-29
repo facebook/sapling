@@ -187,16 +187,16 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   > other_key=other_bar
   > EOF
   $ hg config --debug | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
 
   $ hg config --debug --config "configs.allowedlocations=hgrc1 .hgrc" | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc1:4: zz_other_section.other_key=other_foo
   $TESTTMP/shared_copy/.hg/hgrc1:2: zz_section.key=foo
+  $TESTTMP/shared_copy/.hg/hgrc1:4: zz_other_section.other_key=other_foo
 
   $ hg config --debug --config "configs.allowedlocations=hgrc2 .hgrc" | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
 
   $ hg config --debug --config "configs.allowedlocations=hgrc3 .hgrc" | grep ': zz_'
   [1]

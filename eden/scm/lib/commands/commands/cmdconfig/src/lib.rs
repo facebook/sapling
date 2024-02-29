@@ -236,83 +236,70 @@ fn show_configs(ctx: ReqCtx<ConfigOpts>, formatter: &mut dyn ListFormatter) -> R
     let verbose = ctx.global_opts().verbose;
     let debug = ctx.global_opts().debug;
     let config = ctx.config().clone();
+    let args = &ctx.opts.args;
 
-    let requested_items: Vec<_> = ctx
-        .opts
-        .args
-        .iter()
-        .filter(|a| a.contains('.'))
-        .cloned()
-        .collect();
-    let requested_sections: BTreeSet<_> = ctx
-        .opts
-        .args
-        .into_iter()
-        .filter_map(|a| {
-            if !a.contains('.') {
-                Some(Text::from(a))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    abort_if!(
-        requested_items.len() > 1 && formatter.is_plain(),
-        "only one config item permitted"
-    );
-    abort_if!(
-        !requested_items.is_empty() && !requested_sections.is_empty(),
-        "combining sections and items not permitted"
-    );
-
-    if !requested_items.is_empty() {
-        let mut present_config_count = 0;
-        for item in requested_items {
-            let parts: Vec<_> = item.splitn(2, '.').collect();
-
-            if let Some(item) = get_config_item(&config, parts[0], parts[1], true, debug) {
-                formatter.format_item(&item)?;
-                present_config_count += 1;
-            }
-        }
-
-        // Config is expected to return an empty string if anything goes wrong
-        let exit_code = if formatter.is_plain() && present_config_count == 0 {
-            1
-        } else {
-            0
-        };
-        return Ok(exit_code);
+    if formatter.is_plain() {
+        // Only allow one config item, or multiple config sections to avoid ambiguity.
+        let arg_count = args.len();
+        let dot_arg_count = args.iter().filter(|a| a.contains('.')).count();
+        abort_if!(dot_arg_count > 1, "only one config item permitted");
+        abort_if!(
+            arg_count > dot_arg_count && dot_arg_count > 0,
+            "combining sections and items not permitted"
+        );
     }
 
-    let config_sections: BTreeSet<Text> = config.sections().as_ref().iter().cloned().collect();
-    let empty_selection = requested_sections.is_empty();
-    let selected_sections: Box<dyn Iterator<Item = &Text>> = if empty_selection {
-        Box::new(config_sections.iter())
-    } else {
-        Box::new(requested_sections.intersection(&config_sections))
-    };
-    let mut selected_sections = selected_sections.peekable();
+    // Decides exit code for plain formatter: 0: config or section does not exist.
+    let mut present_config_count = 0;
 
-    if selected_sections.peek().is_none() {
-        return Ok(1);
-    }
-
-    for section in selected_sections {
-        let mut keys = config.keys(section);
-        keys.sort();
-        for key in keys {
-            if let Some(item) = get_config_item(&config, section, &key, false, debug) {
-                if empty_selection && item.builtin && !verbose {
-                    continue;
+    if args.is_empty() {
+        // Print all (non-builtin) configs.
+        for section in config.sections().iter() {
+            let mut keys = config.keys(&section);
+            keys.sort();
+            for key in keys {
+                if let Some(item) = get_config_item(&config, section, &key, false, debug) {
+                    if !verbose && item.builtin {
+                        continue;
+                    }
+                    formatter.format_item(&item)?;
                 }
-                formatter.format_item(&item)?;
+            }
+        }
+        present_config_count = 1;
+    } else {
+        // Print selected configs.
+        for arg in args {
+            match arg.split_once('.') {
+                Some((section, name)) => {
+                    // arg is an item
+                    if let Some(item) = get_config_item(&config, section, name, true, debug) {
+                        formatter.format_item(&item)?;
+                        present_config_count += 1;
+                    }
+                }
+                None => {
+                    // arg is a section.
+                    let section = arg;
+                    let mut keys = config.keys(section);
+                    keys.sort();
+                    for key in keys {
+                        if let Some(item) = get_config_item(&config, section, &key, false, debug) {
+                            formatter.format_item(&item)?;
+                            present_config_count += 1;
+                        }
+                    }
+                }
             }
         }
     }
 
-    Ok(0)
+    let exit_code = if formatter.is_plain() && present_config_count == 0 {
+        1
+    } else {
+        0
+    };
+    Ok(exit_code)
 }
 
 pub fn aliases() -> &'static str {

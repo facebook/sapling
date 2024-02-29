@@ -168,6 +168,30 @@ Read multiple values with -Tjson
   }
   ]
 
+  $ hg config --config=a.1=1 --config=a.2=2 --config=a.3=3 --config=b.1=4 --config=b.2=5 a.3 b a.1 -Tjson
+  [
+  {
+    "name": "a.3",
+    "source": "--config",
+    "value": "3"
+  },
+  {
+    "name": "b.1",
+    "source": "--config",
+    "value": "4"
+  },
+  {
+    "name": "b.2",
+    "source": "--config",
+    "value": "5"
+  },
+  {
+    "name": "a.1",
+    "source": "--config",
+    "value": "1"
+  }
+  ]
+
 Test exit code when no config matches
 
   $ hg config Section.idontexist
