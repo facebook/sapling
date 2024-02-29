@@ -317,7 +317,7 @@ C onto A - rebase onto an ancestor:
 
 Check rebasing public changeset
 
-  $ hg push --config phases.publish=True -q -r 6 # update phase of G
+  $ hg push --config phases.publish=True -q -r 'desc(G)' # update phase of G
   $ hg rebase -d 'desc(A)' -b 'desc(C)'
   nothing to rebase
   $ hg debugmakepublic 'desc(C)'
