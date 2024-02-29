@@ -774,6 +774,15 @@ class CloneCmd(Subcmd):
             help="Enable symlink support for the cloned mount",
         )
 
+        parser.add_argument(
+            "--filter-path",
+            help=(
+                "The FilteredFS filter to activate when "
+                "--backing-store=filteredhg. When this option is omitted, no "
+                "filter is applied to the repo but FilteredFS is still used."
+            ),
+        )
+
         case_group = parser.add_mutually_exclusive_group()
         case_group.add_argument(
             "--case-sensitive",
@@ -787,15 +796,6 @@ class CloneCmd(Subcmd):
             dest="case_sensitive",
             default=sys.platform != "linux",
             help=argparse.SUPPRESS,
-        )
-
-        parser.add_argument(
-            "--filter-path",
-            help=(
-                "The FilteredFS filter to activate when "
-                "--backing-store=filteredhg. When this option is omitted, no "
-                "filter is applied to the repo but FilteredFS is still used."
-            ),
         )
 
     def run(self, args: argparse.Namespace) -> int:
