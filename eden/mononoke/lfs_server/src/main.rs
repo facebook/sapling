@@ -330,6 +330,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     ClientEntryPoint::LfsServer,
                 ))
                 .add(PostResponseMiddleware::with_config(config_handle))
+                .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))
                 .add(RequestContextMiddleware::new(
                     fb,
                     logger.clone(),
@@ -341,7 +342,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
                     "mononoke-lfs",
                 )))
-                .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))
                 .add(OdsMiddleware::new())
                 .add(TimerMiddleware::new())
                 .build(router);

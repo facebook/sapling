@@ -373,18 +373,43 @@ impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         if let Some(scuba_middleware) = state.try_take::<ScubaMiddlewareState>() {
             // Defuse the scopeguard so that we will no longer log cancellation.
-            let scuba = ScopeGuard::into_inner(scuba_middleware.0);
+            let mut scuba = ScopeGuard::into_inner(scuba_middleware.0).clone();
+            let status = &response.status();
 
             if let Some(uri) = Uri::try_borrow_from(state) {
-                if uri.path() == "/health_check" {
-                    return;
-                }
-                if uri.path() == "/proxygen/health_check" {
-                    return;
+                if uri.path() == "/health_check" || uri.path() == "/proxygen/health_check" {
+                    if !justknobs::eval("scm/mononoke:health_check_scuba_log_enabled", None, None)
+                        .unwrap_or(false)
+                    {
+                        return;
+                    }
+
+                    let sampling_rate = core::num::NonZeroU64::new(
+                        if status.as_u16() >= 200 || status.as_u16() < 299 {
+                            const FALLBACK_SAMPLING_RATE: u64 = 1000;
+                            justknobs::get_as::<u64>(
+                                "scm/mononoke:health_check_scuba_log_success_sampling_rate",
+                                None,
+                            )
+                            .unwrap_or(FALLBACK_SAMPLING_RATE)
+                        } else {
+                            const FALLBACK_SAMPLING_RATE: u64 = 1;
+                            justknobs::get_as::<u64>(
+                                "scm/mononoke:health_check_scuba_log_failure_sampling_rate",
+                                None,
+                            )
+                            .unwrap_or(FALLBACK_SAMPLING_RATE)
+                        },
+                    );
+                    if let Some(sampling_rate) = sampling_rate {
+                        scuba.sampled(sampling_rate);
+                    } else {
+                        scuba.unsampled();
+                    }
                 }
             }
 
-            log_stats::<H>(scuba, state, &response.status());
+            log_stats::<H>(scuba, state, status);
         }
     }
 }
