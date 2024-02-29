@@ -25,6 +25,7 @@ rust_library(
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/refencode:refencode",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/zstore:zstore",
     ],

@@ -7,6 +7,9 @@
 
 use std::collections::BTreeMap;
 
+use minibytes::Bytes;
+use types::HgId;
+
 /// Union 2 map changes. Prefer "this" on conflict.
 ///
 /// Practically, set `this` to the metalog that has a more recent timestamp to
@@ -43,6 +46,60 @@ where
         }
     }
     this
+}
+
+fn map3<T>(
+    this: &[u8],
+    other: &[u8],
+    ancestor: &[u8],
+    func: fn(&[u8]) -> Option<T>,
+) -> Option<(T, T, T)> {
+    Some((func(this)?, func(other)?, func(ancestor)?))
+}
+
+/// Application-specific metalog conflict resolution.
+/// `this` should be the one with a more recent timestamp (practially, the metalog to write).
+pub(crate) fn try_resolve_metalog_conflict(
+    key: &str,
+    this: Bytes,
+    other: &[u8],
+    ancestor: &[u8],
+) -> Option<Bytes> {
+    match key {
+        // Those do not affect correctness, pick the more recent one.
+        "tip" | "config" => Some(this),
+        "visibleheads" => {
+            let (this, other, ancestor) =
+                map3(&this, other, ancestor, |s| -> Option<BTreeMap<HgId, ()>> {
+                    Some(
+                        refencode::decode_visibleheads(s)
+                            .ok()?
+                            .into_iter()
+                            .map(|k| (k, ()))
+                            .collect(),
+                    )
+                })?;
+            let resolved = union_maps(this, &other, &ancestor)
+                .into_keys()
+                .collect::<Vec<_>>();
+            Some(refencode::encode_visibleheads(&resolved).into())
+        }
+        "bookmarks" => {
+            let (this, other, ancestor) = map3(&this, other, ancestor, |s| {
+                refencode::decode_bookmarks(s).ok()
+            })?;
+            let resolved = union_maps(this, &other, &ancestor);
+            Some(refencode::encode_bookmarks(&resolved).into())
+        }
+        "remotenames" => {
+            let (this, other, ancestor) = map3(&this, other, ancestor, |s| {
+                refencode::decode_remotenames(s).ok()
+            })?;
+            let resolved = union_maps(this, &other, &ancestor);
+            Some(refencode::encode_remotenames(&resolved).into())
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]
