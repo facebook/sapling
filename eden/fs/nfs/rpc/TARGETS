@@ -40,10 +40,10 @@ cpp_library(
     ],
     exported_deps = [
         ":rpc",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/inodes:fs_channel",
         "//eden/fs/nfs/portmap:portmap",
         "//eden/fs/utils:event_base_state",
-        "//eden/fs/utils:immediate_future",
         "//folly:network_address",
         "//folly/io/async:async_socket",
         "//folly/io/async:server_socket",

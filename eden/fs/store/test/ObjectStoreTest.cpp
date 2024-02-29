@@ -8,6 +8,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
 #include "eden/fs/testharness/StoredObject.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;

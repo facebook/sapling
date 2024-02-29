@@ -8,8 +8,9 @@
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include <folly/MapUtil.h>
 #include <algorithm>
+
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 

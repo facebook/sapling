@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <vector>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -53,7 +54,6 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SystemError.h"

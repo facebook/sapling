@@ -16,7 +16,7 @@
 #include <string_view>
 #include <variant>
 
-#include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/common/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 

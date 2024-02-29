@@ -13,9 +13,10 @@
 #include <folly/Synchronized.h>
 #include <folly/Utility.h>
 #include <folly/logging/xlog.h>
+
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/nfs/MountdRpc.h"
 #include "eden/fs/nfs/rpc/RpcServer.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 

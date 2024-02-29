@@ -49,11 +49,11 @@ cpp_library(
     ],
     exported_deps = [
         ":sqlitetreestore",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/model:model",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//folly:range",
     ],

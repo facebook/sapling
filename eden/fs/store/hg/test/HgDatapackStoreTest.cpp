@@ -9,6 +9,7 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GMock.h>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Tree.h"
@@ -23,7 +24,6 @@
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

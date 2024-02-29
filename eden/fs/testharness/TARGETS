@@ -181,7 +181,7 @@ cpp_library(
     name = "stored_object",
     headers = ["StoredObject.h"],
     exported_deps = [
-        "//eden/fs/utils:immediate_future",
+        "//eden/common/utils:immediate_future",
     ],
 )
 
@@ -221,7 +221,7 @@ cpp_library(
     srcs = ["FakeObjectStore.cpp"],
     headers = ["FakeObjectStore.h"],
     deps = [
-        "//eden/fs/utils:immediate_future",
+        "//eden/common/utils:immediate_future",
         "//folly:map_util",
         "//folly:string",
         "//folly/futures:core",

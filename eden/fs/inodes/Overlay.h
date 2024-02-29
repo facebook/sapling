@@ -16,6 +16,8 @@
 #include <condition_variable>
 #include <optional>
 #include <thread>
+
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/config/InodeCatalogOptions.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -24,7 +26,6 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/RefPtr.h"
 

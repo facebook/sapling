@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/store/filter/GlobFilter.h"
-#include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/common/utils/ImmediateFuture.h"
 
 #include "eden/scm/lib/edenfs_ffi/src/lib.rs.h" // @manual
 

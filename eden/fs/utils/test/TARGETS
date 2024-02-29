@@ -131,18 +131,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "immediate_future",
-    srcs = ["ImmediateFutureTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:immediate_future",
-        "//folly/executors:manual_executor",
-        "//folly/portability:gtest",
-        "//folly/test:test_utils",
-    ],
-)
-
-cpp_unittest(
     name = "io_future",
     srcs = ["IoFutureTest.cpp"],
     supports_static_listing = False,
@@ -400,7 +388,6 @@ cpp_benchmark(
     name = "bench",
     srcs = [
         "IDGenBenchmark.cpp",
-        "ImmediateFutureBenchmark.cpp",
         "ProcessAccessLogBenchmark.cpp",
         "RefPtrBenchmark.cpp",
     ],
@@ -408,11 +395,9 @@ cpp_benchmark(
         "fbsource//third-party/benchmark:benchmark",
         "//eden/common/utils:process_info_cache",
         "//eden/common/utils/benchharness:benchharness",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:process_access_log",
         "//eden/fs/utils:ref_ptr",
         "//eden/fs/utils:utils",
-        "//folly:c_portability",
     ],
 )
 

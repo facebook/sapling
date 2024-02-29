@@ -14,13 +14,13 @@
 #include <optional>
 #include <vector>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/RefPtr.h"
 

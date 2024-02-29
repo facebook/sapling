@@ -65,6 +65,7 @@ cpp_library(
     srcs = ["HgImportRequestQueue.cpp"],
     headers = ["HgImportRequestQueue.h"],
     deps = [
+        "//eden/common/utils:immediate_future",
         "//eden/fs/config:config",
         "//folly:map_util",
     ],
@@ -74,7 +75,6 @@ cpp_library(
         "//folly:synchronized",
         "//folly:try",
         "//folly/container:f14_hash",
-        "//folly/futures:core",
     ],
 )
 

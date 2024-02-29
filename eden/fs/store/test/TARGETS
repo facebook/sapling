@@ -34,6 +34,7 @@ cpp_unittest(
         "//eden/fs/store:filtered_backing_store",
         "//eden/fs/store:store",
         "//eden/fs/store/filter:hg_sparse_filter",
+        "//eden/fs/store/hg:hg_backing_store_options",
         "//eden/fs/store/hg:hg_queued_backing_store",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
@@ -67,6 +68,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:immediate_future",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
@@ -83,7 +85,6 @@ cpp_unittest(
         "//eden/fs/testharness:stored_object",
         "//eden/fs/testharness:temp_file",
         "//eden/fs/testharness:test_util",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:utils",

@@ -11,8 +11,9 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {

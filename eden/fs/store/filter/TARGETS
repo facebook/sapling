@@ -24,7 +24,7 @@ cpp_library(
         "Filter.h",
     ],
     exported_deps = [
-        "//eden/fs/utils:immediate_future",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/utils:path",
         "//folly:range",
     ],
@@ -35,7 +35,7 @@ cpp_library(
     srcs = ["GlobFilter.cpp"],
     headers = ["GlobFilter.h"],
     deps = [
-        "//eden/fs/utils:immediate_future",
+        "//eden/common/utils:immediate_future",
     ],
     exported_deps = [
         ":filters",

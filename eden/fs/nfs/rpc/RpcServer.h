@@ -14,11 +14,11 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/net/NetworkSocket.h>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/utils/EventBaseState.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace folly {
 class Executor;

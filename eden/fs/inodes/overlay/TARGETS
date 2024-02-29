@@ -52,15 +52,14 @@ cpp_library(
     ],
     exported_deps = [
         ":overlay_checker_util",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/model:model",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//folly:cpp_attributes",
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),
-        ("glibc", None, "rt"),
     ],
 )

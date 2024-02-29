@@ -561,8 +561,8 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:immediate_future",
         "//eden/fs/utils:glob",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:ref_ptr",
         "//folly:range",
     ],

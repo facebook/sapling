@@ -25,6 +25,7 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:immediate_future",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
@@ -43,7 +44,6 @@ cpp_unittest(
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:temp_file",
         "//eden/fs/testharness:test_config_source",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//eden/fs/utils:utils",
         "//folly:range",

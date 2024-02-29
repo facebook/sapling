@@ -11,6 +11,7 @@
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -23,7 +24,6 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Guid.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"

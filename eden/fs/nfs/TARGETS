@@ -8,8 +8,8 @@ cpp_library(
     headers = ["Mountd.h"],
     deps = [
         ":mountd_rpc",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/nfs/rpc:server",
-        "//eden/fs/utils:immediate_future",
         "//folly:synchronized",
         "//folly:utility",
         "//folly/logging:logging",
@@ -113,10 +113,10 @@ cpp_library(
     exported_deps = [
         ":dirlist",
         "//eden/common/utils:file_utils",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/store:context",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//eden/fs/utils:ref_ptr",
     ],

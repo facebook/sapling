@@ -15,6 +15,7 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -33,7 +34,6 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/FileUtils.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"

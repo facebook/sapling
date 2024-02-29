@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/utils/FsChannelTypes.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 

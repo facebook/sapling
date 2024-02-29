@@ -331,8 +331,8 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         ":case_sensitivity",
-        ":immediate_future",
         ":path",
+        "//eden/common/utils:immediate_future",
         "//eden/common/utils:throw",
         "//eden/common/utils:win_error",
         "//folly:cpp_attributes",
@@ -549,9 +549,6 @@ cpp_library(
     deps = [
         "//folly/portability:time",
     ],
-    exported_external_deps = [
-        ("glibc", None, "rt"),
-    ],
 )
 
 cpp_library(
@@ -559,21 +556,6 @@ cpp_library(
     headers = ["CaseSensitivity.h"],
     exported_deps = [
         "//folly:portability",
-    ],
-)
-
-cpp_library(
-    name = "immediate_future",
-    srcs = ["ImmediateFuture.cpp"],
-    headers = [
-        "ImmediateFuture.h",
-        "ImmediateFuture-inl.h",
-        "ImmediateFuture-pre.h",
-    ],
-    exported_deps = [
-        "//folly:try",
-        "//folly/futures:core",
-        "//folly/lang:assume",
     ],
 )
 

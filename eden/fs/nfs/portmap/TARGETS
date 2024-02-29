@@ -26,9 +26,9 @@ cpp_library(
     headers = ["Rpcbindd.h"],
     deps = [
         ":rpcbindrpc",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/nfs:mountd_rpc",
         "//eden/fs/nfs/rpc:server",
-        "//eden/fs/utils:immediate_future",
         "//folly:synchronized",
         "//folly:utility",
         "//folly/logging:logging",

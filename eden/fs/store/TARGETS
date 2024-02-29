@@ -130,9 +130,9 @@ cpp_library(
     exported_deps = [
         ":context",
         ":store_type",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//folly:range",
         "//folly/futures:core",
@@ -148,9 +148,9 @@ cpp_library(
     srcs = FILTERED_BACKING_STORE_SRCS,
     headers = FILTERED_BACKING_STORE_HEADERS,
     deps = [
+        "//eden/common/utils:immediate_future",
         "//eden/fs/model:model",
         "//eden/fs/utils:filter_utils",
-        "//eden/fs/utils:immediate_future",
         "//folly:varint",
     ],
     exported_deps = [
@@ -194,13 +194,13 @@ cpp_library(
     exported_deps = [
         ":backing_store_interface",
         ":context",
+        "//eden/common/utils:immediate_future",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:case_sensitivity",
-        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//eden/fs/utils:ref_ptr",
         "//eden/fs/utils:utils",

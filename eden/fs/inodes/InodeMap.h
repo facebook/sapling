@@ -14,13 +14,13 @@
 #include <optional>
 #include <unordered_map>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {

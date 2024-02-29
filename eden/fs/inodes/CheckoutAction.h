@@ -10,10 +10,10 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace folly {
 class exception_wrapper;

@@ -11,7 +11,7 @@
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 
-#include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/common/utils/ImmediateFuture.h"
 
 using folly::makeSemiFuture;
 using folly::SemiFuture;

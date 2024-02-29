@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <tuple>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/Tree.h"
@@ -18,7 +19,6 @@
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
 #include "eden/fs/utils/FilterUtils.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 

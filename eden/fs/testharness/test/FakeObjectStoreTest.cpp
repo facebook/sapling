@@ -9,11 +9,12 @@
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <folly/portability/GTest.h>
+
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 using namespace facebook::eden;
 using folly::IOBuf;

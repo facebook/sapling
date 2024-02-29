@@ -24,10 +24,10 @@ cpp_unittest(
     srcs = ["FakeObjectStoreTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:immediate_future",
         "//eden/fs/model:model",
         "//eden/fs/model:testutil",
         "//eden/fs/testharness:fake_object_store",
-        "//eden/fs/utils:immediate_future",
         "//folly/futures:core",
         "//folly/io:iobuf",
         "//folly/portability:gtest",

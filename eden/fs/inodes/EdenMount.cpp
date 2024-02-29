@@ -21,6 +21,7 @@
 #include <folly/system/Pid.h>
 #include <folly/system/ThreadName.h>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -61,7 +62,6 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/Future.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"

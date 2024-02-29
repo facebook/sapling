@@ -7,10 +7,11 @@
 
 #include "eden/fs/store/BlobAccess.h"
 #include <folly/MapUtil.h>
+
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 

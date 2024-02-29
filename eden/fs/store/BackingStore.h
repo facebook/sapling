@@ -11,6 +11,7 @@
 #include <folly/futures/Future.h>
 #include <memory>
 
+#include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/ObjectId.h"
@@ -19,7 +20,6 @@
 #include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
