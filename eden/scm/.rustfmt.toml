@@ -1,15 +1,8 @@
 # Inherit from fbcode root
-edition = "2018"
+edition = "2021"
+format_code_in_doc_comments = true
+group_imports = "StdExternalCrate"
+imports_granularity = "Item"
 merge_derives = false
 use_field_init_shorthand = true
-
-# Project specific config.
-# Note: fbcode rustfmt does not respect these configs! So they cannot conflict
-# with fbcode format options (i.e. run fbcode rustfmt and the result isn't
-# changing).
-
-# To minimize conflicts, and make things easier to grep.
-imports_granularity = "Item"
-
-# To force an automatic order of use statements.
-group_imports = "StdExternalCrate"
+version = "Two"
