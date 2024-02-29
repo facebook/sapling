@@ -451,20 +451,32 @@ function TileInner(props: TileProps) {
   const preserveAspectRatio = stretchY || scaleY < 1 ? 'none' : undefined;
   const height = width * scaleY;
   const style = stretchY ? {height: '100%', minHeight: height} : {};
+  // Fill the small caused by scaling, non-integer rounding.
+  // When 'x' is at the border (abs >= 10) and 'y' is at the center, use the "gap fix".
+  const getGapFix = (x: number, y: number) =>
+    y === 0 && Math.abs(x) >= 10 ? 0.5 * Math.sign(x) : 0;
   const paths = edges.map(({x1 = 0, y1 = 0, x2 = 0, y2 = 0, flag = 0, color}, i): JSX.Element => {
-    const sY = stretchY ? scaleY * 1.05 : scaleY;
+    // see getGapFix above.
+    const fx1 = getGapFix(x1, y1);
+    const fx2 = getGapFix(x2, y2);
+    const fy1 = getGapFix(y1, x1);
+    const fy2 = getGapFix(y2, x2);
+
+    const sY = scaleY;
     const dashArray = flag & EdgeFlag.Dash ? strokeDashArray : undefined;
     let d;
     if (flag & EdgeFlag.IntersectGap) {
       // This vertical line intercects with a horizonal line visually but it does not mean
       // they connect. Leave a small gap in the middle.
-      d = `M ${x1} ${y1 * sY} L 0 -2 M 0 2 L ${x2} ${y2 * sY}`;
+      d = `M ${x1 + fx1} ${y1 * sY + fy1} L 0 -2 M 0 2 L ${x2 + fx2} ${y2 * sY + fy2}`;
     } else if (y1 === y2 || x1 === x2) {
       // Straight line (-----).
-      d = `M ${x1} ${y1 * sY} L ${x2} ${y2 * sY}`;
+      d = `M ${x1 + fx1} ${y1 * sY + fy1} L ${x2 + fx2} ${y2 * sY + fy2}`;
     } else {
       // Curved line (towards center).
-      d = `M ${x1} ${y1 * sY} Q 0 0 ${x2} ${y2 * sY}`;
+      d = `M ${x1 + fx1} ${y1 * sY + fy1} L ${x1} ${y1 * sY} Q 0 0 ${x2} ${y2 * sY} L ${x2 + fx2} ${
+        y2 * sY + fy2
+      }`;
     }
     return <path d={d} key={i} strokeDasharray={dashArray} stroke={color} />;
   });
