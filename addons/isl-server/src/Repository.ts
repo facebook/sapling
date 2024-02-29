@@ -495,6 +495,11 @@ export class Repository {
     this.operationQueue.abortRunningOperation(operationId);
   }
 
+  /** The currently running operation tracked by the server. */
+  getRunningOperation() {
+    return this.operationQueue.getRunningOperation();
+  }
+
   private normalizeOperationArgs(cwd: string, args: Array<CommandArg>): Array<string> {
     const repoRoot = unwrap(this.info.repoRoot);
     return args.flatMap(arg => {

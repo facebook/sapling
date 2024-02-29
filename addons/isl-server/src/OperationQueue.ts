@@ -166,4 +166,9 @@ export class OperationQueue {
       this.abortController?.abort();
     }
   }
+
+  /** The currently running operation. */
+  getRunningOperation(): RunnableOperation | undefined {
+    return this.runningOperation;
+  }
 }
