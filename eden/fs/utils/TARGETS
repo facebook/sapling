@@ -88,7 +88,7 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
-        ":case_sensitivity",
+        "//eden/common/utils:case_sensitivity",
         "//folly:expected",
     ],
 )
@@ -105,11 +105,11 @@ cpp_library(
         "GlobTree.h",
     ],
     exported_deps = [
-        ":case_sensitivity",
         ":enum",
         ":matcher",
         ":path",
         ":utils",
+        "//eden/common/utils:case_sensitivity",
         "//eden/fs/model:model",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:task_trace",
@@ -330,8 +330,8 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":case_sensitivity",
         ":path",
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:throw",
         "//eden/common/utils:win_error",
@@ -372,10 +372,10 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":case_sensitivity",
         ":memory",
         ":string",
         ":utf8",
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:throw",
         "//folly:expected",
@@ -548,14 +548,6 @@ cpp_library(
     headers = ["Clock.h"],
     deps = [
         "//folly/portability:time",
-    ],
-)
-
-cpp_library(
-    name = "case_sensitivity",
-    headers = ["CaseSensitivity.h"],
-    exported_deps = [
-        "//folly:portability",
     ],
 )
 

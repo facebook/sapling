@@ -10,12 +10,12 @@ cpp_unittest(
         "ovr_config//os:linux",
     ],
     deps = [
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/fuse:fuse",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:test_dispatcher",
-        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:enum",
         "//folly:random",
         "//folly/executors:global_executor",

@@ -13,6 +13,7 @@
 
 #include <winioctl.h> // @manual
 
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/prjfs/PrjfsDiskState.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/ProjfsUtil.h"

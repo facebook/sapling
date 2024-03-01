@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <vector>
 
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/config/CheckoutConfig.h"
@@ -51,7 +52,6 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/NotImplemented.h"

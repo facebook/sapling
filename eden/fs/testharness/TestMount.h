@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <optional>
 #include <vector>
+
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -21,7 +23,6 @@
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeClock.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {

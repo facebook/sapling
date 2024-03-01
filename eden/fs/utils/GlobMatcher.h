@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-#include "eden/fs/utils/CaseSensitivity.h"
+#include "eden/common/utils/CaseSensitivity.h"
 
 namespace facebook::eden {
 

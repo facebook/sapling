@@ -62,11 +62,11 @@ cpp_library(
         "PrjfsDiskState.h",
     ],
     deps = [
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:win_error",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
-        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:file_utils",
         "//eden/fs/utils:projfs_util",
         "//folly/executors:serial_executor",

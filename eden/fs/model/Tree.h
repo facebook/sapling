@@ -8,10 +8,11 @@
 #pragma once
 
 #include <folly/io/IOBuf.h>
+
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathMap.h"
 
 namespace facebook::eden {

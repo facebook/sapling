@@ -39,7 +39,7 @@ cpp_library(
     ],
     exported_deps = [
         ":filters",
-        "//eden/fs/utils:case_sensitivity",
+        "//eden/common/utils:case_sensitivity",
         "//eden/fs/utils:eden_error",
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi",  # @manual
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",  # @manual

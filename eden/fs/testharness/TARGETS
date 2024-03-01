@@ -40,12 +40,12 @@ cpp_library(
     ],
     exported_deps = [
         ":fake_clock",
+        "//eden/common/utils:case_sensitivity",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
-        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:path",
         "//folly:portability",
         "//folly:range",

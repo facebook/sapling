@@ -13,6 +13,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/digest/Blake3.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -26,7 +27,6 @@
 #include "eden/fs/testharness/InodeUnloader.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/StatTimes.h"
 

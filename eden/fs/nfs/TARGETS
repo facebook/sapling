@@ -63,11 +63,11 @@ cpp_library(
     ],
     exported_deps = [
         ":dispatcher",
+        "//eden/common/utils:case_sensitivity",
         "//eden/fs/inodes:fs_channel",
         "//eden/fs/inodes:request_context",
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:process_access_log",
     ],
 )
@@ -97,9 +97,9 @@ cpp_library(
     ],
     exported_deps = [
         ":mountd",
+        "//eden/common/utils:case_sensitivity",
         "//eden/fs/inodes:fs_channel",
         "//eden/fs/nfs/rpc:server",
-        "//eden/fs/utils:case_sensitivity",
     ],
 )
 

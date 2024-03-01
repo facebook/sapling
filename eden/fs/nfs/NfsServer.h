@@ -8,10 +8,11 @@
 #pragma once
 
 #include <tuple>
+
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/nfs/rpc/RpcServer.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 
 namespace folly {
 class Executor;

@@ -9,9 +9,10 @@
 
 #include <folly/futures/Future.h>
 #include <ostream>
+
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/GlobMatcher.h"

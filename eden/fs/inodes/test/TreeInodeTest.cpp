@@ -15,6 +15,8 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <optional>
+
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
@@ -27,7 +29,6 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;

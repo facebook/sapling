@@ -28,9 +28,9 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         ":model-fwd",
+        "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:option_set",
         "//eden/fs/service:thrift-cpp2-types",
-        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:path",
         "//eden/fs/utils:utils",
         "//folly:c_portability",

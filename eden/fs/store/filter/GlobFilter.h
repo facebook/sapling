@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/store/filter/Filter.h"
-#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/EdenError.h"
 
 #include "eden/scm/lib/edenfs_ffi/include/ffi.h"
