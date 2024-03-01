@@ -136,6 +136,7 @@ rust_library(
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/topo_sort:topo_sort",
+        "//eden/mononoke/derived_data/if:derived_data_type_if-rust",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/metaconfig:metaconfig_types",
