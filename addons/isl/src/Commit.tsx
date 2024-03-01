@@ -9,6 +9,7 @@ import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
+import {Bookmark} from './Bookmark';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
@@ -393,17 +394,17 @@ export const Commit = memo(
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
             {commit.bookmarks.map(bookmark => (
-              <VSCodeTag key={bookmark}>{bookmark}</VSCodeTag>
+              <Bookmark key={bookmark}>{bookmark}</Bookmark>
             ))}
             {commit.remoteBookmarks.map(remoteBookmarks => (
-              <VSCodeTag key={remoteBookmarks}>{remoteBookmarks}</VSCodeTag>
+              <Bookmark key={remoteBookmarks}>{remoteBookmarks}</Bookmark>
             ))}
             {commit?.stableCommitMetadata != null ? (
               <>
                 {commit.stableCommitMetadata.map(stable => (
                   <Tooltip title={stable.description} key={stable.value}>
                     <div className="stable-commit-metadata">
-                      <VSCodeTag>{stable.value}</VSCodeTag>
+                      <Bookmark special>{stable.value}</Bookmark>
                     </div>
                   </Tooltip>
                 ))}
