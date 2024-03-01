@@ -372,10 +372,10 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":string",
         ":utf8",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:memory",
+        "//eden/common/utils:string",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:throw",
         "//folly:expected",
@@ -576,15 +576,6 @@ cpp_library(
 cpp_library(
     name = "source_location",
     headers = ["SourceLocation.h"],
-)
-
-cpp_library(
-    name = "string",
-    srcs = ["String.cpp"],
-    headers = ["String.h"],
-    exported_deps = [
-        "fbsource//third-party/fmt:fmt",
-    ],
 )
 
 cpp_library(

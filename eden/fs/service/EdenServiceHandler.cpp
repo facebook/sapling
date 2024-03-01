@@ -29,6 +29,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/common/utils/String.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -88,7 +89,6 @@
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/SourceLocation.h"
 #include "eden/fs/utils/StatTimes.h"
-#include "eden/fs/utils/String.h"
 
 using folly::Future;
 using folly::makeFuture;

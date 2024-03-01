@@ -11,11 +11,11 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:string",
         "//eden/common/utils:throw",
         "//eden/fs/facebook:normalized_hostname",
         "//eden/fs/utils:file_utils",
         "//eden/fs/utils:path",
-        "//eden/fs/utils:string",
         "//eden/fs/utils:try",
         "//folly:file",
         "//folly/portability:gtest",

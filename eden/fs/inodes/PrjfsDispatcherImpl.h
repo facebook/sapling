@@ -7,10 +7,10 @@
 
 #pragma once
 
+#include "eden/common/utils/String.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/utils/String.h"
 
 namespace facebook::eden {
 

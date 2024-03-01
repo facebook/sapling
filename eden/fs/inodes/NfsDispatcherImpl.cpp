@@ -8,6 +8,8 @@
 #include "eden/fs/inodes/NfsDispatcherImpl.h"
 
 #include <folly/futures/Future.h>
+
+#include "eden/common/utils/String.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -16,7 +18,6 @@
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/String.h"
 
 namespace facebook::eden {
 

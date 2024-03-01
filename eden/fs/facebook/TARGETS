@@ -10,7 +10,7 @@ cpp_library(
     srcs = ["NormalizedHostname.cpp"],
     headers = ["NormalizedHostname.h"],
     deps = [
-        "//eden/fs/utils:string",
+        "//eden/common/utils:string",
     ],
 )
 
