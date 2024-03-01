@@ -20,8 +20,8 @@ use parking_lot::RwLock;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Identity {
-    user: UserIdentity,
-    repo: RepoIdentity,
+    user: &'static UserIdentity,
+    repo: &'static RepoIdentity,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -329,7 +329,7 @@ impl std::fmt::Display for Identity {
 }
 
 const HG: Identity = Identity {
-    user: UserIdentity {
+    user: &UserIdentity {
         cli_name: "hg",
         product_name: "Sapling",
         long_product_name: "Sapling SCM",
@@ -349,7 +349,7 @@ const HG: Identity = Identity {
         scripting_except_env_var: "HGPLAINEXCEPT",
     },
 
-    repo: RepoIdentity {
+    repo: &RepoIdentity {
         dot_dir: ".hg",
         config_repo_file: "hgrc",
         sniff_dot_dir: None,
@@ -358,7 +358,7 @@ const HG: Identity = Identity {
 };
 
 const SL: Identity = Identity {
-    user: UserIdentity {
+    user: &UserIdentity {
         cli_name: "sl",
         product_name: "Sapling",
         long_product_name: "Sapling SCM",
@@ -374,7 +374,7 @@ const SL: Identity = Identity {
         scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
     },
 
-    repo: RepoIdentity {
+    repo: &RepoIdentity {
         dot_dir: ".sl",
         config_repo_file: "config",
         sniff_dot_dir: None,
@@ -384,7 +384,7 @@ const SL: Identity = Identity {
 
 #[cfg(test)]
 const TEST: Identity = Identity {
-    user: UserIdentity {
+    user: &UserIdentity {
         cli_name: "test",
         product_name: "Test",
         long_product_name: "Testing SCM",
@@ -397,7 +397,7 @@ const TEST: Identity = Identity {
         scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
     },
 
-    repo: RepoIdentity {
+    repo: &RepoIdentity {
         dot_dir: ".test",
         config_repo_file: "config",
         sniff_dot_dir: None,
