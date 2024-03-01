@@ -1090,10 +1090,6 @@ def _dispatch(req):
             elif rpath:
                 ui.warn(_("warning: --repository ignored\n"))
 
-            from . import match as matchmod, mdiff
-
-            mdiff.init(ui)
-
             ui.log("command", "%s\n", msg)
             if repo:
                 repo.dirstate.loginfo(ui, "pre")

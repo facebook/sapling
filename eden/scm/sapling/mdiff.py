@@ -17,7 +17,7 @@ import re
 import struct
 import zlib
 from hashlib import sha1
-from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKING, Union
+from typing import Iterator, List, Optional, Pattern, Sized, Tuple, Union
 
 import bindings
 
@@ -28,13 +28,9 @@ from .pycompat import encodeutf8, range
 bdiff = bindings.cext.bdiff
 mpatch = bindings.cext.mpatch
 
-if TYPE_CHECKING:
-    import sapling
-
-
 _missing_newline_marker = b"\\ No newline at end of file\n"
 
-blocks = bdiff.blocks
+blocks = bindings.xdiff.blocks
 fixws = bdiff.fixws
 patches = mpatch.patches
 patchedsize = mpatch.patchedsize
@@ -43,12 +39,6 @@ textdiff = bdiff.bdiff
 wordsplitter: Pattern[bytes] = re.compile(
     rb"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])"
 )
-
-# called by dispatch.py
-def init(ui: "sapling.ui.ui") -> None:
-    if ui.configbool("experimental", "xdiff"):
-        global blocks
-        blocks = bindings.xdiff.blocks
 
 
 def splitnewlines(text: bytes) -> "List[bytes]":
