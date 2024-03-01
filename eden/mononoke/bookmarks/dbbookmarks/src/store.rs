@@ -363,11 +363,12 @@ impl SqlBookmarks {
             }
         };
 
-        cloned!(pagination, prefix, self.repo_id);
+        cloned!(pagination, prefix, ctx, self.repo_id);
         let kinds: Vec<BookmarkKind> = kinds.to_vec();
         let categories: Vec<_> = categories.to_vec();
 
         async move {
+            let cri = ctx.metadata().client_request_info();
             let rows = if prefix.is_empty() {
                 match pagination {
                     BookmarkPagination::FromStart => {
@@ -375,8 +376,9 @@ impl SqlBookmarks {
                         // names, then skip the sorting.
                         if limit == std::u64::MAX {
                             let tok: i32 = rand::thread_rng().gen();
-                            SelectAllUnordered::query(
+                            SelectAllUnordered::maybe_traced_query(
                                 &conn,
+                                cri,
                                 &repo_id,
                                 &limit,
                                 &tok,
@@ -395,22 +397,14 @@ impl SqlBookmarks {
                             })
                             .collect()
                         } else {
-                            SelectAll::query(&conn, &repo_id, &limit, &kinds, &categories)
-                                .await?
-                                .into_iter()
-                                .map(|(name, category, kind, cs_id, log_id)| {
-                                    (
-                                        BookmarkKey::with_name_and_category(name, category),
-                                        kind,
-                                        cs_id,
-                                        log_id,
-                                    )
-                                })
-                                .collect()
-                        }
-                    }
-                    BookmarkPagination::After(after) => {
-                        SelectAllAfter::query(&conn, &repo_id, &after, &limit, &kinds, &categories)
+                            SelectAll::maybe_traced_query(
+                                &conn,
+                                cri,
+                                &repo_id,
+                                &limit,
+                                &kinds,
+                                &categories,
+                            )
                             .await?
                             .into_iter()
                             .map(|(name, category, kind, cs_id, log_id)| {
@@ -422,15 +416,37 @@ impl SqlBookmarks {
                                 )
                             })
                             .collect()
+                        }
                     }
+                    BookmarkPagination::After(after) => SelectAllAfter::maybe_traced_query(
+                        &conn,
+                        cri,
+                        &repo_id,
+                        &after,
+                        &limit,
+                        &kinds,
+                        &categories,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|(name, category, kind, cs_id, log_id)| {
+                        (
+                            BookmarkKey::with_name_and_category(name, category),
+                            kind,
+                            cs_id,
+                            log_id,
+                        )
+                    })
+                    .collect(),
                 }
             } else {
                 let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
                 match pagination {
                     BookmarkPagination::FromStart => {
                         if limit == std::u64::MAX {
-                            SelectByPrefixUnordered::query(
+                            SelectByPrefixUnordered::maybe_traced_query(
                                 &conn,
+                                cri,
                                 &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
@@ -450,8 +466,9 @@ impl SqlBookmarks {
                             })
                             .collect()
                         } else {
-                            SelectByPrefix::query(
+                            SelectByPrefix::maybe_traced_query(
                                 &conn,
+                                cri,
                                 &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
@@ -472,8 +489,9 @@ impl SqlBookmarks {
                             .collect()
                         }
                     }
-                    BookmarkPagination::After(after) => SelectByPrefixAfter::query(
+                    BookmarkPagination::After(after) => SelectByPrefixAfter::maybe_traced_query(
                         &conn,
+                        cri,
                         &repo_id,
                         &prefix_like_pattern,
                         &"\\",
@@ -511,7 +529,14 @@ impl SqlBookmarks {
         let conn = self.connections.read_master_connection.clone();
         cloned!(self.repo_id, key);
         async move {
-            let rows = SelectBookmark::query(&conn, &repo_id, key.name(), key.category()).await?;
+            let rows = SelectBookmark::maybe_traced_query(
+                &conn,
+                ctx.metadata().client_request_info(),
+                &repo_id,
+                key.name(),
+                key.category(),
+            )
+            .await?;
             Ok(rows.into_iter().next())
         }
     }
@@ -599,11 +624,13 @@ impl BookmarkUpdateLog for SqlBookmarks {
 
         async move {
             let tok: i32 = rand::thread_rng().gen();
+            let cri = ctx.metadata().client_request_info();
 
             let rows = match offset {
                 Some(offset) => {
-                    SelectBookmarkLogsWithOffset::query(
+                    SelectBookmarkLogsWithOffset::maybe_traced_query(
                         &conn,
+                        cri,
                         &repo_id,
                         key.name(),
                         key.category(),
@@ -614,8 +641,9 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     .await?
                 }
                 None => {
-                    SelectBookmarkLogs::query(
+                    SelectBookmarkLogs::maybe_traced_query(
                         &conn,
+                        cri,
                         &repo_id,
                         key.name(),
                         key.category(),
@@ -651,8 +679,10 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let rows = SelectBookmarkLogsWithTsInRange::query(
+            let cri = ctx.metadata().client_request_info();
+            let rows = SelectBookmarkLogsWithTsInRange::maybe_traced_query(
                 &conn,
+                cri,
                 &repo_id,
                 key.name(),
                 key.category(),
@@ -679,12 +709,18 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
+            let cri = ctx.metadata().client_request_info();
             let entries = match maybe_exclude_reason {
                 Some(ref r) => {
-                    CountFurtherBookmarkLogEntriesWithoutReason::query(&conn, &id, &repo_id, r)
+                    CountFurtherBookmarkLogEntriesWithoutReason::maybe_traced_query(
+                        &conn, cri, &id, &repo_id, r,
+                    )
+                    .await?
+                }
+                None => {
+                    CountFurtherBookmarkLogEntries::maybe_traced_query(&conn, cri, &id, &repo_id)
                         .await?
                 }
-                None => CountFurtherBookmarkLogEntries::query(&conn, &id, &repo_id).await?,
             };
             match entries.into_iter().next() {
                 Some(count) => Ok(count.0),
@@ -713,8 +749,11 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         let repo_id = self.repo_id;
         async move {
-            let entries =
-                CountFurtherBookmarkLogEntriesByReason::query(&conn, &id, &repo_id).await?;
+            let cri = ctx.metadata().client_request_info();
+            let entries = CountFurtherBookmarkLogEntriesByReason::maybe_traced_query(
+                &conn, cri, &id, &repo_id,
+            )
+            .await?;
             Ok(entries.into_iter().collect())
         }
         .boxed()
@@ -731,8 +770,11 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         cloned!(self.repo_id, reason);
         async move {
-            let entries =
-                SkipOverBookmarkLogEntriesWithReason::query(&conn, &id, &repo_id, &reason).await?;
+            let cri = ctx.metadata().client_request_info();
+            let entries = SkipOverBookmarkLogEntriesWithReason::maybe_traced_query(
+                &conn, cri, &id, &repo_id, &reason,
+            )
+            .await?;
             Ok(entries.first().map(|entry| entry.0))
         }
         .boxed()
@@ -750,9 +792,11 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries = ReadNextBookmarkLogEntries::query(&conn, &id, &repo_id, &limit)
-                .watched(ctx.logger())
-                .await?;
+            let cri = ctx.metadata().client_request_info();
+            let entries =
+                ReadNextBookmarkLogEntries::maybe_traced_query(&conn, cri, &id, &repo_id, &limit)
+                    .watched(ctx.logger())
+                    .await?;
 
             let homogenous_entries: Vec<_> = match entries.first().cloned() {
                 Some(first_entry) => {
@@ -818,8 +862,15 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries =
-                ReadNextBookmarkLogEntries::query(&connection, &id, &repo_id, &limit).await?;
+            let cri = ctx.metadata().client_request_info();
+            let entries = ReadNextBookmarkLogEntries::maybe_traced_query(
+                &connection,
+                cri,
+                &id,
+                &repo_id,
+                &limit,
+            )
+            .await?;
 
             Ok(
                 stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
@@ -858,7 +909,8 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries = GetLargestLogId::query(&connection, &repo_id).await?;
+            let cri = ctx.metadata().client_request_info();
+            let entries = GetLargestLogId::maybe_traced_query(&connection, cri, &repo_id).await?;
             let entry = entries.into_iter().next();
             match entry {
                 Some(count) => Ok(count.0),
