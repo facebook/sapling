@@ -124,6 +124,8 @@
   flex-direction: row;
   gap: var(--pad);
   margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .commit-info-actions-bar-row {
   width: 100%;

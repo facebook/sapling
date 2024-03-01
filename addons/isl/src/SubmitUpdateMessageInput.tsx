@@ -14,13 +14,22 @@ import {T} from './i18n';
 import {useAtom, useAtomValue} from 'jotai';
 import {useRef} from 'react';
 
+export function multiSubmitUpdateMessage(commits: Array<CommitInfo>) {
+  // Combine hashes to key the typed update message.
+  // This is kind of volatile, since if you change your selection at all, the message will be cleared.
+  // Note: order must be deterministic so that your selection order doesn't affect this key
+  const orderedCommits = commits.map(c => c.hash);
+  orderedCommits.sort();
+  const key = orderedCommits.join(',');
+  return diffUpdateMessagesState(key);
+}
+
 export function SubmitUpdateMessageInput({commits}: {commits: Array<CommitInfo>}) {
   const provider = useAtomValue(codeReviewProvider);
   const ref = useRef(null);
 
   // typically only one commit, but if you've selected multiple, we key the message on all hashes together.
-  const key = commits.map(c => c.hash).join(',');
-  const [message, setMessage] = useAtom(diffUpdateMessagesState(key));
+  const [message, setMessage] = useAtom(multiSubmitUpdateMessage(commits));
   if (message == null || provider?.supportsUpdateMessage !== true) {
     return null;
   }

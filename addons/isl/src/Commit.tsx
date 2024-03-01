@@ -16,6 +16,7 @@ import {Row} from './ComponentUtils';
 import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
+import {SubmitSelectionButton} from './SubmitSelectionButton';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
@@ -304,7 +305,10 @@ export const Commit = memo(
     }
 
     if (!isPublic && !actionsPrevented && isSelected) {
-      commitActions.push(<FoldButton key="fold-button" commit={commit} />);
+      commitActions.push(
+        <SubmitSelectionButton key="submit-selection-btn" commit={commit} />,
+        <FoldButton key="fold-button" commit={commit} />,
+      );
     }
 
     if (!actionsPrevented && !commit.isHead) {

@@ -15,9 +15,9 @@ import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
-import {HighlightCommitsWhileHovering} from '../HighlightedCommits';
 import {numPendingImageUploads} from '../ImageUpload';
 import {OperationDisabledButton} from '../OperationDisabledButton';
+import {SubmitSelectionButton} from '../SubmitSelectionButton';
 import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {Subtle} from '../Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../SuccessionTracker';
@@ -86,7 +86,6 @@ import {useCallback, useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
-import {debounce} from 'shared/debounce';
 import {firstLine, notEmpty, unwrap} from 'shared/utils';
 
 import './CommitInfoView.css';
@@ -113,19 +112,7 @@ export function CommitInfoSidebar() {
 }
 
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
-  const provider = useAtomValue(codeReviewProvider);
-  const diffSummaries = useAtomValue(allDiffSummaries);
-  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
-  const [updateMessage, setUpdateMessage] = useAtom(
-    // Combine hashes to key the typed update message.
-    // This is kind of volatile, since if you change your selection at all, the message will be cleared.
-    diffUpdateMessagesState(selectedCommits.map(commit => commit.hash).join(',')),
-  );
-  const submittable =
-    (diffSummaries.value != null
-      ? provider?.getSubmittableDiffs(selectedCommits, diffSummaries.value)
-      : undefined) ?? [];
   return (
     <div className="commit-info-view-multi-commit" data-testid="commit-info-view">
       <strong className="commit-list-header">
@@ -144,38 +131,20 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         ))}
       </div>
       <div className="commit-info-actions-bar">
-        <div className="commit-info-actions-bar-row">
+        <div className="commit-info-actions-bar-right">
           <SuggestedRebaseButton
             sources={selectedCommits.map(commit => succeedableRevset(commit.hash))}
           />
+          <FoldButton />
         </div>
         {commitsWithDiffs.length === 0 ? null : (
           <SubmitUpdateMessageInput commits={selectedCommits} />
         )}
-        <div className="commit-info-actions-bar-row">
-          <FoldButton />
-        </div>
         <div className="commit-info-actions-bar-left">
           <SubmitAsDraftCheckbox commitsToBeSubmit={selectedCommits} />
         </div>
         <div className="commit-info-actions-bar-right">
-          {submittable.length === 0 ? null : (
-            <HighlightCommitsWhileHovering toHighlight={submittable}>
-              <OperationDisabledButton
-                contextKey={'submit-selected'}
-                appearance="secondary"
-                runOperation={() => {
-                  // clear update message on submit
-                  setUpdateMessage('');
-                  return unwrap(provider).submitOperation(selectedCommits, {
-                    draft: shouldSubmitAsDraft,
-                    updateMessage: updateMessage || undefined,
-                  });
-                }}>
-                <T>Submit Selected Commits</T>
-              </OperationDisabledButton>
-            </HighlightCommitsWhileHovering>
-          )}
+          <SubmitSelectionButton />
         </div>
       </div>
     </div>
