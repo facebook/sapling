@@ -137,7 +137,7 @@ class HgBackingStore {
   }
 
   std::optional<folly::StringPiece> getRepoName() {
-    return std::optional<folly::StringPiece>{repoName_};
+    return datapackStore_.getRepoName();
   }
 
  private:
@@ -175,7 +175,6 @@ class HgBackingStore {
 
   std::shared_ptr<StructuredLogger> logger_;
 
-  std::string repoName_;
   HgDatapackStore datapackStore_;
 
   // Track metrics for imports currently fetching data from hg
