@@ -90,6 +90,11 @@ struct RepoIdentity {
     /// For example, `a/.sl` with priority 0 and `a/b/.git/sl` with priority 10,
     /// `a/.sl` wins even if it's not the inner-most directory.
     sniff_root_priority: usize,
+
+    /// If set, the initial cli_name must be part of this value for "sniff" to work.
+    /// This is useful to avoid potential risks that (potentially used in automation)
+    /// that "hg root" succeeding in a `.git` repo.
+    sniff_initial_cli_names: Option<&'static str>,
 }
 
 impl Identity {
@@ -354,6 +359,7 @@ const HG: Identity = Identity {
         config_repo_file: "hgrc",
         sniff_dot_dir: None,
         sniff_root_priority: 0,
+        sniff_initial_cli_names: None,
     },
 };
 
@@ -379,6 +385,7 @@ const SL: Identity = Identity {
         config_repo_file: "config",
         sniff_dot_dir: None,
         sniff_root_priority: 0,
+        sniff_initial_cli_names: None,
     },
 };
 
@@ -388,6 +395,7 @@ const SL_GIT: Identity = Identity {
         dot_dir: if cfg!(windows) { ".git\\sl" } else { ".git/sl" },
         sniff_dot_dir: Some(".git"),
         sniff_root_priority: 10, // lowest
+        sniff_initial_cli_names: Some("sl"),
         ..*SL.repo
     },
     ..SL
@@ -413,6 +421,7 @@ const TEST: Identity = Identity {
         config_repo_file: "config",
         sniff_dot_dir: None,
         sniff_root_priority: 5,
+        sniff_initial_cli_names: None,
     },
 };
 
@@ -447,7 +456,8 @@ pub mod idents {
     }
 }
 
-static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
+static INITIAL_DEFAULT: Lazy<Identity> = Lazy::new(compute_default);
+static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(*INITIAL_DEFAULT));
 
 pub use idents::all;
 
@@ -456,6 +466,7 @@ pub fn default() -> Identity {
 }
 
 pub fn reset_default() {
+    // Cannot use INITIAL_DEFAULT - env vars might have changed.
     *DEFAULT.write() = compute_default();
 }
 
@@ -514,6 +525,11 @@ pub fn cli_name() -> &'static str {
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
     for id in all() {
+        if let Some(cli_names) = id.repo.sniff_initial_cli_names {
+            if !cli_names.contains(INITIAL_DEFAULT.cli_name()) {
+                continue;
+            }
+        }
         let test_path = path.join(id.repo.sniff_dot_dir());
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
