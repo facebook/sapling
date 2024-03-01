@@ -143,12 +143,12 @@ impl SqlPhasesStore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        if let Some(cri) = ctx.metadata().client_request_info() {
-            InsertPhase::traced_query(&self.write_connection, cri, &phases).await?;
-        } else {
-            InsertPhase::query(&self.write_connection, &phases).await?;
-        }
-
+        InsertPhase::maybe_traced_query(
+            &self.write_connection,
+            ctx.metadata().client_request_info(),
+            &phases,
+        )
+        .await?;
         {
             let ctx = (ctx, repoid, self);
             let phases = csids
@@ -169,7 +169,12 @@ impl SqlPhasesStore {
         STATS::list_all.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let ans = SelectAllPublic::query(&self.read_connection, &repo_id).await?;
+        let ans = SelectAllPublic::maybe_traced_query(
+            &self.read_connection,
+            ctx.metadata().client_request_info(),
+            &repo_id,
+        )
+        .await?;
         Ok(ans.into_iter().map(|x| x.0).collect())
     }
 }
@@ -236,11 +241,13 @@ impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         // NOTE: We only track public phases in the DB.
-        let public = if let Some(cri) = ctx.metadata().client_request_info() {
-            SelectPhases::traced_query(&mapping.read_connection, cri, repo_id, &cs_ids).await?
-        } else {
-            SelectPhases::query(&mapping.read_connection, repo_id, &cs_ids).await?
-        };
+        let public = SelectPhases::maybe_traced_query(
+            &mapping.read_connection,
+            ctx.metadata().client_request_info(),
+            repo_id,
+            &cs_ids,
+        )
+        .await?;
 
         Result::<_, Error>::Ok(public.into_iter().collect())
     }

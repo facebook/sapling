@@ -1014,48 +1014,26 @@ impl SqlCommitGraphStorage {
             );
             let fetched_edges = match target.edge {
                 PrefetchEdge::FirstParent => {
-                    if let Some(cri) = ctx.metadata().client_request_info() {
-                        SelectManyChangesetsWithFirstParentPrefetch::traced_query(
-                            &self.read_connection.conn,
-                            cri,
-                            &self.repo_id,
-                            &steps,
-                            &target.generation.value(),
-                            cs_ids,
-                        )
-                        .await?
-                    } else {
-                        SelectManyChangesetsWithFirstParentPrefetch::query(
-                            &self.read_connection.conn,
-                            &self.repo_id,
-                            &steps,
-                            &target.generation.value(),
-                            cs_ids,
-                        )
-                        .await?
-                    }
+                    SelectManyChangesetsWithFirstParentPrefetch::maybe_traced_query(
+                        &self.read_connection.conn,
+                        ctx.metadata().client_request_info(),
+                        &self.repo_id,
+                        &steps,
+                        &target.generation.value(),
+                        cs_ids,
+                    )
+                    .await?
                 }
                 PrefetchEdge::SkipTreeSkewAncestor => {
-                    if let Some(cri) = ctx.metadata().client_request_info() {
-                        SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::traced_query(
-                            &self.read_connection.conn,
-                            cri,
-                            &self.repo_id,
-                            &steps,
-                            &target.generation.value(),
-                            cs_ids,
-                        )
-                        .await?
-                    } else {
-                        SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::query(
-                            &self.read_connection.conn,
-                            &self.repo_id,
-                            &steps,
-                            &target.generation.value(),
-                            cs_ids,
-                        )
-                        .await?
-                    }
+                    SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::maybe_traced_query(
+                        &self.read_connection.conn,
+                        ctx.metadata().client_request_info(),
+                        &self.repo_id,
+                        &steps,
+                        &target.generation.value(),
+                        cs_ids,
+                    )
+                    .await?
                 }
             };
             Ok(Self::collect_changeset_edges(&fetched_edges))
@@ -1069,18 +1047,13 @@ impl SqlCommitGraphStorage {
 
                     move |cs_ids| async move {
                         let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
-
-                        let fetched_edges = if let Some(cri) = cri {
-                            SelectManyChangesets::traced_query(
-                                &conn,
-                                &cri,
-                                &repo_id,
-                                cs_ids.as_slice(),
-                            )
-                            .await?
-                        } else {
-                            SelectManyChangesets::query(&conn, &repo_id, cs_ids.as_slice()).await?
-                        };
+                        let fetched_edges = SelectManyChangesets::maybe_traced_query(
+                            &conn,
+                            cri.as_ref(),
+                            &repo_id,
+                            cs_ids.as_slice(),
+                        )
+                        .await?;
                         Ok(Self::collect_changeset_edges(&fetched_edges))
                     }
                 })
@@ -1112,8 +1085,9 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         Ok(Self::collect_changeset_edges(
-            &SelectManyChangesetsInIdRange::query(
+            &SelectManyChangesetsInIdRange::maybe_traced_query(
                 self.read_conn(read_from_master),
+                ctx.metadata().client_request_info(),
                 &self.repo_id,
                 &start_id,
                 &end_id,
@@ -1136,8 +1110,9 @@ impl SqlCommitGraphStorage {
         limit: u64,
         read_from_master: bool,
     ) -> Result<Vec<ChangesetId>> {
-        Ok(SelectManyChangesetsIdsInIdRange::query(
+        Ok(SelectManyChangesetsIdsInIdRange::maybe_traced_query(
             self.read_conn(read_from_master),
+            ctx.metadata().client_request_info(),
             &self.repo_id,
             &start_id,
             &end_id,
@@ -1152,12 +1127,14 @@ impl SqlCommitGraphStorage {
     /// Returns the maximum auto-increment id for any changeset in the repo,
     /// or `None` if there are no changesets.
     pub async fn max_id(&self, ctx: &CoreContext, read_from_master: bool) -> Result<Option<u64>> {
-        Ok(
-            SelectMaxId::query(self.read_conn(read_from_master), &self.repo_id)
-                .await?
-                .first()
-                .map(|(id,)| *id),
+        Ok(SelectMaxId::maybe_traced_query(
+            self.read_conn(read_from_master),
+            ctx.metadata().client_request_info(),
+            &self.repo_id,
         )
+        .await?
+        .first()
+        .map(|(id,)| *id))
     }
 
     /// Returns the maximum auto-increment id of changesets having auto-increment
@@ -1170,8 +1147,9 @@ impl SqlCommitGraphStorage {
         limit: u64,
         read_from_master: bool,
     ) -> Result<Option<u64>> {
-        Ok(SelectMaxIdInRange::query(
+        Ok(SelectMaxIdInRange::maybe_traced_query(
             self.read_conn(read_from_master),
+            ctx.metadata().client_request_info(),
             &self.repo_id,
             &start_id,
             &end_id,
@@ -1193,6 +1171,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         // We need to be careful because there might be dependencies among the edges
         // Part 1 - Add all nodes without any edges, so we generate ids for them
         let transaction = self.write_connection.start_transaction().await?;
+        let cri = ctx.metadata().client_request_info();
         let cs_no_edges = many_edges
             .iter()
             .map(|e| {
@@ -1206,32 +1185,19 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 )
             })
             .collect::<Vec<_>>();
-        let (transaction, result) = if let Some(cri) = ctx.metadata().client_request_info() {
-            InsertChangesetsNoEdges::traced_query_with_transaction(
-                transaction,
-                cri,
-                // This pattern is used to convert a ref to tuple into a tuple of refs.
-                #[allow(clippy::map_identity)]
-                cs_no_edges
-                    .iter()
-                    .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            )
-            .await?
-        } else {
-            InsertChangesetsNoEdges::query_with_transaction(
-                transaction,
-                // This pattern is used to convert a ref to tuple into a tuple of refs.
-                #[allow(clippy::map_identity)]
-                cs_no_edges
-                    .iter()
-                    .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            )
-            .await?
-        };
+        let (transaction, result) = InsertChangesetsNoEdges::maybe_traced_query_with_transaction(
+            transaction,
+            cri,
+            // This pattern is used to convert a ref to tuple into a tuple of refs.
+            #[allow(clippy::map_identity)]
+            cs_no_edges
+                .iter()
+                .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+
         let modified = result.affected_rows();
         if modified == 0 {
             // Early return, everything is already stored
@@ -1256,8 +1222,9 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         }
         let (transaction, cs_to_ids) = if !need_ids.is_empty() {
             // Use the same transaction to make sure we see the new values
-            let (transaction, result) = SelectManyIds::query_with_transaction(
+            let (transaction, result) = SelectManyIds::maybe_traced_query_with_transaction(
                 transaction,
+                cri,
                 &self.repo_id,
                 need_ids.into_iter().collect::<Vec<_>>().as_slice(),
             )
@@ -1300,30 +1267,17 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             }
         };
 
-        let (transaction, _) = if let Some(cri) = ctx.metadata().client_request_info() {
-            FixEdges::traced_query_with_transaction(
-                transaction,
-                cri,
-                // This pattern is used to convert a ref to tuple into a tuple of refs.
-                #[allow(clippy::map_identity)]
-                rows.iter()
-                    .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            )
-            .await?
-        } else {
-            FixEdges::query_with_transaction(
-                transaction,
-                // This pattern is used to convert a ref to tuple into a tuple of refs.
-                #[allow(clippy::map_identity)]
-                rows.iter()
-                    .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            )
-            .await?
-        };
+        let (transaction, _) = FixEdges::maybe_traced_query_with_transaction(
+            transaction,
+            cri,
+            // This pattern is used to convert a ref to tuple into a tuple of refs.
+            #[allow(clippy::map_identity)]
+            rows.iter()
+                .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
 
         let merge_parent_rows = many_edges
             .iter()
@@ -1337,8 +1291,9 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let (transaction, result) = InsertMergeParents::query_with_transaction(
+        let (transaction, result) = InsertMergeParents::maybe_traced_query_with_transaction(
             transaction,
+            cri,
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             merge_parent_rows
@@ -1358,11 +1313,13 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
+        let cri = ctx.metadata().client_request_info();
         let merge_parent_cs_id_to_id: HashMap<ChangesetId, u64> = if edges.parents.len() >= 2 {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            SelectManyIds::query(
+            SelectManyIds::maybe_traced_query(
                 &self.read_connection.conn,
+                cri,
                 &self.repo_id,
                 &edges
                     .parents
@@ -1379,8 +1336,9 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         let transaction = self.write_connection.start_transaction().await?;
 
-        let (transaction, result) = InsertChangeset::query_with_transaction(
+        let (transaction, result) = InsertChangeset::maybe_traced_query_with_transaction(
             transaction,
+            cri,
             &self.repo_id,
             &edges.node.cs_id,
             &edges.node.generation.value(),
@@ -1413,17 +1371,19 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                let (transaction, result) = InsertMergeParents::query_with_transaction(
-                    transaction,
-                    // This pattern is used to convert a ref to tuple into a tuple of refs.
-                    #[allow(clippy::map_identity)]
-                    merge_parent_rows
-                        .iter()
-                        .map(|(a, b, c)| (a, b, c))
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .await?;
+                let (transaction, result) =
+                    InsertMergeParents::maybe_traced_query_with_transaction(
+                        transaction,
+                        cri,
+                        // This pattern is used to convert a ref to tuple into a tuple of refs.
+                        #[allow(clippy::map_identity)]
+                        merge_parent_rows
+                            .iter()
+                            .map(|(a, b, c)| (a, b, c))
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    )
+                    .await?;
 
                 transaction.commit().await?;
                 ctx.perf_counters()
@@ -1520,8 +1480,9 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     ) -> Result<ChangesetIdsResolvedFromPrefix> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let mut fetched_ids = SelectChangesetsInRange::query(
+        let mut fetched_ids = SelectChangesetsInRange::maybe_traced_query(
             &self.read_connection.conn,
+            ctx.metadata().client_request_info(),
             &self.repo_id,
             &cs_prefix.min_bound(),
             &cs_prefix.max_bound(),
@@ -1543,12 +1504,15 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>> {
-        Ok(
-            SelectChildren::query(&self.read_master_connection.conn, &self.repo_id, &cs_id)
-                .await?
-                .into_iter()
-                .map(|(cs_id,)| cs_id)
-                .collect(),
+        Ok(SelectChildren::maybe_traced_query(
+            &self.read_master_connection.conn,
+            ctx.metadata().client_request_info(),
+            &self.repo_id,
+            &cs_id,
         )
+        .await?
+        .into_iter()
+        .map(|(cs_id,)| cs_id)
+        .collect())
     }
 }

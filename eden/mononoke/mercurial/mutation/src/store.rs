@@ -212,26 +212,20 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::SqlWrites, 4);
-        if let Some(cri) = ctx.metadata().client_request_info() {
-            let (txn, _) =
-                AddChangesets::traced_query_with_transaction(txn, cri, db_csets.as_slice()).await?;
-            let (txn, _) =
-                AddEntries::traced_query_with_transaction(txn, cri, ref_db_entries.as_slice())
-                    .await?;
-            let (txn, _) =
-                AddPreds::traced_query_with_transaction(txn, cri, ref_db_preds.as_slice()).await?;
-            let (txn, _) =
-                AddSplits::traced_query_with_transaction(txn, cri, ref_db_splits.as_slice())
-                    .await?;
-            txn.commit().await?;
-        } else {
-            let (txn, _) = AddChangesets::query_with_transaction(txn, db_csets.as_slice()).await?;
-            let (txn, _) =
-                AddEntries::query_with_transaction(txn, ref_db_entries.as_slice()).await?;
-            let (txn, _) = AddPreds::query_with_transaction(txn, ref_db_preds.as_slice()).await?;
-            let (txn, _) = AddSplits::query_with_transaction(txn, ref_db_splits.as_slice()).await?;
-            txn.commit().await?;
-        }
+        let cri = ctx.metadata().client_request_info();
+        let (txn, _) =
+            AddChangesets::maybe_traced_query_with_transaction(txn, cri, db_csets.as_slice())
+                .await?;
+        let (txn, _) =
+            AddEntries::maybe_traced_query_with_transaction(txn, cri, ref_db_entries.as_slice())
+                .await?;
+        let (txn, _) =
+            AddPreds::maybe_traced_query_with_transaction(txn, cri, ref_db_preds.as_slice())
+                .await?;
+        let (txn, _) =
+            AddSplits::maybe_traced_query_with_transaction(txn, cri, ref_db_splits.as_slice())
+                .await?;
+        txn.commit().await?;
 
         debug!(
             ctx.logger(),
@@ -277,25 +271,13 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let count = match ctx.metadata().client_request_info() {
-            Some(cri) => {
-                CountChangesets::traced_query(
-                    &self.connections.read_connection,
-                    cri,
-                    &self.repo_id,
-                    changeset_ids.as_slice(),
-                )
-                .await
-            }
-            None => {
-                CountChangesets::query(
-                    &self.connections.read_connection,
-                    &self.repo_id,
-                    changeset_ids.as_slice(),
-                )
-                .await
-            }
-        }?;
+        let count = CountChangesets::maybe_traced_query(
+            &self.connections.read_connection,
+            ctx.metadata().client_request_info(),
+            &self.repo_id,
+            changeset_ids.as_slice(),
+        )
+        .await?;
 
         if let Some((count,)) = count.into_iter().next() {
             if count as usize == changeset_ids.len() {
@@ -379,25 +361,13 @@ impl SqlHgMutationStore {
         }
         if !to_fetch_split.is_empty() {
             ctx.perf_counters().increment_counter(sql_perf_counter);
-            let rows = match ctx.metadata().client_request_info() {
-                Some(cri) => {
-                    SelectSplitsBySuccessor::traced_query(
-                        connection,
-                        cri,
-                        &self.repo_id,
-                        to_fetch_split.as_slice(),
-                    )
-                    .await
-                }
-                None => {
-                    SelectSplitsBySuccessor::query(
-                        connection,
-                        &self.repo_id,
-                        to_fetch_split.as_slice(),
-                    )
-                    .await
-                }
-            }?;
+            let rows = SelectSplitsBySuccessor::maybe_traced_query(
+                connection,
+                ctx.metadata().client_request_info(),
+                &self.repo_id,
+                to_fetch_split.as_slice(),
+            )
+            .await?;
             for (successor, seq, split_successor) in rows {
                 if let Some(entry) = entry_set.entries.get_mut(&successor) {
                     entry.add_split(seq, split_successor).with_context(|| {
@@ -434,19 +404,9 @@ impl SqlHgMutationStore {
         let cri = ctx.metadata().client_request_info();
         let chunk_rows = stream::iter(chunks.into_iter().map(move |chunk| async move {
             ctx.perf_counters().increment_counter(sql_perf_counter);
-            match cri {
-                Some(cri) => {
-                    SelectBySuccessor::traced_query(
-                        connection,
-                        cri,
-                        &self.repo_id,
-                        chunk.as_slice(),
-                    )
-                    .await
-                }
-                None => SelectBySuccessor::query(connection, &self.repo_id, chunk.as_slice()).await,
-            }
-            .with_context(|| format!("Error fetching successors: {:?}", chunk))
+            SelectBySuccessor::maybe_traced_query(connection, cri, &self.repo_id, chunk.as_slice())
+                .await
+                .with_context(|| format!("Error fetching successors: {:?}", chunk))
         }))
         .buffered(10)
         .try_collect::<Vec<_>>()
@@ -485,27 +445,14 @@ impl SqlHgMutationStore {
         let cri = ctx.metadata().client_request_info();
         let rows = stream::iter(chunks.into_iter().map(|changesets| async move {
             ctx.perf_counters().increment_counter(sql_perf_counter);
-            match cri {
-                Some(cri) => {
-                    SelectBySuccessorChain::traced_query(
-                        connection,
-                        cri,
-                        &self.repo_id,
-                        &self.mutation_chain_limit,
-                        &changesets,
-                    )
-                    .await
-                }
-                None => {
-                    SelectBySuccessorChain::query(
-                        connection,
-                        &self.repo_id,
-                        &self.mutation_chain_limit,
-                        &changesets,
-                    )
-                    .await
-                }
-            }
+            SelectBySuccessorChain::maybe_traced_query(
+                connection,
+                cri,
+                &self.repo_id,
+                &self.mutation_chain_limit,
+                &changesets,
+            )
+            .await
             .with_context(|| format!("Error fetching mutation chains for: {:?}", changesets))
         }))
         .buffered(10)

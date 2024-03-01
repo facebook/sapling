@@ -302,23 +302,23 @@ impl SqlBonsaiHgMapping {
     ) -> Result<(), Error> {
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
+        let cri = ctx.metadata().client_request_info();
         let hg_ids = &[hg_cs_id];
-        let by_hg =
-            SelectMappingByHg::query(&self.read_master_connection.conn, &self.repo_id, hg_ids);
+        let by_hg = SelectMappingByHg::maybe_traced_query(
+            &self.read_master_connection.conn,
+            cri,
+            &self.repo_id,
+            hg_ids,
+        );
         let bcs_ids = &[bcs_id];
 
-        let by_bcs = if let Some(cri) = ctx.metadata().client_request_info() {
-            SelectMappingByBonsai::traced_query(
-                &self.read_master_connection.conn,
-                cri,
-                &self.repo_id,
-                bcs_ids,
-            )
-            .boxed()
-        } else {
-            SelectMappingByBonsai::query(&self.read_master_connection.conn, &self.repo_id, bcs_ids)
-                .boxed()
-        };
+        let by_bcs = SelectMappingByBonsai::maybe_traced_query(
+            &self.read_master_connection.conn,
+            cri,
+            &self.repo_id,
+            bcs_ids,
+        )
+        .boxed();
 
         let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg, by_bcs).await?;
 
@@ -346,17 +346,19 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlWrites);
 
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
-
+        let cri = ctx.metadata().client_request_info();
         if self.overwrite {
-            let result = ReplaceMapping::query(
+            let result = ReplaceMapping::maybe_traced_query(
                 &self.write_connection,
+                cri,
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
             )
             .await?;
             Ok(result.affected_rows() >= 1)
         } else {
-            let result = InsertMapping::query(
+            let result = InsertMapping::maybe_traced_query(
                 &self.write_connection,
+                cri,
                 &[(&self.repo_id, &hg_cs_id, &bcs_id)],
             )
             .await?;
@@ -418,10 +420,12 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         if low > high {
             return Ok(Vec::new());
         }
+        let cri = ctx.metadata().client_request_info();
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectHgChangesetsByRange::query(
+        let rows = SelectHgChangesetsByRange::maybe_traced_query(
             &self.read_connection.conn,
+            cri,
             &self.repo_id,
             &low.as_bytes(),
             &high.as_bytes(),
@@ -432,8 +436,9 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         if fetched.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let rows = SelectHgChangesetsByRange::query(
+            let rows = SelectHgChangesetsByRange::maybe_traced_query(
                 &self.read_master_connection.conn,
+                cri,
                 &self.repo_id,
                 &low.as_bytes(),
                 &high.as_bytes(),
@@ -466,12 +471,13 @@ async fn select_mapping(
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
-                        let res = if let Some(cri) = cri {
-                            SelectMappingByBonsai::traced_query(&conn, &cri, &repo_id, &bcs_ids[..])
-                                .await?
-                        } else {
-                            SelectMappingByBonsai::query(&conn, &repo_id, &bcs_ids[..]).await?
-                        };
+                        let res = SelectMappingByBonsai::maybe_traced_query(
+                            &conn,
+                            cri.as_ref(),
+                            &repo_id,
+                            &bcs_ids[..],
+                        )
+                        .await?;
 
                         Ok(res
                             .into_iter()
@@ -502,18 +508,13 @@ async fn select_mapping(
                     let conn = connection.conn.clone();
                     move |hg_cs_ids| async move {
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
-                        Ok(match cri {
-                            Some(cri) => {
-                                SelectMappingByHg::traced_query(
-                                    &conn,
-                                    &cri,
-                                    &repo_id,
-                                    &hg_cs_ids[..],
-                                )
-                                .await
-                            }
-                            None => SelectMappingByHg::query(&conn, &repo_id, &hg_cs_ids[..]).await,
-                        }?
+                        Ok(SelectMappingByHg::maybe_traced_query(
+                            &conn,
+                            cri.as_ref(),
+                            &repo_id,
+                            &hg_cs_ids[..],
+                        )
+                        .await?
                         .into_iter()
                         .collect())
                     }

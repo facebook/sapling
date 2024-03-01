@@ -115,6 +115,19 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
+                pub async fn maybe_traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: Option<&ClientRequestInfo>,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
+                    match cri {
+                        Some(cri) => traced_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await,
+                        None => query_with_transaction(transaction, $( $pname, )* $( $lname, )*).await
+                    }
+                }
+
+                #[allow(dead_code)]
                 pub async fn query(
                     connection: &Connection,
                     $( $pname: & $ptype, )*
@@ -136,6 +149,19 @@ macro_rules! mononoke_queries {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*),
                     ).await
+                }
+
+                #[allow(dead_code)]
+                pub async fn maybe_traced_query(
+                    connection: &Connection,
+                    cri: Option<&ClientRequestInfo>,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    match cri {
+                        Some(cri) => traced_query(connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        None => query(connection, $( $pname, )* $( $lname, )*).await
+                    }
                 }
             }
 
@@ -185,6 +211,18 @@ macro_rules! mononoke_queries {
                     commented_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await
                 }
 
+                #[allow(dead_code)]
+                pub async fn maybe_traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: Option<&ClientRequestInfo>,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
+                    match cri {
+                        Some(cri) => traced_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await,
+                        None => query_with_transaction(transaction, $( $pname, )* $( $lname, )*).await
+                    }
+                }
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -247,6 +285,20 @@ macro_rules! mononoke_queries {
                         }
         },
                     ).await?.0)
+                }
+
+                #[allow(dead_code)]
+                pub async fn maybe_traced_query(
+                    config: &SqlQueryConfig,
+                    connection: &Connection,
+                    cri: Option<&ClientRequestInfo>,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    match cri {
+                        Some(cri) => traced_query(config, connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        None => query(config, connection, $( $pname, )* $( $lname, )*).await
+                    }
                 }
             }
 
@@ -315,6 +367,19 @@ macro_rules! mononoke_queries {
                 }
 
                 #[allow(dead_code)]
+                pub async fn maybe_traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: Option<&ClientRequestInfo>,
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: & $ptype ),*
+                ) -> Result<(Transaction, WriteResult)> {
+                    match cri {
+                        Some(cri) => traced_query_with_transaction(transaction, &cri, values $( , $pname )*).await,
+                        None => query_with_transaction(transaction, values $( , $pname )*).await
+                    }
+                }
+
+                #[allow(dead_code)]
                 pub async fn query(
                     connection: &Connection,
                     values: &[($( & $vtype, )*)],
@@ -336,6 +401,19 @@ macro_rules! mononoke_queries {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, &cri, values $( , $pname )* ),
                     ).await
+                }
+
+                #[allow(dead_code)]
+                pub async fn maybe_traced_query(
+                    connection: &Connection,
+                    cri: Option<&ClientRequestInfo>,
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: & $ptype ),*
+                ) -> Result<WriteResult> {
+                    match cri {
+                        Some(cri) => traced_query(connection, &cri, values $( , $pname )*).await,
+                        None => query(connection, values $( , $pname )*).await
+                    }
                 }
             }
 
@@ -402,6 +480,18 @@ macro_rules! mononoke_queries {
                         .await
                 }
 
+                #[allow(dead_code)]
+                pub async fn maybe_traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: Option<&ClientRequestInfo>,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<(Transaction, WriteResult)> {
+                    match cri {
+                        Some(cri) => traced_query_with_transaction(transaction, &cri $( , $pname )* $( , $lname )*).await,
+                        None => query_with_transaction(transaction $( , $pname )* $( , $lname )*).await
+                    }
+                }
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -425,6 +515,19 @@ macro_rules! mononoke_queries {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*),
                     ).await
+                }
+
+                #[allow(dead_code)]
+                pub async fn maybe_traced_query(
+                    connection: &Connection,
+                    cri: Option<&ClientRequestInfo>,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<WriteResult> {
+                    match cri {
+                        Some(cri) => traced_query(connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        None => query(connection, $( $pname, )* $( $lname, )*).await
+                    }
                 }
             }
 
@@ -654,6 +757,14 @@ mod tests {
         TestQuery2::traced_query(config, connection, &cri).await?;
         TestQuery3::traced_query(connection, &cri, &[(&12,)]).await?;
         TestQuery4::traced_query(connection, &cri, &"hello").await?;
+        TestQuery::maybe_traced_query(connection, Some(&cri), todo!(), todo!()).await?;
+        TestQuery2::maybe_traced_query(config, connection, Some(&cri)).await?;
+        TestQuery3::maybe_traced_query(connection, Some(&cri), &[(&12,)]).await?;
+        TestQuery4::maybe_traced_query(connection, Some(&cri), &"hello").await?;
+        TestQuery::maybe_traced_query(connection, None, todo!(), todo!()).await?;
+        TestQuery2::maybe_traced_query(config, connection, None).await?;
+        TestQuery3::maybe_traced_query(connection, None, &[(&12,)]).await?;
+        TestQuery4::maybe_traced_query(connection, None, &"hello").await?;
         Ok(())
     }
 }
