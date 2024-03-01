@@ -276,18 +276,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "try",
-    srcs = ["TryTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/common/utils:match",
-        "//eden/fs/utils:try",
-        "//folly:try",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "unix_socket",
     srcs = ["UnixSocketTest.cpp"],
     supports_static_listing = False,

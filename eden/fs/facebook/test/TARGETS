@@ -13,10 +13,10 @@ cpp_unittest(
     deps = [
         "//eden/common/utils:string",
         "//eden/common/utils:throw",
+        "//eden/common/utils:try",
         "//eden/fs/facebook:normalized_hostname",
         "//eden/fs/utils:file_utils",
         "//eden/fs/utils:path",
-        "//eden/fs/utils:try",
         "//folly:file",
         "//folly/portability:gtest",
     ],

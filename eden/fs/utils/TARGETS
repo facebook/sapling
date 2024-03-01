@@ -138,8 +138,8 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:try",
         "//eden/common/utils:win_error",
-        "//eden/fs/utils:try",
         "//folly:exception",
         "//folly:file_util",
     ],
@@ -248,17 +248,6 @@ cpp_library(
 cpp_library(
     name = "static_assert",
     headers = ["StaticAssert.h"],
-)
-
-cpp_library(
-    name = "try",
-    headers = [
-        "Try.h",
-    ],
-    exported_deps = [
-        "//folly:exception_wrapper",
-        "//folly:try",
-    ],
 )
 
 cpp_library(
