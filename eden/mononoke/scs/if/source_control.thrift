@@ -7,6 +7,7 @@
 
 include "fb303/thrift/fb303_core.thrift"
 include "configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift"
+include "eden/mononoke/derived_data/if/derived_data_type.thrift"
 
 namespace cpp2 facebook.scm.service
 namespace php SourceControlService
@@ -18,6 +19,7 @@ typedef binary small_binary (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
 )
+typedef derived_data_type.DerivedDataType DerivedDataType
 
 struct DateTime {
   /// UNIX timestamp
@@ -1060,17 +1062,6 @@ struct RepoLandStackParams {
 
   /// What kind of bookmark can be pushed
   9: BookmarkKindRestrictions bookmark_restrictions = BookmarkKindRestrictions.ANY_KIND;
-}
-
-/// Only support the types of derived data that we wish to expose to SCS clients.
-/// This can be extended later if other usecases arrise.
-/// See https://www.internalfb.com/code/fbsource/[f84d7f31d5e251d6b1a4dcacce880e4b29a73652]/fbcode/eden/mononoke/derived_data/remote/if/derived_data_service.thrift?lines=40
-/// for an exhaustive list of derived data types.  For convenience, keep the variant numbers matching.
-enum DerivedDataType {
-  /// Derive fsnode data
-  FSNODE = 1,
-  /// Derive skeleton manifest data
-  SKELETON_MANIFEST = 9,
 }
 
 struct RepoPrepareCommitsParams {
