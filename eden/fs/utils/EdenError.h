@@ -11,8 +11,9 @@
 #include <folly/ExceptionWrapper.h>
 #include <string_view>
 #include <system_error>
+
+#include "eden/common/utils/Utf8.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/utils/Utf8.h"
 
 namespace facebook::eden {
 /*

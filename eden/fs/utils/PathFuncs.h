@@ -25,7 +25,7 @@
 #include "eden/common/utils/String.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/utils/Utf8.h"
+#include "eden/common/utils/Utf8.h"
 
 namespace facebook::eden {
 

@@ -343,16 +343,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "utf8",
-    srcs = ["Utf8Test.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:utf8",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "glob_test",
     srcs = ["GlobMatcherTest.cpp"],
     supports_static_listing = False,

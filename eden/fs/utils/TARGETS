@@ -132,7 +132,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":utf8",
+        "//eden/common/utils:utf8",
         "//eden/fs/service:thrift-cpp2-types",
         "//folly:exception_wrapper",
     ],
@@ -372,12 +372,12 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":utf8",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:memory",
         "//eden/common/utils:string",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:throw",
+        "//eden/common/utils:utf8",
         "//folly:expected",
         "//folly:fbstring",
         "//folly:fbvector",
@@ -517,19 +517,6 @@ cpp_library(
         "fbsource//third-party/googletest:gtest_headers",
         ":path",
         "//folly/portability:sys_types",
-    ],
-)
-
-cpp_library(
-    name = "utf8",
-    srcs = ["Utf8.cpp"],
-    headers = ["Utf8.h"],
-    deps = [
-        "//folly:unicode",
-    ],
-    exported_deps = [
-        "//folly:range",
-        "//folly:utility",
     ],
 )
 
