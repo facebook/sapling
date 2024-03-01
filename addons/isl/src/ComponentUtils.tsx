@@ -30,6 +30,8 @@ const styles = stylex.create({
   },
 });
 
+export type ReactProps<T extends HTMLElement> = React.DetailedHTMLProps<React.HTMLAttributes<T>, T>;
+
 export function LargeSpinner() {
   return (
     <div data-testid="loading-spinner">
@@ -68,10 +70,7 @@ export function FlexSpacer() {
   return <div {...stylex.props(styles.spacer)} />;
 }
 
-type ContainerProps = React.DetailedHTMLProps<
-  React.HTMLAttributes<HTMLDivElement>,
-  HTMLDivElement
-> & {xstyle?: stylex.StyleXStyles};
+type ContainerProps = ReactProps<HTMLDivElement> & {xstyle?: stylex.StyleXStyles};
 
 /** See `<Row>` and `<Column>`. */
 function FlexBox(props: ContainerProps, flexDirection: 'row' | 'column') {
