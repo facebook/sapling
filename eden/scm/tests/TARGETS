@@ -61,7 +61,7 @@ ENV = {
     "URLENCODE": "$(location //eden/mononoke/tests/integration:urlencode)",
     "HGTEST_NORMAL_LAYOUT": "0",
     "HGRUNTEST_SKIP_ENV": "1",
-    "HGTEST_PYTHON": "$(location //eden/scm:hgpython)",
+    "HGTEST_PYTHON": "fbpython",
     "HGTEST_RUN_TESTS_PY": "$(location :run_tests_py)",
     "HGTEST_SLOWTIMEOUT": "2147483647",
     # used by run-tests.py
