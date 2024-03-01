@@ -18,5 +18,11 @@ const styles = stylex.create({
 });
 
 export function Bookmark({children, special}: {children: ReactNode; special?: boolean}) {
-  return <Tag xstyle={special !== true ? undefined : styles.special}>{children}</Tag>;
+  return (
+    <Tag
+      xstyle={special !== true ? undefined : styles.special}
+      title={typeof children === 'string' ? children : undefined}>
+      {children}
+    </Tag>
+  );
 }

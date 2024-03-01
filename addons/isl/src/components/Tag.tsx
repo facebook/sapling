@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactProps} from '../ComponentUtils';
 import type {ReactNode} from 'react';
 
 import * as stylex from '@stylexjs/stylex';
@@ -27,6 +28,9 @@ const styles = stylex.create({
   },
 });
 
-export function Tag({children, xstyle}: {children: ReactNode; xstyle?: stylex.StyleXStyles}) {
-  return <span {...stylex.props(styles.tag, xstyle)}>{children}</span>;
+export function Tag({
+  xstyle,
+  ...rest
+}: {children: ReactNode; xstyle?: stylex.StyleXStyles} & ReactProps<HTMLSpanElement>) {
+  return <span {...stylex.props(styles.tag, xstyle)} {...rest} />;
 }
