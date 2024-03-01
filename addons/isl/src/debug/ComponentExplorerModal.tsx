@@ -13,6 +13,7 @@ import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
 import {VSCodeCheckbox} from '../VSCodeCheckbox';
 import {RadioGroup} from '../components/Radio';
+import {Tag} from '../components/Tag';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
@@ -23,7 +24,6 @@ import {
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
-  VSCodeTag,
   VSCodeTextArea,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
@@ -117,8 +117,8 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         <Row>
           <VSCodeBadge>Badge</VSCodeBadge>
           <VSCodeBadge>0</VSCodeBadge>
-          <VSCodeTag>Tag</VSCodeTag>
-          <VSCodeTag>0</VSCodeTag>
+          <Tag>Tag</Tag>
+          <Tag>0</Tag>
           <Link href={'#'}>Link</Link>
           <Icon icon="loading" />
           Loading
