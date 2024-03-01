@@ -82,6 +82,14 @@ struct RepoIdentity {
     ///
     /// Examples: `config`, `hgrc`
     config_repo_file: &'static str,
+
+    /// Directory used by `sniff_dir`. Reuse `dot_dir` if `None`.
+    sniff_dot_dir: Option<&'static str>,
+
+    /// Affects `sniff_root`. Lower number wins.
+    /// For example, `a/.sl` with priority 0 and `a/b/.git/sl` with priority 10,
+    /// `a/.sl` wins even if it's not the inner-most directory.
+    sniff_root_priority: usize,
 }
 
 impl Identity {
@@ -344,6 +352,8 @@ const HG: Identity = Identity {
     repo: RepoIdentity {
         dot_dir: ".hg",
         config_repo_file: "hgrc",
+        sniff_dot_dir: None,
+        sniff_root_priority: 0,
     },
 };
 
@@ -367,6 +377,8 @@ const SL: Identity = Identity {
     repo: RepoIdentity {
         dot_dir: ".sl",
         config_repo_file: "config",
+        sniff_dot_dir: None,
+        sniff_root_priority: 0,
     },
 };
 
@@ -388,6 +400,8 @@ const TEST: Identity = Identity {
     repo: RepoIdentity {
         dot_dir: ".test",
         config_repo_file: "config",
+        sniff_dot_dir: None,
+        sniff_root_priority: 5,
     },
 };
 
@@ -469,6 +483,12 @@ fn compute_default() -> Identity {
     ident
 }
 
+impl RepoIdentity {
+    fn sniff_dot_dir(&self) -> &'static str {
+        self.sniff_dot_dir.unwrap_or(self.dot_dir)
+    }
+}
+
 /// CLI name to be used in user facing messaging.
 pub fn cli_name() -> &'static str {
     DEFAULT.read().cli_name()
@@ -479,7 +499,7 @@ pub fn cli_name() -> &'static str {
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
     for id in all() {
-        let test_path = path.join(id.repo.dot_dir);
+        let test_path = path.join(id.repo.sniff_dot_dir());
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
             Ok(md) if md.is_dir() => {
@@ -520,16 +540,23 @@ pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     tracing::debug!(start=%path.display(), "sniffing for repo root");
 
     let mut path = Some(path);
+    let mut best_priority = usize::MAX;
+    let mut best = None;
 
     while let Some(p) = path {
         if let Some(ident) = sniff_dir(p)? {
-            return Ok(Some((p.to_path_buf(), ident)));
+            if ident.repo.sniff_root_priority == 0 {
+                return Ok(Some((p.to_path_buf(), ident)));
+            } else if best_priority > ident.repo.sniff_root_priority {
+                best_priority = ident.repo.sniff_root_priority;
+                best = Some((p, ident));
+            }
         }
 
         path = p.parent();
     }
 
-    Ok(None)
+    Ok(best.map(|(path, ident)| (path.to_path_buf(), ident)))
 }
 
 pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
@@ -653,6 +680,38 @@ mod test {
         assert_eq!(sniffed_root, root);
         assert_eq!(sniffed_ident.repo, TEST.repo);
         assert_eq!(sniffed_ident.user, default().user);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sniff_root_priority() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+
+        // .test      (pri: 5)
+        // a/.sl      (pri: 0, highest)
+        // a/b/.test  (pri: 5)
+        // a/b/c
+
+        let dir = dir.path();
+        let dir_a = dir.join("a");
+        let dir_b = dir_a.join("b");
+        let dir_c = dir_b.join("c");
+
+        fs::create_dir_all(dir.join(TEST.repo.sniff_dot_dir()))?;
+        fs::create_dir_all(dir_a.join(SL.repo.sniff_dot_dir()))?;
+        fs::create_dir_all(dir_b.join(TEST.repo.sniff_dot_dir()))?;
+        fs::create_dir_all(&dir_c)?;
+
+        assert_eq!(sniff_root(&dir)?.unwrap().1.repo, TEST.repo);
+        assert_eq!(sniff_root(&dir_c)?.unwrap().1.repo, SL.repo);
+        assert_eq!(sniff_root(&dir_b)?.unwrap().1.repo, SL.repo);
+        assert_eq!(sniff_root(&dir_a)?.unwrap().1.repo, SL.repo);
+
+        assert_eq!(sniff_dir(&dir)?.unwrap().repo, TEST.repo);
+        assert_eq!(sniff_dir(&dir_a)?.unwrap().repo, SL.repo);
+        assert_eq!(sniff_dir(&dir_b)?.unwrap().repo, TEST.repo);
+        assert!(sniff_dir(&dir_c)?.is_none());
 
         Ok(())
     }
