@@ -58,14 +58,11 @@ export class TypedEventEmitter<EventName extends string, EventType> {
     return this;
   }
 
-  emit(
-    ...args:
-      | [event: 'error', data: Error]
-      | (EventType extends undefined
-          ? [event: EventName] | [event: EventName, data: EventType]
-          : [event: EventName, data: EventType])
-  ): boolean {
-    const [name, data] = args;
+  emit(event: EventName): EventType extends undefined ? boolean : never;
+  emit(event: EventName, data: EventType): boolean;
+  emit(event: 'error', data: Error): boolean;
+
+  emit(name: EventName | 'error', data?: EventType | Error): boolean {
     const event = new EventWithPayload(name, data);
     if (!this.target.dispatchEvent(event)) {
       return false;
