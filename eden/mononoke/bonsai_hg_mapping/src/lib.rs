@@ -502,10 +502,20 @@ async fn select_mapping(
                     let conn = connection.conn.clone();
                     move |hg_cs_ids| async move {
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
-                        Ok(SelectMappingByHg::query(&conn, &repo_id, &hg_cs_ids[..])
-                            .await?
-                            .into_iter()
-                            .collect())
+                        Ok(match cri {
+                            Some(cri) => {
+                                SelectMappingByHg::traced_query(
+                                    &conn,
+                                    &cri,
+                                    &repo_id,
+                                    &hg_cs_ids[..],
+                                )
+                                .await
+                            }
+                            None => SelectMappingByHg::query(&conn, &repo_id, &hg_cs_ids[..]).await,
+                        }?
+                        .into_iter()
+                        .collect())
                     }
                 })
                 .await?;
