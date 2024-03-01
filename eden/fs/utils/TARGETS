@@ -194,11 +194,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "match",
-    headers = ["Match.h"],
-)
-
-cpp_library(
     name = "proc_util",
     srcs = ["ProcUtil.cpp"],
     headers = ["ProcUtil.h"],

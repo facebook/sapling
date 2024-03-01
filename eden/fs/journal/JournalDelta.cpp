@@ -7,7 +7,7 @@
 
 #include "eden/fs/journal/JournalDelta.h"
 #include <folly/logging/xlog.h>
-#include "eden/fs/utils/Match.h"
+#include "eden/common/utils/Match.h"
 
 namespace facebook::eden {
 

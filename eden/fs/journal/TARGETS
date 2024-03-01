@@ -8,7 +8,7 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "//eden/fs/utils:match",
+        "//eden/common/utils:match",
         "//folly/logging:logging",
     ],
     exported_deps = [

@@ -7,13 +7,13 @@
 
 #include "eden/fs/inodes/VirtualInode.h"
 
+#include "eden/common/utils/Match.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/utils/Match.h"
 #include "eden/fs/utils/StatTimes.h"
 
 namespace facebook::eden {

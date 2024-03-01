@@ -12,7 +12,7 @@
 #include <folly/Try.h>
 #include <folly/portability/GTest.h>
 
-#include "eden/fs/utils/Match.h"
+#include "eden/common/utils/Match.h"
 
 using namespace facebook::eden;
 

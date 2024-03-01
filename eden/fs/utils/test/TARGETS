@@ -168,16 +168,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "match",
-    srcs = ["MatchTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:match",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "path_funcs",
     srcs = ["PathFuncsTest.cpp"],
     supports_static_listing = False,
@@ -290,7 +280,7 @@ cpp_unittest(
     srcs = ["TryTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:match",
+        "//eden/common/utils:match",
         "//eden/fs/utils:try",
         "//folly:try",
         "//folly/portability:gtest",
