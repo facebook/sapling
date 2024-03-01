@@ -11,9 +11,9 @@ cpp_unittest(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/testharness:temp_file",
         "//eden/fs/monitor:edenfs_monitor_lib",
         "//eden/fs/testharness:fake_clock",
-        "//eden/fs/testharness:temp_file",
         "//folly:range",
         "//folly/logging:logging",
         "//folly/portability:gmock",

@@ -12,10 +12,10 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 
+#include "eden/common/testharness/TempFile.h"
 #include "eden/fs/monitor/LogFile.h"
 #include "eden/fs/monitor/LogRotation.h"
 #include "eden/fs/testharness/FakeClock.h"
-#include "eden/fs/testharness/TempFile.h"
 
 namespace fs = boost::filesystem;
 using namespace std::chrono_literals;

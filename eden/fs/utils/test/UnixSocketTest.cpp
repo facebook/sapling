@@ -25,7 +25,7 @@
 #include <optional>
 #include <random>
 
-#include "eden/fs/testharness/TempFile.h"
+#include "eden/common/testharness/TempFile.h"
 
 using folly::ByteRange;
 using folly::checkUnixError;

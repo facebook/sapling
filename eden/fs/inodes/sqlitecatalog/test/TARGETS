@@ -7,6 +7,7 @@ cpp_unittest(
     srcs = ["SqliteInodeCatalogTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
@@ -17,7 +18,6 @@ cpp_unittest(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
-        "//eden/fs/testharness:temp_file",
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/utils:utils",

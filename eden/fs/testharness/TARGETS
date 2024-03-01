@@ -14,9 +14,9 @@ cpp_library(
         ":fake_backing_store_and_tree_builder",
         ":fake_fuse",
         ":fake_privhelper",
-        ":temp_file",
         ":test_config_source",
         ":test_util",
+        "//eden/common/testharness:temp_file",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
         "//eden/fs/journal:journal",
@@ -50,20 +50,6 @@ cpp_library(
         "//folly:portability",
         "//folly:range",
         "//folly/executors:manual_executor",
-    ],
-)
-
-cpp_library(
-    name = "temp_file",
-    srcs = ["TempFile.cpp"],
-    headers = ["TempFile.h"],
-    deps = [
-        "//eden/common/utils:system_error",
-        "//folly/portability:unistd",
-    ],
-    exported_deps = [
-        "//folly:range",
-        "//folly/experimental:test_util",
     ],
 )
 
@@ -276,7 +262,7 @@ cpp_library(
     headers = ["TestServer.h"],
     deps = [
         ":fake_privhelper",
-        ":temp_file",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",
         "//eden/fs/service:server",
         "//eden/fs/service:startup_logger",

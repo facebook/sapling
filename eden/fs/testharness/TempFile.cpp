@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/testharness/TempFile.h"
+#include "eden/common/testharness/TempFile.h"
 
 #include <folly/portability/Unistd.h>
 

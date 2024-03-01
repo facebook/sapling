@@ -11,11 +11,12 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <memory>
 #include <optional>
+
+#include "eden/common/testharness/TempFile.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/lmdb/LMDBDatabase.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 

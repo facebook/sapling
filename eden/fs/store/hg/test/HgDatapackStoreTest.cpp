@@ -9,6 +9,7 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GMock.h>
 
+#include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
-#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/fs/utils/FaultInjector.h"
 

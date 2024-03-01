@@ -12,8 +12,6 @@ set(
   "FakePrivHelper.h"
   "FakeTreeBuilder.cpp"
   "FakeTreeBuilder.h"
-  "TempFile.cpp"
-  "TempFile.h"
   "TestMount.cpp"
   "TestMount.h"
   "TestUtil.cpp"
@@ -35,16 +33,17 @@ target_include_directories(eden_testharness
 target_link_libraries(
   eden_testharness
   PUBLIC
-  eden_config
-  eden_inodes
-  eden_model
-  eden_store
-  eden_utils
-  edencommon::edencommon_utils
-  ${BOOST_LIBRARIES}
-  Folly::folly_test_util
-  ${LIBGMOCK_LIBRARIES}
-  ${GLOG_LIBRARY}
+    eden_config
+    eden_inodes
+    eden_model
+    eden_store
+    eden_utils
+    edencommon::edencommon_testharness
+    edencommon::edencommon_utils
+    ${BOOST_LIBRARIES}
+    Folly::folly_test_util
+    ${LIBGMOCK_LIBRARIES}
+    ${GLOG_LIBRARY}
 )
 
 if(NOT WIN32)

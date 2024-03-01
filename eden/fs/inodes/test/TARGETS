@@ -312,6 +312,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         ":overlay_test_util",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/model:testutil",
@@ -319,7 +320,6 @@ cpp_unittest(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
-        "//eden/fs/testharness:temp_file",
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
@@ -344,11 +344,11 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":overlay_test_util",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/testharness:temp_file",
         "//eden/fs/testharness:test_util",
         "//folly:exception",
         "//folly:expected",

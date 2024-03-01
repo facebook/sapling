@@ -75,7 +75,7 @@ cpp_unittest(
     srcs = ["FileDescriptorTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/testharness:temp_file",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/utils:io",
         "//eden/fs/utils:path",
         "//folly:string",
@@ -90,7 +90,7 @@ cpp_unittest(
     srcs = ["FileUtilsTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/testharness:temp_file",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/utils:file_utils",
         "//eden/fs/utils:path",
         "//folly:range",
@@ -182,7 +182,7 @@ cpp_unittest(
     srcs = ["PathFuncsTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/testharness:temp_file",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/utils:file_utils",
         "//eden/fs/utils:path",
         "//folly:exception",
@@ -302,7 +302,7 @@ cpp_unittest(
     srcs = ["UnixSocketTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/testharness:temp_file",
+        "//eden/common/testharness:temp_file",
         "//eden/fs/utils:io",
         "//folly:exception",
         "//folly:file",

@@ -16,6 +16,8 @@
 #include <folly/portability/GTest.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -45,7 +47,6 @@
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
-#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/FileUtils.h"

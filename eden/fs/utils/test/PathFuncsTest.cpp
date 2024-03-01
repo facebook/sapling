@@ -19,7 +19,7 @@
 #include <folly/test/TestUtils.h>
 #include <sstream>
 
-#include "eden/fs/testharness/TempFile.h"
+#include "eden/common/testharness/TempFile.h"
 #include "eden/fs/utils/FileUtils.h"
 
 namespace facebook::eden {

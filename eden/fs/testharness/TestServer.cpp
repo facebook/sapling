@@ -9,6 +9,7 @@
 
 #include <folly/portability/GFlags.h>
 
+#include "eden/common/testharness/TempFile.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
@@ -17,7 +18,6 @@
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
-#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using std::make_shared;

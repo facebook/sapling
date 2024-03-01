@@ -9,12 +9,13 @@
 
 #include <folly/io/IOBuf.h>
 #include <folly/portability/GTest.h>
+
+#include "eden/common/testharness/TempFile.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
-#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/FaultInjector.h"
 
 namespace facebook::eden {

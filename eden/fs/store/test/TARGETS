@@ -8,9 +8,9 @@ cpp_library(
     name = "local_store_test",
     headers = ["LocalStoreTest.h"],
     exported_deps = [
+        "//eden/common/testharness:temp_file",
         "//eden/fs/model:model",
         "//eden/fs/store:store",
-        "//eden/fs/testharness:temp_file",
         "//eden/fs/utils:utils",
         "//folly/io:iobuf",
         "//folly/portability:gtest",
@@ -68,6 +68,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "//eden/common/testharness:temp_file",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
@@ -83,7 +84,6 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:logging_fetch_context",
         "//eden/fs/testharness:stored_object",
-        "//eden/fs/testharness:temp_file",
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:path",
         "//eden/fs/utils:static_assert",
@@ -110,12 +110,12 @@ cpp_binary(
     name = "rocksdb_benchmark",
     srcs = ["RocksDbLocalStoreBench.cpp"],
     deps = [
+        "//eden/common/testharness:temp_file",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/model:model",
         "//eden/fs/store:rocksdb",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/testharness:temp_file",
         "//eden/fs/utils:utils",
     ],
 )

@@ -35,17 +35,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "temp_file_test",
-    srcs = ["TempFileTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/testharness:temp_file",
-        "//folly/logging:logging",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "test_mount_test",
     srcs = ["TestMountTest.cpp"],
     supports_static_listing = False,

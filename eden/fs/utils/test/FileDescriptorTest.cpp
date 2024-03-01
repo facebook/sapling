@@ -11,7 +11,8 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <list>
-#include "eden/fs/testharness/TempFile.h"
+
+#include "eden/common/testharness/TempFile.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Pipe.h"
 
