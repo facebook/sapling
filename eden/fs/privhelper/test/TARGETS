@@ -15,12 +15,12 @@ cpp_unittest(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/utils:system_error",
         "//eden/fs/privhelper:conn",
         "//eden/fs/privhelper:interface",
         "//eden/fs/privhelper:privhelper",
         "//eden/fs/privhelper:server",
         "//eden/fs/testharness:temp_file",
-        "//eden/fs/utils:system_error",
         "//eden/fs/utils:user_info",
         "//folly:conv",
         "//folly:exception",

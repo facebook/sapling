@@ -16,7 +16,9 @@
 #include <chrono>
 #include <csignal>
 #include <type_traits>
+
 #include "eden/common/utils/Synchronized.h"
+#include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
@@ -25,7 +27,6 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/StaticAssert.h"
-#include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/Thread.h"
 
 using namespace folly;

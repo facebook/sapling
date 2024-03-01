@@ -41,7 +41,7 @@ cpp_library(
         "TopLevelIgnores.h",
     ],
     deps = [
-        "//eden/fs/utils:system_error",
+        "//eden/common/utils:system_error",
         "//folly:file",
         "//folly:file_util",
         "//folly/logging:logging",

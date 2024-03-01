@@ -33,7 +33,7 @@ cpp_library(
     srcs = ["Notifier.cpp"],
     headers = ["Notifier.h"],
     deps = [
-        "//eden/fs/utils:system_error",
+        "//eden/common/utils:system_error",
         "//folly/futures:core",
     ],
     exported_deps = [
@@ -66,9 +66,9 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         ":constants",
         "//eden/common/utils:stringconv",
+        "//eden/common/utils:system_error",
         "//eden/fs/config:config",
         "//eden/fs/utils:process",
-        "//eden/fs/utils:system_error",
         "//folly/futures:core",
         "//folly/portability:windows",
     ],
@@ -84,9 +84,9 @@ cpp_library(
     srcs = ["CommandNotifier.cpp"],
     headers = ["CommandNotifier.h"],
     deps = [
+        "//eden/common/utils:system_error",
         "//eden/fs/config:config",
         "//eden/fs/utils:process",
-        "//eden/fs/utils:system_error",
         "//folly/futures:core",
     ],
     exported_deps = [

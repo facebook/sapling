@@ -13,7 +13,8 @@
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <system_error>
-#include "eden/fs/utils/SystemError.h"
+
+#include "eden/common/utils/SystemError.h"
 
 using folly::File;
 using folly::StringPiece;

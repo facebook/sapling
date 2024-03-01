@@ -9,7 +9,7 @@
 
 #include <folly/portability/Unistd.h>
 
-#include "eden/fs/utils/SystemError.h"
+#include "eden/common/utils/SystemError.h"
 
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;

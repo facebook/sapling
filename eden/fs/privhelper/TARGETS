@@ -32,8 +32,8 @@ cpp_library(
     srcs = ["PrivHelperConn.cpp"],
     headers = ["PrivHelperConn.h"],
     deps = [
+        "//eden/common/utils:system_error",
         "//eden/common/utils:throw",
-        "//eden/fs/utils:system_error",
         "//eden/fs/utils:utils",
         "//folly:demangle",
         "//folly:exception",

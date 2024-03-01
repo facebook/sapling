@@ -58,7 +58,7 @@ cpp_library(
     srcs = ["TempFile.cpp"],
     headers = ["TempFile.h"],
     deps = [
-        "//eden/fs/utils:system_error",
+        "//eden/common/utils:system_error",
         "//folly/portability:unistd",
     ],
     exported_deps = [

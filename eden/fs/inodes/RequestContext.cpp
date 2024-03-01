@@ -9,8 +9,8 @@
 
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/SystemError.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/utils/SystemError.h"
 
 using namespace std::chrono;
 

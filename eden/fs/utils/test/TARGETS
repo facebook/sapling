@@ -286,16 +286,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "system_error",
-    srcs = ["SystemErrorTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/common/utils:win_error",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "try",
     srcs = ["TryTest.cpp"],
     supports_static_listing = False,

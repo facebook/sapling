@@ -46,6 +46,7 @@ cpp_library(
     deps = [
         ":nfs_utils",
         ":nfsd_rpc",
+        "//eden/common/utils:system_error",
         "//eden/common/utils:throw",
         "//eden/fs/privhelper:interface",
         "//eden/fs/store:context",
@@ -54,7 +55,6 @@ cpp_library(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:clock",
         "//eden/fs/utils:static_assert",
-        "//eden/fs/utils:system_error",
         "//eden/fs/utils:utils",
         "//folly:utility",
         "//folly/executors:serial_executor",

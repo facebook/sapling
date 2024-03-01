@@ -8,8 +8,9 @@
 #include "eden/fs/notifications/Notifier.h"
 
 #include <folly/futures/Future.h>
+
+#include "eden/common/utils/SystemError.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/utils/SystemError.h"
 
 namespace facebook::eden {
 

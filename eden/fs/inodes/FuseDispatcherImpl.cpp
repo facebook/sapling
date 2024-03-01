@@ -9,6 +9,8 @@
 
 #include "eden/fs/inodes/FuseDispatcherImpl.h"
 #include <folly/logging/xlog.h>
+
+#include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -19,7 +21,6 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
 using std::string;

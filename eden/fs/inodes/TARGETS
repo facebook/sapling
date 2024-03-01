@@ -29,7 +29,7 @@ cpp_library(
     srcs = ["RequestContext.cpp"],
     headers = ["RequestContext.h"],
     deps = [
-        "//eden/fs/utils:system_error",
+        "//eden/common/utils:system_error",
         "//folly/logging:logging",
     ],
     exported_deps = [
@@ -151,6 +151,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         ":file_content_store",
         "//eden/common/utils:synchronized",
+        "//eden/common/utils:system_error",
         "//eden/fs/digest:blake3_hash",
         "//eden/fs/inodes/memcatalog:meminodecatalog",
         "//eden/fs/inodes/sqlitecatalog:bufferedsqliteinodecatalog",
@@ -179,7 +180,6 @@ cpp_library(
         "//eden/fs/utils:match",
         "//eden/fs/utils:nfs_socket",
         "//eden/fs/utils:process",
-        "//eden/fs/utils:system_error",
         "//folly:exception",
         "//folly:fbstring",
         "//folly:file_util",

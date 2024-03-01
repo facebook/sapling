@@ -9,8 +9,8 @@
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/SystemError.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
-#include "eden/fs/utils/SystemError.h"
 
 namespace facebook::eden {
 

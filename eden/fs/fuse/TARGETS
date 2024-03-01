@@ -10,11 +10,11 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/utils:synchronized",
+        "//eden/common/utils:system_error",
         "//eden/fs/notifications:notifier",
         "//eden/fs/privhelper:interface",
         "//eden/fs/telemetry:fs_event_logger",
         "//eden/fs/utils:static_assert",
-        "//eden/fs/utils:system_error",
         "//eden/fs/utils:thread",
         "//folly:exception",
         "//folly/executors:global_executor",

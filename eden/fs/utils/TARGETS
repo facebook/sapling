@@ -13,16 +13,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "system_error",
-    headers = [
-        "SystemError.h",
-    ],
-    exported_deps = [
-        "//eden/common/utils:win_error",
-    ],
-)
-
-cpp_library(
     name = "event_base_state",
     headers = ["EventBaseState.h"],
     exported_deps = [
@@ -127,8 +117,8 @@ cpp_library(
         "NotImplemented.h",
     ],
     deps = [
+        "//eden/common/utils:system_error",
         "//eden/common/utils:win_error",
-        "//eden/fs/utils:system_error",
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
