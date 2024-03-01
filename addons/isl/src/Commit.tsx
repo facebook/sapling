@@ -11,7 +11,7 @@ import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
-import {FlexRow} from './ComponentUtils';
+import {Row} from './ComponentUtils';
 import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
@@ -731,14 +731,14 @@ export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: Successo
   }[successorType] ?? <T>Rewritten as a newer commit</T>;
   const isSuccessorPublic = successorType === 'land' || successorType === 'pushrebase';
   return (
-    <FlexRow style={{gap: 'var(--halfpad)'}}>
+    <Row style={{gap: 'var(--halfpad)'}}>
       <HighlightCommitsWhileHovering toHighlight={[successorInfo.hash]}>
         {inner}
       </HighlightCommitsWhileHovering>
       <EducationInfoTip>
         <ObsoleteTip isSuccessorPublic={isSuccessorPublic} />
       </EducationInfoTip>
-    </FlexRow>
+    </Row>
   );
 }
 

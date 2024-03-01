@@ -9,7 +9,7 @@ import type {DagCommitInfo} from './dag/dag';
 import type {Hash} from './types';
 
 import {CleanupButton, isStackEligibleForCleanup} from './Cleanup';
-import {FlexRow} from './ComponentUtils';
+import {Row} from './ComponentUtils';
 import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
@@ -154,10 +154,10 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
         moreActions.push({
           label: (
             <HighlightCommitsWhileHovering key="submit-entire-stack" toHighlight={submittableStack}>
-              <FlexRow>
+              <Row>
                 <Icon icon="cloud-upload" slot="start" />
                 <T>Submit entire stack</T>
-              </FlexRow>
+              </Row>
             </HighlightCommitsWhileHovering>
           ),
           onClick: async () => {

@@ -11,7 +11,7 @@ import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {holdingAltAtom} from '../ChangedFile';
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
-import {FlexRow} from '../ComponentUtils';
+import {Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
 import messageBus from '../MessageBus';
@@ -69,10 +69,10 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
         <ServerClientMessageLogging />
-        <FlexRow>
+        <Row>
           <ForceDisconnectButton />
           <NopOperationButtons />
-        </FlexRow>
+        </Row>
       </DropdownField>
       <DropdownField title={<T>Component Explorer</T>}>
         <ComponentExplorerButton dismiss={dismiss} />
@@ -97,7 +97,7 @@ function InternalState() {
 
   return (
     <div>
-      <FlexRow>
+      <Row>
         <Tooltip
           placement="bottom"
           title={t(
@@ -136,9 +136,9 @@ function InternalState() {
             <T>Clear Persisted State</T>
           </VSCodeButton>
         </Tooltip>
-      </FlexRow>
+      </Row>
       {isDev && (
-        <FlexRow>
+        <Row>
           <T>Integrate with: </T>
           <VSCodeCheckbox checked={reduxTools} onChange={() => setReduxTools(v => !v)}>
             <T>Redux DevTools</T>
@@ -146,7 +146,7 @@ function InternalState() {
           <VSCodeCheckbox checked={reactTools} onChange={() => setReactTools(v => !v)}>
             {t('React <DebugAtoms/>')}
           </VSCodeCheckbox>
-        </FlexRow>
+        </Row>
       )}
     </div>
   );

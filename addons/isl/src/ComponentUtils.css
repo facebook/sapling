@@ -5,26 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.center-container {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-}
-
-.flex-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--pad);
-}
-
 /* Workaround missing `scrollbar-width: none` support in Chrome */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-.spacer {
-  flex-grow: 1;
 }

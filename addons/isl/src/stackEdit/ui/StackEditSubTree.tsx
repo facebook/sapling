@@ -12,7 +12,7 @@ import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';
 import {CommitTitle as StandaloneCommitTitle} from '../../CommitTitle';
-import {FlexRow} from '../../ComponentUtils';
+import {Row} from '../../ComponentUtils';
 import {DragHandle} from '../../DragHandle';
 import {Tooltip} from '../../Tooltip';
 import {t, T} from '../../i18n';
@@ -266,7 +266,7 @@ export function StackEditCommit({
   );
 
   return (
-    <FlexRow
+    <Row
       data-reorder-id={onDrag ? commit.key : ''}
       data-rev={rev}
       className={`commit${isReorderPreview ? ' commit-reorder-preview' : ''}`}>
@@ -276,7 +276,7 @@ export function StackEditCommit({
       {buttons}
       {title}
       {rightSideButtons}
-    </FlexRow>
+    </Row>
   );
 }
 

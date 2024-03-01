@@ -11,7 +11,7 @@ import type {ParsedDiff} from 'shared/patch/parse';
 import {AvatarImg} from '../Avatar';
 import serverAPI from '../ClientToServerAPI';
 import {SplitDiffTable} from '../ComparisonView/SplitDiffView/SplitDiffHunk';
-import {Column, FlexRow} from '../ComponentUtils';
+import {Column, Row} from '../ComponentUtils';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Subtle} from '../Subtle';
@@ -65,6 +65,7 @@ const styles = stylex.create({
   commentInfo: {
     gap: spacing.half,
     marginBlock: spacing.half,
+    alignItems: 'flex-start',
   },
   inlineCommentFilename: {
     marginBottom: spacing.half,
@@ -96,7 +97,7 @@ const styles = stylex.create({
 
 function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: boolean}) {
   return (
-    <FlexRow {...stylex.props(styles.comment)}>
+    <Row xstyle={styles.comment}>
       <Column {...stylex.props(styles.left)}>
         <AvatarImg
           username={comment.author}
@@ -104,7 +105,7 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
           {...stylex.props(styles.avatar)}
         />
       </Column>
-      <Column {...stylex.props(styles.commentInfo)}>
+      <Column xstyle={styles.commentInfo}>
         <b {...stylex.props(styles.author)}>{comment.author}</b>
         <div>
           {isTopLevel && comment.filename && (
@@ -130,7 +131,7 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
           <Comment key={i} comment={reply} />
         ))}
       </Column>
-    </FlexRow>
+    </Row>
   );
 }
 
@@ -184,10 +185,10 @@ function Reactions({reactions}: {reactions: Array<DiffCommentReaction>}) {
   const names = reactions.map(r => r.name);
   return (
     <Tooltip title={names.join(', ')}>
-      <FlexRow style={{gap: spacing.half}}>
+      <Row style={{gap: spacing.half}}>
         <span style={{letterSpacing: '-2px'}}>{icons}</span>
         <span>{total}</span>
-      </FlexRow>
+      </Row>
     </Tooltip>
   );
 }

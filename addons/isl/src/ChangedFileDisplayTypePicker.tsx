@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FlexRow} from './ComponentUtils';
+import {Row} from './ComponentUtils';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
@@ -41,11 +41,11 @@ export function ChangedFileDisplayTypePicker() {
 
   const actions = entries.map(([type, options]) => ({
     label: (
-      <FlexRow>
+      <Row>
         <Icon icon={displayType === type ? 'check' : 'blank'} slot="start" />
         <Icon icon={options.icon} slot="start" />
         {options.label}
-      </FlexRow>
+      </Row>
     ),
     onClick: () => setDisplayType(type),
   }));

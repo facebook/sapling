@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FlexRow, FlexSpacer, ScrollY} from '../../ComponentUtils';
+import {Row, FlexSpacer, ScrollY} from '../../ComponentUtils';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
 import {T} from '../../i18n';
@@ -41,9 +41,9 @@ function LoadedSplitModal() {
   return (
     <Modal>
       <SplitStackEditPanel />
-      <FlexRow style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
+      <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
         <StackEditConfirmButtons />
-      </FlexRow>
+      </Row>
     </Modal>
   );
 }
@@ -106,11 +106,11 @@ function LoadedEditStackModal() {
           {activeTab === 'split' && <SplitStackEditPanel />}
         </VSCodePanelView>
       </VSCodePanels>
-      <FlexRow style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
+      <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
         {activeTab === 'split' && <SplitStackToolbar />}
         <FlexSpacer />
         <StackEditConfirmButtons />
-      </FlexRow>
+      </Row>
     </Modal>
   );
 }

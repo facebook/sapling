@@ -9,7 +9,7 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
-import {FlexRow} from './ComponentUtils';
+import {Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
@@ -264,13 +264,13 @@ function OpenFilesCmdSetting() {
           <pre>sl config --user isl.open-file-cmd '["cmd", "with", "args"]'</pre>
         </div>
       )}>
-      <FlexRow>
+      <Row>
         <T replace={{$cmd: cmdEl}}>Open files in $cmd</T>
         <Subtle>
           <T>How to configure?</T>
         </Subtle>
         <Icon icon="question" />
-      </FlexRow>
+      </Row>
     </Tooltip>
   );
 }
