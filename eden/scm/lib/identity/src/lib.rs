@@ -382,6 +382,17 @@ const SL: Identity = Identity {
     },
 };
 
+/// `.git/` compatibility mode; scalability is limited by Git.
+const SL_GIT: Identity = Identity {
+    repo: &RepoIdentity {
+        dot_dir: if cfg!(windows) { ".git\\sl" } else { ".git/sl" },
+        sniff_dot_dir: Some(".git"),
+        sniff_root_priority: 10, // lowest
+        ..*SL.repo
+    },
+    ..SL
+};
+
 #[cfg(test)]
 const TEST: Identity = Identity {
     user: &UserIdentity {
@@ -410,7 +421,7 @@ mod idents {
     use super::*;
 
     pub fn all() -> &'static [Identity] {
-        &[SL, HG]
+        &[SL, HG, SL_GIT]
     }
 }
 
@@ -419,7 +430,11 @@ mod idents {
     use super::*;
 
     pub fn all() -> &'static [Identity] {
-        if in_test() { &[SL, HG] } else { &[SL] }
+        if in_test() {
+            &[SL, HG, SL_GIT]
+        } else {
+            &[SL, SL_GIT]
+        }
     }
 }
 
