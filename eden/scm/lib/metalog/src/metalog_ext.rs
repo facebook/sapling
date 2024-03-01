@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use types::HgId;
 
+use crate::Id20;
 use crate::MetaLog;
 
 impl MetaLog {
@@ -60,5 +61,19 @@ impl MetaLog {
         let encoded = refencode::encode_visibleheads(value);
         self.set("visibleheads", &encoded)?;
         Ok(())
+    }
+
+    /// Checkout the "parent" metalog. Not all entries have "parent".
+    /// The "parent" is defined by "Parent: HASH" in the message,
+    /// written by the transaction layer.
+    pub fn parent(&self) -> Result<Option<Self>> {
+        let parent_id = self.message().lines().find_map(|l| {
+            let rest = l.strip_prefix("Parent: ")?;
+            Id20::from_hex(rest.as_bytes()).ok()
+        });
+        match parent_id {
+            None => return Ok(None),
+            Some(id) => Ok(Some(self.checkout(id)?)),
+        }
     }
 }
