@@ -178,17 +178,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "memory",
-    srcs = ["MemoryTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:memory",
-        "//folly:exception",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "path_funcs",
     srcs = ["PathFuncsTest.cpp"],
     supports_static_listing = False,

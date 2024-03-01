@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "eden/fs/utils/Memory.h"
+#include "eden/common/utils/Memory.h"
 
 #include <boost/operators.hpp>
 #include <fmt/format.h>

@@ -372,10 +372,10 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":memory",
         ":string",
         ":utf8",
         "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:memory",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:throw",
         "//folly:expected",
@@ -390,15 +390,6 @@ cpp_library(
     ],
     exported_external_deps = [
         "boost",
-    ],
-)
-
-cpp_library(
-    name = "memory",
-    srcs = ["Memory.cpp"],
-    headers = ["Memory.h"],
-    exported_deps = [
-        "//folly/memory:malloc",
     ],
 )
 
