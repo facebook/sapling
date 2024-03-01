@@ -430,7 +430,7 @@ mod idents {
     use super::*;
 
     pub fn all() -> &'static [Identity] {
-        &[SL, HG, SL_GIT]
+        &[SL, HG]
     }
 }
 
@@ -439,11 +439,7 @@ mod idents {
     use super::*;
 
     pub fn all() -> &'static [Identity] {
-        if in_test() {
-            &[SL, HG, SL_GIT]
-        } else {
-            &[SL, SL_GIT]
-        }
+        if in_test() { &[SL, HG] } else { &[SL] }
     }
 }
 
@@ -455,6 +451,8 @@ pub mod idents {
         &[HG, SL, TEST]
     }
 }
+
+static EXTRA_SNIFF_IDENTS: &'static [Identity] = &[SL_GIT];
 
 static INITIAL_DEFAULT: Lazy<Identity> = Lazy::new(compute_default);
 static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(*INITIAL_DEFAULT));
@@ -524,7 +522,7 @@ pub fn cli_name() -> &'static str {
 /// "{path}/.sl" directories, yielding the sniffed Identity, if any.
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
-    for id in all() {
+    for id in all().iter().chain(EXTRA_SNIFF_IDENTS) {
         if let Some(cli_names) = id.repo.sniff_initial_cli_names {
             if !cli_names.contains(INITIAL_DEFAULT.cli_name()) {
                 continue;
