@@ -17,6 +17,7 @@ OTHER_FILES = [
 
 RUN_TEST_PY_FILES = [
     "run-tests.py",
+    "features.py",
     "watchman.py",
     "killdaemons.py",
     "default_hgrc.py",
