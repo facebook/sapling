@@ -10,9 +10,9 @@
 #include <folly/portability/GTest.h>
 #include <stdexcept>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 

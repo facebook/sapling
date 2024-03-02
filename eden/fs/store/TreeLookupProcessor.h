@@ -8,8 +8,8 @@
 #pragma once
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

@@ -12,7 +12,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/lmdb/libraries/liblmdb:liblmdb",  # @manual
-        "//eden/fs/utils:path",
+        "//eden/common/utils:path",
         "//folly:synchronized",
     ],
 )

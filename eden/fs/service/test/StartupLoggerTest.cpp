@@ -48,8 +48,8 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include "eden/common/utils/FileUtils.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
-#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
 using namespace facebook::eden;

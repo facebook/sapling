@@ -7,7 +7,7 @@
 
 #include "eden/fs/testharness/HgBinary.h"
 #include <folly/Range.h>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 #ifdef _WIN32
 // We will use the known path to HG executable instead of searching in the

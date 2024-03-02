@@ -18,8 +18,8 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest_headers",
+        "//eden/common/utils:path",
         "//eden/fs/sqlite:sqlite",
-        "//eden/fs/utils:path",
     ],
 )
 
@@ -40,7 +40,6 @@ cpp_library(
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/prjfs:disk_state",
-        "//eden/fs/utils:file_utils",
         "//eden/fs/utils:projfs_util",
         "//eden/fs/utils:utils",
         "//folly:file",
@@ -50,11 +49,11 @@ cpp_library(
     exported_deps = [
         ":sqlitetreestore",
         "//eden/common/utils:immediate_future",
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/model:model",
-        "//eden/fs/utils:path",
         "//folly:range",
     ],
 )
@@ -90,10 +89,10 @@ cpp_binary(
     srcs = ["WindowsOverlayScanner.cpp"],
     deps = [
         ":sqliteinodecatalog",
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/telemetry:structured_logger",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:win_stacktrace",
         "//folly/init:init",
         "//folly/logging:init",

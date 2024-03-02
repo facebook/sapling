@@ -12,7 +12,7 @@
 #include <folly/Range.h>
 #include <folly/io/async/EventBase.h>
 
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

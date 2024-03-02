@@ -9,7 +9,7 @@
 
 #include <folly/SocketAddress.h>
 #include <optional>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

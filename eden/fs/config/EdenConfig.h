@@ -15,6 +15,8 @@
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 
 #include "common/rust/shed/hostcaps/hostcaps.h"
+
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/ConfigSource.h"
 #include "eden/fs/config/ConfigVariables.h"
@@ -24,7 +26,6 @@
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ReaddirPrefetch.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace re2 {
 class RE2;

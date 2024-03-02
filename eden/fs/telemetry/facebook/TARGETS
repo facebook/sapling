@@ -13,6 +13,7 @@ cpp_library(
     deps = [
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
+        "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:store",
         "//folly:random",
         "//folly/logging:logging",
@@ -38,9 +39,9 @@ cpp_library(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:utils",
         "//fb303:service_data",
         "//fb303/detail:quantile_stat_wrappers",

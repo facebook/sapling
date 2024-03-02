@@ -14,10 +14,10 @@
 #include <folly/test/TestUtils.h>
 #include <optional>
 
+#include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/FileUtils.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 using folly::test::TemporaryDirectory;
 using namespace facebook::eden;

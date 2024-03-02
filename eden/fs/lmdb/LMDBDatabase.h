@@ -9,8 +9,8 @@
 
 #include <folly/Synchronized.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/lmdb/LMDBConnection.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 // Given a lmdb result code, if the result was not successful

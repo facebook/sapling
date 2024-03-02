@@ -8,8 +8,8 @@
 #pragma once
 
 #include <string>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/git/GitIgnore.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

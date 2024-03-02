@@ -14,8 +14,8 @@
 #include <memory>
 
 #include "eden/common/utils/FileOffset.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/lmdb/LMDBDatabase.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 namespace overlay {

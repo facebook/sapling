@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

@@ -53,10 +53,10 @@ cpp_library(
     exported_deps = [
         ":overlay_checker_util",
         "//eden/common/utils:immediate_future",
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/model:model",
-        "//eden/fs/utils:path",
         "//folly:cpp_attributes",
     ],
     external_deps = [

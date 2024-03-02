@@ -10,8 +10,8 @@
 #include <folly/Synchronized.h>
 #include <sqlite3.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/sqlite/SqliteConnection.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 // Given a sqlite result code, if the result was not successful

@@ -11,6 +11,7 @@ cpp_binary(
     ],
     deps = [
         "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/fuse:fuse",
         "//eden/fs/privhelper:interface",
@@ -18,7 +19,6 @@ cpp_binary(
         "//eden/fs/store:store",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:enum",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:user_info",
         "//folly:exception",
         "//folly/init:init",

@@ -12,8 +12,8 @@
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
 
+#include "eden/common/utils/FileUtils.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/utils/FileUtils.h"
 
 namespace facebook::eden {
 

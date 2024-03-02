@@ -18,6 +18,7 @@
 #include <csignal>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
@@ -26,7 +27,6 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/EnumValue.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;

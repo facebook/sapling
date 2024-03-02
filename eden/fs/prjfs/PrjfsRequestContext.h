@@ -10,9 +10,9 @@
 #include <ProjectedFSLib.h> // @manual
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

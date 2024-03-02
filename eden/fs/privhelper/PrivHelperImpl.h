@@ -9,7 +9,7 @@
 
 #include <folly/portability/GFlags.h>
 #include <memory>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace folly {
 class File;

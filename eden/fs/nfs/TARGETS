@@ -15,8 +15,8 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inode_number",
-        "//eden/fs/utils:path",
         "//folly:file",
         "//folly:network_address",
         "//folly/futures:core",
@@ -114,10 +114,10 @@ cpp_library(
         ":dirlist",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:immediate_future",
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/store:context",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:ref_ptr",
     ],
 )

@@ -11,8 +11,8 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-#include "eden/fs/utils/FileUtils.h"
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using namespace facebook::eden::path_literals;

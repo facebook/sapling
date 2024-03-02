@@ -12,12 +12,12 @@
 #include <optional>
 #include <string_view>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {

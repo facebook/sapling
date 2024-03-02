@@ -11,8 +11,8 @@
 #include <folly/portability/GFlags.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProjfsUtil.h"
 
 DEFINE_string(path, "", "The path to the file to check for rename.");

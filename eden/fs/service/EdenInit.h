@@ -22,7 +22,7 @@
 #include <folly/Conv.h>
 #include <folly/portability/GFlags.h>
 
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 DECLARE_bool(foreground);
 DECLARE_string(configPath);

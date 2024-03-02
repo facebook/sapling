@@ -34,8 +34,8 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inode_number",
-        "//eden/fs/utils:path",
     ],
 )
 

@@ -24,13 +24,13 @@
 #include <thread>
 #include <vector>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using namespace std::literals::chrono_literals;

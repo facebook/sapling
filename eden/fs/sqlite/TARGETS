@@ -11,7 +11,7 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
-        "//eden/fs/utils:path",
+        "//eden/common/utils:path",
         "//folly:synchronized",
     ],
     exported_external_deps = [

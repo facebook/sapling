@@ -13,7 +13,7 @@
 #include <list>
 
 #include "eden/common/testharness/TempFile.h"
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/utils/Pipe.h"
 
 using namespace facebook::eden;

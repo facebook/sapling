@@ -62,10 +62,10 @@ cpp_library(
         "SessionInfo.h",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/store:context",
-        "//eden/fs/utils:path",
     ],
 )
 
@@ -75,7 +75,7 @@ cpp_library(
         "IActivityRecorder.h",
     ],
     exported_deps = [
-        "//eden/fs/utils:path",
+        "//eden/common/utils:path",
     ],
 )
 

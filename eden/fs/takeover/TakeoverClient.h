@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/takeover/TakeoverData.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

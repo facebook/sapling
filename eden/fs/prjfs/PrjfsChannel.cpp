@@ -12,6 +12,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -25,7 +26,6 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook::eden {

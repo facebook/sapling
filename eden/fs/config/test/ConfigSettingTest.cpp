@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>

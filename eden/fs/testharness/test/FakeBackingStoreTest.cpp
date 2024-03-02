@@ -14,9 +14,9 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using namespace std::literals::chrono_literals;

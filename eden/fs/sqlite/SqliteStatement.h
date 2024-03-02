@@ -9,8 +9,8 @@
 
 #include <sqlite3.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/sqlite/SqliteConnection.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 /**

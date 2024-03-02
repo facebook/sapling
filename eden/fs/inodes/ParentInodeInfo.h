@@ -8,8 +8,9 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

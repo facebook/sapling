@@ -10,10 +10,10 @@
 
 #include <folly/Synchronized.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/DiffCallback.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

@@ -10,13 +10,13 @@
 #include <fb303/BaseService.h>
 #include <optional>
 #include "eden/common/os/ProcessId.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/EdenMountHandle.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/TraceBus.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/RefPtr.h"
 
 namespace folly {

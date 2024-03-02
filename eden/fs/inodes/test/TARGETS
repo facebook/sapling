@@ -10,6 +10,7 @@ cpp_unittest(
     srcs = ["CheckoutTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:file_utils",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/prjfs:prjfs",
@@ -22,7 +23,6 @@ cpp_unittest(
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:eden_error",
-        "//eden/fs/utils:file_utils",
         "//eden/fs/utils:utils",
         "//folly:conv",
         "//folly/chrono:conv",
@@ -297,9 +297,9 @@ cpp_library(
     srcs = ["OverlayTestUtil.cpp"],
     headers = ["OverlayTestUtil.h"],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
-        "//eden/fs/utils:path",
     ],
 )
 

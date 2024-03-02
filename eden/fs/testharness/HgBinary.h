@@ -8,7 +8,7 @@
 #pragma once
 
 #include <folly/portability/GFlags.h>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 DECLARE_string(hgPath);
 

@@ -14,9 +14,9 @@
 #include <folly/CPortability.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/WinError.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 #ifndef OUT
 #define OUT

@@ -18,8 +18,8 @@
 #include <folly/portability/Unistd.h>
 #include <sys/stat.h>
 
+#include "eden/common/utils/FileUtils.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/FileUtils.h"
 
 using folly::StringPiece;
 using std::string;

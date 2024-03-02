@@ -8,10 +8,10 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:path",
         "//eden/fs/model:model",
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:eden_error",
-        "//eden/fs/utils:path",
         "//folly:range",
         "//folly:string",
         "//folly/container:array",

@@ -12,10 +12,9 @@
 #include <folly/portability/Windows.h>
 
 #include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/WinError.h"
-#include "eden/fs/utils/FileUtils.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 DEFINE_string(path, "", "The path to the file to check for rename.");
 

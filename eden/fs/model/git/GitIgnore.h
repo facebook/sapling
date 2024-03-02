@@ -9,7 +9,7 @@
 
 #include <folly/Range.h>
 #include <vector>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

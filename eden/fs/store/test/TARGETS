@@ -29,6 +29,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/model:testutil",
         "//eden/fs/store:filtered_backing_store",
@@ -41,7 +42,6 @@ cpp_unittest(
         "//eden/fs/testharness:fake_filter",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_util",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:utils",
         "//folly:varint",
         "//folly/executors:manual_executor",
@@ -70,6 +70,7 @@ cpp_unittest(
     deps = [
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:immediate_future",
+        "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
@@ -85,7 +86,6 @@ cpp_unittest(
         "//eden/fs/testharness:logging_fetch_context",
         "//eden/fs/testharness:stored_object",
         "//eden/fs/testharness:test_util",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:utils",
         "//folly/executors:manual_executor",

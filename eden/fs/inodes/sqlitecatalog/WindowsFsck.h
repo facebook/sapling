@@ -9,9 +9,9 @@
 
 #ifdef _WIN32
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeCatalog.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

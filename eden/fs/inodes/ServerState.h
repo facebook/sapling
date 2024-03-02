@@ -9,9 +9,9 @@
 
 #include <memory>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/RefPtr.h"
 #include "eden/fs/utils/UserInfo.h"
 

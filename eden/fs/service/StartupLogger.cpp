@@ -16,11 +16,11 @@
 #include <sys/types.h>
 
 #include "eden/common/os/ProcessId.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/telemetry/SessionId.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
 #ifndef _WIN32

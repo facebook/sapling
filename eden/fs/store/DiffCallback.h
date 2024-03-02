@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class exception_wrapper;

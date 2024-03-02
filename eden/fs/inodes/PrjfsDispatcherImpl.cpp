@@ -15,6 +15,8 @@
 #include <folly/stop_watch.h>
 #include <optional>
 
+#include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -26,8 +28,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/FileUtils.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {

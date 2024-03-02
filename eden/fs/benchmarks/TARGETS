@@ -127,9 +127,9 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/service:thrift-cpp2-services",
-        "//eden/fs/utils:path",
         "//folly/io/async:event_base_thread",
         "//thrift/lib/cpp2/async:header_client_channel",
         "//watchman/cppclient:cppclient",
@@ -144,9 +144,9 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/service:thrift-cpp2-services",
-        "//eden/fs/utils:path",
         "//folly/io/async:event_base_thread",
         "//folly/portability:gflags",
         "//thrift/lib/cpp2/async:header_client_channel",

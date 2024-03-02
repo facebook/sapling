@@ -16,8 +16,8 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/common/utils/Handle.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/utils/FileDescriptor.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Pipe.h"
 
 #ifndef _WIN32

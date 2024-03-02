@@ -23,7 +23,6 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/prjfs/PrjfsDiskState.h"
 #include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/ProjfsUtil.h"
 
 namespace facebook::eden {

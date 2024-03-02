@@ -71,8 +71,8 @@ cpp_library(
     )],
     deps = [
         ":nfs_rpc",
+        "//eden/common/utils:path",
         "//eden/common/utils:throw",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:process",
         "//eden/fs/utils:sysctl_util",
         "//folly:conv",
@@ -135,7 +135,7 @@ cpp_library(
         "//folly/portability:unistd",
     ],
     exported_deps = [
-        "//eden/fs/utils:path",
+        "//eden/common/utils:path",
         "//folly/portability:gflags",
     ],
 )

@@ -12,10 +12,10 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift-streaming-cpp2-types",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:path",
         "//folly:function",
         "//folly:synchronized",
     ],

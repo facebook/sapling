@@ -11,8 +11,9 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
+
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/FileChangeMonitor.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

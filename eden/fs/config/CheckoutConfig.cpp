@@ -16,9 +16,9 @@
 #include <folly/json/json.h>
 #include <optional>
 
+#include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/FilterUtils.h"
 #include "eden/fs/utils/PathMap.h"
 

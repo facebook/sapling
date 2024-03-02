@@ -14,9 +14,9 @@
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/utils/EnumValue.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

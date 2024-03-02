@@ -13,9 +13,9 @@
 #include <condition_variable>
 #include <unordered_map>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

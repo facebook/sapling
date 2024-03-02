@@ -13,9 +13,9 @@ cpp_binary(
     ],
     deps = [
         ":edenfs_monitor_lib",
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/service:init",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:user_info",
         "//folly:exception",
         "//folly:file",
@@ -65,7 +65,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest_headers",
-        "//eden/fs/utils:path",
+        "//eden/common/utils:path",
         "//eden/fs/utils:process",
         "//folly:file",
         "//folly:portability",
@@ -75,6 +75,5 @@ cpp_library(
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),
-        ("glibc", None, "rt"),
     ],
 )

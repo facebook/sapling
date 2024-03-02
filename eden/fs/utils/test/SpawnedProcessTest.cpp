@@ -11,7 +11,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <list>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using Options = SpawnedProcess::Options;

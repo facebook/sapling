@@ -19,6 +19,8 @@
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileContentStore.h"
@@ -32,7 +34,6 @@
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual

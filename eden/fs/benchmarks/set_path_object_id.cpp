@@ -11,9 +11,10 @@
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/portability/GFlags.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
+
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 DEFINE_int64(threads, 1, "The number of concurrent Thrift client threads");
 DEFINE_int64(path_levels, 0, "The number of folder level");

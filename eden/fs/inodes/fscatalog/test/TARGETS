@@ -13,6 +13,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/common/testharness:temp_file",
+        "//eden/common/utils:file_utils",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/memcatalog:meminodecatalog",
         "//eden/fs/inodes/overlay:overlay_checker",
@@ -20,7 +21,6 @@ cpp_unittest(
         "//eden/fs/model:model",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:test_util",
-        "//eden/fs/utils:file_utils",
         "//folly:conv",
         "//folly:file_util",
         "//folly:range",

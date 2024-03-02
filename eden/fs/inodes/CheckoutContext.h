@@ -15,11 +15,11 @@
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/StatsFetchContext.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class exception_wrapper;

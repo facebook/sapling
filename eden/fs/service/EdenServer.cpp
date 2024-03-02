@@ -39,6 +39,8 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <csignal>
 
+#include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/MountProtocol.h"
@@ -84,11 +86,9 @@
 #include "eden/fs/utils/EdenTaskQueue.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"

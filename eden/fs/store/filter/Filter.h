@@ -10,7 +10,7 @@
 #include <folly/Range.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 // A null filter indicates that nothing should be filtered (i.e. no filter is
 // applied to the repo).

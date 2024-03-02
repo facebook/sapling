@@ -17,7 +17,7 @@
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
-#include "eden/fs/utils/FileUtils.h"
+#include "eden/common/utils/FileUtils.h"
 
 #ifdef __APPLE__
 #include <libproc.h> // @manual

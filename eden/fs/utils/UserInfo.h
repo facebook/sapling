@@ -11,7 +11,7 @@
 #include <gtest/gtest_prod.h>
 #endif
 
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

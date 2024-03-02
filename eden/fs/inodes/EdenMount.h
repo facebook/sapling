@@ -23,6 +23,8 @@
 #include <optional>
 #include <shared_mutex>
 #include <stdexcept>
+
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/InodeCatalogOptions.h"
@@ -41,7 +43,6 @@
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/telemetry/TraceBus.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/OverlayFileAccess.h"

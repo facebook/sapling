@@ -10,8 +10,8 @@
 #include <folly/CancellationToken.h>
 #include <folly/Range.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/StatsFetchContext.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

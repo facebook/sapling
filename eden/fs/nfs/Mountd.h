@@ -13,8 +13,8 @@
 #include <folly/File.h>
 #include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class Executor;

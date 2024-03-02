@@ -10,9 +10,9 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <memory>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

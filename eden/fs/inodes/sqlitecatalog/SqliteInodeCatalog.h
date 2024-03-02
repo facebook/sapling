@@ -11,11 +11,11 @@
 #include <optional>
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteTreeStore.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class File;

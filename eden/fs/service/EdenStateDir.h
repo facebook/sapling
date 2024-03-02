@@ -11,7 +11,7 @@
 #include <folly/Range.h>
 #include <folly/portability/SysStat.h>
 
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace folly {
 class File;

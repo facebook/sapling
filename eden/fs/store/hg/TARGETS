@@ -30,12 +30,12 @@ cpp_library(
     exported_deps = [
         ":hg_backing_store_options",
         ":hg_datapack_store",
+        "//eden/common/utils:path",
         "//eden/fs:config",
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:ref_ptr",
         "//folly:executor",
         "//folly:range",
@@ -85,13 +85,13 @@ cpp_library(
     deps = [
         ":hg_import_request",
         ":hg_proxy_hash",
+        "//eden/common/utils:path",
         "//eden/common/utils:throw",
         "//eden/fs/config:config",
         "//eden/fs/service:thrift_util",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:enum",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:utils",
         "//folly:string",
@@ -145,9 +145,9 @@ cpp_library(
     ],
     exported_deps = [
         ":hg_backing_store_options",
+        "//eden/common/utils:path",
         "//eden/fs/model:model-fwd",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:path",
         "//eden/scm/lib/backingstore:backingstore",  # @manual
         "//eden/scm/lib/backingstore:backingstore_bridge@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore-include",
@@ -173,9 +173,9 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/store:store",
-        "//eden/fs/utils:path",
     ],
 )

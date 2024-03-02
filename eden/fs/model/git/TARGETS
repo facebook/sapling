@@ -47,8 +47,8 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/utils:matcher",
-        "//eden/fs/utils:path",
         "//folly:expected",
         "//folly:range",
     ],

@@ -9,9 +9,9 @@
 
 #include <folly/Range.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 struct git_oid;
 struct git_repository;

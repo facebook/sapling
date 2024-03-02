@@ -10,8 +10,8 @@
 #include <folly/Range.h>
 #include <variant>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 #if defined(__APPLE__)
 #include <sys/mount.h>

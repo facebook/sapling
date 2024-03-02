@@ -11,8 +11,8 @@
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/RootId.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

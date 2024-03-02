@@ -12,11 +12,11 @@
 #include <folly/Synchronized.h>
 #include <optional>
 #include "eden/common/utils/FileOffset.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

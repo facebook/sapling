@@ -12,8 +12,8 @@
 #include <memory>
 
 #include <fmt/format.h>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 struct sqlite3;
 

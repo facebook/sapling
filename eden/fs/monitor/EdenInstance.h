@@ -18,7 +18,7 @@
 #include <folly/io/async/AsyncTimeout.h>
 #include <folly/io/async/EventHandler.h>
 
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
 namespace folly {

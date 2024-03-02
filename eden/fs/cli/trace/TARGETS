@@ -15,9 +15,9 @@ cpp_binary(
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:path",
         "//eden/fs/service:thrift-streaming-cpp2-clients",
         "//eden/fs/service:thrift-streaming-cpp2-types",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:utils",
         "//folly:portability",
         "//folly/init:init",

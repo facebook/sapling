@@ -23,6 +23,7 @@
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperFlags.h"
@@ -30,7 +31,6 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FileDescriptor.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/UserInfo.h"
 

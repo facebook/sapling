@@ -14,7 +14,6 @@
 
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/StringConv.h"
-#include "eden/fs/utils/FileUtils.h"
 
 namespace facebook::eden {
 

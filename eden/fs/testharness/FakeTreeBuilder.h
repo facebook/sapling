@@ -10,8 +10,8 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Range.h>
 #include <memory>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
 
 namespace facebook::eden {

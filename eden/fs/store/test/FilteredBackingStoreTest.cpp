@@ -15,6 +15,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
@@ -28,7 +29,6 @@
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace {
 

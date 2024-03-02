@@ -16,7 +16,7 @@
 #include <folly/File.h>
 #include <folly/Synchronized.h>
 
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

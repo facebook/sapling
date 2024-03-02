@@ -8,11 +8,11 @@
 #include <folly/String.h>
 #include <folly/portability/GTest.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

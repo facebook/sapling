@@ -47,7 +47,7 @@ cpp_library(
         ["fbsource//third-party/toolchains/win:dbghelp.lib"],
     )],
     deps = [
-        ":path",
+        "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:win_error",
         "//folly:c_portability",
@@ -97,9 +97,9 @@ cpp_library(
     exported_deps = [
         ":enum",
         ":matcher",
-        ":path",
         ":utils",
         "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:path",
         "//eden/fs/model:model",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:task_trace",
@@ -129,33 +129,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "file_utils",
-    srcs = [
-        "FileUtils.cpp",
-    ],
-    headers = [
-        "FileUtils.h",
-    ],
-    deps = [
-        "fbsource//third-party/fmt:fmt",
-        "//eden/common/utils:try",
-        "//eden/common/utils:win_error",
-        "//folly:exception",
-        "//folly:file_util",
-    ],
-    exported_deps = [
-        ":path",
-        "//eden/common/utils:file_utils",
-        "//eden/common/utils:handle",
-        "//folly:range",
-        "//folly:try",
-    ],
-    external_deps = [
-        ("boost", None, "boost_filesystem"),
-    ],
-)
-
-cpp_library(
     name = "file_hash",
     srcs = [
         "FileHash.cpp",
@@ -169,7 +142,7 @@ cpp_library(
         "//folly/portability:openssl",
     ],
     exported_deps = [
-        ":path",
+        "//eden/common/utils:path",
         "//eden/fs/model:model",
     ],
 )
@@ -198,7 +171,7 @@ cpp_library(
     srcs = ["ProcUtil.cpp"],
     headers = ["ProcUtil.h"],
     deps = [
-        ":file_utils",
+        "//eden/common/utils:file_utils",
         "//folly:conv",
         "//folly:file_util",
         "//folly:string",
@@ -206,7 +179,7 @@ cpp_library(
         "//folly/portability:unistd",
     ],
     exported_deps = [
-        ":path",
+        "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
         "//folly:range",
     ],
@@ -304,9 +277,9 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        ":path",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:immediate_future",
+        "//eden/common/utils:path",
         "//eden/common/utils:throw",
         "//eden/common/utils:win_error",
         "//folly:cpp_attributes",
@@ -330,40 +303,6 @@ cpp_library(
     exported_external_deps = [
         ("boost", None, "boost_regex"),
         ("glibc", None, "rt"),
-    ],
-)
-
-cpp_library(
-    name = "path",
-    srcs = [
-        "PathFuncs.cpp",
-    ],
-    deps = [
-        "//folly:exception",
-        "//folly/portability:stdlib",
-        "//folly/portability:unistd",
-        "//folly/portability:windows",
-    ],
-    exported_deps = [
-        "fbsource//third-party/fmt:fmt",
-        "//eden/common/utils:case_sensitivity",
-        "//eden/common/utils:memory",
-        "//eden/common/utils:string",
-        "//eden/common/utils:stringconv",
-        "//eden/common/utils:throw",
-        "//eden/common/utils:utf8",
-        "//folly:expected",
-        "//folly:fbstring",
-        "//folly:fbvector",
-        "//folly:string",
-        "//folly/hash:hash",
-        "//folly/logging:logging",
-    ],
-    external_deps = [
-        ("boost", None, "boost_filesystem"),
-    ],
-    exported_external_deps = [
-        "boost",
     ],
 )
 
@@ -397,7 +336,7 @@ cpp_library(
         "//folly/portability:unistd",
     ],
     exported_deps = [
-        ":path",
+        "//eden/common/utils:path",
         "//folly:conv",
         "//folly:file",
         "//folly:portability",
@@ -452,8 +391,8 @@ cpp_library(
     ],
     exported_deps = [
         ":io",
-        ":path",
         "//eden/common/utils:handle",
+        "//eden/common/utils:path",
         "//folly:range",
         "//folly/futures:core",
     ],
@@ -489,7 +428,7 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest_headers",
-        ":path",
+        "//eden/common/utils:path",
         "//folly/portability:sys_types",
     ],
 )
@@ -511,7 +450,7 @@ cpp_library(
         "//folly:exception",
     ],
     exported_deps = [
-        ":path",
+        "//eden/common/utils:path",
         "//folly:network_address",
     ],
 )
@@ -554,7 +493,6 @@ cpp_library(
     headers = ["ProjfsUtil.h"],
     deps = [
         "fbsource//third-party/fmt:fmt",
-        ":file_utils",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:stringconv",
         "//folly:try",

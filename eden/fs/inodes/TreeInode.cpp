@@ -18,6 +18,7 @@
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/config/CheckoutConfig.h"
@@ -56,7 +57,6 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/XAttr.h"

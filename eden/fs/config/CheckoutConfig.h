@@ -12,13 +12,13 @@
 #include <optional>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ParentCommit.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/utils/Guid.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

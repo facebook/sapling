@@ -13,6 +13,7 @@
 #include <folly/test/TestUtils.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -27,7 +28,6 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

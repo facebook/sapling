@@ -9,10 +9,10 @@
 
 #include <string>
 #include <vector>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

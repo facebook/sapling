@@ -11,13 +11,13 @@
 #include <folly/portability/Windows.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/Guid.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 #include "eden/fs/utils/RefPtr.h"
 

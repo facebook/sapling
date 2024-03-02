@@ -10,8 +10,8 @@
 // Implementation of the mount protocol as described in:
 // https://tools.ietf.org/html/rfc1813#page-106
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class EventBase;

@@ -23,8 +23,8 @@ cpp_library(
         "//remote_execution/lib/if:common-cpp2-types",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/store:backing_store_interface",
-        "//eden/fs/utils:path",
         "//remote_execution/lib/cpp:cas_daemon_client_builder",
         "//remote_execution/lib/cpp:prod_config_init",
         "//remote_execution/lib/if/cas:cas-daemon-service-cpp2-types",

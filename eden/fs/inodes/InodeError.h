@@ -7,9 +7,9 @@
 
 #pragma once
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/PathError.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

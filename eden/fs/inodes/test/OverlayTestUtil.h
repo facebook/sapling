@@ -10,10 +10,10 @@
 #include <iomanip>
 #include <sstream>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

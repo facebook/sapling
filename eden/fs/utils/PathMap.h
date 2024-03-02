@@ -14,8 +14,8 @@
 #include <utility>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

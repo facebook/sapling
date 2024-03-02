@@ -31,12 +31,12 @@ cpp_unittest(
     srcs = ["SqliteTreeStoreTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/inodes/sqlitecatalog:sqlitetreestore",
         "//eden/fs/model:model",
         "//eden/fs/sqlite:sqlite",
-        "//eden/fs/utils:path",
         "//eden/fs/utils:utils",
         "//folly/logging:logging",
         "//folly/portability:gtest",

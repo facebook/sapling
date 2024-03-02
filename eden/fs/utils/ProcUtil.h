@@ -12,9 +12,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfo.h"
 #include "eden/common/utils/ProcessInfoCache.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

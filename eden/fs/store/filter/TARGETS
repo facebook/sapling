@@ -13,8 +13,8 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/utils:path",
         "//eden/fs/model:model",
-        "//eden/fs/utils:path",
     ],
 )
 
@@ -25,7 +25,7 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/common/utils:immediate_future",
-        "//eden/fs/utils:path",
+        "//eden/common/utils:path",
         "//folly:range",
     ],
 )

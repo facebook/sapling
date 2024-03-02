@@ -25,6 +25,7 @@
 #include <folly/ThreadLocal.h>
 #include <folly/futures/SharedPromise.h>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/EdenMountHandle.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
@@ -36,7 +37,6 @@
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
 
 DECLARE_bool(takeover);

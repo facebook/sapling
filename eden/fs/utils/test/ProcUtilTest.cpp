@@ -13,12 +13,12 @@
 
 #include <folly/Portability.h>
 #include <folly/portability/GTest.h>
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/common/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using namespace facebook::eden::proc_util;
 
-TEST(proc_util, trimTest) {
+TEST(procUtil, trimTest) {
   std::string tst("");
   EXPECT_EQ(proc_util::trim(tst), "");
 
@@ -47,7 +47,7 @@ TEST(proc_util, trimTest) {
   EXPECT_EQ(proc_util::trim(tst), "start \t\n\v\f\rend");
 }
 
-TEST(proc_util, splitTest) {
+TEST(procUtil, splitTest) {
   std::string line;
 
   line = "key : value";
@@ -90,7 +90,7 @@ static AbsolutePath dataPath(PathComponentPiece name) {
   return thisFile.dirname() + "test-data"_relpath + name;
 }
 
-TEST(proc_util, readMemoryStats) {
+TEST(procUtil, readMemoryStats) {
   auto stats = readMemoryStats();
   if (!stats) {
     EXPECT_FALSE(folly::kIsLinux);
@@ -111,7 +111,7 @@ TEST(proc_util, readMemoryStats) {
   }
 }
 
-TEST(proc_util, parseMemoryStats) {
+TEST(procUtil, parseMemoryStats) {
   size_t pageSize = 4096;
   auto stats = parseStatmFile("26995 164 145 11 0 80 0\n", pageSize);
   ASSERT_TRUE(stats.has_value());
@@ -129,7 +129,7 @@ TEST(proc_util, parseMemoryStats) {
   EXPECT_EQ(pageSize * 1657632, stats->data);
 }
 
-TEST(proc_util, procStatusSomeInvalidInput) {
+TEST(procUtil, procStatusSomeInvalidInput) {
   EXPECT_FALSE(parseStatmFile("26995 164 145 11 0\n", 4096));
   EXPECT_FALSE(parseStatmFile("abc 547249 17716 22695 0 1657632 0\n", 4096));
   EXPECT_FALSE(
@@ -142,12 +142,12 @@ TEST(proc_util, procStatusSomeInvalidInput) {
   EXPECT_TRUE(parseStatmFile("6418297 547249 17716 22695 0 1657632 0\n", 4096));
 }
 
-TEST(proc_util, readMemoryStatsNoThrow) {
+TEST(procUtil, readMemoryStatsNoThrow) {
   auto stats = readStatmFile(canonicalPath("/DOES_NOT_EXIST"));
   EXPECT_FALSE(stats.has_value());
 }
 
-TEST(proc_util, procSmapsPrivateBytes) {
+TEST(procUtil, procSmapsPrivateBytes) {
   auto procPath = dataPath("ProcSmapsSimple.txt"_pc);
   std::ifstream input(procPath.c_str());
   auto smapsListOfMaps = proc_util::parseProcSmaps(input);
@@ -155,21 +155,21 @@ TEST(proc_util, procSmapsPrivateBytes) {
   EXPECT_EQ(privateBytes, 20 * 1024);
 }
 
-TEST(proc_util, procSmapsSomeInvalidInput) {
+TEST(procUtil, procSmapsSomeInvalidInput) {
   auto procPath = dataPath("ProcSmapsError.txt"_pc);
   auto smapsListOfMaps = proc_util::loadProcSmaps(procPath.c_str());
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps).value();
   EXPECT_EQ(privateBytes, 4096);
 }
 
-TEST(proc_util, procSmapsUnknownFormat) {
+TEST(procUtil, procSmapsUnknownFormat) {
   auto procPath = dataPath("ProcSmapsUnknownFormat.txt"_pc);
   auto smapsListOfMaps = proc_util::loadProcSmaps(procPath.c_str());
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps);
   EXPECT_EQ(privateBytes, std::nullopt);
 }
 
-TEST(proc_util, noProcSmapsNoThrow) {
+TEST(procUtil, noProcSmapsNoThrow) {
   std::string procPath("/DOES_NOT_EXIST");
   auto smapsListOfMaps = proc_util::loadProcSmaps(procPath);
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps).value();
