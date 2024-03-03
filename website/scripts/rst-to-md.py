@@ -35,7 +35,7 @@ rsts: Dict[str, str] = json.loads(raw_json)
 
 mds: Dict[str, str] = {}
 
-for (command, rst) in rsts.items():
+for command, rst in rsts.items():
     if not isinstance(rst, str):
         raise TypeError
 

@@ -290,7 +290,7 @@ class Client:
             difftonode[diffidentifiers.pop(hex(hashident))] = hashident
 
         difftoglobalrev = {}
-        for (identifier, diffid) in diffidentifiers.items():
+        for identifier, diffid in diffidentifiers.items():
             # commit_identifier could be svn revision numbers, ignore
             # them.
             if identifier.isdigit():

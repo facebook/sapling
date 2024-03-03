@@ -1381,7 +1381,7 @@ def getsparsepatterns(
                 # we'll append them later.
                 version = debugversion or profile.version()
                 if version == "1":
-                    for (i, value) in enumerate(profile.rules):
+                    for i, value in enumerate(profile.rules):
                         origin = "{} -> {}".format(
                             rawconfig.path, profile.ruleorigin(i)
                         )
@@ -1409,12 +1409,12 @@ def getsparsepatterns(
             excludes.add((value, rawconfig.path))
 
     if includes:
-        for (rule, origin) in includes:
+        for rule, origin in includes:
             rules.append(rule)
             ruleorigins.append(origin)
 
     if excludes:
-        for (rule, origin) in excludes:
+        for rule, origin in excludes:
             rules.append("!" + rule)
             ruleorigins.append(origin)
 
@@ -1585,7 +1585,7 @@ def readsparseprofile(
             profiles.add(value)
             profile = readsparseprofile(repo, rev, value, profileconfigs, depth + 1)
             if profile is not None:
-                for (i, rule) in enumerate(profile.rules):
+                for i, rule in enumerate(profile.rules):
                     rules.append(rule)
                     ruleorigins.append("{} -> {}".format(name, profile.ruleorigin(i)))
                 for subprofile in profile.profiles:
@@ -1752,9 +1752,7 @@ def _discover(ui, repo, rev: Optional[str] = None):
             (
                 PROFILE_ACTIVE
                 if p in active
-                else PROFILE_INCLUDED
-                if p in included
-                else PROFILE_INACTIVE
+                else PROFILE_INCLUDED if p in included else PROFILE_INACTIVE
             ),
             md,
         )
@@ -1875,10 +1873,8 @@ def hintlistverbose(profiles, filters, load_matcher) -> Optional[str]:
         )
 
 
-_deprecate = (
-    lambda o, l=_("(DEPRECATED)"): (o[:3] + (" ".join([o[4], l]),) + o[4:])
-    if l not in o[4]
-    else l
+_deprecate = lambda o, l=_("(DEPRECATED)"): (
+    (o[:3] + (" ".join([o[4], l]),) + o[4:]) if l not in o[4] else l
 )
 
 

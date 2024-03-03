@@ -102,6 +102,7 @@ httpserver._registeraliases(
 quote = urllib.parse.quote
 unquote = urllib.parse.unquote
 
+
 # urllib.parse.urlencode() returns str. We use this function to make
 # sure we return bytes.
 def urlencode(query, doseq: bool = False):

@@ -442,7 +442,7 @@ def loadall(ui, include_list=None):
         result = [(k, v) for (k, v) in result if k in include_list]
 
     alreadyenabled = set(_order)
-    for (name, path) in result:
+    for name, path in result:
         if path:
             if path[0:1] == "!":
                 _disabledextensions[name] = path[1:]

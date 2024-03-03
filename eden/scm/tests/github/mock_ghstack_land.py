@@ -33,7 +33,7 @@ def setup_mock_github_server() -> MockGitHubServer:
     )
 
     # Set up mocked responses for each draft commit in our stack.
-    for (idx, draft_commit) in enumerate(
+    for idx, draft_commit in enumerate(
         subprocess.check_output(
             [
                 "sl",

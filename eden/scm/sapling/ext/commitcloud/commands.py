@@ -550,7 +550,7 @@ def cloudlog(ui, repo, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     limit = cmdutil.loglimit(opts)
 
-    for (rev, _type, ctx, parents) in revdag:
+    for rev, _type, ctx, parents in revdag:
         if ctx.mutable() and datematcher(ctx.date()[0]):
             if limit is not None:
                 if limit == 0:

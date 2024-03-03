@@ -191,6 +191,7 @@ else:
 # For Windows support
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 
+
 # Whether to use IPv6
 def checksocketfamily(name, port=20058):
     """return true if we can listen on localhost using family=name

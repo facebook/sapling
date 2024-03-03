@@ -79,9 +79,9 @@ def restackonce(
         # We need to ensure that the 'operation' field in the obsmarker metadata
         # is always set to 'rebase', regardless of the current command so that
         # the restacked commits will appear as 'rebased' in smartlog.
-        overrides[
-            (tweakdefaults.globaldata, tweakdefaults.createmarkersoperation)
-        ] = "rebase"
+        overrides[(tweakdefaults.globaldata, tweakdefaults.createmarkersoperation)] = (
+            "rebase"
+        )
 
     if noconflictmsg:
         overrides[("rebase", "noconflictmsg")] = noconflictmsg

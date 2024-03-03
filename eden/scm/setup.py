@@ -1150,7 +1150,7 @@ from distutils.errors import DistutilsSetupError
 
 
 def build_libraries(self, libraries):
-    for (lib_name, build_info) in libraries:
+    for lib_name, build_info in libraries:
         sources = build_info.get("sources")
         if sources is None or not isinstance(sources, (list, tuple)):
             raise DistutilsSetupError(

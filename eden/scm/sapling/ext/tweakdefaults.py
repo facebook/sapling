@@ -694,9 +694,11 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     elif not pats or (len(pats) == 1 and pats[0] == "re:"):
         pats = [""]
 
-    with ui.configoverride(
-        {("commands", "status.relative"): "false"}
-    ) if rootrel else util.nullcontextmanager():
+    with (
+        ui.configoverride({("commands", "status.relative"): "false"})
+        if rootrel
+        else util.nullcontextmanager()
+    ):
         return orig(ui, repo, *pats, **opts)
 
 

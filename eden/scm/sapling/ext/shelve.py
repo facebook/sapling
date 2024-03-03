@@ -574,7 +574,7 @@ def _listshelvefileinfos(repo, shelvedir):
 def cleanupcmd(ui, repo) -> None:
     """subcommand that deletes all shelves"""
     with repo.wlock():
-        for (name, _type) in _listshelvefileinfos(repo, shelvedir):
+        for name, _type in _listshelvefileinfos(repo, shelvedir):
             suffix = name.rsplit(".", 1)[-1]
             if suffix in shelvefileextensions:
                 shelvedfile(repo, name).movetobackup()
@@ -614,7 +614,7 @@ def listshelves(repo):
             raise
         return []
     info = []
-    for (name, _type) in names:
+    for name, _type in names:
         pfx, sfx = name.rsplit(".", 1)
         if not pfx or sfx != patchextension:
             continue

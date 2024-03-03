@@ -367,9 +367,11 @@ def _makerage(ui, repo, **opts) -> str:
         (
             "disk space usage",
             lambda: shcmd(
-                "wmic LogicalDisk Where DriveType=3 Get DeviceId,FileSystem,FreeSpace,Size"
-                if pycompat.iswindows
-                else "df -h",
+                (
+                    "wmic LogicalDisk Where DriveType=3 Get DeviceId,FileSystem,FreeSpace,Size"
+                    if pycompat.iswindows
+                    else "df -h"
+                ),
                 check=False,
             ),
         ),

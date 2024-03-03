@@ -289,7 +289,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             r = f in ctx and ctx[f].renamed()
             if r:
                 renamed.append((r[0], f))
-        for (src, dst) in renamed:
+        for src, dst in renamed:
             files.remove(dst)
             files.add(src)
 

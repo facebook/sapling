@@ -53,6 +53,7 @@ wdirparenttype = "wdirparent"
 # to indicate this namespace is shared with the source?
 sharednamespaces: Dict[str, str] = {bookmarktype: hg.sharedbookmarks}
 
+
 # Journal recording, register hooks and storage object
 def extsetup(ui) -> None:
     extensions.wrapfunction(dispatch, "runcommand", runcommand)

@@ -28,6 +28,8 @@ from sapling.simplemerge import Merge3Text, render_minimized
 
 
 TestCase = unittest.TestCase
+
+
 # bzr compatible interface, for the tests
 class Merge3(Merge3Text):
     """3-way merge of texts.

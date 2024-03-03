@@ -1197,7 +1197,7 @@ class localrepository:
 
             fastpathheads = set()
             fastpathcommits, fastpathsegments, fastpathfallbacks = 0, 0, 0
-            for (old, new) in fastpath:
+            for old, new in fastpath:
                 try:
                     commits, segments = bindings.exchange.fastpull(
                         self.ui._rcfg,

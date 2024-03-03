@@ -1322,7 +1322,7 @@ class pathhistoryparents:
         """get parent nodes of node for path."""
         if node == nullid:
             return []
-        for (nameset, parents) in self.setparents:
+        for nameset, parents in self.setparents:
             if node in nameset:
                 return parents(node)
         raise error.ProgrammingError("%s is not yet follow()-ed" % hex(node))

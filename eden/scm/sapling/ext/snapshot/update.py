@@ -103,7 +103,7 @@ def _download_files_and_fix_status(ui, repo, snapshot) -> None:
 
     wctx = repo[None]
     with perftrace.trace("Pre-fix status"):
-        for (path, fc) in snapshot["file_changes"]:
+        for path, fc in snapshot["file_changes"]:
             fctx = wctx[path]
             # fc is either a string or a dict, can't use `"Deletion" in fc` because
             # that applies to "UntrackedDeletion" as well

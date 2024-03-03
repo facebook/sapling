@@ -41,7 +41,7 @@ def main(latest: bool = False) -> None:
     if not latest:
         print("Which invocation would you like to report?")
         print()
-        for (i, fn) in enumerate(logs):
+        for i, fn in enumerate(logs):
             if next_index > 10:
                 break
 

@@ -1348,9 +1348,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         node=wctx.p1().node(),
         other=mctx.node(),
         # Ancestor can include the working copy, so we use this helper:
-        ancestors=[scmutil.contextnodesupportingwdir(c) for c in ancestors]
-        if ancestors
-        else None,
+        ancestors=(
+            [scmutil.contextnodesupportingwdir(c) for c in ancestors]
+            if ancestors
+            else None
+        ),
         labels=labels,
     )
 
@@ -2429,7 +2431,7 @@ def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
     failed_removes = plan.apply(
         repo.fileslog.filestore,
     )
-    for (path, err) in failed_removes:
+    for path, err in failed_removes:
         repo.ui.warn(_("update failed to remove %s: %s!\n") % (path, err))
     repo.ui.debug("Apply done\n")
     stats = plan.stats()

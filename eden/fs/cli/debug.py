@@ -334,7 +334,7 @@ class ProcessFetchCmd(Subcmd):
             processes.items(), key=lambda x: x[1].fetch_count, reverse=True
         )
 
-        for (pid, process) in sorted_processes:
+        for pid, process in sorted_processes:
             if process.fetch_count:
                 row: Dict[str, str] = {}
                 cmd = process.cmd
@@ -663,7 +663,7 @@ def check_size_corruption(
 
     if local_store_corruption:
         print(f"{len(local_store_corruption)} corrupted sizes in the local store")
-        for (filename, mismatch) in local_store_corruption[:10]:
+        for filename, mismatch in local_store_corruption[:10]:
             print(
                 f"{filename} --"
                 f"actual size: {mismatch.actual_blobsize} -- "

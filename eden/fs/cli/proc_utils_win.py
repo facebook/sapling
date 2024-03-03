@@ -47,33 +47,29 @@ else:
     # checking for us.
     class _win32:
         @staticmethod
-        def OpenProcess(desired_access: int, inherit_handle: bool, pid: int) -> _HANDLE:
-            ...
+        def OpenProcess(
+            desired_access: int, inherit_handle: bool, pid: int
+        ) -> _HANDLE: ...
 
         @staticmethod
         def OpenProcessToken(
             handle: _HANDLE, desired_access: int, token_handle: _PHANDLE
-        ) -> bool:
-            ...
+        ) -> bool: ...
 
         @staticmethod
-        def CloseHandle(handle: _HANDLE) -> None:
-            ...
+        def CloseHandle(handle: _HANDLE) -> None: ...
 
         @staticmethod
-        def TerminateProcess(handle: _HANDLE, exit_code: int) -> bool:
-            ...
+        def TerminateProcess(handle: _HANDLE, exit_code: int) -> bool: ...
 
         @staticmethod
-        def GetExitCodeProcess(handle: _HANDLE, exit_code: _LPDWORD) -> _BOOL:
-            ...
+        def GetExitCodeProcess(handle: _HANDLE, exit_code: _LPDWORD) -> _BOOL: ...
 
     class psapi:
         @staticmethod
         def GetProcessImageFileNameW(
             handle: _HANDLE, fileName: _LPWSTR, size: _DWORD
-        ) -> _DWORD:
-            ...
+        ) -> _DWORD: ...
 
     class advapi32:
         @staticmethod
@@ -83,11 +79,9 @@ else:
             token_information: ctypes._CArgObject,
             token_information_length: _DWORD,
             return_length: _PDWORD,
-        ) -> bool:
-            ...
+        ) -> bool: ...
 
-    def raise_win_error() -> NoReturn:
-        ...
+    def raise_win_error() -> NoReturn: ...
 
 
 _PROCESS_TERMINATE = 0x0001

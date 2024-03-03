@@ -82,9 +82,9 @@ class Command:
                 }
                 for arg in self.args
             ],
-            "subcommands": [c.to_dict() for c in self.subcommands]
-            if self.subcommands
-            else None,
+            "subcommands": (
+                [c.to_dict() for c in self.subcommands] if self.subcommands else None
+            ),
         }
 
 

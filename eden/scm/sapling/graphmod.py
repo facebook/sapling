@@ -148,7 +148,7 @@ def colored(dag, repo):
     else:
         getconf = lambda rev: {}
 
-    for (cur, type, data, parents) in dag:
+    for cur, type, data, parents in dag:
 
         # Compute seen and next
         if cur not in seen:

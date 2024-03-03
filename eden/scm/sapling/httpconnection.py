@@ -26,6 +26,7 @@ from . import httpclient, sslutil, urllibcompat, util
 urlerr = util.urlerr
 urlreq = util.urlreq
 
+
 # moved here from url.py to avoid a cycle
 class httpsendfile:
     """This is a wrapper around the objects returned by python's "open".
@@ -90,6 +91,8 @@ class HTTPConnection(httpclient.HTTPConnection):
 
 _configuredlogging = False
 LOGFMT = "%(levelname)s:%(name)s:%(lineno)d:%(message)s"
+
+
 # Subclass BOTH of these because otherwise urllib2 "helpfully"
 # reinserts them since it notices we don't include any subclasses of
 # them.

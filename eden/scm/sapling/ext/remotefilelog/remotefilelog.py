@@ -593,5 +593,5 @@ class remotefileslog(filelog.fileslog):
         ui = self.repo.ui
         if type(self.filestore) is revisionstore.filescmstore:
             metrics = self.filestore.getmetrics()
-            for (metric, value) in metrics:
+            for metric, value in metrics:
                 ui.metrics.gauge(metric, value)

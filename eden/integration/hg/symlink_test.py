@@ -125,12 +125,13 @@ rename to symbolic_link
         self.write_file("symlink", os.path.join("adir", "hello.txt"))
         self.assertEqual(
             self.repo.hg("diff"),
-            """diff --git a/symlink b/symlink
+            (
+                """diff --git a/symlink b/symlink
 old mode 120000
 new mode 100644
 """
-            if os.name != "nt"
-            else r"""diff --git a/symlink b/symlink
+                if os.name != "nt"
+                else r"""diff --git a/symlink b/symlink
 old mode 120000
 new mode 100644
 --- a/symlink
@@ -140,19 +141,21 @@ new mode 100644
 \ No newline at end of file
 +adir\hello.txt
 \ No newline at end of file
-""",
+"""
+            ),
         )
         self.repo.update(self.quasi_symlink_commit, clean=True)
         os.remove(self.get_path("symlink"))
         self.repo.symlink("symlink", os.path.join("adir", "hello.txt"))
         self.assertEqual(
             self.repo.hg("diff"),
-            """diff --git a/symlink b/symlink
+            (
+                """diff --git a/symlink b/symlink
 old mode 100644
 new mode 120000
 """
-            if os.name != "nt"
-            else r"""diff --git a/symlink b/symlink
+                if os.name != "nt"
+                else r"""diff --git a/symlink b/symlink
 old mode 100644
 new mode 120000
 --- a/symlink
@@ -162,7 +165,8 @@ new mode 120000
 \ No newline at end of file
 +adir/hello.txt
 \ No newline at end of file
-""",
+"""
+            ),
         )
 
     def test_directory_listing(self) -> None:

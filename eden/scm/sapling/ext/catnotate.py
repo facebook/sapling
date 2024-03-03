@@ -36,6 +36,7 @@ def catnotate(ui, repo, file1, *args, **opts) -> int:
     prefix = ""
 
     err = 1
+
     # modified and stripped cmdutil.cat follows
     def write(path):
         fp = cmdutil.makefileobj(
@@ -46,7 +47,7 @@ def catnotate(ui, repo, file1, *args, **opts) -> int:
             fp.write(b"%s: binary file\n" % path.encode("utf8"))
             return
 
-        for (num, line) in enumerate(data.split(b"\n"), start=1):
+        for num, line in enumerate(data.split(b"\n"), start=1):
             line = line + b"\n"
             fp.write(
                 b"%s:%s: %s" % (path.encode("utf8"), str(num).encode("utf8"), line)

@@ -38,9 +38,7 @@ def httpstatussuccess(s):
     return s >= 200 and s < 300
 
 
-def checkdnsresolution(
-    ui, url
-) -> Optional[
+def checkdnsresolution(ui, url) -> Optional[
     List[
         Tuple[
             socket.AddressFamily,
@@ -184,8 +182,8 @@ def openhttpconn(ui, url, opts) -> httpclient.HTTPConnection:
             unix_socket_path=unixsocketpath,
         )
     else:
-        sslvalidator = (
-            lambda x: None if opts.get("insecure") else sslutil.validatesocket
+        sslvalidator = lambda x: (
+            None if opts.get("insecure") else sslutil.validatesocket
         )
 
         _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)

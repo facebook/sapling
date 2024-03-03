@@ -225,7 +225,7 @@ parthandlermapping = {}
 
 def parthandler(
     parttype: str,
-    params: "Tuple[str, ...]" = ()
+    params: "Tuple[str, ...]" = (),
     # pyre-fixme[31]: Expression `unbundlepart), None)])]` is not a valid type.
 ) -> "Callable[Callable[(bundleoperation, unbundlepart), None], Callable[(bundleoperation, unbundlepart), None]]":
     """decorator that register a function as a bundle2 part handler

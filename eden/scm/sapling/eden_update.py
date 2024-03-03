@@ -12,6 +12,7 @@ instead of doing a normal scan of the filesystem.
 from . import error, merge as mergemod, progress, pycompat, util
 from .i18n import _
 
+
 # This function is called by merge.goto() in the fast path
 # to ask the eden daemon to perform the update operation.
 @util.timefunction("edenupdate", 0, "ui")

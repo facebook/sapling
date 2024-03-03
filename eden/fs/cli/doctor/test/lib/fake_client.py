@@ -34,15 +34,15 @@ class FakeClient:
         def _get_default_mount_state() -> Optional[eden_ttypes.MountState]:
             return eden_ttypes.MountState.RUNNING
 
-        self._path_mount_state: Dict[
-            bytes, Optional[eden_ttypes.MountState]
-        ] = defaultdict(_get_default_mount_state)
+        self._path_mount_state: Dict[bytes, Optional[eden_ttypes.MountState]] = (
+            defaultdict(_get_default_mount_state)
+        )
 
-        self._path_mount_inode_info: Dict[
-            bytes, eden_ttypes.MountInodeInfo
-        ] = defaultdict(
-            lambda: eden_ttypes.MountInodeInfo(
-                unloadedInodeCount=1, loadedFileCount=2, loadedTreeCount=3
+        self._path_mount_inode_info: Dict[bytes, eden_ttypes.MountInodeInfo] = (
+            defaultdict(
+                lambda: eden_ttypes.MountInodeInfo(
+                    unloadedInodeCount=1, loadedFileCount=2, loadedTreeCount=3
+                )
             )
         )
 

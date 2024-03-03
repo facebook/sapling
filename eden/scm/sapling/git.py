@@ -539,7 +539,7 @@ def _writerefs(repo, refnodes):
     Only 'refs/heads/<name>' references are written (as local bookmarks).
     Other references will be normalized to `refs/visibleheads/<hex>`.
     """
-    for (ref, node) in refnodes:
+    for ref, node in refnodes:
         ref = str(ref)
         if not ref.startswith("refs/heads/"):
             # ref might be non-standard like "BUNDLE_HEAD".
@@ -655,7 +655,7 @@ def parsesubmodules(ctx):
 
     data = ctx[".gitmodules"].data()
     submodules = []
-    for (name, url, path) in bindings.workingcopy.parsegitsubmodules(data):
+    for name, url, path in bindings.workingcopy.parsegitsubmodules(data):
         submodules.append(
             Submodule(name, url, path, weakref.proxy(repo)),
         )

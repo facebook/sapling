@@ -3402,7 +3402,7 @@ def displaygraph(
             renderer.reserve(rev)
 
     show_abbreviated_ancestors = ShowAbbreviatedAncestorsWhen.load_from_config(repo.ui)
-    for (rev, _type, ctx, parents) in dag:
+    for rev, _type, ctx, parents in dag:
         char = formatnode(repo, ctx)
         copies = None
         if getrenamed and ctx.rev():

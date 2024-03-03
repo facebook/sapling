@@ -631,6 +631,7 @@ class wirepeer(repository.legacypeer):
 
 # server side
 
+
 # wire protocol command can either return a string or one of these classes.
 class streamres:
     """wireproto reply: binary stream

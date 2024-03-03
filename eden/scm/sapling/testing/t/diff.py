@@ -19,6 +19,7 @@ class ExpectLine:
     (glob) - The line contains glob patterns (ex. '*')
     (re) - The line is a regular expression
     """
+
     # raw line content, including the hints, without ending "\n"
     rawline: str
 
@@ -224,7 +225,7 @@ class MultiLineMatcher:
 
         matched = True
 
-        for (tag, i1, i2, j1, j2) in difflib.SequenceMatcher(
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
             a=alines, b=blines
         ).get_opcodes():
             if tag == "equal":

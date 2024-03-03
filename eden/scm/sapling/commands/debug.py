@@ -2864,7 +2864,7 @@ def debugsmallcommitmetadata(ui, repo, value: str = "", **opts) -> None:
             else:
                 entries = commitmeta.finddelete(node=node, category=category)
             fm.plain(_("Deleted the following entries:\n"))
-            for ((node_, category_), value_) in entries.items():
+            for (node_, category_), value_ in entries.items():
                 formatitem(fm, node_, category_, value_)
         else:
             # Delete single
@@ -2884,7 +2884,7 @@ def debugsmallcommitmetadata(ui, repo, value: str = "", **opts) -> None:
             else:
                 entries = commitmeta.find(node=node, category=category)
             fm.plain(_("Found the following entries:\n"))
-            for ((node_, category_), value_) in entries.items():
+            for (node_, category_), value_ in entries.items():
                 formatitem(fm, node_, category_, value_)
         else:
             # Read single
@@ -3614,7 +3614,7 @@ def debugruntest(ui, *paths, **opts) -> int:
     with extensions.wrappedfunction(
         mputil,
         "_args_from_interpreter_flags",
-        _args
+        _args,
         # pyre-fixme[6]: For 1st param expected `List[str]` but got `Tuple[Any, ...]`.
     ), TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r:
         for item in r:

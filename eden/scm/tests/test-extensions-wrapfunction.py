@@ -63,6 +63,7 @@ with wrap1:
     print("context manager", dummy.getstack())
 print("context manager", dummy.getstack())
 
+
 # Wrap callable object which has no __name__
 class callableobj:
     def __call__(self):

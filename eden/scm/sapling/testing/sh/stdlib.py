@@ -179,7 +179,7 @@ def local(args: List[str], env: Env):
 def wait(args: List[str], stdout: BinaryIO, env: Env):
     if args:
         raise NotImplementedError(f"wait {args=}")
-    for (thread, jobout) in env.jobs:
+    for thread, jobout in env.jobs:
         thread.join()
         stdout.write(jobout.getvalue())
     env.jobs.clear()

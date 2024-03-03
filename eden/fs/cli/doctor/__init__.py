@@ -254,9 +254,11 @@ class EdenDoctorChecker:
                 checkout = CheckoutInfo(
                     self.instance,
                     path,
-                    backing_repo=Path(os.fsdecode(mount.backingRepoPath))
-                    if mount.backingRepoPath is not None
-                    else None,
+                    backing_repo=(
+                        Path(os.fsdecode(mount.backingRepoPath))
+                        if mount.backingRepoPath is not None
+                        else None
+                    ),
                     running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
                     state=mount_state,
                     mount_inode_info=mount_point_info.get(mount.mountPoint),

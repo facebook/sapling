@@ -16,6 +16,7 @@ from .cmd_util import require_checkout
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 
+
 # Avoid CRLF line-endings on Windows.
 def _println(val: str) -> None:
     buffer = sys.stdout.buffer

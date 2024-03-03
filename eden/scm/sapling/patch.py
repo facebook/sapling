@@ -56,6 +56,7 @@ wordsplitter = re.compile(rb"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-
 
 PatchError = error.PatchError
 
+
 # public functions
 def split(stream):
     """return an iterator of individual patches from a stream"""

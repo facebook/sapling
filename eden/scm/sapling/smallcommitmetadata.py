@@ -79,7 +79,7 @@ class smallcommitmetadata:
             if node is None or node == node_
             if category is None or category == category_
         ]
-        for (key, _value) in entriestoremove:
+        for key, _value in entriestoremove:
             del self.contents[key]
         return altsortdict(entriestoremove)
 

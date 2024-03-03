@@ -142,7 +142,7 @@ class realconnectionpool:
         nondefaultreasons = {}
         serverpaths = {}
         for reason, peersforreason in self._reasons.items():
-            for (path, peername, peerinfo) in peersforreason:
+            for path, peername, peerinfo in peersforreason:
                 serverpaths[reason] = path
 
                 if peername is None:

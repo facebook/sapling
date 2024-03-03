@@ -22,6 +22,7 @@ rm_rf = functools.partial(shutil.rmtree, ignore_errors=True)
 print_err = functools.partial(print, file=sys.stderr)
 glob_r = functools.partial(glob.glob, recursive=True)
 
+
 # used to detect if files are changed.
 def hash_path_contents(paths: List[str]):
     h = hashlib.sha1()
@@ -38,6 +39,7 @@ def hash_path_contents(paths: List[str]):
 
 WALK_EXCLUDE_DIRS = ["node_modules", "build", "dist", "vscode-build", "coverage"]
 WALK_EXCLUDE_EXTS = ".xz"
+
 
 # find source code files (to hash_path_contents), excluding build results and node_modules
 def walk_src_files(top: str):

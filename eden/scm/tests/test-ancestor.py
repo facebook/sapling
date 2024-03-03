@@ -93,6 +93,7 @@ def test_missingancestors(seed, rng):
     testcount = 10
     inccount = 10
     nerrs = [0]
+
     # the default mu and sigma give us a nice distribution of mostly
     # single-digit counts (including 0) with some higher ones
     def lognormrandom(mu, sigma):

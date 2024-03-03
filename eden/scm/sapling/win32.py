@@ -176,6 +176,7 @@ CERT_TRUST_IS_PARTIAL_CHAIN = 0x10000
 X509_ASN_ENCODING = 0x00000001
 PKCS_7_ASN_ENCODING = 0x00010000
 
+
 # These structs are only complete enough to achieve what we need.
 class CERT_CHAIN_CONTEXT(ctypes.Structure):
     _fields_ = (

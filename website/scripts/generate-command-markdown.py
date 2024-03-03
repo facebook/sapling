@@ -96,6 +96,7 @@ def get_sapling() -> str:
 
 subprocess_cwd = os.path.dirname(__file__)
 
+
 # Extract command documentation from Sapling.
 def generate_commands_json(command_list: List[str]) -> Dict:
     proc = subprocess.run(
@@ -365,7 +366,7 @@ def regenerate_pages(command_list, commands_json, output_dir: Path):
     command_markdown = generate_pages(command_list, commands_json)
 
     markdown_files = []
-    for (command, info) in command_markdown.items():
+    for command, info in command_markdown.items():
         remove_command_doc(commands_json[command]["aliases"], output_dir)
 
         command_file_path = output_dir / f"{command}.md"

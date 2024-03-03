@@ -304,9 +304,9 @@ via-profile = "bind"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    "state": "not-mounted"
-                    if sys.platform != "win32"
-                    else "symlink-missing",
+                    "state": (
+                        "not-mounted" if sys.platform != "win32" else "symlink-missing"
+                    ),
                 },
             ],
         )
@@ -355,9 +355,9 @@ via-profile = "bind"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    "state": "not-mounted"
-                    if sys.platform != "win32"
-                    else "symlink-missing",
+                    "state": (
+                        "not-mounted" if sys.platform != "win32" else "symlink-missing"
+                    ),
                 },
             ],
         )
@@ -443,9 +443,9 @@ via-profile = "bind"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    "state": "not-mounted"
-                    if sys.platform != "win32"
-                    else "symlink-missing",
+                    "state": (
+                        "not-mounted" if sys.platform != "win32" else "symlink-missing"
+                    ),
                 },
             ],
         )

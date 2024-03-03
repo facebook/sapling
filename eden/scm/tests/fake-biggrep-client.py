@@ -89,5 +89,5 @@ files = {
     "grepdir/subdir2/subfile2": "foobar_dirsub",
 }
 
-for (filename, context) in files.items():
+for filename, context in files.items():
     result_line(filename, 1, 1, context)

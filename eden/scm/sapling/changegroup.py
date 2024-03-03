@@ -821,6 +821,7 @@ class cg1packer:
                     raise error.Abort(msg)
 
                 linkrevnodes = linknodes(filerevlog, fname)
+
                 # Lookup for filenodes, we collected the linkrev nodes above in
                 # the fastpath case and with lookupmf in the slowpath case.
                 def lookupfilelog(x):

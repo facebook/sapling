@@ -305,9 +305,9 @@ def print_diagnostic_info(
 
 
 def report_edenfs_bug(instance: EdenInstance, reporter: str) -> None:
-    rage_lambda: Callable[
-        [EdenInstance, IO[bytes]], None
-    ] = lambda inst, sink: print_diagnostic_info(inst, sink, False)
+    rage_lambda: Callable[[EdenInstance, IO[bytes]], None] = (
+        lambda inst, sink: print_diagnostic_info(inst, sink, False)
+    )
     _report_edenfs_bug(rage_lambda, instance, reporter)
 
 

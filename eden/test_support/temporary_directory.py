@@ -39,6 +39,7 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
     This is necessary for removing Eden checkout directories since "eden clone" makes
     the original mount point directory read-only.
     """
+
     # If we encounter an EPERM or EACCESS error removing a file try making its parent
     # directory writable and then retry the removal.
     def _remove_readonly(

@@ -51,6 +51,7 @@ from .pycompat import decodeutf8, encodeutf8, iswindows
 NETSTRING_SEPARATOR = b":"
 NETSTRING_ENDING = b","
 
+
 # Matches IoStream in Mononoke
 class IoStream(Enum):
     STDIN = 0

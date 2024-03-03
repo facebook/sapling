@@ -1428,7 +1428,7 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
             for i, r in enumerate(publicheads)
             if knownheads[i] and cl.changelogrevision(r).manifest in mfrevlog.nodemap
         ]
-        with repo.wlock(), repo.lock(), (repo.transaction("backfillmanifest")) as tr:
+        with repo.wlock(), repo.lock(), repo.transaction("backfillmanifest") as tr:
             bundlecaps = exchange.caps20to10(repo)
             cg = remote.getbundle(
                 "pull", bundlecaps=bundlecaps, common=common, heads=heads

@@ -35,7 +35,7 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize):
     incorrectfiletype = _("'{}' has incorrect file type")
     files2check = []
     wctx = repo[None]
-    for (path, fc) in filechanges:
+    for path, fc in filechanges:
         if fc == "Deletion":
             if path not in wc.removed:
                 return False, incorrectmod.format(path)

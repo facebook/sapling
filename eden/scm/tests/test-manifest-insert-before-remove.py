@@ -17,7 +17,7 @@ class ManifestInsertBeforeRemoveTest(unittest.TestCase):
         manifest = bindings.manifest.treemanifest(store)
         manifest["dir/name"] = translatenode("1")
         manifest["dir/unchanged"] = translatenode("2")
-        for (path, node, raw, _, _, _) in manifest.finalize():
+        for path, node, raw, _, _, _ in manifest.finalize():
             store.insert(path, node, raw)
         return (store, manifest)
 

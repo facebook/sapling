@@ -209,13 +209,15 @@ class ListMountInfo(typing.NamedTuple):
     def to_json_dict(self) -> Dict[str, Any]:
         return {
             "data_dir": self.data_dir.as_posix(),
-            "state": MountState._VALUES_TO_NAMES.get(self.state)
-            if self.state is not None
-            else "NOT_RUNNING",
+            "state": (
+                MountState._VALUES_TO_NAMES.get(self.state)
+                if self.state is not None
+                else "NOT_RUNNING"
+            ),
             "configured": self.configured,
-            "backing_repo": self.backing_repo.as_posix()
-            if self.backing_repo is not None
-            else None,
+            "backing_repo": (
+                self.backing_repo.as_posix() if self.backing_repo is not None else None
+            ),
         }
 
 
@@ -234,17 +236,15 @@ class AbstractEdenInstance:
         except ValueError:
             return default
 
-    def get_config_value(self, key: str, default: str) -> str:
-        ...
+    def get_config_value(self, key: str, default: str) -> str: ...
 
-    def get_config_bool(self, key: str, default: bool) -> bool:
-        ...
+    def get_config_bool(self, key: str, default: bool) -> bool: ...
 
-    def get_config_strs(self, key: str, default: configutil.Strs) -> configutil.Strs:
-        ...
+    def get_config_strs(
+        self, key: str, default: configutil.Strs
+    ) -> configutil.Strs: ...
 
-    def get_checkouts(self) -> List["EdenCheckout"]:
-        ...
+    def get_checkouts(self) -> List["EdenCheckout"]: ...
 
 
 class EdenInstance(AbstractEdenInstance):

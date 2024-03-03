@@ -123,8 +123,7 @@ class ProblemTracker(abc.ABC):
         else:
             self.add_problem_impl(problem)
 
-    def add_problem_impl(self, problem: ProblemBase) -> None:
-        ...
+    def add_problem_impl(self, problem: ProblemBase) -> None: ...
 
 
 class ProblemFixer(ProblemTracker):

@@ -136,16 +136,13 @@ class ExpectedFileSet(Mapping[Path, ExpectedFileBase]):
         return key in self._entries
 
     @typing.overload
-    def pop(self, path: _AnyPath) -> ExpectedFileBase:
-        ...
+    def pop(self, path: _AnyPath) -> ExpectedFileBase: ...
 
     @typing.overload  # noqa: F811
-    def pop(self, path: _AnyPath, default: ExpectedFileBase) -> ExpectedFileBase:
-        ...
+    def pop(self, path: _AnyPath, default: ExpectedFileBase) -> ExpectedFileBase: ...
 
     @typing.overload  # noqa: F811
-    def pop(self, path: _AnyPath, default: None) -> Optional[ExpectedFileBase]:
-        ...
+    def pop(self, path: _AnyPath, default: None) -> Optional[ExpectedFileBase]: ...
 
     def pop(  # noqa: F811
         self,

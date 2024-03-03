@@ -268,7 +268,7 @@ def run_tests(
 
     success = True
 
-    for (prefix, runner, tests) in work:
+    for prefix, runner, tests in work:
         args = list(test_flags.runner_args())
 
         if xunit_output is not None:
