@@ -18,7 +18,7 @@ use clientinfo::get_client_request_info;
 use fbthrift_socket::SocketTransport;
 use serde::Deserialize;
 use thrift_types::edenfs;
-use thrift_types::edenfs::client::EdenService;
+use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
 use types::HgId;

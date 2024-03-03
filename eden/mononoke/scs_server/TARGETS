@@ -72,10 +72,12 @@ rust_binary(
         "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-services",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//fb303/thrift:fb303_core-rust",
+        "//fb303/thrift:fb303_core-rust-services",
         "//login/if:login_objects_thrift-rust",
     ],
 )

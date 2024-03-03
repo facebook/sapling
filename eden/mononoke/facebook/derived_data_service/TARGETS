@@ -48,6 +48,7 @@ rust_binary(
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/derived_data/remote/if:DerivedDataService-metadata-sys",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust-services",
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_repos:mononoke_repos",
@@ -57,6 +58,7 @@ rust_binary(
         "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//fb303/thrift:fb303_core-rust",
+        "//fb303/thrift:fb303_core-rust-services",
     ],
 )
 
@@ -89,6 +91,7 @@ rust_library(
         "//eden/mononoke/common/facebook/thrift_client:thrift_client",
         "//eden/mononoke/derived_data:derived_data_remote",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust-clients",
         "//eden/mononoke/server/context:context",
         "//fb303/thrift:fb303_core-rust",
     ],

@@ -36,6 +36,7 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks_types",
         "//eden/mononoke/common/facebook/thrift_client:thrift_client",
         "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust",
+        "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust-clients",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
         "//fb303/thrift:fb303_core-rust",
@@ -69,6 +70,7 @@ rust_binary(
         "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/facebook/bookmark_service/if:BookmarkService-metadata-sys",
         "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust",
+        "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust-services",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_repos:mononoke_repos",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
@@ -76,5 +78,6 @@ rust_binary(
         "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//fb303/thrift:fb303_core-rust",
+        "//fb303/thrift:fb303_core-rust-services",
     ],
 )

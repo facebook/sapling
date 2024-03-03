@@ -18,7 +18,7 @@ use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
 use maplit::hashmap;
 use sharding_ext::encode_repo_name;
-use source_control::client::SourceControlService;
+use source_control_clients::SourceControlService;
 use source_control_x2pclients::make_SourceControlService_x2pclient;
 
 const DEFAULT_TIER: &str = "shardmanager:mononoke.scs";

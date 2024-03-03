@@ -30,8 +30,8 @@ use fbthrift_socket::SocketTransport;
 use thrift_streaming::streaming_eden_service::StreamStartStatusError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
-use thrift_types::edenfs::client::EdenService;
 use thrift_types::edenfs::types::DaemonInfo;
+use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;

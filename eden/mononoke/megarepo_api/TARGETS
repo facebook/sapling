@@ -15,6 +15,7 @@ rust_library(
         ":megarepo_error",
         "//common/rust/shed/fbinit:fbinit",
         "//configerator/configo/if:configo-rust",
+        "//configerator/configo/if:configo-rust-clients",
         "//configerator/configo/if:configo-rust-srclients",
     ],
 )

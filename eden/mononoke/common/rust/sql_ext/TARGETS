@@ -11,7 +11,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
     ],
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:abomonation",
         "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
@@ -48,5 +48,8 @@ rust_library(
         "//eden/mononoke/common/time_measuring:time_measuring",
         "//crypto/keychain_service:if-rust",
         "//crypto/keychain_service:if-rust-srclients",
-    ]),
+    ])) + [
+        "//crypto/keychain_service:if-rust-clients",
+        "//dba/myadmin/if:if-myadmin-rust-clients",
+    ],
 )

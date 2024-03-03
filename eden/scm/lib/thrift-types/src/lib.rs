@@ -9,6 +9,7 @@
 // Re-export
 pub use anyhow;
 pub use edenfs;
+pub use edenfs_clients;
 pub use edenfs_config;
 pub use fb303_core;
 pub use fbthrift;

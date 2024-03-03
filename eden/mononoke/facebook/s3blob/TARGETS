@@ -32,6 +32,7 @@ rust_library(
         "//common/rust/smc-thrift:smc-thrift",
         "//common/smc/if:if-rust",
         "//crypto/keychain_service:if-rust",
+        "//crypto/keychain_service:if-rust-clients",
         "//crypto/keychain_service:if-rust-srclients",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/mononoke_types:mononoke_types",

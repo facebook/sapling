@@ -54,6 +54,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/scs/if:source_control-rust-x2pclients",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],

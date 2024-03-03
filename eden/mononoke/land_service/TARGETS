@@ -37,6 +37,7 @@ rust_binary(
         "//eden/mononoke/hooks:hooks",
         "//eden/mononoke/land_service/if:LandService-metadata-sys",
         "//eden/mononoke/land_service/if:land_service_if-rust",
+        "//eden/mononoke/land_service/if:land_service_if-rust-services",  # For easier error handling
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
@@ -47,6 +48,7 @@ rust_binary(
         "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//fb303/thrift:fb303_core-rust",
+        "//fb303/thrift:fb303_core-rust-services",  # For easier error handling
         "//login/if:login_objects_thrift-rust",
     ],
 )

@@ -17,5 +17,6 @@ rust_binary(
         "//eden/mononoke/git/facebook/scs_connection:scs_connection",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
     ],
 )

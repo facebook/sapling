@@ -29,6 +29,7 @@ rust_binary(
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/repo_name:repo_name",

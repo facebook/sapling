@@ -52,6 +52,7 @@ rust_library(
         "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
         "//eden/fs/cli_rs/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/fs/service:thrift-streaming-rust",
+        "//eden/fs/service:thrift-streaming-rust-clients",
         "//eden/fs/service:thrift-streaming-rust-thriftclients",
         "//eden/scm/lib/atomicfile:atomicfile",
         "//eden/scm/lib/thrift-types:thrift-types",

@@ -32,6 +32,7 @@ rust_binary(
         "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/derived_data:derived_data_constants",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
     ],
 )
 

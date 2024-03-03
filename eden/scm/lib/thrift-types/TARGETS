@@ -7,6 +7,7 @@ rust_library(
     srcs = ["src/lib.rs"],
     named_deps = {
         "edenfs": "//eden/fs/service:thrift-rust",
+        "edenfs_clients": "//eden/fs/service:thrift-rust-clients",
         "edenfs_config": "//eden/fs/config:config_thrift-rust",
         "fb303_core": "//fb303/thrift:fb303_core-rust",
         "hgclient_conf": "//configerator/structs/scm/hg/hgclientconf:config-rust",
