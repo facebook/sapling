@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List, Optional, Tuple
 
-from sapling import error, formatter, git, hintutil, templatekw
+from sapling import error, formatter, git, hintutil, templatekw, util
 from sapling.context import changectx
 from sapling.i18n import _
 from sapling.node import hex, nullid
@@ -100,6 +100,8 @@ class CommitData:
     # Whether this commit should be part of another pull request rather than
     # the head of its own pull request.
     is_dep: bool
+    # List of remotenames for this node
+    remotenames: list[str]
     # Description of the commit, set lazily.
     msg: Optional[str] = None
 
@@ -124,16 +126,34 @@ class PullRequestParams:
     number: int
 
 
-async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
+async def get_partitions(
+    ui, repo, store, filter
+) -> Tuple[List[List[CommitData]], Optional[str]]:
     commits_to_process = await asyncio.gather(
         *[derive_commit_data(node, repo, store) for node in repo.nodes(filter)]
     )
     if not commits_to_process:
         return []
 
+    stack_base_branch = None
+
+    feature_branch_pattern = ui.config("github", "pr.feature-branch-pattern")
+    if feature_branch_pattern:
+        feature_branch_matcher = util.stringmatcher(feature_branch_pattern)[-1]
+
     # Partition the chain.
     partitions: List[List[CommitData]] = []
     for commit in commits_to_process:
+        if feature_branch_matcher:
+            remote_branch_names = [
+                str.removeprefix(r, "remote/") for r in commit.remotenames
+            ]
+            matched_feature_branch = next(
+                (r for r in remote_branch_names if feature_branch_matcher(r)), None
+            )
+            if matched_feature_branch:
+                stack_base_branch = matched_feature_branch
+                break
         if commit.is_dep:
             if partitions:
                 partitions[-1].append(commit)
@@ -143,7 +163,7 @@ async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
                 continue
         else:
             partitions.append([commit])
-    return partitions
+    return (partitions, stack_base_branch)
 
 
 async def update_commits_in_stack(
@@ -158,7 +178,9 @@ async def update_commits_in_stack(
 
     workflow = SubmitWorkflow.from_config(ui)
 
-    partitions = await get_partitions(ui, repo, store, "sort(. %% public(), -rev)")
+    partitions, stack_base_branch = await get_partitions(
+        ui, repo, store, "sort(. %% public(), -rev)"
+    )
     if not partitions:
         ui.status_err(_("no commits to submit\n"))
         return 0
@@ -223,6 +245,7 @@ async def update_commits_in_stack(
                 store,
                 ui,
                 is_draft,
+                stack_base_branch=stack_base_branch,
             )
         else:
             assert isinstance(params, SerialStrategyParams)
@@ -233,6 +256,7 @@ async def update_commits_in_stack(
                 store,
                 ui,
                 is_draft,
+                stack_base_branch=stack_base_branch,
             )
 
     # Now that each pull request has a named branch pushed to GitHub, we can
@@ -248,7 +272,13 @@ async def update_commits_in_stack(
         repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
-            partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
+            partitions,
+            index,
+            workflow,
+            pr_numbers_and_num_commits,
+            repository,
+            ui,
+            stack_base_branch=stack_base_branch,
         )
         for index in range(len(partitions))
     ] + [
@@ -271,14 +301,18 @@ async def rewrite_pull_request_body(
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     repository: Repository,
     ui,
+    stack_base_branch: Optional[str],
 ) -> None:
     # If available, use the head branch of the previous partition as the base
     # of this branch. Recall that partitions is ordered from the top of the
     # stack to the bottom.
     partition = partitions[index]
     base = repository.get_base_branch()
-    if workflow == SubmitWorkflow.SINGLE and index < len(partitions) - 1:
-        base = none_throws(partitions[index + 1][0].head_branch_name)
+    if workflow == SubmitWorkflow.SINGLE:
+        if index < len(partitions) - 1:
+            base = none_throws(partitions[index + 1][0].head_branch_name)
+        elif stack_base_branch:
+            base = stack_base_branch
 
     head_commit_data = partition[0]
 
@@ -430,6 +464,7 @@ async def create_pull_requests_serially(
     store: PullRequestStore,
     ui,
     is_draft: bool,
+    stack_base_branch: Optional[str],
 ) -> None:
     """Creates a new pull request for each entry in the `commits` list.
 
@@ -446,8 +481,11 @@ async def create_pull_requests_serially(
     parent = None
     for commit, branch_name in commits:
         base = repository.get_base_branch()
-        if workflow == SubmitWorkflow.SINGLE and parent:
-            base = none_throws(parent.head_branch_name)
+        if workflow == SubmitWorkflow.SINGLE:
+            if parent:
+                base = none_throws(parent.head_branch_name)
+            elif stack_base_branch:
+                base = stack_base_branch
 
         body = commit.get_msg()
         title = firstline(body)
@@ -575,6 +613,7 @@ async def create_pull_requests_from_placeholder_issues(
     store: PullRequestStore,
     ui,
     is_draft: bool,
+    stack_base_branch: Optional[str],
 ) -> None:
     """Creates a new pull request for each entry in the `commits` list.
 
@@ -597,6 +636,8 @@ async def create_pull_requests_from_placeholder_issues(
             parent = params.parent
             if parent:
                 base = none_throws(parent.head_branch_name)
+            elif stack_base_branch:
+                base = stack_base_branch
 
         response = await gh_submit.create_pull_request_from_placeholder_issue(
             hostname=repository.hostname,
@@ -720,6 +761,11 @@ async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> Comm
         msg = ctx.description()
         is_dep = store.is_follower(node)
         head_branch_name = None
+
+    remotenames = []
+    if "remotebookmarks" in repo.names:
+        remotenames = repo.names["remotebookmarks"].names(repo, node)
+
     return CommitData(
         node=node,
         head_branch_name=head_branch_name,
@@ -727,6 +773,7 @@ async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> Comm
         ctx=ctx,
         is_dep=is_dep,
         msg=msg,
+        remotenames=remotenames,
     )
 
 
