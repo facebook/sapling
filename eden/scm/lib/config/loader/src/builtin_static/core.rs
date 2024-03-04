@@ -21,6 +21,7 @@ repackfactor=3
 timeout=600
 color=auto
 paginate=true
+ignorerevnum=True
 
 [checkout]
 resumable=true

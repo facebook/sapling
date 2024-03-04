@@ -12,6 +12,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
+hgplain = { version = "0.1.0", path = "../util/hgplain" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
 thiserror = "1.0.49"
