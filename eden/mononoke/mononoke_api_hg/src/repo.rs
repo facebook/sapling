@@ -907,7 +907,7 @@ impl HgRepoContext {
                     })
                 })))
             })
-            .buffered(10)
+            .buffered(25)
             .try_flatten())
     }
 
@@ -936,7 +936,7 @@ impl HgRepoContext {
             .ancestors_difference_stream(&ctx, bonsai_heads, bonsai_common)
             .await?
             .map_err(MononokeError::from)
-            .and_then(move |bcs_id| {
+            .map_ok(move |bcs_id| {
                 let ctx = ctx.clone();
                 let blob_repo = blob_repo.clone();
                 async move {
@@ -945,7 +945,8 @@ impl HgRepoContext {
                         .await
                         .map_err(MononokeError::from)
                 }
-            });
+            })
+            .try_buffered(100);
         Ok(commit_graph_stream)
     }
 
@@ -1009,7 +1010,7 @@ impl HgRepoContext {
 
         let bonsai_hg_mapping = stream::iter(all_cs_ids)
             .chunks(map_chunk_size)
-            .then(move |chunk| async move {
+            .map(move |chunk| async move {
                 let mapping = self
                     .blob_repo()
                     .get_hg_bonsai_mapping(self.ctx().clone(), chunk.to_vec())
@@ -1017,6 +1018,7 @@ impl HgRepoContext {
                     .context("error fetching hg bonsai mapping")?;
                 Ok::<_, Error>(mapping)
             })
+            .buffered(25)
             .try_collect::<Vec<Vec<(HgChangesetId, ChangesetId)>>>()
             .await?
             .into_iter()
