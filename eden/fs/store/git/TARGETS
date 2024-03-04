@@ -11,11 +11,11 @@ cpp_library(
         "ovr_config//os:linux",
     ],
     deps = [
+        "//eden/common/utils:enum",
         "//eden/common/utils:throw",
         "//eden/fs/model/git:git",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
-        "//eden/fs/utils:enum",
         "//folly/futures:core",
         "//folly/logging:logging",
         "//folly:conv",

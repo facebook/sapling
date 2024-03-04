@@ -13,12 +13,12 @@
 #include <folly/logging/xlog.h>
 #include <folly/ssl/OpenSSLHash.h>
 
+#include "eden/common/utils/EnumValue.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/EnumValue.h"
 
 using folly::ByteRange;
 using folly::IOBuf;

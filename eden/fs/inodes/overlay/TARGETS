@@ -36,8 +36,8 @@ cpp_library(
         "OverlayChecker.h",
     ],
     deps = [
+        "//eden/common/utils:enum",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
-        "//eden/fs/utils:enum",
         "//folly:conv",
         "//folly:exception_wrapper",
         "//folly:file",

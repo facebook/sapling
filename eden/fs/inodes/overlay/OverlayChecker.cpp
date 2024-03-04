@@ -25,8 +25,8 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include "eden/common/utils/EnumValue.h"
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
-#include "eden/fs/utils/EnumValue.h"
 
 using apache::thrift::CompactSerializer;
 using folly::ByteRange;

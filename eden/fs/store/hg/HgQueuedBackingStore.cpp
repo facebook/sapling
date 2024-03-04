@@ -22,6 +22,7 @@
 #include <folly/system/ThreadName.h>
 
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
@@ -37,7 +38,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook::eden {

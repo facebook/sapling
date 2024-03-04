@@ -10,9 +10,9 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
+        "//eden/common/utils:enum",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:system_error",
-        "//eden/fs/utils:enum",
         "//eden/fs/utils:filter_utils",
         "//eden/fs/utils:user_info",
         "//folly:map_util",

@@ -3,16 +3,6 @@ load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 oncall("scm_client_infra")
 
 cpp_library(
-    name = "enum",
-    headers = [
-        "EnumValue.h",
-    ],
-    exported_deps = [
-        "//folly:utility",
-    ],
-)
-
-cpp_library(
     name = "event_base_state",
     headers = ["EventBaseState.h"],
     exported_deps = [
@@ -95,9 +85,9 @@ cpp_library(
         "GlobTree.h",
     ],
     exported_deps = [
-        ":enum",
         ":matcher",
         "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:enum",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/model:model",
@@ -201,7 +191,7 @@ cpp_library(
         "//folly:thread_local",
     ],
     exported_deps = [
-        ":enum",
+        "//eden/common/utils:enum",
         "//eden/common/utils:utils",
         "//eden/fs/service:thrift-cpp2-types",
         "//folly:synchronized",

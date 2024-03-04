@@ -23,6 +23,7 @@
 #include <folly/stop_watch.h>
 
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -41,7 +42,6 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/EnumValue.h"
 
 using folly::Future;
 using folly::IOBuf;

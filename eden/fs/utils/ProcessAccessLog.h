@@ -11,8 +11,8 @@
 #include <type_traits>
 
 #include "eden/common/utils/BucketedLog.h"
+#include "eden/common/utils/EnumValue.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/utils/EnumValue.h"
 
 namespace facebook::eden {
 

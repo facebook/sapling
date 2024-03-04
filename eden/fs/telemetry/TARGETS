@@ -14,7 +14,7 @@ cpp_library(
         "TraceBus-inl.h",
     ],
     deps = [
-        "//eden/fs/utils:enum",
+        "//eden/common/utils:enum",
         "//folly:string",
     ],
     exported_deps = [

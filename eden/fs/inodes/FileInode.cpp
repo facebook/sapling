@@ -17,6 +17,7 @@
 
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/DirType.h"
+#include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -35,7 +36,6 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/NotImplemented.h"
 

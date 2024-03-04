@@ -13,7 +13,7 @@
 #include <folly/String.h>
 
 #include "eden/common/utils/Bug.h"
-#include "eden/fs/utils/EnumValue.h"
+#include "eden/common/utils/EnumValue.h"
 
 namespace facebook::eden {
 

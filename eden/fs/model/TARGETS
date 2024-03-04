@@ -17,9 +17,9 @@ cpp_library(
         "EntryAttributeFlags.h",
     ],
     deps = [
+        "//eden/common/utils:enum",
         "//eden/common/utils:throw",
         "//eden/fs/digest:blake3_hash",
-        "//eden/fs/utils:enum",
         "//folly:conv",
         "//folly:string",
         "//folly/logging:logging",

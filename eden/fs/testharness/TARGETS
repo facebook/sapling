@@ -184,7 +184,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":test_util",
-        "//eden/fs/utils:enum",
+        "//eden/common/utils:enum",
         "//folly:map_util",
         "//folly/futures:core",
         "//folly/logging:logging",

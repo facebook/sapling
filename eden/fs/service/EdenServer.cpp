@@ -39,6 +39,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <csignal>
 
+#include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -87,7 +88,6 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/EdenTaskQueue.h"
-#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
