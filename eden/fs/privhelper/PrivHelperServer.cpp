@@ -36,9 +36,9 @@
 #include <csignal>
 #include <set>
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/SysctlUtil.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/privhelper/NfsMountRpc.h"
-#include "eden/fs/utils/SysctlUtil.h"
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual

@@ -320,15 +320,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "sysctl_util",
-    srcs = ["SysctlUtil.cpp"],
-    headers = ["SysctlUtil.h"],
-    deps = [
-        "//folly:exception",
-    ],
-)
-
-cpp_library(
     name = "projfs_util",
     srcs = ["ProjfsUtil.cpp"],
     headers = ["ProjfsUtil.h"],

@@ -20,7 +20,7 @@
 
 #include <cstdlib>
 
-#include "eden/fs/utils/SysctlUtil.h"
+#include "eden/common/utils/SysctlUtil.h"
 
 namespace {
 /**
