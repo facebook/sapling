@@ -1601,7 +1601,7 @@ Do you still want to delete {path}?"""
                                     )
                                     return 1
                                 else:
-                                    winhr = WinFileHandlerReleaser()
+                                    winhr = WinFileHandlerReleaser(instance)
                                     maybe_succeeded = winhr.try_release(path)
                                     try:
                                         # Try again after try_release
