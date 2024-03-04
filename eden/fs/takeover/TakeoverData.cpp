@@ -20,7 +20,7 @@
 
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/utils/UnixSocket.h"
+#include "eden/common/utils/UnixSocket.h"
 
 using apache::thrift::CompactSerializer;
 using folly::IOBuf;

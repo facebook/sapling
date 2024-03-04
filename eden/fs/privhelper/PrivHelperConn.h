@@ -11,7 +11,7 @@
 #include <folly/io/Cursor.h>
 #include <cinttypes>
 #include <stdexcept>
-#include "eden/fs/utils/UnixSocket.h"
+#include "eden/common/utils/UnixSocket.h"
 
 namespace folly {
 class File;

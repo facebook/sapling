@@ -275,9 +275,9 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:io",
         "//eden/common/utils:path",
         "//eden/fs/config:config",
-        "//eden/fs/utils:io",
         "//eden/fs/utils:process",
         "//folly:file",
         "//folly:range",

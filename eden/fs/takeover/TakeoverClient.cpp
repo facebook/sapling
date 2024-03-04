@@ -13,9 +13,9 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include "eden/common/utils/FutureUnixSocket.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
-#include "eden/fs/utils/FutureUnixSocket.h"
 
 using apache::thrift::CompactSerializer;
 using std::string;

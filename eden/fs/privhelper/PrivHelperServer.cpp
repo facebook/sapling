@@ -43,7 +43,7 @@
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual
 #include <IOKit/kext/KextManager.h> // @manual
-#include <eden/fs/utils/Pipe.h>
+#include <eden/common/utils/Pipe.h>
 #include <eden/fs/utils/SpawnedProcess.h>
 #include <fuse_ioctl.h> // @manual
 #include <fuse_mount.h> // @manual

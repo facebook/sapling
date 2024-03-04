@@ -12,8 +12,8 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include "eden/common/utils/UnixSocket.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
-#include "eden/fs/utils/UnixSocket.h"
 
 namespace folly {
 class EventBase;

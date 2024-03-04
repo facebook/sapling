@@ -26,36 +26,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "file_descriptor",
-    srcs = ["FileDescriptorTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/common/testharness:temp_file",
-        "//eden/common/utils:path",
-        "//eden/fs/utils:io",
-        "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:gtest",
-        "//folly/test:test_utils",
-    ],
-)
-
-cpp_unittest(
-    name = "io_future",
-    srcs = ["IoFutureTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:io",
-        "//folly:exception",
-        "//folly:file",
-        "//folly/io/async:async_base",
-        "//folly/portability:gtest",
-        "//folly/portability:sockets",
-        "//folly/test:test_utils",
-    ],
-)
-
-cpp_unittest(
     name = "proc_util",
     srcs = ["ProcUtilTest.cpp"],
     env = {
@@ -123,28 +93,6 @@ cpp_unittest(
         "//eden/common/utils:path",
         "//eden/fs/utils:process",
         "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:gtest",
-        "//folly/test:test_utils",
-    ],
-)
-
-cpp_unittest(
-    name = "unix_socket",
-    srcs = ["UnixSocketTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/common/testharness:temp_file",
-        "//eden/fs/utils:io",
-        "//folly:exception",
-        "//folly:file",
-        "//folly:random",
-        "//folly:range",
-        "//folly:string",
-        "//folly/experimental:test_util",
-        "//folly/futures:core",
-        "//folly/io:iobuf",
-        "//folly/io/async:async_base",
         "//folly/logging:logging",
         "//folly/portability:gtest",
         "//folly/test:test_utils",

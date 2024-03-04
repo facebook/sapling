@@ -15,10 +15,10 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/common/utils/FileDescriptor.h"
 #include "eden/common/utils/Handle.h"
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/utils/FileDescriptor.h"
-#include "eden/fs/utils/Pipe.h"
+#include "eden/common/utils/Pipe.h"
 
 #ifndef _WIN32
 #include <spawn.h>

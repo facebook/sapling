@@ -48,7 +48,7 @@ cpp_library(
         "//folly/portability:unistd",
     ],
     exported_deps = [
-        "//eden/fs/utils:io",
+        "//eden/common/utils:io",
         "//folly:range",
         "//folly/io:iobuf",
     ],
@@ -93,7 +93,7 @@ cpp_library(
     ],
     exported_deps = [
         ":conn",
-        "//eden/fs/utils:io",
+        "//eden/common/utils:io",
     ],
     external_deps = [
         ("boost", None, "boost_algorithm"),
@@ -113,9 +113,9 @@ cpp_library(
         ":flags",
         ":interface",
         ":server",
+        "//eden/common/utils:io",
         "//eden/common/utils:utils",
         "//eden/fs/utils:eden_error",
-        "//eden/fs/utils:io",
         "//eden/fs/utils:process",
         "//eden/fs/utils:user_info",
         "//folly:exception",

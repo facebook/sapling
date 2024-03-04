@@ -236,49 +236,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "io",
-    srcs = [
-        "FileDescriptor.cpp",
-        "FutureUnixSocket.cpp",
-        "IoFuture.cpp",
-        "Pipe.cpp",
-        "UnixSocket.cpp",
-    ],
-    headers = [
-        "FileDescriptor.h",
-        "FutureUnixSocket.h",
-        "IoFuture.h",
-        "Pipe.h",
-        "UnixSocket.h",
-    ],
-    deps = [
-        "fbsource//third-party/fmt:fmt",
-        "//eden/common/utils:utils",
-        "//folly:exception",
-        "//folly:file_util",
-        "//folly:network_address",
-        "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:fcntl",
-        "//folly/portability:sockets",
-        "//folly/portability:sys_uio",
-        "//folly/portability:unistd",
-    ],
-    exported_deps = [
-        "//eden/common/utils:path",
-        "//folly:conv",
-        "//folly:file",
-        "//folly:portability",
-        "//folly:try",
-        "//folly/futures:core",
-        "//folly/io:iobuf",
-        "//folly/io/async:async_base",
-        "//folly/io/async:delayed_destruction",
-        "//folly/portability:iovec",
-    ],
-)
-
-cpp_library(
     name = "chrono",
     srcs = [
         "ChronoParse.cpp",
@@ -319,8 +276,8 @@ cpp_library(
         "//folly/system:shell",
     ],
     exported_deps = [
-        ":io",
         "//eden/common/utils:handle",
+        "//eden/common/utils:io",
         "//eden/common/utils:path",
         "//folly:range",
         "//folly/futures:core",
