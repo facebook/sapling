@@ -50,8 +50,8 @@ Update - local file conflicts with remote directory:
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up dir --config experimental.checkout.rust-path-conflicts=false
-  (activating bookmark dir)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark dir)
 
 Update - local symlink conflicts with remote directory:
 
@@ -68,8 +68,8 @@ Update - local symlink conflicts with remote directory:
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up dir --config experimental.checkout.rust-path-conflicts=false
-  (activating bookmark dir)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark dir)
 
 Update - local directory conflicts with remote file
 
@@ -82,8 +82,8 @@ Update - local directory conflicts with remote file
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up file --config experimental.checkout.rust-path-conflicts=false
-  (activating bookmark file)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark file)
   $ cat a/b
   1
 
@@ -98,8 +98,8 @@ Update - local directory conflicts with remote symlink
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up link --config experimental.checkout.rust-path-conflicts=false
-  (activating bookmark link)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark link)
 #if symlink
   $ f a/b
   a/b -> c
@@ -142,5 +142,5 @@ Update clean - local directory conflicts with changed remote file
   abort: uncommitted changes
   [255]
   $ hg up file2 --clean
-  (changing active bookmark from file to file2)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (changing active bookmark from file to file2)

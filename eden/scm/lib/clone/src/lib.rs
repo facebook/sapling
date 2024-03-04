@@ -70,28 +70,22 @@ pub fn init_working_copy(
     if let Some(target) = target {
         let wc = wc.lock()?;
 
-        match checkout::checkout(
+        if let Err(err) = checkout::checkout(
             ctx,
             repo,
             &wc,
             target,
             checkout::BookmarkAction::None,
             checkout::CheckoutMode::AbortIfConflicts,
+            checkout::ReportMode::Minimal,
         ) {
-            Ok(stats) => {
-                if let Some((updated, _removed)) = stats {
-                    ctx.logger.info(format!("{} files updated", updated));
-                }
+            if ctx.config.get_or_default("checkout", "resumable")? {
+                ctx.logger.info(format!(
+                    "Checkout failed. Resume with '{} checkout --continue'",
+                    ctx.logger.cli_name(),
+                ));
             }
-            Err(err) => {
-                if ctx.config.get_or_default("checkout", "resumable")? {
-                    ctx.logger.info(format!(
-                        "Checkout failed. Resume with '{} checkout --continue'",
-                        ctx.logger.cli_name(),
-                    ));
-                }
-                return Err(err);
-            }
+            return Err(err);
         }
     }
 

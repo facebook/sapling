@@ -11,6 +11,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use checkout::BookmarkAction;
+use checkout::ReportMode;
 use clidispatch::abort;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
@@ -177,7 +178,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     };
 
     let _lock = repo.lock()?;
-    let update_result = checkout::checkout(
+    checkout::checkout(
         &ctx.core,
         repo,
         &wc,
@@ -188,18 +189,8 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
             BookmarkAction::SetActiveIfValid(dest)
         },
         checkout_mode,
+        ReportMode::Always,
     )?;
-
-    if !ctx.global_opts().quiet {
-        if let Some((updated, removed)) = update_result {
-            ctx.io().write(format!(
-                "{} files updated, 0 files merged, {} files removed, 0 files unresolved\n",
-                updated, removed
-            ))?;
-        } else {
-            ctx.io().write("update complete\n")?;
-        }
-    }
 
     Ok(0)
 }

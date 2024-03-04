@@ -900,6 +900,18 @@ pub enum BookmarkAction {
     SetActiveIfValid(String),
 }
 
+#[derive(PartialEq)]
+pub enum ReportMode {
+    // No informational output.
+    Quiet,
+    // Report all file counts if any are greater than zero.
+    IfChanged,
+    // Always print message.
+    Always,
+    // Only report counts greater than zero.
+    Minimal,
+}
+
 #[instrument(skip_all)]
 pub fn checkout(
     ctx: &CoreContext,
@@ -908,6 +920,7 @@ pub fn checkout(
     target_commit: HgId,
     bookmark_action: BookmarkAction,
     update_mode: CheckoutMode,
+    report_mode: ReportMode,
 ) -> Result<Option<(usize, usize)>> {
     if update_mode == CheckoutMode::MergeConflicts {
         unimplemented!("Rust checkout doesn't support merging files");
@@ -980,15 +993,44 @@ pub fn checkout(
         }
     };
 
+    if report_mode != ReportMode::Quiet {
+        if let Some((updated, removed)) = &stats {
+            let mut items = vec![
+                (*updated, "updated"),
+                (0, "merged"),
+                (*removed, "removed"),
+                (0, "unresolved"),
+            ];
+
+            if report_mode == ReportMode::Minimal {
+                items.retain(|(c, _)| *c > 0);
+            }
+
+            if report_mode == ReportMode::Always || items.iter().any(|(c, _)| *c > 0) {
+                ctx.logger.info(
+                    items
+                        .into_iter()
+                        .map(|(c, n)| format!("{c} files {n}"))
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                );
+            }
+        } else if report_mode == ReportMode::Always {
+            ctx.logger.info("update complete");
+        }
+    }
+
     if new_bookmark != current_bookmark {
-        match (&current_bookmark, &new_bookmark) {
-            // TODO: color bookmark name
-            (Some(old), Some(new)) => ctx
-                .logger
-                .info(format!("(changing active bookmark from {old} to {new})")),
-            (None, Some(new)) => ctx.logger.info(format!("(activating bookmark {new})")),
-            (Some(old), None) => ctx.logger.info(format!("(leaving bookmark {old})")),
-            (None, None) => {}
+        if report_mode != ReportMode::Quiet {
+            match (&current_bookmark, &new_bookmark) {
+                // TODO: color bookmark name
+                (Some(old), Some(new)) => ctx
+                    .logger
+                    .info(format!("(changing active bookmark from {old} to {new})")),
+                (None, Some(new)) => ctx.logger.info(format!("(activating bookmark {new})")),
+                (Some(old), None) => ctx.logger.info(format!("(leaving bookmark {old})")),
+                (None, None) => {}
+            }
         }
 
         wc.set_active_bookmark(new_bookmark)?;

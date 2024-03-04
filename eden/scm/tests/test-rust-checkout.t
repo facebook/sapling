@@ -252,18 +252,18 @@ Update active bookmark
   cat: .hg/bookmarks.current: $ENOENT$
   [1]
   $ hg go BOOK_B
-  (activating bookmark BOOK_B)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark BOOK_B)
   $ cat .hg/bookmarks.current
   BOOK_B (no-eol)
   $ hg go BOOK_A
-  (changing active bookmark from BOOK_B to BOOK_A)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (changing active bookmark from BOOK_B to BOOK_A)
   $ cat .hg/bookmarks.current
   BOOK_A (no-eol)
   $ hg go $B
-  (leaving bookmark BOOK_A)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark BOOK_A)
   $ cat .hg/bookmarks.current
   cat: .hg/bookmarks.current: $ENOENT$
   [1]
