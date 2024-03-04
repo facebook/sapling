@@ -102,12 +102,18 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
+        let cri = ctx.metadata().client_request_info();
         let entries: Vec<_> = entries
             .iter()
             .map(|entry| (&self.repo_id, &entry.bcs_id, &entry.svnrev))
             .collect();
 
-        DangerouslyAddSvnrevs::query(&self.connections.write_connection, &entries[..]).await?;
+        DangerouslyAddSvnrevs::maybe_traced_query(
+            &self.connections.write_connection,
+            cri,
+            &entries[..],
+        )
+        .await?;
 
         Ok(())
     }
@@ -120,8 +126,13 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let mut mappings =
-            select_mapping(&self.connections.read_connection, self.repo_id, &objects).await?;
+        let mut mappings = select_mapping(
+            ctx,
+            &self.connections.read_connection,
+            self.repo_id,
+            &objects,
+        )
+        .await?;
 
         let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
 
@@ -133,6 +144,7 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
         let mut master_mappings = select_mapping(
+            ctx,
             &self.connections.read_master_connection,
             self.repo_id,
             &left_to_fetch,
@@ -184,6 +196,7 @@ fn filter_fetched_objects(
 }
 
 async fn select_mapping(
+    ctx: &CoreContext,
     connection: &Connection,
     repo_id: RepositoryId,
     objects: &BonsaisOrSvnrevs,
@@ -192,12 +205,15 @@ async fn select_mapping(
         return Ok(vec![]);
     }
 
+    let cri = ctx.metadata().client_request_info();
     let rows = match objects {
         BonsaisOrSvnrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(connection, &repo_id, &bcs_ids[..]).await?
+            SelectMappingByBonsai::maybe_traced_query(connection, cri, &repo_id, &bcs_ids[..])
+                .await?
         }
         BonsaisOrSvnrevs::Svnrev(svnrevs) => {
-            SelectMappingBySvnrev::query(connection, &repo_id, &svnrevs[..]).await?
+            SelectMappingBySvnrev::maybe_traced_query(connection, cri, &repo_id, &svnrevs[..])
+                .await?
         }
     };
 
