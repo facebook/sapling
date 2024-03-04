@@ -137,7 +137,7 @@ impl Scuba {
     }
 
     pub fn add_client_request_info(&mut self, ctx: &CoreContext) {
-        if let Some(client_info) = ctx.metadata().client_request_info() {
+        if let Some(client_info) = ctx.client_request_info() {
             self.multiplex_scuba.add_client_request_info(client_info);
             self.inner_blobstores_scuba
                 .add_client_request_info(client_info);

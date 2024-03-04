@@ -409,7 +409,7 @@ impl Changesets for SqlChangesets {
 
         let fetched_cs = select_many_changesets(
             ctx.fb,
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.read_connection,
             self.repo_id,
             &cs_ids,
@@ -433,7 +433,7 @@ impl Changesets for SqlChangesets {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let mut master_fetched_cs = select_many_changesets(
                 ctx.fb,
-                ctx.metadata().client_request_info(),
+                ctx.client_request_info(),
                 &self.read_master_connection,
                 self.repo_id,
                 &notfetched_cs_ids,

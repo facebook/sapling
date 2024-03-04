@@ -179,7 +179,7 @@ impl PlainCommitInfo {
 
         let (mut pusher_correlator, mut pusher_entry_point, mut pusher_main_id) =
             (None, None, None);
-        if let Some(cri) = ctx.metadata().client_request_info() {
+        if let Some(cri) = ctx.client_request_info() {
             pusher_correlator = Some(cri.correlator.clone());
             pusher_entry_point = Some(cri.entry_point.to_string());
             pusher_main_id = cri.main_id.clone();

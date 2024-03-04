@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use clientinfo::ClientInfo;
+use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use metadata::Metadata;
 use scribe_ext::Scribe;
@@ -144,6 +145,10 @@ impl CoreContext {
 
     pub fn metadata(&self) -> &Metadata {
         self.session.metadata()
+    }
+
+    pub fn client_request_info(&self) -> Option<&ClientRequestInfo> {
+        self.metadata().client_request_info()
     }
 
     pub fn session(&self) -> &SessionContainer {

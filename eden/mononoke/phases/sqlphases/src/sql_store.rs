@@ -143,12 +143,8 @@ impl SqlPhasesStore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        InsertPhase::maybe_traced_query(
-            &self.write_connection,
-            ctx.metadata().client_request_info(),
-            &phases,
-        )
-        .await?;
+        InsertPhase::maybe_traced_query(&self.write_connection, ctx.client_request_info(), &phases)
+            .await?;
         {
             let ctx = (ctx, repoid, self);
             let phases = csids
@@ -171,7 +167,7 @@ impl SqlPhasesStore {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let ans = SelectAllPublic::maybe_traced_query(
             &self.read_connection,
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &repo_id,
         )
         .await?;
@@ -243,7 +239,7 @@ impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
         // NOTE: We only track public phases in the DB.
         let public = SelectPhases::maybe_traced_query(
             &mapping.read_connection,
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             repo_id,
             &cs_ids,
         )

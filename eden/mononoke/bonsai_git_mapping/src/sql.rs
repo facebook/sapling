@@ -117,7 +117,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         STATS::adds.add_value(entries.len().try_into().map_err(Error::from)?);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
 
         let rows: Vec<_> = entries
             .iter()
@@ -243,7 +243,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         }
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let rows = SelectGitSha1sByRange::maybe_traced_query(
             &self.connections.read_connection,
             cri,
@@ -348,7 +348,7 @@ async fn select_mapping(
         return Ok(vec![]);
     }
 
-    let cri = ctx.metadata().client_request_info();
+    let cri = ctx.client_request_info();
     let rows = match objects {
         BonsaisOrGitShas::Bonsai(bcs_ids) => {
             SelectMappingByBonsai::maybe_traced_query(connection, cri, repo_id, &bcs_ids[..])

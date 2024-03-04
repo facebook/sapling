@@ -134,7 +134,7 @@ impl Loggable for PlainBookmarkInfo {
             .set_operation(self.operation.clone())
             .set_update_reason(self.update_reason.clone());
 
-        if let Some(cri) = ctx.metadata().client_request_info() {
+        if let Some(cri) = ctx.client_request_info() {
             logger.set_client_correlator(cri.correlator.clone());
             logger.set_client_entry_point(cri.entry_point.to_string());
         }

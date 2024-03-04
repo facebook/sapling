@@ -368,7 +368,7 @@ impl SqlBookmarks {
         let categories: Vec<_> = categories.to_vec();
 
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let rows = if prefix.is_empty() {
                 match pagination {
                     BookmarkPagination::FromStart => {
@@ -531,7 +531,7 @@ impl SqlBookmarks {
         async move {
             let rows = SelectBookmark::maybe_traced_query(
                 &conn,
-                ctx.metadata().client_request_info(),
+                ctx.client_request_info(),
                 &repo_id,
                 key.name(),
                 key.category(),
@@ -624,7 +624,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
 
         async move {
             let tok: i32 = rand::thread_rng().gen();
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
 
             let rows = match offset {
                 Some(offset) => {
@@ -679,7 +679,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let rows = SelectBookmarkLogsWithTsInRange::maybe_traced_query(
                 &conn,
                 cri,
@@ -709,7 +709,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let entries = match maybe_exclude_reason {
                 Some(ref r) => {
                     CountFurtherBookmarkLogEntriesWithoutReason::maybe_traced_query(
@@ -749,7 +749,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         let repo_id = self.repo_id;
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let entries = CountFurtherBookmarkLogEntriesByReason::maybe_traced_query(
                 &conn, cri, &id, &repo_id,
             )
@@ -770,7 +770,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let conn = self.connections.read_connection.clone();
         cloned!(self.repo_id, reason);
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let entries = SkipOverBookmarkLogEntriesWithReason::maybe_traced_query(
                 &conn, cri, &id, &repo_id, &reason,
             )
@@ -792,7 +792,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let entries =
                 ReadNextBookmarkLogEntries::maybe_traced_query(&conn, cri, &id, &repo_id, &limit)
                     .watched(ctx.logger())
@@ -862,7 +862,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let entries = ReadNextBookmarkLogEntries::maybe_traced_query(
                 &connection,
                 cri,
@@ -909,7 +909,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let cri = ctx.metadata().client_request_info();
+            let cri = ctx.client_request_info();
             let entries = GetLargestLogId::maybe_traced_query(&connection, cri, &repo_id).await?;
             let entry = entries.into_iter().next();
             match entry {

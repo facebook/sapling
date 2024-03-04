@@ -212,7 +212,7 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::SqlWrites, 4);
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let (txn, _) =
             AddChangesets::maybe_traced_query_with_transaction(txn, cri, db_csets.as_slice())
                 .await?;
@@ -273,7 +273,7 @@ impl SqlHgMutationStore {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let count = CountChangesets::maybe_traced_query(
             &self.connections.read_connection,
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.repo_id,
             changeset_ids.as_slice(),
         )
@@ -363,7 +363,7 @@ impl SqlHgMutationStore {
             ctx.perf_counters().increment_counter(sql_perf_counter);
             let rows = SelectSplitsBySuccessor::maybe_traced_query(
                 connection,
-                ctx.metadata().client_request_info(),
+                ctx.client_request_info(),
                 &self.repo_id,
                 to_fetch_split.as_slice(),
             )
@@ -401,7 +401,7 @@ impl SqlHgMutationStore {
             .map(|chunk| chunk.collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let chunk_rows = stream::iter(chunks.into_iter().map(move |chunk| async move {
             ctx.perf_counters().increment_counter(sql_perf_counter);
             SelectBySuccessor::maybe_traced_query(connection, cri, &self.repo_id, chunk.as_slice())
@@ -442,7 +442,7 @@ impl SqlHgMutationStore {
             .map(|chunk| chunk.copied().collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let rows = stream::iter(chunks.into_iter().map(|changesets| async move {
             ctx.perf_counters().increment_counter(sql_perf_counter);
             SelectBySuccessorChain::maybe_traced_query(

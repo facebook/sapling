@@ -302,7 +302,7 @@ impl SqlBonsaiHgMapping {
     ) -> Result<(), Error> {
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let hg_ids = &[hg_cs_id];
         let by_hg = SelectMappingByHg::maybe_traced_query(
             &self.read_master_connection.conn,
@@ -346,7 +346,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlWrites);
 
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         if self.overwrite {
             let result = ReplaceMapping::maybe_traced_query(
                 &self.write_connection,
@@ -381,7 +381,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let (mut mappings, left_to_fetch) = select_mapping(
             ctx.fb,
-            ctx.metadata().client_request_info().cloned(),
+            ctx.client_request_info().cloned(),
             &self.read_connection,
             self.repo_id,
             ids,
@@ -397,7 +397,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let (mut master_mappings, _) = select_mapping(
             ctx.fb,
-            ctx.metadata().client_request_info().cloned(),
+            ctx.client_request_info().cloned(),
             &self.read_master_connection,
             self.repo_id,
             left_to_fetch,
@@ -420,7 +420,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         if low > high {
             return Ok(Vec::new());
         }
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectHgChangesetsByRange::maybe_traced_query(

@@ -45,7 +45,7 @@ fn record_scuba_common(
     scuba.add(KEY, key);
     scuba.add(OPERATION, operation);
     scuba.add(MULTIPLEX_ID, multiplex_id.clone());
-    if let Some(client_info) = ctx.metadata().client_request_info() {
+    if let Some(client_info) = ctx.client_request_info() {
         scuba.add_client_request_info(client_info);
     }
 }

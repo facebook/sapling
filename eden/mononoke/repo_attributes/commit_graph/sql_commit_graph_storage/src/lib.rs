@@ -1016,7 +1016,7 @@ impl SqlCommitGraphStorage {
                 PrefetchEdge::FirstParent => {
                     SelectManyChangesetsWithFirstParentPrefetch::maybe_traced_query(
                         &self.read_connection.conn,
-                        ctx.metadata().client_request_info(),
+                        ctx.client_request_info(),
                         &self.repo_id,
                         &steps,
                         &target.generation.value(),
@@ -1027,7 +1027,7 @@ impl SqlCommitGraphStorage {
                 PrefetchEdge::SkipTreeSkewAncestor => {
                     SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::maybe_traced_query(
                         &self.read_connection.conn,
-                        ctx.metadata().client_request_info(),
+                        ctx.client_request_info(),
                         &self.repo_id,
                         &steps,
                         &target.generation.value(),
@@ -1043,7 +1043,7 @@ impl SqlCommitGraphStorage {
                 .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
                     let conn = rendezvous.conn.clone();
                     let repo_id = self.repo_id.clone();
-                    let cri = ctx.metadata().client_request_info().cloned();
+                    let cri = ctx.client_request_info().cloned();
 
                     move |cs_ids| async move {
                         let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
@@ -1087,7 +1087,7 @@ impl SqlCommitGraphStorage {
         Ok(Self::collect_changeset_edges(
             &SelectManyChangesetsInIdRange::maybe_traced_query(
                 self.read_conn(read_from_master),
-                ctx.metadata().client_request_info(),
+                ctx.client_request_info(),
                 &self.repo_id,
                 &start_id,
                 &end_id,
@@ -1112,7 +1112,7 @@ impl SqlCommitGraphStorage {
     ) -> Result<Vec<ChangesetId>> {
         Ok(SelectManyChangesetsIdsInIdRange::maybe_traced_query(
             self.read_conn(read_from_master),
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.repo_id,
             &start_id,
             &end_id,
@@ -1129,7 +1129,7 @@ impl SqlCommitGraphStorage {
     pub async fn max_id(&self, ctx: &CoreContext, read_from_master: bool) -> Result<Option<u64>> {
         Ok(SelectMaxId::maybe_traced_query(
             self.read_conn(read_from_master),
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.repo_id,
         )
         .await?
@@ -1149,7 +1149,7 @@ impl SqlCommitGraphStorage {
     ) -> Result<Option<u64>> {
         Ok(SelectMaxIdInRange::maybe_traced_query(
             self.read_conn(read_from_master),
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.repo_id,
             &start_id,
             &end_id,
@@ -1171,7 +1171,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         // We need to be careful because there might be dependencies among the edges
         // Part 1 - Add all nodes without any edges, so we generate ids for them
         let transaction = self.write_connection.start_transaction().await?;
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let cs_no_edges = many_edges
             .iter()
             .map(|e| {
@@ -1313,7 +1313,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
-        let cri = ctx.metadata().client_request_info();
+        let cri = ctx.client_request_info();
         let merge_parent_cs_id_to_id: HashMap<ChangesetId, u64> = if edges.parents.len() >= 2 {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
@@ -1482,7 +1482,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut fetched_ids = SelectChangesetsInRange::maybe_traced_query(
             &self.read_connection.conn,
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.repo_id,
             &cs_prefix.min_bound(),
             &cs_prefix.max_bound(),
@@ -1506,7 +1506,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     ) -> Result<Vec<ChangesetId>> {
         Ok(SelectChildren::maybe_traced_query(
             &self.read_master_connection.conn,
-            ctx.metadata().client_request_info(),
+            ctx.client_request_info(),
             &self.repo_id,
             &cs_id,
         )

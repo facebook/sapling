@@ -238,7 +238,7 @@ impl Middleware for RequestDumperMiddleware {
                         return;
                     }
                     request_dumper.add_duration(dur_ms);
-                    let cri = rctx.ctx.metadata().client_request_info();
+                    let cri = rctx.ctx.client_request_info();
                     if let Some(cri) = cri {
                         request_dumper.add_client_correlator(cri.correlator.as_str());
                         request_dumper.add_client_entry_point(cri.entry_point.to_string().as_str());
