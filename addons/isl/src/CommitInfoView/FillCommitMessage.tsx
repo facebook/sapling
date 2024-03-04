@@ -9,6 +9,7 @@ import type {CommitInfo} from '../types';
 import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
+import {Internal} from '../Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {LinkButton} from '../components/LinkButton';
@@ -57,7 +58,12 @@ const fillCommitMessageMethods: Array<{
       if (!parent) {
         return undefined;
       }
-      return parseCommitMessageFields(schema, parent.title, parent.description);
+      const fields = parseCommitMessageFields(schema, parent.title, parent.description);
+      if (Internal.diffFieldTag) {
+        // don't fill in diff field, so we don't conflict with a previous diff
+        delete fields[Internal.diffFieldTag];
+      }
+      return fields;
     },
   },
   {

@@ -224,7 +224,10 @@ function joinWithComma(tokens: Array<string>): string {
  * Look through the message fields for a diff number
  */
 export function findEditedDiffNumber(field: CommitMessageFields): string | undefined {
-  const found = field['Differential Revision'];
+  if (Internal.diffFieldTag == null) {
+    return undefined;
+  }
+  const found = field[Internal.diffFieldTag];
   if (Array.isArray(found)) {
     return found[0];
   }

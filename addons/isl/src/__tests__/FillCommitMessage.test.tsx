@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {Internal} from '../Internal';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -17,6 +18,7 @@ import {
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
+import {unwrap} from 'shared/utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
@@ -27,6 +29,7 @@ const {
   clickToSelectCommit,
   getTitleEditor,
   getDescriptionEditor,
+  getFieldEditor,
 } = CommitInfoTestUtils;
 
 describe('FillCommitMessage', () => {
@@ -79,6 +82,35 @@ describe('FillCommitMessage', () => {
       expect(getTitleEditor().value).toMatch('Head Commit');
       expect(getDescriptionEditor().value).toMatch(/This is my commit message/);
     });
+  });
+
+  it('skips filling diff numbers', async () => {
+    if (Internal.diffFieldTag == null) {
+      // skip this test in OSS where differential revision is not a tag
+      return;
+    }
+    act(() => {
+      simulateCommits({
+        value: [
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('a', 'My Commit', '1'),
+          COMMIT('b', 'Head Commit', 'a', {
+            isHead: true,
+            description: 'Summary: This is my commit message\nDifferential Revision: D12345',
+          }),
+        ],
+      });
+    });
+    clickCommitMode();
+
+    const editor = getFieldEditor(Internal.diffFieldTag);
+    expect(editor).toHaveValue('');
+
+    const loadFromLastCommit = withinCommitInfo().getByText('last commit');
+    expect(loadFromLastCommit).toBeInTheDocument();
+    fireEvent.click(loadFromLastCommit);
+    await waitFor(() => expect(getTitleEditor().value).toMatch('Head Commit'));
+    expect(getFieldEditor(unwrap(Internal.diffFieldTag))).toHaveValue('');
   });
 
   it('Load from commit template', async () => {

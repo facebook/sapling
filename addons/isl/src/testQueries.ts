@@ -141,6 +141,14 @@ export const CommitInfoTestUtils = {
     return (textarea as unknown as {control: HTMLTextAreaElement}).control;
   },
 
+  /** Get the input element for a given field's editor, according to the field key in the FieldConfig (actually just a div in tests) */
+  getFieldEditor(key: string): HTMLDivElement {
+    const renderKey = key.toLowerCase().replace(/\s/g, '-');
+    const el = screen.getByTestId(`commit-info-${renderKey}-field`) as HTMLDivElement;
+    expect(el).toBeInTheDocument();
+    return el;
+  },
+
   descriptionTextContent() {
     return CommitInfoTestUtils.getDescriptionEditor().value;
   },
