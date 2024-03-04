@@ -17,8 +17,8 @@
 #include <optional>
 #include "eden/common/utils/FileDescriptor.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook::eden {
 

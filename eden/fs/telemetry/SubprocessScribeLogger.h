@@ -9,8 +9,8 @@
 
 #include <folly/Synchronized.h>
 #include <list>
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/telemetry/ScribeLogger.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook::eden {
 

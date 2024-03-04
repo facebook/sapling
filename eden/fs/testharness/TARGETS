@@ -250,8 +250,8 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/common/utils:path",
+        "//eden/common/utils:process",
         "//eden/fs/model:model",
-        "//eden/fs/utils:process",
         "//folly/portability:gflags",
     ],
 )

@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/OverlayFile.h"
@@ -38,7 +39,6 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 using namespace folly::string_piece_literals;
 

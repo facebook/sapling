@@ -10,7 +10,7 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
-#include "eden/fs/utils/SpawnedProcess.h"
+#include "eden/common/utils/SpawnedProcess.h"
 
 using namespace facebook::eden;
 

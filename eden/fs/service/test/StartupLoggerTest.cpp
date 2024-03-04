@@ -49,8 +49,8 @@
 #include <string>
 #include <thread>
 #include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

@@ -255,36 +255,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "process",
-    srcs = [
-        "SpawnedProcess.cpp",
-    ],
-    headers = [
-        "SpawnedProcess.h",
-    ],
-    deps = [
-        "//eden/common/utils:stringconv",
-        "//eden/common/utils:win_error",
-        "//folly:exception",
-        "//folly:scope_guard",
-        "//folly:string",
-        "//folly/executors:global_executor",
-        "//folly/io/async:async_base",
-        "//folly/io/async:event_base_manager",
-        "//folly/logging:logging",
-        "//folly/portability:unistd",
-        "//folly/system:shell",
-    ],
-    exported_deps = [
-        "//eden/common/utils:handle",
-        "//eden/common/utils:io",
-        "//eden/common/utils:path",
-        "//folly:range",
-        "//folly/futures:core",
-    ],
-)
-
-cpp_library(
     name = "thread",
     srcs = ["Thread.cpp"],
     external_deps = [

@@ -19,7 +19,7 @@
 #include <folly/io/async/EventHandler.h>
 
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/utils/SpawnedProcess.h"
+#include "eden/common/utils/SpawnedProcess.h"
 
 namespace folly {
 class EventBase;

@@ -22,10 +22,10 @@
 #include <folly/futures/Future.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook::eden {
 namespace {

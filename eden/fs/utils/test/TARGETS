@@ -86,20 +86,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "spawned_process",
-    srcs = ["SpawnedProcessTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/common/utils:path",
-        "//eden/fs/utils:process",
-        "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:gtest",
-        "//folly/test:test_utils",
-    ],
-)
-
-cpp_unittest(
     name = "user_info",
     srcs = ["UserInfoTest.cpp"],
     supports_static_listing = False,

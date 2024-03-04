@@ -10,10 +10,10 @@ cpp_unittest(
     ],
     deps = [
         "//eden/common/utils:file_utils",
+        "//eden/common/utils:process",
         "//eden/fs/service:startup_logger",
         "//eden/fs/service:startup_status_subscriber",
         "//eden/fs/telemetry:log_info",
-        "//eden/fs/utils:process",
         "//folly:exception",
         "//folly:file",
         "//folly:file_util",

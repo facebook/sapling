@@ -83,7 +83,7 @@ cpp_benchmark(
         "ActivityBufferBenchmark.cpp",
     ],
     deps = [
-        "//eden/fs/utils:process",
+        "//eden/common/utils:process",
         "//folly:exception",
         "//folly:file",
         "//folly:stop_watch",

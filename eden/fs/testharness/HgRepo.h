@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/testharness/HgBinary.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook::eden {
 

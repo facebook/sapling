@@ -313,6 +313,7 @@ cpp_unittest(
     deps = [
         ":overlay_test_util",
         "//eden/common/testharness:temp_file",
+        "//eden/common/utils:process",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/model:testutil",
@@ -323,7 +324,6 @@ cpp_unittest(
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
-        "//eden/fs/utils:process",
         "//folly:exception",
         "//folly:expected",
         "//folly:file_util",

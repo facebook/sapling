@@ -135,7 +135,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
-        "//eden/fs/utils:process",
+        "//eden/common/utils:process",
         "//folly:range",
         "//folly:synchronized",
     ],

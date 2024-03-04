@@ -11,11 +11,11 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/monitor/EdenMonitor.h"
 #include "eden/fs/monitor/LogFile.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 
 using facebook::fb303::cpp2::fb303_status;
 using folly::Future;

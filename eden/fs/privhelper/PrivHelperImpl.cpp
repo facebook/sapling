@@ -26,12 +26,12 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/FileDescriptor.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperFlags.h"
 #include "eden/fs/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using folly::checkUnixError;
