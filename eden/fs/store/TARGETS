@@ -109,7 +109,7 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/os:os",
-        "//eden/fs/utils:ref_ptr",
+        "//eden/common/utils:ref_ptr",
     ],
 )
 
@@ -155,10 +155,10 @@ cpp_library(
     ],
     exported_deps = [
         ":backing_store_interface",
+        "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
         "//eden/fs/store/filter:filtered_object_id",
         "//eden/fs/store/filter:filters",
-        "//eden/fs/utils:ref_ptr",
     ],
 )
 
@@ -197,13 +197,13 @@ cpp_library(
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
+        "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:ref_ptr",
         "//folly:cancellation_token",
         "//folly:executor",
         "//folly:intrusive_list",

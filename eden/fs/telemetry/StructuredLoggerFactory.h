@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "eden/fs/utils/RefPtr.h"
+#include "eden/common/utils/RefPtr.h"
 
 namespace facebook::eden {
 

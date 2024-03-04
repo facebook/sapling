@@ -14,6 +14,7 @@
 #include <folly/Synchronized.h>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

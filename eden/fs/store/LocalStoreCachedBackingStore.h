@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/store/BackingStore.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

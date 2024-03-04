@@ -12,10 +12,10 @@
 
 #include "eden/common/utils/Guid.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/prjfs/Enumerator.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

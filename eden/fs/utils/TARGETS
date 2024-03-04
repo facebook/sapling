@@ -199,11 +199,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "ref_ptr",
-    headers = ["RefPtr.h"],
-)
-
-cpp_library(
     name = "ring_buffer",
     headers = ["RingBuffer.h"],
 )

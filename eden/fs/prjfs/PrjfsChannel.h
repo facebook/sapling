@@ -13,13 +13,13 @@
 
 #include "eden/common/utils/Guid.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
-#include "eden/fs/utils/RefPtr.h"
 
 #ifdef _WIN32
 #include <ProjectedFSLib.h> // @manual

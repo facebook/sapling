@@ -15,6 +15,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

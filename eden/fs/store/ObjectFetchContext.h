@@ -12,8 +12,8 @@
 #include <unordered_map>
 
 #include "eden/common/os/ProcessId.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/store/ImportPriority.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

@@ -10,11 +10,11 @@
 #include "eden/common/utils/FileOffset.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/utils/RefPtr.h"
 
 #include <sys/stat.h>
 

@@ -13,8 +13,8 @@
 #include <folly/ThreadLocal.h>
 #include <folly/stop_watch.h>
 
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

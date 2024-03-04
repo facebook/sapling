@@ -14,7 +14,7 @@
 #include <folly/Range.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
-#include "eden/fs/utils/RefPtr.h"
+#include "eden/common/utils/RefPtr.h"
 
 #include "eden/fs/utils/GlobNodeImpl.h"
 

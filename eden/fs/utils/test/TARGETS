@@ -53,16 +53,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "ref_ptr",
-    srcs = ["RefPtrTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/utils:ref_ptr",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "ring_buffer",
     srcs = ["RingBufferTest.cpp"],
     supports_static_listing = False,
@@ -113,14 +103,12 @@ cpp_benchmark(
     name = "bench",
     srcs = [
         "ProcessAccessLogBenchmark.cpp",
-        "RefPtrBenchmark.cpp",
     ],
     deps = [
         "fbsource//third-party/benchmark:benchmark",
         "//eden/common/utils:process_info_cache",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/utils:process_access_log",
-        "//eden/fs/utils:ref_ptr",
     ],
 )
 

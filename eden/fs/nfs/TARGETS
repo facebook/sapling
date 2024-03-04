@@ -115,10 +115,10 @@ cpp_library(
         "//eden/common/utils:file_utils",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
+        "//eden/common/utils:ref_ptr",
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/store:context",
-        "//eden/fs/utils:ref_ptr",
     ],
 )
 

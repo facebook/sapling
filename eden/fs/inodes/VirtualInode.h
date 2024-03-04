@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/UnmaterializedUnloadedBlobDirEntry.h"
 #include "eden/fs/model/BlobMetadata.h"
@@ -17,7 +18,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
-#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 

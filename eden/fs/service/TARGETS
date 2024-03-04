@@ -440,6 +440,7 @@ cpp_library(
         ":thrift-streaming-cpp2-services",
         "//eden/common/os:os",
         "//eden/common/utils:path",
+        "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
         "//eden/fs:config",
         "//eden/fs/inodes:inodes",
@@ -449,7 +450,6 @@ cpp_library(
         "//eden/fs/telemetry:activity_buffer",
         "//eden/fs/telemetry:activity_recorder",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:ref_ptr",
         "//fb303:base_service",
         "//folly:executor",
         "//folly:file",
@@ -562,8 +562,8 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/common/utils:immediate_future",
+        "//eden/common/utils:ref_ptr",
         "//eden/fs/utils:glob",
-        "//eden/fs/utils:ref_ptr",
         "//folly:range",
     ],
 )
