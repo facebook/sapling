@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.41
+
+### Mar 4 2024
+
+- Fix UI not refreshing after finishing queued commands
+- Add option to use "unified" diff view mode for comparison view
+  - By default, it uses "split" diff view on wide screens, and "unified" on small screens
+- Improve behavior when reconnecting, so commands don't look like they're stuck running
+- Some rendering improvements to the comparison view
+
 ## 0.1.40
 
 ### Feb 26 2024
