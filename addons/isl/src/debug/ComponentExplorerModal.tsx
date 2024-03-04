@@ -11,7 +11,7 @@ import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
-import {VSCodeCheckbox} from '../VSCodeCheckbox';
+import {Checkbox} from '../components/Checkbox';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
 import {T} from '../i18n';
@@ -39,6 +39,8 @@ const fontSizes = ['smaller', 'small', 'normal', 'big', 'bigger'] as const;
 
 export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown}) {
   const [radioChoice, setRadioChoice] = useState('radio');
+  const [checkbox1, setCheckbox1] = useState(false);
+  const [checkbox2, setCheckbox2] = useState(true);
   return (
     <div {...stylex.props(styles.container)}>
       <h2>
@@ -102,9 +104,12 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           </VSCodeDropdown>
         </Row>
         <Row>
-          <VSCodeCheckbox>Checkbox</VSCodeCheckbox>
-          <VSCodeCheckbox checked>Checked</VSCodeCheckbox>
-          <VSCodeCheckbox disabled>Disabled</VSCodeCheckbox>
+          <Checkbox checked={checkbox1} onChange={setCheckbox1}>
+            Checkbox
+          </Checkbox>
+          <Checkbox checked={checkbox2} onChange={setCheckbox2}>
+            Checked
+          </Checkbox>
           <RadioGroup
             choices={[
               {title: 'Radio', value: 'radio'},
