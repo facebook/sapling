@@ -22,8 +22,6 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-packblob_thrift__clients = { package = "packblob_thrift_clients", version = "0.1.0", path = "clients" }
-packblob_thrift__services = { package = "packblob_thrift_services", version = "0.1.0", path = "services" }
 packblob_thrift__types = { package = "packblob_thrift_types", version = "0.1.0", path = "types" }
 ref-cast = "1.0.18"
 thiserror = "1.0.49"

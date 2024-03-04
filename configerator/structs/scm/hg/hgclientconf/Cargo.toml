@@ -18,8 +18,6 @@ doc = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-config__clients = { package = "config_clients", version = "0.1.0", path = "clients" }
-config__services = { package = "config_services", version = "0.1.0", path = "services" }
 config__types = { package = "config_types", version = "0.1.0", path = "types" }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
