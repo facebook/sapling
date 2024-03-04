@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 import pathlib
 
 from .lib.service_test_case import fake_service_test, service_test, ServiceTestCaseBase

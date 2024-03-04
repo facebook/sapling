@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 from eden.integration.lib.hgrepo import HgRepository
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test

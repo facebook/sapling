@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 # Pick the "right" python to execute the script in stdin.
 # This should match the python linked with "hgmain" in buck build.
 import os

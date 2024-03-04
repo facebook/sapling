@@ -13,6 +13,8 @@
 # @nolint
 # fmt: off
 
+# pyre-unsafe
+
 
 import asyncio
 import inspect

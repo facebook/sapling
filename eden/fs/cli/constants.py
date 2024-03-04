@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 SHUTDOWN_EXIT_CODE_NORMAL = 0
 SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN = 0
 SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2

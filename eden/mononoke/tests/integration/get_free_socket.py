@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 # From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port
 
 import socket

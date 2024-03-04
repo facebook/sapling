@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import argparse
 
 from . import cmd_util, subcmd as subcmd_mod

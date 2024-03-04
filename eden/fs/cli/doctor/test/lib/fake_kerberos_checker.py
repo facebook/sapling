@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.check_kerberos import KerberosChecker
 from eden.fs.cli.doctor.problem import ProblemTracker
