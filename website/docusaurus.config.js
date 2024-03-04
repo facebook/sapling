@@ -84,6 +84,11 @@ const config = {
           src: 'img/Sapling_icon-dark-green.svg',
         },
         items: [
+          {
+            href: '/docs/introduction/',
+            label: 'Documentation',
+            position: 'left',
+          },
           // Please keep GitHub link to the right for consistency.
           {
             href: gitHubRepo,
