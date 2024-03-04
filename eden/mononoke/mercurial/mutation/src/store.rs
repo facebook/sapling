@@ -430,13 +430,10 @@ impl SqlHgMutationStore {
         connection: &Connection,
         sql_perf_counter: PerfCounterType,
         entry_set: &mut HgMutationEntrySet,
+        changesets: &HashSet<HgChangesetId>,
     ) -> Result<()> {
-        if entry_set.entries.is_empty() {
-            return Ok(());
-        }
-        let chunks = entry_set
-            .entries
-            .keys()
+        let chunks = changesets
+            .iter()
             .chunks(SELECT_CHAIN_CHUNK_SIZE)
             .into_iter()
             .map(|chunk| chunk.copied().collect::<Vec<_>>())
@@ -605,7 +602,7 @@ impl HgMutationStore for SqlHgMutationStore {
         let (connection, sql_perf_counter) = self
             .read_connection_for_changesets(ctx, &changeset_ids)
             .await?;
-        self.fetch_by_successor(
+        self.fetch_all_predecessors(
             ctx,
             connection,
             sql_perf_counter,
@@ -613,8 +610,6 @@ impl HgMutationStore for SqlHgMutationStore {
             &changeset_ids,
         )
         .await?;
-        self.fetch_all_predecessors(ctx, connection, sql_perf_counter, &mut entry_set)
-            .await?;
         let changeset_count = changeset_ids.len();
         let entries = entry_set.into_all_predecessors_by_changeset(changeset_ids);
         debug!(
