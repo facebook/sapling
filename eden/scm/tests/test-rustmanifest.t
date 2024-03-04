@@ -110,10 +110,6 @@
 
 
   $ hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebasemerge -q
-  fetching tree '' 47968cf0bfa76dd552b0c468487e0b2e58dd067a
-  1 trees fetched over 0.00s
-  fetching tree 'x' 4f20beec050d22de4f11003f4cdadd266b59be20
-  1 trees fetched over 0.00s
   $ cd $TESTTMP/clientpushrebasemerge
   $ cat >> .hg/hgrc << 'EOF'
   > [treemanifest]
@@ -159,10 +155,6 @@
   remote: 5 new changesets from the server will be downloaded
 
   $ hg files -r master
-  fetching tree '' 2d97a52179228b1897e02a1f2005e8913fbe284e
-  1 trees fetched over 0.00s
-  fetching tree 'y' c92bb8214e072555389f3fa53b9bb25df5a7c35a
-  1 trees fetched over 0.00s
   x/a
   x/b
   y/c
@@ -170,8 +162,6 @@
 # Check that a secondary client will pull a consistent view of the repository
 
   $ hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/pullingclient -q
-  fetching tree 'x' 34f8d0715188dfecc32838d1d23a93453e0cebd9
-  1 trees fetched over 0.00s
   $ cd $TESTTMP/pullingclient
 
   >>> pprint.pprint(listcommitandmanifesthashes("$A::"))
@@ -201,10 +191,6 @@
   > |
   > desc(E)
   > EOS
-  fetching tree '' 049ce323291d05719ed7194daffe12ef8b7814b2
-  1 trees fetched over 0.00s
-  fetching tree 'y' bfa15c41434329031f15c569d46b9680cf0f791c
-  1 trees fetched over 0.00s
   $ hg push --to=master -r $J
   pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
   searching for changes

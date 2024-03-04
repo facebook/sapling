@@ -1,6 +1,7 @@
 #chg-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig checkout.use-rust=true
 
 TODO: configure mutation
   $ configure dummyssh
@@ -111,18 +112,9 @@ Stack of non-conflicting commits should be accepted
   remote:     46a2df24e272  b => xxx
   remote:     0e3997dc0733  b => baz
   remote: 3 new changesets from the server will be downloaded
-  running * (glob)
-  sending hello command
-  sending between command
-  remote: 542
-  remote: capabilities: * (glob)
-  remote: 1
-  sending gettreepack command
   resolving manifests
    branchmerge: False, force: False
    ancestor: 0e3997dc0733, local: 0e3997dc0733+, remote: 4cfedb0dc25f
-  reusing connection from pool
-  sending getpackv1 command
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log -R ../server

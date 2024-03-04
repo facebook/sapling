@@ -65,12 +65,8 @@ This file tests that normal mercurial operations never read the flat manifests
   $ hg pull -q -r 0
   $ hg pull -q -r 1
   $ hg up 'desc(add)'
-  fetching tree '' 5ce27016a79d253c34c64aebd35bfb09605ad3ee
-  1 trees fetched over * (glob)
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo a >> b && hg commit -Aqm 'modify b'
   $ hg rebase -d 77dc854aeab9a59885f87fa57bfeddbb73b23443 -r 'max(desc(modify))'
   rebasing 667a26a14261 "modify b"
-  fetching tree '' 9486c937c5894f8f2adbaa0b589e8df5022217c9
-  1 trees fetched over * (glob)

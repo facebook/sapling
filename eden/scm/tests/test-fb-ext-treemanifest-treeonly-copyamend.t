@@ -82,28 +82,6 @@ time.
   
 Create a client
   $ clone master client
-  fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0
-  1 trees fetched over 0.00s
-  fetching tree 'a' da4a8c7aed08ac15737161f1141f62c8bf5863ff
-  1 trees fetched over 0.00s
-  fetching tree 'a/b' 7bce920d6eb775219b166d3ff5ed179beb911262
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c' d3b274e3a1a3eb3b2e40649edf5fa760ebe4244a
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d' 9ebcd13da6585be7f4a193758ab658900177485f
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e' e813c621f9cb5854cf135aadf40e583aa82cde17
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f' ac2756cfc47ad4292e74abdf5e2f64e4a5a87150
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g' b549e4b73c3f8e5e58ebf82ae4da98b29303af07
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h' 44efe33f66d2e94e5d0ed0ecf71a5261c886fddf
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h/i' 368f5aab3f700081ac9a8bc4e4ae1058aa9b8140
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h/i/j' 22ac44092b0a117fbfeabff7839cd97964ebc4ea
-  1 trees fetched over 0.00s
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
@@ -123,54 +101,10 @@ Amend the commit to add a new file with an empty cache, with descendantrevfastpa
   $ echo more >> a/b/c/d/e/f/g/h/i/j/file3
   $ hg amend -A --config remotefilelog.debug=True --config remotefilelog.descendantrevfastpath=True
   adding a/b/c/d/e/f/g/h/i/j/file3
-  fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0
   * files fetched over *s (glob) (?)
-  1 trees fetched over 0.00s
-  fetching tree 'a' da4a8c7aed08ac15737161f1141f62c8bf5863ff
-  1 trees fetched over 0.00s
-  fetching tree 'a/b' 7bce920d6eb775219b166d3ff5ed179beb911262
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c' d3b274e3a1a3eb3b2e40649edf5fa760ebe4244a
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d' 9ebcd13da6585be7f4a193758ab658900177485f
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e' e813c621f9cb5854cf135aadf40e583aa82cde17
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f' ac2756cfc47ad4292e74abdf5e2f64e4a5a87150
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g' b549e4b73c3f8e5e58ebf82ae4da98b29303af07
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h' 44efe33f66d2e94e5d0ed0ecf71a5261c886fddf
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h/i' 368f5aab3f700081ac9a8bc4e4ae1058aa9b8140
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h/i/j' 22ac44092b0a117fbfeabff7839cd97964ebc4ea
-  1 trees fetched over 0.00s
 
 Try again, disabling the descendantrevfastpath
   $ clearcache
   $ echo more >> a/b/c/d/e/f/g/h/i/j/file3
   $ hg amend -A --config remotefilelog.debug=True --config remotefilelog.descendantrevfastpath=False
-  fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0
   * files fetched over *s (glob) (?)
-  1 trees fetched over 0.00s
-  fetching tree 'a' da4a8c7aed08ac15737161f1141f62c8bf5863ff
-  1 trees fetched over 0.00s
-  fetching tree 'a/b' 7bce920d6eb775219b166d3ff5ed179beb911262
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c' d3b274e3a1a3eb3b2e40649edf5fa760ebe4244a
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d' 9ebcd13da6585be7f4a193758ab658900177485f
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e' e813c621f9cb5854cf135aadf40e583aa82cde17
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f' ac2756cfc47ad4292e74abdf5e2f64e4a5a87150
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g' b549e4b73c3f8e5e58ebf82ae4da98b29303af07
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h' 44efe33f66d2e94e5d0ed0ecf71a5261c886fddf
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h/i' 368f5aab3f700081ac9a8bc4e4ae1058aa9b8140
-  1 trees fetched over 0.00s
-  fetching tree 'a/b/c/d/e/f/g/h/i/j' 22ac44092b0a117fbfeabff7839cd97964ebc4ea
-  1 trees fetched over 0.00s

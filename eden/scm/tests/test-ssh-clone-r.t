@@ -3,7 +3,6 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ configure dummyssh
 This test tries to exercise the ssh functionality with a dummy script
 
@@ -11,6 +10,7 @@ creating 'remote' repo
 
   $ hg init remote
   $ cd remote
+  $ disable treemanifest
   $ hg unbundle "$TESTDIR/bundles/remote.hg"
   adding changesets
   adding manifests

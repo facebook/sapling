@@ -26,10 +26,6 @@ Create client2 - it will have only the first commit, so client1 will be pushing
 two server and one local commits later.
   $ hgcloneshallow ssh://user@dummy/master client2 -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
-  1 trees fetched over 0.00s
-  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
   $ cat >> client2/.hg/hgrc <<EOF
   > [remotefilelog]
   > reponame=master
@@ -47,10 +43,6 @@ Create create two more server commits
 Create client1 - it will have both server commits
   $ hgcloneshallow ssh://user@dummy/master client1 -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 8f1968f7671d1a929c43fd5a36b00a6a44ab849f
-  1 trees fetched over 0.00s
-  fetching tree 'subdir' 143a95c22d775432b9bdc0d78803b3657c140a80
-  1 trees fetched over 0.00s
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -74,10 +66,6 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
 # already has.
   $ hg -R ../client2 prefetch -r 'all()'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
-  1 trees fetched over 0.00s
-  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
   $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
   $ cat >> ../client2/.hg/hgrc <<EOF
   > [remotefilelog]

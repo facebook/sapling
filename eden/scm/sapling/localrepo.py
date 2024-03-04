@@ -399,6 +399,8 @@ class localrepository:
         # backed by Rust eagerepo::EagerRepo. Mainly used in tests or
         # fully local repos.
         eagerepo.EAGEREPO_REQUIREMENT,
+        # explicit requirement for a revlog repo using eager store (i.e. revlog2.py)
+        "eagercompat",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -644,12 +646,19 @@ class localrepository:
 
         # needed by revlog2
         sfmt = self.storage_format()
-        if sfmt == "revlog" or not extensions.isenabled(self.ui, "treemanifest"):
+        if not create and (
+            sfmt == "revlog" or not extensions.isenabled(self.ui, "treemanifest")
+        ):
             from . import revlog2
 
             revlog2.patch_types()
 
             self.svfs._reporef = weakref.ref(self)
+
+            if "eagercompat" not in self.storerequirements:
+                with self.lock(wait=False):
+                    self.storerequirements.add("eagercompat")
+                    self._writestorerequirements()
 
         try:
             self._visibilitymigration()

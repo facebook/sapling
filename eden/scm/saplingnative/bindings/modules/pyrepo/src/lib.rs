@@ -121,6 +121,13 @@ py_class!(pub class repo |py| {
 
     def nullableedenapi(&self) -> PyResult<Option<PyEdenApi>> {
         let repo_ref = self.inner(py).read();
+
+        if repo_ref.config().get("paths", "default").is_some_and(|p| p.starts_with("ssh://user@dummy/")) {
+            // Don't expose edenapi client to Python since it impacts behavior. We only
+            // want it for Rust components that require edenapi.
+            return Ok(None);
+        }
+
         match repo_ref.optional_eden_api().map_pyerr(py)? {
             Some(api) => Ok(Some(PyEdenApi::create_instance(py, api)?)),
             None => Ok(None),

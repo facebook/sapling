@@ -39,9 +39,6 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
 
   $ cd master
 
@@ -56,9 +53,6 @@
 Test prefetch
   $ hg prefetch -r 'desc("add x")' -r 'desc("add subdir/z")' -r 'desc("modify x")'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  2 trees fetched over 0.00s
-  fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
 
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -70,11 +64,6 @@ requires tree manifest for the base commit.
 
   $ hg prefetch -r '2' --base '1'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
-  fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
-  1 trees fetched over 0.00s
-  2 trees fetched over * (glob)
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test prefetching when a draft commit is marked public
@@ -84,9 +73,6 @@ Test prefetching when a draft commit is marked public
 - Create a draft commit, and force it to be public
   $ hg prefetch -r .
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
   $ echo foo > foo
   $ hg commit -Aqm 'add foo'
   $ hg debugmakepublic -r .
@@ -109,15 +95,8 @@ Test prefetching when a draft commit is marked public
 - missing manifest from the server.
   $ clearcache
   $ hg status --change 'desc("modify x")' --config extensions.remotenames=
-  fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
-  1 trees fetched over 0.00s
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
   M dir/x
   $ hg debugstrip -r 'desc("add foo")'
-  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd (?)
-  1 trees fetched over 0.00s (?)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ clearcache
@@ -131,11 +110,6 @@ Test auto prefetch during normal access
   [1]
   $ hg log -r tip --stat --pager=off
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
-  1 trees fetched over 0.00s
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
   commit:      311cac64787d
   bookmark:    default/master
   hoistedname: master
@@ -151,22 +125,12 @@ Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 'tip^'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r tip
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
 - Only 2 of the 3 trees from tip^ are downloaded as part of --stat's fetch
   $ hg log -r tip --stat --pager=off > /dev/null
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
-  1 trees fetched over 0.00s
-  fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
 
 Test auto prefetch during pull
 
@@ -179,11 +143,9 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching trees for 3 commits
-  * trees fetched over * (glob)
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
   $ hg debugstrip -q -r 'draft()'
-  2 trees fetched over 0.00s (?)
 
 - Prefetch just the top manifest (but the full one)
   $ rm -rf $CACHEDIR/master
@@ -192,24 +154,17 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
   searching for changes
   no changes found
   prefetching tree for 311cac64787d
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 - Prefetch commit 1 then minimally prefetch commit 2
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 1
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
-  1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
   pulling from ssh://user@dummy/master
   searching for changes
   no changes found
   prefetching tree for 311cac64787d
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test prefetching certain revs during pull
@@ -228,8 +183,6 @@ Test prefetching certain revs during pull
   adding manifests
   adding file changes
   prefetching tree for 311cac64787d
-  fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
-  1 trees fetched over 0.00s
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 - Test prefetching only the new tree parts for a commit who's parent tree is not
@@ -239,8 +192,6 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
   searching for changes
   no changes found
   prefetching tree for 47bb1c5075af
-  fetching tree '' fe0e17e3157e05d7c36f025f10597357a41ef7f9
-  1 trees fetched over 0.00s
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test that prefetch refills just part of a tree when the cache is deleted
@@ -248,12 +199,8 @@ Test that prefetch refills just part of a tree when the cache is deleted
   $ echo >> dir/x
   $ hg commit -m 'edit x locally'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree 'dir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
-  1 trees fetched over 0.00s
   $ rm -rf $CACHEDIR/master/*
   $ hg cat subdir/z
-  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  1 trees fetched over * (glob)
   z
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
@@ -263,10 +210,6 @@ trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r '2 + 4'
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
-  2 trees fetched over 0.00s
-  2 trees fetched over 0.00s
-  fetching tree 'dir' bf22bc15398b5293cabbeef06bba44e8a2cc215c
-  1 trees fetched over 0.00s
 
 Test prefetching with no options works. The expectation is to prefetch the stuff
 required for working with the draft commits which happens to be only revision 5
@@ -279,8 +222,6 @@ file prefetching code path fetches 1 file for revision 5 and while doing so,
 also fetches 3 trees dealing with the tree manifest of the base revision 2.
 
   $ hg prefetch
-  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Prefetching with treemanifest.ondemandfetch=True should fall back to normal
@@ -288,8 +229,6 @@ fetch is the server doesn't support it.
 
   $ rm -rf $CACHEDIR/master
   $ hg prefetch --config treemanifest.ondemandfetch=True
-  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  1 trees fetched over 0.00s
 
 Running prefetch in the master repository should exit gracefully
 

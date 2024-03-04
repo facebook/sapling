@@ -227,6 +227,21 @@ impl EagerRepo {
         let dag = Dag::open(store_dir.join("segments").join("v1"))?;
         let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
+
+        let repo = Self {
+            dag,
+            store,
+            metalog,
+            dir: dir.to_path_buf(),
+        };
+
+        // "eagercompat" is a revlog repo secretly using an eager store under the hood.
+        // It's requirements don't match our expectations, so return early. This is mainly
+        // so we can access the EagerRepo EdenApi trait implementation.
+        if has_eagercompat_requirement(&store_dir) {
+            return Ok(repo);
+        }
+
         // Write "requires" files.
         write_requires(&hg_dir, &["store", "treestate", "windowssymlinks"])?;
         write_requires(
@@ -239,12 +254,6 @@ impl EagerRepo {
                 "invalidatelinkrev",
             ],
         )?;
-        let repo = Self {
-            dag,
-            store,
-            metalog,
-            dir: dir.to_path_buf(),
-        };
         Ok(repo)
     }
 
@@ -255,8 +264,7 @@ impl EagerRepo {
     /// - `test:name`, `test://name`: same as `eager:$TESTTMP/server-repos/name`
     /// - `/path/to/dir` where the path is a EagerRepo.
     pub fn url_to_dir(value: &str) -> Option<PathBuf> {
-        let prefix = "eager:";
-        if let Some(path) = value.strip_prefix(prefix) {
+        if let Some(path) = value.strip_prefix("eager:") {
             let path: PathBuf = if cfg!(windows) {
                 // Remove '//' prefix from Windows file path. This makes it
                 // possible to use paths like 'eager://C:\foo\bar'.
@@ -272,8 +280,8 @@ impl EagerRepo {
             tracing::trace!("url_to_dir {} => {}", value, path.display());
             return Some(path);
         }
-        let prefix = "test:";
-        if let Some(path) = value.strip_prefix(prefix) {
+
+        if let Some(path) = value.strip_prefix("test:") {
             let path = path.trim_start_matches('/');
             if let Ok(tmp) = std::env::var("TESTTMP") {
                 let tmp: &Path = Path::new(&tmp);
@@ -282,11 +290,30 @@ impl EagerRepo {
                 return Some(path);
             }
         }
+
+        if let Some(path) = value.strip_prefix("ssh://user@dummy/") {
+            // Allow instantiating EagerRepo for dummyssh servers. This is so we can get a
+            // working EdenApi for server repos in legacy tests.
+            if let Ok(tmp) = std::env::var("TESTTMP") {
+                let path = Path::new(&tmp).join(path);
+                if let Ok(Some(ident)) = identity::sniff_dir(&path) {
+                    let mut store_path = path.clone();
+                    store_path.push(ident.dot_dir());
+                    store_path.push("store");
+                    if has_eagercompat_requirement(&store_path) {
+                        tracing::trace!("url_to_dir {} => {}", value, path.display());
+                        return Some(path);
+                    }
+                }
+            }
+        }
+
         let path = Path::new(value);
         if is_eager_repo(path) {
             tracing::trace!("url_to_dir {} => {}", value, path.display());
             return Some(path.to_path_buf());
         }
+
         None
     }
 
@@ -455,12 +482,17 @@ pub fn is_eager_repo(path: &Path) -> bool {
             }
         }
         tracing::trace!(
-            "url_to_dir {}: missing 'eagerepo' requirment",
+            "url_to_dir {}: missing 'eagerepo' requirement",
             path.display()
         );
     }
 
     false
+}
+
+fn has_eagercompat_requirement(store_path: &Path) -> bool {
+    std::fs::read_to_string(store_path.join("requires"))
+        .is_ok_and(|r| r.split('\n').any(|r| r == "eagercompat"))
 }
 
 /// Convert parents and raw_text to HG SHA1 text format.

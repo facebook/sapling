@@ -557,6 +557,13 @@ class basetreemanifestlog:
             store.get(dir, node)
         except KeyError:
             raise shallowutil.MissingNodesError([(dir, node)])
+        except error.HttpError as ex:
+            # Hack to handle eagerstore errors. This should be converted to a KeyError
+            # somewhere in Rust.
+            if "404" in str(ex):
+                raise shallowutil.MissingNodesError([(dir, node)])
+            else:
+                raise ex
 
         m = treemanifestctx(self, dir, node)
         self._treemanifestcache[node] = m
@@ -1386,7 +1393,8 @@ def _existonserver(repo, mfnode):
     Return True if the server has the mfnode, False otherwise.
     """
     stream, _stats = repo.edenapi.trees(
-        [("", mfnode)], {"parents": False, "manifest_blob": False}
+        [("", mfnode)],
+        {"parents": False, "manifest_blob": False, "child_metadata": False},
     )
     try:
         list(stream)

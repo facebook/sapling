@@ -333,11 +333,8 @@ impl Repo {
                 return Ok(None);
             }
             Some(path) => {
-                // EagerRepo URLs (test:, eager: file path).
-                if path.starts_with("test:")
-                    || path.starts_with("eager:")
-                    || (!path.contains("://") && EagerRepo::url_to_dir(&path).is_some())
-                {
+                // EagerRepo URLs (test:, eager: file path, dummyssh).
+                if EagerRepo::url_to_dir(&path).is_some() {
                     tracing::trace!(target: "repo::eden_api", "using EagerRepo at {}", &path);
                     return Ok(Some(self.force_construct_eden_api()?));
                 }

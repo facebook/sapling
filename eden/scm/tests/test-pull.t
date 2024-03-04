@@ -2,7 +2,6 @@
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ configure dummyssh
 #require serve
 

@@ -213,7 +213,7 @@ Hide a commit. Make sure isbackedup still works
 Run command that creates multiple transactions. Make sure that just one backup is started
   $ cd ..
   $ rm -rf client
-  $ hg clone --no-shallow ssh://user@dummy/repo client -q
+  $ clone repo client
   $ cd client
   $ hg debugdrawdag -q <<'EOS'
   > C

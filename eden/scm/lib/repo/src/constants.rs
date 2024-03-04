@@ -66,5 +66,7 @@ pub static SUPPORTED_STORE_REQUIREMENTS: Lazy<HashSet<String>> = Lazy::new(|| {
         // backed by Rust eagerepo::EagerRepo. Mainly used in tests or
         // fully local repos.
         "eagerepo".to_owned(),
+        // explicit requirement for a revlog repo using eager store (i.e. revlog2.py)
+        "eagercompat".to_owned(),
     ])
 });

@@ -35,11 +35,7 @@ Test autocreatetrees
   $ hg pull -q
 
   $ hg up -r 'desc("add subdir/z")'
-  fetching tree '' 3171d1d9315ec883e4028e787f617120bd06cfa8
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  1 trees fetched over 0.00s
-  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  1 trees fetched over 0.00s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -63,8 +59,6 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ hg commit -Am 'modify subdir/y again'
   $ hg rebase -d 085784c01c08984ae3b6f4e4a6e553035d58380b -s '.^'
   rebasing * "modify subdir/y" (glob)
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over * (glob)
   rebasing * "modify subdir/y again" (glob)
   $ hg log -r '.^::.' -T '{manifest}\n'
   0e5087e257eeb8a1418a1ec5f4395fb17b8c1b4f
