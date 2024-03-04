@@ -79,7 +79,7 @@ pub struct Repo {
     repo_identity: RepoIdentity,
 
     #[init(repo_identity.name().to_string())]
-    _name: String,
+    name: String,
 
     #[facet]
     repo_config: RepoConfig,

@@ -41,62 +41,62 @@ const PACKFILE_URIS_SEPARATOR: &str = ",";
 pub struct FetchArgs {
     /// Indicates to the server the objects which the client wants to
     /// retrieve
-    wants: Vec<ObjectId>,
+    pub wants: Vec<ObjectId>,
     /// Indicates to the server the objects which the client already has
     /// locally
-    haves: Vec<ObjectId>,
+    pub haves: Vec<ObjectId>,
     /// Indicates to the server that negotiation should terminate (or
     /// not even begin if performing a clone) and that the server should
     /// use the information supplied in the request to construct the packfile
-    done: bool,
+    pub done: bool,
     /// Request that a thin pack be sent, which is a pack with deltas
     /// which reference base objects not contained within the pack (but
     /// are known to exist at the receiving end)
-    thin_pack: bool,
+    pub thin_pack: bool,
     /// Request that progress information that would normally be sent on
     /// side-band channel 2, during the packfile transfer, should not be sent
-    no_progress: bool,
+    pub no_progress: bool,
     /// Request that annotated tags should be sent if the objects they
     /// point to are being sent.
-    include_tag: bool,
+    pub include_tag: bool,
     /// Indicate that the client understands PACKv2 with delta referring
     /// to its base by position in pack rather than by an oid
-    ofs_delta: bool,
+    pub ofs_delta: bool,
     /// List of object Ids representing the edge of the shallow history present
     /// at the client, i.e. the set of commits that the client knows about but
     /// does not have any of their parents and their ancestors
-    shallow: Vec<ObjectId>,
+    pub shallow: Vec<ObjectId>,
     /// Requests that the fetch/clone should be shallow having a commit
     /// depth of "deepen" relative to the server
-    deepen: Option<u32>,
+    pub deepen: Option<u32>,
     /// Requests that the semantics of the "deepen" command be changed
     /// to indicate that the depth requested is relative to the client's
     /// current shallow boundary, instead of relative to the requested commits.
-    deepen_relative: bool,
+    pub deepen_relative: bool,
     /// Requests that the shallow clone/fetch should be cut at a specific time,
     /// instead of depth. The timestamp provided should be in the same format
     /// as is expected for git rev-list --max-age <timestamp>
-    deepen_since: Option<gix_date::Time>,
+    pub deepen_since: Option<gix_date::Time>,
     /// Requests that the shallow clone/fetch should be cut at a specific revision
     /// instead of a depth, i.e. the specified oid becomes the boundary at which the
     /// fetch or clone should stop at
-    deepen_not: Option<ObjectId>,
+    pub deepen_not: Option<ObjectId>,
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
-    filter: Option<String>,
+    pub filter: Option<String>,
     /// Indicates to the server that the client wants to retrieve a particular ref
     /// by providing the full name of the ref on the server
-    want_ref: Option<String>,
+    pub want_ref: Option<String>,
     /// Instruct the server to send the whole response multiplexed, not just the
     /// packfile section
-    sideband_all: bool,
+    pub sideband_all: bool,
     /// Indicates to the server that the client is willing to receive URIs of any
     /// of the given protocols in place of objects in the sent packfile. Before
     /// performing the connectivity check, the client should download from all given URIs
-    packfile_uris: Vec<String>,
+    pub packfile_uris: Vec<String>,
     /// Indicates to the server that it should never send "ready", but should wait
     /// for the client to say "done" before sending the packfile
-    wait_for_done: bool,
+    pub wait_for_done: bool,
 }
 
 fn parse_oid(data: &[u8], oid_type: &[u8]) -> anyhow::Result<ObjectId> {

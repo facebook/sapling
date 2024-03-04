@@ -12,7 +12,7 @@ const MAX_DATA_LEN: usize = 65516;
 /// Packetline representing the end of a message
 pub const FLUSH_LINE: &[u8] = b"0000";
 /// Packetline separating sections of a message
-const DELIMITER_LINE: &[u8] = b"0001";
+pub const DELIMITER_LINE: &[u8] = b"0001";
 /// Packetline representing the end of response for stateless connections
 const RESPONSE_END_LINE: &[u8] = b"0002";
 /// Prefix for error messages

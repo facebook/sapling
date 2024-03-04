@@ -8,7 +8,6 @@
 mod context;
 
 pub use context::GitServerContext;
-#[allow(unused_imports)]
 pub use context::RepositoryRequestContext;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
@@ -19,7 +18,6 @@ pub struct ServiceType {
     pub service: String,
 }
 
-#[allow(dead_code)]
 impl ServiceType {
     pub fn new(service: String) -> Self {
         Self { service }
@@ -31,7 +29,6 @@ pub struct ResponseType {
     pub response: String,
 }
 
-#[allow(dead_code)]
 impl ResponseType {
     pub fn new(response: String) -> Self {
         Self { response }
@@ -45,7 +42,6 @@ pub struct RepositoryParams {
     repository: Vec<String>,
 }
 
-#[allow(dead_code)]
 impl RepositoryParams {
     pub fn repo_name(&self) -> String {
         let repo = self.repository.join("/");
