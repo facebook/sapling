@@ -11,8 +11,7 @@ use cpython::*;
 use dag::Id;
 use dag::IdSet;
 use dag::IdSetIter;
-
-use crate::idmap::WDIR_REV;
+use types::hgid::WDIR_REV;
 
 /// A wrapper around [`IdSet`] with Python integration.
 ///

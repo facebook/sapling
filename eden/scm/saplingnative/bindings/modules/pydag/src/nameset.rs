@@ -18,9 +18,9 @@ use dag::nameset::BoxVertexStream;
 use dag::Set;
 use dag::Vertex;
 use futures::stream::StreamExt;
+use types::hgid::NULL_ID;
 
 use crate::dagalgo::dagalgo;
-use crate::idmap::NULL_NODE;
 use crate::parents::parents;
 
 /// A wrapper around [`Set`] with Python integration added.
@@ -221,7 +221,7 @@ impl<'a> FromPyObject<'a> for Names {
             let set = Set::from_static_names(pylist.into_iter().filter_map(|name| {
                 let data = name.data(py);
                 // Skip "nullid" automatically.
-                if data == &NULL_NODE[..] {
+                if data == NULL_ID.as_ref() {
                     None
                 } else {
                     Some(Vertex::copy_from(data))
@@ -273,7 +273,7 @@ impl Iterator for PyNameIter {
                 Some(Ok(value)) => {
                     let value = value.extract::<PyBytes>(py)?;
                     let data = value.data(py);
-                    if data == &NULL_NODE[..] {
+                    if data == NULL_ID.as_ref() {
                         // Skip "nullid" automatically.
                         self.next().transpose().map_pyerr(py)
                     } else {

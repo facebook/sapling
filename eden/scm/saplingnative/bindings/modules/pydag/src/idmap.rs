@@ -13,11 +13,9 @@ use cpython_ext::ResultPyErrExt;
 use dag::ops::IdConvert;
 use dag::Id;
 use dag::Vertex;
-
-// Mercurial's special case. -1 maps to (b"\0" * 20)
-pub(crate) const NULL_NODE: [u8; 20] = [0u8; 20];
-pub(crate) const WDIR_NODE: [u8; 20] = [0xffu8; 20];
-pub(crate) const WDIR_REV: i64 = i64::MAX;
+use types::hgid::NULL_ID;
+use types::hgid::WDIR_ID;
+use types::hgid::WDIR_REV;
 
 py_class!(pub class idmap |py| {
     data map: Arc<dyn IdConvert + Send + Sync + 'static>;
@@ -25,9 +23,9 @@ py_class!(pub class idmap |py| {
     /// Translate id to node.
     def id2node(&self, id: i64) -> PyResult<PyBytes> {
         if id == -1 {
-            Ok(PyBytes::new(py, &NULL_NODE))
+            Ok(PyBytes::new(py, NULL_ID.as_ref()))
         } else if id == WDIR_REV {
-            Ok(PyBytes::new(py, &WDIR_NODE))
+            Ok(PyBytes::new(py, WDIR_ID.as_ref()))
         } else {
             let v = block_on(self.map(py).vertex_name(Id(id as u64))).map_pyerr(py)?;
             Ok(PyBytes::new(py, v.as_ref()))
@@ -37,9 +35,9 @@ py_class!(pub class idmap |py| {
     /// Translate node to id.
     def node2id(&self, node: PyBytes) -> PyResult<i64> {
         let node = node.data(py);
-        if node == &NULL_NODE {
+        if node == NULL_ID.as_ref() {
             Ok(-1)
-        } else if node == &WDIR_NODE {
+        } else if node == WDIR_ID.as_ref() {
             Ok(WDIR_REV)
         } else {
             let id = block_on(self.map(py).vertex_id(Vertex::copy_from(node))).map_pyerr(py)?;
@@ -59,7 +57,7 @@ py_class!(pub class idmap |py| {
         let mut iter = nodes.into_iter();
         for id in ids {
             if id == -1 {
-                result.push(PyBytes::new(py, &NULL_NODE));
+                result.push(PyBytes::new(py, NULL_ID.as_ref()));
             } else if id >= 0 {
                 if let Some(node) = iter.next() {
                     let node = node.map_pyerr(py)?;
@@ -147,7 +145,7 @@ py_class!(pub class idmap |py| {
 
     def __contains__(&self, node: PyBytes) -> PyResult<bool> {
         let node = node.data(py);
-        if node == &NULL_NODE {
+        if node == NULL_ID.as_ref() {
             Ok(true)
         } else {
             let name = Vertex::copy_from(node);

@@ -19,3 +19,4 @@ pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
 pyio = { version = "0.1.0", path = "../pyio" }
 pymetalog = { version = "0.1.0", path = "../pymetalog" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
+types = { version = "0.1.0", path = "../../../../lib/types" }
