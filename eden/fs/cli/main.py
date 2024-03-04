@@ -1609,6 +1609,8 @@ Do you still want to delete {path}?"""
                                             fs_mod.new().rmdir(
                                                 path, args.preserve_mount_point
                                             )
+                                        else:
+                                            return 1
                                     except Exception as ex:
                                         print(
                                             f"Error: cannot remove contents of {path} even after trying to kill processes holding resources: {ex}"
