@@ -648,7 +648,9 @@ pub async fn find_latest_derived_and_underived(
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
     for (prev_limit, limit) in history_depth_limits.into_iter().tuple_windows() {
-        debug!(ctx.logger(), "{} bookmark, limit {}", book, limit);
+        if prev_limit > 0 {
+            debug!(ctx.logger(), "{} bookmark, limit {}", book, limit);
+        }
         // Note that since new entries might be inserted to the bookmark log,
         // the next call to `list_bookmark_log_entries(...)` might return
         // entries that were already returned on the previous call `list_bookmark_log_entries(...)`.
