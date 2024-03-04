@@ -13,10 +13,10 @@
 #include <folly/Try.h>
 #include <folly/io/Cursor.h>
 
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ObjectId.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 class BlobMetadata;

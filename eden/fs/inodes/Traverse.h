@@ -8,11 +8,11 @@
 #pragma once
 
 #include <variant>
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/ObjectId.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 

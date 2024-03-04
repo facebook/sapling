@@ -11,9 +11,9 @@
 #include <folly/Synchronized.h>
 #include <bitset>
 
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
 

@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/utils/MappedDiskVector.h"
+#include "eden/common/utils/MappedDiskVector.h"
 
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>

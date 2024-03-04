@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/DirType.h"
+#include "eden/common/utils/DirType.h"
 #include <folly/Utility.h>
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 

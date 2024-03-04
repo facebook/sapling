@@ -7,10 +7,10 @@
 
 #pragma once
 
+#include "eden/common/utils/PathMap.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
-#include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {

@@ -11,12 +11,12 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
-#include "eden/fs/utils/FaultInjector.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(blobID, "", "The blob ID");

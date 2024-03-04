@@ -11,6 +11,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -20,7 +21,6 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/Bug.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;

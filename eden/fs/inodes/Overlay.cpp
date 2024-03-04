@@ -20,6 +20,7 @@
 #include <folly/stop_watch.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
@@ -33,7 +34,6 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/Bug.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual

@@ -15,6 +15,7 @@
 #include <folly/test/TestUtils.h>
 
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/DirType.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -26,7 +27,6 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 

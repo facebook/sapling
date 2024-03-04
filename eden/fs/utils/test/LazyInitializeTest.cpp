@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/LazyInitialize.h"
+#include "eden/common/utils/LazyInitialize.h"
 
 #include <folly/portability/GTest.h>
 

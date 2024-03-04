@@ -10,9 +10,9 @@ cpp_unittest(
     deps = [
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/model/git:gitignore",
-        "//eden/fs/utils:utils",
         "//folly:file",
         "//folly:file_util",
         "//folly:range",

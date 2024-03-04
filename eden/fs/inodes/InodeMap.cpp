@@ -14,7 +14,9 @@
 #include <folly/chrono/Conv.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/SystemError.h"
+#include "eden/common/utils/TimeUtil.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -22,9 +24,7 @@
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/TimeUtil.h"
 
 using folly::Future;
 using folly::Promise;

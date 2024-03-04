@@ -28,7 +28,10 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
+#include "eden/common/utils/Bug.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/common/utils/StatTimes.h"
 #include "eden/common/utils/String.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -80,15 +83,12 @@
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/telemetry/Tracing.h"
-#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
-#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/GlobMatcher.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/SourceLocation.h"
-#include "eden/fs/utils/StatTimes.h"
 
 using folly::Future;
 using folly::makeFuture;

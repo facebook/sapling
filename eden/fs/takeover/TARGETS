@@ -40,10 +40,10 @@ cpp_library(
     exported_deps = [
         ":serialization-cpp2-types",
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/utils:fs_channel_types",
         "//eden/fs/utils:io",
-        "//eden/fs/utils:utils",
         "//folly:file",
         "//folly/futures:core",
         "//folly/io:iobuf",

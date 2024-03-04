@@ -11,11 +11,11 @@
 #ifndef _WIN32
 
 #include <optional>
+#include "eden/common/utils/Bug.h"
+#include "eden/common/utils/MappedDiskVector.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/MappedDiskVector.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook::eden {

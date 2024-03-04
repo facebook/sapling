@@ -13,12 +13,12 @@
 #include <array>
 #include <condition_variable>
 #include <optional>
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/utils/DirType.h"
 #ifdef __APPLE__
 #include <sys/mount.h>
 #include <sys/param.h>

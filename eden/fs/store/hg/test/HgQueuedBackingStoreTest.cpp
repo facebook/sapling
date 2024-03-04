@@ -9,6 +9,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
@@ -19,7 +20,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
-#include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

@@ -47,10 +47,10 @@ cpp_library(
         ":inode_number",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes/overlay:overlay_checker_util",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
-        "//eden/fs/utils:utils",
     ],
 )
 
@@ -202,6 +202,7 @@ cpp_library(
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/common/utils:string",
+        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/config:config_thrift-cpp2-types",
         "//eden/fs/fuse:fuse",
@@ -227,7 +228,6 @@ cpp_library(
         "//eden/fs/utils:ref_ptr",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:user_info",
-        "//eden/fs/utils:utils",
         "//folly:cancellation_token",
         "//folly:exception_wrapper",
         "//folly:expected",
@@ -272,7 +272,7 @@ cpp_library(
         "//folly:conv",
     ],
     exported_deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:sys_stat",
         "//folly/portability:sys_types",
     ],

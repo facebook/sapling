@@ -10,6 +10,8 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
+#include "eden/common/utils/FaultInjector.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
@@ -17,8 +19,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 DEFINE_bool(
     fault_injection_block_mounts,

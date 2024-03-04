@@ -74,7 +74,7 @@ cpp_library(
     ],
     exported_deps = [
         ":notifier",
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly:synchronized",
     ],
 )

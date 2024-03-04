@@ -9,8 +9,8 @@
 
 #include <folly/Synchronized.h>
 
+#include "eden/common/utils/Guid.h"
 #include "eden/fs/notifications/Notifier.h"
-#include "eden/fs/utils/Guid.h"
 
 #include <queue>
 

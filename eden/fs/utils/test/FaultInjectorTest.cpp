@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include <eden/fs/utils/FaultInjector.h>
+#include <eden/common/utils/FaultInjector.h>
 
 #include <folly/portability/GTest.h>
 #include <folly/stop_watch.h>

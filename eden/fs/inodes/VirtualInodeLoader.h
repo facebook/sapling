@@ -13,10 +13,10 @@
 #include <folly/futures/Future.h>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/PathMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/utils/PathMap.h"
 
 namespace facebook::eden {
 

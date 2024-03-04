@@ -97,10 +97,10 @@ cpp_library(
     srcs = ["LMDBStoreInterface.cpp"],
     headers = ["LMDBStoreInterface.h"],
     deps = [
+        "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/telemetry:structured_logger",
-        "//eden/fs/utils:utils",
         "//folly:range",
         "//thrift/lib/cpp2/protocol:protocol",
     ],

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/CoverageSet.h"
+#include "eden/common/utils/CoverageSet.h"
 #include <folly/portability/GTest.h>
 
 using namespace facebook::eden;

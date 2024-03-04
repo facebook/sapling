@@ -30,11 +30,11 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes:file_content_store",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//eden/fs/utils:utils",
         "//folly:file",
         "//folly:range",
     ],

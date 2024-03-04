@@ -19,7 +19,9 @@
 
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/Guid.h"
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
@@ -50,9 +52,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using folly::Unit;

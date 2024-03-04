@@ -8,10 +8,10 @@
 #ifndef _WIN32
 
 #include <chrono>
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/async/EventBase.h>

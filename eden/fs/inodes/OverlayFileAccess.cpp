@@ -14,6 +14,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/OpenSSL.h>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/fs/digest/Blake3.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -22,7 +23,6 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/utils/Bug.h"
 #include "folly/FileUtil.h"
 
 namespace facebook::eden {

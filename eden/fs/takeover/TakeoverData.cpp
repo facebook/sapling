@@ -18,8 +18,8 @@
 
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/UnixSocket.h"
 
 using apache::thrift::CompactSerializer;

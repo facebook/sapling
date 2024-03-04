@@ -7,10 +7,10 @@
 
 #pragma once
 
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 

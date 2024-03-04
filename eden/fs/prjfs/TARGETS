@@ -36,6 +36,7 @@ cpp_library(
     exported_deps = [
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes:fs_channel",
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:request_context",
@@ -44,7 +45,6 @@ cpp_library(
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:process_access_log",
         "//eden/fs/utils:ref_ptr",
-        "//eden/fs/utils:utils",
         "//folly/executors:sequenced_executor",
         "//folly/experimental:atomic_read_mostly_main_ptr",
         "//folly/futures:future_splitter",
@@ -72,9 +72,9 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
-        "//eden/fs/utils:utils",
         "//folly/portability:windows",
     ],
 )

@@ -14,6 +14,7 @@
 #include <folly/futures/Future.h>
 #include <folly/portability/Stdlib.h>
 
+#include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/nfs/NfsRequestContext.h"
@@ -26,7 +27,6 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 #ifdef __linux__

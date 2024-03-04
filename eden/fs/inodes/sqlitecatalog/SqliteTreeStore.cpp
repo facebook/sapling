@@ -11,12 +11,12 @@
 #include <folly/stop_watch.h>
 #include <array>
 #include <iterator>
+#include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 

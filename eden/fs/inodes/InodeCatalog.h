@@ -9,13 +9,13 @@
 
 #include <optional>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayCheckerUtil.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/utils/Bug.h"
 
 #ifdef __APPLE__
 #include <sys/mount.h>

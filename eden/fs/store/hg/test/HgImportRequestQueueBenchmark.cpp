@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+#include <utility>
+#include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
-#include "eden/fs/utils/IDGen.h"
 
 namespace {
 
@@ -27,8 +28,9 @@ std::shared_ptr<HgImportRequest> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
+  std::string proxyHashString = proxyHash.getValue();
   return HgImportRequest::makeBlobImportRequest(
-      ObjectId{proxyHash.getValue()},
+      ObjectId{proxyHashString},
       std::move(proxyHash),
       priority,
       ObjectFetchContext::Cause::Unknown,

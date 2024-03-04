@@ -10,12 +10,12 @@
 #include <folly/executors/SequencedExecutor.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/utils/Guid.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/prjfs/Enumerator.h"
-#include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/RefPtr.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
 

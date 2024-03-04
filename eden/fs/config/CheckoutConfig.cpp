@@ -17,10 +17,10 @@
 #include <optional>
 
 #include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/PathMap.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/utils/FilterUtils.h"
-#include "eden/fs/utils/PathMap.h"
 
 using folly::ByteRange;
 using folly::IOBuf;

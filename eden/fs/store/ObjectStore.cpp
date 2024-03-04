@@ -13,6 +13,7 @@
 
 #include <stdexcept>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/Throw.h"
@@ -25,7 +26,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
-#include "eden/fs/utils/Bug.h"
 
 using folly::Future;
 using folly::makeFuture;

@@ -8,12 +8,12 @@ cpp_unittest(
     deps = [
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/lmdbcatalog:lmdbstoreif",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/lmdb:lmdb",
         "//eden/fs/model:model",
-        "//eden/fs/utils:utils",
         "//folly/portability:gtest",
         "//thrift/lib/cpp2/protocol:protocol",
     ],

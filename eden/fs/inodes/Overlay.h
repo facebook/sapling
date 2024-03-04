@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/InodeCatalogOptions.h"
@@ -26,7 +27,6 @@
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/RefPtr.h"
 
 #ifndef _WIN32

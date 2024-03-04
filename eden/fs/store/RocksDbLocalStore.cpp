@@ -22,6 +22,8 @@
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
 
+#include "eden/common/utils/Bug.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/rocksdb/RocksException.h"
@@ -31,8 +33,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
-#include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/FaultInjector.h"
 
 using folly::ByteRange;
 using folly::Synchronized;

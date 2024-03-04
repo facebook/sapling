@@ -24,7 +24,7 @@
 #ifdef __APPLE__
 #include <sys/ucred.h> // @manual
 #endif
-#include "eden/fs/utils/Bug.h"
+#include "eden/common/utils/Bug.h"
 
 using folly::ByteRange;
 using folly::EventBase;

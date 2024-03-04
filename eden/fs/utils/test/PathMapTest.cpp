@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/PathMap.h"
+#include "eden/common/utils/PathMap.h"
 #include <folly/portability/GTest.h>
 #include <folly/portability/Unistd.h>
 

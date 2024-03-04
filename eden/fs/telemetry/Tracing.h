@@ -18,7 +18,7 @@
 #include <folly/lang/Aligned.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/utils/IDGen.h"
+#include "eden/common/utils/IDGen.h"
 
 namespace facebook::eden {
 

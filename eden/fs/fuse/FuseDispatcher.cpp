@@ -14,9 +14,9 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/StatTimes.h"
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/StatTimes.h"
 
 using namespace folly;
 

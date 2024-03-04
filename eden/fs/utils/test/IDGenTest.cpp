@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/IDGen.h"
+#include "eden/common/utils/IDGen.h"
 #include <folly/portability/GTest.h>
 
 using namespace facebook::eden;

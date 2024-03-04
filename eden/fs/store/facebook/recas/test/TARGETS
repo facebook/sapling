@@ -12,11 +12,11 @@ cpp_unittest(
     env = {"RE_TEST": "1"},
     deps = [
         "//common/files:files",
+        "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/model:testutil",
         "//eden/fs/store/facebook/recas:recas",
         "//eden/fs/store/facebook/recas:recas-digest-util",
-        "//eden/fs/utils:utils",
         "//folly/experimental/coro:gmock_helpers",
         "//folly/portability:gmock",
         "//folly/portability:gtest",

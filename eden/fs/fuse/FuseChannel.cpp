@@ -17,6 +17,8 @@
 #include <csignal>
 #include <type_traits>
 
+#include "eden/common/utils/Bug.h"
+#include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseDirList.h"
@@ -24,8 +26,6 @@
 #include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
-#include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/Thread.h"
 

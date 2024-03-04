@@ -9,11 +9,11 @@
 #include <optional>
 
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/DirType.h"
+#include "eden/common/utils/PathMap.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/ObjectId.h"
-#include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook::eden {

@@ -13,7 +13,10 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
+#include "eden/common/utils/StatTimes.h"
+#include "eden/common/utils/TimeUtil.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -33,9 +36,6 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/EdenError.h"
-#include "eden/fs/utils/FaultInjector.h"
-#include "eden/fs/utils/StatTimes.h"
-#include "eden/fs/utils/TimeUtil.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

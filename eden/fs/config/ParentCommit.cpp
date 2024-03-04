@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/config/ParentCommit.h"
-#include "eden/fs/utils/Bug.h"
+#include "eden/common/utils/Bug.h"
 
 namespace facebook::eden {
 

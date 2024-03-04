@@ -16,7 +16,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
-#include "eden/fs/utils/Bug.h"
+#include "eden/common/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 
 namespace facebook::eden {

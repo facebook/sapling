@@ -11,6 +11,7 @@
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include <optional>
+#include "eden/common/utils/CoverageSet.h"
 #include "eden/common/utils/FileOffset.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -20,7 +21,6 @@
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/utils/BufVec.h"
-#include "eden/fs/utils/CoverageSet.h"
 
 namespace folly {
 class File;

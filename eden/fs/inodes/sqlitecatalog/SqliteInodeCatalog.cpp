@@ -8,10 +8,10 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 
 #include <folly/File.h>
+#include "eden/common/utils/Bug.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/sqlitecatalog/WindowsFsck.h"
-#include "eden/fs/utils/Bug.h"
 
 namespace facebook::eden {
 

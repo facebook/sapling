@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/BucketedLog.h"
+#include "eden/common/utils/BucketedLog.h"
 
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>

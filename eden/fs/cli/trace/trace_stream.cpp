@@ -18,9 +18,9 @@
 #include <unordered_set>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/TimeUtil.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenServiceAsyncClient.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
-#include "eden/fs/utils/TimeUtil.h"
 
 using namespace facebook::eden;
 using namespace std::string_view_literals;

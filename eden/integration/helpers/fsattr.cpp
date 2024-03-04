@@ -8,8 +8,8 @@
 #include <folly/init/Init.h>
 #include <folly/json/dynamic.h>
 #include <folly/json/json.h>
-#include <gflags/gflags.h>
-#include "eden/fs/utils/XAttr.h"
+#include <folly/portability/GFlags.h>
+#include "eden/common/utils/XAttr.h"
 
 DEFINE_string(fileName, "", "the path to examine");
 DEFINE_string(

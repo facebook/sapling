@@ -16,11 +16,16 @@
 #include <sys/stat.h>
 #include <vector>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/CaseSensitivity.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/common/utils/SystemError.h"
+#include "eden/common/utils/TimeUtil.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/common/utils/XAttr.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDirList.h"
@@ -53,13 +58,8 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/Tracing.h"
-#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
-#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/TimeUtil.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
-#include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;
 using folly::Future;

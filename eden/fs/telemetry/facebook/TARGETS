@@ -40,9 +40,9 @@ cpp_library(
     ],
     deps = [
         "//eden/common/utils:path",
+        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
-        "//eden/fs/utils:utils",
         "//fb303:service_data",
         "//fb303/detail:quantile_stat_wrappers",
         "//folly:file_util",

@@ -9,7 +9,7 @@ cpp_unittest(
     srcs = ["BucketedLogTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
     ],
@@ -20,7 +20,7 @@ cpp_unittest(
     srcs = ["BugTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly:exception_wrapper",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
@@ -53,7 +53,7 @@ cpp_unittest(
     srcs = ["CoverageSetTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
     ],
 )
@@ -63,7 +63,7 @@ cpp_unittest(
     srcs = ["FaultInjectorTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly:stop_watch",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
@@ -90,7 +90,7 @@ cpp_unittest(
     srcs = ["FutureTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
     ],
 )
@@ -101,7 +101,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
     ],
 )
@@ -111,7 +111,7 @@ cpp_unittest(
     srcs = ["IDGenTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
     ],
 )
@@ -136,7 +136,7 @@ cpp_unittest(
     srcs = ["LazyInitializeTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
     ],
 )
@@ -146,7 +146,7 @@ cpp_unittest(
     srcs = ["MappedDiskVectorTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/experimental:test_util",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
@@ -158,7 +158,7 @@ cpp_unittest(
     srcs = ["PathMapTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/portability:gtest",
         "//folly/portability:unistd",
     ],
@@ -294,10 +294,10 @@ cpp_benchmark(
     deps = [
         "fbsource//third-party/benchmark:benchmark",
         "//eden/common/utils:process_info_cache",
+        "//eden/common/utils:utils",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/utils:process_access_log",
         "//eden/fs/utils:ref_ptr",
-        "//eden/fs/utils:utils",
     ],
 )
 

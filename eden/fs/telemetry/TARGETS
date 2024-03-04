@@ -18,9 +18,9 @@ cpp_library(
         "//folly:string",
     ],
     exported_deps = [
+        "//eden/common/utils:utils",
         "//eden/fs:config",
         "//eden/fs/utils:ref_ptr",
-        "//eden/fs/utils:utils",
         "//fb303/detail:quantile_stat_wrappers",
         "//folly:clock_gettime_wrappers",
         "//folly:range",

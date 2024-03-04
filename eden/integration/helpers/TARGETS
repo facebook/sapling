@@ -31,7 +31,7 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
-        "//eden/fs/utils:utils",
+        "//eden/common/utils:utils",
         "//folly/init:init",
         "//folly/json:dynamic",
     ],
@@ -59,11 +59,11 @@ cpp_binary(
     name = "zero_blob",
     srcs = ["ZeroBlob.cpp"],
     deps = [
+        "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/store:rocksdb",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:utils",
         "//folly/init:init",
         "//folly/logging:init",
         "//folly/logging:logging",

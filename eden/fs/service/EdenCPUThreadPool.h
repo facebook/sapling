@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
 

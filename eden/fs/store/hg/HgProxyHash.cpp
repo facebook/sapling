@@ -10,11 +10,11 @@
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/Bug.h"
 
 using folly::ByteRange;
 using folly::Endian;

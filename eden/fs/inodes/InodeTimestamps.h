@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "eden/fs/utils/TimeUtil.h"
+#include "eden/common/utils/TimeUtil.h"
 
 #include <stdint.h>
 #include <time.h>

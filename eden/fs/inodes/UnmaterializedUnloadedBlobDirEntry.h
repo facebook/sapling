@@ -7,9 +7,9 @@
 
 #pragma once
 
+#include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/model/ObjectId.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 

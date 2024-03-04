@@ -9,9 +9,9 @@
 #include <folly/logging/xlog.h>
 #include <sys/stat.h>
 
+#include "eden/common/utils/StatTimes.h"
+#include "eden/common/utils/TimeUtil.h"
 #include "eden/fs/config/FileChangeMonitor.h"
-#include "eden/fs/utils/StatTimes.h"
-#include "eden/fs/utils/TimeUtil.h"
 
 namespace facebook::eden {
 

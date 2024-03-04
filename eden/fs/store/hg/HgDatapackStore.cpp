@@ -13,6 +13,8 @@
 #include <memory>
 #include <optional>
 
+#include "eden/common/utils/Bug.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
@@ -24,8 +26,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {

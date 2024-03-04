@@ -29,6 +29,7 @@ cpp_unittest(
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
+        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/model:testutil",
@@ -45,7 +46,6 @@ cpp_unittest(
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_config_source",
-        "//eden/fs/utils:utils",
         "//folly:range",
         "//folly:try",
         "//folly/executors:cpu_thread_pool_executor",
@@ -65,11 +65,11 @@ cpp_benchmark(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/utils:utils",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/config:config",
         "//eden/fs/store:context",
         "//eden/fs/store/hg:hg_import_request",
         "//eden/fs/store/hg:hg_import_request_queue",
-        "//eden/fs/utils:utils",
     ],
 )

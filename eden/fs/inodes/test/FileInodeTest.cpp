@@ -15,6 +15,7 @@
 #include <folly/test/TestUtils.h>
 #include <chrono>
 
+#include "eden/common/utils/StatTimes.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -22,7 +23,6 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/StatTimes.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;

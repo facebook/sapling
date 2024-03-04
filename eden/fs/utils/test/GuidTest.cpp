@@ -7,7 +7,7 @@
 
 #ifdef _WIN32
 
-#include "eden/fs/utils/Guid.h"
+#include "eden/common/utils/Guid.h"
 #include <fmt/format.h>
 #include <folly/portability/GTest.h>
 #include <iostream>

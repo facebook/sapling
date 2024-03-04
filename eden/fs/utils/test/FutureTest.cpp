@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/Future.h"
+#include "eden/common/utils/Future.h"
 #include <folly/portability/GTest.h>
 
 using namespace facebook::eden;

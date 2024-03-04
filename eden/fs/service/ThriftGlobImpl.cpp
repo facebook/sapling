@@ -10,6 +10,7 @@
 #include <folly/logging/LogLevel.h>
 #include <folly/logging/xlog.h>
 #include <memory>
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -22,7 +23,6 @@
 #include "eden/fs/utils/GlobNodeImpl.h"
 #include "eden/fs/utils/GlobResult.h"
 #include "eden/fs/utils/GlobTree.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
 

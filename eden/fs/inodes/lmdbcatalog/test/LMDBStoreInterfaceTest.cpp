@@ -13,12 +13,12 @@
 #include <optional>
 
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/lmdb/LMDBDatabase.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 

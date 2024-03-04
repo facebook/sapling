@@ -6,12 +6,12 @@
  */
 
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
-#include "eden/fs/utils/FaultInjector.h"
 
 namespace {
 using namespace facebook::eden;

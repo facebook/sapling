@@ -9,8 +9,8 @@
 #include <folly/logging/xlog.h>
 #include <utility>
 
+#include "eden/common/utils/IDGen.h"
 #include "eden/fs/store/ObjectCache.h"
-#include "eden/fs/utils/IDGen.h"
 
 namespace facebook::eden {
 

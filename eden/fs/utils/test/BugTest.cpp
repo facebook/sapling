@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/Bug.h"
+#include "eden/common/utils/Bug.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/portability/GTest.h>
