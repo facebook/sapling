@@ -1272,6 +1272,8 @@ pub(crate) fn check_conflicts(
             .map(|c| c.to_owned()),
     );
 
+    conflicts.sort();
+
     if !conflicts.is_empty() {
         let limit = 5;
 
