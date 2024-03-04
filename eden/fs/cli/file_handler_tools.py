@@ -63,8 +63,6 @@ class FileHandlerReleaser(ABC):
 
 
 if sys.platform == "win32":
-    import psutil
-
     WINDOWS_HANDLE_BIN = "handle.exe"
 
     class WinFileHandlerReleaser(FileHandlerReleaser):
@@ -75,6 +73,12 @@ if sys.platform == "win32":
             return None
 
         def check_handle(self, mount: Path, frs: FileReleaseStatus) -> bool:
+            try:
+                import psutil
+            except Exception as e:
+                frs.exception_raised = e
+                return False
+
             handle = self.get_handle_path()
             if not handle:
                 return False
@@ -172,7 +176,9 @@ if sys.platform == "win32":
                     print()
                     frs.log_release_outcome(False)
                     return False
-            except Exception as e:  # Hopefully never here but let's give us a chance to log it
+            except (
+                Exception
+            ) as e:  # Hopefully never here but let's give us a chance to log it
                 print(f"Exception raised when trying to release file: {e}")
                 frs.exception_raised = e
                 frs.log_release_outcome(False)
