@@ -17,6 +17,7 @@ pub mod content_metadata_v2;
 pub mod datetime;
 pub mod deleted_manifest_common;
 pub mod deleted_manifest_v2;
+pub mod derivable_type;
 pub mod errors;
 pub mod fastlog_batch;
 pub mod file_change;
@@ -65,6 +66,7 @@ pub use content_metadata_v2::ContentAlias;
 pub use content_metadata_v2::ContentMetadataV2;
 pub use datetime::DateTime;
 pub use datetime::Timestamp;
+pub use derivable_type::DerivableType;
 pub use file_change::BasicFileChange;
 pub use file_change::FileChange;
 pub use file_change::FileType;
@@ -113,6 +115,7 @@ pub use typed_hash::TestShardedManifestId;
 mod macros;
 
 pub mod thrift {
+    pub use derived_data_type_if::DerivedDataType;
     pub use mononoke_types_serialization::blame;
     pub use mononoke_types_serialization::bonsai;
     pub use mononoke_types_serialization::bssm;

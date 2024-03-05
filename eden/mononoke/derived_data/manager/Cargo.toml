@@ -27,7 +27,6 @@ context = { version = "0.1.0", path = "../../server/context" }
 derived_data_constants = { version = "0.1.0", path = "../constants" }
 derived_data_remote = { version = "0.1.0", path = "../remote" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
-derived_data_type_if = { version = "0.1.0", path = "../if" }
 either = "1.5"
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
@@ -42,7 +41,6 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0.49"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
