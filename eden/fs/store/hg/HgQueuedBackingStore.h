@@ -30,6 +30,7 @@ class BackingStoreLogger;
 class ReloadableConfig;
 class HgBackingStore;
 class LocalStore;
+class UnboundedQueueExecutor;
 class EdenStats;
 class HgImportRequest;
 class StructuredLogger;
@@ -119,6 +120,23 @@ struct HgImportTraceEvent : TraceEventBase {
 class HgQueuedBackingStore final : public BackingStore {
  public:
   HgQueuedBackingStore(
+      std::unique_ptr<folly::Executor> retryThreadPool,
+      std::shared_ptr<LocalStore> localStore,
+      EdenStatsPtr stats,
+      std::unique_ptr<HgBackingStore> backingStore,
+      std::unique_ptr<HgDatapackStore> datapackStore,
+      UnboundedQueueExecutor* serverThreadPool,
+      std::shared_ptr<ReloadableConfig> config,
+      std::shared_ptr<StructuredLogger> structuredLogger,
+      std::unique_ptr<BackingStoreLogger> logger);
+
+  /**
+   * Create an HgQueuedBackingStore suitable for use in unit tests. It uses an
+   * inline executor to process loaded objects rather than the thread pools used
+   * in production Eden.
+   */
+  HgQueuedBackingStore(
+      std::unique_ptr<folly::Executor> retryThreadPool,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       std::unique_ptr<HgBackingStore> backingStore,
@@ -315,6 +333,9 @@ class HgQueuedBackingStore final : public BackingStore {
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
 
+  // A set of threads processing Sapling retry requests.
+  std::unique_ptr<folly::Executor> retryThreadPool_;
+
   /**
    * Reference to the eden config, may be a null pointer in unit tests.
    */
@@ -323,6 +344,13 @@ class HgQueuedBackingStore final : public BackingStore {
   std::unique_ptr<HgBackingStore> backingStore_;
 
   std::unique_ptr<HgDatapackStore> datapackStore_;
+
+  // The main server thread pool; we push the Futures back into
+  // this pool to run their completion code to avoid clogging
+  // the importer pool. Queuing in this pool can never block (which would risk
+  // deadlock) or throw an exception when full (which would incorrectly fail the
+  // load).
+  folly::Executor* serverThreadPool_;
 
   /**
    * The import request queue. This queue is unbounded. This queue

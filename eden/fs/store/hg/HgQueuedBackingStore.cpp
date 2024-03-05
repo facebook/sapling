@@ -14,6 +14,7 @@
 
 #include <re2/re2.h>
 
+#include <folly/Executor.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
@@ -26,6 +27,7 @@
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -76,6 +78,56 @@ HgImportTraceEvent::HgImportTraceEvent(
 }
 
 HgQueuedBackingStore::HgQueuedBackingStore(
+    std::unique_ptr<folly::Executor> retryThreadPool,
+    std::shared_ptr<LocalStore> localStore,
+    EdenStatsPtr stats,
+    std::unique_ptr<HgBackingStore> backingStore,
+    std::unique_ptr<HgDatapackStore> datapackStore,
+    UnboundedQueueExecutor* serverThreadPool,
+    std::shared_ptr<ReloadableConfig> config,
+    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::unique_ptr<BackingStoreLogger> logger)
+    : localStore_(std::move(localStore)),
+      stats_(std::move(stats)),
+      retryThreadPool_(std::move(retryThreadPool)),
+      config_(config),
+      backingStore_(std::move(backingStore)),
+      datapackStore_{std::move(datapackStore)},
+      serverThreadPool_(serverThreadPool),
+      queue_(std::move(config)),
+      structuredLogger_{std::move(structuredLogger)},
+      logger_(std::move(logger)),
+      activityBuffer_{
+          config_->getEdenConfig()->hgActivityBufferSize.getValue()},
+      traceBus_{TraceBus<HgImportTraceEvent>::create(
+          "hg",
+          config_->getEdenConfig()->HgTraceBusCapacity.getValue())} {
+  uint8_t numberThreads =
+      config_->getEdenConfig()->numBackingstoreThreads.getValue();
+  if (!numberThreads) {
+    XLOG(WARN)
+        << "HgQueuedBackingStore configured to use 0 threads. Invalid, using one thread instead";
+    numberThreads = 1;
+  }
+  threads_.reserve(numberThreads);
+  for (uint16_t i = 0; i < numberThreads; i++) {
+    threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
+  }
+
+  hgTraceHandle_ = traceBus_->subscribeFunction(
+      folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
+      [this](const HgImportTraceEvent& event) {
+        activityBuffer_.addEvent(event);
+      });
+}
+
+/**
+ * Create an HgQueuedBackingStore suitable for use in unit tests. It uses an
+ * inline executor to process loaded objects rather than the thread pools used
+ * in production Eden.
+ */
+HgQueuedBackingStore::HgQueuedBackingStore(
+    std::unique_ptr<folly::Executor> retryThreadPool,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     std::unique_ptr<HgBackingStore> backingStore,
@@ -85,9 +137,11 @@ HgQueuedBackingStore::HgQueuedBackingStore(
     std::unique_ptr<BackingStoreLogger> logger)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
+      retryThreadPool_{std::move(retryThreadPool)},
       config_(config),
       backingStore_(std::move(backingStore)),
       datapackStore_{std::move(datapackStore)},
+      serverThreadPool_(retryThreadPool_.get()),
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),

@@ -9,7 +9,9 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <memory>
 #include <stdexcept>
+#include <utility>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/ImmediateFuture.h"
@@ -94,14 +96,18 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
           edenConfig,
           nullptr,
           &faultInjector)};
+  std::unique_ptr<folly::InlineExecutor> retryThreadPool{
+      std::make_unique<folly::InlineExecutor>()};
   std::unique_ptr<HgBackingStore> underlyingBackingStore{
       std::make_unique<HgBackingStore>(
+          retryThreadPool.get(),
           edenConfig,
           localStore,
           datapackStore.get(),
           stats.copy())};
   std::shared_ptr<HgQueuedBackingStore> backingStore{
       std::make_shared<HgQueuedBackingStore>(
+          std::move(retryThreadPool),
           localStore,
           stats.copy(),
           std::move(underlyingBackingStore),

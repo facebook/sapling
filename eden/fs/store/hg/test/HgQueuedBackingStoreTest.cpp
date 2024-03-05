@@ -8,6 +8,7 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
+#include <algorithm>
 #include <memory>
 
 #include "eden/common/utils/FaultInjector.h"
@@ -70,7 +71,10 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
           edenConfig,
           nullptr,
           &faultInjector)};
+  std::unique_ptr<folly::InlineExecutor> retryThreadPool{
+      std::make_unique<folly::InlineExecutor>()};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
+      retryThreadPool.get(),
       edenConfig,
       localStore,
       datapackStore.get(),
@@ -78,6 +82,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
     return std::make_unique<HgQueuedBackingStore>(
+        std::move(retryThreadPool),
         localStore,
         stats.copy(),
         std::move(backingStore),

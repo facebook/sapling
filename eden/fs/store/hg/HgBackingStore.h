@@ -46,7 +46,7 @@ class HgBackingStore {
    * Create a new HgBackingStore.
    */
   HgBackingStore(
-      AbsolutePathPiece repository,
+      folly::Executor* retryThreadPool,
       std::shared_ptr<LocalStore> localStore,
       HgDatapackStore* datapackStore,
       UnboundedQueueExecutor* serverThreadPool,
@@ -60,6 +60,7 @@ class HgBackingStore {
    * production Eden.
    */
   HgBackingStore(
+      folly::Executor* retryThreadPool,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
       HgDatapackStore* datapackStore,
@@ -161,7 +162,7 @@ class HgBackingStore {
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
   // A set of threads processing Sapling retry requests.
-  std::unique_ptr<folly::Executor> retryThreadPool_;
+  folly::Executor* retryThreadPool_;
   std::shared_ptr<ReloadableConfig> config_;
   // The main server thread pool; we push the Futures back into
   // this pool to run their completion code to avoid clogging

@@ -15,8 +15,6 @@
 #include <folly/Try.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/GlobalExecutor.h>
-#include <folly/executors/task_queue/UnboundedBlockingQueue.h>
-#include <folly/executors/thread_factory/InitThreadFactory.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -51,15 +49,6 @@ using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
 
-DEFINE_int32(
-    num_hg_import_threads,
-    // Why 8? 1 is materially slower but 24 is no better than 4 in a simple
-    // microbenchmark that touches all files.  8 is better than 4 in the case
-    // that we need to fetch a bunch from the network.
-    // See benchmarks in the doc linked from D5067763.
-    // Note that this number would benefit from occasional revisiting.
-    8,
-    "the number of hg import threads per repo");
 DEFINE_bool(
     hg_fetch_missing_trees,
     true,
@@ -73,28 +62,10 @@ namespace {
 ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
-
-/**
- * Thread factory that sets thread name and initializes a thread local
- * Sapling retry state.
- */
-class SaplingRetryThreadFactory : public folly::InitThreadFactory {
- public:
-  SaplingRetryThreadFactory(
-      AbsolutePathPiece repository,
-      EdenStatsPtr stats,
-      std::shared_ptr<StructuredLogger> logger)
-      : folly::InitThreadFactory(
-            std::make_shared<folly::NamedThreadFactory>("SaplingRetry"),
-            [repository = AbsolutePath{repository},
-             stats = std::move(stats),
-             logger] {},
-            [] {}) {}
-};
 } // namespace
 
 HgBackingStore::HgBackingStore(
-    AbsolutePathPiece repository,
+    folly::Executor* retryThreadPool,
     std::shared_ptr<LocalStore> localStore,
     HgDatapackStore* datapackStore,
     UnboundedQueueExecutor* serverThreadPool,
@@ -103,26 +74,7 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<StructuredLogger> logger)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
-      retryThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
-          FLAGS_num_hg_import_threads,
-          /* Eden performance will degrade when, for example, a status operation
-           * causes a large number of import requests to be scheduled before a
-           * lightweight operation needs to check the RocksDB cache. In that
-           * case, the RocksDB threads can end up all busy inserting work into
-           * the retry queue, preventing future requests that would hit cache
-           * from succeeding.
-           *
-           * Thus, make the retry queue unbounded.
-           *
-           * In the long term, we'll want a more comprehensive approach to
-           * bounding the parallelism of scheduled work.
-           */
-          make_unique<folly::UnboundedBlockingQueue<
-              folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<SaplingRetryThreadFactory>(
-              repository,
-              stats.copy(),
-              logger))),
+      retryThreadPool_(retryThreadPool),
       config_(std::move(config)),
       serverThreadPool_(serverThreadPool),
       logger_(std::move(logger)),
@@ -134,15 +86,16 @@ HgBackingStore::HgBackingStore(
  * production Eden.
  */
 HgBackingStore::HgBackingStore(
+    folly::Executor* retryThreadPool,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
     HgDatapackStore* datapackStore,
     EdenStatsPtr stats)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
-      retryThreadPool_{std::make_unique<folly::InlineExecutor>()},
+      retryThreadPool_{retryThreadPool},
       config_(std::move(config)),
-      serverThreadPool_{retryThreadPool_.get()},
+      serverThreadPool_{retryThreadPool_},
       logger_(nullptr),
       datapackStore_(datapackStore) {}
 
@@ -235,7 +188,7 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
   return folly::via(
-             retryThreadPool_.get(),
+             retryThreadPool_,
              [this,
               path,
               manifestNode,
@@ -485,7 +438,7 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
 SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(
-             retryThreadPool_.get(),
+             retryThreadPool_,
              [this,
               hgInfo = std::move(hgInfo),
               &liveImportBlobWatches = liveImportBlobWatches_] {
