@@ -68,10 +68,6 @@ class HgBackingStore {
 
   ~HgBackingStore();
 
-  std::optional<folly::StringPiece> getRepoName() {
-    return datapackStore_->getRepoName();
-  }
-
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;

@@ -252,7 +252,7 @@ class HgQueuedBackingStore final : public BackingStore {
   void periodicManagementTask() override;
 
   std::optional<folly::StringPiece> getRepoName() override {
-    return backingStore_->getRepoName();
+    return datapackStore_->getRepoName();
   }
 
   HgBackingStore& getHgBackingStore() {
