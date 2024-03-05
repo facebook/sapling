@@ -14,9 +14,6 @@
 #include <fb303/TFunctionStatHandler.h>
 #include <folly/Conv.h>
 #include <folly/MapUtil.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
-#include <folly/executors/task_queue/UnboundedBlockingQueue.h>
-#include <folly/executors/thread_factory/InitThreadFactory.h>
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
@@ -63,16 +60,6 @@ THRIFT_FLAG_DECLARE_bool(server_header_reject_framed);
 
 using folly::StringPiece;
 using std::string;
-
-DEFINE_int32(
-    num_hg_import_threads,
-    // Why 8? 1 is materially slower but 24 is no better than 4 in a simple
-    // microbenchmark that touches all files.  8 is better than 4 in the case
-    // that we need to fetch a bunch from the network.
-    // See benchmarks in the doc linked from D5067763.
-    // Note that this number would benefit from occasional revisiting.
-    8,
-    "the number of hg import threads per repo");
 
 namespace facebook::eden {
 
@@ -149,69 +136,23 @@ void EdenMain::runServer(const EdenServer& server) {
 }
 
 namespace {
-
-/**
- * Thread factory that sets thread name and initializes a thread local
- * Sapling retry state.
- */
-class SaplingRetryThreadFactory : public folly::InitThreadFactory {
- public:
-  SaplingRetryThreadFactory(
-      AbsolutePathPiece repository,
-      EdenStatsPtr stats,
-      std::shared_ptr<StructuredLogger> logger)
-      : folly::InitThreadFactory(
-            std::make_shared<folly::NamedThreadFactory>("SaplingRetry"),
-            [repository = AbsolutePath{repository},
-             stats = std::move(stats),
-             logger] {},
-            [] {}) {}
-};
-
 std::shared_ptr<HgQueuedBackingStore> createHgQueuedBackingStore(
     const BackingStoreFactory::CreateParams& params,
     const AbsolutePath& repoPath,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::unique_ptr<HgBackingStoreOptions> runtimeOptions) {
-  auto retryThreadPool = std::make_unique<folly::CPUThreadPoolExecutor>(
-      FLAGS_num_hg_import_threads,
-      /* Eden performance will degrade when, for example, a status operation
-       * causes a large number of import requests to be scheduled before a
-       * lightweight operation needs to check the RocksDB cache. In that
-       * case, the RocksDB threads can end up all busy inserting work into
-       * the retry queue, preventing future requests that would hit cache
-       * from succeeding.
-       *
-       * Thus, make the retry queue unbounded.
-       *
-       * In the long term, we'll want a more comprehensive approach to
-       * bounding the parallelism of scheduled work.
-       */
-      std::make_unique<folly::UnboundedBlockingQueue<
-          folly::CPUThreadPoolExecutor::CPUTask>>(),
-      std::make_shared<SaplingRetryThreadFactory>(
-          repoPath,
-          params.sharedStats.copy(),
-          params.serverState->getStructuredLogger()));
-  auto datapackStore = std::make_unique<HgDatapackStore>(
-      repoPath,
-      HgDatapackStore::computeSaplingOptions(),
-      HgDatapackStore::computeRuntimeOptions(std::move(runtimeOptions)),
-      reloadableConfig,
-      params.serverState->getStructuredLogger(),
-      &params.serverState->getFaultInjector());
-
   return std::make_shared<HgQueuedBackingStore>(
-      std::move(retryThreadPool),
+      repoPath,
       params.localStore,
       params.sharedStats.copy(),
-      std::move(datapackStore),
       params.serverState->getThreadPool().get(),
       reloadableConfig,
+      std::move(runtimeOptions),
       params.serverState->getStructuredLogger(),
       std::make_unique<BackingStoreLogger>(
           params.serverState->getStructuredLogger(),
-          params.serverState->getProcessInfoCache()));
+          params.serverState->getProcessInfoCache()),
+      &params.serverState->getFaultInjector());
 }
 } // namespace
 

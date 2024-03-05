@@ -17,6 +17,9 @@
 #include <folly/Executor.h>
 #include <folly/Range.h>
 #include <folly/String.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/task_queue/UnboundedBlockingQueue.h>
+#include <folly/executors/thread_factory/InitThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
@@ -49,6 +52,16 @@ DEFINE_bool(
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
 
+DEFINE_int32(
+    num_hg_import_threads,
+    // Why 8? 1 is materially slower but 24 is no better than 4 in a simple
+    // microbenchmark that touches all files.  8 is better than 4 in the case
+    // that we need to fetch a bunch from the network.
+    // See benchmarks in the doc linked from D5067763.
+    // Note that this number would benefit from occasional revisiting.
+    8,
+    "the number of hg import threads per repo");
+
 namespace facebook::eden {
 
 namespace {
@@ -62,6 +75,24 @@ static_assert(
 ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
+
+/**
+ * Thread factory that sets thread name and initializes a thread local
+ * Sapling retry state.
+ */
+class SaplingRetryThreadFactory : public folly::InitThreadFactory {
+ public:
+  SaplingRetryThreadFactory(
+      AbsolutePathPiece repository,
+      EdenStatsPtr stats,
+      std::shared_ptr<StructuredLogger> logger)
+      : folly::InitThreadFactory(
+            std::make_shared<folly::NamedThreadFactory>("SaplingRetry"),
+            [repository = AbsolutePath{repository},
+             stats = std::move(stats),
+             logger] {},
+            [] {}) {}
+};
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -88,19 +119,38 @@ HgImportTraceEvent::HgImportTraceEvent(
 }
 
 HgQueuedBackingStore::HgQueuedBackingStore(
-    std::unique_ptr<folly::Executor> retryThreadPool,
+    AbsolutePathPiece repository,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
-    std::unique_ptr<HgDatapackStore> datapackStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
+    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::unique_ptr<BackingStoreLogger> logger)
+    std::unique_ptr<BackingStoreLogger> logger,
+    FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
-      stats_(std::move(stats)),
-      retryThreadPool_(std::move(retryThreadPool)),
+      stats_(stats.copy()),
+      retryThreadPool_(std::make_unique<folly::CPUThreadPoolExecutor>(
+          FLAGS_num_hg_import_threads,
+          /* Eden performance will degrade when, for example, a status operation
+           * causes a large number of import requests to be scheduled before a
+           * lightweight operation needs to check the RocksDB cache. In that
+           * case, the RocksDB threads can end up all busy inserting work into
+           * the retry queue, preventing future requests that would hit cache
+           * from succeeding.
+           *
+           * Thus, make the retry queue unbounded.
+           *
+           * In the long term, we'll want a more comprehensive approach to
+           * bounding the parallelism of scheduled work.
+           */
+          std::make_unique<folly::UnboundedBlockingQueue<
+              folly::CPUThreadPoolExecutor::CPUTask>>(),
+          std::make_shared<SaplingRetryThreadFactory>(
+              repository,
+              stats.copy(),
+              structuredLogger))),
       config_(config),
-      datapackStore_{std::move(datapackStore)},
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
@@ -109,7 +159,14 @@ HgQueuedBackingStore::HgQueuedBackingStore(
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
-          config_->getEdenConfig()->HgTraceBusCapacity.getValue())} {
+          config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
+      datapackStore_{std::make_unique<HgDatapackStore>(
+          repository,
+          HgDatapackStore::computeSaplingOptions(),
+          HgDatapackStore::computeRuntimeOptions(std::move(runtimeOptions)),
+          config_,
+          structuredLogger_,
+          faultInjector)} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -135,18 +192,17 @@ HgQueuedBackingStore::HgQueuedBackingStore(
  * in production Eden.
  */
 HgQueuedBackingStore::HgQueuedBackingStore(
-    std::unique_ptr<folly::Executor> retryThreadPool,
+    AbsolutePathPiece repository,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
-    std::unique_ptr<HgDatapackStore> datapackStore,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::unique_ptr<BackingStoreLogger> logger)
+    std::unique_ptr<BackingStoreLogger> logger,
+    FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
-      retryThreadPool_{std::move(retryThreadPool)},
+      retryThreadPool_{std::make_unique<folly::InlineExecutor>()},
       config_(config),
-      datapackStore_{std::move(datapackStore)},
       serverThreadPool_(retryThreadPool_.get()),
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
@@ -155,7 +211,16 @@ HgQueuedBackingStore::HgQueuedBackingStore(
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
-          config_->getEdenConfig()->HgTraceBusCapacity.getValue())} {
+          config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
+      datapackStore_{std::make_unique<HgDatapackStore>(
+          repository,
+          HgDatapackStore::computeTestSaplingOptions(),
+          HgDatapackStore::computeTestRuntimeOptions(
+              std::make_unique<HgBackingStoreOptions>(
+                  /*ignoreFilteredPathsConfig=*/false)),
+          config_,
+          nullptr,
+          faultInjector)} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {

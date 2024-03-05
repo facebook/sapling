@@ -61,28 +61,16 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>(stats.copy())};
 
   FaultInjector faultInjector{/*enabled=*/false};
-  std::unique_ptr<HgDatapackStore> datapackStore{
-      std::make_unique<HgDatapackStore>(
-          repo.path(),
-          HgDatapackStore::computeTestSaplingOptions(),
-          HgDatapackStore::computeTestRuntimeOptions(
-              std::make_unique<HgBackingStoreOptions>(
-                  /*ignoreFilteredPathsConfig=*/false)),
-          edenConfig,
-          nullptr,
-          &faultInjector)};
-  std::unique_ptr<folly::InlineExecutor> retryThreadPool{
-      std::make_unique<folly::InlineExecutor>()};
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
     return std::make_unique<HgQueuedBackingStore>(
-        std::move(retryThreadPool),
+        repo.path(),
         localStore,
         stats.copy(),
-        std::move(datapackStore),
         edenConfig,
         std::make_shared<NullStructuredLogger>(),
-        std::make_unique<BackingStoreLogger>());
+        std::make_unique<BackingStoreLogger>(),
+        &faultInjector);
   }
 };
 

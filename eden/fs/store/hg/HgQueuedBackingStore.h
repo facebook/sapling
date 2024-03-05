@@ -123,14 +123,15 @@ struct HgImportTraceEvent : TraceEventBase {
 class HgQueuedBackingStore final : public BackingStore {
  public:
   HgQueuedBackingStore(
-      std::unique_ptr<folly::Executor> retryThreadPool,
+      AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
-      std::unique_ptr<HgDatapackStore> datapackStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
+      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
-      std::unique_ptr<BackingStoreLogger> logger);
+      std::unique_ptr<BackingStoreLogger> logger,
+      FaultInjector* FOLLY_NONNULL faultInjector);
 
   /**
    * Create an HgQueuedBackingStore suitable for use in unit tests. It uses an
@@ -138,13 +139,13 @@ class HgQueuedBackingStore final : public BackingStore {
    * in production Eden.
    */
   HgQueuedBackingStore(
-      std::unique_ptr<folly::Executor> retryThreadPool,
+      AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
-      std::unique_ptr<HgDatapackStore> datapackStore,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> structuredLogger,
-      std::unique_ptr<BackingStoreLogger> logger);
+      std::unique_ptr<BackingStoreLogger> logger,
+      FaultInjector* FOLLY_NONNULL faultInjector);
 
   ~HgQueuedBackingStore() override;
 
@@ -401,8 +402,6 @@ class HgQueuedBackingStore final : public BackingStore {
    */
   std::shared_ptr<ReloadableConfig> config_;
 
-  std::unique_ptr<HgDatapackStore> datapackStore_;
-
   // The main server thread pool; we push the Futures back into
   // this pool to run their completion code to avoid clogging
   // the importer pool. Queuing in this pool can never block (which would risk
@@ -458,6 +457,9 @@ class HgQueuedBackingStore final : public BackingStore {
 
   // Handle for TraceBus subscription.
   TraceSubscriptionHandle<HgImportTraceEvent> hgTraceHandle_;
+
+  // The datapack store using with this HgQueuedBackingStore
+  std::unique_ptr<HgDatapackStore> datapackStore_;
 };
 
 } // namespace facebook::eden
