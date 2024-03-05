@@ -259,6 +259,10 @@ class HgQueuedBackingStore final : public BackingStore {
     return *backingStore_;
   }
 
+  HgDatapackStore& getDatapackStore() {
+    return *datapackStore_;
+  }
+
   int64_t dropAllPendingRequestsFromQueue() override;
 
  private:

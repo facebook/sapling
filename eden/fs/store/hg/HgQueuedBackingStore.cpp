@@ -209,7 +209,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
 
-  backingStore_->getDatapackStore()->getBlobBatch(requests);
+  datapackStore_->getBlobBatch(requests);
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;
@@ -318,7 +318,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
-  backingStore_->getDatapackStore()->getTreeBatch(requests);
+  datapackStore_->getTreeBatch(requests);
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;
@@ -381,7 +381,7 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
     XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
   }
 
-  backingStore_->getDatapackStore()->getBlobMetadataBatch(requests);
+  datapackStore_->getBlobMetadataBatch(requests);
 
   {
     for (auto& request : requests) {
@@ -533,8 +533,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree =
-          backingStore_->getDatapackStore()->getTreeLocal(id, proxyHash)) {
+  if (auto tree = datapackStore_->getTreeLocal(id, proxyHash)) {
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
     return folly::makeSemiFuture(GetTreeResult{
@@ -613,7 +612,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  auto blob = backingStore_->getDatapackStore()->getBlobLocal(proxyHash);
+  auto blob = datapackStore_->getBlobLocal(proxyHash);
   if (blob.hasValue()) {
     return folly::makeSemiFuture(GetBlobResult{
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
@@ -695,8 +694,7 @@ HgQueuedBackingStore::getBlobMetadata(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::BlobMetadata);
 
-  auto metadata =
-      backingStore_->getDatapackStore()->getLocalBlobMetadata(proxyHash);
+  auto metadata = datapackStore_->getLocalBlobMetadata(proxyHash);
   if (metadata.hasValue()) {
     return folly::makeSemiFuture(GetBlobMetaResult{
         std::move(metadata.value()),
@@ -1176,7 +1174,7 @@ ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {
-  backingStore_->getDatapackStore()->flush();
+  datapackStore_->flush();
 }
 
 namespace {

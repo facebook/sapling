@@ -3449,8 +3449,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        hgBackingStore->getHgBackingStore().getDatapackStore()->getBlobLocal(
-            proxyHash),
+        hgBackingStore->getDatapackStore().getBlobLocal(proxyHash),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
@@ -3465,8 +3464,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        hgBackingStore->getHgBackingStore().getDatapackStore()->getBlobRemote(
-            proxyHash),
+        hgBackingStore->getDatapackStore().getBlobRemote(proxyHash),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
@@ -3534,9 +3532,8 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
     std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
         castToHgQueuedBackingStore(backingStore, edenMount->getPath());
 
-    auto metadata = hgBackingStore->getHgBackingStore()
-                        .getDatapackStore()
-                        ->getLocalBlobMetadata(proxyHash)
+    auto metadata = hgBackingStore->getDatapackStore()
+                        .getLocalBlobMetadata(proxyHash)
                         .value_or(nullptr);
 
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(

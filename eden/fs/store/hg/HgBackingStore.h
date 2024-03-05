@@ -68,10 +68,6 @@ class HgBackingStore {
 
   ~HgBackingStore();
 
-  HgDatapackStore* getDatapackStore() {
-    return datapackStore_;
-  }
-
   std::optional<folly::StringPiece> getRepoName() {
     return datapackStore_->getRepoName();
   }
