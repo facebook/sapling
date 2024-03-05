@@ -24,8 +24,9 @@ so that each commit in the stack can be reviewed individually.
 This would be the original commit message of this fictitious commit.
 `);
     expect(parsedBody).toEqual({
-      firstLine: 'Stack created with [Sapling](https://sapling-scm.com/github).',
+      firstLine: '[//]: # (BEGIN SAPLING FOOTER)',
       introduction: `\
+Stack created with [Sapling](https://sapling-scm.com/github).
 
 Stacks created by Sapling are best viewed using ReviewStack
 so that each commit in the stack can be reviewed individually.
@@ -58,8 +59,9 @@ so that each commit in the stack can be reviewed individually.
 * #789 (2 commits)
 `);
     expect(parsedBody).toEqual({
-      firstLine: 'Stack created with [Sapling](https://sapling-scm.com/github).',
+      firstLine: '[//]: # (BEGIN SAPLING FOOTER)',
       introduction: `\
+Stack created with [Sapling](https://sapling-scm.com/github).
 
 Stacks created by Sapling are best viewed using ReviewStack
 so that each commit in the stack can be reviewed individually.
@@ -86,8 +88,8 @@ Stack created with [Sapling](https://sapling-scm.com/github).
 * __->__ #123
 `);
     expect(parsedBody).toEqual({
-      firstLine: 'Stack created with [Sapling](https://sapling-scm.com/github).',
-      introduction: '',
+      firstLine: '[//]: # (BEGIN SAPLING FOOTER)',
+      introduction: 'Stack created with [Sapling](https://sapling-scm.com/github).\n',
       stack: [
         {number: 1, numCommits: 1},
         {number: 123, numCommits: 1},
