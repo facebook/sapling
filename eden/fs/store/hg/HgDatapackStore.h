@@ -65,6 +65,14 @@ class HgDatapackStore {
   std::optional<Hash20> getManifestNode(const ObjectId& commitId);
 
   void getTreeBatch(const ImportRequestsList& requests);
+  static SaplingNativeOptions computeTestSaplingOptions();
+  static std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
+      std::unique_ptr<HgBackingStoreOptions> options);
+
+  static SaplingNativeOptions computeSaplingOptions();
+
+  static std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
+      std::unique_ptr<HgBackingStoreOptions> options);
 
   folly::Try<TreePtr> getTree(
       const RelativePath& path,

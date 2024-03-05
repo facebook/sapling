@@ -91,44 +91,16 @@ class SaplingRetryThreadFactory : public folly::InitThreadFactory {
              logger] {},
             [] {}) {}
 };
-
-HgDatapackStore::SaplingNativeOptions computeSaplingOptions() {
-  HgDatapackStore::SaplingNativeOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
-HgDatapackStore::SaplingNativeOptions computeTestSaplingOptions() {
-  HgDatapackStore::SaplingNativeOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
-std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
-    std::unique_ptr<HgBackingStoreOptions> options) {
-  options->ignoreFilteredPathsConfig =
-      options->ignoreFilteredPathsConfig.value_or(false);
-  return options;
-}
-
-std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
-    std::unique_ptr<HgBackingStoreOptions> options) {
-  options->ignoreFilteredPathsConfig =
-      options->ignoreFilteredPathsConfig.value_or(false);
-  return options;
-}
-
 } // namespace
 
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     std::shared_ptr<LocalStore> localStore,
+    HgDatapackStore* datapackStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
-    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
     EdenStatsPtr stats,
-    std::shared_ptr<StructuredLogger> logger,
-    FaultInjector* FOLLY_NONNULL faultInjector)
+    std::shared_ptr<StructuredLogger> logger)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
       retryThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
@@ -154,13 +126,7 @@ HgBackingStore::HgBackingStore(
       config_(std::move(config)),
       serverThreadPool_(serverThreadPool),
       logger_(std::move(logger)),
-      datapackStore_(
-          repository,
-          computeSaplingOptions(),
-          computeRuntimeOptions(std::move(runtimeOptions)),
-          config_,
-          logger_,
-          faultInjector) {}
+      datapackStore_(datapackStore) {}
 
 /**
  * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -168,25 +134,17 @@ HgBackingStore::HgBackingStore(
  * production Eden.
  */
 HgBackingStore::HgBackingStore(
-    AbsolutePathPiece repository,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
-    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
-    EdenStatsPtr stats,
-    FaultInjector* FOLLY_NONNULL faultInjector)
+    HgDatapackStore* datapackStore,
+    EdenStatsPtr stats)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       retryThreadPool_{std::make_unique<folly::InlineExecutor>()},
       config_(std::move(config)),
       serverThreadPool_{retryThreadPool_.get()},
       logger_(nullptr),
-      datapackStore_(
-          repository,
-          computeTestSaplingOptions(),
-          computeTestRuntimeOptions(std::move(runtimeOptions)),
-          config_,
-          logger_,
-          faultInjector) {}
+      datapackStore_(datapackStore) {}
 
 HgBackingStore::~HgBackingStore() = default;
 
@@ -296,11 +254,11 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
 
                // Flush (and refresh) SaplingNativeBackingStore to ensure all
                // data is written and to rescan pack files or local indexes
-               datapackStore_.flush();
+               datapackStore_->flush();
 
                // Retry using datapackStore (SaplingNativeBackingStore)
                auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
-               auto tree = datapackStore_.getTree(
+               auto tree = datapackStore_->getTree(
                    path, manifestNode, edenTreeID, /*context*/ nullptr);
                if (tree.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
@@ -309,7 +267,7 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                  // Record miss and return error
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
-                       datapackStore_.getRepoName(),
+                       datapackStore_->getRepoName(),
                        FetchMiss::Tree,
                        tree.exception().what().toStdString(),
                        true});
@@ -473,7 +431,7 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifest(
   return folly::via(
              serverThreadPool_,
              [this, commitId] {
-               return datapackStore_.getManifestNode(commitId);
+               return datapackStore_->getManifestNode(commitId);
              })
       .thenValue([this, commitId, fetchContext = context.copy()](
                      auto manifestNode) {
@@ -513,7 +471,7 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
   // try SaplingNativeBackingStore first
   folly::stop_watch<std::chrono::milliseconds> watch;
   auto tree =
-      datapackStore_.getTree(path.copy(), manifestNode, objectId, context);
+      datapackStore_->getTree(path.copy(), manifestNode, objectId, context);
   if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from SaplingNativeBackingStore";
@@ -543,11 +501,11 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
 
                // Flush (and refresh) SaplingNativeBackingStore to ensure all
                // data is written and to rescan pack files or local indexes
-               datapackStore_.flush();
+               datapackStore_->flush();
 
                // Retry using datapackStore (SaplingNativeBackingStore).
                auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
-               auto blob = datapackStore_.getBlob(
+               auto blob = datapackStore_->getBlob(
                    hgInfo, sapling::FetchMode::AllowRemote);
                if (blob.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
@@ -556,7 +514,7 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                  // Record miss and return error
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
-                       datapackStore_.getRepoName(),
+                       datapackStore_->getRepoName(),
                        FetchMiss::Blob,
                        blob.exception().what().toStdString(),
                        true});
@@ -609,11 +567,11 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
     case HgImportObject::PREFETCH:
       return liveImportPrefetchWatches_;
     case HgImportObject::BATCHED_BLOB:
-      return datapackStore_.getLiveBatchedBlobWatches();
+      return datapackStore_->getLiveBatchedBlobWatches();
     case HgImportObject::BATCHED_TREE:
-      return datapackStore_.getLiveBatchedTreeWatches();
+      return datapackStore_->getLiveBatchedTreeWatches();
     case HgImportObject::BATCHED_BLOBMETA:
-      return datapackStore_.getLiveBatchedBlobMetaWatches();
+      return datapackStore_->getLiveBatchedBlobMetaWatches();
   }
   EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }

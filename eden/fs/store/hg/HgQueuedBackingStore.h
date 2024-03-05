@@ -122,6 +122,7 @@ class HgQueuedBackingStore final : public BackingStore {
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       std::unique_ptr<HgBackingStore> backingStore,
+      std::unique_ptr<HgDatapackStore> datapackStore,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger);
@@ -320,6 +321,8 @@ class HgQueuedBackingStore final : public BackingStore {
   std::shared_ptr<ReloadableConfig> config_;
 
   std::unique_ptr<HgBackingStore> backingStore_;
+
+  std::unique_ptr<HgDatapackStore> datapackStore_;
 
   /**
    * The import request queue. This queue is unbounded. This queue

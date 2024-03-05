@@ -48,12 +48,11 @@ class HgBackingStore {
   HgBackingStore(
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
+      HgDatapackStore* datapackStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
       EdenStatsPtr edenStats,
-      std::shared_ptr<StructuredLogger> logger,
-      FaultInjector* FOLLY_NONNULL faultInjector);
+      std::shared_ptr<StructuredLogger> logger);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -61,12 +60,10 @@ class HgBackingStore {
    * production Eden.
    */
   HgBackingStore(
-      AbsolutePathPiece repository,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
-      EdenStatsPtr,
-      FaultInjector* FOLLY_NONNULL faultInjector);
+      HgDatapackStore* datapackStore,
+      EdenStatsPtr);
 
   ~HgBackingStore();
 
@@ -132,12 +129,12 @@ class HgBackingStore {
 
   folly::SemiFuture<BlobPtr> fetchBlobFromHgImporter(HgProxyHash hgInfo);
 
-  HgDatapackStore& getDatapackStore() {
+  HgDatapackStore* getDatapackStore() {
     return datapackStore_;
   }
 
   std::optional<folly::StringPiece> getRepoName() {
-    return datapackStore_.getRepoName();
+    return datapackStore_->getRepoName();
   }
 
  private:
@@ -175,7 +172,12 @@ class HgBackingStore {
 
   std::shared_ptr<StructuredLogger> logger_;
 
-  HgDatapackStore datapackStore_;
+  // Raw pointer to the `std::unique_ptr<HgDatapackStore>` owned by the
+  // same `HgQueuedBackingStore` that also has a `std::unique_ptr` to this
+  // class. Holding this raw pointer is safe because this class's lifetime is
+  // controlled by the same class (`HgQueuedBackingStore`) that controlls the
+  // lifetime of the underlying `HgDatapackStore` here
+  HgDatapackStore* datapackStore_;
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;

@@ -120,6 +120,34 @@ TreePtr fromRawTree(
 
 } // namespace
 
+HgDatapackStore::SaplingNativeOptions HgDatapackStore::computeSaplingOptions() {
+  SaplingNativeOptions options{};
+  options.allow_retries = false;
+  return options;
+}
+
+HgDatapackStore::SaplingNativeOptions
+HgDatapackStore::computeTestSaplingOptions() {
+  SaplingNativeOptions options{};
+  options.allow_retries = false;
+  return options;
+}
+
+std::unique_ptr<HgBackingStoreOptions> HgDatapackStore::computeRuntimeOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
+
+std::unique_ptr<HgBackingStoreOptions>
+HgDatapackStore::computeTestRuntimeOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
+
 std::optional<Hash20> HgDatapackStore::getManifestNode(
     const ObjectId& commitId) {
   auto manifestNode = store_.getManifestNode(commitId.getBytes());

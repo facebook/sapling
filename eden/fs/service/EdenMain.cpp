@@ -136,25 +136,33 @@ void EdenMain::runServer(const EdenServer& server) {
 }
 
 namespace {
+
 std::shared_ptr<HgQueuedBackingStore> createHgQueuedBackingStore(
     const BackingStoreFactory::CreateParams& params,
     const AbsolutePath& repoPath,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::unique_ptr<HgBackingStoreOptions> runtimeOptions) {
+  auto datapackStore = std::make_unique<HgDatapackStore>(
+      repoPath,
+      HgDatapackStore::computeSaplingOptions(),
+      HgDatapackStore::computeRuntimeOptions(std::move(runtimeOptions)),
+      reloadableConfig,
+      params.serverState->getStructuredLogger(),
+      &params.serverState->getFaultInjector());
   auto underlyingStore = std::make_unique<HgBackingStore>(
       repoPath,
       params.localStore,
+      datapackStore.get(),
       params.serverState->getThreadPool().get(),
       reloadableConfig,
-      std::move(runtimeOptions),
       params.sharedStats.copy(),
-      params.serverState->getStructuredLogger(),
-      &params.serverState->getFaultInjector());
+      params.serverState->getStructuredLogger());
 
   return std::make_shared<HgQueuedBackingStore>(
       params.localStore,
       params.sharedStats.copy(),
       std::move(underlyingStore),
+      std::move(datapackStore),
       reloadableConfig,
       params.serverState->getStructuredLogger(),
       std::make_unique<BackingStoreLogger>(

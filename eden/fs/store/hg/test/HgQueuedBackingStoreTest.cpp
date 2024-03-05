@@ -8,6 +8,7 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
+#include <memory>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -59,20 +60,28 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>(stats.copy())};
 
   FaultInjector faultInjector{/*enabled=*/false};
+  std::unique_ptr<HgDatapackStore> datapackStore{
+      std::make_unique<HgDatapackStore>(
+          repo.path(),
+          HgDatapackStore::computeTestSaplingOptions(),
+          HgDatapackStore::computeTestRuntimeOptions(
+              std::make_unique<HgBackingStoreOptions>(
+                  /*ignoreFilteredPathsConfig=*/false)),
+          edenConfig,
+          nullptr,
+          &faultInjector)};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
-      repo.path(),
       edenConfig,
       localStore,
-      std::make_unique<HgBackingStoreOptions>(
-          /*ignoreFilteredPathsConfig=*/false),
-      stats.copy(),
-      &faultInjector)};
+      datapackStore.get(),
+      stats.copy())};
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
     return std::make_unique<HgQueuedBackingStore>(
         localStore,
         stats.copy(),
         std::move(backingStore),
+        std::move(datapackStore),
         edenConfig,
         std::make_shared<NullStructuredLogger>(),
         std::make_unique<BackingStoreLogger>());

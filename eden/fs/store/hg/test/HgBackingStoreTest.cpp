@@ -84,18 +84,28 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
           rawEdenConfig,
           ConfigReloadBehavior::NoReload)};
   FaultInjector faultInjector{/*enabled=*/false};
+  std::unique_ptr<HgDatapackStore> datapackStore{
+      std::make_unique<HgDatapackStore>(
+          repo.path(),
+          HgDatapackStore::computeTestSaplingOptions(),
+          HgDatapackStore::computeTestRuntimeOptions(
+              std::make_unique<HgBackingStoreOptions>(
+                  /*ignoreFilteredPathsConfig=*/false)),
+          edenConfig,
+          nullptr,
+          &faultInjector)};
+  std::unique_ptr<HgBackingStore> underlyingBackingStore{
+      std::make_unique<HgBackingStore>(
+          edenConfig,
+          localStore,
+          datapackStore.get(),
+          stats.copy())};
   std::shared_ptr<HgQueuedBackingStore> backingStore{
       std::make_shared<HgQueuedBackingStore>(
           localStore,
           stats.copy(),
-          std::make_unique<HgBackingStore>(
-              repo.path(),
-              edenConfig,
-              localStore,
-              std::make_unique<HgBackingStoreOptions>(
-                  /*ignoreFilteredPathsConfig=*/false),
-              stats.copy(),
-              &faultInjector),
+          std::move(underlyingBackingStore),
+          std::move(datapackStore),
           edenConfig,
           std::make_shared<NullStructuredLogger>(),
           nullptr)};

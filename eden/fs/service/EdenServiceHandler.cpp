@@ -3449,7 +3449,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        hgBackingStore->getHgBackingStore().getDatapackStore().getBlobLocal(
+        hgBackingStore->getHgBackingStore().getDatapackStore()->getBlobLocal(
             proxyHash),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
@@ -3465,7 +3465,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        hgBackingStore->getHgBackingStore().getDatapackStore().getBlobRemote(
+        hgBackingStore->getHgBackingStore().getDatapackStore()->getBlobRemote(
             proxyHash),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
@@ -3536,7 +3536,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
 
     auto metadata = hgBackingStore->getHgBackingStore()
                         .getDatapackStore()
-                        .getLocalBlobMetadata(proxyHash)
+                        ->getLocalBlobMetadata(proxyHash)
                         .value_or(nullptr);
 
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
