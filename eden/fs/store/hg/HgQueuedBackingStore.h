@@ -14,11 +14,15 @@
 #include <memory>
 #include <vector>
 
+#include "eden/common/utils/RefPtr.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/HgBackingStore.h"
+#include "eden/fs/store/hg/HgBackingStoreOptions.h"
+#include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -28,7 +32,6 @@ namespace facebook::eden {
 
 class BackingStoreLogger;
 class ReloadableConfig;
-class HgBackingStore;
 class LocalStore;
 class UnboundedQueueExecutor;
 class EdenStats;
@@ -123,7 +126,6 @@ class HgQueuedBackingStore final : public BackingStore {
       std::unique_ptr<folly::Executor> retryThreadPool,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
-      std::unique_ptr<HgBackingStore> backingStore,
       std::unique_ptr<HgDatapackStore> datapackStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
@@ -139,7 +141,6 @@ class HgQueuedBackingStore final : public BackingStore {
       std::unique_ptr<folly::Executor> retryThreadPool,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
-      std::unique_ptr<HgBackingStore> backingStore,
       std::unique_ptr<HgDatapackStore> datapackStore,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> structuredLogger,
@@ -253,10 +254,6 @@ class HgQueuedBackingStore final : public BackingStore {
 
   std::optional<folly::StringPiece> getRepoName() override {
     return datapackStore_->getRepoName();
-  }
-
-  HgBackingStore& getHgBackingStore() {
-    return *backingStore_;
   }
 
   HgDatapackStore& getDatapackStore() {
@@ -403,8 +400,6 @@ class HgQueuedBackingStore final : public BackingStore {
    * Reference to the eden config, may be a null pointer in unit tests.
    */
   std::shared_ptr<ReloadableConfig> config_;
-
-  std::unique_ptr<HgBackingStore> backingStore_;
 
   std::unique_ptr<HgDatapackStore> datapackStore_;
 

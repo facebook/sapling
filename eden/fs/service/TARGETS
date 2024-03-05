@@ -404,7 +404,6 @@ cpp_library(
         "//eden/fs/store:sqlite",
         "//eden/fs/store:store",
         "//eden/fs/store/filter:glob_filter",
-        "//eden/fs/store/hg:hg_backing_store",
         "//eden/fs/store/hg:hg_queued_backing_store",
         "//eden/fs/telemetry:hive_logger",
         "//eden/fs/telemetry:log_info",

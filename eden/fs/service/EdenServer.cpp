@@ -76,7 +76,6 @@
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/TreeCache.h"
-#include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"

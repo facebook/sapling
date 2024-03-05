@@ -130,19 +130,12 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
           &faultInjector)};
   std::unique_ptr<folly::InlineExecutor> retryThreadPool{
       std::make_unique<folly::InlineExecutor>()};
-  std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
-      retryThreadPool.get(),
-      edenConfig,
-      localStore,
-      datapackStore.get(),
-      stats.copy())};
 
   std::shared_ptr<HgQueuedBackingStore> wrappedStore_{
       std::make_shared<HgQueuedBackingStore>(
           std::move(retryThreadPool),
           localStore,
           stats.copy(),
-          std::move(backingStore),
           std::move(datapackStore),
           edenConfig,
           std::make_shared<NullStructuredLogger>(),

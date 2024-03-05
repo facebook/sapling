@@ -200,20 +200,11 @@ std::shared_ptr<HgQueuedBackingStore> createHgQueuedBackingStore(
       reloadableConfig,
       params.serverState->getStructuredLogger(),
       &params.serverState->getFaultInjector());
-  auto underlyingStore = std::make_unique<HgBackingStore>(
-      retryThreadPool.get(),
-      params.localStore,
-      datapackStore.get(),
-      params.serverState->getThreadPool().get(),
-      reloadableConfig,
-      params.sharedStats.copy(),
-      params.serverState->getStructuredLogger());
 
   return std::make_shared<HgQueuedBackingStore>(
       std::move(retryThreadPool),
       params.localStore,
       params.sharedStats.copy(),
-      std::move(underlyingStore),
       std::move(datapackStore),
       params.serverState->getThreadPool().get(),
       reloadableConfig,
