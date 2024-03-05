@@ -34,6 +34,7 @@
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
@@ -41,6 +42,13 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/StaticAssert.h"
+
+DEFINE_bool(
+    hg_fetch_missing_trees,
+    true,
+    "Set this parameter to \"no\" to disable fetching missing treemanifest "
+    "trees from the remote mercurial server.  This is generally only useful "
+    "for testing/debugging purposes");
 
 namespace facebook::eden {
 
@@ -52,6 +60,9 @@ static_assert(CheckSize<HgImportTraceEvent, 72>());
 // 10 MB overhead per backing repo is tolerable.
 static_assert(
     CheckEqual<7200000, kTraceBusCapacity * sizeof(HgImportTraceEvent)>());
+ObjectId hashFromRootId(const RootId& root) {
+  return ObjectId::fromHex(root.value());
+}
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -214,7 +225,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
       // The blobs were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's import the blob through the hg importer.
       // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
-      auto fetchSemiFuture = backingStore_->fetchBlobFromHgImporter(
+      auto fetchSemiFuture = retryGetBlob(
           request->getRequest<HgImportRequest::BlobImport>()->proxyHash);
       futures.emplace_back(
           std::move(fetchSemiFuture)
@@ -233,6 +244,58 @@ void HgQueuedBackingStore::processBlobImportRequests(
 
     folly::collectAll(futures).wait();
   }
+}
+
+folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
+    HgProxyHash hgInfo) {
+  return folly::via(
+             retryThreadPool_.get(),
+             [this,
+              hgInfo = std::move(hgInfo),
+              &liveImportBlobWatches = liveImportBlobWatches_] {
+               folly::stop_watch<std::chrono::milliseconds> watch;
+               RequestMetricsScope queueTracker{&liveImportBlobWatches};
+
+               // NOTE: In the future we plan to update
+               // SaplingNativeBackingStore (and HgDatapackStore) to provide and
+               // asynchronous interface enabling us to perform our retries
+               // there. In the meantime we use retryThreadPool_ for these
+               // longer-running retry requests to avoid starving
+               // serverThreadPool_.
+
+               // Flush (and refresh) SaplingNativeBackingStore to ensure all
+               // data is written and to rescan pack files or local indexes
+               datapackStore_->flush();
+
+               // Retry using datapackStore (SaplingNativeBackingStore).
+               auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
+               auto blob = datapackStore_->getBlob(
+                   hgInfo, sapling::FetchMode::AllowRemote);
+               if (blob.hasValue()) {
+                 stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
+                 result = blob.value();
+               } else {
+                 // Record miss and return error
+                 if (structuredLogger_) {
+                   structuredLogger_->logEvent(FetchMiss{
+                       datapackStore_->getRepoName(),
+                       FetchMiss::Blob,
+                       blob.exception().what().toStdString(),
+                       true});
+                 }
+
+                 stats_->increment(&HgBackingStoreStats::fetchBlobRetryFailure);
+                 auto ew = folly::exception_wrapper{blob.exception()};
+                 result = folly::makeFuture<BlobPtr>(std::move(ew));
+               }
+               stats_->addDuration(
+                   &HgBackingStoreStats::importBlobDuration, watch.elapsed());
+               return result;
+             })
+      .thenError([this](folly::exception_wrapper&& ew) {
+        stats_->increment(&HgBackingStoreStats::importBlobError);
+        return folly::makeSemiFuture<BlobPtr>(std::move(ew));
+      });
 }
 
 void HgQueuedBackingStore::processTreeImportRequests(
@@ -269,10 +332,15 @@ void HgQueuedBackingStore::processTreeImportRequests(
       }
 
       // The trees were either not found locally, or, when EdenAPI is enabled,
-      // not found on the server. Let's import the trees through the hg
-      // importer.
-      // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
-      auto treeSemiFuture = backingStore_->getTree(request);
+      // not found on the server. Let's retry to import the trees
+      auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
+      auto treeSemiFuture =
+          retryGetTree(
+              treeImport->proxyHash
+                  .revHash(), // this is really the manifest node
+              treeImport->hash,
+              treeImport->proxyHash.path())
+              .semi();
       futures.emplace_back(
           std::move(treeSemiFuture)
               .defer([request = std::move(request),
@@ -473,12 +541,13 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getTreeImpl(id, proxyHash, context)
+  return getTreeEnqueue(id, proxyHash, context)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
 
-ImmediateFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTreeImpl(
+ImmediateFuture<BackingStore::GetTreeResult>
+HgQueuedBackingStore::getTreeEnqueue(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
@@ -701,7 +770,188 @@ ImmediateFuture<BackingStore::GetRootTreeResult>
 HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
-  return backingStore_->getRootTree(rootId, context);
+  ObjectId commitId = hashFromRootId(rootId);
+
+  return localStore_
+      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
+      .thenValue(
+          [this, commitId, context = context.copy()](StoreResult result)
+              -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
+            if (!result.isValid()) {
+              return importTreeManifest(commitId, context)
+                  .thenValue([this, commitId](TreePtr rootTree) {
+                    XLOG(DBG1) << "imported mercurial commit " << commitId
+                               << " as tree " << rootTree->getHash();
+
+                    localStore_->put(
+                        KeySpace::HgCommitToTreeFamily,
+                        commitId,
+                        rootTree->getHash().getBytes());
+                    return BackingStore::GetRootTreeResult{
+                        rootTree, rootTree->getHash()};
+                  });
+            }
+
+            auto rootTreeHash = HgProxyHash::load(
+                localStore_.get(),
+                ObjectId{result.bytes()},
+                "getRootTree",
+                *stats_);
+            return importTreeManifestImpl(rootTreeHash.revHash(), context)
+                .thenValue([](TreePtr tree) {
+                  return BackingStore::GetRootTreeResult{tree, tree->getHash()};
+                });
+          });
+}
+
+folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifest(
+    const ObjectId& commitId,
+    const ObjectFetchContextPtr& context) {
+  return folly::via(
+             serverThreadPool_,
+             [this, commitId] {
+               return datapackStore_->getManifestNode(commitId);
+             })
+      .thenValue([this, commitId, fetchContext = context.copy()](
+                     auto manifestNode) {
+        if (!manifestNode.has_value()) {
+          auto ew = folly::exception_wrapper{std::runtime_error{
+              "Manifest node could not be found for commitId"}};
+          return folly::makeFuture<TreePtr>(std::move(ew));
+        }
+        XLOGF(
+            DBG2,
+            "commit {} has manifest node {}",
+            commitId,
+            manifestNode.value());
+        return importTreeManifestImpl(*std::move(manifestNode), fetchContext);
+      });
+}
+
+folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifestImpl(
+    Hash20 manifestNode,
+    const ObjectFetchContextPtr& context) {
+  // Record that we are at the root for this node
+  RelativePathPiece path{};
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
+
+  ObjectId objectId;
+
+  switch (hgObjectIdFormat) {
+    case HgObjectIdFormat::WithPath:
+      objectId = HgProxyHash::makeEmbeddedProxyHash1(manifestNode, path);
+      break;
+
+    case HgObjectIdFormat::HashOnly:
+      objectId = HgProxyHash::makeEmbeddedProxyHash2(manifestNode);
+      break;
+  }
+
+  // try SaplingNativeBackingStore
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  auto tree =
+      datapackStore_->getTree(path.copy(), manifestNode, objectId, context);
+  if (tree.hasValue()) {
+    XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
+               << " from SaplingNativeBackingStore";
+    stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
+    return folly::makeFuture(std::move(tree.value()));
+  }
+  // retry once if the initial fetch failed
+  return retryGetTree(manifestNode, objectId, path);
+}
+
+folly::Future<TreePtr> HgQueuedBackingStore::retryGetTree(
+    const Hash20& manifestNode,
+    const ObjectId& edenTreeID,
+    RelativePathPiece path) {
+  XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
+             << manifestNode << " for path \"" << path << "\"";
+
+  // Explicitly check for the null ID on the root directory.
+  // This isn't actually present in the mercurial data store; it has to be
+  // handled specially in the code.
+  if (path.empty() && manifestNode == kZeroHash) {
+    auto tree = std::make_shared<TreePtr::element_type>(
+        Tree::container{kPathMapDefaultCaseSensitive}, edenTreeID);
+    return folly::makeFuture(std::move(tree));
+  }
+
+  if (!FLAGS_hg_fetch_missing_trees) {
+    auto ew = folly::exception_wrapper{std::runtime_error{
+        "Data not available via edenapi, skipping fallback to importer because "
+        "of FLAGS_hg_fetch_missing_trees"}};
+    return folly::makeFuture<TreePtr>(std::move(ew));
+  }
+
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  auto writeBatch = localStore_->beginWrite();
+  // When aux metadata is enabled hg fetches file metadata along with get tree
+  // request, no need for separate network call!
+  return retryGetTreeImpl(
+             manifestNode, edenTreeID, path.copy(), std::move(writeBatch))
+      .thenValue([this, watch, config = config_](TreePtr&& result) mutable {
+        stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
+        return std::move(result);
+      });
+}
+
+folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
+    Hash20 manifestNode,
+    ObjectId edenTreeID,
+    RelativePath path,
+    std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
+  return folly::via(
+             retryThreadPool_.get(),
+             [this,
+              path,
+              manifestNode,
+              edenTreeID,
+              writeBatch,
+              &liveImportTreeWatches = liveImportTreeWatches_] {
+               folly::stop_watch<std::chrono::milliseconds> watch;
+               RequestMetricsScope queueTracker{&liveImportTreeWatches};
+
+               // NOTE: In the future we plan to update
+               // SaplingNativeBackingStore (and HgDatapackStore) to provide and
+               // asynchronous interface enabling us to perform our retries
+               // there. In the meantime we use retryThreadPool_ for these
+               // longer-running retry requests to avoid starving
+               // serverThreadPool_.
+
+               // Flush (and refresh) SaplingNativeBackingStore to ensure all
+               // data is written and to rescan pack files or local indexes
+               datapackStore_->flush();
+
+               // Retry using datapackStore (SaplingNativeBackingStore)
+               auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
+               auto tree = datapackStore_->getTree(
+                   path, manifestNode, edenTreeID, /*context*/ nullptr);
+               if (tree.hasValue()) {
+                 stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
+                 result = tree.value();
+               } else {
+                 // Record miss and return error
+                 if (structuredLogger_) {
+                   structuredLogger_->logEvent(FetchMiss{
+                       datapackStore_->getRepoName(),
+                       FetchMiss::Tree,
+                       tree.exception().what().toStdString(),
+                       true});
+                 }
+
+                 stats_->increment(&HgBackingStoreStats::fetchTreeRetryFailure);
+                 auto ew = folly::exception_wrapper{tree.exception()};
+                 result = folly::makeFuture<TreePtr>(std::move(ew));
+               }
+               stats_->addDuration(
+                   &HgBackingStoreStats::importTreeDuration, watch.elapsed());
+               return result;
+             })
+      .thenError([this](folly::exception_wrapper&& ew) {
+        stats_->increment(&HgBackingStoreStats::importTreeError);
+        return folly::makeFuture<TreePtr>(std::move(ew));
+      });
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
@@ -793,7 +1043,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
 
 size_t HgQueuedBackingStore::getImportMetric(
     RequestMetricsScope::RequestStage stage,
-    HgBackingStore::HgImportObject object,
+    HgImportObject object,
     RequestMetricsScope::RequestMetric metric) const {
   return RequestMetricsScope::getMetricFromWatches(
       metric, getImportWatches(stage, object));
@@ -802,33 +1052,74 @@ size_t HgQueuedBackingStore::getImportMetric(
 RequestMetricsScope::LockedRequestWatchList&
 HgQueuedBackingStore::getImportWatches(
     RequestMetricsScope::RequestStage stage,
-    HgBackingStore::HgImportObject object) const {
+    HgImportObject object) const {
   switch (stage) {
     case RequestMetricsScope::RequestStage::PENDING:
       return getPendingImportWatches(object);
     case RequestMetricsScope::RequestStage::LIVE:
-      return backingStore_->getLiveImportWatches(object);
+      return getLiveImportWatches(object);
   }
   EDEN_BUG() << "unknown hg import stage " << enumValue(stage);
 }
 
 RequestMetricsScope::LockedRequestWatchList&
-HgQueuedBackingStore::getPendingImportWatches(
-    HgBackingStore::HgImportObject object) const {
+HgQueuedBackingStore::getPendingImportWatches(HgImportObject object) const {
   switch (object) {
-    case HgBackingStore::HgImportObject::BLOB:
-    case HgBackingStore::HgImportObject::BATCHED_BLOB:
+    case HgImportObject::BLOB:
+    case HgImportObject::BATCHED_BLOB:
       return pendingImportBlobWatches_;
-    case HgBackingStore::HgImportObject::TREE:
-    case HgBackingStore::HgImportObject::BATCHED_TREE:
+    case HgImportObject::TREE:
+    case HgImportObject::BATCHED_TREE:
       return pendingImportTreeWatches_;
-    case HgBackingStore::HgImportObject::BLOBMETA:
-    case HgBackingStore::HgImportObject::BATCHED_BLOBMETA:
+    case HgImportObject::BLOBMETA:
+    case HgImportObject::BATCHED_BLOBMETA:
       return pendingImportBlobMetaWatches_;
-    case HgBackingStore::HgImportObject::PREFETCH:
+    case HgImportObject::PREFETCH:
       return pendingImportPrefetchWatches_;
   }
   EDEN_BUG() << "unknown hg import object type " << static_cast<int>(object);
+}
+
+RequestMetricsScope::LockedRequestWatchList&
+HgQueuedBackingStore::getLiveImportWatches(HgImportObject object) const {
+  switch (object) {
+    case HgImportObject::BLOB:
+      return liveImportBlobWatches_;
+    case HgImportObject::TREE:
+      return liveImportTreeWatches_;
+    case HgImportObject::BLOBMETA:
+      return liveImportBlobMetaWatches_;
+    case HgImportObject::PREFETCH:
+      return liveImportPrefetchWatches_;
+    case HgImportObject::BATCHED_BLOB:
+      return datapackStore_->getLiveBatchedBlobWatches();
+    case HgImportObject::BATCHED_TREE:
+      return datapackStore_->getLiveBatchedTreeWatches();
+    case HgImportObject::BATCHED_BLOBMETA:
+      return datapackStore_->getLiveBatchedBlobMetaWatches();
+  }
+  EDEN_BUG() << "unknown hg import object " << enumValue(object);
+}
+
+folly::StringPiece HgQueuedBackingStore::stringOfHgImportObject(
+    HgImportObject object) {
+  switch (object) {
+    case HgImportObject::BLOB:
+      return "blob";
+    case HgImportObject::TREE:
+      return "tree";
+    case HgImportObject::BLOBMETA:
+      return "blobmeta";
+    case HgImportObject::BATCHED_BLOB:
+      return "batched_blob";
+    case HgImportObject::BATCHED_TREE:
+      return "batched_tree";
+    case HgImportObject::BATCHED_BLOBMETA:
+      return "batched_blobmeta";
+    case HgImportObject::PREFETCH:
+      return "prefetch";
+  }
+  EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
 
 void HgQueuedBackingStore::startRecordingFetch() {
@@ -843,8 +1134,8 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
 }
 
 ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
-    const RootId& root,
-    const Hash20& manifest,
+    const RootId& rootId,
+    const Hash20& manifestId,
     const ObjectFetchContextPtr& context) {
   // This method is used when the client informs us about a target manifest
   // that it is about to update to, for the scenario when a manifest has
@@ -854,7 +1145,34 @@ ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
   //
   // When the local store is populated with metadata for newly-created
   // manifests then we can update this so that is true when appropriate.
-  return backingStore_->importTreeManifestForRoot(root, manifest, context);
+  /**
+   * Import the root manifest for the specied revision using mercurial
+   * treemanifest data.  This is called when the root manifest is provided
+   * to EdenFS directly by the hg client.
+   */
+  auto commitId = hashFromRootId(rootId);
+  return localStore_
+      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
+      .thenValue(
+          [this, commitId, manifestId, context = context.copy()](
+              StoreResult result) -> folly::Future<folly::Unit> {
+            if (result.isValid()) {
+              // We have already imported this commit, nothing to do.
+              return folly::unit;
+            }
+
+            return importTreeManifestImpl(manifestId, context)
+                .thenValue([this, commitId, manifestId](TreePtr rootTree) {
+                  XLOG(DBG3) << "imported mercurial commit " << commitId
+                             << " with manifest " << manifestId << " as tree "
+                             << rootTree->getHash();
+
+                  localStore_->put(
+                      KeySpace::HgCommitToTreeFamily,
+                      commitId,
+                      rootTree->getHash().getBytes());
+                });
+          });
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {

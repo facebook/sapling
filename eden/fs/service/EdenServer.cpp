@@ -220,7 +220,7 @@ std::optional<std::string> getUnixDomainSocketPath(
 std::string getCounterNameForImportMetric(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
-    std::optional<HgBackingStore::HgImportObject> object = std::nullopt) {
+    std::optional<HgQueuedBackingStore::HgImportObject> object = std::nullopt) {
   if (object.has_value()) {
     // base prefix . stage . object . metric
     return folly::to<std::string>(
@@ -228,7 +228,7 @@ std::string getCounterNameForImportMetric(
         ".",
         RequestMetricsScope::stringOfHgImportStage(stage),
         ".",
-        HgBackingStore::stringOfHgImportObject(object.value()),
+        HgQueuedBackingStore::stringOfHgImportObject(object.value()),
         ".",
         RequestMetricsScope::stringOfRequestMetric(metric));
   }
@@ -419,7 +419,7 @@ EdenServer::EdenServer(
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : HgBackingStore::hgImportObjects) {
+      for (auto object : HgQueuedBackingStore::hgImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->registerCallback(counterName, [this, stage, object, metric] {
           auto individual_counters = this->collectHgQueuedBackingStoreCounters(
@@ -433,7 +433,7 @@ EdenServer::EdenServer(
       auto summaryCounterName = getCounterNameForImportMetric(stage, metric);
       counters->registerCallback(summaryCounterName, [this, stage, metric] {
         std::vector<size_t> individual_counters;
-        for (auto object : HgBackingStore::hgImportObjects) {
+        for (auto object : HgQueuedBackingStore::hgImportObjects) {
           auto more_counters = this->collectHgQueuedBackingStoreCounters(
               [stage, object, metric](const HgQueuedBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
@@ -458,7 +458,7 @@ EdenServer::~EdenServer() {
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : HgBackingStore::hgImportObjects) {
+      for (auto object : HgQueuedBackingStore::hgImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->unregisterCallback(counterName);
       }

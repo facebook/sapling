@@ -147,6 +147,29 @@ class HgQueuedBackingStore final : public BackingStore {
 
   ~HgQueuedBackingStore() override;
 
+  /**
+   * Objects that can be imported from Hg
+   */
+  enum HgImportObject {
+    BLOB,
+    TREE,
+    BLOBMETA,
+    BATCHED_BLOB,
+    BATCHED_TREE,
+    BATCHED_BLOBMETA,
+    PREFETCH
+  };
+  constexpr static std::array<HgImportObject, 7> hgImportObjects{
+      HgImportObject::BLOB,
+      HgImportObject::TREE,
+      HgImportObject::BLOBMETA,
+      HgImportObject::BATCHED_BLOB,
+      HgImportObject::BATCHED_TREE,
+      HgImportObject::BATCHED_BLOBMETA,
+      HgImportObject::PREFETCH};
+
+  static folly::StringPiece stringOfHgImportObject(HgImportObject object);
+
   ActivityBuffer<HgImportTraceEvent>& getActivityBuffer() {
     return activityBuffer_;
   }
@@ -189,6 +212,17 @@ class HgQueuedBackingStore final : public BackingStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
+  // Get blob step functions
+  folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
+
+  /**
+   * Import the manifest for the specified revision using mercurial
+   * treemanifest data.
+   */
+  folly::Future<TreePtr> importTreeManifest(
+      const ObjectId& commitId,
+      const ObjectFetchContextPtr& context);
+
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
@@ -197,22 +231,22 @@ class HgQueuedBackingStore final : public BackingStore {
    * calculates `metric` for `object` imports that are `stage`.
    *    ex. HgQueuedBackingStore::getImportMetrics(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          RequestMetricsScope::HgImportObject::BLOB,
+   *          HgQueuedBackingStore::HgImportObject::BLOB,
    *          RequestMetricsScope::Metric::COUNT,
    *        )
    *    calculates the number of blob imports that are pending
    */
   size_t getImportMetric(
       RequestMetricsScope::RequestStage stage,
-      HgBackingStore::HgImportObject object,
+      HgImportObject object,
       RequestMetricsScope::RequestMetric metric) const;
 
   void startRecordingFetch() override;
   std::unordered_set<std::string> stopRecordingFetch() override;
 
   ImmediateFuture<folly::Unit> importManifestForRoot(
-      const RootId& root,
-      const Hash20& manifest,
+      const RootId& rootId,
+      const Hash20& manifestId,
       const ObjectFetchContextPtr& context) override;
 
   void periodicManagementTask() override;
@@ -231,6 +265,21 @@ class HgQueuedBackingStore final : public BackingStore {
   // Forbidden copy constructor and assignment operator
   HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;
   HgQueuedBackingStore& operator=(const HgQueuedBackingStore&) = delete;
+
+  folly::Future<TreePtr> importTreeManifestImpl(
+      Hash20 manifestNode,
+      const ObjectFetchContextPtr& context);
+
+  folly::Future<TreePtr> retryGetTree(
+      const Hash20& manifestNode,
+      const ObjectId& edenTreeID,
+      RelativePathPiece path);
+
+  folly::Future<TreePtr> retryGetTreeImpl(
+      Hash20 manifestNode,
+      ObjectId edenTreeID,
+      RelativePath path,
+      std::shared_ptr<LocalStore::WriteBatch> writeBatch);
 
   void processBlobImportRequests(
       std::vector<std::shared_ptr<HgImportRequest>>&& requests);
@@ -283,7 +332,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * the tree is present locally, as this function will always push the request
    * at the end of the queue.
    */
-  ImmediateFuture<GetTreeResult> getTreeImpl(
+  ImmediateFuture<GetTreeResult> getTreeEnqueue(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
@@ -301,23 +350,33 @@ class HgQueuedBackingStore final : public BackingStore {
    * gets the watches timing `object` imports that are `stage`
    *    ex. HgQueuedBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          HgBackingStore::HgImportObject::BLOB,
+   *          HgQueuedBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing blob imports that are pending
    */
   RequestMetricsScope::LockedRequestWatchList& getImportWatches(
       RequestMetricsScope::RequestStage stage,
-      HgBackingStore::HgImportObject object) const;
+      HgImportObject object) const;
 
   /**
    * Gets the watches timing pending `object` imports
-   *   ex. HgBackingStore::getPendingImportWatches(
-   *          HgBackingStore::HgImportObject::BLOB,
+   *   ex. HgQueuedBackingStore::getPendingImportWatches(
+   *          HgQueuedBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing pending blob imports
    */
   RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
-      HgBackingStore::HgImportObject object) const;
+      HgImportObject object) const;
+
+  /**
+   * Gets the watches timing live `object` imports
+   *   ex. HgQueuedBackingStore::getLiveImportWatches(
+   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *        )
+   *    gets the watches timing live blob imports
+   */
+  RequestMetricsScope::LockedRequestWatchList& getLiveImportWatches(
+      HgImportObject object) const;
 
   /**
    * isRecordingFetch_ indicates if HgQueuedBackingStore is recording paths
@@ -383,6 +442,14 @@ class HgQueuedBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;
+
+  // Track metrics for imports currently fetching data from hg
+  mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList liveImportTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveImportBlobMetaWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveImportPrefetchWatches_;
 
   ActivityBuffer<HgImportTraceEvent> activityBuffer_;
 
