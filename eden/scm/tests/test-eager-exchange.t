@@ -91,6 +91,7 @@ Pull (non-lazy):
     $ hg debugchangelog --migrate revlog
     $ LOG= hg pull -B master -r $B
     pulling from test:e1
+    fetching revlog data for 4 commits
     $ LOG= hg log -Gr 'all()' -T '{desc} {remotenames}'
     o  D remote/master
     │
@@ -105,6 +106,7 @@ Pull (non-lazy):
     $ hg debugchangelog --migrate fullsegments
     $ LOG= hg pull -B master -r $B
     pulling from test:e1
+    fetching revlog data for 4 commits
     $ LOG= hg log -Gr 'all()' -T '{desc} {remotenames}'
     o  B
     │

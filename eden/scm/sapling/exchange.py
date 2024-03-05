@@ -1806,12 +1806,18 @@ def _pullcommitgraph(pullop, version):
         else:
             # also need fetch commit text (messages)
             # graphnodes: [(node, [parent])]
-            nodes = [n[0] for n in graphnodes]
+            repo.ui.status(_("fetching revlog data for %s commits\n") % len(graphnodes))
+            batchsize = 100000
+            nodebatches = [
+                [n[0] for n in graphnodes[start : start + batchsize]]
+                for start in range(0, len(graphnodes), batchsize)
+            ]
             # commitdata result: [{"hgid": node, "revlog_data": p1_p2_text}]
             prefix_len = len(nullid) * 2
             # node_text: {node: text}
             node_text = {
                 c["hgid"]: c["revlog_data"][prefix_len:]
+                for nodes in nodebatches
                 for c in repo.edenapi.commitdata(nodes)[0]
             }
             # input of addcommits: [(node, [parent], text)]
