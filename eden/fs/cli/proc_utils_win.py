@@ -135,7 +135,11 @@ def open_process(pid: int, access: int = _PROCESS_QUERY_LIMITED_INFORMATION) -> 
 def open_process_token(process_handle: Handle) -> Handle:
     token_handle = Handle.make_empty()
     if not _win32.OpenProcessToken(
-        process_handle.handle, _TOKEN_READ, token_handle.asref()
+        process_handle.handle,
+        _TOKEN_READ,
+        # pyre-fixme[6]: For 3rd argument expected `_PHANDLE` but got
+        #  `_Pointer[c_void_p]`.
+        token_handle.asref(),
     ):
         raise_win_error()
 
@@ -151,6 +155,8 @@ def is_token_elevated(token_handle: Handle) -> bool:
             _TOKEN_ELEVATION,
             ctypes.byref(elevation),
             ctypes.c_ulong(ctypes.sizeof(elevation)),
+            # pyre-fixme[6]: For 5th argument expected `_PDWORD` but got
+            #  `_Pointer[c_ulong]`.
             ctypes.pointer(output_size),
         )
         == 0
@@ -180,6 +186,7 @@ def get_exit_code(handle: Handle) -> Optional[int]:
     """
     STILL_ACTIVE = 259
     exit_code = _DWORD()
+    # pyre-fixme[6]: For 2nd argument expected `_LPDWORD` but got `_Pointer[c_ulong]`.
     if _win32.GetExitCodeProcess(handle.handle, ctypes.pointer(exit_code)) == 0:
         raise_win_error()
 
