@@ -416,7 +416,7 @@ async fn setup_repo<'a>(
 
     // Only walk derived node types that the repo is configured to contain
     include_node_types.retain(|t| {
-        if let Some(t) = t.derived_data_name() {
+        if let Some(t) = t.derived_data_type() {
             repo_config.derived_data_config.is_enabled(t)
         } else {
             true
@@ -428,7 +428,7 @@ async fn setup_repo<'a>(
 
     if let Some(ref mut chunking) = tail_params.chunking {
         chunking.chunk_by.retain(|t| {
-            if let Some(t) = t.derived_data_name() {
+            if let Some(t) = t.derived_data_type() {
                 repo_config.derived_data_config.is_enabled(t)
             } else {
                 true

@@ -10,15 +10,10 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blame::fetch_content_for_blame;
-use blame::RootBlameV2;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data::BonsaiDerived;
-use fastlog::RootFastlog;
 use fsnodes::prefetch_content_metadata;
-use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::future::try_join3;
 use futures::future::try_join4;
@@ -29,6 +24,7 @@ use futures::stream::TryStreamExt;
 use futures::TryFutureExt;
 use manifest::find_intersection_of_diffs;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
@@ -42,17 +38,15 @@ use unodes::RootUnodeManifestId;
 
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.
-const PREFETCH_CONTENT_TYPES: &[&str] = &[RootBlameV2::DERIVABLE_NAME];
-const PREFETCH_CONTENT_METADATA_TYPES: &[&str] = &[RootFsnodeId::DERIVABLE_NAME];
-const PREFETCH_UNODE_TYPES: &[&str] = &[
-    RootFastlog::DERIVABLE_NAME,
-    RootDeletedManifestV2Id::DERIVABLE_NAME,
-];
+const PREFETCH_CONTENT_TYPES: &[DerivableType] = &[DerivableType::BlameV2];
+const PREFETCH_CONTENT_METADATA_TYPES: &[DerivableType] = &[DerivableType::Fsnodes];
+const PREFETCH_UNODE_TYPES: &[DerivableType] =
+    &[DerivableType::Fastlog, DerivableType::DeletedManifests];
 
 pub async fn warmup(
     ctx: &CoreContext,
     repo: &(impl RepoBlobstoreArc + RepoDerivedDataArc + Send + Sync),
-    derived_data_type: &str,
+    derived_data_type: DerivableType,
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     // Warmup bonsai changesets unconditionally because

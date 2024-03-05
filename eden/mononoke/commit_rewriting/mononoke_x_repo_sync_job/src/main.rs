@@ -81,6 +81,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::MononokeApp;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
@@ -227,7 +228,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     common_pushrebase_bookmarks: HashSet<BookmarkKey>,
     base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
-    derived_data_types: Vec<String>,
+    derived_data_types: Vec<DerivableType>,
     tailing_args: TailingArgs<M, Repo>,
     sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
@@ -301,7 +302,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     backpressure_params: &BackpressureParams,
-    derived_data_types: &[String],
+    derived_data_types: &[DerivableType],
     sleep_duration: Duration,
     maybe_bookmark_regex: &Option<Regex>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -568,7 +569,11 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 common_bookmarks,
                 scuba_sample,
                 backpressure_params,
-                tail_cmd_args.derived_data_types.clone(),
+                tail_cmd_args
+                    .derived_data_types
+                    .into_iter()
+                    .map(|ty| DerivableType::from_name(&ty))
+                    .collect::<Result<_>>()?,
                 tailing_args,
                 sleep_duration,
                 maybe_bookmark_regex,

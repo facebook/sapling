@@ -22,7 +22,8 @@ use crate::thrift;
 /// It also provides `as_ref()` method for serialization.
 /// and implements FromStr trait for deserialization.
 #[derive(
-    AsRefStr, EnumString, Display, Debug, Clone, PartialEq, Eq, Hash, EnumIter
+    AsRefStr, EnumString, Display, Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Ord,
+    PartialOrd
 )]
 pub enum DerivableType {
     BlameV2,

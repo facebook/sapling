@@ -28,10 +28,8 @@ use clap::Parser;
 use cmdlib::monitoring::AliveService;
 use context::CoreContext;
 use context::SessionContainer;
-use derived_data_manager::BonsaiDerivable;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use filenodes_derivation::FilenodesOnlyPublic;
 use futures::future::try_join;
 use futures::future::TryFutureExt;
 #[cfg(fbcode_build)]
@@ -44,6 +42,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use slog::error;
@@ -202,8 +201,16 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         HashMap::new()
     };
 
-    let mut derived_data_types = args.derived_data_type;
-    let excluded_derived_data_types = args.exclude_derived_data_type;
+    let mut derived_data_types = args
+        .derived_data_type
+        .into_iter()
+        .map(|name| DerivableType::from_name(&name))
+        .collect::<Result<Vec<_>>>()?;
+    let excluded_derived_data_types = args
+        .exclude_derived_data_type
+        .into_iter()
+        .map(|name| DerivableType::from_name(&name))
+        .collect::<Result<Vec<_>>>()?;
 
     for v in &excluded_derived_data_types {
         if derived_data_types.contains(v) {
@@ -211,12 +218,10 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         }
     }
 
-    // Make sure filenodes derived unless specifically excluded since public hg changesets must have filenodes derived
-    let filenodes_derived_name = FilenodesOnlyPublic::NAME.to_string();
-    if !derived_data_types.contains(&filenodes_derived_name)
-        && !excluded_derived_data_types.contains(&filenodes_derived_name)
+    if !derived_data_types.contains(&DerivableType::FileNodes)
+        && !excluded_derived_data_types.contains(&DerivableType::FileNodes)
     {
-        derived_data_types.push(filenodes_derived_name);
+        derived_data_types.push(DerivableType::FileNodes);
     }
 
     let repo_arg = args.repo.as_repo_arg();

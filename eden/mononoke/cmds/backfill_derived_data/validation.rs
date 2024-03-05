@@ -42,6 +42,7 @@ use manifest::Manifest;
 use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use readonlyblob::ReadOnlyBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -74,9 +75,11 @@ pub async fn validate(
         .await?
         .get_commits();
 
-    let derived_data_type = sub_m
-        .value_of(ARG_DERIVED_DATA_TYPE)
-        .ok_or_else(|| anyhow!("{} is not set", ARG_DERIVED_DATA_TYPE))?;
+    let derived_data_type = DerivableType::from_name(
+        sub_m
+            .value_of(ARG_DERIVED_DATA_TYPE)
+            .ok_or_else(|| anyhow!("{} is not set", ARG_DERIVED_DATA_TYPE))?,
+    )?;
     info!(
         ctx.logger(),
         "Validating {} on {}...",
@@ -116,13 +119,13 @@ pub async fn validate(
         // already exists in underlying mapping. This option disables this feature.
         membonsaihgmapping.set_save_noop_writes(true);
 
-        let types = std::iter::once(derived_data_type.to_string())
+        let types = std::iter::once(derived_data_type)
             .chain(
                 DERIVED_DATA_DEPS
-                    .get(derived_data_type)
+                    .get(&derived_data_type)
                     .unwrap()
                     .iter()
-                    .map(|t| t.to_string()),
+                    .cloned(),
             )
             .collect::<Vec<_>>();
 
@@ -179,20 +182,20 @@ async fn validate_generated_data<'a>(
     mem_blob_repo: &'a BlobRepo,
 ) -> Result<(), Error> {
     let mem_blob = mem_blob_repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
-    if real_derived_utils.name() == RootFsnodeId::NAME {
+    if real_derived_utils.variant() == RootFsnodeId::VARIANT {
         validate_fsnodes(ctx, real_repo, cs_id, &mem_blob).await?;
-    } else if real_derived_utils.name() == RootSkeletonManifestId::NAME {
+    } else if real_derived_utils.variant() == RootSkeletonManifestId::VARIANT {
         validate_skeleton_manifests(ctx, real_repo, cs_id, &mem_blob).await?;
-    } else if real_derived_utils.name() == RootUnodeManifestId::NAME {
+    } else if real_derived_utils.variant() == RootUnodeManifestId::VARIANT {
         validate_unodes(ctx, real_repo, cs_id, &mem_blob).await?;
-    } else if real_derived_utils.name() == MappedHgChangesetId::NAME {
+    } else if real_derived_utils.variant() == MappedHgChangesetId::VARIANT {
         validate_hgchangesets(ctx, real_repo, cs_id, &mem_blob).await?;
     } else {
         warn_once.call_once(||
             warn!(
                 ctx.logger(),
                 "Validating generated blobs is not supported for {}, so no validation of generated blobs was done!",
-                real_derived_utils.name()
+                real_derived_utils.variant().name()
             )
         );
     }

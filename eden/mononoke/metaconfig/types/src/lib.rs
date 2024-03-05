@@ -32,6 +32,7 @@ use derive_more::Into;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
@@ -317,18 +318,22 @@ pub struct DerivedDataConfig {
 
 impl DerivedDataConfig {
     /// Returns whether the named derived data type is enabled.
-    pub fn is_enabled(&self, name: &str) -> bool {
+    pub fn is_enabled(&self, derivable_type: DerivableType) -> bool {
         if let Some(config) = self.available_configs.get(&self.enabled_config_name) {
-            config.types.contains(name)
+            config.types.contains(&derivable_type)
         } else {
             false
         }
     }
 
     /// Return whether the named derived data type is enabled in named config
-    pub fn is_enabled_for_config_name(&self, name: &str, config_name: &str) -> bool {
+    pub fn is_enabled_for_config_name(
+        &self,
+        derivable_type: DerivableType,
+        config_name: &str,
+    ) -> bool {
         if let Some(config) = self.available_configs.get(config_name) {
-            config.types.contains(name)
+            config.types.contains(&derivable_type)
         } else {
             false
         }
@@ -349,7 +354,7 @@ impl DerivedDataConfig {
 #[derive(Eq, Clone, Default, Debug, PartialEq)]
 pub struct DerivedDataTypesConfig {
     /// The configured types.
-    pub types: HashSet<String>,
+    pub types: HashSet<DerivableType>,
 
     /// Key prefixes for mappings.  These are used to generate unique
     /// mapping keys when rederiving existing derived data types.
@@ -359,7 +364,7 @@ pub struct DerivedDataTypesConfig {
     ///
     /// The prefix is applied to the commit hash part of the key, i.e.
     /// `derived_root_fsnode.HASH` becomes `derived_root_fsnode.PREFIXHASH`.
-    pub mapping_key_prefixes: HashMap<String, String>,
+    pub mapping_key_prefixes: HashMap<DerivableType, String>,
 
     /// What unode version should be used.
     pub unode_version: UnodeVersion,

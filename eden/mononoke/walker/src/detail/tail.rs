@@ -225,8 +225,8 @@ where
     let mut state_start = Timestamp::now();
 
     let with_hg = repo_params.include_node_types.iter().any(|n| {
-        let n = n.derived_data_name();
-        n == Some(MappedHgChangesetId::NAME) || n == Some(FilenodesOnlyPublic::NAME)
+        let n = n.derived_data_type();
+        n == Some(MappedHgChangesetId::VARIANT) || n == Some(FilenodesOnlyPublic::VARIANT)
     });
 
     // At every iteration, check if cancellation is requested by the caller.

@@ -34,6 +34,7 @@ backfill derived data
   * Completed derived data command setup for repo repo (glob)
   * Initiating derived data command execution for repo repo* (glob)
   * using repo "repo" repoid RepositoryId(0)* (glob)
+  * Reloading redacted config from configerator (glob)
   * Initializing CfgrLiveCommitSyncConfig, repo: repo (glob)
   * Initialized PushRedirect configerator config, repo: repo (glob)
   * Initialized all commit sync versions configerator config, repo: repo (glob)

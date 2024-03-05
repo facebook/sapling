@@ -59,8 +59,8 @@ const DERIVED_PREFIX: &str = "derived_";
 static DERIVED_DATA_NODE_TYPES: Lazy<HashMap<String, Vec<NodeType>>> = Lazy::new(|| {
     let mut m: HashMap<String, Vec<NodeType>> = HashMap::new();
     for t in NodeType::iter() {
-        if let Some(name) = t.derived_data_name() {
-            m.entry(format!("{}{}", DERIVED_PREFIX, name))
+        if let Some(derived_data_type) = t.derived_data_type() {
+            m.entry(format!("{}{}", DERIVED_PREFIX, derived_data_type.name()))
                 .or_default()
                 .push(t);
         }

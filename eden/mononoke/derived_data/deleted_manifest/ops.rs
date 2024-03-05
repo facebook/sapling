@@ -77,7 +77,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
             return Ok(Some(PathState::Exists(unode_entry)));
         }
 
-        let use_deleted_manifest = repo.repo_derived_data().config().is_enabled(Self::NAME);
+        let use_deleted_manifest = repo.repo_derived_data().config().is_enabled(Self::VARIANT);
         if !use_deleted_manifest {
             return Ok(None);
         }

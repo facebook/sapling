@@ -295,7 +295,7 @@ impl<'a> ChangeTargetConfig<'a> {
 
         let derivers = FuturesUnordered::new();
         for ty in derived_data_types {
-            let utils = derived_data_utils(ctx.fb, target_repo.inner_repo(), ty)?;
+            let utils = derived_data_utils(ctx.fb, target_repo.inner_repo(), *ty)?;
             derivers.push(utils.derive(
                 ctx.clone(),
                 target_repo.inner_repo().repo_derived_data_arc(),

@@ -528,11 +528,11 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
 
     let derived_data_types_config = DerivedDataTypesConfig {
         types: hashset! {
-            ChangesetInfo::NAME.to_string(),
-            MappedGitCommitId::NAME.to_string(),
-            TreeHandle::NAME.to_string(),
-            RootGitDeltaManifestId::NAME.to_string(),
-            RootUnodeManifestId::NAME.to_string(),
+            ChangesetInfo::VARIANT,
+            MappedGitCommitId::VARIANT,
+            TreeHandle::VARIANT,
+            RootGitDeltaManifestId::VARIANT,
+            RootUnodeManifestId::VARIANT,
         },
         ..Default::default()
     };

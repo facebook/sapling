@@ -13,10 +13,11 @@ use clap::Args;
 use context::CoreContext;
 use context::SessionClass;
 use derived_data_utils::derived_data_utils;
-use derived_data_utils::POSSIBLE_DERIVED_TYPES;
+use derived_data_utils::POSSIBLE_DERIVED_TYPE_NAMES;
 use futures_stats::TimedTryFutureExt;
 use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
+use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataRef;
 use slog::trace;
 
@@ -27,7 +28,7 @@ pub(super) struct DeriveArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
     /// Type of derived data
-    #[clap(long, short = 'T', required = true,  value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPES), group="types to derive")]
+    #[clap(long, short = 'T', required = true,  value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPE_NAMES), group="types to derive")]
     derived_data_types: Vec<String>,
     /// Whether all enabled derived data types should be derived
     #[clap(long, required = true, group = "types to derive")]
@@ -47,7 +48,10 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
         derived_data_config.types.clone()
     } else {
         // Only derive the types specified by the user
-        args.derived_data_types.into_iter().collect::<HashSet<_>>()
+        args.derived_data_types
+            .into_iter()
+            .map(|ty| DerivableType::from_name(&ty))
+            .collect::<Result<HashSet<_>>>()?
     };
 
     for derived_data_type in derived_data_types {
@@ -60,11 +64,11 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
 async fn derive_data_type(
     ctx: &mut CoreContext,
     repo: &Repo,
-    derived_data_type: String,
+    derived_data_type: DerivableType,
     csids: &[ChangesetId],
     rederive: bool,
 ) -> Result<()> {
-    let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type.clone())?;
+    let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
 
     if rederive {
         trace!(ctx.logger(), "about to rederive {} commits", csids.len());
@@ -85,7 +89,7 @@ async fn derive_data_type(
         trace!(
             ctx.logger(),
             "derived {} for {} in {}ms, {:?}",
-            &derived_data_type,
+            derived_data_type.name(),
             csid,
             stats.completion_time.as_millis(),
             res,

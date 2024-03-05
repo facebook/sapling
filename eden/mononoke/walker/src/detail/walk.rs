@@ -1940,7 +1940,7 @@ where
             with_blame: repo_params.include_node_types.contains(&NodeType::Blame),
             with_fastlog: include_node_types
                 .iter()
-                .any(|n| n.derived_data_name() == Some(RootFastlog::NAME)),
+                .any(|n| n.derived_data_type() == Some(RootFastlog::VARIANT)),
             with_filenodes: include_edge_types.iter().any(|e| {
                 e.outgoing_type() == NodeType::HgFileNode
                     || e.outgoing_type() == NodeType::HgManifestFileNode

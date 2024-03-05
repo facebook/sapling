@@ -18,7 +18,6 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::anyhow;
-use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
@@ -34,7 +33,6 @@ use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::DerivedDataTypesConfig;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
-use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::Rederivation;
@@ -63,6 +61,7 @@ use lock_ext::LockExt;
 use mercurial_derivation::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
@@ -77,7 +76,7 @@ use unodes::RootUnodeManifestId;
 
 pub mod warmup;
 
-pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
+pub const POSSIBLE_DERIVED_TYPE_NAMES: &[&str] = &[
     RootUnodeManifestId::NAME,
     RootFastlog::NAME,
     MappedHgChangesetId::NAME,
@@ -95,26 +94,44 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootTestShardedManifestDirectory::NAME,
 ];
 
+pub const POSSIBLE_DERIVED_TYPES: &[DerivableType] = &[
+    RootUnodeManifestId::VARIANT,
+    RootFastlog::VARIANT,
+    MappedHgChangesetId::VARIANT,
+    RootFsnodeId::VARIANT,
+    RootBlameV2::VARIANT,
+    ChangesetInfo::VARIANT,
+    FilenodesOnlyPublic::VARIANT,
+    RootSkeletonManifestId::VARIANT,
+    TreeHandle::VARIANT,
+    MappedGitCommitId::VARIANT,
+    RootDeletedManifestV2Id::VARIANT,
+    RootBssmV3DirectoryId::VARIANT,
+    RootGitDeltaManifestId::VARIANT,
+    RootTestManifestDirectory::VARIANT,
+    RootTestShardedManifestDirectory::VARIANT,
+];
+
 pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
 
 lazy_static! {
     // TODO: come up with a better way to maintain these dependencies T77090285
-    pub static ref DERIVED_DATA_DEPS: HashMap<&'static str, Vec<&'static str>> = {
-        let unodes = RootUnodeManifestId::NAME;
-        let fastlog = RootFastlog::NAME;
-        let hgchangeset = MappedHgChangesetId::NAME;
-        let fsnodes = RootFsnodeId::NAME;
-        let blame = RootBlameV2::NAME;
-        let changesets_info = ChangesetInfo::NAME;
-        let deleted_mf_v2 = RootDeletedManifestV2Id::NAME;
-        let filenodes = FilenodesOnlyPublic::NAME;
-        let skeleton_mf = RootSkeletonManifestId::NAME;
-        let bssm_v3 = RootBssmV3DirectoryId::NAME;
-        let git_delta_manifest = RootGitDeltaManifestId::NAME;
-        let git_commit = MappedGitCommitId::NAME;
-        let git_tree = TreeHandle::NAME;
-        let test_mf = RootTestManifestDirectory::NAME;
-        let test_sharded_mf = RootTestShardedManifestDirectory::NAME;
+    pub static ref DERIVED_DATA_DEPS: HashMap<DerivableType, Vec<DerivableType>> = {
+        let unodes = RootUnodeManifestId::VARIANT;
+        let fastlog = RootFastlog::VARIANT;
+        let hgchangeset = MappedHgChangesetId::VARIANT;
+        let fsnodes = RootFsnodeId::VARIANT;
+        let blame = RootBlameV2::VARIANT;
+        let changesets_info = ChangesetInfo::VARIANT;
+        let deleted_mf_v2 = RootDeletedManifestV2Id::VARIANT;
+        let filenodes = FilenodesOnlyPublic::VARIANT;
+        let skeleton_mf = RootSkeletonManifestId::VARIANT;
+        let bssm_v3 = RootBssmV3DirectoryId::VARIANT;
+        let git_delta_manifest = RootGitDeltaManifestId::VARIANT;
+        let git_commit = MappedGitCommitId::VARIANT;
+        let git_tree = TreeHandle::VARIANT;
+        let test_mf = RootTestManifestDirectory::VARIANT;
+        let test_sharded_mf = RootTestShardedManifestDirectory::VARIANT;
 
         let mut dag = HashMap::new();
 
@@ -136,7 +153,7 @@ lazy_static! {
 
         dag
     };
-    pub static ref DERIVED_DATA_ORDER: HashMap<&'static str, usize> = {
+    pub static ref DERIVED_DATA_ORDER: HashMap<DerivableType, usize> = {
         let order = sort_topological(&*DERIVED_DATA_DEPS).expect("derived data can not form loop");
         order
             .into_iter()
@@ -160,12 +177,12 @@ pub fn derive_data_for_csids(
     ctx: &CoreContext,
     repo: &(impl Repo + Clone + Send + Sync + 'static),
     csids: Vec<ChangesetId>,
-    derived_data_types: &[String],
+    derived_data_types: &[DerivableType],
 ) -> Result<impl Future<Output = Result<()>>> {
     let derivations = FuturesUnordered::new();
 
     for data_type in derived_data_types {
-        let derived_utils = derived_data_utils(ctx.fb, repo, data_type)?;
+        let derived_utils = derived_data_utils(ctx.fb, repo, *data_type)?;
 
         let mut futs = vec![];
         for csid in &csids {
@@ -258,7 +275,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
     fn clear_regenerate(&self);
 
     /// Get a name for this type of derived data
-    fn name(&self) -> &'static str;
+    fn variant(&self) -> DerivableType;
 
     /// Find all underived ancestors of the target changeset id.
     ///
@@ -312,8 +329,8 @@ impl<Derivable> Rederivation for DerivedUtilsFromManager<Derivable>
 where
     Derivable: NewBonsaiDerivable,
 {
-    fn needs_rederive(&self, derivable_name: &str, csid: ChangesetId) -> Option<bool> {
-        if derivable_name == Derivable::NAME {
+    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> Option<bool> {
+        if derivable_type == Derivable::VARIANT {
             if self.rederive.with(|rederive| rederive.contains(&csid)) {
                 return Some(true);
             }
@@ -321,8 +338,8 @@ where
         None
     }
 
-    fn mark_derived(&self, derivable_name: &str, csid: ChangesetId) {
-        if derivable_name == Derivable::NAME {
+    fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId) {
+        if derivable_type == Derivable::VARIANT {
             self.rederive.with(|rederive| rederive.remove(&csid));
         }
     }
@@ -417,8 +434,8 @@ where
         self.rederive.with(|rederive| rederive.clear());
     }
 
-    fn name(&self) -> &'static str {
-        Derivable::NAME
+    fn variant(&self) -> DerivableType {
+        Derivable::VARIANT
     }
 
     async fn find_underived<'a>(
@@ -445,19 +462,21 @@ where
 pub fn derived_data_utils(
     fb: FacebookInit,
     repo: &impl Repo,
-    name: impl AsRef<str>,
+    derivable_type: DerivableType,
 ) -> Result<Arc<dyn DerivedUtils>> {
-    let name = name.as_ref();
     let derived_data_config = repo.repo_derived_data().config();
-    let types_config = if derived_data_config.is_enabled(name) {
+    let types_config = if derived_data_config.is_enabled(derivable_type) {
         repo.repo_derived_data().active_config()
     } else {
-        return Err(anyhow!("Derived data type {} is not configured", name));
+        return Err(anyhow!(
+            "Derived data type {} is not configured",
+            derivable_type.name()
+        ));
     };
     derived_data_utils_impl(
         fb,
         repo,
-        name,
+        derivable_type,
         types_config,
         &derived_data_config.enabled_config_name,
     )
@@ -466,11 +485,11 @@ pub fn derived_data_utils(
 pub fn derived_data_utils_for_config(
     fb: FacebookInit,
     repo: &impl Repo,
-    type_name: impl AsRef<str>,
+    derivable_type: DerivableType,
     config_name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>> {
     let config = repo.repo_derived_data().config();
-    if config.is_enabled_for_config_name(type_name.as_ref(), config_name.as_ref()) {
+    if config.is_enabled_for_config_name(derivable_type, config_name.as_ref()) {
         let named_config = repo
             .repo_derived_data()
             .config()
@@ -481,101 +500,92 @@ pub fn derived_data_utils_for_config(
                     config_name.as_ref()
                 )
             })?;
-        derived_data_utils_impl(
-            fb,
-            repo,
-            type_name.as_ref(),
-            named_config,
-            config_name.as_ref(),
-        )
+        derived_data_utils_impl(fb, repo, derivable_type, named_config, config_name.as_ref())
     } else {
-        derived_data_utils(fb, repo, type_name)
+        derived_data_utils(fb, repo, derivable_type)
     }
 }
 
 fn derived_data_utils_impl(
     _fb: FacebookInit,
     repo: &impl Repo,
-    name: &str,
+    derivable_type: DerivableType,
     config: &DerivedDataTypesConfig,
     enabled_config_name: &str,
 ) -> Result<Arc<dyn DerivedUtils>> {
     let enabled_config_name = enabled_config_name.to_string();
-    match name {
-        RootUnodeManifestId::NAME => Ok(Arc::new(
+    match derivable_type {
+        RootUnodeManifestId::VARIANT => Ok(Arc::new(
             DerivedUtilsFromManager::<RootUnodeManifestId>::new(repo, config, enabled_config_name),
         )),
-        RootFastlog::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFastlog>::new(
+        RootFastlog::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<RootFastlog>::new(
             repo,
             config,
             enabled_config_name,
         ))),
-        MappedHgChangesetId::NAME => Ok(Arc::new(
+        MappedHgChangesetId::VARIANT => Ok(Arc::new(
             DerivedUtilsFromManager::<MappedHgChangesetId>::new(repo, config, enabled_config_name),
         )),
-        RootFsnodeId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFsnodeId>::new(
+        RootFsnodeId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<RootFsnodeId>::new(
             repo,
             config,
             enabled_config_name,
         ))),
-        RootBlameV2::NAME => match config.blame_version {
+        RootBlameV2::VARIANT => match config.blame_version {
             BlameVersion::V2 => Ok(Arc::new(DerivedUtilsFromManager::<RootBlameV2>::new(
                 repo,
                 config,
                 enabled_config_name,
             ))),
         },
-        ChangesetInfo::NAME => Ok(Arc::new(DerivedUtilsFromManager::<ChangesetInfo>::new(
+        ChangesetInfo::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<ChangesetInfo>::new(
             repo,
             config,
             enabled_config_name,
         ))),
-        RootDeletedManifestV2Id::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+        RootDeletedManifestV2Id::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
             RootDeletedManifestV2Id,
         >::new(
             repo, config, enabled_config_name
         ))),
-        FilenodesOnlyPublic::NAME => Ok(Arc::new(
+        FilenodesOnlyPublic::VARIANT => Ok(Arc::new(
             DerivedUtilsFromManager::<FilenodesOnlyPublic>::new(repo, config, enabled_config_name),
         )),
-        RootSkeletonManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+        RootSkeletonManifestId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
             RootSkeletonManifestId,
         >::new(
             repo, config, enabled_config_name
         ))),
-        TreeHandle::NAME => Ok(Arc::new(DerivedUtilsFromManager::<TreeHandle>::new(
+        TreeHandle::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<TreeHandle>::new(
             repo,
             config,
             enabled_config_name,
         ))),
-        MappedGitCommitId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<MappedGitCommitId>::new(
-            repo,
-            config,
-            enabled_config_name,
-        ))),
-        RootGitDeltaManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+        MappedGitCommitId::VARIANT => Ok(Arc::new(
+            DerivedUtilsFromManager::<MappedGitCommitId>::new(repo, config, enabled_config_name),
+        )),
+        RootGitDeltaManifestId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
             RootGitDeltaManifestId,
         >::new(
             repo, config, enabled_config_name
         ))),
-        RootBssmV3DirectoryId::NAME => Ok(Arc::new(
-            DerivedUtilsFromManager::<RootBssmV3DirectoryId>::new(
-                repo,
-                config,
-                enabled_config_name,
-            ),
-        )),
-        RootTestManifestDirectory::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+        RootBssmV3DirectoryId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootBssmV3DirectoryId,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
+        RootTestManifestDirectory::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
             RootTestManifestDirectory,
         >::new(
             repo, config, enabled_config_name
         ))),
-        RootTestShardedManifestDirectory::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
-            RootTestShardedManifestDirectory,
-        >::new(
-            repo, config, enabled_config_name
-        ))),
-        name => Err(format_err!("Unsupported derived data type: {}", name)),
+        RootTestShardedManifestDirectory::VARIANT => {
+            Ok(Arc::new(DerivedUtilsFromManager::<
+                RootTestShardedManifestDirectory,
+            >::new(
+                repo, config, enabled_config_name
+            )))
+        }
     }
 }
 
@@ -678,14 +688,17 @@ impl DeriveGraph {
                             slog::debug!(
                                 ctx.logger(),
                                 "[{}:{}] count:{} start:{} end:{}",
-                                deriver.name(),
+                                deriver.variant().name(),
                                 node.id,
                                 node.csids.len(),
                                 first,
                                 last
                             );
-                            let mut scuba =
-                                create_derive_graph_scuba_sample(&ctx, &node.csids, deriver.name());
+                            let mut scuba = create_derive_graph_scuba_sample(
+                                &ctx,
+                                &node.csids,
+                                Some(deriver.variant()),
+                            );
                             scuba
                                 .add_future_stats(&stats)
                                 .log_with_msg("Derived stack", None);
@@ -709,7 +722,10 @@ impl DeriveGraph {
         let mut stack = vec![self];
         let mut visited = HashSet::new();
         while let Some(node) = stack.pop() {
-            let deriver = node.deriver.as_ref().map_or_else(|| "root", |d| d.name());
+            let deriver = node
+                .deriver
+                .as_ref()
+                .map_or_else(|| "root", |d| d.variant().name());
             writeln!(
                 w,
                 " {0} [label=\"[{1}] id:{0} csids:{2}\"]",
@@ -733,12 +749,13 @@ impl DeriveGraph {
 pub fn create_derive_graph_scuba_sample(
     ctx: &CoreContext,
     nodes: &[ChangesetId],
-    derived_data_name: &str,
+    derivable_type: Option<DerivableType>,
 ) -> MononokeScubaSampleBuilder {
     let mut scuba_sample = ctx.scuba().clone();
-    scuba_sample
-        .add("stack_size", nodes.len())
-        .add("derived_data", derived_data_name);
+    scuba_sample.add("stack_size", nodes.len());
+    if let Some(derivable_type) = derivable_type {
+        scuba_sample.add("derived_data", derivable_type.name());
+    }
     if let (Some(first), Some(last)) = (nodes.first(), nodes.last()) {
         scuba_sample
             .add("first_csid", format!("{}", first))
@@ -787,24 +804,24 @@ pub async fn build_derive_graph(
 ) -> Result<DeriveGraph> {
     // resolve derived data types dependencies, and require derivers for all dependencies
     // to be provided.
-    derivers.sort_by_key(|d| DERIVED_DATA_ORDER.get(d.name()));
+    derivers.sort_by_key(|d| DERIVED_DATA_ORDER.get(&d.variant()));
     let deriver_to_index: HashMap<_, _> = derivers
         .iter()
         .enumerate()
-        .map(|(i, d)| (d.name(), i))
+        .map(|(i, d)| (d.variant(), i))
         .collect();
     let mut derivers_dependiencies = Vec::new();
     derivers_dependiencies.resize_with(derivers.len(), Vec::new);
     for (index, deriver) in derivers.iter().enumerate() {
-        let dep_names = DERIVED_DATA_DEPS
-            .get(deriver.name())
-            .ok_or_else(|| anyhow!("unknown derived data type: {}", deriver.name()))?;
-        for dep_name in dep_names {
-            let dep_index = deriver_to_index.get(dep_name).ok_or_else(|| {
+        let deps = DERIVED_DATA_DEPS
+            .get(&deriver.variant())
+            .ok_or_else(|| anyhow!("unknown derived data type: {}", deriver.variant().name()))?;
+        for dep in deps {
+            let dep_index = deriver_to_index.get(dep).ok_or_else(|| {
                 anyhow!(
                     "{0} depends on {1}, but deriver for {1} is not provided",
-                    deriver.name(),
-                    dep_name,
+                    deriver.variant(),
+                    dep,
                 )
             })?;
             derivers_dependiencies[index].push(dep_index);
@@ -868,7 +885,7 @@ pub async fn build_derive_graph(
                 None => continue,
                 Some(csid_derivers) => {
                     for deriver in csid_derivers.iter() {
-                        let index = deriver_to_index[deriver.name()];
+                        let index = deriver_to_index[&deriver.variant()];
                         csids_by_deriver[index].push(*csid);
                     }
                 }
@@ -1033,7 +1050,7 @@ pub fn find_underived_many(
 pub async fn check_derived(
     ctx: &CoreContext,
     ddm: &DerivedDataManager,
-    derived_data_type: &DerivableType,
+    derived_data_type: DerivableType,
     head_cs_id: ChangesetId,
 ) -> Result<bool, DerivationError> {
     match derived_data_type {
@@ -1202,8 +1219,8 @@ mod tests {
             .get(ctx.clone(), &BookmarkKey::new("master").unwrap())
             .await?
             .unwrap();
-        let blame_deriver = derived_data_utils(ctx.fb, &repo, "blame")?;
-        let unodes_deriver = derived_data_utils(ctx.fb, &repo, "unodes")?;
+        let blame_deriver = derived_data_utils(ctx.fb, &repo, DerivableType::BlameV2)?;
+        let unodes_deriver = derived_data_utils(ctx.fb, &repo, DerivableType::Unodes)?;
 
         // make sure we require all dependencies, blame depens on unodes
         let graph = build_derive_graph(
@@ -1242,9 +1259,18 @@ mod tests {
                 8 => vec![6, 7],
             }
         );
-        assert_eq!(nodes[0].deriver.as_ref().unwrap().name(), "unodes");
-        assert_eq!(nodes[1].deriver.as_ref().unwrap().name(), "blame");
-        assert_eq!(nodes[2].deriver.as_ref().unwrap().name(), "unodes");
+        assert_eq!(
+            nodes[0].deriver.as_ref().unwrap().variant(),
+            DerivableType::Unodes
+        );
+        assert_eq!(
+            nodes[1].deriver.as_ref().unwrap().variant(),
+            DerivableType::BlameV2
+        );
+        assert_eq!(
+            nodes[2].deriver.as_ref().unwrap().variant(),
+            DerivableType::Unodes
+        );
 
         let graph = build_derive_graph(
             &ctx,
@@ -1369,8 +1395,8 @@ mod tests {
             unimplemented!()
         }
 
-        fn name(&self) -> &'static str {
-            self.deriver.name()
+        fn variant(&self) -> DerivableType {
+            self.deriver.variant()
         }
 
         async fn find_underived<'a>(
@@ -1397,9 +1423,9 @@ mod tests {
         let c = *dag.get("C").unwrap();
 
         let thin_out = ThinOut::new_keep_all();
-        let blame_deriver = derived_data_utils(ctx.fb, &repo, "blame")?;
+        let blame_deriver = derived_data_utils(ctx.fb, &repo, DerivableType::BlameV2)?;
         let unodes_deriver = {
-            let deriver = derived_data_utils(ctx.fb, &repo, "unodes")?;
+            let deriver = derived_data_utils(ctx.fb, &repo, DerivableType::Unodes)?;
             Arc::new(CountedDerivedUtils::new(deriver))
         };
 
@@ -1411,8 +1437,8 @@ mod tests {
             thin_out,
         )
         .map_ok(|(csid, _parents, derivers)| {
-            let names: Vec<_> = derivers.iter().map(|d| d.name()).collect();
-            (csid, names)
+            let types: Vec<_> = derivers.iter().map(|d| d.variant()).collect();
+            (csid, types)
         })
         .try_collect()
         .await?;
@@ -1420,9 +1446,9 @@ mod tests {
         assert_eq!(
             entries,
             btreemap! {
-                a => vec!["blame", "unodes"],
-                b => vec!["blame", "unodes"],
-                c => vec!["blame", "unodes"],
+                a => vec![DerivableType::BlameV2, DerivableType::Unodes],
+                b => vec![DerivableType::BlameV2, DerivableType::Unodes],
+                c => vec![DerivableType::BlameV2, DerivableType::Unodes],
             }
         );
 
@@ -1441,8 +1467,8 @@ mod tests {
             thin_out,
         )
         .map_ok(|(csid, _parents, derivers)| {
-            let names: Vec<_> = derivers.iter().map(|d| d.name()).collect();
-            (csid, names)
+            let types: Vec<_> = derivers.iter().map(|d| d.variant()).collect();
+            (csid, types)
         })
         .try_collect()
         .await?;
@@ -1450,8 +1476,8 @@ mod tests {
         assert_eq!(
             entries,
             btreemap! {
-                b => vec!["blame"],
-                c => vec!["blame", "unodes"],
+                b => vec![DerivableType::BlameV2],
+                c => vec![DerivableType::BlameV2, DerivableType::Unodes],
             }
         );
         anyhow::Ok(())
@@ -1470,9 +1496,9 @@ mod tests {
         let utils_v2 = derived_data_utils_impl(
             fb,
             &repo,
-            "unodes",
+            DerivableType::Unodes,
             &DerivedDataTypesConfig {
-                types: hashset! { String::from("unodes") },
+                types: hashset! { DerivableType::Unodes },
                 unode_version: UnodeVersion::V2,
                 ..Default::default()
             },

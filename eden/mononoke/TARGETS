@@ -96,8 +96,6 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/derived_data:derived_data_manager",
-        "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",
         "//eden/mononoke/mercurial:mercurial_revlog",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",

@@ -150,7 +150,8 @@ mod args {
     use derived_data_utils::derived_data_utils_for_config;
     use derived_data_utils::DerivedUtils;
     use derived_data_utils::DEFAULT_BACKFILLING_CONFIG_NAME;
-    use derived_data_utils::POSSIBLE_DERIVED_TYPES;
+    use derived_data_utils::POSSIBLE_DERIVED_TYPE_NAMES;
+    use mononoke_types::DerivableType;
 
     use super::Repo;
 
@@ -163,7 +164,7 @@ mod args {
         #[clap(long, default_value = DEFAULT_BACKFILLING_CONFIG_NAME)]
         pub(super) backfill_config_name: String,
         /// Type of derived data
-        #[clap(long, short = 'T', value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPES))]
+        #[clap(long, short = 'T', value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPE_NAMES))]
         pub(super) derived_data_type: String,
     }
 
@@ -177,11 +178,15 @@ mod args {
                 derived_data_utils_for_config(
                     ctx.fb,
                     repo,
-                    self.derived_data_type,
+                    DerivableType::from_name(&self.derived_data_type)?,
                     self.backfill_config_name,
                 )
             } else {
-                derived_data_utils(ctx.fb, &repo, self.derived_data_type)
+                derived_data_utils(
+                    ctx.fb,
+                    &repo,
+                    DerivableType::from_name(&self.derived_data_type)?,
+                )
             }
         }
     }

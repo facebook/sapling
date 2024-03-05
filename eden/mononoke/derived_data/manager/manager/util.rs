@@ -53,7 +53,7 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        if self.config().types.contains(Derivable::NAME) {
+        if self.config().types.contains(&Derivable::VARIANT) {
             Ok(())
         } else {
             Err(DerivationError::Disabled(

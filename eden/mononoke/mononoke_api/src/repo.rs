@@ -902,21 +902,21 @@ impl RepoContext {
         self.blob_repo()
             .repo_derived_data()
             .config()
-            .is_enabled(ChangesetInfo::NAME)
+            .is_enabled(ChangesetInfo::VARIANT)
     }
 
     pub fn derive_gitcommit_enabled(&self) -> bool {
         self.blob_repo()
             .repo_derived_data()
             .config()
-            .is_enabled(MappedGitCommitId::NAME)
+            .is_enabled(MappedGitCommitId::VARIANT)
     }
 
     pub fn derive_hgchangesets_enabled(&self) -> bool {
         self.blob_repo()
             .repo_derived_data()
             .config()
-            .is_enabled(MappedHgChangesetId::NAME)
+            .is_enabled(MappedHgChangesetId::VARIANT)
     }
 
     /// Load bubble from id

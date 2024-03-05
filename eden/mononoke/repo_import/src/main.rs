@@ -391,7 +391,7 @@ async fn derive_bonsais_single_repo(
 
     let derived_utils: Vec<_> = derived_data_types
         .iter()
-        .map(|ty| derived_data_utils(ctx.fb, repo.as_blob_repo(), ty))
+        .map(|ty| derived_data_utils(ctx.fb, repo.as_blob_repo(), *ty))
         .collect::<Result<_, _>>()?;
 
     stream::iter(derived_utils)

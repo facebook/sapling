@@ -64,6 +64,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::DeletedManifestV2Id;
+use mononoke_types::DerivableType;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
@@ -514,7 +515,7 @@ impl fmt::Display for NodeType {
 
 impl NodeType {
     /// Derived data types are keyed by their statically defined NAME
-    pub fn derived_data_name(&self) -> Option<&'static str> {
+    pub fn derived_data_type(&self) -> Option<DerivableType> {
         match self {
             NodeType::Root => None,
             // Bonsai
@@ -522,37 +523,37 @@ impl NodeType {
             NodeType::Changeset => None,
             // from filenodes/lib.rs: If hg changeset is not generated, then root filenode can't possible be generated
             // therefore this is the same as MappedHgChangesetId + FilenodesOnlyPublic
-            NodeType::BonsaiHgMapping => Some(FilenodesOnlyPublic::NAME),
+            NodeType::BonsaiHgMapping => Some(FilenodesOnlyPublic::VARIANT),
             NodeType::PhaseMapping => None,
             NodeType::PublishedBookmarks => None,
             // Hg
-            NodeType::HgBonsaiMapping => Some(MappedHgChangesetId::NAME),
-            NodeType::HgChangeset => Some(MappedHgChangesetId::NAME),
-            NodeType::HgChangesetViaBonsai => Some(MappedHgChangesetId::NAME),
-            NodeType::HgManifest => Some(MappedHgChangesetId::NAME),
-            NodeType::HgFileEnvelope => Some(MappedHgChangesetId::NAME),
-            NodeType::HgFileNode => Some(FilenodesOnlyPublic::NAME),
-            NodeType::HgManifestFileNode => Some(FilenodesOnlyPublic::NAME),
+            NodeType::HgBonsaiMapping => Some(MappedHgChangesetId::VARIANT),
+            NodeType::HgChangeset => Some(MappedHgChangesetId::VARIANT),
+            NodeType::HgChangesetViaBonsai => Some(MappedHgChangesetId::VARIANT),
+            NodeType::HgManifest => Some(MappedHgChangesetId::VARIANT),
+            NodeType::HgFileEnvelope => Some(MappedHgChangesetId::VARIANT),
+            NodeType::HgFileNode => Some(FilenodesOnlyPublic::VARIANT),
+            NodeType::HgManifestFileNode => Some(FilenodesOnlyPublic::VARIANT),
             // Content
             NodeType::FileContent => None,
             NodeType::FileContentMetadataV2 => None,
             NodeType::AliasContentMapping => None,
             // Derived data
-            NodeType::Blame => Some(RootBlameV2::NAME),
-            NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
-            NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
-            NodeType::DeletedManifestV2 => Some(RootDeletedManifestV2Id::NAME),
-            NodeType::DeletedManifestV2Mapping => Some(RootDeletedManifestV2Id::NAME),
-            NodeType::FastlogBatch => Some(RootFastlog::NAME),
-            NodeType::FastlogDir => Some(RootFastlog::NAME),
-            NodeType::FastlogFile => Some(RootFastlog::NAME),
-            NodeType::Fsnode => Some(RootFsnodeId::NAME),
-            NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
-            NodeType::SkeletonManifest => Some(RootSkeletonManifestId::NAME),
-            NodeType::SkeletonManifestMapping => Some(RootSkeletonManifestId::NAME),
-            NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
-            NodeType::UnodeManifest => Some(RootUnodeManifestId::NAME),
-            NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
+            NodeType::Blame => Some(RootBlameV2::VARIANT),
+            NodeType::ChangesetInfo => Some(ChangesetInfo::VARIANT),
+            NodeType::ChangesetInfoMapping => Some(ChangesetInfo::VARIANT),
+            NodeType::DeletedManifestV2 => Some(RootDeletedManifestV2Id::VARIANT),
+            NodeType::DeletedManifestV2Mapping => Some(RootDeletedManifestV2Id::VARIANT),
+            NodeType::FastlogBatch => Some(RootFastlog::VARIANT),
+            NodeType::FastlogDir => Some(RootFastlog::VARIANT),
+            NodeType::FastlogFile => Some(RootFastlog::VARIANT),
+            NodeType::Fsnode => Some(RootFsnodeId::VARIANT),
+            NodeType::FsnodeMapping => Some(RootFsnodeId::VARIANT),
+            NodeType::SkeletonManifest => Some(RootSkeletonManifestId::VARIANT),
+            NodeType::SkeletonManifestMapping => Some(RootSkeletonManifestId::VARIANT),
+            NodeType::UnodeFile => Some(RootUnodeManifestId::VARIANT),
+            NodeType::UnodeManifest => Some(RootUnodeManifestId::VARIANT),
+            NodeType::UnodeMapping => Some(RootUnodeManifestId::VARIANT),
         }
     }
 
@@ -1177,9 +1178,9 @@ mod tests {
         // supported in graph
         let mut s = HashSet::new();
         for t in NodeType::iter() {
-            if let Some(d) = t.derived_data_name() {
+            if let Some(d) = t.derived_data_type() {
                 assert!(
-                    a.contains(d),
+                    a.contains(&d),
                     "graph derived data type {} for {} is not known by default_test_repo_config()",
                     d,
                     t
@@ -1191,23 +1192,23 @@ mod tests {
         // If you are adding a new derived data type, please add it to the walker graph rather than to this
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
-        let grandfathered: HashSet<&'static str> = HashSet::from_iter(vec![
-            "git_trees",
-            "git_commits",
-            "git_delta_manifests",
-            "testmanifest",
-            "testshardedmanifest",
-            "bssm_v3",
+        let grandfathered: HashSet<DerivableType> = HashSet::from_iter(vec![
+            DerivableType::GitTree,
+            DerivableType::GitCommit,
+            DerivableType::GitDeltaManifest,
+            DerivableType::TestManifest,
+            DerivableType::TestShardedManifest,
+            DerivableType::BssmV3,
         ]);
         let mut missing = HashSet::new();
         for t in a {
-            if s.contains(t.as_str()) {
+            if s.contains(&t) {
                 assert!(
-                    !grandfathered.contains(t.as_str()),
+                    !grandfathered.contains(&t),
                     "You've added support for {}, please remove it from the grandfathered missing set",
                     t
                 );
-            } else if !grandfathered.contains(t.as_str()) {
+            } else if !grandfathered.contains(&t) {
                 missing.insert(t);
             }
         }

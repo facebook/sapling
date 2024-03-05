@@ -21,6 +21,7 @@ use fixtures::TestRepoFixture;
 use futures::try_join;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
+use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataArc;
 use smallvec::SmallVec;
 
@@ -38,7 +39,7 @@ use crate::StoreRequest;
 
 #[fbinit::test]
 async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
-    create_commit(fb, "skeleton_manifests").await?;
+    create_commit(fb, DerivableType::SkeletonManifests).await?;
 
     Ok(())
 }
@@ -46,7 +47,10 @@ async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
 // Check that commits were created correctly, and also check that only a single
 // derived data type was derived (i.e. check that we don't derive something that we aren't supposed
 // to).
-async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result<(), Error> {
+async fn create_commit(
+    fb: FacebookInit,
+    derived_data_to_derive: DerivableType,
+) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
@@ -186,7 +190,7 @@ async fn validate_unnecessary_derived_data_is_not_derived(
     repo: &RepoContext,
     parent_cs_id: ChangesetId,
     cs_id: ChangesetId,
-    derived_data_to_derive: &str,
+    derived_data_to_derive: DerivableType,
 ) -> Result<(), Error> {
     for ty in &repo
         .blob_repo()
@@ -194,11 +198,11 @@ async fn validate_unnecessary_derived_data_is_not_derived(
         .active_config()
         .types
     {
-        if ty == "git_trees" {
+        if *ty == DerivableType::GitTree {
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;
         }
-        let utils = derived_data_utils(ctx.fb, repo.blob_repo(), ty)?;
+        let utils = derived_data_utils(ctx.fb, repo.blob_repo(), *ty)?;
         let not_derived = utils
             .pending(
                 ctx.clone(),
@@ -207,7 +211,7 @@ async fn validate_unnecessary_derived_data_is_not_derived(
             )
             .await?;
         // It's expected to derive skeleton manifests for the parent commit
-        if ty == derived_data_to_derive {
+        if *ty == derived_data_to_derive {
             assert_eq!(not_derived, vec![cs_id]);
         } else {
             assert_eq!(not_derived, vec![parent_cs_id, cs_id]);

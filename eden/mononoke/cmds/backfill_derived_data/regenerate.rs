@@ -32,6 +32,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataArc;
 use slog::debug;
 
@@ -89,7 +90,7 @@ pub async fn regenerate_derived_data(
     ctx: &CoreContext,
     repo: &BlobRepo,
     csids: Vec<ChangesetId>,
-    derived_data_types: Vec<String>,
+    derived_data_types: Vec<DerivableType>,
     opts: &DeriveOptions,
 ) -> Result<RegenerateStats, Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);

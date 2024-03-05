@@ -61,6 +61,7 @@ use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::Timestamp;
 use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
@@ -167,35 +168,32 @@ impl WarmBookmarksCacheBuilder {
         phases: &ArcPhases,
     ) -> Result<(), Error> {
         self.add_derived_data_warmers(
-            vec![MappedHgChangesetId::NAME, FilenodesOnlyPublic::NAME],
+            &[MappedHgChangesetId::VARIANT, FilenodesOnlyPublic::VARIANT],
             repo_derived_data,
         )?;
         self.add_public_phase_warmer(phases);
         Ok(())
     }
 
-    fn add_derived_data_warmers<'name, Name>(
+    fn add_derived_data_warmers<'a>(
         &mut self,
-        types: impl IntoIterator<Item = &'name Name>,
+        types: impl IntoIterator<Item = &'a DerivableType>,
         repo_derived_data: &ArcRepoDerivedData,
-    ) -> Result<(), Error>
-    where
-        Name: 'name + AsRef<str> + ?Sized,
-    {
-        let types = types.into_iter().map(AsRef::as_ref).collect::<HashSet<_>>();
+    ) -> Result<(), Error> {
+        let types = types.into_iter().collect::<HashSet<_>>();
 
         let config = repo_derived_data.config();
         for ty in types.iter() {
-            if !config.is_enabled(ty) {
+            if !config.is_enabled(**ty) {
                 return Err(anyhow!(
                     "{} is not enabled for {}",
-                    ty,
+                    ty.name(),
                     self.repo_identity.name()
                 ));
             }
         }
 
-        if types.contains(MappedHgChangesetId::NAME) {
+        if types.contains(&MappedHgChangesetId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<MappedHgChangesetId>(
                     &self.ctx,
@@ -203,75 +201,74 @@ impl WarmBookmarksCacheBuilder {
                 ));
         }
 
-        if types.contains(RootUnodeManifestId::NAME) {
+        if types.contains(&RootUnodeManifestId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<RootUnodeManifestId>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(RootFsnodeId::NAME) {
+        if types.contains(&RootFsnodeId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<RootFsnodeId>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(RootSkeletonManifestId::NAME) {
+        if types.contains(&RootSkeletonManifestId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<RootSkeletonManifestId>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(RootBlameV2::NAME) {
+        if types.contains(&RootBlameV2::VARIANT) {
             self.warmers.push(create_derived_data_warmer::<RootBlameV2>(
                 &self.ctx,
                 repo_derived_data.clone(),
             ));
         }
-        if types.contains(ChangesetInfo::NAME) {
+        if types.contains(&ChangesetInfo::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<ChangesetInfo>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        // deleted manifest share the same name
-        if types.contains(RootDeletedManifestV2Id::NAME) {
+        if types.contains(&RootDeletedManifestV2Id::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<RootDeletedManifestV2Id>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(RootFastlog::NAME) {
+        if types.contains(&RootFastlog::VARIANT) {
             self.warmers.push(create_derived_data_warmer::<RootFastlog>(
                 &self.ctx,
                 repo_derived_data.clone(),
             ));
         }
-        if types.contains(RootBssmV3DirectoryId::NAME) {
+        if types.contains(&RootBssmV3DirectoryId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<RootBssmV3DirectoryId>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(TreeHandle::NAME) {
+        if types.contains(&TreeHandle::VARIANT) {
             self.warmers.push(create_derived_data_warmer::<TreeHandle>(
                 &self.ctx,
                 repo_derived_data.clone(),
             ));
         }
-        if types.contains(MappedGitCommitId::NAME) {
+        if types.contains(&MappedGitCommitId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<MappedGitCommitId>(
                     &self.ctx,
                     repo_derived_data.clone(),
                 ));
         }
-        if types.contains(RootGitDeltaManifestId::NAME) {
+        if types.contains(&RootGitDeltaManifestId::VARIANT) {
             self.warmers
                 .push(create_derived_data_warmer::<RootGitDeltaManifestId>(
                     &self.ctx,

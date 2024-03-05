@@ -130,7 +130,7 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         if let Some(rederivation) = self.rederivation.as_ref() {
-            if rederivation.needs_rederive(Derivable::NAME, csid) == Some(true) {
+            if rederivation.needs_rederive(Derivable::VARIANT, csid) == Some(true) {
                 return Ok(None);
             }
         }
@@ -148,7 +148,9 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         if let Some(rederivation) = self.rederivation.as_ref() {
-            csids.retain(|csid| rederivation.needs_rederive(Derivable::NAME, *csid) != Some(true));
+            csids.retain(|csid| {
+                rederivation.needs_rederive(Derivable::VARIANT, *csid) != Some(true)
+            });
         }
         let derived = Derivable::fetch_batch(ctx, self, &csids).await?;
         Ok(derived)
@@ -266,7 +268,7 @@ impl DerivationContext {
     {
         self.config()
             .mapping_key_prefixes
-            .get(Derivable::NAME)
+            .get(&Derivable::VARIANT)
             .map_or("", String::as_str)
     }
 
@@ -275,7 +277,7 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         if let Some(rederivation) = self.rederivation.as_ref() {
-            rederivation.needs_rederive(Derivable::NAME, csid) == Some(true)
+            rederivation.needs_rederive(Derivable::VARIANT, csid) == Some(true)
         } else {
             false
         }
@@ -286,7 +288,7 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         if let Some(rederivation) = self.rederivation.as_ref() {
-            rederivation.mark_derived(Derivable::NAME, csid);
+            rederivation.mark_derived(Derivable::VARIANT, csid);
         }
     }
 

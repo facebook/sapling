@@ -43,6 +43,7 @@ use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 use phases::PhasesRef;
 use repo_identity::RepoIdentityRef;
@@ -82,7 +83,7 @@ pub struct Blobimport<'a> {
     pub has_globalrev: bool,
     pub populate_git_mapping: bool,
     pub small_repo_id: Option<RepositoryId>,
-    pub derived_data_types: Vec<String>,
+    pub derived_data_types: Vec<DerivableType>,
     pub origin_repo: Option<BackupSourceRepo>,
 }
 
@@ -245,7 +246,14 @@ impl<'a> Blobimport<'a> {
             };
 
             if !derived_data_types.is_empty() {
-                info!(ctx.logger(), "Deriving data for: {:?}", derived_data_types);
+                info!(
+                    ctx.logger(),
+                    "Deriving data for: {:?}",
+                    derived_data_types
+                        .iter()
+                        .map(|ty| ty.name())
+                        .collect::<Vec<_>>()
+                );
             }
 
             let derivation_work = derive_data_for_csids(

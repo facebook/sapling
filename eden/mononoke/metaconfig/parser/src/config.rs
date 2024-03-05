@@ -546,6 +546,7 @@ mod test {
     use metaconfig_types::UpdateLoggingConfig;
     use metaconfig_types::WalkerConfig;
     use mononoke_types::path::MPath;
+    use mononoke_types::DerivableType;
     use mononoke_types::NonRootMPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
@@ -1220,9 +1221,9 @@ mod test {
                     enabled_config_name: "default".to_string(),
                     available_configs: hashmap!["default".to_string() => DerivedDataTypesConfig {
                         types: hashset! {
-                            String::from("fsnodes"),
-                            String::from("unodes"),
-                            String::from("blame"),
+                            DerivableType::Fsnodes,
+                            DerivableType::Unodes,
+                            DerivableType::BlameV2,
                         },
                         mapping_key_prefixes: hashmap! {},
                         unode_version: UnodeVersion::V2,

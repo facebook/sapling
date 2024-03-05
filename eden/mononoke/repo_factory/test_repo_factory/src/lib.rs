@@ -13,8 +13,6 @@ use std::sync::Arc;
 use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
-use blame::RootBlameV2;
 use blobstore::Blobstore;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
@@ -35,7 +33,6 @@ use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
-use changeset_info::ChangesetInfo;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use commit_graph::ArcCommitGraph;
@@ -44,30 +41,20 @@ use commit_graph_compat::ChangesetsCommitGraphCompat;
 use context::CoreContext;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
-use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data_manager::BonsaiDerivable;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStore;
-use fastlog::RootFastlog;
 use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
-use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
-use fsnodes::RootFsnodeId;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
-use git_types::MappedGitCommitId;
-use git_types::RootGitDeltaManifestId;
-use git_types::TreeHandle;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::hashmap;
-use maplit::hashset;
 use megarepo_mapping::MegarepoMapping;
 use memblob::Memblob;
-use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use metaconfig_types::ArcRepoConfig;
@@ -82,6 +69,7 @@ use metaconfig_types::SegmentedChangelogConfig;
 use metaconfig_types::SegmentedChangelogHeadConfig;
 use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::UnodeVersion;
+use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
@@ -121,7 +109,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::new_test_segmented_changelog;
 use segmented_changelog::SegmentedChangelogSqlConnections;
 use segmented_changelog_types::ArcSegmentedChangelog;
-use skeleton_manifest::RootSkeletonManifestId;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::sqlite::SqliteCallbacks;
 use sql::Connection;
@@ -133,11 +120,9 @@ use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
+use strum::IntoEnumIterator;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use test_manifest::RootTestManifestDirectory;
-use test_sharded_manifest::RootTestShardedManifestDirectory;
-use unodes::RootUnodeManifestId;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::ArcRepoHandlerBase;
 use wireproto_handler::PushRedirectorBase;
@@ -172,23 +157,7 @@ pub struct TestRepoFactory {
 /// This configuration enables all derived data types at the latest version.
 pub fn default_test_repo_config() -> RepoConfig {
     let derived_data_types_config = DerivedDataTypesConfig {
-        types: hashset! {
-            RootBlameV2::NAME.to_string(),
-            FilenodesOnlyPublic::NAME.to_string(),
-            ChangesetInfo::NAME.to_string(),
-            RootFastlog::NAME.to_string(),
-            RootFsnodeId::NAME.to_string(),
-            RootDeletedManifestV2Id::NAME.to_string(),
-            RootUnodeManifestId::NAME.to_string(),
-            TreeHandle::NAME.to_string(),
-            MappedGitCommitId::NAME.to_string(),
-            RootGitDeltaManifestId::NAME.to_string(),
-            MappedHgChangesetId::NAME.to_string(),
-            RootSkeletonManifestId::NAME.to_string(),
-            RootTestManifestDirectory::NAME.to_string(),
-            RootTestShardedManifestDirectory::NAME.to_string(),
-            RootBssmV3DirectoryId::NAME.to_string(),
-        },
+        types: DerivableType::iter().collect(),
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
         ..Default::default()

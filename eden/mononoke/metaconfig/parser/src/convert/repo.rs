@@ -54,6 +54,7 @@ use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
@@ -453,8 +454,16 @@ impl Convert for RawDerivedDataTypesConfig {
     type Output = DerivedDataTypesConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        let types = self.types.into_iter().collect();
-        let mapping_key_prefixes = self.mapping_key_prefixes.into_iter().collect();
+        let types = self
+            .types
+            .into_iter()
+            .map(|ty| DerivableType::from_name(&ty))
+            .collect::<Result<_>>()?;
+        let mapping_key_prefixes = self
+            .mapping_key_prefixes
+            .into_iter()
+            .map(|(k, _v)| Ok((DerivableType::from_name(&k)?, _v)))
+            .collect::<Result<_>>()?;
         let unode_version = match self.unode_version {
             None => UnodeVersion::default(),
             Some(1) => return Err(anyhow!("unode version 1 has been deprecated")),

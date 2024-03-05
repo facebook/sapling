@@ -39,6 +39,7 @@ use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
 
@@ -57,12 +58,12 @@ pub trait Rederivation: Send + Sync + 'static {
     ///
     /// If this function returns `None`, then it will only be
     /// derived if it isn't already derived.
-    fn needs_rederive(&self, derivable_name: &str, csid: ChangesetId) -> Option<bool>;
+    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> Option<bool>;
 
     /// Marks a changeset as having been derived.  After this
     /// is called, `needs_rederive` should not return `true` for
     /// this changeset.
-    fn mark_derived(&self, derivable_name: &str, csid: ChangesetId);
+    fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId);
 }
 
 impl DerivedDataManager {
@@ -478,7 +479,7 @@ impl DerivedDataManager {
                 .await?;
             derivation_ctx.flush(&ctx).await?;
             if let Some(rederivation) = rederivation {
-                rederivation.mark_derived(Derivable::NAME, csid);
+                rederivation.mark_derived(Derivable::VARIANT, csid);
             }
             Ok(())
         }
@@ -907,7 +908,7 @@ impl DerivedDataManager {
                 derivation_ctx.flush(ctx).await?;
                 if let Some(rederivation) = rederivation {
                     for csid in csids {
-                        rederivation.mark_derived(Derivable::NAME, csid);
+                        rederivation.mark_derived(Derivable::VARIANT, csid);
                     }
                 }
                 Ok::<_, Error>(())
