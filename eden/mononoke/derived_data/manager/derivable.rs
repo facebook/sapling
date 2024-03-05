@@ -64,6 +64,28 @@ pub enum DerivableType {
 }
 
 impl DerivableType {
+    pub fn from_name(s: &str) -> Result<Self> {
+        // We need the duplication here to make it a `const fn` so it can be used in
+        // BonsaiDerivable::NAME
+        Ok(match s {
+            "blame" => DerivableType::BlameV2,
+            "bssm_v3" => DerivableType::BssmV3,
+            "changeset_info" => DerivableType::ChangesetInfo,
+            "deleted_manifest" => DerivableType::DeletedManifests,
+            "fastlog" => DerivableType::Fastlog,
+            "filenodes" => DerivableType::FileNodes,
+            "fsnodes" => DerivableType::Fsnodes,
+            "hgchangesets" => DerivableType::HgChangesets,
+            "git_trees" => DerivableType::GitTree,
+            "git_commits" => DerivableType::GitCommit,
+            "git_delta_manifests" => DerivableType::GitDeltaManifest,
+            "skeleton_manifests" => DerivableType::SkeletonManifests,
+            "testmanifest" => DerivableType::TestManifest,
+            "testshardedmanifest" => DerivableType::TestShardedManifest,
+            "unodes" => DerivableType::Unodes,
+            _ => bail!("invalid name for DerivedDataType: {}", s),
+        })
+    }
     const fn name(&self) -> &'static str {
         match self {
             DerivableType::BlameV2 => "blame",
@@ -438,7 +460,18 @@ mod tests {
                 variant,
                 DerivableType::from_thrift(variant.into_thrift())
                     .expect("Failed to convert back to DerivableType from thrift")
-            )
+            );
+        }
+    }
+    #[test]
+    fn name_derived_data_type_conversion_must_be_bidirectional() {
+        for variant in DerivableType::iter() {
+            assert_eq!(
+                variant,
+                DerivableType::from_name(variant.name()).expect(
+                    "Failed to convert back to DerivableType from its string representation with DerivableType::name"
+                )
+            );
         }
     }
 }
