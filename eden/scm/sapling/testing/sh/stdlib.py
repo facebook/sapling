@@ -273,44 +273,58 @@ def test(args: List[str], arg0: str, env: Env):
     if (arg0, args[-1]) in (("[", "]"), ("[[", "]]")):
         args = args[:-1]
     istrue: Optional[bool] = None
-    if len(args) == 3:
-        op = args[1]
-        if op in {"-gt", "-lt", "-ge", "-le", "-eq", "-ne"}:
-            lhs = int(args[0] or "0")
-            rhs = int(args[2] or "0")
-            istrue = getattr(lhs, f"__{op[1:]}__")(rhs)
-        if op in {"=", "==", "!="}:
-            lhs = args[0]
-            rhs = args[2]
-            istrue = lhs == rhs
-            if op == "!=":
-                istrue = not istrue
-    elif len(args) == 2:
-        op, arg = args
-        fs = env.fs
-        if op == "-n":
-            istrue = bool(arg)
-        elif op == "-z":
-            istrue = not bool(arg)
-        elif op == "-f":
-            istrue = fs.isfile(arg)
-        elif op == "-d":
-            istrue = fs.isdir(arg)
-        elif op == "-e":
-            try:
-                fs.stat(arg)
-                istrue = True
-            except FileNotFoundError:
-                istrue = False
-        elif op == "-x":
-            import stat
 
-            # pyre-fixme[9]: istrue has type `Optional[bool]`; used as `int`.
-            istrue = fs.stat(arg).st_mode & stat.S_IEXEC
-    if istrue is None:
-        raise NotImplementedError(f"test {args} is not implemented")
+    ors = [[]]
+    for v in args:
+        if v == "-o":
+            ors.append([])
+        else:
+            ors[-1].append(v)
+
+    for args in ors:
+        if len(args) == 3:
+            op = args[1]
+            if op in {"-gt", "-lt", "-ge", "-le", "-eq", "-ne"}:
+                lhs = int(args[0] or "0")
+                rhs = int(args[2] or "0")
+                istrue = getattr(lhs, f"__{op[1:]}__")(rhs)
+            if op in {"=", "==", "!="}:
+                lhs = args[0]
+                rhs = args[2]
+                istrue = lhs == rhs
+                if op == "!=":
+                    istrue = not istrue
+        elif len(args) == 2:
+            op, arg = args
+            fs = env.fs
+            if op == "-n":
+                istrue = bool(arg)
+            elif op == "-z":
+                istrue = not bool(arg)
+            elif op == "-f":
+                istrue = fs.isfile(arg)
+            elif op == "-d":
+                istrue = fs.isdir(arg)
+            elif op == "-e":
+                try:
+                    fs.stat(arg)
+                    istrue = True
+                except FileNotFoundError:
+                    istrue = False
+            elif op == "-x":
+                import stat
+
+                # pyre-fixme[9]: istrue has type `Optional[bool]`; used as `int`.
+                istrue = fs.stat(arg).st_mode & stat.S_IEXEC
+
+        if istrue:
+            break
+        if istrue is None:
+            raise NotImplementedError(f"test {args} is not implemented")
+
     if neg:
         istrue = not istrue
+
     return int(not istrue)
 
 
