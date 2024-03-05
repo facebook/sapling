@@ -91,8 +91,10 @@ struct TreeInfoOutput {
     path: String,
     r#type: String,
     id: String,
-    simple_format_sha1: String,
-    simple_format_sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    simple_format_sha1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    simple_format_sha256: Option<String>,
     child_files_count: i64,
     child_files_total_size: i64,
     child_dirs_count: i64,
@@ -107,8 +109,12 @@ impl Render for TreeInfoOutput {
         write!(w, "Path: {}\n", self.path)?;
         write!(w, "Type: {}\n", self.r#type)?;
         write!(w, "Id: {}\n", self.id)?;
-        write!(w, "Simple-Format-SHA1: {}\n", self.simple_format_sha1)?;
-        write!(w, "Simple-Format-SHA256: {}\n", self.simple_format_sha256)?;
+        if let Some(simple_format_sha1) = &self.simple_format_sha1 {
+            write!(w, "Simple-Format-SHA1: {}\n", simple_format_sha1)?;
+        }
+        if let Some(simple_format_sha256) = &self.simple_format_sha256 {
+            write!(w, "Simple-Format-SHA256: {}\n", simple_format_sha256)?;
+        }
         write!(
             w,
             "Children: {} {} ({}), {} {}\n",
@@ -299,8 +305,14 @@ fn tree_info(
     info: thrift::TreeInfo,
 ) -> TreeInfoOutput {
     let id = faster_hex::hex_string(&info.id);
-    let simple_format_sha1 = faster_hex::hex_string(&info.simple_format_sha1);
-    let simple_format_sha256 = faster_hex::hex_string(&info.simple_format_sha256);
+    let simple_format_sha1 = info
+        .simple_format_sha1
+        .as_deref()
+        .map(faster_hex::hex_string);
+    let simple_format_sha256 = info
+        .simple_format_sha256
+        .as_deref()
+        .map(faster_hex::hex_string);
     TreeInfoOutput {
         path,
         r#type: entry_type.to_string().to_lowercase(),

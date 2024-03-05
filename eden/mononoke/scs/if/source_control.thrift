@@ -298,11 +298,11 @@ struct TreeInfo {
   /// The id of the tree that can be used in subsequent look-ups.
   1: binary id;
 
-  /// The sha1 of the simple format of the directory.
-  2: binary simple_format_sha1;
+  /// DEPRECATED: The sha1 of the simple format of the directory.
+  2: optional binary simple_format_sha1;
 
-  /// The sha256 of the simple format of the directory.
-  3: binary simple_format_sha256;
+  /// DEPRECATED: The sha256 of the simple format of the directory.
+  3: optional binary simple_format_sha256;
 
   /// The count of files inside the directory (excluding files inside
   /// subdirectories).

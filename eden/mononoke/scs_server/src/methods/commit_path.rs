@@ -73,8 +73,8 @@ impl SourceControlServiceImpl {
                 let summary = tree.summary().await?;
                 let tree_info = thrift::TreeInfo {
                     id: tree.id().as_ref().to_vec(),
-                    simple_format_sha1: summary.simple_format_sha1.as_ref().to_vec(),
-                    simple_format_sha256: summary.simple_format_sha256.as_ref().to_vec(),
+                    simple_format_sha1: Some(summary.simple_format_sha1.as_ref().to_vec()),
+                    simple_format_sha256: Some(summary.simple_format_sha256.as_ref().to_vec()),
                     child_files_count: summary.child_files_count as i64,
                     child_files_total_size: summary.child_files_total_size as i64,
                     child_dirs_count: summary.child_dirs_count as i64,

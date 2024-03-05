@@ -62,8 +62,10 @@ pub(super) struct CommandArgs {
 enum LsEntryOutput {
     Tree {
         id: String,
-        simple_format_sha1: String,
-        simple_format_sha256: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        simple_format_sha1: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        simple_format_sha256: Option<String>,
         child_files_count: i64,
         child_files_total_size: i64,
         child_dirs_count: i64,
@@ -193,9 +195,14 @@ fn list_output(
                 let entry_output = match entry.info {
                     thrift::EntryInfo::tree(info) => {
                         let id = faster_hex::hex_string(&info.id);
-                        let simple_format_sha1 = faster_hex::hex_string(&info.simple_format_sha1);
-                        let simple_format_sha256 =
-                            faster_hex::hex_string(&info.simple_format_sha256);
+                        let simple_format_sha1 = info
+                            .simple_format_sha1
+                            .as_deref()
+                            .map(faster_hex::hex_string);
+                        let simple_format_sha256 = info
+                            .simple_format_sha256
+                            .as_deref()
+                            .map(faster_hex::hex_string);
                         LsEntryOutput::Tree {
                             id,
                             simple_format_sha1,
