@@ -391,6 +391,10 @@ pub(crate) async fn is_ancestor(
     Ok(false)
 }
 
+// `scope` is usually the "dirty" set that might need to be inserted, or might
+// already exist in the existing dag, obtained by `dag.dirty()`. It is okay for
+// `scope` to be empty, which might lead to more network round-trips. See also
+// the docstring for `Parents::hint_subdag_for_insertion`.
 #[tracing::instrument(skip(this), level=tracing::Level::DEBUG)]
 pub(crate) async fn hint_subdag_for_insertion(
     this: &(impl Parents + ?Sized),

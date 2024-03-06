@@ -228,14 +228,18 @@ pub trait Parents: Send + Sync {
 
     /// A hint of a sub-graph for inserting `heads`.
     ///
-    /// This is used to reduce remote fetches in a lazy graph.
-    /// The roots will be checked first, if a root is unknown locally then
-    /// all its descendants will be considered unknown locally.
+    /// This is used to reduce remote fetches in a lazy graph. The function
+    /// should ideally return a subset of pending vertexes that are confirmed to
+    /// not overlap in the existing (potentially lazy) graph.
+    ///
+    /// The pending roots will be checked first, if a root is unknown locally
+    /// then all its descendants will be considered unknown locally.
     ///
     /// The returned graph is only used to optimize network fetches in
     /// `assign_head`. It is not used to be actually inserted to the graph. So
     /// returning an empty or "incorrect" graph does not hurt correctness. But
-    /// might hurt performance.
+    /// might hurt performance. Returning a set that contains vertexes that do
+    /// overlap in the existing graph is incorrect.
     async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag>;
 }
 
