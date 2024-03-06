@@ -551,7 +551,7 @@ registerDisposable(
       case 'forgot':
         writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
-          if (currentOperation == null) {
+          if (currentOperation == null || currentOperation.exitCode != null) {
             return current;
           }
 
@@ -672,7 +672,8 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
 }
 
 const currentOperationHeartbeatTimer = new Timer(() => {
-  if (readAtom(operationList).currentOperation == null) {
+  const currentOp = readAtom(operationList).currentOperation;
+  if (currentOp == null || currentOp.endTime != null) {
     // Stop the timer.
     return false;
   }
