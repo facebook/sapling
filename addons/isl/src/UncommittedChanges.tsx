@@ -463,10 +463,8 @@ export function UncommittedChanges({place}: {place: Place}) {
   );
 
   const onConfirmQuickCommit = () => {
-    const title =
-      (commitTitleRef.current as HTMLInputElement | null)?.value ||
-      template?.fields.Title ||
-      temporaryCommitTitle();
+    const titleEl = commitTitleRef.current as HTMLInputElement | null;
+    const title = titleEl?.value || template?.fields.Title || temporaryCommitTitle();
     // use the template, unless a specific quick title is given
     const fields: CommitMessageFields = {...template?.fields, Title: title};
     const message = commitMessageFieldsToString(schema, fields);
@@ -475,6 +473,10 @@ export function UncommittedChanges({place}: {place: Place}) {
     const operation = getCommitOperation(message, hash, selection.selection, allFiles);
     selection.discardPartialSelections();
     runOperation(operation);
+    if (titleEl) {
+      // clear out message now that we've used it
+      titleEl.value = '';
+    }
   };
 
   if (error) {

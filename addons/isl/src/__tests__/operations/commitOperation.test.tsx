@@ -161,4 +161,18 @@ describe('CommitOperation', () => {
       },
     });
   });
+
+  it('clears quick commit title after committing', () => {
+    const commitTree = screen.getByTestId('commit-tree-root');
+    clickCheckboxForFile(commitTree, 'file2.txt'); // partial commit, so the quick input box isn't unmounted
+
+    const quickInput = screen.getByTestId('quick-commit-title');
+    act(() => {
+      userEvent.type(quickInput, 'My Commit');
+    });
+
+    clickQuickCommit();
+
+    expect(quickInput).toHaveValue('');
+  });
 });
