@@ -209,6 +209,9 @@ struct CommitInfo {
   /// Extra git headers associated with the commit if the commit is a
   /// mirrored version from a git repo.
   10: optional map<small_binary, binary_bytes> git_extra_headers;
+
+  /// The date the commit was committed (if available - commit comes from Git).
+  11: optional i64 committer_date;
 }
 
 struct BookmarkInfo {
