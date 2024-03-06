@@ -63,7 +63,7 @@ Lookup commits that are removed:
   $ echo $E
   9bc730a19041f9ec7cb33c626e811aa233efb18c
 
-  $ hg log -r $D -T '{desc}\n' --traceback --config devel.collapse-traceback=0
+  $ hg log -r $D -T '{desc}\n' --config devel.collapse-traceback=0
   error.HttpError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found
   [255]
 
