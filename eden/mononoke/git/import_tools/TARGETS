@@ -27,6 +27,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/manifest:manifest",

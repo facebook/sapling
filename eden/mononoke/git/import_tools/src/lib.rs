@@ -49,6 +49,7 @@ pub use crate::git_reader::GitRepoReader;
 pub use crate::gitimport_objects::convert_time_to_datetime;
 pub use crate::gitimport_objects::oid_to_sha1;
 use crate::gitimport_objects::read_raw_object;
+pub use crate::gitimport_objects::BackfillDerivation;
 pub use crate::gitimport_objects::CommitMetadata;
 pub use crate::gitimport_objects::ExtractedCommit;
 pub use crate::gitimport_objects::GitLeaf;
@@ -281,6 +282,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
     }
 
     let acc = RwLock::new(GitimportAccumulator::new());
+    let backfill_derivation = prefs.backfill_derivation.clone();
 
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
     target
@@ -448,8 +450,8 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         // Go from Vec<Result<X,Y>> -> Result<Vec<X>,Y>
         .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
         .try_for_each(|v| async {
-            cloned!(ctx, uploader);
-            task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, v).await }).await?
+            cloned!(backfill_derivation, ctx, uploader);
+            task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, backfill_derivation, v).await }).await?
         })
         .await?;
 
@@ -663,7 +665,12 @@ pub async fn import_tree_as_single_bonsai_changeset(
         )
         .and_then(|(cs, id)| {
             uploader
-                .finalize_batch(ctx, prefs.dry_run, vec![(cs, sha1)])
+                .finalize_batch(
+                    ctx,
+                    prefs.dry_run,
+                    prefs.backfill_derivation.clone(),
+                    vec![(cs, sha1)],
+                )
                 .map_ok(move |_| id)
         })
         .await

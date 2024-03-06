@@ -30,6 +30,7 @@ rust_binary(
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/server/context:context",

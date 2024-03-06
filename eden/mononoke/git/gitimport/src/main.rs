@@ -33,6 +33,7 @@ use futures::future;
 use import_tools::create_changeset_for_annotated_tag;
 use import_tools::import_tree_as_single_bonsai_changeset;
 use import_tools::upload_git_tag;
+use import_tools::BackfillDerivation;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
@@ -46,11 +47,14 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
+use slog::warn;
 
 use crate::mem_writes_changesets::MemWritesChangesets;
 
@@ -144,6 +148,11 @@ struct GitimportArgs {
     /// Only use if you are sure that's what you want.
     #[clap(long)]
     discard_submodules: bool,
+    /// Don't backfill derived data during this import.
+    /// This is dangerous if used in conjunction with generate_bookmarks as public
+    /// commits which are not derived may create high load for the derived data service
+    #[clap(long)]
+    bypass_derived_data_backfilling: bool,
 }
 
 #[derive(Subcommand)]
@@ -182,20 +191,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         ClientInfo::default_with_entry_point(ClientEntryPoint::GitImport),
     );
     let args: GitimportArgs = app.args()?;
-    let mut prefs = GitimportPreferences {
-        concurrency: args.concurrency,
-        submodules: !args.discard_submodules,
-        ..Default::default()
-    };
-    // if we are readonly, then we'll set up some overrides to still be able to do meaningful
-    // things below.
-    let dry_run = app.readonly_storage().0;
-    prefs.dry_run = dry_run;
-
-    if let Some(path) = args.git_command_path {
-        prefs.git_command_path = PathBuf::from(path);
-    }
-
     let path = Path::new(&args.git_repository_path);
 
     let reupload = if args.reupload_commits {
@@ -212,6 +207,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         repo.repo_identity().id(),
     );
 
+    let dry_run = app.readonly_storage().0;
     let repo = if dry_run {
         repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
             Arc::new(MemWritesBlobstore::new(blobstore))
@@ -226,6 +222,46 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     } else {
         repo
     };
+
+    let backfill_derivation = if args.bypass_derived_data_backfilling {
+        if args.generate_bookmarks {
+            warn!(
+                logger,
+                "Warning: gitimport was called bypassing derived data backfilling while generating bookmarks.\nIt is your responsibility to ensure that all derived data types are backfilled before this repository is expose to prod to avoid the risk of overloading the derived data service."
+            );
+        }
+        BackfillDerivation::No
+    } else if args.discard_submodules {
+        let configured_types = &repo.repo_derived_data().active_config().types;
+        BackfillDerivation::OnlySpecificTypes(
+            configured_types
+                .iter()
+                .filter(|ty| match ty {
+                    // If we discard submodules, we can't derive the git data types since they are inconsistent
+                    DerivableType::GitCommit
+                    | DerivableType::GitDeltaManifest
+                    | DerivableType::GitTree => false,
+                    _ => true,
+                })
+                .cloned()
+                .collect(),
+        )
+    } else {
+        BackfillDerivation::AllConfiguredTypes
+    };
+    let mut prefs = GitimportPreferences {
+        concurrency: args.concurrency,
+        submodules: !args.discard_submodules,
+        backfill_derivation,
+        ..Default::default()
+    };
+    // if we are readonly, then we'll set up some overrides to still be able to do meaningful
+    // things below.
+    prefs.dry_run = dry_run;
+
+    if let Some(path) = args.git_command_path {
+        prefs.git_command_path = PathBuf::from(path);
+    }
 
     let uploader = import_direct::DirectUploader::new(repo.clone(), reupload);
 

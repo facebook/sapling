@@ -17,6 +17,7 @@ rust_binary(
         "fbsource//third-party/rust:hyper-openssl",
         "fbsource//third-party/rust:openssl",
         "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:strum",
         "//common/rust/monitoring:obc_lib",
         "//common/rust/scuba:scuba",
         "//common/rust/shed/fbinit:fbinit",

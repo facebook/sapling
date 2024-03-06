@@ -20,10 +20,12 @@ rust_library(
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/server/context:context",
     ],
 )

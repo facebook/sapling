@@ -149,12 +149,9 @@ Setup git repo A
 
 Import repos in reverse dependency order, C, B then A.
 
-  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" full-repo
-
-  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" full-repo
-
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" full-repo > $TESTTMP/gitimport_output
-
+  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling full-repo
+  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling full-repo
+  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling full-repo > $TESTTMP/gitimport_output
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" initial-import \
@@ -305,12 +302,9 @@ Then delete repo C submodule used directly in repo A
   8c33a27 Add root_file
 
 
-  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" full-repo
-
-  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" full-repo
-
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" full-repo > $TESTTMP/gitimport_output
-
+  $ REPOID="$REPO_C_ID" quiet gitimport --bypass-derived-data-backfilling "$GIT_REPO_C" full-repo
+  $ REPOID="$REPO_B_ID" quiet gitimport --bypass-derived-data-backfilling "$GIT_REPO_B" full-repo
+  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling full-repo > $TESTTMP/gitimport_output
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
 # TODO(T174902563): set up live sync instead of initial-import
