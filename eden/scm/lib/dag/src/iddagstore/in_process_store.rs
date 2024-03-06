@@ -25,6 +25,7 @@ use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
 use crate::ops::Persist;
+use crate::ops::StorageVersion;
 use crate::segment::Segment;
 use crate::spanset::Span;
 use crate::IdSet;
@@ -309,6 +310,12 @@ impl IdDagStore for InProcessStore {
         };
         let iter = get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?);
         Ok(Box::new(iter))
+    }
+}
+
+impl StorageVersion for InProcessStore {
+    fn storage_version(&self) -> (u64, u64) {
+        (0, 0)
     }
 }
 

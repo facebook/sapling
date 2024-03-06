@@ -33,6 +33,7 @@ use crate::iddagstore::InProcessStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::iddagstore::IndexedLogStore;
 use crate::ops::Persist;
+use crate::ops::StorageVersion;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::TryClone;
 use crate::segment::FlatSegment;
@@ -1946,6 +1947,12 @@ impl<P: Fn(Id) -> Result<bool>> LazyPredicate<P> {
             self.false_count += 1;
         }
         Ok(())
+    }
+}
+
+impl<S: StorageVersion> StorageVersion for IdDag<S> {
+    fn storage_version(&self) -> (u64, u64) {
+        self.store.storage_version()
     }
 }
 

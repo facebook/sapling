@@ -31,6 +31,7 @@ use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
 use crate::ops::Persist;
+use crate::ops::StorageVersion;
 use crate::segment::describe_segment_bytes;
 use crate::segment::hex;
 use crate::segment::Segment;
@@ -167,6 +168,12 @@ impl CoveredIdSetInner {
                 self.id_set_pending_remove_by_group[group] = IdSet::empty();
             }
         }
+    }
+}
+
+impl StorageVersion for IndexedLogStore {
+    fn storage_version(&self) -> (u64, u64) {
+        self.log.version()
     }
 }
 
