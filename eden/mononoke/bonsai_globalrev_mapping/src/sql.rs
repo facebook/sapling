@@ -287,7 +287,12 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .map(|entry| (&repo_id, &entry.bcs_id, &entry.globalrev))
             .collect();
 
-        DangerouslyAddGlobalrevs::query(&self.connections.write_connection, &entries[..]).await?;
+        DangerouslyAddGlobalrevs::maybe_traced_query(
+            &self.connections.write_connection,
+            ctx.client_request_info(),
+            &entries[..],
+        )
+        .await?;
 
         Ok(())
     }
@@ -300,8 +305,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let mut mappings =
-            select_mapping(&self.connections.read_connection, self.repo_id, &objects).await?;
+        let mut mappings = select_mapping(
+            ctx,
+            &self.connections.read_connection,
+            self.repo_id,
+            &objects,
+        )
+        .await?;
 
         let left_to_fetch = mappings.left_to_fetch(objects);
 
@@ -313,6 +323,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
         let master_mappings = select_mapping(
+            ctx,
             &self.connections.read_master_connection,
             self.repo_id,
             &left_to_fetch,
@@ -330,8 +341,9 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let row = SelectClosestGlobalrev::query(
+        let row = SelectClosestGlobalrev::maybe_traced_query(
             &self.connections.read_connection,
+            ctx.client_request_info(),
             &self.repo_id,
             &globalrev,
         )
@@ -354,16 +366,21 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let row = SelectMaxEntry::query(&self.connections.read_master_connection, repo_id)
-            .await?
-            .into_iter()
-            .next();
+        let row = SelectMaxEntry::maybe_traced_query(
+            &self.connections.read_master_connection,
+            ctx.client_request_info(),
+            repo_id,
+        )
+        .await?
+        .into_iter()
+        .next();
 
         Ok(row.map(|r| r.0))
     }
 }
 
 async fn select_mapping(
+    ctx: &CoreContext,
     connection: &Connection,
     repo_id: RepositoryId,
     objects: &BonsaisOrGlobalrevs,
@@ -374,15 +391,22 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrGlobalrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(connection, &repo_id, &bcs_ids[..]).await?
+            SelectMappingByBonsai::maybe_traced_query(
+                connection,
+                ctx.client_request_info(),
+                &repo_id,
+                &bcs_ids[..],
+            )
+            .await?
         }
         BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
             let max_globalrev = globalrevs
                 .iter()
                 .max()
                 .expect("We already returned earlier if objects.is_empty()");
-            SelectMappingByGlobalrevCacheFriendly::query(
+            SelectMappingByGlobalrevCacheFriendly::maybe_traced_query(
                 connection,
+                ctx.client_request_info(),
                 &repo_id,
                 max_globalrev,
                 &globalrevs[..],
@@ -438,6 +462,7 @@ pub enum AddGlobalrevsErrorKind {
 // BonsaiGlobalrevMapping trait, we should probably rethink the design of it, and not actually have
 // it contain any connections (instead, they should be passed on by callers).
 pub async fn add_globalrevs(
+    ctx: &CoreContext,
     transaction: Transaction,
     repo_id: RepositoryId,
     entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
@@ -451,8 +476,12 @@ pub async fn add_globalrevs(
     // crate doesn't allow us to reach into this yet, so for now we check the number of affected
     // rows.
 
-    let (transaction, res) =
-        DangerouslyAddGlobalrevs::query_with_transaction(transaction, &rows[..]).await?;
+    let (transaction, res) = DangerouslyAddGlobalrevs::maybe_traced_query_with_transaction(
+        transaction,
+        ctx.client_request_info(),
+        &rows[..],
+    )
+    .await?;
 
     if res.affected_rows() != rows.len() as u64 {
         return Err(AddGlobalrevsErrorKind::Conflict);

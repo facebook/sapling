@@ -160,10 +160,10 @@ struct GlobalrevTransactionHook {
 impl PushrebaseTransactionHook for GlobalrevTransactionHook {
     async fn populate_transaction(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        let txn = add_globalrevs(txn, self.repo_id, &self.entries[..])
+        let txn = add_globalrevs(ctx, txn, self.repo_id, &self.entries[..])
             .await
             .map_err(|e| match e {
                 AddGlobalrevsErrorKind::Conflict => BookmarkTransactionError::LogicError,

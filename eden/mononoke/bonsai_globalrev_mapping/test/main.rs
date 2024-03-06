@@ -142,7 +142,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let txn = conn.start_transaction().await?;
-    let txn = add_globalrevs(txn, REPO_ZERO, &[e0.clone()]).await?;
+    let txn = add_globalrevs(&ctx, txn, REPO_ZERO, &[e0.clone()]).await?;
     txn.commit().await?;
 
     assert_eq!(
@@ -153,7 +153,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let txn = conn.start_transaction().await?;
-    let txn = add_globalrevs(txn, REPO_ZERO, &[e1.clone()]).await?;
+    let txn = add_globalrevs(&ctx, txn, REPO_ZERO, &[e1.clone()]).await?;
     txn.commit().await?;
 
     assert_eq!(
@@ -166,8 +166,9 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     // Inserting duplicates fails
 
     let txn = conn.start_transaction().await?;
+    let ctx_new = ctx.clone();
     let res = async move {
-        let txn = add_globalrevs(txn, REPO_ZERO, &[e1.clone()]).await?;
+        let txn = add_globalrevs(&ctx_new, txn, REPO_ZERO, &[e1.clone()]).await?;
         txn.commit().await?;
         Result::<_, AddGlobalrevsErrorKind>::Ok(())
     }

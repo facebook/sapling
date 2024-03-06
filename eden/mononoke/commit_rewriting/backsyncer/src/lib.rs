@@ -600,6 +600,7 @@ where
 
                         if !globalrev_entries.is_empty() {
                             bonsai_globalrev_mapping::add_globalrevs(
+                                &ctx,
                                 txn,
                                 target_repo_id,
                                 &globalrev_entries,
