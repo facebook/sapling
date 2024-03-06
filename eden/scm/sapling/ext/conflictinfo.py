@@ -312,13 +312,15 @@ def gen_contents_with_conflict_styles(repo, output, base, local, other):
         # "contents" might be None for delete/update conflict
         return
 
-    m3 = Merge3Text(basetext, desttext, srctext, repo.ui)
+    overrides = {("ui", "quiet"): True}
+    with repo.ui.configoverride(overrides):
+        m3 = Merge3Text(basetext, desttext, srctext, repo.ui)
 
-    # we can extend this to other conflict styles in the future
-    conflict_renders = [
-        ("merge3", render_merge3),
-    ]
-    for name, conflict_render in conflict_renders:
-        lines = conflict_render(m3, b"dest", b"source", b"base")[0]
-        contents = _decodeutf8ornone(b"".join(lines))
-        output[f"contents:{name}"] = contents
+        # we can extend this to other conflict styles in the future
+        conflict_renders = [
+            ("merge3", render_merge3),
+        ]
+        for name, conflict_render in conflict_renders:
+            lines = conflict_render(m3, b"dest", b"source", b"base")[0]
+            contents = _decodeutf8ornone(b"".join(lines))
+            output[f"contents:{name}"] = contents
