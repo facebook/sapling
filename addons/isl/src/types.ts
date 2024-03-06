@@ -558,6 +558,7 @@ export type LocalStorageName =
   | 'isl.debug-react-tools'
   | 'isl.debug-redux-tools'
   | 'isl.comparison-display-mode'
+  | 'isl.expand-generated-files'
   | 'isl-color-theme';
 
 export type ClientToServerMessage =

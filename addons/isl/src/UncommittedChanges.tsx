@@ -39,7 +39,7 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
-import {readAtom, writeAtom} from './jotaiUtils';
+import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
 import {getAmendOperation} from './operations/AmendOperation';
@@ -65,7 +65,7 @@ import {
 } from './serverAPIState';
 import {GeneratedStatus} from './types';
 import {VSCodeBadge, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -344,6 +344,15 @@ export function ChangedFiles(props: {
   );
 }
 
+const generatedFilesInitiallyExpanded = localStorageBackedAtom<boolean>(
+  'isl.expand-generated-files',
+  false,
+);
+
+export const __TEST__ = {
+  generatedFilesInitiallyExpanded,
+};
+
 function LinearFileList(props: {
   files: Array<UIChangedFile>;
   displayType: ChangedFilesDisplayType;
@@ -355,6 +364,7 @@ function LinearFileList(props: {
   const {files, generatedStatuses, ...rest} = props;
 
   const groupedByGenerated = group(files, file => generatedStatuses[file.path]);
+  const [initiallyExpanded, setInitallyExpanded] = useAtom(generatedFilesInitiallyExpanded);
 
   function GeneratedFilesCollapsableSection(status: GeneratedStatus) {
     const group = groupedByGenerated[status] ?? [];
@@ -373,7 +383,8 @@ function LinearFileList(props: {
               : 'Generated Files $count'}
           </T>
         }
-        startExpanded={status === GeneratedStatus.PartiallyGenerated}>
+        startExpanded={status === GeneratedStatus.PartiallyGenerated || initiallyExpanded}
+        onToggle={expanded => setInitallyExpanded(expanded)}>
         {group.map(file => (
           <File key={file.path} {...rest} file={file} generatedStatus={status} />
         ))}

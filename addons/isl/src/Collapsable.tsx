@@ -14,16 +14,24 @@ export function Collapsable({
   children,
   title,
   className,
+  onToggle,
 }: {
   startExpanded?: boolean;
   children: React.ReactNode;
   title: React.ReactNode;
   className?: string;
+  onToggle?: (expanded: boolean) => unknown;
 }) {
   const [isExpanded, setIsExpanded] = useState(startExpanded === true);
   return (
     <div className={'collapsable' + (className ? ` ${className}` : '')}>
-      <div className="collapsable-title" onClick={() => setIsExpanded(!isExpanded)}>
+      <div
+        className="collapsable-title"
+        onClick={() => {
+          const newState = !isExpanded;
+          setIsExpanded(newState);
+          onToggle?.(newState);
+        }}>
         <Icon icon={isExpanded ? 'chevron-down' : 'chevron-right'} /> {title}
       </div>
       {isExpanded ? <div className="collapsable-contents">{children}</div> : null}

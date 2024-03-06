@@ -7,6 +7,8 @@
 
 import App from '../App';
 import {genereatedFileCache} from '../GeneratedFile';
+import {__TEST__} from '../UncommittedChanges';
+import {readAtom, writeAtom} from '../jotaiUtils';
 import {ignoreRTL} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -21,6 +23,44 @@ import {
 import {GeneratedStatus} from '../types';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
+
+/** Generated `num` files, in the repeating pattern: genereated, partially generated, manual */
+async function simulateGeneratedFiles(num: number) {
+  const files = new Array(num).fill(null).map((_, i) => `file_${zeroPad(i)}.txt`);
+  act(() => {
+    simulateUncommittedChangedFiles({
+      value: files.map(path => ({
+        path,
+        status: 'M',
+      })),
+    });
+  });
+  await waitFor(() => {
+    expectMessageSentToServer({
+      type: 'fetchGeneratedStatuses',
+      paths: expect.anything(),
+    });
+  });
+  act(() => {
+    simulateMessageFromServer({
+      type: 'fetchedGeneratedStatuses',
+      results: Object.fromEntries(
+        files.map((path, i) => [
+          path,
+          i % 3 === 0
+            ? GeneratedStatus.Generated
+            : i % 3 === 1
+            ? GeneratedStatus.PartiallyGenerated
+            : GeneratedStatus.Manual,
+        ]),
+      ),
+    });
+  });
+}
+
+function zeroPad(n: number): string {
+  return ('000' + n.toString()).slice(-3);
+}
 
 describe('Generated Files', () => {
   beforeEach(() => {
@@ -49,43 +89,6 @@ describe('Generated Files', () => {
       });
     });
   });
-
-  async function simulateGeneratedFiles(num: number) {
-    const files = new Array(num).fill(null).map((_, i) => `file_${zeroPad(i)}.txt`);
-    act(() => {
-      simulateUncommittedChangedFiles({
-        value: files.map(path => ({
-          path,
-          status: 'M',
-        })),
-      });
-    });
-    await waitFor(() => {
-      expectMessageSentToServer({
-        type: 'fetchGeneratedStatuses',
-        paths: expect.anything(),
-      });
-    });
-    act(() => {
-      simulateMessageFromServer({
-        type: 'fetchedGeneratedStatuses',
-        results: Object.fromEntries(
-          files.map((path, i) => [
-            path,
-            i % 3 === 0
-              ? GeneratedStatus.Generated
-              : i % 3 === 1
-              ? GeneratedStatus.PartiallyGenerated
-              : GeneratedStatus.Manual,
-          ]),
-        ),
-      });
-    });
-  }
-
-  function zeroPad(n: number): string {
-    return ('000' + n.toString()).slice(-3);
-  }
 
   it('fetches generated files for uncommitted changes', async () => {
     await simulateGeneratedFiles(5);
@@ -156,5 +159,24 @@ describe('Generated Files', () => {
     expect(
       screen.getByText('There are more than 1000 files, some files may appear out of order'),
     ).toBeInTheDocument();
+  });
+
+  it('remembers expanded state', async () => {
+    writeAtom(__TEST__.generatedFilesInitiallyExpanded, true);
+
+    await simulateGeneratedFiles(1);
+
+    expect(screen.getByText(ignoreRTL('file_000.txt'))).toBeInTheDocument();
+    expect(screen.getByText('Generated Files')).toBeInTheDocument();
+  });
+
+  it('writes expanded state', async () => {
+    expect(readAtom(__TEST__.generatedFilesInitiallyExpanded)).toEqual(false);
+
+    await simulateGeneratedFiles(1);
+
+    fireEvent.click(screen.getByText('Generated Files'));
+
+    expect(readAtom(__TEST__.generatedFilesInitiallyExpanded)).toEqual(true);
   });
 });
