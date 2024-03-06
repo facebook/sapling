@@ -825,20 +825,18 @@ ImmediateFuture<OnDiskState> recheckDiskState(
     std::chrono::steady_clock::time_point receivedAt,
     int retry,
     OnDiskStateTypes expectedType) {
-  if (mount.getCheckoutConfig()->getEnableWindowsSymlinks()) {
-    const auto elapsed = std::chrono::steady_clock::now() - receivedAt;
-    const auto delay =
-        mount.getEdenConfig()->prjfsDirectoryCreationDelay.getValue();
-    if (elapsed < delay) {
-      // See comment on EdenConfig::prjfsDirectoryCreationDelay for what's
-      // going on here.
-      auto timeToSleep =
-          std::chrono::duration_cast<folly::HighResDuration>(delay - elapsed);
-      return ImmediateFuture{folly::futures::sleep(timeToSleep)}.thenValue(
-          [&mount, path = path.copy(), retry, receivedAt](folly::Unit&&) {
-            return getOnDiskState(mount, path, receivedAt, retry);
-          });
-    }
+  const auto elapsed = std::chrono::steady_clock::now() - receivedAt;
+  const auto delay =
+      mount.getEdenConfig()->prjfsDirectoryCreationDelay.getValue();
+  if (elapsed < delay) {
+    // See comment on EdenConfig::prjfsDirectoryCreationDelay for what's
+    // going on here.
+    auto timeToSleep =
+        std::chrono::duration_cast<folly::HighResDuration>(delay - elapsed);
+    return ImmediateFuture{folly::futures::sleep(timeToSleep)}.thenValue(
+        [&mount, path = path.copy(), retry, receivedAt](folly::Unit&&) {
+          return getOnDiskState(mount, path, receivedAt, retry);
+        });
   }
   return OnDiskState(expectedType);
 }
