@@ -249,7 +249,7 @@ impl<'a> RepoBlobstoreCopier<'a> {
     fn new(source: &'a RepoBlobstore, target: &'a RepoBlobstore) -> Self {
         let inner_source = source.0.0.as_inner_unredacted();
         let inner_target = target.0.0.as_inner_unredacted();
-        #[allow(clippy::vtable_address_comparisons)]
+        #[allow(ambiguous_wide_pointer_comparisons)]
         if Arc::ptr_eq(inner_source.as_inner(), inner_target.as_inner()) {
             Self::Optimized {
                 source: inner_source,

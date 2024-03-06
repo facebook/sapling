@@ -319,10 +319,7 @@ async fn create_bundle_impl(
             create_manifest_entries_stream(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
-                manifests
-                    .into_iter()
-                    .map(|(path, m_id, cs_id)| (path, m_id, cs_id))
-                    .collect(),
+                manifests.into_iter().collect(),
             ),
             parts::StoreInHgCache::Yes,
         )?);

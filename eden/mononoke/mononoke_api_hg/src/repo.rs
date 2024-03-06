@@ -816,10 +816,7 @@ impl HgRepoContext {
 
     /// Check if all changesets in the list are public.
     /// This may treat commits that "recently" became public as draft.
-    pub async fn is_all_public(
-        &self,
-        changesets: &Vec<HgChangesetId>,
-    ) -> Result<bool, MononokeError> {
+    pub async fn is_all_public(&self, changesets: &[HgChangesetId]) -> Result<bool, MononokeError> {
         let len = changesets.len();
         let public_phases = self
             .blob_repo()

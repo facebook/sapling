@@ -1130,7 +1130,7 @@ async fn subcommand_verify_bookmarks(
 
 async fn update_large_repo_bookmarks(
     ctx: CoreContext,
-    diff: &Vec<BookmarkDiff>,
+    diff: &[BookmarkDiff],
     syncers: &Syncers<SqlSyncedCommitMapping, CrossRepo>,
     common_commit_sync_config: &CommonCommitSyncConfig,
     update_mode: UpdateLargeRepoBookmarksMode,

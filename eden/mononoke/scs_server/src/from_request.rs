@@ -380,7 +380,7 @@ impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
 
 impl FromRequest<thrift::DerivedDataType> for DerivableType {
     fn from_request(data_type: &thrift::DerivedDataType) -> Result<Self, thrift::RequestError> {
-        DerivableType::from_thrift(*data_type).map_err(|e| errors::invalid_request(e))
+        DerivableType::from_thrift(*data_type).map_err(errors::invalid_request)
     }
 }
 

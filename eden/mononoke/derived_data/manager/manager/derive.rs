@@ -253,7 +253,7 @@ impl DerivedDataManager {
                                 manager
                                     .lease()
                                     .try_acquire_in_loop(&ctx, &lease_key, || async {
-                                        Ok(Derivable::fetch(&ctx, &derivation_ctx, csid).await?)
+                                        Derivable::fetch(&ctx, &derivation_ctx, csid).await
                                     })
                                     .await,
                             )

@@ -134,13 +134,13 @@ impl CommitGraph {
                     if property(edges.node).await? {
                         property_frontier.push(edges.node.cs_id);
                     } else {
-                        match edges
+                        let lowest_ancestor = edges
                             .lowest_skip_tree_edge_with(|node| {
                                 borrowed!(property);
                                 async move { Ok(!property(node).await?) }
                             })
-                            .await?
-                        {
+                            .await?;
+                        match lowest_ancestor {
                             Some(ancestor) => {
                                 frontier
                                     .entry(ancestor.generation)

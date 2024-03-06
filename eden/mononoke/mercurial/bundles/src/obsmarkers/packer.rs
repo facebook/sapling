@@ -47,9 +47,9 @@ pub fn obsmarkers_packer_stream(
 
 fn prepare_obsmarker_chunk(
     predecessor: &HgChangesetId,
-    successors: &Vec<HgChangesetId>,
+    successors: &[HgChangesetId],
     time: &DateTime,
-    metadata: &Vec<MetadataEntry>,
+    metadata: &[MetadataEntry],
 ) -> Result<Chunk> {
     // Reserve space, fill it with zeros before writing out our data.
     let mut v: Vec<u8> = vec![0; 19];
@@ -166,9 +166,9 @@ mod test {
     fn content_matches(
         data: &[u8],
         predecessor: &HgChangesetId,
-        successors: &Vec<HgChangesetId>,
+        successors: &[HgChangesetId],
         time: &DateTime,
-        metadata: &Vec<MetadataEntry>,
+        metadata: &[MetadataEntry],
     ) -> bool {
         BigEndian::read_f64(&data[4..]) == time.timestamp_secs() as f64
             && BigEndian::read_i16(&data[12..]) == time.tz_offset_minutes()
@@ -183,7 +183,7 @@ mod test {
 
     quickcheck! {
         fn test_prepare_no_metadata(predecessor: HgChangesetId, successors: Vec<HgChangesetId>, time: DateTime) -> bool {
-            let chunk = prepare_obsmarker_chunk(&predecessor, &successors, &time, &vec![]);
+            let chunk = prepare_obsmarker_chunk(&predecessor, &successors, &time, &[]);
             chunk.is_ok() && size_matches(&chunk.unwrap().into_bytes().unwrap())
         }
 
@@ -202,7 +202,7 @@ mod test {
         }
 
         fn test_roundtrip(predecessor: HgChangesetId, successors: Vec<HgChangesetId>, time: DateTime, metadata: Vec<MetadataEntry>) -> bool {
-            let metadata = metadata.into_iter().take(4).collect(); // See above
+            let metadata = metadata.into_iter().take(4).collect::<Vec<_>>(); // See above
             let chunk = prepare_obsmarker_chunk(&predecessor, &successors, &time, &metadata);
             chunk.is_ok() && content_matches(&chunk.unwrap().into_bytes().unwrap(), &predecessor, &successors, &time, &metadata)
         }
@@ -233,7 +233,7 @@ mod test {
         let metadata = vec![entry; u16::max_value() as usize];
         let chunk = prepare_obsmarker_chunk(
             &nodehash::ONES_CSID,
-            &vec![nodehash::TWOS_CSID],
+            &[nodehash::TWOS_CSID],
             &time,
             &metadata,
         );
@@ -247,7 +247,7 @@ mod test {
         let metadata = vec![entry];
         let chunk = prepare_obsmarker_chunk(
             &nodehash::ONES_CSID,
-            &vec![nodehash::TWOS_CSID],
+            &[nodehash::TWOS_CSID],
             &time,
             &metadata,
         );
@@ -261,7 +261,7 @@ mod test {
         let metadata = vec![entry];
         let chunk = prepare_obsmarker_chunk(
             &nodehash::ONES_CSID,
-            &vec![nodehash::TWOS_CSID],
+            &[nodehash::TWOS_CSID],
             &time,
             &metadata,
         );
@@ -298,7 +298,7 @@ mod test {
         assert!(content_matches(
             &r2,
             &nodehash::ONES_CSID,
-            &vec![nodehash::TWOS_CSID],
+            &[nodehash::TWOS_CSID],
             &time,
             &meta
         ));
@@ -308,7 +308,7 @@ mod test {
         assert!(content_matches(
             &r3,
             &nodehash::THREES_CSID,
-            &vec![nodehash::FOURS_CSID],
+            &[nodehash::FOURS_CSID],
             &time,
             &meta
         ));
