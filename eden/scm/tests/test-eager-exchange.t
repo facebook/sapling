@@ -200,7 +200,7 @@ Clone:
 Commit hash and message are lazy
 
   $ LOG=dag::protocol=debug,eagerepo=debug hg log -T '{desc} {node}\n' -r 'all()'
-  DEBUG dag::protocol: resolve ids [0] remotely
+  DEBUG dag::protocol: resolve ids [1, 0] remotely
   DEBUG eagerepo::api: revlog_data 748104bd5058bf2c386d074d8dcf2704855380f6, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999
   A 748104bd5058bf2c386d074d8dcf2704855380f6
   C 178c10ffbc2f92d5407c14478ae9d9dea81f232e
@@ -271,7 +271,6 @@ Test that auto pull invalidates public() properly:
     pulling '428b6ef7fec737262ee83ba89e4fab5e3a07db44' from 'test:server-autopull'
     DEBUG dag::protocol: resolve names [a81a182e51718edfeccb2f62846c28c7b83de6f1] remotely
     DEBUG dag::protocol: resolve names [428b6ef7fec737262ee83ba89e4fab5e3a07db44] remotely
-    DEBUG dag::protocol: resolve ids [97] remotely
     D1
     D2
     D3
@@ -312,6 +311,6 @@ Test that filtering revset does not use sequential fetches.
 
   $ LOG=dag::protocol=trace,eagerepo::api=debug hg log -r "reverse(master~20::master) & not(file(r're:.*'))"
   DEBUG dag::protocol: resolve ids [9] remotely
-  DEBUG dag::protocol: resolve ids [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] remotely
+  DEBUG dag::protocol: resolve ids [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28] remotely
   DEBUG eagerepo::api: revlog_data * (glob)
   >>> assert _.count('revlog_data') == 1 and 0 < _.count('resolve id') < 3

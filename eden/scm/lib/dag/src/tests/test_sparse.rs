@@ -530,15 +530,11 @@ async fn test_flush_no_over_fetch() {
     );
 
     // Flush with a master head. Should not fetch anything.
-    // FIXME: E~1 should not be resolved.
     // FIXME: Why resolve X again?
     let heads = VertexListWithOptions::from(vec![VertexName::copy_from(b"E")])
         .with_highest_group(Group::MASTER);
     client.dag.flush(&heads).await.unwrap();
-    assert_eq!(
-        client.output(),
-        ["resolve paths: [E~1]", "resolve names: [X], heads: [E]"]
-    );
+    assert_eq!(client.output(), ["resolve names: [X], heads: [E]"]);
 
     // "D" remains unknown locally (E~1 is not fetched).
     assert_eq!(

@@ -438,7 +438,19 @@ pub(crate) async fn hint_subdag_for_insertion(
         parents: this,
         scope,
     };
-    dag.add_heads(&scoped_parents, &heads.into()).await?;
+
+    // Exclude heads that are outside 'scope'. They might trigger remote fetches.
+    let heads_in_scope = {
+        let mut heads_in_scope = Vec::with_capacity(heads.len());
+        for head in heads {
+            if scope.contains(head).await? {
+                heads_in_scope.push(head.clone());
+            }
+        }
+        heads_in_scope
+    };
+    dag.add_heads(&scoped_parents, &heads_in_scope.into())
+        .await?;
 
     Ok(dag)
 }
