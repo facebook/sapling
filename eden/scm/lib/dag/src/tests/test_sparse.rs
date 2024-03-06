@@ -515,6 +515,43 @@ P->C: 1->5, 1->N6, 3->8, 7->8, 9->N0
 }
 
 #[tokio::test]
+async fn test_flush_no_over_fetch() {
+    let server = TestDag::draw("A..E # master: E");
+    let mut client = server.client_cloned_data().await;
+
+    // Branch off "B".
+    client.drawdag_async("B-X-Y-Z", &[]).await;
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [B], heads: [E]",
+            "resolve names: [X], heads: [E]"
+        ]
+    );
+
+    // Flush with a master head. Should not fetch anything.
+    // FIXME: E~1 should not be resolved.
+    // FIXME: Why resolve X again?
+    let heads = VertexListWithOptions::from(vec![VertexName::copy_from(b"E")])
+        .with_highest_group(Group::MASTER);
+    client.dag.flush(&heads).await.unwrap();
+    assert_eq!(
+        client.output(),
+        ["resolve paths: [E~1]", "resolve names: [X], heads: [E]"]
+    );
+
+    // "D" remains unknown locally (E~1 is not fetched).
+    assert_eq!(
+        client
+            .dag
+            .contains_vertex_name_locally(&["D".into()])
+            .await
+            .unwrap(),
+        [false]
+    );
+}
+
+#[tokio::test]
 async fn test_resolve_misleading_merges() {
     // Test when the server graph gets more merges making vertexes
     // previously not a parent of a merge become a parent of a merge.
