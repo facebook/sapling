@@ -166,7 +166,7 @@ where
 #[async_trait::async_trait]
 impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
 where
-    IS: IdDagStore + Persist,
+    IS: IdDagStore + Persist + StorageVersion,
     IdDag<IS>: TryClone + 'static,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
     P: Open<OpenTarget = Self> + Send + Sync + 'static,
@@ -363,16 +363,21 @@ where
 impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: Send + Sync + 'static,
+    IdDag<IS>: StorageVersion,
     M: Send + Sync + 'static,
     P: Send + Sync + 'static,
-    S: StorageVersion + Send + Sync + 'static,
+    S: Send + Sync + 'static,
 {
     /// Attempt to reuse caches from `other` if two `NameDag`s are compatible.
     /// Usually called when `self` is newly created.
     fn maybe_reuse_caches_from(&mut self, other: &Self) {
-        if self.state.storage_version() != other.state.storage_version()
-            || self.persisted_id_set.as_spans() != other.persisted_id_set.as_spans()
-        {
+        // No need to check IdMap (or "state" which includes both IdDag and IdMap).
+        // If IdMap is changed (ex. by flush_cached_idmap), the cache states
+        // (missing_vertexes_confirmed_by_remote, overlay_map) are still reusable.
+        let dag_version_mismatch = self.dag.storage_version() != other.dag.storage_version();
+        let persisted_id_mismatch =
+            self.persisted_id_set.as_spans() != other.persisted_id_set.as_spans();
+        if dag_version_mismatch || persisted_id_mismatch {
             tracing::debug!(target: "dag::cache", "cannot reuse cache");
             return;
         }
@@ -495,10 +500,10 @@ where
 impl<IS, M, P, S> DagStrip for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
-    IdDag<IS>: TryClone,
+    IdDag<IS>: TryClone + StorageVersion,
     M: TryClone + Persist + IdMapWrite + IdConvert + Send + Sync + 'static,
     P: TryClone + Open<OpenTarget = Self> + Send + Sync + 'static,
-    S: TryClone + StorageVersion + Persist + Send + Sync + 'static,
+    S: TryClone + Persist + Send + Sync + 'static,
 {
     async fn strip(&mut self, set: &NameSet) -> Result<()> {
         if !self.pending_heads.is_empty() {
@@ -684,10 +689,10 @@ where
 impl<IS, M, P, S> DagImportPullData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
-    IdDag<IS>: TryClone,
+    IdDag<IS>: TryClone + StorageVersion,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
     P: Open<OpenTarget = Self> + TryClone + Send + Sync + 'static,
-    S: StorageVersion + TryClone + Persist + Send + Sync + 'static,
+    S: TryClone + Persist + Send + Sync + 'static,
 {
     async fn import_pull_data(
         &mut self,

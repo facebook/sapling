@@ -173,7 +173,7 @@ async fn test_add_heads() {
     );
 
     client.flush("G").await;
-    assert_eq!(client.output(), ["resolve names: [I], heads: [B]"]);
+    assert_eq!(client.output(), [] as [&str; 0]);
 
     let mut client = server.client_cloned_data().await;
     let heads = VertexListWithOptions::from(&["K".into()][..])
@@ -530,11 +530,10 @@ async fn test_flush_no_over_fetch() {
     );
 
     // Flush with a master head. Should not fetch anything.
-    // FIXME: Why resolve X again?
     let heads = VertexListWithOptions::from(vec![VertexName::copy_from(b"E")])
         .with_highest_group(Group::MASTER);
     client.dag.flush(&heads).await.unwrap();
-    assert_eq!(client.output(), ["resolve names: [X], heads: [E]"]);
+    assert_eq!(client.output(), [] as [&str; 0]);
 
     // "D" remains unknown locally (E~1 is not fetched).
     assert_eq!(
