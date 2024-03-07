@@ -149,7 +149,7 @@
   Error: Error in generating pack item stream
   
   Caused by:
-      0: Error while counting objects for packing
+      0: Error while calculating object count
       1: Error in deriving RootGitDeltaManifestId for commit ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))
       2: a batch dependency has not been derived
       3: failed to derive batch dependencies

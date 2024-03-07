@@ -58,7 +58,6 @@ const DELTA_CHUNK_COUNT: usize = 100_000;
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct DeltaInstructionChunkId(Blake2);
 
-#[allow(dead_code)]
 impl DeltaInstructionChunkId {
     pub fn new(
         actual_cs_id: &ChangesetId,
@@ -90,7 +89,6 @@ pub struct DeltaInstructionChunkIdPrefix {
     base_mpath: MPath,
 }
 
-#[allow(dead_code)]
 impl DeltaInstructionChunkIdPrefix {
     pub fn new(
         actual_cs_id: ChangesetId,

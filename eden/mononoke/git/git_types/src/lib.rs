@@ -35,6 +35,7 @@ pub use crate::commit::MappedGitCommitId;
 pub use crate::delta::DeltaInstructionChunkIdPrefix;
 pub use crate::delta::DeltaInstructions;
 pub use crate::delta_manifest::GitDeltaManifestEntry;
+pub use crate::delta_manifest::ObjectDelta;
 pub use crate::derive_delta_manifest::RootGitDeltaManifestId;
 pub use crate::errors::GitError;
 pub use crate::store::fetch_delta_instructions;
