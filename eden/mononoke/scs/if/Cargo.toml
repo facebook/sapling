@@ -29,6 +29,7 @@ ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 source_control__types = { package = "source_control_types", version = "0.1.0", path = "types" }
 thiserror = "1.0.49"
+thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
 

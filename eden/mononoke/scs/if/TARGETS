@@ -36,5 +36,6 @@ thrift_library(
         "//configerator/structs/scm/mononoke/megarepo:megarepo_configs",
         "//eden/mononoke/derived_data/if:derived_data_type_if",
         "//fb303/thrift:fb303_core",
+        "//thrift/annotation:thrift",
     ],
 )

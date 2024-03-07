@@ -6,6 +6,7 @@
  */
 
 include "fb303/thrift/fb303_core.thrift"
+include "thrift/annotation/thrift.thrift"
 include "configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift"
 include "eden/mononoke/derived_data/if/derived_data_type.thrift"
 
@@ -2051,16 +2052,18 @@ enum RequestErrorKind {
   MERGE_CONFLICTS = 11,
 }
 
-exception RequestError {
+stateful client exception RequestError {
   1: RequestErrorKind kind;
+  @thrift.ExceptionMessage
   2: string reason;
-} (message = "reason")
+}
 
-exception InternalError {
+transient server exception InternalError {
+  @thrift.ExceptionMessage
   1: string reason;
   2: optional string backtrace;
   3: list<string> source_chain;
-} (message = "reason")
+}
 
 struct RequestErrorStruct {
   1: source_control.RequestErrorKind kind;
@@ -2083,11 +2086,12 @@ struct PushrebaseConflict {
   2: Path right;
 }
 
-exception PushrebaseConflictsException {
+permanent client exception PushrebaseConflictsException {
+  @thrift.ExceptionMessage
   1: string reason;
   /// Always non-empty
   2: list<PushrebaseConflict> conflicts;
-} (message = "reason")
+}
 
 struct HookRejection {
   /// The hook that rejected the output
@@ -2098,11 +2102,12 @@ struct HookRejection {
   3: HookOutcomeRejected reason;
 }
 
-exception HookRejectionsException {
+stateful client exception HookRejectionsException {
+  @thrift.ExceptionMessage
   1: string reason;
   /// Always non-empty
   2: list<HookRejection> rejections;
-} (message = "reason")
+}
 
 /// Service Definition
 

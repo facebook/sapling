@@ -17,5 +17,6 @@ thrift_library(
     },
     deps = [
         "//fb303/thrift:fb303_core",
+        "//thrift/annotation:thrift",
     ],
 )
