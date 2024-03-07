@@ -8,11 +8,11 @@
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include <fb303/ServiceData.h>
 #include <folly/logging/xlog.h>
+#include "eden/common/telemetry/SubprocessScribeLogger.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/telemetry/ScubaStructuredLogger.h"
-#include "eden/fs/telemetry/SubprocessScribeLogger.h"
 
 namespace facebook::eden {
 

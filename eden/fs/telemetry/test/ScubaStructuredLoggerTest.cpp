@@ -9,7 +9,7 @@
 #include <folly/json/json.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include "eden/fs/telemetry/ScribeLogger.h"
+#include "eden/common/telemetry/ScribeLogger.h"
 
 using namespace facebook::eden;
 using namespace testing;

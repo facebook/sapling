@@ -45,31 +45,13 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "scribe_test",
-    srcs = [
-        "SubprocessScribeLoggerTest.cpp",
-    ],
-    compatible_with = [
-        "ovr_config//os:linux",
-        "ovr_config//os:macos",
-    ],
-    deps = [
-        "//eden/fs/telemetry:scribe_logger",
-        "//folly:exception",
-        "//folly:file_util",
-        "//folly/experimental:test_util",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "scuba_test",
     srcs = [
         "ScubaStructuredLoggerTest.cpp",
     ],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/telemetry:scribe_logger",
+        "//eden/common/telemetry:scribe_logger",
         "//eden/fs/telemetry:structured_logger",
         "//folly/json:dynamic",
         "//folly/portability:gmock",

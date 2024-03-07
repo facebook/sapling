@@ -9,8 +9,8 @@
 
 #include <folly/json/json.h>
 #include <folly/logging/xlog.h>
+#include "eden/common/telemetry/SubprocessScribeLogger.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/telemetry/SubprocessScribeLogger.h"
 
 namespace facebook::eden {
 
