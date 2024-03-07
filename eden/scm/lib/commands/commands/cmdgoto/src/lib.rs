@@ -109,24 +109,35 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     // Clean up the "updatemergestate" file if we are done merging.
     // We do this before try_operation since that will error on "updatemergestate".
     // This should happen even without "--continue".
-    let cleaned_mergestate = maybe_clear_update_merge_state(&wc, ctx.opts.clean)?;
+    let mergestate = maybe_clear_update_merge_state(&wc, ctx.opts.clean)?;
 
     let updatestate_path = wc.dot_hg_path().join("updatestate");
 
     if ctx.opts.r#continue {
-        if cleaned_mergestate {
-            // User ran "sl goto --continue" after resolving all "--merge" conflicts.
-            return Ok(0);
-        }
-
-        let interrupted_dest = match fs::read_to_string(&updatestate_path) {
-            Ok(data) => data,
-            Err(err) if err.kind() == io::ErrorKind::NotFound => {
-                bail!("not in an interrupted goto state")
+        match mergestate {
+            GotoMergeState::Resolved => {
+                // User ran "sl goto --continue" after resolving all "--merge" conflicts.
+                return Ok(0);
             }
-            Err(err) => return Err(err.into()),
-        };
-        dest.push(interrupted_dest);
+            GotoMergeState::Unresolved => {
+                // Still have unresolved files.
+                abort!(
+                    "{}\n{}",
+                    "outstanding merge conflicts",
+                    "(use '@prog@ resolve --list' to list, '@prog@ resolve --mark FILE' to mark resolved)"
+                );
+            }
+            GotoMergeState::NotMerging => {
+                let interrupted_dest = match fs::read_to_string(&updatestate_path) {
+                    Ok(data) => data,
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                        bail!("not in an interrupted goto state")
+                    }
+                    Err(err) => return Err(err.into()),
+                };
+                dest.push(interrupted_dest);
+            }
+        }
     }
 
     // We either consumed "updatestate" above, or are goto'ing someplace else,
@@ -195,20 +206,32 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     Ok(0)
 }
 
+enum GotoMergeState {
+    NotMerging,
+    Resolved,
+    Unresolved,
+}
+
 // Clear us out of the "updatemergestate" state if there are no unresolved
-// files or user specified "--clean". Returns whether state was cleared.
-fn maybe_clear_update_merge_state(wc: &LockedWorkingCopy, clean: bool) -> Result<bool> {
+// files or user specified "--clean".
+fn maybe_clear_update_merge_state(wc: &LockedWorkingCopy, clean: bool) -> Result<GotoMergeState> {
     let ums_path = wc.dot_hg_path().join("updatemergestate");
 
     if !ums_path.try_exists().context("updatemergestate")? {
-        return Ok(false);
+        return Ok(GotoMergeState::NotMerging);
     }
 
-    if clean || !wc.read_merge_state()?.unwrap_or_default().is_unresolved() {
+    if clean {
         fs_err::remove_file(&ums_path)?;
-        Ok(true)
+        return Ok(GotoMergeState::NotMerging);
+    }
+
+    if wc.read_merge_state()?.unwrap_or_default().is_unresolved() {
+        Ok(GotoMergeState::Unresolved)
     } else {
-        Ok(false)
+        fs_err::remove_file(&ums_path)?;
+        wc.clear_merge_state()?;
+        Ok(GotoMergeState::Resolved)
     }
 }
 

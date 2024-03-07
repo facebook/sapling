@@ -47,7 +47,8 @@ Run it again to make sure we didn't clear out state file:
   [255]
 
   $ hg go --continue
-  abort: not in an interrupted goto state
+  abort: outstanding merge conflicts
+  (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
   [255]
 
   $ hg resolve --mark foo

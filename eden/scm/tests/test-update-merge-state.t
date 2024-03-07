@@ -7,6 +7,7 @@
   $ eagerepo
   $ enable morestatus
   $ setconfig morestatus.show=True ui.origbackuppath=.hg/origs
+  $ setconfig checkout.use-rust=true
 
 Python utility:
 
