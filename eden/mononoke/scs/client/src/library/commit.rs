@@ -36,6 +36,14 @@ pub(crate) struct CommitInfo {
     pub extra: BTreeMap<String, String>,
     pub extra_hex: BTreeMap<String, String>,
     pub git_extra_headers: Option<BTreeMap<String, String>>,
+    pub committer_date: Option<DateTime<FixedOffset>>,
+}
+
+fn timestamp_to_date(timezone: i32, timestamp: i64) -> DateTime<FixedOffset> {
+    FixedOffset::east_opt(timezone)
+        .unwrap()
+        .timestamp_opt(timestamp, 0)
+        .unwrap()
 }
 
 impl TryFrom<&thrift::CommitInfo> for CommitInfo {
@@ -54,10 +62,7 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
         // the timezone is seconds east of UTC.
         let timestamp = commit.date;
         let timezone = commit.tz;
-        let date = FixedOffset::east_opt(timezone)
-            .unwrap()
-            .timestamp_opt(timestamp, 0)
-            .unwrap();
+        let date = timestamp_to_date(timezone, timestamp);
         // Extras are binary data, but usually we want to render them as
         // strings. In the case that they are not UTF-8 strings, they're
         // probably a commit hash, so we should hex-encode them. Record extras
@@ -85,6 +90,9 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
                 })
                 .collect()
         });
+        let committer_date = commit
+            .committer_date
+            .map(|timestamp| timestamp_to_date(timezone, timestamp));
         Ok(CommitInfo {
             r#type: "commit".to_string(),
             ids,
@@ -98,8 +106,24 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
             extra,
             extra_hex,
             git_extra_headers,
+            committer_date,
         })
     }
+}
+
+fn render_date(
+    w: &mut dyn Write,
+    date: DateTime<FixedOffset>,
+    description: &str,
+) -> Result<(), Error> {
+    let local_date = date.with_timezone(&Local).to_string();
+    let date = date.to_string();
+    if date != local_date {
+        write!(w, "{}: {} ({})\n", description, date, local_date)?;
+    } else {
+        write!(w, "{}: {}\n", description, date)?;
+    }
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -118,12 +142,9 @@ pub(crate) fn render_commit_summary(
         w,
     )?;
     write!(w, "\n")?;
-    let date = commit.date.to_string();
-    let local_date = commit.date.with_timezone(&Local).to_string();
-    if date != local_date {
-        write!(w, "Date: {} ({})\n", date, local_date)?;
-    } else {
-        write!(w, "Date: {}\n", date)?;
+    render_date(w, commit.date, "Date")?;
+    if let Some(committer_date) = commit.committer_date {
+        render_date(w, committer_date, "Committer Date")?;
     }
     write!(w, "Author: {}\n", commit.author)?;
     write!(
@@ -165,12 +186,9 @@ pub(crate) fn render_commit_info(
         )?;
         write!(w, "\n")?;
     }
-    let date = commit.date.to_string();
-    let local_date = commit.date.with_timezone(&Local).to_string();
-    if date != local_date {
-        write!(w, "Date: {} ({})\n", date, local_date)?;
-    } else {
-        write!(w, "Date: {}\n", date)?;
+    render_date(w, commit.date, "Date")?;
+    if let Some(committer_date) = commit.committer_date {
+        render_date(w, committer_date, "Committer Date")?;
     }
     write!(w, "Author: {}\n", commit.author)?;
     write!(w, "Generation: {}\n", commit.generation)?;
