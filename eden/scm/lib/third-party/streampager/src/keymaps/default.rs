@@ -1,18 +1,18 @@
 //! Default keymap
 
 keymap! {
-    CTRL 'C', 'q', ('Q') => Quit;
+    CTRL 'c', 'q', ('Q') => Quit;
     Escape => Cancel;
-    CTRL 'L', 'r' => Refresh;
-    CTRL 'R' => ToggleRuler;
-    UpArrow, 'k', (CTRL 'K'), (CTRL 'P') => ScrollUpLines(1);
-    DownArrow, 'j', (CTRL 'N'), Enter => ScrollDownLines(1);
+    CTRL 'l', 'r' => Refresh;
+    CTRL 'r' => ToggleRuler;
+    UpArrow, 'k', (CTRL 'k'), (CTRL 'p') => ScrollUpLines(1);
+    DownArrow, 'j', (CTRL 'n'), Enter => ScrollDownLines(1);
     SHIFT UpArrow, (ApplicationUpArrow) => ScrollUpScreenFraction(4);
     SHIFT DownArrow, (ApplicationDownArrow) => ScrollDownScreenFraction(4);
-    CTRL UpArrow, 'u', CTRL 'U' => ScrollUpScreenFraction(2);
-    CTRL DownArrow, 'd', CTRL 'D' => ScrollDownScreenFraction(2);
-    PageUp, Backspace, 'b', CTRL 'B', ALT 'v' => ScrollUpScreenFraction(1);
-    PageDown, ' ', 'f', CTRL 'F', CTRL 'V' => ScrollDownScreenFraction(1);
+    CTRL UpArrow, 'u', CTRL 'u' => ScrollUpScreenFraction(2);
+    CTRL DownArrow, 'd', CTRL 'd' => ScrollDownScreenFraction(2);
+    PageUp, Backspace, 'b', CTRL 'b', ALT 'v' => ScrollUpScreenFraction(1);
+    PageDown, ' ', 'f', CTRL 'f', CTRL 'v' => ScrollDownScreenFraction(1);
     Home, 'g', '<' => ScrollToTop;
     End, 'F', 'G', '>' => ScrollToBottom;
     LeftArrow => ScrollLeftColumns(4);

@@ -373,7 +373,7 @@ impl Prompt {
         const ALT: Modifiers = Modifiers::ALT;
         let value_width = width - self.prompt.width() - 4;
         let action = match (key.modifiers, key.key) {
-            (NONE, Enter) | (CTRL, Char('J')) | (CTRL, Char('M')) => {
+            (NONE, Enter) | (CTRL, Char('j')) | (CTRL, Char('m')) => {
                 // Finish.
                 let _ = self.history.save();
                 let mut run = self.run.take();
@@ -387,7 +387,7 @@ impl Prompt {
                     }
                 }));
             }
-            (NONE, Escape) | (CTRL, Char('C')) => {
+            (NONE, Escape) | (CTRL, Char('c')) => {
                 // Cancel.
                 return DisplayAction::Run(Box::new(|screen: &mut Screen| {
                     screen.clear_prompt();
@@ -395,19 +395,19 @@ impl Prompt {
                 }));
             }
             (NONE, Char(c)) => self.state_mut().insert_char(c, value_width),
-            (NONE, Backspace) | (CTRL, Char('H')) => self.state_mut().delete_prev_char(),
-            (NONE, Delete) | (CTRL, Char('D')) => self.state_mut().delete_next_char(),
-            (CTRL, Char('W')) | (ALT, Backspace) => self.state_mut().delete_prev_word(),
+            (NONE, Backspace) | (CTRL, Char('h')) => self.state_mut().delete_prev_char(),
+            (NONE, Delete) | (CTRL, Char('d')) => self.state_mut().delete_next_char(),
+            (CTRL, Char('w')) | (ALT, Backspace) => self.state_mut().delete_prev_word(),
             (ALT, Char('d')) => self.state_mut().delete_next_word(),
-            (NONE, RightArrow) | (CTRL, Char('F')) => self.state_mut().move_next_char(),
-            (NONE, LeftArrow) | (CTRL, Char('B')) => self.state_mut().move_prev_char(),
+            (NONE, RightArrow) | (CTRL, Char('f')) => self.state_mut().move_next_char(),
+            (NONE, LeftArrow) | (CTRL, Char('b')) => self.state_mut().move_prev_char(),
             (CTRL, RightArrow) | (ALT, Char('f')) => self.state_mut().move_next_word(),
             (CTRL, LeftArrow) | (ALT, Char('b')) => self.state_mut().move_prev_word(),
-            (CTRL, Char('K')) => self.state_mut().delete_to_end(),
-            (CTRL, Char('U')) => self.state_mut().delete_to_start(),
-            (NONE, End) | (CTRL, Char('E')) => self.state_mut().move_to_end(),
-            (NONE, Home) | (CTRL, Char('A')) => self.state_mut().move_to_start(),
-            (CTRL, Char('T')) => self.state_mut().transpose_chars(),
+            (CTRL, Char('k')) => self.state_mut().delete_to_end(),
+            (CTRL, Char('u')) => self.state_mut().delete_to_start(),
+            (NONE, End) | (CTRL, Char('e')) => self.state_mut().move_to_end(),
+            (NONE, Home) | (CTRL, Char('a')) => self.state_mut().move_to_start(),
+            (CTRL, Char('t')) => self.state_mut().transpose_chars(),
             (NONE, UpArrow) => self.history.previous(),
             (NONE, DownArrow) => self.history.next(),
             _ => return DisplayAction::None,

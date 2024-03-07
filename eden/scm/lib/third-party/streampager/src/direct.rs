@@ -166,7 +166,7 @@ pub(crate) fn direct<T: Terminal>(
                 use termwiz::input::KeyCode::Char;
                 use termwiz::input::Modifiers;
                 match (key.modifiers, key.key) {
-                    (Modifiers::NONE, Char('q')) | (Modifiers::CTRL, Char('C')) => {
+                    (Modifiers::NONE, Char('q')) | (Modifiers::CTRL, Char('c')) => {
                         term.render(&state.abort()).map_err(Error::Termwiz)?;
                         return Ok(Outcome::Interrupted);
                     }
