@@ -655,7 +655,11 @@ class localrepository:
 
             self.svfs._reporef = weakref.ref(self)
 
-            if "eagercompat" not in self.storerequirements:
+            if (
+                "eagercompat" not in self.storerequirements
+                # seems incompatible with legacy lfs extension
+                and not extensions.isenabled(self.ui, "lfs")
+            ):
                 with self.lock(wait=False):
                     self.storerequirements.add("eagercompat")
                     self._writestorerequirements()
