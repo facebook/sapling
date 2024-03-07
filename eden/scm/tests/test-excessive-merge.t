@@ -2,8 +2,8 @@
 
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ hg init
 
+  $ newrepo
   $ echo foo > a
   $ echo foo > b
   $ hg add a b

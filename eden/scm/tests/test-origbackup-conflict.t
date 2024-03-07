@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
   $ eagerepo
+  $ setconfig commands.update.check=none
 Set up repo
 
   $ setconfig ui.origbackuppath=.hg/origbackups merge.checkunknown=warn

@@ -110,7 +110,7 @@
 # -f, directory
 # (The code path using "follow()" revset will follow file renames, so 'b' and 'a' show up)
 
-  $ hg up -q 3
+  $ hg up -q 'desc(d)'
   $ hg log -f dir
   commit:      * (glob)
   user:        test
@@ -165,7 +165,7 @@
   +++ b/dir/b	Thu Jan 01 00:00:03 1970 +0000
   @@ -0,0 +1,1 @@
   +a
-  $ hg up -q 4
+  $ hg up -q 'desc(e)'
 
 # -f, a wrong style
 
@@ -216,7 +216,7 @@
 
 # one rename
 
-  $ hg up -q 2
+  $ hg up -q 'desc(c)'
   $ hg log -vf a
   commit:      * (glob)
   user:        test
@@ -262,7 +262,7 @@
 
 # log -pf dir/b
 
-  $ hg up -q 3
+  $ hg up -q 'desc(d)'
   $ hg log -pf dir/b
   commit:      * (glob)
   user:        test
@@ -452,7 +452,7 @@
 
 # -f and multiple filelog heads
 
-  $ hg up -q 2
+  $ hg up -q 'desc(c)'
   $ hg log -f g --template '{rev}\n'
   2
   1
@@ -527,7 +527,7 @@
 
 # log copies, non-linear manifest
 
-  $ hg up -C 3
+  $ hg up -C 'desc(d)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg mv dir/b e
   $ echo foo > foo
@@ -603,7 +603,7 @@
   $ echo r2 >> base
   $ hg ci -Amr2 -d '1 0'
 
-  $ hg up -C 1
+  $ hg up -C 'desc(r1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b1 > b1
 
@@ -661,7 +661,7 @@
 
 # log -f -r '1 + 4'
 
-  $ hg up -C 0
+  $ hg up -C 'desc(base)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b2 > b2
   $ hg ci -Amb2 -d '1 0'
@@ -692,7 +692,7 @@
 
 # log -r "follow('set:grep(b2)', 4)"
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(base)'
   $ hg log -r 'follow('\''set:grep(b2)'\'', 4)'
   commit:      * (glob)
   user:        test
@@ -725,7 +725,7 @@
   $ hg log -Gq -r 'follow()'
   @  67e992f2c4f3
 
-  $ hg up -qC 4
+  $ hg up -qC 'desc(b2)'
 
 # log -f -r null
 
@@ -746,7 +746,7 @@
 
 # log -r .  with two parents
 
-  $ hg up -C 3
+  $ hg up -C 'desc(b1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -787,12 +787,12 @@
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b1
   
-  commit:      * (glob)
+  commit:      3d5bf5654eda
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     r1
   
-  commit:      * (glob)
+  commit:      67e992f2c4f3
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     base
@@ -810,7 +810,7 @@
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     m12
   
-  commit:      * (glob)
+  commit:      ddb82e70d1a1
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b2
@@ -858,24 +858,24 @@
 # log -p -l2 --color=always
 
   $ hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--color=always'
-  \x1b[0m\x1b[1m\x1b[93mcommit:      2404bbcab562\x1b[0m (esc)
+  [0m[1m[93mcommit:      2404bbcab562[0m
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b1.1
   
-  \x1b[0m\x1b[1mdiff -r 302e9dd6890d -r 2404bbcab562 b1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[31m--- a/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
+  [0m[1mdiff -r 302e9dd6890d -r 2404bbcab562 b1[0m
+  [0m[1m[31m--- a/b1	Thu Jan 01 00:00:01 1970 +0000[0m
   \x1b[0m\x1b[1m\x1b[32m+++ b/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
-  \x1b[35m@@ -1,1 +1,2 @@\x1b[39m (esc)
+  [35m@@ -1,1 +1,2 @@[39m
    b1
-  \x1b[92m+postm\x1b[39m (esc)
+  [92m+postm[39m
   
-  \x1b[0m\x1b[1m\x1b[93mcommit:      302e9dd6890d\x1b[0m (esc)
+  [0m[1m[93mcommit:      302e9dd6890d[0m
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     m12
   
-  \x1b[0m\x1b[1mdiff -r e62f78d544b4 -r 302e9dd6890d b2\x1b[0m (esc)
+  [0m[1mdiff -r e62f78d544b4 -r 302e9dd6890d b2[0m
   \x1b[0m\x1b[1m\x1b[31m--- /dev/null	Thu Jan 01 00:00:00 1970 +0000\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[32m+++ b/b2	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
   \x1b[35m@@ -0,0 +1,1 @@\x1b[39m (esc)
@@ -909,7 +909,7 @@
   $ hg ci -qAm a0
   $ echo 1 >> a
   $ hg ci -m a1
-  $ hg up -q 0
+  $ hg up -q 'desc(a0)'
   $ echo 1 >> a
   $ touch b
   $ hg ci -qAm 'a1 with b'
@@ -945,7 +945,7 @@
 
 #  fctx.introrev() == 2, but fctx.linkrev() == 1
 
-  $ hg up -q 2
+  $ hg up -q 'desc("a1 with b")'
   $ hg log -pf a
   === 2: a1 with b
   diff -r * -r * a (glob)
@@ -983,7 +983,7 @@
   $ hg ci -m a0
   $ echo 6 >> b
   $ hg ci -m b0
-  $ hg up -q 4
+  $ hg up -q "desc('a,b')"
   $ echo 7 >> b
   $ hg ci -m b1
   $ echo 8 >> a
@@ -1282,7 +1282,7 @@
   $ hg ci -A -m 'add foo, related'
   adding foo
 
-  $ hg up 0
+  $ hg up 'desc("init, unrelated")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch branch
   $ hg ci -A -m 'first branch, unrelated'
@@ -1293,11 +1293,11 @@
   $ echo change > foo
   $ hg ci -m 'change foo, related'
 
-  $ hg up 6
+  $ hg up 'desc("create foo, related")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'change foo in branch' > foo
   $ hg ci -m 'change foo in branch, related'
-  $ hg merge 7
+  $ hg merge "desc('change foo, related')"
   merging foo
   warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -1320,52 +1320,52 @@
   $ hg ci -m 'Last merge, related'
 
   $ hg log --graph
-  @    commit:      * (glob)
+  @    commit:      4dae8563d2c5
   ├─╮  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     Last merge, related
   │ │
-  │ o    commit:      * (glob)
+  │ o    commit:      7b35701b003e
   │ ├─╮  user:        test
   │ │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │ │  summary:     First merge, related
   │ │ │
-  │ │ o  commit:      * (glob)
+  │ │ o  commit:      e5416ad8a855
   │ │ │  user:        test
   │ │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │ │  summary:     change foo in branch, related
   │ │ │
-  │ o │  commit:      * (glob)
+  │ o │  commit:      87fe3144dcfa
   │ ├─╯  user:        test
   │ │    date:        Thu Jan 01 00:00:00 1970 +0000
   │ │    summary:     change foo, related
   │ │
-  │ o  commit:      * (glob)
+  │ o  commit:      dc6c325fe5ee
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     create foo, related
   │ │
-  │ o  commit:      * (glob)
+  │ o  commit:      73db34516eb9
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     first branch, unrelated
   │ │
-  o │  commit:      * (glob)
+  o │  commit:      88176d361b69
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     add foo, related
   │ │
-  o │  commit:      * (glob)
+  o │  commit:      dd78ae4afb56
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     delete foo, unrelated
   │ │
-  o │  commit:      * (glob)
+  o │  commit:      c4c64aedf0f7
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     add unrelated old foo
   │ │
-  o │  commit:      * (glob)
+  o │  commit:      e5faa7440653
   ├─╯  user:        test
   │    date:        Thu Jan 01 00:00:00 1970 +0000
   │    summary:     change, unrelated
@@ -1376,32 +1376,32 @@
      summary:     init, unrelated
 
   $ hg --traceback log -f foo
-  commit:      * (glob)
+  commit:      4dae8563d2c5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Last merge, related
   
-  commit:      * (glob)
+  commit:      7b35701b003e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     First merge, related
   
-  commit:      * (glob)
+  commit:      e5416ad8a855
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change foo in branch, related
   
-  commit:      * (glob)
+  commit:      87fe3144dcfa
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change foo, related
   
-  commit:      * (glob)
+  commit:      dc6c325fe5ee
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     create foo, related
   
-  commit:      * (glob)
+  commit:      88176d361b69
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo, related
@@ -1433,7 +1433,7 @@
   $ echo b > b
   $ hg ci -Am1
   adding b
-  $ hg co 0
+  $ hg co 'desc(0)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > a
   $ hg ci -m2
@@ -1510,7 +1510,7 @@
 
 # test that parent prevent a changeset to be hidden
 
-  $ hg up 1 -q --hidden
+  $ hg up 'desc("a bis")' -q --hidden
   $ hg log '--template={rev}:{node}\n'
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
@@ -1813,7 +1813,7 @@
   $ hg ci -Aqm a
   $ echo b > d/a
   $ hg ci -Aqm b
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ echo b > d/a
   $ hg ci -Aqm c
   $ hg log -f d -T '{desc}' -G
@@ -1996,7 +1996,7 @@
   adding b
   $ echo B > b
   $ hg ci --amend -m 1
-  $ hg up 0
+  $ hg up 'desc(0)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
   $ hg ci -Am2
@@ -2047,7 +2047,7 @@
   $ echo 2 > B
   $ echo 2 > C
   $ hg commit -m A2B2C2
-  $ hg up 0
+  $ hg up 'desc(A1B1C1)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 > A
   $ echo 2 > B
@@ -2060,7 +2060,7 @@
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     A3B2C2
   │
-  │ o  commit:      * (glob)
+  │ o  commit:      07dcc6b312c0
   ├─╯  user:        test
   │    date:        Thu Jan 01 00:00:00 1970 +0000
   │    summary:     A2B2C2
@@ -2073,7 +2073,7 @@
 # Log -f on B should reports current changesets
 
   $ hg log -fG B
-  @  commit:      * (glob)
+  @  commit:      fe5fc3d0eb17
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     A3B2C2

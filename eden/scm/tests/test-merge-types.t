@@ -4,6 +4,7 @@
 #require symlink execbit
 
   $ eagerepo
+  $ setconfig commands.update.check=none
   $ tellmeabout() {
   >   f -Dxt "$@"
   > }

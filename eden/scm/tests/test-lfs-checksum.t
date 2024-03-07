@@ -3,6 +3,7 @@
 
   $ enable lfs remotefilelog
   $ setconfig lfs.url=file://$TESTTMP/cache lfs.threshold=1 remotefilelog.cachepath=$TESTTMP/rflcache
+  $ setconfig checkout.use-rust=false
 
 Write a LFS file to the repo
 

@@ -9,6 +9,8 @@
 # a file-level merge failed
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig commands.update.check=none
+
   $ eagerepo
   $ hg init repo
   $ cd repo

@@ -73,7 +73,7 @@ list bookmarks
 Verify that switching to Z updates the active bookmark:
   $ hg goto Z
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (activating bookmark Z)
+  (changing active bookmark from Y to Z)
   $ hg bookmark
      Y                         719295282060
    * Z                         000000000000
@@ -81,7 +81,7 @@ Verify that switching to Z updates the active bookmark:
 Switch back to Y for the remaining tests in this file:
   $ hg goto Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark Y)
+  (changing active bookmark from Z to Y)
 
 delete bookmarks
 

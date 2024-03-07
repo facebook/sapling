@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
   $ configure mutation-norecord
+  $ setconfig commands.update.check=none
 
 Avoid "\r" in messages:
 

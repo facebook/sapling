@@ -59,7 +59,7 @@ define_flags! {
         /// create new bookmark
         #[short('B')]
         #[argtype("VALUE")]
-        bookmark: String,
+        bookmark: Option<String>,
 
         #[args]
         args: Vec<String>,
@@ -67,23 +67,34 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
-    // Missing features (in roughly priority order):
-    // - edenfs checkout support
-    // - progressfile and --continue
-    // - updatestate file maintaince
-    // - Activating/deactivating bookmarks
-    // - Checking unknown files (do we need this?)
-    //
-    // Features to deprecate/not support:
-    // - --merge, --inactive, --date, --check
-
     if !repo.config().get_or_default("checkout", "use-rust")? {
         fallback!("checkout.use-rust is False");
+    }
+
+    if repo.config().get("commands", "update.check").as_deref() == Some("none") {
+        // This is equivalent to --merge, which we don't support.
+        fallback!("commands.update.check=none");
+    }
+
+    if wc.parents()?.len() > 1 {
+        fallback!("multiple working copy parents");
+    }
+
+    if repo.storage_format().is_git() {
+        // We can't be sure if submodules are involved since ".submodules" may have been
+        // added in the checkout destination.
+        tracing::debug!(target: "checkout_info", checkout_detail="gitmodules");
+        fallback!("git format unsupported (submodules)");
     }
 
     if ctx.opts.merge || !ctx.opts.date.is_empty() {
         tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
         fallback!("one or more unsupported options in Rust checkout");
+    }
+
+    if ctx.opts.bookmark.is_some() {
+        tracing::debug!(target: "checkout_info", checkout_detail="bookmark");
+        fallback!("--bookmark not supported");
     }
 
     if ctx.opts.clean && ctx.opts.r#continue {
@@ -100,7 +111,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     }
 
     if ctx.opts.check as i32 + ctx.opts.clean as i32 + ctx.opts.merge as i32 > 1 {
-        abort!("can only specify one of --check, --clean, or --merge");
+        abort!("can only specify one of -C/--clean, -c/--check, or -m/--merge");
     }
 
     // Protect the various ".hg" state file checks.

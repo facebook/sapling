@@ -24,7 +24,7 @@ Make sure we notice the change of mode if the cached size == -1:
   $ hg status
   M a
 
-  $ hg up d69afc33ff8a77eda0ccb79374772831912446c3
+  $ hg up -C d69afc33ff8a77eda0ccb79374772831912446c3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   d69afc33ff8a

@@ -3,6 +3,8 @@
 #require unix-permissions no-root no-windows
 
   $ configure modernclient
+FIXME(checkout): slow lock warnings
+  $ setconfig checkout.use-rust=false
 
 Prepare
 

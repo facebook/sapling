@@ -17,7 +17,7 @@ Verify error message when no cachepath specified
   $ hg up -q null
   $ cp $HGRCPATH $HGRCPATH.bak
   $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
-  $ hg up tip
+  $ hg up tip --config checkout.use-rust=false
   abort: get_cache_path
   
   Caused by:

@@ -2,6 +2,7 @@
 
   $ eagerepo
   $ enable mergedriver
+  $ setconfig commands.update.check=none
 
 basic merge driver: just lists out files and contents, doesn't resolve any files
 

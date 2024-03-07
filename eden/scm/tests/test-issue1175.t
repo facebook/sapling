@@ -2,6 +2,8 @@
 
 https://bz.mercurial-scm.org/1175
 
+  $ setconfig commands.update.check=none
+
   $ newrepo repo
   $ touch a
   $ hg ci -Am0

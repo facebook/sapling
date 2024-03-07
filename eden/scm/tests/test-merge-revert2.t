@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
+  $ setconfig commands.update.check=none
   $ hg init repo
   $ cd repo
 

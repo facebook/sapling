@@ -248,17 +248,23 @@ fn resolve_revnum(args: &LookupArgs) -> Result<Option<HgId>> {
         Ok(rev) => rev,
     };
 
-    match rev {
-        -1 => Ok(Some(NULL_ID)),
-        WDIR_REV => Ok(Some(WDIR_ID)),
+    let id = match rev {
+        -1 => NULL_ID,
+        WDIR_REV => WDIR_ID,
         rev => {
             let name = block_on(async { args.id_map.vertex_name(Id(rev as u64)).await })?;
-            Ok(Some(HgId::from_byte_array(
+            HgId::from_byte_array(
                 name.0
                     .into_vec()
                     .try_into()
                     .map_err(|v| anyhow!("unexpected vertex name length: {:?}", v))?,
-            )))
+            )
         }
+    };
+
+    if args.config.get("devel", "legacy.revnum").as_deref() == Some("abort") {
+        bail!("local revision number is disabled in this repo");
     }
+
+    Ok(Some(id))
 }

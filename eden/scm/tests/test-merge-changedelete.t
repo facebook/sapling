@@ -30,6 +30,7 @@ Make sure HGMERGE doesn't interfere with the test
 
   $ configure modern
   $ newclientrepo repo
+  $ setconfig commands.update.check=none
 
   $ echo 1 > file1
   $ echo 2 > file2

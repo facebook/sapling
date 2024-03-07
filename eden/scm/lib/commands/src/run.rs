@@ -254,6 +254,8 @@ fn dispatch_command(
             if failed_fallback {
                 197
             } else if should_fallback {
+                tracing::debug!(?err, "falling back to python");
+
                 fell_back = true;
                 // Change the current dir back to the original so it is not surprising to the Python
                 // code.

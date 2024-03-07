@@ -4,6 +4,7 @@ Test the lfs.localstore config option
 
   $ enable lfs
   $ setconfig lfs.url=file://$TESTTMP/remote lfs.threshold=1
+  $ setconfig checkout.use-rust=false
 
   $ newrepo
   $ drawdag <<'EOS'

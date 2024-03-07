@@ -23,7 +23,7 @@ ipv6={use_ipv6}
 
 [commands]
 status.relative=True
-update.check=none
+update.check=noconflict
 
 [config]
 use-rust=True
@@ -60,6 +60,9 @@ windows-symlinks=True
 [tweakdefaults]
 graftkeepdate=True
 logdefaultfollow=False
+
+[checkout]
+use-rust=true
 """
     if use_watchman:
         content += """

@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
   $ eagerepo
+  $ setconfig commands.update.check=none
   $ hg init repo
   $ cd repo
 

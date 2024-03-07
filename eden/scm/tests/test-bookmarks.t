@@ -165,7 +165,7 @@ bookmark rev 0 again
 
   $ hg goto X
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (activating bookmark X)
+  (changing active bookmark from X2 to X)
   $ echo c > c
   $ hg add c
   $ hg commit -m 2

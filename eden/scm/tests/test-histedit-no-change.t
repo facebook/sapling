@@ -7,6 +7,7 @@ editing a changeset without any actual change would corrupt the repository
 
   $ enable histedit
   $ configure modern
+  $ setconfig commands.update.check=none
 
   $ initrepo ()
   > {

@@ -1,5 +1,6 @@
 #debugruntest-compatible
 
+  $ setconfig commands.update.check=none
 
 Criss cross merging
 

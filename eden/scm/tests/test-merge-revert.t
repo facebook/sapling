@@ -7,6 +7,7 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
+  $ setconfig commands.update.check=none
 
   $ hg init repo
   $ cd repo

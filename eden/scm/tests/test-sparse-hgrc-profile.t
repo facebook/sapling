@@ -1,6 +1,7 @@
 #testcases normalcheckout nativecheckout
   $ configure modernclient
   $ enable sparse
+  $ setconfig commands.update.check=none
 
 #if nativecheckout
   $ setconfig experimental.nativecheckout=True

@@ -70,7 +70,7 @@ Check that the checkout locations are synced after the amend is made
   unixname: test
 
 Checkout the old commit and see if the location is synced
-  $ hg checkout bb757c825e81d15d6959648d8f055c8e5958310f --hidden
+  $ hg checkout bb757c825e81d15d6959648d8f055c8e5958310f --hidden --config checkout.use-rust=false
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ python $TESTTMP/dumpdata.py
   repo_name: server

@@ -318,7 +318,7 @@ Test --check
   abort: uncommitted changes
   [255]
   $ hg go --clean --check -q null
-  abort: can only specify one of --check, --clean, or --merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   [255]
 
 Bail on dir/path conflict with added file:

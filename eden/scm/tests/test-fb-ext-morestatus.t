@@ -14,9 +14,11 @@
   > EOF
   $ breakupdate() {
   >   setconfig extensions.breakupdate="$TESTTMP/breakupdate.py"
+  >   setconfig checkout.use-rust=false
   > }
   $ unbreakupdate() {
   >   disable breakupdate
+  >   setconfig checkout.use-rust=true
   > }
 
 Test An empty repo should return no extra output

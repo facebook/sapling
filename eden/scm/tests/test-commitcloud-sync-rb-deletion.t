@@ -3,6 +3,7 @@
 
   $ configure modern
   $ setconfig infinitepush.branchpattern=re:scratch/.+
+  $ setconfig checkout.use-rust=false
 
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"

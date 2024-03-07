@@ -5,6 +5,7 @@ and files
 
   $ configure modernclient
   $ setconfig experimental.nativecheckout=true
+  $ setconfig commands.update.check=none
 
 Update with local changes across a file rename
 

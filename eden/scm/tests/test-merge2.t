@@ -1,6 +1,8 @@
 #chg-compatible
 
   $ eagerepo
+  $ setconfig commands.update.check=none
+
   $ hg init t
   $ cd t
   $ echo This is file a1 > a

@@ -247,10 +247,9 @@ Invalid format strings don't crash Mercurial
 
 Test command name:
   $ newclientrepo
-  atexit handler executed
   $ enable sparse
 Both Rust and Python use canonical "update" name:
-  $ SL_LOG=command_info=debug hg go . 2>&1 | grep command=
+  $ SL_LOG=command_info=debug hg go --config checkout.use-rust=false . 2>&1 | grep command=
   DEBUG command_info: command="update"
   DEBUG command_info: command="update"
 Sub commands work:

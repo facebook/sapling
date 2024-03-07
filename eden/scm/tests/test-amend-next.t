@@ -150,7 +150,7 @@ Test bookmark navigation.
 Test bookmark activation.
   $ hg up bottom
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark bottom)
+  (changing active bookmark from top to bottom)
   $ hg next 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
@@ -223,7 +223,7 @@ Test --newest flag.
   o  bottom r0
   $ hg up bottom
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (activating bookmark bottom)
+  (changing active bookmark from other to bottom)
   $ hg next --top
   current stack has multiple heads, namely:
   [*] (top) r5 (glob)
@@ -247,7 +247,7 @@ Test --newest flag.
 Test --towards flag.
   $ hg up bottom
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (activating bookmark bottom)
+  (changing active bookmark from other to bottom)
   $ showgraph
   o  other test
   │

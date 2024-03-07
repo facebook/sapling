@@ -19,19 +19,17 @@
   >     hg init r
   >     cd r
   >     addcommits a b c d e f
-  >     hg goto 1
+  >     hg goto 'desc(b)'
   >     addcommits g h i
-  >     hg goto 1
+  >     hg goto 'desc(b)'
   >     echo CONFLICT > f
   >     hg add f
   >     hg ci -m "conflict f"
-  >     hg goto 9
   > }
 
   $ initrepo
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log before rebase
 

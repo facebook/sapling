@@ -4,6 +4,7 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable commitextras
   $ setconfig ui.allowemptycommit=1
+  $ setconfig checkout.use-rust=false
 
   $ HGENCODING=utf-8
   $ export HGENCODING

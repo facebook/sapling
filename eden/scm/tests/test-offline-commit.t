@@ -1,6 +1,8 @@
 #debugruntest-compatible
 
   $ configure modernclient
+FIXME(checkout): pre-fetch for offline commit
+  $ setconfig checkout.use-rust=false
 
 Prepare Repo:
 

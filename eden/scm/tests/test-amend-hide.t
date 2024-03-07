@@ -107,12 +107,12 @@
 
 # hg hide --cleanup tests
 
-  $ hg goto 4
+  $ hg goto 'desc(E)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo f > f
   $ hg add f
   $ hg commit -d '0 0' -m F
-  $ hg goto 4
+  $ hg goto 'desc(E)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg amend --no-rebase -m E2 -d '0 0'
   hint[amend-restack]: descendants of 78d2dca436b2 are left behind - use 'hg restack' to rebase them

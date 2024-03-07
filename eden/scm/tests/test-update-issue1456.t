@@ -2,6 +2,7 @@
 
 #require execbit
   $ setconfig experimental.nativecheckout=true
+  $ setconfig commands.update.check=none
 
   $ newserver server
 

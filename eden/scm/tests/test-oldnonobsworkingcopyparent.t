@@ -1,7 +1,9 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ enable undo rebase 
+  $ enable undo rebase
+FIXME(checkout): use journal instead of undo to get previous parent
+  $ setconfig commands.update.check=none
 
   $ newrepo
   $ drawdag <<'EOS'
