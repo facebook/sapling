@@ -735,6 +735,15 @@ def shownode(repo, ctx, templ, **args):
     return ctx.hex()
 
 
+@templatekeyword("nodescheme")
+def nodescheme(repo, ctx, templ, **args):
+    """String. The changeset id scheme, e.g. "hg" or "git"."""
+    if git.isgitformat(repo):
+        return "git"
+    else:
+        return "hg"
+
+
 @templatekeyword("obsolete")
 def showobsolete(repo, ctx, templ, **args) -> str:
     """String. Whether the changeset is obsolete. (EXPERIMENTAL)"""
