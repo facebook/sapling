@@ -127,10 +127,6 @@ class httppasswordmgrdbproxy:
         return tuple(v for v in self._get_mgr().find_user_password(realm, uri))
 
 
-def _catchterm(*args):
-    raise error.SignalInterrupt
-
-
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
 _unset: object = uiconfig._unset
@@ -852,8 +848,6 @@ class ui:
 
         wasformatted = self.formatted
         wasterminaloutput = self.terminaloutput()
-        if hasattr(signal, "SIGPIPE"):
-            util.signal(signal.SIGPIPE, _catchterm)
 
         if self.configbool("experimental", "rust-custom-pager", True):
             self._runrustpager(pagercmd)
