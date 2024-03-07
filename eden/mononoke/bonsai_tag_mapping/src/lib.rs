@@ -47,6 +47,16 @@ pub trait BonsaiTagMapping: Send + Sync {
     /// The repository for which this mapping has been created
     fn repo_id(&self) -> RepositoryId;
 
+    /// Fetch all the tag mapping entries for the given repo
+    async fn get_all_entries(&self) -> Result<Vec<BonsaiTagMappingEntry>>;
+
+    /// Fetch the tag mapping entries corresponding to the input changeset ids
+    /// for the given repo
+    async fn get_entries_by_changesets(
+        &self,
+        changeset_id: Vec<ChangesetId>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>>;
+
     /// Fetch the tag mapping entry correponding to the tag name in the
     /// given repo, if one exists
     async fn get_entry_by_tag_name(
@@ -60,7 +70,10 @@ pub trait BonsaiTagMapping: Send + Sync {
     async fn get_entries_by_changeset(
         &self,
         changeset_id: ChangesetId,
-    ) -> Result<Option<Vec<BonsaiTagMappingEntry>>>;
+    ) -> Result<Option<Vec<BonsaiTagMappingEntry>>> {
+        let entries = self.get_entries_by_changesets(vec![changeset_id]).await?;
+        Ok((!entries.is_empty()).then_some(entries))
+    }
 
     /// Add new tag name to bonsai changeset mappings
     async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()>;

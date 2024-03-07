@@ -31,13 +31,21 @@ mononoke_queries! {
         "REPLACE INTO bonsai_tag_mapping (repo_id, tag_name, changeset_id, tag_hash, target_is_tag) VALUES {values}"
     }
 
-    read SelectMappingByChangeset(
+    read SelectAllMappings(
         repo_id: RepositoryId,
-        changeset_id: ChangesetId
     ) -> (String, ChangesetId, GitSha1, bool) {
         "SELECT tag_name, changeset_id, tag_hash, target_is_tag
          FROM bonsai_tag_mapping
-         WHERE repo_id = {repo_id} AND changeset_id = {changeset_id}"
+         WHERE repo_id = {repo_id}"
+    }
+
+    read SelectMappingByChangeset(
+        repo_id: RepositoryId,
+        >list changeset_id: ChangesetId
+    ) -> (String, ChangesetId, GitSha1, bool) {
+        "SELECT tag_name, changeset_id, tag_hash, target_is_tag
+         FROM bonsai_tag_mapping
+         WHERE repo_id = {repo_id} AND changeset_id IN {changeset_id}"
     }
 
     read SelectMappingByTagName(
@@ -87,6 +95,22 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         self.repo_id
     }
 
+    async fn get_all_entries(&self) -> Result<Vec<BonsaiTagMappingEntry>> {
+        let results = SelectAllMappings::query(&self.connections.read_connection, &self.repo_id)
+            .await
+            .with_context(|| {
+                format!("Failure in fetching all entries for repo {}", self.repo_id)
+            })?;
+
+        let values = results
+            .into_iter()
+            .map(|(tag_name, changeset_id, tag_hash, target_is_tag)| {
+                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash, target_is_tag)
+            })
+            .collect::<Vec<_>>();
+        return Ok(values);
+    }
+
     async fn get_entry_by_tag_name(
         &self,
         tag_name: String,
@@ -119,20 +143,20 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
             }))
     }
 
-    async fn get_entries_by_changeset(
+    async fn get_entries_by_changesets(
         &self,
-        changeset_id: ChangesetId,
-    ) -> Result<Option<Vec<BonsaiTagMappingEntry>>> {
+        changeset_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>> {
         let results = SelectMappingByChangeset::query(
             &self.connections.read_connection,
             &self.repo_id,
-            &changeset_id,
+            changeset_ids.as_slice(),
         )
         .await
         .with_context(|| {
             format!(
-                "Failure in fetching entry for changeset {:?} in repo {}",
-                changeset_id, self.repo_id
+                "Failure in fetching entry for changesets {:?} in repo {}",
+                changeset_ids, self.repo_id
             )
         })?;
 
@@ -142,8 +166,7 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
                 BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash, target_is_tag)
             })
             .collect::<Vec<_>>();
-        let output = (!values.is_empty()).then_some(values);
-        return Ok(output);
+        return Ok(values);
     }
 
     async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()> {
