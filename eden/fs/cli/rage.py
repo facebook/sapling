@@ -76,6 +76,11 @@ except ImportError:
         return None
 
 
+THRIFT_COUNTER_REGEX = (
+    r"thrift\.(EdenService|BaseService)\..*(time|num_samples|num_calls).*"
+)
+
+
 def section_title(message: str, out: IO[bytes]) -> None:
     out.write(util_mod.underlined(message).encode())
 
@@ -284,6 +289,12 @@ def print_diagnostic_info(
             out.write(stats_stream.getvalue().encode())
 
     print_counters(instance, "EdenFS", top_mod.COUNTER_REGEX, out)
+    print_counters(
+        instance,
+        "Thrift",
+        THRIFT_COUNTER_REGEX,
+        out,
+    )
 
     if health_status.is_healthy() and not dry_run and processor:
         print_recent_events(processor, out, dry_run)
