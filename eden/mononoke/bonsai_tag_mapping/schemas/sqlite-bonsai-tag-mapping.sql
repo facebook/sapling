@@ -15,4 +15,7 @@ CREATE TABLE IF NOT EXISTS bonsai_tag_mapping (
   tag_hash VARBINARY(20) DEFAULT 0x0000000000000000000000000000000000000000, -- The Git hash of the tag object
   target_is_tag BOOLEAN DEFAULT FALSE, -- Flag determining if the target of the tag is another tag instead of a commit
   PRIMARY KEY (repo_id, tag_name)
-)
+);
+
+CREATE INDEX IF NOT EXISTS bonsai_tag_mapping_hashes
+  ON bonsai_tag_mapping (tag_hash, repo_id);

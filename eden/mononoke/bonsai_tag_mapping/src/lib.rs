@@ -75,6 +75,12 @@ pub trait BonsaiTagMapping: Send + Sync {
         Ok((!entries.is_empty()).then_some(entries))
     }
 
+    /// Fetch the tag mapping entries corresponding to the input tag hashes
+    async fn get_entries_by_tag_hashes(
+        &self,
+        tag_hashes: Vec<GitSha1>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>>;
+
     /// Add new tag name to bonsai changeset mappings
     async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()>;
 }

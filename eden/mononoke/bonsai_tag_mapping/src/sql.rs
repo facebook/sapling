@@ -56,6 +56,15 @@ mononoke_queries! {
          FROM bonsai_tag_mapping
          WHERE repo_id = {repo_id} AND tag_name = {tag_name}"
     }
+
+    read SelectMappingByTagHash(
+        repo_id: RepositoryId,
+        >list tag_hash: GitSha1
+    ) -> (String, ChangesetId, GitSha1, bool) {
+        "SELECT tag_name, changeset_id, tag_hash, target_is_tag
+         FROM bonsai_tag_mapping
+         WHERE repo_id = {repo_id} AND tag_hash IN {tag_hash}"
+    }
 }
 
 pub struct SqlBonsaiTagMapping {
@@ -157,6 +166,32 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
             format!(
                 "Failure in fetching entry for changesets {:?} in repo {}",
                 changeset_ids, self.repo_id
+            )
+        })?;
+
+        let values = results
+            .into_iter()
+            .map(|(tag_name, changeset_id, tag_hash, target_is_tag)| {
+                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash, target_is_tag)
+            })
+            .collect::<Vec<_>>();
+        return Ok(values);
+    }
+
+    async fn get_entries_by_tag_hashes(
+        &self,
+        tag_hashes: Vec<GitSha1>,
+    ) -> Result<Vec<BonsaiTagMappingEntry>> {
+        let results = SelectMappingByTagHash::query(
+            &self.connections.read_connection,
+            &self.repo_id,
+            tag_hashes.as_slice(),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching entry for tag hashes {:?} in repo {}",
+                tag_hashes, self.repo_id
             )
         })?;
 

@@ -206,3 +206,37 @@ async fn test_get_all_tags(_: FacebookInit) -> Result<(), Error> {
     );
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_get_tag_by_tag_hashes(_: FacebookInit) -> Result<(), Error> {
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let entry = BonsaiTagMappingEntry {
+        changeset_id: bonsai::ONES_CSID,
+        tag_name: "JustATag".to_string(),
+        tag_hash: GitSha1::from_str(ZERO_GIT_HASH)?,
+        target_is_tag: false,
+    };
+    let another_entry = BonsaiTagMappingEntry {
+        changeset_id: bonsai::TWOS_CSID,
+        tag_name: "AnotherTag".to_string(),
+        tag_hash: GitSha1::from_str(ONE_GIT_HASH)?,
+        target_is_tag: true,
+    };
+    mapping
+        .add_or_update_mappings(vec![entry, another_entry])
+        .await?;
+
+    let result = mapping
+        .get_entries_by_tag_hashes(vec![
+            GitSha1::from_str(ZERO_GIT_HASH)?,
+            GitSha1::from_str(ONE_GIT_HASH)?,
+        ])
+        .await?
+        .into_iter()
+        .map(|entry| entry.tag_name);
+    assert_eq!(
+        HashSet::from_iter(result),
+        HashSet::from(["JustATag".to_string(), "AnotherTag".to_string()])
+    );
+    Ok(())
+}
