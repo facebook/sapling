@@ -29,15 +29,14 @@ use gotham_ext::response::TryIntoResponse;
 use http::HeaderMap;
 use hyper::Body;
 use hyper::Response;
+use packetline::encode::delim_to_write;
 use packetline::encode::flush_to_write;
-use packetline::encode::write_binary_packetline;
 use packetline::encode::write_data_channel;
 use packetline::encode::write_text_packetline;
-use packetline::DELIMITER_LINE;
 use packetline::FLUSH_LINE;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
-use protocol::generator::generate_pack_item_stream;
+use protocol::generator::fetch_response;
 use protocol::generator::ls_refs_response;
 use tokio::io::ErrorKind;
 use tokio::sync::mpsc;
@@ -128,7 +127,7 @@ async fn acknowledgements(
     }
     // Add a delim line to indicate the end of the acknowledgements section. Note that
     // the delim line will not be followed by a newline character
-    write_binary_packetline(DELIMITER_LINE, &mut output_buffer).await?;
+    delim_to_write(&mut output_buffer).await?;
     Ok((Some(Bytes::from(output_buffer)), header))
 }
 
@@ -313,7 +312,7 @@ pub async fn fetch(
             if !include_pack {
                 return Ok(());
             }
-            let response_stream = generate_pack_item_stream(
+            let response_stream = fetch_response(
                 &request_context.ctx,
                 &request_context.repo,
                 args.into_request(),

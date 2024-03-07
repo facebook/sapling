@@ -147,7 +147,7 @@ impl DeltaInclusion {
     pub fn standard() -> Self {
         DeltaInclusion::Include {
             form: DeltaForm::RefAndOffset,
-            inclusion_threshold: 0.6,
+            inclusion_threshold: 0.8,
         }
     }
 }
@@ -256,6 +256,48 @@ impl LsRefsRequest {
     }
 }
 
+/// The request parameters used to specify the constraints that need to be
+/// honored while generating the packstream to be sent as response for fetch
+/// command
+#[derive(Debug, Clone)]
+pub struct FetchRequest {
+    /// Collection of commit object Ids that are requested by the client
+    pub heads: Vec<ObjectId>,
+    /// Collection of commit object Ids that are present with the client
+    pub bases: Vec<ObjectId>,
+    /// Boolean flag indicating if the packfile can contain deltas referring
+    /// to objects outside the packfile
+    pub include_out_of_pack_deltas: bool,
+    /// Flag indicating if the packfile should contain objects corresponding to
+    /// annotated tags if the commits that the tag points are present in the
+    /// packfile
+    pub include_annotated_tags: bool,
+    /// Flag indicating if the caller supports offset deltas
+    pub offset_delta: bool,
+    /// List of object Ids representing the edge of the shallow history present
+    /// at the client, i.e. the set of commits that the client knows about but
+    /// does not have any of their parents and their ancestors
+    pub shallow: Vec<ObjectId>,
+    /// Requests that the fetch/clone should be shallow having a commit
+    /// depth of "deepen" relative to the server
+    pub deepen: Option<u32>,
+    /// Requests that the semantics of the "deepen" command be changed
+    /// to indicate that the depth requested is relative to the client's
+    /// current shallow boundary, instead of relative to the requested commits.
+    pub deepen_relative: bool,
+    /// Requests that the shallow clone/fetch should be cut at a specific time,
+    /// instead of depth. The timestamp provided should be in the same format
+    /// as is expected for git rev-list --max-age <timestamp>
+    pub deepen_since: Option<gix_date::Time>,
+    /// Requests that the shallow clone/fetch should be cut at a specific revision
+    /// instead of a depth, i.e. the specified oid becomes the boundary at which the
+    /// fetch or clone should stop at
+    pub deepen_not: Option<ObjectId>,
+    /// Request that various objects from the packfile be omitted using
+    /// one of several filtering techniques
+    pub filter: Option<String>,
+}
+
 /// Struct representing the packfile item response generated for the
 /// given range of commits
 pub struct PackItemStreamResponse<'a> {
@@ -320,5 +362,20 @@ impl LsRefsResponse {
             }
         }
         Ok(())
+    }
+}
+
+/// Struct representing the packfile item response generated for the
+/// fetch request command
+pub struct FetchResponse<'a> {
+    /// The stream of packfile items that were generated for the fetch request command
+    pub items: BoxStream<'a, Result<PackfileItem>>,
+    /// The number of packfile items that were generated for the fetch request command
+    pub num_items: usize,
+}
+
+impl<'a> FetchResponse<'a> {
+    pub fn new(items: BoxStream<'a, Result<PackfileItem>>, num_items: usize) -> Self {
+        Self { items, num_items }
     }
 }

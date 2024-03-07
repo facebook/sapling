@@ -10,10 +10,7 @@ use gix_hash::ObjectId;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
-use protocol::types::DeltaInclusion;
-use protocol::types::PackItemStreamRequest;
-use protocol::types::PackfileItemInclusion;
-use protocol::types::TagInclusion;
+use protocol::types::FetchRequest;
 
 const DONE: &[u8] = b"done";
 const THIN_PACK: &[u8] = b"thin-pack";
@@ -207,13 +204,21 @@ impl FetchArgs {
         Ok(fetch_args)
     }
 
-    //NOTE: This request is only for full clone and will not work for incremental pulls
-    pub fn into_request(self) -> PackItemStreamRequest {
-        PackItemStreamRequest::full_repo(
-            DeltaInclusion::standard(),
-            TagInclusion::AsIs,
-            PackfileItemInclusion::FetchAndStore,
-        )
+    /// Convert the fetch command args into FetchRequest instance
+    pub fn into_request(self) -> FetchRequest {
+        FetchRequest {
+            heads: self.wants,
+            bases: self.haves,
+            include_out_of_pack_deltas: self.thin_pack,
+            include_annotated_tags: self.include_tag,
+            offset_delta: self.ofs_delta,
+            shallow: self.shallow,
+            deepen: self.deepen,
+            deepen_since: self.deepen_since,
+            deepen_not: self.deepen_not,
+            deepen_relative: self.deepen_relative,
+            filter: self.filter,
+        }
     }
 }
 

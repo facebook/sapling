@@ -21,6 +21,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
+gix-date = "0.7"
 gix-hash = "0.11"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packetline = { version = "0.1.0", path = "../packetline" }

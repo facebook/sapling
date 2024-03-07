@@ -10,6 +10,7 @@ use anyhow::Result;
 use async_stream::try_stream;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkCategory;
@@ -51,6 +52,8 @@ use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
 use crate::types::DeltaInclusion;
+use crate::types::FetchRequest;
+use crate::types::FetchResponse;
 use crate::types::LsRefsRequest;
 use crate::types::LsRefsResponse;
 use crate::types::PackItemStreamRequest;
@@ -140,8 +143,45 @@ async fn bookmarks(
     Ok(bookmarks)
 }
 
+/// Fetch all the bookmarks in the repo corresponding to tags that point
+/// to the given list of commits
+async fn tag_bookmarks(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    tag_entries: &[BonsaiTagMappingEntry],
+    commits: &[ChangesetId],
+) -> Result<Vec<String>> {
+    let bookmarks = bookmarks(
+        ctx,
+        repo,
+        &RequestedRefs::Included(
+            tag_entries
+                .iter()
+                .map(|entry| entry.tag_name.clone())
+                .collect(),
+        ),
+    )
+    .await
+    .with_context(|| {
+        format!(
+            "Error in fetching bookmarks for repo {}",
+            repo.repo_identity().name()
+        )
+    })?
+    .into_iter()
+    .filter_map(|(bookmark_key, cs_id)| {
+        if commits.contains(&cs_id) {
+            Some(bookmark_key.to_string())
+        } else {
+            None
+        }
+    })
+    .collect::<Vec<_>>();
+    Ok(bookmarks)
+}
+
 /// Get the count of distinct blob and tree items to be included in the packfile
-async fn object_count(
+async fn trees_and_blobs_count(
     ctx: &CoreContext,
     repo: &impl Repo,
     target_commits: BoxStream<'_, Result<ChangesetId>>,
@@ -242,6 +282,24 @@ fn delta_base(
 
 fn to_commit_stream(commits: Vec<ChangesetId>) -> BoxStream<'static, Result<ChangesetId>> {
     stream::iter(commits.into_iter().map(Ok)).boxed()
+}
+
+async fn git_shas_to_bonsais(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    oids: impl Iterator<Item = impl AsRef<gix_hash::oid>>,
+) -> Result<Vec<ChangesetId>> {
+    let git_shas = BonsaisOrGitShas::from_object_ids(oids)?;
+    repo.bonsai_git_mapping()
+        .get(ctx, git_shas)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to fetch bonsai_git_mapping for repo {}",
+                repo.repo_identity().name()
+            )
+        })
+        .map(|entries| entries.into_iter().map(|entry| entry.bcs_id).collect())
 }
 
 /// Get the Git counterpart for a bonsai commit, if it exists.
@@ -774,6 +832,43 @@ async fn tag_packfile_stream<'a>(
     anyhow::Ok((tag_stream, tags_count))
 }
 
+/// Create a stream of packfile items containing tag objects that point to some commit
+/// in the packfile/bundle while also returning the total number of tags included in the stream
+async fn tag_packfile_stream_from_commits<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+    commits: Vec<ChangesetId>,
+    include_annotated_tags: bool,
+) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
+    // If no annotated tags are requested, return an empty stream
+    if !include_annotated_tags {
+        return anyhow::Ok((stream::empty().boxed(), 0));
+    }
+    // Fetch entries corresponding to annotated tags in the repo
+    let tag_entries = repo
+        .bonsai_tag_mapping()
+        .get_all_entries()
+        .await
+        .context("Error in getting tags during fetch")?;
+    // Fetch the tag to changeset mapping for the annotated tags
+    let bookmarks = tag_bookmarks(ctx, repo, &tag_entries, &commits).await?;
+    let required_tags = tag_entries
+        .into_iter()
+        .filter(|entry| {
+            // Filter out tags that don't belong to the commits being requested
+            bookmarks.contains(&entry.tag_name)
+        })
+        .collect::<Vec<_>>();
+    let tags_count = required_tags.len();
+    let tag_stream = tag_entries_to_stream(
+        ctx,
+        repo,
+        required_tags,
+        PackfileItemInclusion::FetchAndStore,
+    );
+    anyhow::Ok((tag_stream, tags_count))
+}
+
 /// Based on the input request parameters, generate a stream of `PackfileItem`s that
 /// can be written into a pack file
 pub async fn generate_pack_item_stream<'a>(
@@ -804,12 +899,12 @@ pub async fn generate_pack_item_stream<'a>(
         .await?;
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
+    let commits_count = target_commits.len();
     // STEP 1: Get the count of distinct blob and tree objects to be included in the packfile/bundle.
-    let mut object_count = object_count(ctx, repo, to_commit_stream(target_commits.clone()))
-        .await
-        .context("Error while calculating object count")?;
-    // Compute object count using the number of commit and content objects
-    object_count += target_commits.len();
+    let trees_and_blobs_count =
+        trees_and_blobs_count(ctx, repo, to_commit_stream(target_commits.clone()))
+            .await
+            .context("Error while calculating object count")?;
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
@@ -850,8 +945,8 @@ pub async fn generate_pack_item_stream<'a>(
     let (tag_stream, tags_count) = tag_packfile_stream(ctx, repo, &bookmarks, &request)
         .await
         .context("Error while generating tag packfile item stream")?;
-    // Include the tags in the object count since the tags will also be part of the packfile/bundle
-    object_count += tags_count;
+    // Compute the overall object count by summing the trees, blobs, tags and commits count
+    let object_count = commits_count + trees_and_blobs_count + tags_count;
 
     // STEP 6: Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
     // and tag stream include full objects and the blob_and_tree_stream has deltas in the correct order
@@ -894,4 +989,73 @@ pub async fn ls_refs_response(
         .context("Error while adding symrefs to included set of refs")?;
 
     Ok(LsRefsResponse::new(refs_to_include.into_iter().collect()))
+}
+
+/// Based on the input request parameters, generate the response to the
+/// fetch request command
+pub async fn fetch_response<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+    request: FetchRequest,
+) -> Result<FetchResponse<'a>> {
+    let delta_inclusion = DeltaInclusion::standard();
+    let packfile_item_inclusion = PackfileItemInclusion::FetchAndStore;
+    // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
+    let bases = git_shas_to_bonsais(ctx, repo, request.bases.iter())
+        .await
+        .context("Error converting base Git commits to Bonsai duing fetch")?;
+    let heads = git_shas_to_bonsais(ctx, repo, request.heads.iter())
+        .await
+        .context("Error converting head Git commits to Bonsai during fetch")?;
+    // Get the stream of commits between the bases and heads
+    let mut target_commits = repo
+        .commit_graph()
+        .ancestors_difference_stream(ctx, heads, bases)
+        .await
+        .context("Error in getting stream of commits between heads and bases during fetch")?
+        .try_collect::<Vec<_>>()
+        .await?;
+    let commits_count = target_commits.len();
+    // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
+    target_commits.reverse();
+    // Get the count of unique blob and tree objects to be included in the packfile
+    let trees_and_blobs_count =
+        trees_and_blobs_count(ctx, repo, to_commit_stream(target_commits.clone()))
+            .await
+            .context("Error while calculating object count during fetch")?;
+    // Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
+    // we have already counted these items as part of object count.
+    let blob_and_tree_stream = blob_and_tree_packfile_stream(
+        ctx,
+        repo,
+        to_commit_stream(target_commits.clone()),
+        delta_inclusion,
+        packfile_item_inclusion,
+    )
+    .await
+    .context("Error while generating blob and tree packfile item stream during fetch")?;
+    // Get the stream of commit packfile items to include in the pack/bundle. Note that we have already counted these items
+    // as part of object count.
+    let commit_stream = commit_packfile_stream(
+        ctx,
+        repo,
+        to_commit_stream(target_commits.clone()),
+        packfile_item_inclusion,
+    )
+    .await
+    .context("Error while generating commit packfile item stream during fetch")?;
+    // Get the stream of annotated tag items that are pointing to one of the commits in the range.
+    let (tag_stream, tags_count) =
+        tag_packfile_stream_from_commits(ctx, repo, target_commits, true)
+            .await
+            .context("Error while generating tag packfile item stream during fetch")?;
+    // Compute the overall object count by summing the trees, blobs, tags and commits count
+    let object_count = commits_count + trees_and_blobs_count + tags_count;
+    // Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
+    // and tag stream include full objects and the blob_and_tree_stream has deltas in the correct order
+    let packfile_stream = tag_stream
+        .chain(commit_stream)
+        .chain(blob_and_tree_stream)
+        .boxed();
+    Ok(FetchResponse::new(packfile_stream, object_count))
 }
