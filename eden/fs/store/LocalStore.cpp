@@ -114,7 +114,7 @@ ImmediateFuture<std::vector<StoreResult>> LocalStore::getBatch(
 }
 
 ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
-  DurationScope stat{stats_, &LocalStoreStats::getTree};
+  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getTree};
   return getImmediateFuture(KeySpace::TreeFamily, id)
       .thenValue(
           [id, stat = std::move(stat), stats = stats_.copy()](
@@ -143,7 +143,7 @@ ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
 }
 
 ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
-  DurationScope stat{stats_, &LocalStoreStats::getBlob};
+  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getBlob};
   return getImmediateFuture(KeySpace::BlobFamily, id)
       .thenValue(
           [id, stat = std::move(stat), stats = stats_.copy()](
@@ -168,7 +168,7 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
 
 ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
     const ObjectId& id) const {
-  DurationScope stat{stats_, &LocalStoreStats::getBlobMetadata};
+  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getBlobMetadata};
   return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
       .thenValue(
           [id, stat = std::move(stat), stats = stats_.copy()](

@@ -7,7 +7,6 @@
 
 #include "eden/fs/telemetry/EdenStats.h"
 
-#include <folly/logging/xlog.h>
 #include <chrono>
 #include <memory>
 
@@ -49,16 +48,6 @@ StatsGroupBase::Duration::Duration(std::string_view name)
 
 void StatsGroupBase::Duration::addDuration(std::chrono::microseconds elapsed) {
   addValue(elapsed.count());
-}
-
-DurationScope::~DurationScope() noexcept {
-  if (edenStats_ && updateScope_) {
-    try {
-      updateScope_(*edenStats_, stopWatch_.elapsed());
-    } catch (const std::exception& e) {
-      XLOG(ERR) << "error recording duration: " << e.what();
-    }
-  }
 }
 
 } // namespace facebook::eden

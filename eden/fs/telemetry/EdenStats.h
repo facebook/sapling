@@ -11,6 +11,7 @@
 
 #include <fb303/detail/QuantileStatWrappers.h>
 #include <folly/ThreadLocal.h>
+#include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 
 #include "eden/common/utils/RefPtr.h"
@@ -431,33 +432,40 @@ struct InodeMetadataTableStats : StatsGroup<InodeMetadataTableStats> {
 
 /**
  * On construction, notes the current time. On destruction, records the elapsed
- * time in the specified EdenStats Duration.
+ * time in the specified StatsPtr Duration.
  *
  * Moveable, but not copyable.
  */
+template <typename Stats, typename StatsPtr = RefPtr<Stats>>
 class DurationScope {
  public:
   DurationScope() = delete;
 
   template <typename T>
-  DurationScope(EdenStatsPtr&& edenStats, StatsGroupBase::Duration T::*duration)
-      : edenStats_{std::move(edenStats)},
+  DurationScope(StatsPtr&& stats, StatsGroupBase::Duration T::*duration)
+      : stats_{std::move(stats)},
         // This use of std::function won't allocate on libstdc++,
         // libc++, or Microsoft STL. All three have a couple pointers
         // worth of small buffer inline storage.
-        updateScope_{[duration](EdenStats& stats, StopWatch::duration elapsed) {
+        updateScope_{[duration](Stats& stats, StopWatch::duration elapsed) {
           stats.addDuration(duration, elapsed);
         }} {
-    assert(edenStats_);
+    assert(stats_);
   }
 
   template <typename T>
-  DurationScope(
-      const EdenStatsPtr& edenStats,
-      StatsGroupBase::Duration T::*duration)
-      : DurationScope{edenStats.copy(), duration} {}
+  DurationScope(const StatsPtr& stats, StatsGroupBase::Duration T::*duration)
+      : DurationScope{stats.copy(), duration} {}
 
-  ~DurationScope() noexcept;
+  ~DurationScope() noexcept {
+    if (stats_ && updateScope_) {
+      try {
+        updateScope_(*stats_, stopWatch_.elapsed());
+      } catch (const std::exception& e) {
+        XLOG(ERR) << "error recording duration: " << e.what();
+      }
+    }
+  }
 
   DurationScope(DurationScope&& that) = default;
   DurationScope& operator=(DurationScope&& that) = default;
@@ -468,8 +476,8 @@ class DurationScope {
  private:
   using StopWatch = folly::stop_watch<>;
   StopWatch stopWatch_;
-  EdenStatsPtr edenStats_;
-  std::function<void(EdenStats& stats, StopWatch::duration)> updateScope_;
+  StatsPtr stats_;
+  std::function<void(Stats& stats, StopWatch::duration)> updateScope_;
 };
 
 } // namespace facebook::eden

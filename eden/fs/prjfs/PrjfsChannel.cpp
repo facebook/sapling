@@ -868,7 +868,8 @@ folly::Try<folly::Unit> removeCachedFileImpl(
         FMT_STRING("Couldn't delete file {}: PrjfsChannel is stopped"), path)}};
   }
 
-  DurationScope statScope{inner->getStats(), &PrjfsStats::removeCachedFile};
+  DurationScope<EdenStats> statScope{
+      inner->getStats(), &PrjfsStats::removeCachedFile};
 
   if (path.empty()) {
     return folly::Try<folly::Unit>{folly::unit};
@@ -1713,7 +1714,7 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
         path)}};
   }
 
-  DurationScope statScope{
+  DurationScope<EdenStats> statScope{
       inner->getStats(), &PrjfsStats::addDirectoryPlaceholder};
 
   if (path.empty()) {

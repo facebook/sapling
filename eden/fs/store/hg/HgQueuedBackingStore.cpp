@@ -579,7 +579,7 @@ std::string HgQueuedBackingStore::staticRenderObjectId(
 folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  DurationScope scope{stats_, &HgBackingStoreStats::getTree};
+  DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getTree};
 
   HgProxyHash proxyHash;
   try {
@@ -658,7 +658,7 @@ HgQueuedBackingStore::getTreeEnqueue(
 folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  DurationScope scope{stats_, &HgBackingStoreStats::getBlob};
+  DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getBlob};
 
   HgProxyHash proxyHash;
   try {
@@ -739,7 +739,7 @@ folly::SemiFuture<BackingStore::GetBlobMetaResult>
 HgQueuedBackingStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  DurationScope scope{stats_, &HgBackingStoreStats::getBlobMetadata};
+  DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getBlobMetadata};
 
   HgProxyHash proxyHash;
   try {

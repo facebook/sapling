@@ -201,7 +201,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
   TaskTraceBlock block{"ObjectStore::getTree"};
-  DurationScope statScope{stats_, &ObjectStoreStats::getTree};
+  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTree};
 
   // Check in the LocalStore first
 
@@ -269,7 +269,7 @@ ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
 ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
-  DurationScope statScope{stats_, &ObjectStoreStats::getBlob};
+  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getBlob};
 
   deprioritizeWhenFetchHeavy(*fetchContext);
   return ImmediateFuture<BackingStore::GetBlobResult>{
@@ -317,7 +317,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext,
     bool blake3Needed) const {
-  DurationScope statScope{stats_, &ObjectStoreStats::getBlobMetadata};
+  DurationScope<EdenStats> statScope{
+      stats_, &ObjectStoreStats::getBlobMetadata};
 
   // Check in-memory cache
   auto inMemoryCacheBlobMetadata =
