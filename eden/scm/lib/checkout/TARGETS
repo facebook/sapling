@@ -58,6 +58,7 @@ rust_library(
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",
+        "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/hook:hook",

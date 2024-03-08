@@ -1908,7 +1908,8 @@ def _prefetchlazychildren(repo, node):
                 )
             else:
                 tracing.debug(
-                    "children of %s: %s" % (hex(node), [hex(n) for n in childrennodes]),
+                    "children of %s: [%s]"
+                    % (hex(node), ", ".join(map(hex, childrennodes))),
                     target="checkout::prefetch",
                 )
         else:

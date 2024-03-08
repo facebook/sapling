@@ -22,6 +22,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use async_runtime::block_on;
 use atexit::AtExit;
 use context::CoreContext;
 use crossbeam::channel;
@@ -947,6 +948,10 @@ pub fn checkout(
         ]),
     )?;
 
+    if let Err(err) = prefetch_children(repo, &target_commit) {
+        tracing::warn!(target: "checkout::prefetch", ?err, "unexpected error prefetching lazy children");
+    }
+
     let source_commit = wc.first_parent()?;
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
@@ -1047,6 +1052,43 @@ pub fn checkout(
     state_change.mark_success();
 
     Ok(stats)
+}
+
+/// Prefetch lazy children of `node`. This makes it possible to "commit" offline.
+/// See D30004908 for context.
+fn prefetch_children(repo: &Repo, node: &HgId) -> Result<()> {
+    if !repo.store_requirements.contains("lazychangelog") {
+        tracing::debug!(target: "checkout::prefetch", "skip prefetch for non-lazychangelog");
+        return Ok(());
+    }
+
+    let vertex = dag::VertexName::copy_from(node.as_ref());
+
+    let dag = repo.dag_commits()?;
+    let mut dag = dag.write();
+
+    let id = match block_on(dag.vertex_id_with_max_group(&vertex, dag::Group::MASTER))? {
+        None => {
+            tracing::debug!(target: "checkout::prefetch", "skip prefetch because {node} is not in master (lazy) group");
+            return Ok(());
+        }
+        Some(id) => id,
+    };
+
+    let id_dag = dag.id_dag_snapshot()?;
+    let id_children = id_dag.children(id.into())?;
+    let id_children: Vec<dag::Id> = id_children.iter_desc().collect();
+
+    // Prefetch children.
+    let children = block_on(dag.vertex_name_batch(&id_children))?
+        .into_iter()
+        .collect::<dag::Result<Vec<_>>>()?;
+
+    tracing::debug!(target: "checkout::prefetch", "children of {node}: {:?}", children);
+
+    block_on(dag.flush(&[]))?;
+
+    Ok(())
 }
 
 fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
