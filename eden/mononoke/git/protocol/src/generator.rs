@@ -716,14 +716,17 @@ async fn blob_and_tree_packfile_items<'a>(
             )
         })?;
     let objects_stream = try_stream! {
-        let mut entries = delta_manifest.into_subentries(ctx, &blobstore);
+        let mut entries = Box::pin(delta_manifest.into_subentries(ctx, &blobstore).ready_chunks(1000));
         // NOTE: The order of the entries needs to be maintained
-        while let Some((path, entry)) = entries.try_next().await? {
-            let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry);
-            yield packfile_item
+        while let Some(entries) = entries.next().await {
+            for entry in entries {
+                let (path, entry) = entry?;
+                let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry);
+                yield packfile_item
+            }
         }
     };
-    anyhow::Ok(objects_stream.try_buffered(500).boxed())
+    anyhow::Ok(objects_stream.try_buffered(1000).boxed())
 }
 
 /// Create a stream of packfile items containing blob and tree objects that need to be included in the packfile/bundle.
@@ -784,7 +787,7 @@ async fn commit_packfile_stream<'a>(
             )
             .await
         })
-        .try_buffered(500)
+        .try_buffered(1000)
         .boxed();
     anyhow::Ok(commit_stream)
 }
