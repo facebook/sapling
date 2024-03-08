@@ -365,7 +365,7 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
         registertestcase=testcases.append,
     )
 
-    testcases = [f"_run_once(_testcase='{tc}')\n" for tc in testcases]
+    testcases = [f"_run_once(testcase='{tc}')\n" for tc in testcases]
     if not testcases:
         testcases.append("_run_once()\n")
 
@@ -387,8 +387,8 @@ from sapling.testing.t.runtime import TestTmp
 TESTFILE = {repr(str(path))}
 TESTDIR = {repr(str(testdir))}
 
-def _run_once(_testcase=None):
-    t = TestTmp(tmpprefix={repr(path.name)})
+def _run_once(testcase=None):
+    t = TestTmp(tmpprefix={repr(path.name)}, testcase=testcase)
     t.setenv("TESTFILE", TESTFILE)
     t.setenv("TESTDIR", TESTDIR)
     t.setenv("RUNTESTDIR", TESTDIR)  # compatibility: path of run-tests.py

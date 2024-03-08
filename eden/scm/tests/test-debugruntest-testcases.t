@@ -42,3 +42,18 @@ Make sure we can't see case1's variable.
   in shared test
 
   $ hg init
+
+
+#if case1
+  $ echo_case() {
+  >   echo case1
+  > }
+#else
+  $ echo_case() {
+  >   echo case2
+  > }
+#endif
+
+  $ echo_case
+  case1 (case1 !)
+  case2 (case2 !)

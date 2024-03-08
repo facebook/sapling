@@ -108,15 +108,17 @@ def checkfeatures(features):
             result["missing"].append(feature)
             continue
 
-        check, desc = checks[feature]
-        available = _checkfeaturecache.get(feature)
-        try:
-            if available is None:
-                available = check()
-                _checkfeaturecache[feature] = available
-        except Exception:
-            result["error"].append("hghave check failed: %s" % feature)
-            continue
+        available, desc = checks[feature]
+        if callable(available):
+            check = available
+            available = _checkfeaturecache.get(feature)
+            try:
+                if available is None:
+                    available = check()
+                    _checkfeaturecache[feature] = available
+            except Exception:
+                result["error"].append("hghave check failed: %s" % feature)
+                continue
 
         if not negate and not available:
             result["skipped"].append("missing feature: %s" % desc)

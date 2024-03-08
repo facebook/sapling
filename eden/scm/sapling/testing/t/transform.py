@@ -295,7 +295,7 @@ def rewriteblocks(
         ... end''', registertestcase=lambda _case: None))
         #if case1
         <BLANKLINE>
-        if _testcase == 'case1':
+        if testcase == 'case1':
         <BLANKLINE>
             checkoutput(sheval('echo case1\n'), '', src='$ echo case1\n', srcloc=2, outloc=3, endloc=3, indent=2, filename='')
         <BLANKLINE>
@@ -307,7 +307,7 @@ def rewriteblocks(
         #endif
         #if case2
         <BLANKLINE>
-        if _testcase == 'case2':
+        if testcase == 'case2':
         <BLANKLINE>
             checkoutput(sheval('echo case2\n'), '', src='$ echo case2\n', srcloc=7, outloc=8, endloc=8, indent=2, filename='')
         <BLANKLINE>
@@ -422,7 +422,7 @@ def rewriteblocks(
 
             if rawfeatures in testcases:
                 maybeseparate("python")
-                appendline(f"if _testcase == '{rawfeatures}':\n")
+                appendline(f"if testcase == '{rawfeatures}':\n")
                 extraindent += 1
                 condition = True
             elif hasfeature and all(hasfeature(f) for f in features):
