@@ -3,8 +3,6 @@
 #require unix-permissions no-root no-windows
 
   $ configure modernclient
-FIXME(checkout): slow lock warnings
-  $ setconfig checkout.use-rust=false
 
 Prepare
 
@@ -67,13 +65,11 @@ One process waiting for another for a significant period of time (longer than th
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleeplong" > stdout &
 Wait until bg process has entered critical section.
   $ while [ ! -f sleeping ]; do sleep 0.01; done
-  $ hg -R b up -q --config ui.timeout.warn=0 . > preup-stdout 2>preup-stderr
+  $ LOG=repolock=warn hg -R b up -q --config ui.timeout.warn=0 . > preup-stdout 2>preup-stderr
   $ wait
   $ cat preup-stdout
-  $ cat preup-stderr
-  waiting for lock on working directory of b held by process '*' on host '*' (glob)
-  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
-  got lock after * seconds (glob) (?)
+  $ grep repolock preup-stderr | head -1
+   WARN repolock: lock contended name="wlock" contents="*" (glob)
   $ cat stdout
   adding b
 

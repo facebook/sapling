@@ -27,6 +27,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use fs2::FileExt;
 use parking_lot::Mutex;
+use progress_model::ProgressBar;
 use util::errors::IOContext;
 use util::lock::PathLock;
 
@@ -329,25 +330,37 @@ fn lock(
 ) -> Result<LockHandle, LockError> {
     let start = Instant::now();
 
+    let bar = ProgressBar::new_adhoc("waiting for lock", 0, "");
+
     loop {
         match try_lock(dir, name, contents) {
             Ok(h) => return Ok(h),
             Err(err) => match err {
-                LockError::Contended(_) => {
+                LockError::Contended(LockContendedError { ref contents, .. }) => {
                     // TODO: add user friendly debugging similar to Python locks.
                     let elapsed = start.elapsed();
 
                     // Only emit trace events at most once a second.
                     if (elapsed.as_millis() % 1000) < config.backoff.as_millis() {
+                        let contents = util::utf8::escape_non_utf8(contents);
                         if elapsed >= config.warn_deadline {
-                            tracing::warn!(name, "lock contended");
+                            tracing::warn!(name, contents, "lock contended");
                         } else {
-                            tracing::info!(name, "lock contended");
+                            tracing::info!(name, contents, "lock contended");
                         };
                     }
 
                     if elapsed >= config.deadline {
                         return Err(err);
+                    }
+
+                    if let Some(pid) = pid_from_lock_contents(contents) {
+                        bar.set_message(format!("{name} held by pid {pid}"));
+                    } else {
+                        bar.set_message(format!(
+                            "{name} held by {}",
+                            util::utf8::escape_non_utf8(contents)
+                        ));
                     }
 
                     sleep(config.backoff)

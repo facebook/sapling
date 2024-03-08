@@ -172,7 +172,7 @@ def trylock(
     )
 
     if l.delay:
-        msg = _("got lock after %s seconds\n") % l.delay
+        msg = _("got lock after %s seconds\n") % round(l.delay, 1)
         if 0 <= warnsecs <= l.delay:
             ui.warn(msg)
         else:
