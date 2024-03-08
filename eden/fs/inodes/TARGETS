@@ -34,6 +34,7 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/fs/store:context",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:process_access_log",
         "//folly/futures:core",
@@ -222,6 +223,7 @@ cpp_library(
         "//eden/fs/takeover:takeover",
         "//eden/fs/telemetry:activity_buffer",
         "//eden/fs/telemetry:activity_recorder",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:bufvec",

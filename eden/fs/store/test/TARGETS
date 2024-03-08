@@ -81,8 +81,8 @@ cpp_unittest(
         "//eden/fs/store:rocksdb",
         "//eden/fs/store:sqlite",
         "//eden/fs/store:store",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
-        "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:logging_fetch_context",
         "//eden/fs/testharness:stored_object",
@@ -115,7 +115,7 @@ cpp_binary(
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/model:model",
         "//eden/fs/store:rocksdb",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
-        "//eden/fs/telemetry:telemetry",
     ],
 )

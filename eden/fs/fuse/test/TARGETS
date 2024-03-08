@@ -14,7 +14,7 @@ cpp_unittest(
         "//eden/common/utils:enum",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/fuse:fuse",
-        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:test_dispatcher",
         "//folly:random",

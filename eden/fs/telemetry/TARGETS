@@ -3,13 +3,31 @@ load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 oncall("scm_client_infra")
 
 cpp_library(
-    name = "telemetry",
+    name = "stats",
     srcs = [
         "EdenStats.cpp",
+    ],
+    headers = [
+        "EdenStats.h",
+    ],
+    exported_deps = [
+        ":telemetry",
+        "//eden/common/utils:ref_ptr",
+        "//eden/fs:config",
+        "//folly:thread_local",
+    ],
+)
+
+cpp_library(
+    name = "telemetry",
+    srcs = [
         "RequestMetricsScope.cpp",
+        "StatsGroup.cpp",
         "Tracing.cpp",
     ],
     headers = [
+        "DurationScope.h",
+        "StatsGroup.h",
         "TraceBus.h",
         "TraceBus-inl.h",
     ],
@@ -18,9 +36,7 @@ cpp_library(
         "//folly:string",
     ],
     exported_deps = [
-        "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
-        "//eden/fs:config",
         "//fb303/detail:quantile_stat_wrappers",
         "//folly:clock_gettime_wrappers",
         "//folly:range",
@@ -121,7 +137,7 @@ cpp_library(
         "NullStructuredLogger.h",
     ],
     deps = [
-        ":telemetry",
+        ":stats",
         "//eden/common/telemetry:scribe_logger",
         "//eden/fs/config:config",
         "//fb303:service_data",

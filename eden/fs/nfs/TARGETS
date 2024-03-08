@@ -108,7 +108,7 @@ cpp_library(
     srcs = ["NfsDispatcher.cpp"],
     headers = ["NfsDispatcher.h"],
     deps = [
-        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/telemetry:stats",
     ],
     exported_deps = [
         ":dirlist",

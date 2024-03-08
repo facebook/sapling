@@ -450,6 +450,7 @@ cpp_library(
         "//eden/fs/takeover:takeover",
         "//eden/fs/telemetry:activity_buffer",
         "//eden/fs/telemetry:activity_recorder",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:telemetry",
         "//fb303:base_service",
         "//folly:executor",

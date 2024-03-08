@@ -15,7 +15,7 @@ cpp_library(
         "//eden/common/utils:path",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift-streaming-cpp2-types",
-        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/telemetry:stats",
         "//folly:function",
         "//folly:synchronized",
     ],

@@ -18,7 +18,7 @@ cpp_binary(
         "//eden/fs/privhelper:interface",
         "//eden/fs/privhelper:privhelper",
         "//eden/fs/store:store",
-        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/utils:user_info",
         "//folly:exception",
         "//folly/init:init",

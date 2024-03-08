@@ -51,6 +51,7 @@ cpp_library(
         "//eden/fs/config:config",
         "//eden/fs/service:thrift_util",
         "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:static_assert",
         "//folly:executor",
@@ -136,7 +137,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
-        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/telemetry:stats",
         "//folly/logging:logging",
     ],
     exported_deps = [
