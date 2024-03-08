@@ -350,11 +350,15 @@ pub async fn repo_stack_git_bundle(
         RequestedRefs::IncludedWithValue([(BUNDLE_HEAD.to_owned(), head)].into_iter().collect());
     // Ensure we don't include the base and any of its ancestors in the bundle
     let already_present = vec![base];
+    // NOTE: We are excluding deltas for this bundle since there is a potential for cycles
+    // This should not impact perf since the bundle is for a stack of draft commits. Once native
+    // git server is rolled out, we can just do git pull at the client side instead of relying on
+    // bundles.
     let request = PackItemStreamRequest::new(
         RequestedSymrefs::ExcludeAll, // Need no symrefs for this bundle
         requested_refs,
         already_present,
-        DeltaInclusion::standard(),
+        DeltaInclusion::Exclude, // We don't need deltas for this bundle
         TagInclusion::AsIs,
         PackfileItemInclusion::Generate,
     );
