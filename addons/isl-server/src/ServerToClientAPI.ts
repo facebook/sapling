@@ -548,7 +548,7 @@ export default class ServerToClientAPI {
         // Note: we would still need to fall back to cat for comparisons that do not involve
         // the working copy.
         const cat: Promise<string> = repo
-          .cat(relativePath, revsetForComparison(comparison))
+          .cat(ctx, relativePath, revsetForComparison(comparison))
           .catch(() => '');
 
         cat.then(content =>

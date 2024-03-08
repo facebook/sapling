@@ -724,18 +724,12 @@ export class Repository {
     this.initialConnectionContext.logger.info('[cat]', s),
   );
   /** Return file content at a given revset, e.g. hash or `.` */
-  public cat(file: AbsolutePath, rev: Revset): Promise<string> {
+  public cat(ctx: RepositoryContext, file: AbsolutePath, rev: Revset): Promise<string> {
     return this.catLimiter.enqueueRun(async () => {
       // For `sl cat`, we want the output of the command verbatim.
       const options = {stripFinalNewline: false};
-      return (
-        await this.runCommand(
-          ['cat', file, '--rev', rev],
-          'CatCommand',
-          /*cwd=*/ undefined,
-          options,
-        )
-      ).stdout;
+      return (await this.runCommand(['cat', file, '--rev', rev], 'CatCommand', ctx, options))
+        .stdout;
     });
   }
 

@@ -51,7 +51,7 @@ function mockRepoAdded(): NonNullable<typeof activeRepo> {
   let savedOnChangeHeadCommit: (commit: CommitInfo) => unknown;
   activeRepo = {
     // eslint-disable-next-line require-await
-    cat: jest.fn(async (file: string, rev: string) => {
+    cat: jest.fn(async (_ctx: RepositoryContext, file: string, rev: string) => {
       if (rev === '.' && file === '/path/to/repo/file1.txt') {
         return FILE1_CONTENT_HEAD;
       }
@@ -87,19 +87,23 @@ const mockTracker = makeServerSideTracker(
   jest.fn(),
 );
 
-const mockCtx: RepositoryContext = {
-  cwd: 'cwd',
-  cmd: 'sl',
-  logger: mockLogger,
-  tracker: mockTracker,
-};
-
 describe('DiffContentProvider', () => {
+  let ctx: RepositoryContext;
+  beforeEach(() => {
+    ctx = {
+      cwd: 'cwd',
+      cmd: 'sl',
+      logger: mockLogger,
+      tracker: mockTracker,
+    };
+  });
+
   const encodedFile1 = encodeSaplingDiffUri(vscode.Uri.file('/path/to/repo/file1.txt'), {
     type: ComparisonType.UncommittedChanges,
   });
+
   it('provides file contents', async () => {
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
 
     const repo = mockRepoAdded();
 
@@ -107,12 +111,12 @@ describe('DiffContentProvider', () => {
 
     expect(content).toEqual(FILE1_CONTENT_HEAD);
     expect(repo.cat).toHaveBeenCalledTimes(1);
-    expect(repo.cat).toHaveBeenCalledWith('/path/to/repo/file1.txt', '.');
+    expect(repo.cat).toHaveBeenCalledWith(ctx, '/path/to/repo/file1.txt', '.');
     provider.dispose();
   });
 
   it('caches file contents', async () => {
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
     const repo = mockRepoAdded();
     await provider.provideTextDocumentContent(encodedFile1, mockCancelToken);
     await provider.provideTextDocumentContent(encodedFile1, mockCancelToken);
@@ -123,7 +127,7 @@ describe('DiffContentProvider', () => {
   it('invalidates files when the repository head changes', async () => {
     const commit1 = {hash: '1'} as CommitInfo;
     const commit2 = {hash: '2'} as CommitInfo;
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
     const onChange = jest.fn();
     const onChangeDisposable = provider.onDidChange(onChange);
     const repo = mockRepoAdded();
@@ -144,7 +148,7 @@ describe('DiffContentProvider', () => {
   it('invalidates file content cache when the repository head changes', async () => {
     const commit1 = {hash: '1'} as CommitInfo;
     const commit2 = {hash: '2'} as CommitInfo;
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
     const repo = mockRepoAdded();
     repo.mockChangeHeadCommit(commit1);
 
@@ -160,7 +164,7 @@ describe('DiffContentProvider', () => {
 
   it('files opened before repo created provide content once repo is ready', async () => {
     mockNoActiveRepo();
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
     const onChange = jest.fn();
     const onChangeDisposable = provider.onDidChange(onChange);
 
@@ -193,7 +197,7 @@ describe('DiffContentProvider', () => {
     });
     const commit1 = {hash: '1'} as CommitInfo;
     const commit2 = {hash: '2'} as CommitInfo;
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
     const onChange = jest.fn();
     const onChangeDisposable = provider.onDidChange(onChange);
     const repo = mockRepoAdded();
@@ -227,7 +231,7 @@ describe('DiffContentProvider', () => {
       return {dispose: jest.fn()};
     });
     const commit2 = {hash: '2'} as CommitInfo;
-    const provider = new SaplingDiffContentProvider(mockCtx);
+    const provider = new SaplingDiffContentProvider(ctx);
     const repo = mockRepoAdded();
     await provider.provideTextDocumentContent(encodedFile1, mockCancelToken);
     expect(repo.cat).toHaveBeenCalledTimes(1);

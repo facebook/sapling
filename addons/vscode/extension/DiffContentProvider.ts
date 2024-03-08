@@ -6,7 +6,6 @@
  */
 
 import type {Repository} from 'isl-server/src/Repository';
-import type {Logger} from 'isl-server/src/logger';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {Disposable} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
@@ -158,7 +157,7 @@ export class SaplingDiffContentProvider implements vscode.TextDocumentContentPro
 
     // fall back to fetching from the repo
     const fetchedFileContent = await repo
-      .cat(fsPath, revset)
+      .cat(this.ctx, fsPath, revset)
       // An error during `cat` usually means the right side of the comparison was added since the left,
       // so `cat` claims `no such file` at that revset.
       // TODO: it would be more accurate to check that the error is due to this, and return null if not.
