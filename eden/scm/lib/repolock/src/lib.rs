@@ -358,6 +358,14 @@ fn lock(
     }
 }
 
+fn pid_from_lock_contents(id: &[u8]) -> Option<u64> {
+    // Contents look like `hostame + ("/" + namespace)? + ":" + pid + ("/" + starttime)?`.
+    let id = std::str::from_utf8(id).ok()?;
+    let id = id.split_once(':').map(|s| s.1)?;
+    let id = id.split_once('/').map_or(id, |s| s.0);
+    id.parse().ok()
+}
+
 struct LockPaths {
     legacy: PathBuf,
     dir: PathBuf,
@@ -843,5 +851,13 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_pid_from_lock_contents() {
+        assert_eq!(pid_from_lock_contents(b""), None);
+        assert_eq!(pid_from_lock_contents(b"123"), None);
+        assert_eq!(pid_from_lock_contents(b"host:123"), Some(123));
+        assert_eq!(pid_from_lock_contents(b"host/space:123/456"), Some(123));
     }
 }
