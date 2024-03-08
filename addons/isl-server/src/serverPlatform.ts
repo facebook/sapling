@@ -6,6 +6,7 @@
  */
 
 import type {Repository} from './Repository';
+import type {RepositoryContext} from './serverTypes';
 import type {
   AbsolutePath,
   PlatformSpecificClientToServerMessages,
@@ -26,6 +27,7 @@ export interface ServerPlatform {
   sessionId?: string;
   handleMessageFromClient(
     repo: Repository | undefined,
+    ctx: RepositoryContext | undefined,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (disapose: () => unknown) => void,
@@ -36,6 +38,7 @@ export const browserServerPlatform: ServerPlatform = {
   platformName: 'browser',
   handleMessageFromClient: (
     repo: Repository | undefined,
+    ctx: RepositoryContext | undefined,
     message: PlatformSpecificClientToServerMessages,
   ) => {
     switch (message.type) {
@@ -64,8 +67,11 @@ export const browserServerPlatform: ServerPlatform = {
       }
       case 'platform/openFile': {
         (async () => {
-          const opener = await repo?.getConfig('isl.open-file-cmd');
-          const absPath: AbsolutePath = pathModule.join(unwrap(repo?.info.repoRoot), message.path);
+          if (repo == null || ctx == null) {
+            return;
+          }
+          const opener = await repo.getConfig(ctx, 'isl.open-file-cmd');
+          const absPath: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
           let args: Array<string> = [];
           if (opener) {
             // opener should be either a JSON string (wrapped in quotes) or a JSON array of strings,
@@ -94,7 +100,7 @@ export const browserServerPlatform: ServerPlatform = {
                 break;
             }
           }
-          repo?.initialConnectionContext.logger.log('open file', absPath);
+          repo.initialConnectionContext.logger.log('open file', absPath);
           if (args.length > 0) {
             spawnInBackground(repo, args);
           }

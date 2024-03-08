@@ -7,6 +7,7 @@
 
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
+import type {ConfigName} from 'isl/src/types';
 
 /**
  * Per-connection context with which to access a repository.
@@ -18,6 +19,7 @@ export type RepositoryContext = {
   cwd: string;
   logger: Logger;
   tracker: ServerSideTracker;
-  // TODO: Config cache
+
+  knownConfigs?: ReadonlyMap<ConfigName, string> | undefined;
   // TODO: visible commit age range
 };

@@ -6,15 +6,32 @@
  */
 
 import type {Repository} from '../Repository';
+import type {ServerPlatform} from '../serverPlatform';
+import type {RepositoryContext} from '../serverTypes';
 import type {PathLike} from 'fs';
 import type {FileHandle} from 'fs/promises';
 
 import {GeneratedFilesDetector} from '../GeneratedFiles';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {promises} from 'fs';
 import {GeneratedStatus} from 'isl/src/types';
 import {mockLogger} from 'shared/testUtils';
 
 /* eslint-disable require-await */
+
+const mockTracker = makeServerSideTracker(
+  mockLogger,
+  {platformName: 'test'} as ServerPlatform,
+  '0.1',
+  jest.fn(),
+);
+
+const mockCtx: RepositoryContext = {
+  cwd: 'cwd',
+  cmd: 'sl',
+  logger: mockLogger,
+  tracker: mockTracker,
+};
 
 describe('GeneratedFiles', () => {
   describe('getGeneratedFilePathRegex', () => {
@@ -28,7 +45,7 @@ describe('GeneratedFiles', () => {
         logger: mockLogger,
       } as unknown as Repository;
       const detector = new GeneratedFilesDetector();
-      const result = await detector.queryFilesGenerated(mockRepo, mockLogger, '/', [
+      const result = await detector.queryFilesGenerated(mockRepo, mockCtx, '/', [
         'src/myFile.js',
         'foobar',
       ]);
@@ -48,7 +65,7 @@ describe('GeneratedFiles', () => {
         logger: mockLogger,
       } as unknown as Repository;
       const detector = new GeneratedFilesDetector();
-      const result = await detector.queryFilesGenerated(mockRepo, mockLogger, '/', [
+      const result = await detector.queryFilesGenerated(mockRepo, mockCtx, '/', [
         'src/myFile.js',
         'yarn.lock',
         'subproject/yarn.lock',
@@ -82,7 +99,7 @@ describe('GeneratedFiles', () => {
         logger: mockLogger,
       } as unknown as Repository;
       const detector = new GeneratedFilesDetector();
-      const result = await detector.queryFilesGenerated(mockRepo, mockLogger, '/', [
+      const result = await detector.queryFilesGenerated(mockRepo, mockCtx, '/', [
         'myFile.js',
         'myPartiallyGeneratedFile.js',
         'myGeneratedFile.js',

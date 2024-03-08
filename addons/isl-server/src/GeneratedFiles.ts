@@ -6,7 +6,7 @@
  */
 
 import type {Repository} from './Repository';
-import type {Logger} from './logger';
+import type {RepositoryContext} from './serverTypes';
 import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 
 import {Internal} from './Internal';
@@ -23,8 +23,11 @@ const defaultGeneratedPathRegex =
   Internal.generatedFilesRegex ??
   /(yarn\.lock$|package-lock\.json$|node_modules\/.*$|\.py[odc]$|\.class$|\.[oa]$|\.so$|Gemfile\.lock$|go\.sum$|Cargo\.lock$|\.dll$|\.exe$|\.pdb$|composer\.lock$|Podfile\.lock$)/;
 
-async function getGeneratedFilePathRegex(repo: Repository): Promise<RegExp> {
-  const configuredPathRegex = await repo.getConfig('isl.generated-files-regex');
+async function getGeneratedFilePathRegex(
+  repo: Repository,
+  ctx: RepositoryContext,
+): Promise<RegExp> {
+  const configuredPathRegex = await repo.getConfig(ctx, 'isl.generated-files-regex');
   let regex = defaultGeneratedPathRegex;
   if (configuredPathRegex) {
     try {
@@ -76,7 +79,7 @@ export class GeneratedFilesDetector {
    */
   public async queryFilesGenerated(
     repo: Repository,
-    logger: Logger,
+    ctx: RepositoryContext,
     root: AbsolutePath,
     files: Array<RepoRelativePath>,
   ): Promise<Record<RepoRelativePath, GeneratedStatus>> {
@@ -84,8 +87,9 @@ export class GeneratedFilesDetector {
       return {};
     }
     const t1 = performance.now();
+    const {logger} = ctx;
 
-    const regex = await getGeneratedFilePathRegex(repo);
+    const regex = await getGeneratedFilePathRegex(repo, ctx);
 
     const results = group(
       files,

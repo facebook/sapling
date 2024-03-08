@@ -7,6 +7,7 @@
 
 import type {Repository} from 'isl-server/src/Repository';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {
   AbsolutePath,
   PlatformSpecificClientToServerMessages,
@@ -30,6 +31,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
   sessionId: vscode.env.sessionId,
   handleMessageFromClient: async (
     repo: Repository | undefined,
+    _ctx: RepositoryContext | undefined,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (cb: () => unknown) => void,

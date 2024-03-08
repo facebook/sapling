@@ -136,7 +136,6 @@ export class Repository {
    */
   public configHoldOffRefreshMs = 10000;
 
-  public knownConfigs: ReadonlyMap<ConfigName, string> | undefined = undefined;
   private configRateLimiter = new RateLimiter(1);
 
   private currentVisibleCommitRangeIndex = 0;
@@ -281,7 +280,7 @@ export class Repository {
 
     this.disposables.push(() => subscription.dispose());
 
-    this.applyConfigInBackground();
+    this.applyConfigInBackground(ctx);
   }
 
   public nextVisibleCommitRangeInDays(): number | undefined {
@@ -1055,8 +1054,11 @@ export class Repository {
   }
 
   /** Read a config. The config name must be part of `allConfigNames`. */
-  public async getConfig(configName: ConfigName): Promise<string | undefined> {
-    return (await this.getKnownConfigs()).get(configName);
+  public async getConfig(
+    ctx: RepositoryContext,
+    configName: ConfigName,
+  ): Promise<string | undefined> {
+    return (await this.getKnownConfigs(ctx)).get(configName);
   }
 
   /**
@@ -1075,19 +1077,21 @@ export class Repository {
   }
 
   /** Load all "known" configs. Cached on `this`. */
-  public getKnownConfigs(): Promise<ReadonlyMap<ConfigName, string | undefined>> {
-    if (this.knownConfigs != null) {
-      return Promise.resolve(this.knownConfigs);
+  public getKnownConfigs(
+    ctx: RepositoryContext,
+  ): Promise<ReadonlyMap<ConfigName, string | undefined>> {
+    if (ctx.knownConfigs != null) {
+      return Promise.resolve(ctx.knownConfigs);
     }
     return this.configRateLimiter.enqueueRun(async () => {
-      if (this.knownConfigs == null) {
+      if (ctx.knownConfigs == null) {
         // Fetch all configs using one command.
         const knownConfig = new Map<ConfigName, string>(
-          await getConfigs<ConfigName>(this.initialConnectionContext, allConfigNames),
+          await getConfigs<ConfigName>(ctx, allConfigNames),
         );
-        this.knownConfigs = knownConfig;
+        ctx.knownConfigs = knownConfig;
       }
-      return this.knownConfigs;
+      return ctx.knownConfigs;
     });
   }
 
@@ -1108,8 +1112,8 @@ export class Repository {
   }
 
   /** Load and apply configs to `this` in background. */
-  private applyConfigInBackground() {
-    this.getConfig('isl.hold-off-refresh-ms').then(configValue => {
+  private applyConfigInBackground(ctx: RepositoryContext) {
+    this.getConfig(ctx, 'isl.hold-off-refresh-ms').then(configValue => {
       if (configValue != null) {
         const numberValue = parseInt(configValue, 10);
         if (numberValue >= 0) {

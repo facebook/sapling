@@ -286,6 +286,7 @@ export default class ServerToClientAPI {
         if (data.type.startsWith('platform/')) {
           this.platform.handleMessageFromClient(
             /*repo=*/ undefined,
+            /*ctx*/ undefined,
             data as PlatformSpecificClientToServerMessages,
             message => this.postMessage(message),
             (dispose: () => unknown) => {
@@ -500,7 +501,7 @@ export default class ServerToClientAPI {
       }
       case 'getConfig': {
         repo
-          .getConfig(data.name)
+          .getConfig(ctx, data.name)
           .catch(() => undefined)
           .then(value => {
             logger.info('got config', data.name, value);
@@ -644,7 +645,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchGeneratedStatuses': {
         generatedFilesDetector
-          .queryFilesGenerated(repo, ctx.logger, repo.info.repoRoot, data.paths)
+          .queryFilesGenerated(repo, ctx, repo.info.repoRoot, data.paths)
           .then(results => {
             this.postMessage({type: 'fetchedGeneratedStatuses', results});
           });
@@ -870,6 +871,7 @@ export default class ServerToClientAPI {
         }
         this.platform.handleMessageFromClient(
           repo,
+          ctx,
           data as Exclude<typeof data, CodeReviewProviderSpecificClientToServerMessages>,
           message => this.postMessage(message),
           (dispose: () => unknown) => {
