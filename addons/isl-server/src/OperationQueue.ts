@@ -6,7 +6,6 @@
  */
 
 import type {ServerSideTracker} from './analytics/serverSideTracker';
-import type {Logger} from './logger';
 import type {RepositoryContext} from './serverTypes';
 import type {
   OperationCommandProgressReporter,
@@ -25,7 +24,6 @@ import {defer} from 'shared/utils';
  */
 export class OperationQueue {
   constructor(
-    private logger: Logger,
     private runCallback: (
       operation: RunnableOperation,
       cwd: string,
@@ -100,7 +98,7 @@ export class OperationQueue {
       );
     } catch (err) {
       const errString = (err as Error).toString();
-      this.logger.log('error running operation: ', operation.args[0], errString);
+      ctx.logger.log('error running operation: ', operation.args[0], errString);
       onProgress({id: operation.id, kind: 'error', error: errString});
 
       // clear queue to run when we hit an error,

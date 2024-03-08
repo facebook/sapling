@@ -33,7 +33,7 @@ describe('OperationQueue', () => {
   it('runs command directly when nothing queued', async () => {
     const p = defer();
     const runCallback = jest.fn().mockImplementation(() => p.promise);
-    const queue = new OperationQueue(mockLogger, runCallback);
+    const queue = new OperationQueue(runCallback);
 
     const onProgress = jest.fn();
 
@@ -70,7 +70,7 @@ describe('OperationQueue', () => {
 
         return Promise.resolve(undefined);
       });
-    const queue = new OperationQueue(mockLogger, runCallback);
+    const queue = new OperationQueue(runCallback);
 
     const onProgress = jest.fn();
     const runPromise = queue.runOrQueueOperation(
@@ -111,7 +111,7 @@ describe('OperationQueue', () => {
       return p;
     });
     const onProgress = jest.fn();
-    const queue = new OperationQueue(mockLogger, runCallback);
+    const queue = new OperationQueue(runCallback);
     const id = 'abc';
     const op = queue.runOrQueueOperation(
       mockCtx,
@@ -135,7 +135,7 @@ describe('OperationQueue', () => {
     const runP1 = jest.fn(() => p1.promise);
     const runP2 = jest.fn(() => p2.promise);
     const runCallback = jest.fn().mockImplementationOnce(runP1).mockImplementationOnce(runP2);
-    const queue = new OperationQueue(mockLogger, runCallback);
+    const queue = new OperationQueue(runCallback);
 
     const onProgress = jest.fn();
     expect(runP1).not.toHaveBeenCalled();
@@ -189,7 +189,7 @@ describe('OperationQueue', () => {
     const runP1 = jest.fn(() => p1.promise);
     const runP2 = jest.fn(() => p2.promise);
     const runCallback = jest.fn().mockImplementationOnce(runP1).mockImplementationOnce(runP2);
-    const queue = new OperationQueue(mockLogger, runCallback);
+    const queue = new OperationQueue(runCallback);
 
     const onProgress = jest.fn();
     expect(runP1).not.toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('OperationQueue', () => {
     const runP1 = jest.fn(() => p1.promise);
     const runP2 = jest.fn(() => p2.promise);
     const runCallback = jest.fn().mockImplementationOnce(runP1).mockImplementationOnce(runP2);
-    const queue = new OperationQueue(mockLogger, runCallback);
+    const queue = new OperationQueue(runCallback);
 
     const onProgress = jest.fn();
     expect(runP1).not.toHaveBeenCalled();

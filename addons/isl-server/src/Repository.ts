@@ -217,7 +217,6 @@ export class Repository {
     this.watchForChanges = new WatchForChanges(info, ctx.logger, this.pageFocusTracker, callback);
 
     this.operationQueue = new OperationQueue(
-      ctx.logger,
       (
         operation: RunnableOperation,
         cwd: string,
