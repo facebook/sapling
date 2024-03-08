@@ -11,6 +11,7 @@ import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
+import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
@@ -20,7 +21,6 @@ import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {
   VSCodeBadge,
-  VSCodeButton,
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
@@ -89,15 +89,26 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         </Row>
         <GroupName>Components</GroupName>
         <Row>
-          <VSCodeButton>Primary</VSCodeButton>
-          <VSCodeButton appearance="secondary">Secondary</VSCodeButton>
-          <VSCodeButton appearance="icon">Icon</VSCodeButton>
-          <VSCodeButton appearance="icon">
-            <Icon icon="rocket" slot="start" /> Icon
-          </VSCodeButton>
-          <VSCodeButton appearance="icon">
+          <Button primary>Primary</Button>
+          <Button disabled primary>
+            Primary
+          </Button>
+          <Button>Secondary</Button>
+          <Button disabled>Secondary</Button>
+          <Button icon>Icon</Button>
+          <Button icon>
             <Icon icon="rocket" />
-          </VSCodeButton>
+            Icon
+          </Button>
+          <Button icon>
+            <Icon icon="rocket" />
+          </Button>
+          <Button icon disabled>
+            <Icon icon="rocket" /> Icon
+          </Button>
+          <Button>
+            <Icon icon="rocket" /> Secondary With Icon
+          </Button>
           <VSCodeDropdown>
             <VSCodeOption>Dropdown</VSCodeOption>
             <VSCodeOption>Option</VSCodeOption>
