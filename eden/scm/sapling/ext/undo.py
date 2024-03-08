@@ -681,26 +681,6 @@ def _oldworkingcopyparent(repo, subset, x):
     return subset & smartset.baseset(revs, repo=repo)
 
 
-@revsetpredicate("oldnonobsworkingcopyparent")
-def _oldnonobsworkingcopyparent(repo, subset, x):
-    """``oldnonobsworkingcopyparent()``
-    previous non-obsolete working copy parent
-    """
-    max_candidates = repo.ui.configint(
-        "experimental", "max-old-nonobs-commit-candidates", 50
-    )
-    current_rev = repo["."].rev()
-    for i in range(1, max_candidates + 1):
-        revs = _getoldworkingcopyparent(repo, i)
-        rev = revs.first()
-        if (
-            not repo[rev].obsolete()
-            and rev != current_rev  # this is for 'amend' and 'restack' case
-        ):
-            return subset & smartset.baseset(revs, repo=repo)
-    raise error.Abort(_("not found previous non-obsolete commit"))
-
-
 # Templates
 templatefunc = registrar.templatefunc()
 

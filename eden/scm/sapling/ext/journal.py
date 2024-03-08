@@ -30,6 +30,7 @@ from sapling import (
     node,
     pycompat,
     registrar,
+    smartset,
     util,
 )
 from sapling.i18n import _
@@ -180,6 +181,37 @@ def unsharejournal(orig, ui, repo, repopath):
                 storage._write(repo.localvfs, [entry])
 
     return orig(ui, repo, repopath)
+
+
+revsetpredicate = registrar.revsetpredicate()
+
+
+@revsetpredicate("oldnonobsworkingcopyparent")
+def _oldnonobsworkingcopyparent(repo, subset, x):
+    """``oldnonobsworkingcopyparent()``
+    previous non-obsolete working copy parent
+    """
+    current_node = repo["."].node()
+    for entry in repo.journal.filtered(namespace="wdirparent"):
+        # Rebase can update wc to each commit as it goes. We don't want consider the last
+        # rebased commit as our last parent.
+        # TODO: this is fragile since "commands" records the actual CLI args, not the
+        # canonical command name.
+        if entry.command.startswith("rebase"):
+            continue
+
+        nodes = entry.oldhashes
+
+        # Skip merge states.
+        if len(nodes) != 1:
+            continue
+
+        if nodes[0] == current_node or repo[nodes[0]].obsolete():
+            continue
+
+        return subset & smartset.baseset(nodes, repo=repo)
+
+    return set()
 
 
 class journalstorage:

@@ -356,7 +356,7 @@ def oldnonobsworkingcopyparentset(repo, subset, x, order):
     if func is None:
         raise error.ParseError(
             _(
-                "please enable 'undo' extension to use '-' as old non-obsolete "
+                "please enable 'journal' extension to use '-' as old non-obsolete "
                 "working copy parent"
             )
         )
