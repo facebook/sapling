@@ -780,7 +780,7 @@ export class Repository {
     const lastChecked = new Date();
 
     const [extension, backupStatuses, cloudStatus] = await Promise.allSettled([
-      this.forceGetConfig('extensions.commitcloud', ctx.cwd),
+      this.forceGetConfig(ctx, 'extensions.commitcloud'),
       this.fetchCommitCloudBackupStatuses(ctx),
       this.fetchCommitCloudStatus(ctx),
     ]);
@@ -1054,15 +1054,13 @@ export class Repository {
    * Read a single config, forcing a new dedicated call to `sl config`.
    * Prefer `getConfig` to batch fetches when possible.
    */
-  public async forceGetConfig(configName: string, cwd: string): Promise<string | undefined> {
-    const result = (
-      await runCommand({...this.initialConnectionContext, cwd: cwd ?? this.info.repoRoot}, [
-        'config',
-        configName,
-      ])
-    ).stdout;
+  public async forceGetConfig(
+    ctx: RepositoryContext,
+    configName: string,
+  ): Promise<string | undefined> {
+    const result = (await runCommand(ctx, ['config', configName])).stdout;
     this.initialConnectionContext.logger.info(
-      `loaded configs from ${cwd}: ${configName} => ${result}`,
+      `loaded configs from ${ctx.cwd}: ${configName} => ${result}`,
     );
     return result;
   }
