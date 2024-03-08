@@ -47,7 +47,7 @@ export function OperationDisabledButton({
     | Array<Operation>
     | undefined
     | Promise<Operation | Array<Operation> | undefined>;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   disabled?: boolean;
   icon?: React.ReactNode;
   className?: string;

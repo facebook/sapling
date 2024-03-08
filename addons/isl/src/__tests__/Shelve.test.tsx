@@ -243,6 +243,17 @@ describe('Shelve', () => {
         });
       });
 
+      it('runs delete', () => {
+        fireEvent.click(screen.getByTestId('delete-shelve-aaa'));
+
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: ['shelve', '--delete', 'my shelve'],
+          }),
+        });
+      });
+
       it('dismisses tooltip while running unshelve', () => {
         fireEvent.click(screen.getByText('Unshelve'));
 

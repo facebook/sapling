@@ -86,6 +86,7 @@ export type TrackEventName =
   | 'RevertOperation'
   | 'SetConfigOperation'
   | 'ShelveOperation'
+  | 'DeleteShelveOperation'
   | 'UnshelveOperation'
   | 'RunCommand'
   | 'StatusCommand'

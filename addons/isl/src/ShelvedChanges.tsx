@@ -19,6 +19,7 @@ import {Tooltip} from './Tooltip';
 import {ChangedFiles} from './UncommittedChanges';
 import {T, t} from './i18n';
 import {atomLoadableWithRefresh} from './jotaiUtils';
+import {DeleteShelveOperation} from './operations/DeleteShelveOperation';
 import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -111,6 +112,18 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
                     <RelativeDate date={change.date} useShortVariant />
                   </Subtle>
                   <FlexSpacer />
+                  <Tooltip title={t('Remove from the list of shelved changes')}>
+                    <OperationDisabledButton
+                      appearance="icon"
+                      contextKey={`delete-shelve-${change.hash}`}
+                      data-testid={`delete-shelve-${change.hash}`}
+                      className="unshelve-button"
+                      runOperation={() => {
+                        dismiss();
+                        return new DeleteShelveOperation(change);
+                      }}
+                      icon={<Icon icon="trash" />}></OperationDisabledButton>
+                  </Tooltip>
                   <Tooltip
                     title={t(
                       'Apply these changes without removing this from your list of shelved changes',
