@@ -239,7 +239,7 @@ describe('Repository', () => {
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     const repo = new Repository(info, ctx);
     // @ts-expect-error We expect a type error in addition to runtime validation
-    await expect(repo.setConfig('user', 'some-random-config', 'hi')).rejects.toEqual(
+    await expect(repo.setConfig(ctx, 'user', 'some-random-config', 'hi')).rejects.toEqual(
       new Error('Config some-random-config not in allowlist for settable configs'),
     );
   });

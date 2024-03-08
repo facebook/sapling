@@ -1096,6 +1096,7 @@ export class Repository {
   }
 
   public setConfig(
+    ctx: RepositoryContext,
     level: ConfigLevel,
     configName: SettableConfigName,
     configValue: string,
@@ -1106,9 +1107,7 @@ export class Repository {
       );
     }
     // Attempt to avoid racy config read/write.
-    return this.configRateLimiter.enqueueRun(() =>
-      setConfig(this.initialConnectionContext, level, configName, configValue),
-    );
+    return this.configRateLimiter.enqueueRun(() => setConfig(ctx, level, configName, configValue));
   }
 
   /** Load and apply configs to `this` in background. */

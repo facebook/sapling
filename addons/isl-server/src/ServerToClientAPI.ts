@@ -511,7 +511,7 @@ export default class ServerToClientAPI {
       }
       case 'setConfig': {
         logger.info('set config', data.name, data.value);
-        repo.setConfig('user', data.name, data.value).catch(err => {
+        repo.setConfig(ctx, 'user', data.name, data.value).catch(err => {
           logger.error('error setting config', data.name, data.value, err);
         });
         break;
