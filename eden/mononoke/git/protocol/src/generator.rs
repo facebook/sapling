@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Result;
 use async_stream::try_stream;
@@ -41,6 +43,7 @@ use git_types::HeaderState;
 use git_types::ObjectDelta;
 use git_types::RootGitDeltaManifestId;
 use gix_hash::ObjectId;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -66,6 +69,7 @@ use crate::types::SymrefFormat;
 use crate::types::TagInclusion;
 
 const HEAD_REF: &str = "HEAD";
+const TAGS_PREFIX: &str = "tags/";
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -247,22 +251,84 @@ fn to_commit_stream(commits: Vec<ChangesetId>) -> BoxStream<'static, Result<Chan
     stream::iter(commits.into_iter().map(Ok)).boxed()
 }
 
+/// Fetch all the bonsai commits pointed to by the annotated tags corresponding
+/// to the input object ids
+async fn tagged_commits(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    git_shas: Vec<GitSha1>,
+) -> Result<Vec<ChangesetId>> {
+    if git_shas.is_empty() {
+        return Ok(vec![]);
+    }
+    // Fetch the names of the tags corresponding to the tag object represented by the input object ids
+    let tag_names = repo
+        .bonsai_tag_mapping()
+        .get_entries_by_tag_hashes(git_shas)
+        .await
+        .context("Error while fetching tag entries from tag hashes")?
+        .into_iter()
+        .map(|entry| entry.tag_name)
+        .collect::<FxHashSet<String>>();
+    let tag_names = Arc::new(tag_names);
+    // Fetch the commits pointed to by those tags
+    repo.bookmarks()
+        .list(
+            ctx.clone(),
+            Freshness::MostRecent,
+            &BookmarkPrefix::new(TAGS_PREFIX)?,
+            BookmarkCategory::ALL,
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            u64::MAX,
+        )
+        .try_filter_map(|(bookmark, cs_id)| {
+            let tag_names = tag_names.clone();
+            async move {
+                if tag_names.contains(&bookmark.name().to_string()) {
+                    Ok(Some(cs_id))
+                } else {
+                    Ok(None)
+                }
+            }
+        })
+        .try_collect::<Vec<_>>()
+        .await
+}
+
+/// Fetch the corresponding bonsai commits for the input Git object ids. If the object id doesn't
+/// correspond to a bonsai commit, try to resolve it to a tag and then fetch the bonsai commit
 async fn git_shas_to_bonsais(
     ctx: &CoreContext,
     repo: &impl Repo,
     oids: impl Iterator<Item = impl AsRef<gix_hash::oid>>,
 ) -> Result<Vec<ChangesetId>> {
-    let git_shas = BonsaisOrGitShas::from_object_ids(oids)?;
-    repo.bonsai_git_mapping()
-        .get(ctx, git_shas)
+    let shas = oids
+        .map(|oid| GitSha1::from_object_id(oid.as_ref()))
+        .collect::<Result<Vec<_>>>()
+        .context("Error while converting Git object Ids to Git Sha1 during fetch")?;
+    // Get the bonsai commits corresponding to the Git shas
+    let entries = repo
+        .bonsai_git_mapping()
+        .get(ctx, BonsaisOrGitShas::GitSha1(shas.clone()))
         .await
         .with_context(|| {
             format!(
                 "Failed to fetch bonsai_git_mapping for repo {}",
                 repo.repo_identity().name()
             )
-        })
-        .map(|entries| entries.into_iter().map(|entry| entry.bcs_id).collect())
+        })?;
+    // Filter out the git shas for which we don't have an entry in the bonsai_git_mapping table
+    // These are likely annotated tags which need to be resolved separately
+    let tag_shas = shas
+        .into_iter()
+        .filter(|&sha| !entries.iter().any(|entry| entry.git_sha1 == sha))
+        .collect::<Vec<_>>();
+    let mut commits_from_tags = tagged_commits(ctx, repo, tag_shas)
+        .await
+        .context("Error while resolving annotated tags to their commits")?;
+    commits_from_tags.extend(entries.into_iter().map(|entry| entry.bcs_id));
+    anyhow::Ok(commits_from_tags)
 }
 
 /// Get the Git counterpart for a bonsai commit, if it exists.
