@@ -39,6 +39,13 @@ const mockTracker = makeServerSideTracker(
   jest.fn(),
 );
 
+const mockCtx: RepositoryContext = {
+  logger: mockLogger,
+  tracker: mockTracker,
+  cwd: '/test',
+  cmd: 'sl',
+};
+
 function mockExeca(
   cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
 ) {
@@ -113,7 +120,7 @@ describe('Repository', () => {
     it('extracting github repo info', async () => {
       setPathsDefault('https://github.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger, mockTracker);
+      const repo = new Repository(info, mockCtx);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -132,7 +139,7 @@ describe('Repository', () => {
     it('extracting github enterprise repo info', async () => {
       setPathsDefault('https://ghe.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger, mockTracker);
+      const repo = new Repository(info, mockCtx);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -151,7 +158,7 @@ describe('Repository', () => {
     it('handles non-github-enterprise unknown code review providers', async () => {
       setPathsDefault('https://gitlab.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
-      const repo = new Repository(info, mockLogger, mockTracker);
+      const repo = new Repository(info, mockCtx);
       expect(repo.info).toEqual({
         type: 'success',
         command: 'sl',
@@ -169,7 +176,7 @@ describe('Repository', () => {
   it('applies isl.hold-off-refresh-ms config', async () => {
     setConfigOverrideForTests([['isl.hold-off-refresh-ms', '12345']], false);
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
-    const repo = new Repository(info, mockLogger, mockTracker);
+    const repo = new Repository(info, mockCtx);
     await new Promise(process.nextTick);
     expect(repo.configHoldOffRefreshMs).toBe(12345);
   });
@@ -182,7 +189,7 @@ describe('Repository', () => {
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
-    const repo = new Repository(info, mockLogger, mockTracker);
+    const repo = new Repository(info, mockCtx);
     expect(repo.info).toEqual({
       type: 'success',
       command: 'sl',
@@ -233,7 +240,7 @@ describe('Repository', () => {
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
-    const repo = new Repository(info, mockLogger, mockTracker);
+    const repo = new Repository(info, mockCtx);
     // @ts-expect-error We expect a type error in addition to runtime validation
     await expect(repo.setConfig('user', 'some-random-config', 'hi')).rejects.toEqual(
       new Error('Config some-random-config not in allowlist for settable configs'),
@@ -350,7 +357,7 @@ ${MARK_OUT}
     });
 
     it('checks for merge conflicts', async () => {
-      const repo = new Repository(repoInfo, mockLogger, mockTracker);
+      const repo = new Repository(repoInfo, mockCtx);
 
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
@@ -378,7 +385,7 @@ ${MARK_OUT}
     });
 
     it('disposes conflict change subscriptions', async () => {
-      const repo = new Repository(repoInfo, mockLogger, mockTracker);
+      const repo = new Repository(repoInfo, mockCtx);
 
       const onChange = jest.fn();
       const subscription = repo.onChangeConflictState(onChange);
@@ -392,7 +399,7 @@ ${MARK_OUT}
     it('sends conflicts right away on subscription if already in conflicts', async () => {
       enterMergeConflict(MOCK_CONFLICT);
 
-      const repo = new Repository(repoInfo, mockLogger, mockTracker);
+      const repo = new Repository(repoInfo, mockCtx);
 
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
@@ -414,7 +421,7 @@ ${MARK_OUT}
     });
 
     it('preserves previous conflicts as resolved', async () => {
-      const repo = new Repository(repoInfo, mockLogger, mockTracker);
+      const repo = new Repository(repoInfo, mockCtx);
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
 
@@ -455,7 +462,7 @@ ${MARK_OUT}
         [/^sl resolve --tool internal:dumpjson --all/, new Error('failed to do the thing')],
       ]);
 
-      const repo = new Repository(repoInfo, mockLogger, mockTracker);
+      const repo = new Repository(repoInfo, mockCtx);
       const onChange = jest.fn();
       repo.onChangeConflictState(onChange);
 
@@ -588,7 +595,7 @@ describe('absolutePathForFileInRepo', () => {
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
     };
-    const repo = new Repository(repoInfo, mockLogger, mockTracker);
+    const repo = new Repository(repoInfo, mockCtx);
 
     expect(absolutePathForFileInRepo('foo/bar/file.txt', repo)).toEqual(
       '/path/to/repo/foo/bar/file.txt',
@@ -614,7 +621,7 @@ describe('absolutePathForFileInRepo', () => {
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
     };
-    const repo = new Repository(repoInfo, mockLogger, mockTracker);
+    const repo = new Repository(repoInfo, mockCtx);
 
     expect(absolutePathForFileInRepo('foo\\bar\\file.txt', repo, path.win32)).toEqual(
       'C:\\path\\to\\repo\\foo\\bar\\file.txt',

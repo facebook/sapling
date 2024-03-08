@@ -30,7 +30,10 @@ async function getGeneratedFilePathRegex(repo: Repository): Promise<RegExp> {
     try {
       regex = new RegExp(configuredPathRegex);
     } catch (err) {
-      repo.logger.error('Configured generated files regex is invalid', err);
+      repo.initialConnectionContext.logger.error(
+        'Configured generated files regex is invalid',
+        err,
+      );
     }
   }
   return regex;

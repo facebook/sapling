@@ -147,8 +147,7 @@ class RepositoryCache {
       // once we're sure we don't have a repository to re-use.
       const repo = new this.RepositoryType(
         repoInfo as ValidatedRepoInfo, // repoInfo is now guaranteed to have these root/dotdir set
-        ctx.logger,
-        ctx.tracker,
+        ctx,
       );
 
       const internalRef = new RefCounted(repo);

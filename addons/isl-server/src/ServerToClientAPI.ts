@@ -582,7 +582,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchCommitMessageTemplate': {
-        this.handleFetchCommitMessageTemplate(repo);
+        this.handleFetchCommitMessageTemplate(repo, ctx);
         break;
       }
       case 'fetchShelvedChanges': {
@@ -649,7 +649,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchGeneratedStatuses': {
         generatedFilesDetector
-          .queryFilesGenerated(repo, repo.logger, repo.info.repoRoot, data.paths)
+          .queryFilesGenerated(repo, ctx.logger, repo.info.repoRoot, data.paths)
           .then(results => {
             this.postMessage({type: 'fetchedGeneratedStatuses', results});
           });
@@ -897,8 +897,8 @@ export default class ServerToClientAPI {
     }
   }
 
-  private async handleFetchCommitMessageTemplate(repo: Repository) {
-    const {logger} = repo;
+  private async handleFetchCommitMessageTemplate(repo: Repository, ctx: RepositoryContext) {
+    const {logger} = ctx;
     try {
       const [result, customTemplate] = await Promise.all([
         repo.runCommand(

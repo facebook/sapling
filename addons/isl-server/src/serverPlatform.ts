@@ -56,7 +56,7 @@ export const browserServerPlatform: ServerPlatform = {
             args = ['xdg-open', pathModule.dirname(absPath)];
             break;
         }
-        repo?.logger.log('open file', absPath);
+        repo?.initialConnectionContext.logger.log('open file', absPath);
         if (args.length > 0) {
           spawnInBackground(repo, args);
         }
@@ -94,7 +94,7 @@ export const browserServerPlatform: ServerPlatform = {
                 break;
             }
           }
-          repo?.logger.log('open file', absPath);
+          repo?.initialConnectionContext.logger.log('open file', absPath);
           if (args.length > 0) {
             spawnInBackground(repo, args);
           }
@@ -134,7 +134,7 @@ function spawnInBackground(repo: Repository | undefined, args: Array<string>) {
   });
   // Silent error. Don't crash the server process.
   proc.on('error', err => {
-    repo?.logger.log('failed to open', args, err);
+    repo?.initialConnectionContext.logger.log('failed to open', args, err);
   });
   proc.unref();
 }

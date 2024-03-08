@@ -10,7 +10,6 @@ import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
-import type {Logger} from './logger';
 import type {RepositoryContext} from './serverTypes';
 import type {
   CommitInfo,
@@ -156,26 +155,12 @@ export class Repository {
   public initialConnectionContext: RepositoryContext;
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
-  constructor(
-    public info: ValidatedRepoInfo,
-    public logger: Logger,
-    /** Analytics Tracker that was valid when this repo was created. Since Repository's can be reused,
-     * there may be other trackers associated with this repo, which are not accounted for.
-     * This tracker should only be used for things that are shared among multiple consumers of this repo,
-     * like uncommitted changes.
-     */
-    public trackerBestEffort: ServerSideTracker,
-  ) {
-    this.initialConnectionContext = {
-      logger,
-      cmd: info.command,
-      cwd: info.repoRoot,
-      tracker: trackerBestEffort,
-    };
+  constructor(public info: ValidatedRepoInfo, ctx: RepositoryContext) {
+    this.initialConnectionContext = ctx;
 
     const remote = info.codeReviewSystem;
     if (remote.type === 'github') {
-      this.codeReviewProvider = new GitHubCodeReviewProvider(remote, logger);
+      this.codeReviewProvider = new GitHubCodeReviewProvider(remote, ctx.logger);
     }
 
     if (remote.type === 'phabricator' && Internal?.PhabricatorCodeReviewProvider != null) {
@@ -208,7 +193,7 @@ export class Repository {
       if (pollKind !== 'force' && shouldWait()) {
         // Do nothing. This is fine because after the operation
         // there will be a refresh.
-        this.logger.info('polling prevented from shouldWait');
+        ctx.logger.info('polling prevented from shouldWait');
         return;
       }
       if (kind === 'uncommitted changes') {
@@ -229,10 +214,10 @@ export class Repository {
         );
       }
     };
-    this.watchForChanges = new WatchForChanges(info, logger, this.pageFocusTracker, callback);
+    this.watchForChanges = new WatchForChanges(info, ctx.logger, this.pageFocusTracker, callback);
 
     this.operationQueue = new OperationQueue(
-      this.logger,
+      ctx.logger,
       (
         operation: RunnableOperation,
         cwd: string,
@@ -330,14 +315,14 @@ export class Repository {
   }
 
   public checkForMergeConflicts = serializeAsyncCall(async () => {
-    this.logger.info('checking for merge conflicts');
+    this.initialConnectionContext.logger.info('checking for merge conflicts');
     // Fast path: check if .sl/merge dir changed
     const wasAlreadyInConflicts = this.mergeConflicts != null;
     if (!wasAlreadyInConflicts) {
       const mergeDirExists = await exists(path.join(this.info.dotdir, 'merge'));
       if (!mergeDirExists) {
         // Not in a conflict
-        this.logger.info(
+        this.initialConnectionContext.logger.info(
           `conflict state still the same (${
             wasAlreadyInConflicts ? 'IN merge conflict' : 'NOT in conflict'
           })`,
@@ -366,7 +351,7 @@ export class Repository {
       );
       output = JSON.parse(proc.stdout) as ResolveCommandConflictOutput;
     } catch (err) {
-      this.logger.error(`failed to check for merge conflicts: ${err}`);
+      this.initialConnectionContext.logger.error(`failed to check for merge conflicts: ${err}`);
       // To avoid being stuck in "loading" state forever, let's pretend there's no conflicts.
       this.mergeConflicts = undefined;
       this.mergeConflictsEmitter.emit('change', this.mergeConflicts);
@@ -374,23 +359,28 @@ export class Repository {
     }
 
     this.mergeConflicts = computeNewConflicts(this.mergeConflicts, output, fetchStartTimestamp);
-    this.logger.info(`repo ${this.mergeConflicts ? 'IS' : 'IS NOT'} in merge conflicts`);
+    this.initialConnectionContext.logger.info(
+      `repo ${this.mergeConflicts ? 'IS' : 'IS NOT'} in merge conflicts`,
+    );
     if (this.mergeConflicts) {
       const maxConflictsToLog = 20;
       const remainingConflicts = (this.mergeConflicts.files ?? [])
         .filter(conflict => conflict.status === 'U')
         .map(conflict => conflict.path)
         .slice(0, maxConflictsToLog);
-      this.logger.info('remaining files with conflicts: ', remainingConflicts);
+      this.initialConnectionContext.logger.info(
+        'remaining files with conflicts: ',
+        remainingConflicts,
+      );
     }
     this.mergeConflictsEmitter.emit('change', this.mergeConflicts);
 
     if (!wasAlreadyInConflicts && this.mergeConflicts) {
-      this.trackerBestEffort.track('EnterMergeConflicts', {
+      this.initialConnectionContext.tracker.track('EnterMergeConflicts', {
         extras: {numConflicts: this.mergeConflicts.files?.length ?? 0},
       });
     } else if (wasAlreadyInConflicts && !this.mergeConflicts) {
-      this.trackerBestEffort.track('ExitMergeConflicts', {extras: {}});
+      this.initialConnectionContext.tracker.track('ExitMergeConflicts', {extras: {}});
     }
   });
 
@@ -551,7 +541,7 @@ export class Repository {
       Internal.additionalEnvForCommand?.(operation),
     );
 
-    this.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
+    this.initialConnectionContext.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
 
     const execution = execa(command, args, {...options, stdout: 'pipe', stderr: 'pipe'});
     // It would be more appropriate to call this in reponse to execution.on('spawn'), but
@@ -568,7 +558,11 @@ export class Repository {
       onProgress('exit', exitCode || 0);
     });
     signal.addEventListener('abort', () => {
-      this.logger.log('kill operation: ', command, cwdRelativeArgs.join(' '));
+      this.initialConnectionContext.logger.log(
+        'kill operation: ',
+        command,
+        cwdRelativeArgs.join(' '),
+      );
     });
     handleAbortSignalOnProcess(execution, signal);
     await execution;
@@ -576,7 +570,7 @@ export class Repository {
 
   setPageFocus(page: string, state: PageVisibility) {
     this.pageFocusTracker.setState(page, state);
-    this.trackerBestEffort.track('FocusChanged', {extras: {state}});
+    this.initialConnectionContext.tracker.track('FocusChanged', {extras: {state}});
   }
 
   /** Return the latest fetched value for UncommittedChanges. */
@@ -613,10 +607,12 @@ export class Repository {
       };
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
-      this.logger.error('Error fetching files: ', err);
+      this.initialConnectionContext.logger.error('Error fetching files: ', err);
       if (isExecaError(err)) {
         if (err.stderr.includes('checkout is currently in progress')) {
-          this.logger.info('Ignoring `hg status` error caused by in-progress checkout');
+          this.initialConnectionContext.logger.info(
+            'Ignoring `hg status` error caused by in-progress checkout',
+          );
           return;
         }
       }
@@ -676,7 +672,10 @@ export class Repository {
         ['log', '--template', FETCH_TEMPLATE, '--rev', revset],
         'LogCommand',
       );
-      const commits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
+      const commits = parseCommitInfoOutput(
+        this.initialConnectionContext.logger,
+        proc.stdout.trim(),
+      );
       if (commits.length === 0) {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
       }
@@ -695,7 +694,7 @@ export class Repository {
       if (isExecaError(error) && error.stderr.includes('Please check your internet connection')) {
         error = Error('Network request failed. Please check your internet connection.');
       }
-      this.logger.error('Error fetching commits: ', error);
+      this.initialConnectionContext.logger.error('Error fetching commits: ', error);
       this.smartlogCommitsChangesEmitter.emit('change', {
         fetchStartTimestamp,
         fetchCompletedTimestamp: Date.now(),
@@ -731,7 +730,7 @@ export class Repository {
   }
 
   private catLimiter = new RateLimiter(MAX_SIMULTANEOUS_CAT_CALLS, s =>
-    this.logger.info('[cat]', s),
+    this.initialConnectionContext.logger.info('[cat]', s),
   );
   /** Return file content at a given revset, e.g. hash or `.` */
   public cat(file: AbsolutePath, rev: Revset): Promise<string> {
@@ -783,7 +782,7 @@ export class Repository {
     // TODO: We don't actually need all the fields in FETCH_TEMPLATE for blame. Reducing this template may speed it up as well.
     const commits = await this.lookupCommits([...hashes]);
     const t3 = Date.now();
-    this.logger.info(
+    this.initialConnectionContext.logger.info(
       `Fetched ${commits.size} commits for blame. Blame took ${(t2 - t1) / 1000}s, commits took ${
         (t3 - t2) / 1000
       }s`,
@@ -904,7 +903,10 @@ export class Repository {
             ['log', '--template', FETCH_TEMPLATE, '--rev', hashesToFetch.join('+')],
             'LookupCommitsCommand',
           ).then(output => {
-            return parseCommitInfoOutput(this.logger, output.stdout.trim());
+            return parseCommitInfoOutput(
+              this.initialConnectionContext.logger,
+              output.stdout.trim(),
+            );
           });
 
     const result = new Map();
@@ -966,7 +968,7 @@ export class Repository {
       )
     ).stdout;
 
-    const shelves = parseShelvedCommitsOutput(this.logger, output.trim());
+    const shelves = parseShelvedCommitsOutput(this.initialConnectionContext.logger, output.trim());
     // sort by date ascending
     shelves.sort((a, b) => b.date.getTime() - a.date.getTime());
     return shelves;
@@ -993,7 +995,7 @@ export class Repository {
     try {
       const configs = JSON.parse(result.stdout) as [{name: string; value: unknown}];
       const alerts = parseAlerts(configs);
-      this.logger.info('Found active alerts:', alerts);
+      this.initialConnectionContext.logger.info('Found active alerts:', alerts);
       return alerts;
     } catch (e) {
       return [];
@@ -1037,7 +1039,7 @@ export class Repository {
      * Optionally provide a more specific tracker. If not provided, the best-effort tracker for the repo is used.
      * Prefer passing an exact tracker when available, or else cwd/session id/platform/version could be inaccurate.
      */
-    tracker: ServerSideTracker = this.trackerBestEffort,
+    tracker: ServerSideTracker = this.initialConnectionContext.tracker,
   ) {
     const id = randomId();
     return tracker.operation(
@@ -1077,7 +1079,9 @@ export class Repository {
         configName,
       ])
     ).stdout;
-    this.logger.info(`loaded configs from ${cwd}: ${configName} => ${result}`);
+    this.initialConnectionContext.logger.info(
+      `loaded configs from ${cwd}: ${configName} => ${result}`,
+    );
     return result;
   }
 
