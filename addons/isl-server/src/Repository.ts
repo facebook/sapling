@@ -148,7 +148,12 @@ export class Repository {
     undefined,
   ];
 
-  public ctx: RepositoryContext;
+  /**
+   * The context used when the repository was created.
+   * This is needed for subscriptions to have access to ANY logger, etc.
+   * Avoid using this, and prefer using the correct context for a given connection.
+   */
+  public initialConnectionContext: RepositoryContext;
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(
@@ -161,7 +166,12 @@ export class Repository {
      */
     public trackerBestEffort: ServerSideTracker,
   ) {
-    this.ctx = {logger, cmd: info.command, cwd: info.repoRoot, tracker: trackerBestEffort};
+    this.initialConnectionContext = {
+      logger,
+      cmd: info.command,
+      cwd: info.repoRoot,
+      tracker: trackerBestEffort,
+    };
 
     const remote = info.codeReviewSystem;
     if (remote.type === 'github') {
@@ -169,7 +179,10 @@ export class Repository {
     }
 
     if (remote.type === 'phabricator' && Internal?.PhabricatorCodeReviewProvider != null) {
-      this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(remote, this.ctx);
+      this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(
+        remote,
+        this.initialConnectionContext,
+      );
     }
 
     const shouldWait = (): boolean => {
@@ -1037,7 +1050,7 @@ export class Repository {
       },
       () =>
         runCommand(
-          {...this.ctx, cwd: cwd ?? this.info.repoRoot},
+          {...this.initialConnectionContext, cwd: cwd ?? this.info.repoRoot},
           args,
           {
             ...options,
@@ -1059,7 +1072,10 @@ export class Repository {
    */
   public async forceGetConfig(configName: string, cwd: string): Promise<string | undefined> {
     const result = (
-      await runCommand({...this.ctx, cwd: cwd ?? this.info.repoRoot}, ['config', configName])
+      await runCommand({...this.initialConnectionContext, cwd: cwd ?? this.info.repoRoot}, [
+        'config',
+        configName,
+      ])
     ).stdout;
     this.logger.info(`loaded configs from ${cwd}: ${configName} => ${result}`);
     return result;
@@ -1074,7 +1090,7 @@ export class Repository {
       if (this.knownConfigs == null) {
         // Fetch all configs using one command.
         const knownConfig = new Map<ConfigName, string>(
-          await getConfigs<ConfigName>(this.ctx, allConfigNames),
+          await getConfigs<ConfigName>(this.initialConnectionContext, allConfigNames),
         );
         this.knownConfigs = knownConfig;
       }
@@ -1094,7 +1110,7 @@ export class Repository {
     }
     // Attempt to avoid racy config read/write.
     return this.configRateLimiter.enqueueRun(() =>
-      setConfig(this.ctx, level, configName, configValue),
+      setConfig(this.initialConnectionContext, level, configName, configValue),
     );
   }
 

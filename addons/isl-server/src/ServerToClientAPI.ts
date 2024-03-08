@@ -345,7 +345,7 @@ export default class ServerToClientAPI {
         const maybeRepo = this.currentState.type === 'repo' ? this.currentState.repo : undefined;
         const ctx: RepositoryContext = {
           // cwd is only needed to run graphql query, here it's just best-effort
-          cwd: maybeRepo?.ctx.cwd ?? process.cwd(),
+          cwd: maybeRepo?.initialConnectionContext.cwd ?? process.cwd(),
           cmd: this.connection.command ?? 'sl',
           logger: this.logger,
           tracker: this.tracker,
@@ -809,14 +809,16 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchFeatureFlag': {
-        Internal.fetchFeatureFlag?.(repo.ctx, data.name).then((passes: boolean) => {
-          this.logger.info(`feature flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
-          this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes});
-        });
+        Internal.fetchFeatureFlag?.(repo.initialConnectionContext, data.name).then(
+          (passes: boolean) => {
+            this.logger.info(`feature flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
+            this.postMessage({type: 'fetchedFeatureFlag', name: data.name, passes});
+          },
+        );
         break;
       }
       case 'fetchInternalUserInfo': {
-        Internal.fetchUserInfo?.(repo.ctx).then((info: Serializable) => {
+        Internal.fetchUserInfo?.(repo.initialConnectionContext).then((info: Serializable) => {
           this.logger.info('user info:', info);
           this.postMessage({type: 'fetchedInternalUserInfo', info});
         });
@@ -827,7 +829,7 @@ export default class ServerToClientAPI {
           break;
         }
         repo.runDiff(data.comparison, /* context lines */ 4).then(diff => {
-          Internal.generateAICommitMessage?.(repo.ctx, {
+          Internal.generateAICommitMessage?.(repo.initialConnectionContext, {
             title: data.title,
             context: diff,
           })
@@ -900,7 +902,7 @@ export default class ServerToClientAPI {
           undefined,
           this.tracker,
         ),
-        Internal.getCustomDefaultCommitTemplate?.(repo.ctx),
+        Internal.getCustomDefaultCommitTemplate?.(repo.initialConnectionContext),
       ]);
 
       let template = result.stdout
