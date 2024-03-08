@@ -19,9 +19,7 @@ def backup(repo, revs, connect_opts=None, force=False):
 def backupwithlockheld(repo, revs, connect_opts=None, force=False):
     remotepath = ccutil.getremotepath(repo.ui)
     getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
-    with repo.lock():
-        # Load the backup state under the repo lock to ensure a consistent view.
-        state = backupstate.BackupState(repo, resetlocalstate=force)
+    state = backupstate.BackupState(repo, resetlocalstate=force)
     return _backup(
         repo,
         state,

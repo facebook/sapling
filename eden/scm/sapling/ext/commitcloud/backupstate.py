@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import contextlib
 import os
 
 from sapling import error, node as nodemod, util
@@ -25,28 +26,36 @@ class BackupState:
     directory = "commitcloud"
 
     def __init__(self, repo, resetlocalstate=False, usehttp=False):
-        self.repo = repo
-        self.usehttp = usehttp
-        repo.sharedvfs.makedirs(self.directory)
-        self.filename = os.path.join(
-            self.directory,
-            self.name,
-        )
-        self.heads = set()
-        if repo.sharedvfs.exists(self.filename) and not resetlocalstate:
-            lines = repo.sharedvfs.readutf8(self.filename).splitlines()
-            if len(lines) < 1 or lines[0].strip() != FORMAT_VERSION:
-                version = lines[0].strip() if len(lines) > 0 else "<empty>"
-                repo.ui.debug(
-                    "unrecognised backedupheads version '%s', ignoring\n" % version
-                )
-                self.initfromserver()
-                return
-            heads = [nodemod.bin(head.strip()) for head in lines[1:]]
-            heads = repo.changelog.filternodes(heads, local=True)
-            self.heads = set(heads)
+        # Don't take repo lock when loading backup state. This way, "cloud backup" etc.
+        # won't conflict with stuck commands (e.g. "rebase" waiting for user input).
+        if repo.ui.configbool("experimental", "lock-for-backup-state", False):
+            cm = repo.lock()
         else:
-            self.initfromserver()
+            cm = contextlib.nullcontext()
+
+        with cm:
+            self.repo = repo
+            self.usehttp = usehttp
+            repo.sharedvfs.makedirs(self.directory)
+            self.filename = os.path.join(
+                self.directory,
+                self.name,
+            )
+            self.heads = set()
+            if repo.sharedvfs.exists(self.filename) and not resetlocalstate:
+                lines = repo.sharedvfs.readutf8(self.filename).splitlines()
+                if len(lines) < 1 or lines[0].strip() != FORMAT_VERSION:
+                    version = lines[0].strip() if len(lines) > 0 else "<empty>"
+                    repo.ui.debug(
+                        "unrecognised backedupheads version '%s', ignoring\n" % version
+                    )
+                    self.initfromserver()
+                    return
+                heads = [nodemod.bin(head.strip()) for head in lines[1:]]
+                heads = repo.changelog.filternodes(heads, local=True)
+                self.heads = set(heads)
+            else:
+                self.initfromserver()
 
     def initfromserver(self):
         # Check with the server about all visible commits that we don't already

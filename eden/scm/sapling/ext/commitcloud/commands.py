@@ -1740,8 +1740,7 @@ def cloudupload(ui, repo, **opts):
     else:
         revs = None
 
-    with repo.lock():
-        state = backupstate.BackupState(repo, usehttp=True)
+    state = backupstate.BackupState(repo, usehttp=True)
 
     uploaded, failed = upload.upload(
         repo, revs, force=opts.get("force"), localbackupstate=state

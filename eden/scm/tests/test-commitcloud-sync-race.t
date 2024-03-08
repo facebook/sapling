@@ -116,7 +116,6 @@ Let the background sync we started earlier continue, and start a concurrent clou
   $ hg cloud sync --best-effort
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
-  visibility: read 1 heads: 1292cc1f1c17
   backing up stack rooted at 1292cc1f1c17
   visibility: read 1 heads: 1292cc1f1c17
   pulling 79089e97b9e7 from ssh://user@dummy/server
@@ -149,7 +148,6 @@ Wait for the background backup to finish and check its output.
   $ hg debugwaitbackup
   $ cat $TESTTMP/bgsync.out
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  visibility: read 0 heads: 
   visibility: read 0 heads: 
   visibility: read 1 heads: 1292cc1f1c17
   abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
