@@ -616,7 +616,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchAllCommitChangedFiles': {
         repo
-          .getAllChangedFiles(data.hash)
+          .getAllChangedFiles(ctx, data.hash)
           .then(files => {
             this.postMessage({
               type: 'fetchedAllCommitChangedFiles',

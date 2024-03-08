@@ -747,7 +747,7 @@ export class Repository {
     const output = await this.runCommand(
       ['blame', filePath, '-Tjson', '--change', '--rev', hash],
       'BlameCommand',
-      undefined,
+      ctx,
       undefined,
       /* don't timeout */ 0,
     );
@@ -891,6 +891,7 @@ export class Repository {
         : await this.runCommand(
             ['log', '--template', FETCH_TEMPLATE, '--rev', hashesToFetch.join('+')],
             'LookupCommitsCommand',
+            ctx,
           ).then(output => {
             return parseCommitInfoOutput(ctx.logger, output.stdout.trim());
           });
@@ -913,11 +914,12 @@ export class Repository {
     return result;
   }
 
-  public async getAllChangedFiles(hash: Hash): Promise<Array<ChangedFile>> {
+  public async getAllChangedFiles(ctx: RepositoryContext, hash: Hash): Promise<Array<ChangedFile>> {
     const output = (
       await this.runCommand(
         ['log', '--template', CHANGED_FILES_TEMPLATE, '--rev', hash],
         'LookupAllCommitChangedFilesCommand',
+        ctx,
       )
     ).stdout;
 
@@ -951,6 +953,7 @@ export class Repository {
       await this.runCommand(
         ['log', '--rev', 'shelved()', '--template', SHELVE_FETCH_TEMPLATE],
         'GetShelvesCommand',
+        ctx,
       )
     ).stdout;
 
@@ -969,12 +972,9 @@ export class Repository {
   }
 
   public async getActiveAlerts(ctx: RepositoryContext): Promise<Array<Alert>> {
-    const result = await this.runCommand(
-      ['config', '-Tjson', 'alerts'],
-      'GetAlertsCommand',
-      undefined,
-      {reject: false},
-    );
+    const result = await this.runCommand(['config', '-Tjson', 'alerts'], 'GetAlertsCommand', ctx, {
+      reject: false,
+    });
     if (result.exitCode !== 0 || !result.stdout) {
       return [];
     }
@@ -988,8 +988,8 @@ export class Repository {
     }
   }
 
-  public async getRagePaste(): Promise<string> {
-    const output = await this.runCommand(['rage'], 'RageCommand', undefined, undefined, 90_000);
+  public async getRagePaste(ctx: RepositoryContext): Promise<string> {
+    const output = await this.runCommand(['rage'], 'RageCommand', ctx, undefined, 90_000);
     const match = /P\d{9,}/.exec(output.stdout);
     if (match) {
       return match[0];
