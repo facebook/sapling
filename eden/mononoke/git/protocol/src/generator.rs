@@ -143,44 +143,6 @@ async fn bookmarks(
     Ok(bookmarks)
 }
 
-/// Fetch all the bookmarks in the repo corresponding to tags that point
-/// to the given list of commits
-async fn tag_bookmarks(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    tag_entries: &[BonsaiTagMappingEntry],
-    commits: &[ChangesetId],
-) -> Result<Vec<String>> {
-    let bookmarks = bookmarks(
-        ctx,
-        repo,
-        &RequestedRefs::Included(
-            tag_entries
-                .iter()
-                .map(|entry| entry.tag_name.clone())
-                .collect(),
-        ),
-    )
-    .await
-    .with_context(|| {
-        format!(
-            "Error in fetching bookmarks for repo {}",
-            repo.repo_identity().name()
-        )
-    })?
-    .into_iter()
-    .filter_map(|(bookmark_key, cs_id)| {
-        if commits.contains(&cs_id) {
-            Some(bookmark_key.to_string())
-        } else {
-            print!("{},", bookmark_key);
-            None
-        }
-    })
-    .collect::<Vec<_>>();
-    Ok(bookmarks)
-}
-
 /// Get the count of distinct blob and tree items to be included in the packfile
 async fn trees_and_blobs_count(
     ctx: &CoreContext,
@@ -822,40 +784,20 @@ async fn tag_packfile_stream<'a>(
     anyhow::Ok((tag_stream, tags_count))
 }
 
-/// Create a stream of packfile items containing tag objects that point to some commit
-/// in the packfile/bundle while also returning the total number of tags included in the stream
-async fn tag_packfile_stream_from_commits<'a>(
+/// Create a stream of packfile items containing annotated tag objects that exist in the repo
+async fn all_tags_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    commits: Vec<ChangesetId>,
-    include_annotated_tags: bool,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
-    // If no annotated tags are requested, return an empty stream
-    if !include_annotated_tags {
-        return anyhow::Ok((stream::empty().boxed(), 0));
-    }
     // Fetch entries corresponding to annotated tags in the repo
     let tag_entries = repo
         .bonsai_tag_mapping()
         .get_all_entries()
         .await
         .context("Error in getting tags during fetch")?;
-    // Fetch the tag to changeset mapping for the annotated tags
-    let bookmarks = tag_bookmarks(ctx, repo, &tag_entries, &commits).await?;
-    let required_tags = tag_entries
-        .into_iter()
-        .filter(|entry| {
-            // Filter out tags that don't belong to the commits being requested
-            bookmarks.contains(&entry.tag_name)
-        })
-        .collect::<Vec<_>>();
-    let tags_count = required_tags.len();
-    let tag_stream = tag_entries_to_stream(
-        ctx,
-        repo,
-        required_tags,
-        PackfileItemInclusion::FetchAndStore,
-    );
+    let tags_count = tag_entries.len();
+    let tag_stream =
+        tag_entries_to_stream(ctx, repo, tag_entries, PackfileItemInclusion::FetchAndStore);
     anyhow::Ok((tag_stream, tags_count))
 }
 
@@ -1036,11 +978,12 @@ pub async fn fetch_response<'a>(
     )
     .await
     .context("Error while generating commit packfile item stream during fetch")?;
-    // Get the stream of annotated tag items that are pointing to one of the commits in the range.
-    let (tag_stream, tags_count) =
-        tag_packfile_stream_from_commits(ctx, repo, target_commits, true)
-            .await
-            .context("Error while generating tag packfile item stream during fetch")?;
+    // Get the stream of all annotated tag items in the repo
+    // NOTE: Ideally, we should filter it based on the requested refs but its much faster to just send all the tags.
+    // Git ignores the unnecessary objects and the extra size overhead in the pack is just a few KBs
+    let (tag_stream, tags_count) = all_tags_packfile_stream(ctx, repo)
+        .await
+        .context("Error while generating tag packfile item stream during fetch")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
     let object_count = commits_count + trees_and_blobs_count + tags_count;
     // Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
