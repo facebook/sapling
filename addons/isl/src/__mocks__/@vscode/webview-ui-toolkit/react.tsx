@@ -8,7 +8,7 @@
 import type {
   VSCodeButton as VSCodeButtonType,
   VSCodeCheckbox as VSCodeCheckboxType,
-  VSCodeTag as VSCodeTagType,
+  VSCodeLink as VSCodeLinkType,
   VSCodeDivider as VSCodeDividerType,
   VSCodeBadge as VSCodeBadgeType,
   VSCodeRadio as VSCodeRadioType,
@@ -21,8 +21,7 @@ import React, {useEffect, useRef, forwardRef} from 'react';
 // vscode webview-ui-toolkit uses ES Modules, which doesn't play well with jest transpilation yet.
 // We need to provide mock verison of these components for now
 
-export const VSCodeLink = (p: React.PropsWithChildren<typeof VSCodeTagType>) => <a {...p} />;
-export const VSCodeTag = (p: React.PropsWithChildren<typeof VSCodeTagType>) => <div {...p} />;
+export const VSCodeLink = (p: React.PropsWithChildren<typeof VSCodeLinkType>) => <a {...p} />;
 export const VSCodeBadge = (p: React.PropsWithChildren<typeof VSCodeBadgeType>) => <div {...p} />;
 export const VSCodeButton = forwardRef(
   (
