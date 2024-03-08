@@ -86,7 +86,7 @@ export default class ServerToClientAPI {
   private queuedMessages: Array<IncomingMessage> = [];
   private currentState:
     | {type: 'loading'}
-    | {type: 'repo'; repo: Repository; cwd: string}
+    | {type: 'repo'; repo: Repository; ctx: RepositoryContext}
     | {type: 'error'; error: RepositoryError} = {type: 'loading'};
 
   private pageId = randomId();
@@ -151,10 +151,10 @@ export default class ServerToClientAPI {
     this.processQueuedMessages();
   }
 
-  private setCurrentRepo(repo: Repository, cwd: string) {
+  private setCurrentRepo(repo: Repository, ctx: RepositoryContext) {
     this.disposeRepoDisposables();
 
-    this.currentState = {type: 'repo', repo, cwd};
+    this.currentState = {type: 'repo', repo, ctx};
 
     this.tracker.context.setRepo(repo);
 
@@ -206,7 +206,7 @@ export default class ServerToClientAPI {
     this.activeRepoRef = repositoryCache.getOrCreate(ctx);
     this.activeRepoRef.promise.then(repoOrError => {
       if (repoOrError instanceof Repository) {
-        this.setCurrentRepo(repoOrError, newCwd);
+        this.setCurrentRepo(repoOrError, ctx);
       } else {
         this.setRepoError(repoOrError);
       }
@@ -274,8 +274,8 @@ export default class ServerToClientAPI {
     const {currentState} = this;
     switch (currentState.type) {
       case 'repo': {
-        const {repo, cwd} = currentState;
-        this.handleIncomingMessageWithRepo(data as WithRepoMessage, repo, cwd);
+        const {repo, ctx} = currentState;
+        this.handleIncomingMessageWithRepo(data as WithRepoMessage, repo, ctx);
         break;
       }
 
@@ -321,7 +321,7 @@ export default class ServerToClientAPI {
             this.postMessage({
               type: 'repoInfo',
               info: this.currentState.repo.info,
-              cwd: this.currentState.cwd,
+              cwd: this.currentState.ctx.cwd,
             });
             break;
           case 'error':
@@ -376,8 +376,12 @@ export default class ServerToClientAPI {
   /**
    * Handle messages which require a repository to have been successfully set up to run
    */
-  private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
-    const {logger} = repo;
+  private handleIncomingMessageWithRepo(
+    data: WithRepoMessage,
+    repo: Repository,
+    ctx: RepositoryContext,
+  ) {
+    const {cwd, logger} = ctx;
     switch (data.type) {
       case 'subscribe': {
         const {subscriptionID, kind} = data;
