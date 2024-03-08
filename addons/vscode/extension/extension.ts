@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
     if (enabledSCMApiFeatures.has('blame')) {
       context.subscriptions.push(new InlineBlameProvider(reposList, ctx));
     }
-    context.subscriptions.push(registerSaplingDiffContentProvider(logger));
+    context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
     context.subscriptions.push(new DeletedFileContentProvider());
 
     context.subscriptions.push(...registerCommands(ctx));
