@@ -8,8 +8,8 @@
 #pragma once
 
 #include <unordered_map>
+#include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/telemetry/SessionInfo.h"
-#include "eden/fs/telemetry/LogEvent.h"
 
 namespace facebook::eden {
 

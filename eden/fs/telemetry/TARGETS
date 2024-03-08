@@ -129,7 +129,6 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
-        ":log_info",
         "//eden/common/telemetry:log_info",
         "//eden/common/utils:ref_ptr",
     ],

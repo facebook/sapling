@@ -50,6 +50,7 @@ cpp_library(
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/service:thrift_util",
+        "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:static_assert",
         "//folly:executor",

@@ -45,6 +45,7 @@ cpp_library(
     deps = [
         "//eden/common/utils:throw",
         "//eden/fs/config:config",
+        "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:task_trace",
         "//eden/fs/telemetry:telemetry",

@@ -81,6 +81,7 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Clock.h"

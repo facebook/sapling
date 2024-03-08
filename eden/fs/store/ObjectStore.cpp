@@ -24,6 +24,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 

@@ -8,6 +8,7 @@
 #ifdef _WIN32
 
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
+
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <cpptoml.h>
@@ -28,6 +29,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 
 namespace facebook::eden {

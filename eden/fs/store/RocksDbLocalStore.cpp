@@ -31,6 +31,7 @@
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 

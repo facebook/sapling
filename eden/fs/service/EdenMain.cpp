@@ -45,6 +45,7 @@
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/UserInfo.h"
 #include "eden/fs/utils/WinStackTrace.h"

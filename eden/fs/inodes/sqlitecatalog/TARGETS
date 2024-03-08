@@ -11,6 +11,7 @@ cpp_library(
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
         "//folly:range",
         "//folly:stop_watch",
