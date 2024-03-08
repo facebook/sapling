@@ -343,13 +343,16 @@ export default class ServerToClientAPI {
       }
       case 'fileBugReport': {
         const maybeRepo = this.currentState.type === 'repo' ? this.currentState.repo : undefined;
-        const ctx: RepositoryContext = {
-          // cwd is only needed to run graphql query, here it's just best-effort
-          cwd: maybeRepo?.initialConnectionContext.cwd ?? process.cwd(),
-          cmd: this.connection.command ?? 'sl',
-          logger: this.logger,
-          tracker: this.tracker,
-        };
+        const ctx: RepositoryContext =
+          this.currentState.type === 'repo'
+            ? this.currentState.ctx
+            : {
+                // cwd is only needed to run graphql query, here it's just best-effort
+                cwd: maybeRepo?.initialConnectionContext.cwd ?? process.cwd(),
+                cmd: this.connection.command ?? 'sl',
+                logger: this.logger,
+                tracker: this.tracker,
+              };
         Internal.fileABug?.(
           ctx,
           data.data,
