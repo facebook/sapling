@@ -634,7 +634,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchCommitCloudState': {
-        repo.getCommitCloudState(cwd).then(state => {
+        repo.getCommitCloudState(ctx).then(state => {
           this.postMessage({
             type: 'fetchedCommitCloudState',
             state: {value: state},
@@ -777,10 +777,9 @@ export default class ServerToClientAPI {
         const exec = repo.runCommand(
           ['debugexportstack', '-r', revs, ...assumeTrackedArgs],
           'ExportStackCommand',
-          undefined,
+          ctx,
           undefined,
           /* don't timeout */ 0,
-          this.tracker,
         );
         const reply = (stack?: ExportStack, error?: string) => {
           this.postMessage({
@@ -799,10 +798,9 @@ export default class ServerToClientAPI {
         const exec = repo.runCommand(
           ['debugimportstack'],
           'ImportStackCommand',
-          undefined,
+          ctx,
           {stdin: stdinStream},
           /* don't timeout */ 0,
-          this.tracker,
         );
         const reply = (imported?: ImportedStack, error?: string) => {
           this.postMessage({type: 'importedStack', imported: imported ?? [], error});
@@ -896,14 +894,7 @@ export default class ServerToClientAPI {
     const {logger} = ctx;
     try {
       const [result, customTemplate] = await Promise.all([
-        repo.runCommand(
-          ['debugcommitmessage', 'isl'],
-          'FetchCommitTemplateCommand',
-          undefined,
-          undefined,
-          undefined,
-          this.tracker,
-        ),
+        repo.runCommand(['debugcommitmessage', 'isl'], 'FetchCommitTemplateCommand', ctx),
         Internal.getCustomDefaultCommitTemplate?.(repo.initialConnectionContext),
       ]);
 

@@ -782,13 +782,13 @@ export class Repository {
     return blame[0].lines.map(({node, line}) => [line, commits.get(node)]);
   }
 
-  public async getCommitCloudState(cwd: string): Promise<CommitCloudSyncState> {
+  public async getCommitCloudState(ctx: RepositoryContext): Promise<CommitCloudSyncState> {
     const lastChecked = new Date();
 
     const [extension, backupStatuses, cloudStatus] = await Promise.allSettled([
-      this.forceGetConfig('extensions.commitcloud', cwd),
-      this.fetchCommitCloudBackupStatuses(cwd),
-      this.fetchCommitCloudStatus(cwd),
+      this.forceGetConfig('extensions.commitcloud', ctx.cwd),
+      this.fetchCommitCloudBackupStatuses(ctx),
+      this.fetchCommitCloudStatus(ctx),
     ]);
     if (extension.status === 'fulfilled' && extension.value !== '') {
       return {
@@ -817,7 +817,7 @@ export class Repository {
   }
 
   private async fetchCommitCloudBackupStatuses(
-    cwd: string,
+    ctx: RepositoryContext,
   ): Promise<Map<Hash, CommitCloudBackupStatus>> {
     const revset = 'draft() - backedup()';
     const commitCloudBackupStatusTemplate = `{dict(
@@ -829,7 +829,7 @@ export class Repository {
     const output = await this.runCommand(
       ['log', '--rev', revset, '--template', commitCloudBackupStatusTemplate],
       'CommitCloudSyncBackupStatusCommand',
-      cwd,
+      ctx,
     );
 
     const rawObjects = output.stdout.trim().split('\n');
@@ -858,14 +858,14 @@ export class Repository {
     return statuses;
   }
 
-  private async fetchCommitCloudStatus(cwd: string): Promise<{
+  private async fetchCommitCloudStatus(ctx: RepositoryContext): Promise<{
     lastBackup: Date | undefined;
     currentWorkspace: string;
     workspaceChoices: Array<string>;
   }> {
     const [cloudStatusOutput, cloudListOutput] = await Promise.all([
-      this.runCommand(['cloud', 'status'], 'CommitCloudStatusCommand', cwd),
-      this.runCommand(['cloud', 'list'], 'CommitCloudListCommand', cwd),
+      this.runCommand(['cloud', 'status'], 'CommitCloudStatusCommand', ctx),
+      this.runCommand(['cloud', 'list'], 'CommitCloudListCommand', ctx),
     ]);
 
     const currentWorkspace =
@@ -1024,17 +1024,13 @@ export class Repository {
     args: Array<string>,
     /** Which event name to track for this command. If undefined, generic 'RunCommand' is used. */
     eventName: TrackEventName | undefined,
-    cwd?: string,
+    context?: RepositoryContext,
     options?: execa.Options,
     timeout?: number,
-    /**
-     * Optionally provide a more specific tracker. If not provided, the best-effort tracker for the repo is used.
-     * Prefer passing an exact tracker when available, or else cwd/session id/platform/version could be inaccurate.
-     */
-    tracker: ServerSideTracker = this.initialConnectionContext.tracker,
   ) {
     const id = randomId();
-    return tracker.operation(
+    const ctx = context ?? this.initialConnectionContext;
+    return ctx.tracker.operation(
       eventName ?? 'RunCommand',
       'RunCommandError',
       {
@@ -1044,7 +1040,7 @@ export class Repository {
       },
       () =>
         runCommand(
-          {...this.initialConnectionContext, cwd: cwd ?? this.info.repoRoot},
+          ctx,
           args,
           {
             ...options,
