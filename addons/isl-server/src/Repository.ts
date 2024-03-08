@@ -952,7 +952,7 @@ export class Repository {
     return files;
   }
 
-  public async getShelvedChanges(): Promise<Array<ShelvedChange>> {
+  public async getShelvedChanges(ctx: RepositoryContext): Promise<Array<ShelvedChange>> {
     const output = (
       await this.runCommand(
         ['log', '--rev', 'shelved()', '--template', SHELVE_FETCH_TEMPLATE],
@@ -960,7 +960,7 @@ export class Repository {
       )
     ).stdout;
 
-    const shelves = parseShelvedCommitsOutput(this.initialConnectionContext.logger, output.trim());
+    const shelves = parseShelvedCommitsOutput(ctx.logger, output.trim());
     // sort by date ascending
     shelves.sort((a, b) => b.date.getTime() - a.date.getTime());
     return shelves;

@@ -582,7 +582,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchShelvedChanges': {
         repo
-          .getShelvedChanges()
+          .getShelvedChanges(ctx)
           .then(shelvedChanges => {
             this.postMessage({
               type: 'fetchedShelvedChanges',
