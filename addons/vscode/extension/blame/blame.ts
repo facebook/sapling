@@ -7,8 +7,7 @@
 
 import type {VSCodeReposList} from '../VSCodeRepo';
 import type {Repository} from 'isl-server/src/Repository';
-import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
-import type {Logger} from 'isl-server/src/logger';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo, Result} from 'isl/src/types';
 import type {
   DecorationOptions,
@@ -81,11 +80,7 @@ export class InlineBlameProvider implements Disposable {
   observedRepos = new Map<string, RepoCaches>();
   decorationType = window.createTextEditorDecorationType({});
 
-  constructor(
-    private reposList: VSCodeReposList,
-    private logger: Logger,
-    private tracker: ServerSideTracker,
-  ) {
+  constructor(private reposList: VSCodeReposList, private ctx: RepositoryContext) {
     this.initBasedOnConfig();
   }
 
@@ -179,7 +174,7 @@ export class InlineBlameProvider implements Disposable {
       }),
     );
 
-    this.logger.info('Initialized inline blame');
+    this.ctx.logger.info('Initialized inline blame');
   }
 
   deinit(): void {
@@ -227,7 +222,7 @@ export class InlineBlameProvider implements Disposable {
 
     const repo = this.reposList.repoForPath(fileUri)?.repo;
     if (!repo) {
-      this.logger.warn(`Could not fetch Blame: No repository found for path ${uri.fsPath}.`);
+      this.ctx.logger.warn(`Could not fetch Blame: No repository found for path ${uri.fsPath}.`);
       this.filesBeingProcessed.delete(fileUri);
       return false;
     }
@@ -254,18 +249,18 @@ export class InlineBlameProvider implements Disposable {
 
     const repoCaches = this.observedRepos.get(repoUri);
     if (repoCaches == null) {
-      this.logger.warn(`Could not fetch Blame: repo not in cache.`);
+      this.ctx.logger.warn(`Could not fetch Blame: repo not in cache.`);
       return false;
     }
 
     const blame = await this.getBlame(textEditor, repoCaches?.headHash);
 
     if (blame.error) {
-      this.tracker.error('BlameLoaded', 'BlameError', blame.error.message, {
+      this.ctx.tracker.error('BlameLoaded', 'BlameError', blame.error.message, {
         duration: Date.now() - startTime,
       });
     } else {
-      this.tracker.track('BlameLoaded', {
+      this.ctx.tracker.track('BlameLoaded', {
         duration: Date.now() - startTime,
       });
     }
@@ -273,14 +268,14 @@ export class InlineBlameProvider implements Disposable {
     this.filesBeingProcessed.delete(fileUri);
     if (blame.error) {
       if (blame.error.name === 'No Blame') {
-        this.logger.info(`No blame found for path ${path}`, blame.error.message);
+        this.ctx.logger.info(`No blame found for path ${path}`, blame.error.message);
       } else {
         const message = `Failed to fetch Blame for path ${path}`;
-        this.logger.error(`${message}: `, blame.error.message);
+        this.ctx.logger.error(`${message}: `, blame.error.message);
         return false;
       }
     } else if (blame.value.length === 0) {
-      this.logger.info(`No blame found for path ${path}`);
+      this.ctx.logger.info(`No blame found for path ${path}`);
     }
 
     const blameLines = unwrap(blame.value);
@@ -299,7 +294,7 @@ export class InlineBlameProvider implements Disposable {
     const uri = textEditor.document.uri.fsPath;
     const repo = this.reposList.repoForPath(uri)?.repo;
     try {
-      return {value: await unwrap(repo).blame(uri, baseHash)};
+      return {value: await unwrap(repo).blame(this.ctx, uri, baseHash)};
     } catch (err: unknown) {
       return {error: err as Error};
     }
@@ -387,7 +382,7 @@ export class InlineBlameProvider implements Disposable {
       const blameText = {inline, hover};
       return blameText;
     } catch (err) {
-      this.logger.error('Error getting blame text:', err);
+      this.ctx.logger.error('Error getting blame text:', err);
       return undefined;
     }
   }
@@ -428,7 +423,7 @@ export class InlineBlameProvider implements Disposable {
         }
 
         if (repoCaches.headHash !== '') {
-          this.logger.info('Head commit changed, invaldating blame.');
+          this.ctx.logger.info('Head commit changed, invaldating blame.');
         }
 
         repoCaches.headHash = head.hash;

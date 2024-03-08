@@ -47,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const reposList = new VSCodeReposList(logger, extensionTracker, enabledSCMApiFeatures);
     context.subscriptions.push(reposList);
     if (enabledSCMApiFeatures.has('blame')) {
-      context.subscriptions.push(new InlineBlameProvider(reposList, logger, extensionTracker));
+      context.subscriptions.push(new InlineBlameProvider(reposList, ctx));
     }
     context.subscriptions.push(registerSaplingDiffContentProvider(logger));
     context.subscriptions.push(new DeletedFileContentProvider());

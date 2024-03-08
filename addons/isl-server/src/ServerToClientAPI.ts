@@ -597,7 +597,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchLatestCommit': {
         repo
-          .lookupCommits([data.revset])
+          .lookupCommits(ctx, [data.revset])
           .then(commits => {
             this.postMessage({
               type: 'fetchedLatestCommit',
