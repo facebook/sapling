@@ -122,8 +122,11 @@ impl MegarepoTest {
         }
 
         let mut init_target_cs = init_target_cs.create_commit_object().await?;
-        let remapping_state =
-            CommitRemappingState::new(remapping_state, initial_config.version.clone());
+        let remapping_state = CommitRemappingState::new(
+            remapping_state,
+            initial_config.version.clone(),
+            Some(target.bookmark.to_owned()),
+        );
         remapping_state
             .save_in_changeset(ctx, &self.blobrepo, &mut init_target_cs)
             .await?;

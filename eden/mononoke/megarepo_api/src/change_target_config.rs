@@ -227,8 +227,11 @@ impl<'a> ChangeTargetConfig<'a> {
             target.clone(),
             new_version.clone(),
         )?;
-        let new_remapping_state =
-            CommitRemappingState::new(changesets_to_merge.clone(), new_version);
+        let new_remapping_state = CommitRemappingState::new(
+            changesets_to_merge.clone(),
+            new_version,
+            Some(target.bookmark.to_owned()),
+        );
 
         // Diff the configs to find out action items.
         let diff = diff_configs(
@@ -249,6 +252,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 new_config.version.clone(),
                 message.clone(),
                 self.mutable_renames,
+                target.bookmark.to_owned(),
             )
             .await?;
         let additions_merge = if let Some(additions_merge_cs_id) = additions_merge_cs_id {
@@ -329,6 +333,7 @@ impl<'a> ChangeTargetConfig<'a> {
         sync_config_version: SyncConfigVersion,
         message: Option<String>,
         mutable_renames: &Arc<MutableRenames>,
+        bookmark: String,
     ) -> Result<Option<ChangesetId>, MegarepoError> {
         if diff.added.is_empty() {
             return Ok(None);
@@ -362,6 +367,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 false, /* write_commit_remapping_state */
                 sync_config_version,
                 message,
+                bookmark,
             )
             .await?,
         ))

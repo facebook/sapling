@@ -127,16 +127,21 @@ pub struct CommitRemappingState {
     pub latest_synced_changesets: BTreeMap<SourceName, ChangesetId>,
     /// Config version that was used to create this commit
     sync_config_version: SyncConfigVersion,
+    /// AOSP manifest branch that this branch is based on
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bookmark: Option<String>,
 }
 
 impl CommitRemappingState {
     pub fn new(
         latest_synced_changesets: BTreeMap<SourceName, ChangesetId>,
         sync_config_version: SyncConfigVersion,
+        bookmark: Option<String>,
     ) -> Self {
         Self {
             latest_synced_changesets,
             sync_config_version,
+            bookmark,
         }
     }
 
@@ -545,6 +550,7 @@ mod test {
                 SourceName::new("source_2") => TWOS_CSID,
             },
             "version_1".to_string(),
+            None,
         );
         let res = String::from_utf8(state.serialize()?)?;
         assert_eq!(
@@ -557,6 +563,26 @@ mod test {
   "sync_config_version": "version_1"
 }"#
         );
+
+        let state: CommitRemappingState = serde_json::from_str(&res)?;
+        assert_eq!(state.bookmark, None);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_deserialization_ignores_extra_fields(_fb: FacebookInit) -> Result<(), Error> {
+        let s = r#"{
+  "latest_synced_changesets": {
+    "source_1": "1111111111111111111111111111111111111111111111111111111111111111",
+    "source_2": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "sync_config_version": "version_1",
+  "foo": 423423423
+}"#;
+
+        let state: CommitRemappingState = serde_json::from_str(s)?;
+        assert_eq!(state.sync_config_version, "version_1");
 
         Ok(())
     }

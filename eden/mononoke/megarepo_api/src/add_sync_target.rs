@@ -123,6 +123,7 @@ impl<'a> AddSyncTarget<'a> {
                 true, /* write_commit_remapping_state */
                 sync_target_config.version.clone(),
                 message,
+                sync_target_config.target.bookmark.clone(),
             )
             .await?;
 

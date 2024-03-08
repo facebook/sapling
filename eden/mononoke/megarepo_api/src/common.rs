@@ -816,6 +816,7 @@ pub trait MegarepoOp {
         write_commit_remapping_state: bool,
         sync_config_version: SyncConfigVersion,
         message: Option<String>,
+        bookmark: String,
     ) -> Result<ChangesetId, MegarepoError> {
         // Now let's create a merge commit that merges all moved changesets
 
@@ -829,6 +830,7 @@ pub trait MegarepoOp {
                     .map(|(source, css)| (source.clone(), css.source))
                     .collect(),
                 sync_config_version.clone(),
+                Some(bookmark),
             ))
         } else {
             None
