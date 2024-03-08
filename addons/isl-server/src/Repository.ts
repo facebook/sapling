@@ -11,7 +11,7 @@ import type {TrackEventName} from './analytics/eventNames';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
 import type {Logger} from './logger';
-import type {ExecutionContext} from './serverTypes';
+import type {RepositoryContext} from './serverTypes';
 import type {
   CommitInfo,
   Disposable,
@@ -148,7 +148,7 @@ export class Repository {
     undefined,
   ];
 
-  public ctx: ExecutionContext;
+  public ctx: RepositoryContext;
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(
@@ -390,7 +390,7 @@ export class Repository {
    * Resulting RepoInfo may have null fields if cwd is not a valid repo root.
    * Throws if `command` is not found.
    */
-  static async getRepoInfo(ctx: ExecutionContext): Promise<RepoInfo> {
+  static async getRepoInfo(ctx: RepositoryContext): Promise<RepoInfo> {
     const {cmd, cwd, logger} = ctx;
     const [repoRoot, dotdir, configs] = await Promise.all([
       findRoot(ctx).catch((err: Error) => err),

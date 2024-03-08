@@ -10,7 +10,7 @@ import type {RepositoryReference} from './RepositoryCache';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
-import type {ExecutionContext} from './serverTypes';
+import type {RepositoryContext} from './serverTypes';
 import type {Serializable} from 'isl/src/serialize';
 import type {
   ServerToClientMessage,
@@ -197,7 +197,7 @@ export default class ServerToClientAPI {
     // This ensures new messages coming in will be queued and handled only with the new repository
     this.currentState = {type: 'loading'};
     const command = this.connection.command ?? 'sl';
-    const ctx: ExecutionContext = {
+    const ctx: RepositoryContext = {
       cwd: newCwd,
       cmd: command,
       logger: this.logger,
@@ -343,7 +343,7 @@ export default class ServerToClientAPI {
       }
       case 'fileBugReport': {
         const maybeRepo = this.currentState.type === 'repo' ? this.currentState.repo : undefined;
-        const ctx: ExecutionContext = {
+        const ctx: RepositoryContext = {
           // cwd is only needed to run graphql query, here it's just best-effort
           cwd: maybeRepo?.ctx.cwd ?? process.cwd(),
           cmd: this.connection.command ?? 'sl',

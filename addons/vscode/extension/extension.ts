@@ -7,7 +7,7 @@
 
 import type {EnabledSCMApiFeature} from './types';
 import type {Logger} from 'isl-server/src/logger';
-import type {ExecutionContext} from 'isl-server/src/serverTypes';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
 
 import packageJson from '../package.json';
 import {DeletedFileContentProvider} from './DeletedFileContentProvider';
@@ -35,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
       Internal.getEnabledSCMApiFeatures?.() ?? new Set<EnabledSCMApiFeature>(['blame', 'sidebar']),
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
-    const ctx: ExecutionContext = {
+    const ctx: RepositoryContext = {
       cmd: getCLICommand(),
       cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(),
       logger,

@@ -7,7 +7,7 @@
 
 import type {ResolveCommandConflictOutput} from '../commands';
 import type {ServerPlatform} from '../serverPlatform';
-import type {ExecutionContext} from '../serverTypes';
+import type {RepositoryContext} from '../serverTypes';
 import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
 
 import {absolutePathForFileInRepo, Repository} from '../Repository';
@@ -80,7 +80,7 @@ function setPathsDefault(path: string) {
 }
 
 describe('Repository', () => {
-  const ctx: ExecutionContext = {
+  const ctx: RepositoryContext = {
     cmd: 'sl',
     cwd: '/path/to/cwd',
     logger: mockLogger,

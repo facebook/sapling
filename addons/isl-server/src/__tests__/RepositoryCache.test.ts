@@ -8,7 +8,7 @@
 import type {Repository} from '../Repository';
 import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
-import type {ExecutionContext} from '../serverTypes';
+import type {RepositoryContext} from '../serverTypes';
 import type {RepoInfo, RepositoryError} from 'isl/src/types';
 
 import {__TEST__} from '../RepositoryCache';
@@ -26,7 +26,7 @@ const mockTracker = makeServerSideTracker(
 );
 
 class SimpleMockRepositoryImpl {
-  static getRepoInfo(ctx: ExecutionContext): Promise<RepoInfo> {
+  static getRepoInfo(ctx: RepositoryContext): Promise<RepoInfo> {
     const {cwd, cmd} = ctx;
     let data;
     if (cwd.includes('/path/to/repo')) {
@@ -57,7 +57,7 @@ class SimpleMockRepositoryImpl {
 }
 const SimpleMockRepository = SimpleMockRepositoryImpl as unknown as typeof Repository;
 
-const ctx: ExecutionContext = {
+const ctx: RepositoryContext = {
   cmd: 'sl',
   logger: mockLogger,
   tracker: mockTracker,
@@ -231,7 +231,7 @@ describe('RepositoryCache', () => {
     const p2 = defer<RepoInfo>();
 
     class BlockingMockRepository {
-      static getRepoInfo(ctx: ExecutionContext): Promise<RepoInfo> {
+      static getRepoInfo(ctx: RepositoryContext): Promise<RepoInfo> {
         const {cwd} = ctx;
         if (cwd === '/path/to/repo/cwd1') {
           return p1.promise;

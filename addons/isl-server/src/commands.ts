@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExecutionContext} from './serverTypes';
+import type {RepositoryContext} from './serverTypes';
 import type {AbsolutePath, MergeConflicts} from 'isl/src/types';
 
 import {isExecaError} from './utils';
@@ -46,7 +46,7 @@ export type ResolveCommandConflictOutput = [
 
 /** Run an sl command (without analytics). */
 export async function runCommand(
-  ctx: ExecutionContext,
+  ctx: RepositoryContext,
   args_: Array<string>,
   options_?: execa.Options,
   timeout: number = READ_COMMAND_TIMEOUT_MS,
@@ -89,7 +89,7 @@ export async function runCommand(
 /**
  * Root of the repository where the .sl folder lives.
  * Throws only if `command` is invalid, so this check can double as validation of the `sl` command */
-export async function findRoot(ctx: ExecutionContext): Promise<AbsolutePath | undefined> {
+export async function findRoot(ctx: RepositoryContext): Promise<AbsolutePath | undefined> {
   try {
     return (await runCommand(ctx, ['root'])).stdout;
   } catch (error) {
@@ -108,7 +108,7 @@ export async function findRoot(ctx: ExecutionContext): Promise<AbsolutePath | un
   }
 }
 
-export async function findDotDir(ctx: ExecutionContext): Promise<AbsolutePath | undefined> {
+export async function findDotDir(ctx: RepositoryContext): Promise<AbsolutePath | undefined> {
   try {
     return (await runCommand(ctx, ['root', '--dotdir'])).stdout;
   } catch (error) {
@@ -124,7 +124,7 @@ export async function findDotDir(ctx: ExecutionContext): Promise<AbsolutePath | 
  * Errors are silenced.
  */
 export async function getConfigs<T extends string>(
-  ctx: ExecutionContext,
+  ctx: RepositoryContext,
   configNames: ReadonlyArray<T>,
 ): Promise<Map<T, string>> {
   if (configOverride !== undefined) {
@@ -156,7 +156,7 @@ export async function getConfigs<T extends string>(
 
 export type ConfigLevel = 'user' | 'system' | 'local';
 export async function setConfig(
-  ctx: ExecutionContext,
+  ctx: RepositoryContext,
   level: ConfigLevel,
   configName: string,
   configValue: string,

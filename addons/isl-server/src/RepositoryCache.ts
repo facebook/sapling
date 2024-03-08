@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExecutionContext} from './serverTypes';
+import type {RepositoryContext} from './serverTypes';
 import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 
 import {Repository} from './Repository';
@@ -99,7 +99,7 @@ class RepositoryCache {
    * Create a new Repository, or re-use if one already exists.
    * Repositories are reference-counted to ensure they can be disposed when no longer needed.
    */
-  getOrCreate(ctx: ExecutionContext): RepositoryReference {
+  getOrCreate(ctx: RepositoryContext): RepositoryReference {
     // Fast path: if this cwd is already a known repo root, we can use it directly.
     // This only works if the cwd happens to be the repo root.
     const found = this.lookup(ctx.cwd);
