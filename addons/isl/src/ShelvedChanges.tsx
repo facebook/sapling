@@ -7,7 +7,7 @@
 
 import serverAPI from './ClientToServerAPI';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
-import {FlexSpacer} from './ComponentUtils';
+import {FlexSpacer, Row} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {EmptyState} from './EmptyState';
 import {ErrorNotice} from './ErrorNotice';
@@ -72,7 +72,7 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
   return (
     <DropdownFields
       title={
-        <span className="shelved-changes-title">
+        <Row>
           <T>Shelved Changes</T>{' '}
           <Tooltip
             title={t(
@@ -80,7 +80,7 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
             )}>
             <Icon icon="info" />
           </Tooltip>
-        </span>
+        </Row>
       }
       icon="archive"
       className="shelved-changes-dropdown"
@@ -111,17 +111,38 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
                     <RelativeDate date={change.date} useShortVariant />
                   </Subtle>
                   <FlexSpacer />
-                  <OperationDisabledButton
-                    appearance="secondary"
-                    contextKey={`unshelve-${change.hash}`}
-                    className="unshelve-button"
-                    runOperation={() => {
-                      dismiss();
-                      return new UnshelveOperation(change);
-                    }}
-                    icon={<Icon icon="layers-active" slot="start" />}>
-                    <T>Unshelve</T>
-                  </OperationDisabledButton>
+                  <Tooltip
+                    title={t(
+                      'Apply these changes without removing this from your list of shelved changes',
+                    )}>
+                    <OperationDisabledButton
+                      appearance="icon"
+                      contextKey={`unshelve-keep-${change.hash}`}
+                      className="unshelve-button"
+                      runOperation={() => {
+                        dismiss();
+                        return new UnshelveOperation(change, true);
+                      }}
+                      icon={<Icon icon="layers-active" slot="start" />}>
+                      <T>Apply</T>
+                    </OperationDisabledButton>
+                  </Tooltip>
+                  <Tooltip
+                    title={t(
+                      'Apply these changes and remove this from your list of shelved changes',
+                    )}>
+                    <OperationDisabledButton
+                      appearance="secondary"
+                      contextKey={`unshelve-${change.hash}`}
+                      className="unshelve-button"
+                      runOperation={() => {
+                        dismiss();
+                        return new UnshelveOperation(change, false);
+                      }}
+                      icon={<Icon icon="layers-active" slot="start" />}>
+                      <T>Unshelve</T>
+                    </OperationDisabledButton>
+                  </Tooltip>
                 </div>
                 <OpenComparisonViewButton
                   comparison={comparison}

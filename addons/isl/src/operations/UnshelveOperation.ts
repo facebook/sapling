@@ -14,14 +14,18 @@ import type {ShelvedChange, UncommittedChanges} from '../types';
 import {Operation} from './Operation';
 
 export class UnshelveOperation extends Operation {
-  constructor(private shelvedChange: ShelvedChange) {
+  constructor(private shelvedChange: ShelvedChange, private keep: boolean) {
     super('UnshelveOperation');
   }
 
   static opName = 'Unshelve';
 
   getArgs() {
-    const args = ['unshelve', '--name', this.shelvedChange.name];
+    const args = ['unshelve'];
+    if (this.keep) {
+      args.push('--keep');
+    }
+    args.push('--name', this.shelvedChange.name);
     return args;
   }
 

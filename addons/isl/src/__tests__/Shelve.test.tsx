@@ -232,6 +232,17 @@ describe('Shelve', () => {
         });
       });
 
+      it('runs apply', () => {
+        fireEvent.click(screen.getByText('Apply'));
+
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({
+            args: ['unshelve', '--keep', '--name', 'my shelve'],
+          }),
+        });
+      });
+
       it('dismisses tooltip while running unshelve', () => {
         fireEvent.click(screen.getByText('Unshelve'));
 
