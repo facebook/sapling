@@ -11,6 +11,7 @@ import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
+import {Badge} from '../components/Badge';
 import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {RadioGroup} from '../components/Radio';
@@ -20,7 +21,6 @@ import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {
-  VSCodeBadge,
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
@@ -50,41 +50,41 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         <GroupName>Colors</GroupName>
         <Row>
           {basicBgs.map(name => (
-            <Badge fg={colors.fg} bg={colors[name]} key={name}>
+            <ColorBadge fg={colors.fg} bg={colors[name]} key={name}>
               {name}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
         <Row>
           {scmColors.map(name => (
-            <Badge fg={colors[name]} bg={colors.bg} key={name}>
+            <ColorBadge fg={colors[name]} bg={colors.bg} key={name}>
               <Icon icon="diff-modified" />
               {name}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
         <Row>
           {pureColors.map(name => (
-            <Badge fg={colors[name]} bg={colors.bg} key={name}>
+            <ColorBadge fg={colors[name]} bg={colors.bg} key={name}>
               {name}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
         <Row>
           {pureColors.map(name => (
-            <Badge fg={colors.fg} bg={colors[name]} key={name}>
+            <ColorBadge fg={colors.fg} bg={colors[name]} key={name}>
               {name}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
         <Row>
-          <Badge fg={colors.errorFg} bg={colors.errorBg}>
+          <ColorBadge fg={colors.errorFg} bg={colors.errorBg}>
             Error
-          </Badge>
+          </ColorBadge>
           {signalColors.map(name => (
-            <Badge fg={colors.signalFg} bg={colors[name]} key={name}>
+            <ColorBadge fg={colors.signalFg} bg={colors[name]} key={name}>
               {name}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
         <GroupName>Components</GroupName>
@@ -131,8 +131,8 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           />
         </Row>
         <Row>
-          <VSCodeBadge>Badge</VSCodeBadge>
-          <VSCodeBadge>0</VSCodeBadge>
+          <Badge>Badge</Badge>
+          <Badge>0</Badge>
           <Tag>Tag</Tag>
           <Tag>0</Tag>
           <Link href={'#'}>Link</Link>
@@ -164,18 +164,18 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         <GroupName>Spacing</GroupName>
         <Row>
           {paddings.map(size => (
-            <Badge style={styles.padding(size)} key={size}>
+            <ColorBadge style={styles.padding(size)} key={size}>
               {size}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
         <Row>
           <div {...stylex.props(layout.flexCol)} style={{alignItems: 'flex-start'}}>
             {paddings.map(size => (
               <div {...stylex.props(layout.flexRow)} style={{gap: spacing[size]}}>
-                <Badge>A</Badge>
-                <Badge>B</Badge>
-                <Badge>{size}</Badge>
+                <ColorBadge>A</ColorBadge>
+                <ColorBadge>B</ColorBadge>
+                <ColorBadge>{size}</ColorBadge>
               </div>
             ))}
           </div>
@@ -183,9 +183,9 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         <GroupName>Font</GroupName>
         <Row>
           {fontSizes.map(size => (
-            <Badge style={styles.font(size)} bg={colors.hoverDarken} key={size}>
+            <ColorBadge style={styles.font(size)} bg={colors.hoverDarken} key={size}>
               {size}
-            </Badge>
+            </ColorBadge>
           ))}
         </Row>
       </div>
@@ -220,7 +220,7 @@ const styles = stylex.create({
   }),
 });
 
-function Badge({
+function ColorBadge({
   children,
   bg,
   fg,
