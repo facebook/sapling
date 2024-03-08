@@ -25,8 +25,8 @@ import {defer} from 'shared/utils';
 export class OperationQueue {
   constructor(
     private runCallback: (
+      ctx: RepositoryContext,
       operation: RunnableOperation,
-      cwd: string,
       handleProgress: OperationCommandProgressReporter,
       signal: AbortSignal,
     ) => Promise<void>,
@@ -49,7 +49,7 @@ export class OperationQueue {
     operation: RunnableOperation,
     onProgress: (progress: OperationProgress) => void,
   ): Promise<'ran' | 'skipped'> {
-    const {cwd, tracker} = ctx;
+    const {tracker, logger} = ctx;
     if (this.runningOperation != null) {
       this.queuedOperations.push({...operation, tracker});
       const deferred = defer<'ran' | 'skipped'>();
@@ -94,11 +94,11 @@ export class OperationQueue {
         operation.trackEventName,
         'RunOperationError',
         {extras: {args: operation.args, runner: operation.runner}, operationId: operation.id},
-        _p => this.runCallback(operation, cwd, handleCommandProgress, controller.signal),
+        _p => this.runCallback(ctx, operation, handleCommandProgress, controller.signal),
       );
     } catch (err) {
       const errString = (err as Error).toString();
-      ctx.logger.log('error running operation: ', operation.args[0], errString);
+      logger.log('error running operation: ', operation.args[0], errString);
       onProgress({id: operation.id, kind: 'error', error: errString});
 
       // clear queue to run when we hit an error,

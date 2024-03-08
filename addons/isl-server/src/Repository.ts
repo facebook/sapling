@@ -218,13 +218,14 @@ export class Repository {
 
     this.operationQueue = new OperationQueue(
       (
+        ctx: RepositoryContext,
         operation: RunnableOperation,
-        cwd: string,
         handleCommandProgress,
         signal: AbortSignal,
       ): Promise<void> => {
+        const {cwd} = ctx;
         if (operation.runner === CommandRunner.Sapling) {
-          return this.runOperation(operation, handleCommandProgress, cwd, signal);
+          return this.runOperation(ctx, operation, handleCommandProgress, signal);
         } else if (operation.runner === CommandRunner.CodeReviewProvider) {
           const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
           if (this.codeReviewProvider?.runExternalCommand == null) {
@@ -519,11 +520,12 @@ export class Repository {
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
   private async runOperation(
+    ctx: RepositoryContext,
     operation: RunnableOperation,
     onProgress: OperationCommandProgressReporter,
-    cwd: string,
     signal: AbortSignal,
   ): Promise<void> {
+    const {cwd} = ctx;
     const cwdRelativeArgs = this.normalizeOperationArgs(cwd, operation.args);
     const {stdin} = operation;
     const {command, args, options} = getExecParams(
@@ -534,7 +536,7 @@ export class Repository {
       Internal.additionalEnvForCommand?.(operation),
     );
 
-    this.initialConnectionContext.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
+    ctx.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
 
     const execution = execa(command, args, {...options, stdout: 'pipe', stderr: 'pipe'});
     // It would be more appropriate to call this in reponse to execution.on('spawn'), but
@@ -551,11 +553,7 @@ export class Repository {
       onProgress('exit', exitCode || 0);
     });
     signal.addEventListener('abort', () => {
-      this.initialConnectionContext.logger.log(
-        'kill operation: ',
-        command,
-        cwdRelativeArgs.join(' '),
-      );
+      ctx.logger.log('kill operation: ', command, cwdRelativeArgs.join(' '));
     });
     handleAbortSignalOnProcess(execution, signal);
     await execution;
