@@ -18,6 +18,7 @@ rust_library(
         "fbsource//third-party/rust:gix-pack",
         "fbsource//third-party/rust:pin-project",
         "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rustc-hash",
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
