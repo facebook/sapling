@@ -173,6 +173,7 @@ async fn tag_bookmarks(
         if commits.contains(&cs_id) {
             Some(bookmark_key.to_string())
         } else {
+            print!("{},", bookmark_key);
             None
         }
     })
@@ -611,7 +612,7 @@ async fn packfile_entry(
     changeset_id: ChangesetId,
     path: MPath,
     mut entry: GitDeltaManifestEntry,
-) -> Result<(PackfileItem, Option<ObjectId>)> {
+) -> Result<PackfileItem> {
     let blobstore = repo.repo_blobstore_arc();
     // Determine if the delta variant should be used or the base variant
     let delta = delta_base(&mut entry, delta_inclusion);
@@ -642,18 +643,17 @@ async fn packfile_entry(
                 delta.instructions_uncompressed_size,
                 instruction_bytes,
             );
-            anyhow::Ok((packfile_item, Some(delta.base.oid)))
+            anyhow::Ok(packfile_item)
         }
         None => {
             // Use the full object instead
-            let packfile_item = base_packfile_item(
+            base_packfile_item(
                 ctx,
                 repo,
                 ObjectIdentifierType::AllObjects(entry.full.as_rich_git_sha1()?),
                 packfile_item_inclusion,
             )
-            .await?;
-            anyhow::Ok((packfile_item, None))
+            .await
         }
     }
 }
@@ -687,22 +687,12 @@ async fn blob_and_tree_packfile_items<'a>(
                 root_mf_id
             )
         })?;
-    let (mut items_in_pack, mut items_as_base) = (FxHashSet::default(), FxHashSet::default());
     let objects_stream = try_stream! {
         let mut entries = delta_manifest.into_subentries(ctx, &blobstore);
+        // NOTE: The order of the entries needs to be maintained
         while let Some((path, entry)) = entries.try_next().await? {
-            // If the object is a duplicate OR if the object is already present at the client, then skip it
-            if items_in_pack.contains(&entry.full.oid) || items_as_base.contains(&entry.full.oid) {
-                continue;
-            }
-            items_in_pack.insert(entry.full.oid.clone());
-            let (packfile_item, maybe_base) = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry).await?;
-            if let Some(delta_base) = maybe_base {
-                if !items_as_base.contains(&delta_base) {
-                    items_as_base.insert(delta_base);
-                }
-            }
-            yield futures::future::ok(packfile_item)
+            let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry);
+            yield packfile_item
         }
     };
     anyhow::Ok(objects_stream.try_buffered(500).boxed())
@@ -1008,6 +998,8 @@ pub async fn fetch_response<'a>(
         .await
         .context("Error converting head Git commits to Bonsai during fetch")?;
     // Get the stream of commits between the bases and heads
+    // TODO(rajshar): There is no strict need to sort and collect the commits in any
+    // particular order here. Investigate if it would be better to just get the stream of commits
     let mut target_commits = repo
         .commit_graph()
         .ancestors_difference_stream(ctx, heads, bases)

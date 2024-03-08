@@ -39,6 +39,8 @@ pub enum DeltaForm {
 
 /// Struct responsible for encoding and writing incoming stream
 /// of git object bytes as a packfile to `raw_writer`.
+/// NOTE: The caller must ensure that the stream of objects passed to this
+/// writer are sorted topologically
 pub struct PackfileWriter<T>
 where
     T: AsyncWrite + Unpin,
@@ -67,7 +69,6 @@ where
     object_id_with_index: HashMap<ObjectId, usize>,
 }
 
-#[allow(dead_code)]
 impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     /// Create a new packfile writer based on `raw_writer` for writing `count` entries to the Packfile.
     pub fn new(raw_writer: T, count: u32, concurrency: usize, delta_form: DeltaForm) -> Self {
@@ -101,46 +102,36 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
         &mut self,
         entries_stream: impl Stream<Item = Result<PackfileItem>>,
     ) -> Result<()> {
-        use futures::TryStreamExt;
         // Write the packfile header if applicable
         self.write_header().await?;
         let mut entries_stream = Box::pin(entries_stream.ready_chunks(self.concurrency));
         while let Some(entries) = entries_stream.next().await {
-            let entries: Vec<_> = futures::stream::iter(entries)
-                .map_ok(|entry| async move {
+            let entries = entries
+                .into_iter()
+                .map(|entry| {
                     let entry: Entry = entry
+                        .context("Failure in fetching Packfile Item from stream")?
                         .try_into()
                         .context("Failure in converting PackfileItem to Entry")?;
                     anyhow::Ok(entry)
                 })
-                .try_buffered(self.concurrency)
-                .try_collect()
-                .await?;
+                .collect::<Result<Vec<_>>>()?;
 
             for mut entry in entries {
+                // TODO(rajshar): Add support for preventing cycles in on-disk bundle for partial repo
                 // If the entry is already written to the packfile, skip writing it again
                 if self.object_id_with_index.contains_key(&entry.id) {
                     continue;
                 }
-                // Will be false for all our cases since we generate the entry with the object ID in hand. Including here for
-                // completeness sake.
-                if entry.is_invalid() {
-                    self.object_offset_with_validity.push((0, false));
-                }
-                // The current object will be written at offset `size`.
-                self.object_offset_with_validity.push((self.size, true));
-                self.object_id_with_index
-                    .insert(entry.id.clone(), self.object_offset_with_validity.len() - 1);
-                if let DeltaForm::OnlyOffset = self.delta_form {
-                    // The pack is allowed to have only offset deltas. Convert any ref deltas into
-                    // offset deltas before writing to pack
-                    entry = self.convert_ref_delta_to_offset_delta(entry)?;
-                }
+                self.record_entry(&entry);
+                // If the current entry is a ref delta and we can only have offset deltas, then convert the ref delta
+                // to an offset delta. Otherwise, return the entry as-is
+                entry = self.convert_ref_delta_to_offset_delta(entry)?;
                 // Since the packfile is version 2, the entry should follow the same version
                 let header = entry.to_entry_header(Version::V2, |index| {
                     let (base_offset, is_valid_object) = self.object_offset_with_validity[index];
                     if !is_valid_object {
-                        unreachable!("Encountered a RefDelta that points to an object which does not exist in the packfile.")
+                        unreachable!("Encountered an offset delta that points to an object which does not exist in the packfile.")
                     }
                     self.size - base_offset
                 });
@@ -186,18 +177,37 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     }
 
     fn convert_ref_delta_to_offset_delta(&self, entry: Entry) -> Result<Entry> {
-        match entry.kind {
-            gix_pack::data::output::entry::Kind::Base(_) => Ok(entry),
-            gix_pack::data::output::entry::Kind::DeltaRef { .. } => Ok(entry),
-            gix_pack::data::output::entry::Kind::DeltaOid { id } => {
-                let object_index = self
-                    .object_id_with_index
-                    .get(&id)
-                    .ok_or_else(|| anyhow::anyhow!("Couldn't find index for {}", id))?
-                    .clone();
-                let kind = gix_pack::data::output::entry::Kind::DeltaRef { object_index };
-                Ok(Entry { kind, ..entry })
-            }
+        use gix_pack::data::output::entry::Kind::*;
+        match self.delta_form {
+            // The pack is allowed to have only offset deltas. Convert any ref deltas into
+            // offset deltas before writing to pack
+            DeltaForm::OnlyOffset => match entry.kind {
+                Base(_) => Ok(entry),
+                DeltaRef { .. } => Ok(entry),
+                DeltaOid { id } => {
+                    let object_index = self
+                        .object_id_with_index
+                        .get(&id)
+                        .ok_or_else(|| anyhow::anyhow!("Couldn't find index for {}", id))?
+                        .clone();
+                    let kind = DeltaRef { object_index };
+                    Ok(Entry { kind, ..entry })
+                }
+            },
+            _ => Ok(entry),
         }
+    }
+
+    fn record_entry(&mut self, entry: &Entry) {
+        // Will be false for all our cases since we generate the entry with the object ID in hand.
+        // Including here for sake of completeness.
+        if entry.is_invalid() {
+            self.object_offset_with_validity.push((0, false));
+        }
+        // The current object will be written at offset `size`.
+        self.object_offset_with_validity.push((self.size, true));
+        // Record the object and its index in the validity list for future lookups
+        self.object_id_with_index
+            .insert(entry.id.clone(), self.object_offset_with_validity.len() - 1);
     }
 }
