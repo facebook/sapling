@@ -337,11 +337,14 @@ fn lock(
                     // TODO: add user friendly debugging similar to Python locks.
                     let elapsed = start.elapsed();
 
-                    if elapsed >= config.warn_deadline {
-                        tracing::warn!(name, "lock contended");
-                    } else {
-                        tracing::info!(name, "lock contended");
-                    };
+                    // Only emit trace events at most once a second.
+                    if (elapsed.as_millis() % 1000) < config.backoff.as_millis() {
+                        if elapsed >= config.warn_deadline {
+                            tracing::warn!(name, "lock contended");
+                        } else {
+                            tracing::info!(name, "lock contended");
+                        };
+                    }
 
                     if elapsed >= config.deadline {
                         return Err(err);
