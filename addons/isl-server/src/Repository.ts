@@ -997,7 +997,11 @@ export class Repository {
     throw new Error('No paste found in rage output: ' + output.stdout);
   }
 
-  public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {
+  public async runDiff(
+    ctx: RepositoryContext,
+    comparison: Comparison,
+    contextLines = 4,
+  ): Promise<string> {
     const output = await this.runCommand(
       [
         'diff',
@@ -1010,6 +1014,7 @@ export class Repository {
         String(contextLines),
       ],
       'DiffCommand',
+      ctx,
     );
     return output.stdout;
   }

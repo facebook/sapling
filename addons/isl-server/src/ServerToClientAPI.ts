@@ -518,7 +518,7 @@ export default class ServerToClientAPI {
       case 'requestComparison': {
         const {comparison} = data;
         const diff: Promise<Result<string>> = repo
-          .runDiff(comparison)
+          .runDiff(ctx, comparison)
           .then(value => ({value}))
           .catch(error => {
             logger?.error('error running diff', error.toString());
@@ -828,7 +828,7 @@ export default class ServerToClientAPI {
         if (Internal.generateAICommitMessage == null) {
           break;
         }
-        repo.runDiff(data.comparison, /* context lines */ 4).then(diff => {
+        repo.runDiff(ctx, data.comparison, /* context lines */ 4).then(diff => {
           Internal.generateAICommitMessage?.(repo.initialConnectionContext, {
             title: data.title,
             context: diff,
