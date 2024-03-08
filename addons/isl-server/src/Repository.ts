@@ -8,7 +8,6 @@
 import type {CodeReviewProvider} from './CodeReviewProvider';
 import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
-import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
 import type {RepositoryContext} from './serverTypes';
 import type {
@@ -348,6 +347,7 @@ export class Repository {
       const proc = await this.runCommand(
         ['resolve', '--tool', 'internal:dumpjson', '--all'],
         'GetConflictsCommand',
+        this.initialConnectionContext,
       );
       output = JSON.parse(proc.stdout) as ResolveCommandConflictOutput;
     } catch (err) {
@@ -585,7 +585,11 @@ export class Repository {
     try {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
-      const proc = await this.runCommand(['status', '-Tjson', '--copies'], 'StatusCommand');
+      const proc = await this.runCommand(
+        ['status', '-Tjson', '--copies'],
+        'StatusCommand',
+        this.initialConnectionContext,
+      );
       const files = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
         ...change,
         path: removeLeadingPathSep(change.path),
@@ -662,6 +666,7 @@ export class Repository {
       const proc = await this.runCommand(
         ['log', '--template', FETCH_TEMPLATE, '--rev', revset],
         'LogCommand',
+        this.initialConnectionContext,
       );
       const commits = parseCommitInfoOutput(
         this.initialConnectionContext.logger,
@@ -1023,12 +1028,11 @@ export class Repository {
     args: Array<string>,
     /** Which event name to track for this command. If undefined, generic 'RunCommand' is used. */
     eventName: TrackEventName | undefined,
-    context?: RepositoryContext,
+    ctx: RepositoryContext,
     options?: execa.Options,
     timeout?: number,
   ) {
     const id = randomId();
-    const ctx = context ?? this.initialConnectionContext;
     return ctx.tracker.operation(
       eventName ?? 'RunCommand',
       'RunCommandError',
