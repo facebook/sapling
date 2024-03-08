@@ -7,6 +7,7 @@
 
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
+import type {RepositoryContext} from './serverTypes';
 import type {
   OperationCommandProgressReporter,
   OperationProgress,
@@ -46,11 +47,11 @@ export class OperationQueue {
    * - 'skipped', when the operation is never going to be run, since an earlier queued command errored.
    */
   async runOrQueueOperation(
+    ctx: RepositoryContext,
     operation: RunnableOperation,
     onProgress: (progress: OperationProgress) => void,
-    tracker: ServerSideTracker,
-    cwd: string,
   ): Promise<'ran' | 'skipped'> {
+    const {cwd, tracker} = ctx;
     if (this.runningOperation != null) {
       this.queuedOperations.push({...operation, tracker});
       const deferred = defer<'ran' | 'skipped'>();
@@ -122,11 +123,10 @@ export class OperationQueue {
       if (op != null) {
         // don't await this, the caller should resolve when the original operation finishes.
         this.runOrQueueOperation(
+          ctx,
           op,
           // TODO: we're using the onProgress from the LAST `runOperation`... should we be keeping the newer onProgress in the queued operation?
           onProgress,
-          op.tracker,
-          cwd,
         );
       }
     } else {

@@ -6,6 +6,7 @@
  */
 
 import type {ServerPlatform} from '../serverPlatform';
+import type {RepositoryContext} from '../serverTypes';
 import type {OperationCommandProgressReporter} from 'isl/src/types';
 
 import {OperationQueue} from '../OperationQueue';
@@ -13,12 +14,20 @@ import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {CommandRunner} from 'isl/src/types';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
+
 const mockTracker = makeServerSideTracker(
   mockLogger,
   {platformName: 'test'} as ServerPlatform,
   '0.1',
   jest.fn(),
 );
+
+const mockCtx: RepositoryContext = {
+  cwd: 'cwd',
+  cmd: 'sl',
+  logger: mockLogger,
+  tracker: mockTracker,
+};
 
 describe('OperationQueue', () => {
   it('runs command directly when nothing queued', async () => {
@@ -29,6 +38,7 @@ describe('OperationQueue', () => {
     const onProgress = jest.fn();
 
     const runPromise = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['pull'],
         id: '1',
@@ -36,8 +46,6 @@ describe('OperationQueue', () => {
         trackEventName: 'PullOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
     // calls synchronously
     expect(runCallback).toHaveBeenCalledTimes(1);
@@ -66,6 +74,7 @@ describe('OperationQueue', () => {
 
     const onProgress = jest.fn();
     const runPromise = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['pull'],
         id: '1',
@@ -73,8 +82,6 @@ describe('OperationQueue', () => {
         trackEventName: 'PullOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
 
     const result = await runPromise;
@@ -107,10 +114,9 @@ describe('OperationQueue', () => {
     const queue = new OperationQueue(mockLogger, runCallback);
     const id = 'abc';
     const op = queue.runOrQueueOperation(
+      mockCtx,
       {args: [], id, runner: CommandRunner.Sapling, trackEventName: 'RunOperation'},
       onProgress,
-      mockTracker,
-      'cwd',
     );
     queue.abortRunningOperation('wrong-id');
     expect(onProgress).not.toHaveBeenCalled();
@@ -136,6 +142,7 @@ describe('OperationQueue', () => {
     expect(runP2).not.toHaveBeenCalled();
 
     const runPromise1 = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['pull'],
         id: '1',
@@ -143,13 +150,12 @@ describe('OperationQueue', () => {
         trackEventName: 'PullOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
     expect(runP1).toHaveBeenCalled();
     expect(runP2).not.toHaveBeenCalled();
 
     const runPromise2 = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['rebase'],
         id: '2',
@@ -157,8 +163,6 @@ describe('OperationQueue', () => {
         trackEventName: 'RebaseOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
     expect(runP1).toHaveBeenCalled();
     expect(runP2).not.toHaveBeenCalled(); // it's queued up
@@ -192,6 +196,7 @@ describe('OperationQueue', () => {
     expect(runP2).not.toHaveBeenCalled();
 
     const runPromise1 = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['pull'],
         id: '1',
@@ -199,12 +204,11 @@ describe('OperationQueue', () => {
         trackEventName: 'PullOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
     expect(runP1).toHaveBeenCalled();
     expect(runP2).not.toHaveBeenCalled();
     const runPromise2 = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['rebase'],
         id: '2',
@@ -212,8 +216,6 @@ describe('OperationQueue', () => {
         trackEventName: 'RebaseOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
     expect(runP1).toHaveBeenCalled();
     expect(runP2).not.toHaveBeenCalled(); // it's queued up
@@ -246,6 +248,7 @@ describe('OperationQueue', () => {
     expect(runP2).not.toHaveBeenCalled();
 
     const runPromise1 = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['pull'],
         id: '1',
@@ -253,8 +256,6 @@ describe('OperationQueue', () => {
         trackEventName: 'PullOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
 
     p1.reject(new Error('fake error'));
@@ -262,6 +263,7 @@ describe('OperationQueue', () => {
 
     // after p1 errors, run another operation
     const runPromise2 = queue.runOrQueueOperation(
+      mockCtx,
       {
         args: ['rebase'],
         id: '2',
@@ -269,8 +271,6 @@ describe('OperationQueue', () => {
         trackEventName: 'RebaseOperation',
       },
       onProgress,
-      mockTracker,
-      'cwd',
     );
 
     // p2 runs immediately

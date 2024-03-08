@@ -484,17 +484,12 @@ export default class ServerToClientAPI {
       }
       case 'runOperation': {
         const {operation} = data;
-        repo.runOrQueueOperation(
-          operation,
-          progress => {
-            this.postMessage({type: 'operationProgress', ...progress});
-            if (progress.kind === 'queue') {
-              this.tracker.track('QueueOperation', {extras: {operation: operation.trackEventName}});
-            }
-          },
-          this.tracker,
-          cwd,
-        );
+        repo.runOrQueueOperation(ctx, operation, progress => {
+          this.postMessage({type: 'operationProgress', ...progress});
+          if (progress.kind === 'queue') {
+            this.tracker.track('QueueOperation', {extras: {operation: operation.trackEventName}});
+          }
+        });
         break;
       }
       case 'abortRunningOperation': {

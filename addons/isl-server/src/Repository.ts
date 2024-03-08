@@ -472,17 +472,11 @@ export class Repository {
    * This promise resolves when the operation exits.
    */
   async runOrQueueOperation(
+    ctx: RepositoryContext,
     operation: RunnableOperation,
     onProgress: (progress: OperationProgress) => void,
-    tracker: ServerSideTracker,
-    cwd: string,
   ): Promise<void> {
-    const result = await this.operationQueue.runOrQueueOperation(
-      operation,
-      onProgress,
-      tracker,
-      cwd,
-    );
+    const result = await this.operationQueue.runOrQueueOperation(ctx, operation, onProgress);
 
     if (result !== 'skipped') {
       // After any operation finishes, make sure we poll right away,

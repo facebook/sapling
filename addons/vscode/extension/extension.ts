@@ -52,7 +52,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(registerSaplingDiffContentProvider(logger));
     context.subscriptions.push(new DeletedFileContentProvider());
 
-    context.subscriptions.push(...registerCommands(extensionTracker));
+    context.subscriptions.push(...registerCommands(ctx));
 
     Internal?.registerInternalBugLogsProvider != null &&
       context.subscriptions.push(Internal.registerInternalBugLogsProvider(logger));

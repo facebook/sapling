@@ -6,7 +6,7 @@
  */
 
 import type {Repository} from 'isl-server/src/Repository';
-import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {Operation} from 'isl/src/operations/Operation';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
@@ -47,7 +47,7 @@ export const vscodeCommands = {
   ),
 
   ['sapling.revert-file']: commandWithUriOrResourceState(async function (
-    this: Context,
+    this: RepositoryContext,
     repo: Repository,
     _,
     path: RepoRelativePath,
@@ -60,7 +60,7 @@ export const vscodeCommands = {
     if (choice !== 'Revert') {
       return;
     }
-    return runOperation(repo, new RevertOperation([path]), this.tracker);
+    return runOperation(this, repo, new RevertOperation([path]));
   }),
 };
 
@@ -96,16 +96,13 @@ export function executeVSCodeCommand<K extends keyof VSCodeCommand>(
   return vscode.commands?.executeCommand(id, ...args) as ReturnType<VSCodeCommand[K]>;
 }
 
-type Context = {
-  tracker: ServerSideTracker;
-};
-
 const runOperation = (
+  ctx: RepositoryContext,
   repo: Repository,
   operation: Operation,
-  tracker: ServerSideTracker,
 ): undefined => {
   repo.runOrQueueOperation(
+    ctx,
     {
       args: operation.getArgs(),
       id: operation.id,
@@ -113,23 +110,22 @@ const runOperation = (
       trackEventName: operation.trackEventName,
     },
     () => undefined, // TODO: Send this progress info to any existing ISL webview if there is one
-    tracker,
-    repo.info.repoRoot,
   );
   return undefined;
 };
 
-export function registerCommands(tracker: ServerSideTracker): Array<vscode.Disposable> {
-  const context: Context = {
-    tracker,
-  };
-
+export function registerCommands(ctx: RepositoryContext): Array<vscode.Disposable> {
   const disposables: Array<vscode.Disposable> = Object.entries(vscodeCommands).map(
     ([id, handler]) =>
       vscode.commands.registerCommand(id, (...args: Parameters<typeof handler>) =>
-        tracker.operation('RunVSCodeCommand', 'VSCodeCommandError', {extras: {command: id}}, () => {
-          return (handler as (...args: Array<unknown>) => unknown).apply(context, args);
-        }),
+        ctx.tracker.operation(
+          'RunVSCodeCommand',
+          'VSCodeCommandError',
+          {extras: {command: id}},
+          () => {
+            return (handler as (...args: Array<unknown>) => unknown).apply(ctx, args);
+          },
+        ),
       ),
   );
   return disposables;
@@ -212,7 +208,7 @@ function openRemoteFileLink(
  * - a vscode Uri for programmatic invocations
  * - a SourceControlResourceState for use from the VS Code SCM sidebar API
  */
-function commandWithUriOrResourceState<Ctx>(
+function commandWithUriOrResourceState(
   handler: (
     repo: Repository,
     uri: vscode.Uri,
@@ -220,7 +216,7 @@ function commandWithUriOrResourceState<Ctx>(
   ) => unknown | Thenable<unknown>,
 ) {
   return function (
-    this: Ctx,
+    this: RepositoryContext,
     uriOrResource: vscode.Uri | vscode.SourceControlResourceState | undefined,
   ) {
     const uri =
