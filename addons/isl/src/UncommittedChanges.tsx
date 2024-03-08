@@ -37,6 +37,7 @@ import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
+import {Badge} from './components/Badge';
 import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
 import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
@@ -64,7 +65,7 @@ import {
   useRunOperation,
 } from './serverAPIState';
 import {GeneratedStatus} from './types';
-import {VSCodeBadge, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
@@ -376,7 +377,7 @@ function LinearFileList(props: {
         title={
           <T
             replace={{
-              $count: <VSCodeBadge>{group.length}</VSCodeBadge>,
+              $count: <Badge>{group.length}</Badge>,
             }}>
             {status === GeneratedStatus.PartiallyGenerated
               ? 'Partially Generated Files $count'

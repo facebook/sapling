@@ -31,6 +31,7 @@ import {
   latestCommitMessageFields,
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
+import {Badge} from '../components/Badge';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -73,7 +74,6 @@ import {
 import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
-  VSCodeBadge,
   VSCodeButton,
   VSCodeDivider,
   VSCodeLink,
@@ -299,7 +299,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           <Section data-testid="changes-to-amend">
             <SmallCapsTitle>
               {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
-              <VSCodeBadge>{uncommittedChanges.length}</VSCodeBadge>
+              <Badge>{uncommittedChanges.length}</Badge>
             </SmallCapsTitle>
             {uncommittedChanges.length === 0 ? (
               <Subtle>
@@ -314,7 +314,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           <Section data-testid="committed-changes">
             <SmallCapsTitle>
               <T>Files Changed</T>
-              <VSCodeBadge>{commit.totalFileCount}</VSCodeBadge>
+              <Badge>{commit.totalFileCount}</Badge>
             </SmallCapsTitle>
             <div className="changed-file-list">
               <div className="button-row">

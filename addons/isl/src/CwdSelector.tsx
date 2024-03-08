@@ -13,13 +13,13 @@ import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {Badge} from './components/Badge';
 import {T} from './i18n';
 import {lazyAtom, writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
 import {
-  VSCodeBadge,
   VSCodeButton,
   VSCodeDivider,
   VSCodeRadio,
@@ -97,7 +97,7 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
       {provider != null ? (
         <DropdownField title={<T>Code Review Provider</T>}>
           <span>
-            <VSCodeBadge>{provider?.name}</VSCodeBadge> <provider.RepoInfo />
+            <Badge>{provider?.name}</Badge> <provider.RepoInfo />
           </span>
         </DropdownField>
       ) : null}

@@ -18,6 +18,7 @@ import messageBus from '../MessageBus';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
+import {Badge} from '../components/Badge';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
@@ -34,10 +35,12 @@ import {
   useRunOperation,
 } from '../serverAPIState';
 import {useShowToast} from '../toast';
+import {colors} from '../tokens.stylex';
 import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
-import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
+import * as stylex from '@stylexjs/stylex';
+import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 
@@ -215,17 +218,38 @@ function DebugPerfInfo() {
   );
 }
 
+const styles = stylex.create({
+  slow: {
+    color: colors.signalFg,
+    backgroundColor: colors.signalBadBg,
+  },
+  ok: {
+    color: colors.signalFg,
+    backgroundColor: colors.signalMediumBg,
+  },
+  fast: {
+    color: colors.signalFg,
+    backgroundColor: colors.signalGoodBg,
+  },
+});
+
 function FetchDurationInfo(
   props: {name: ReactNode} & ExclusiveOr<{start?: number; end?: number}, {duration: number}>,
 ) {
   const {name} = props;
   const {end, start, duration} = props;
   const deltaMs = duration != null ? duration : end == null || start == null ? null : end - start;
-  const assessment =
-    deltaMs == null ? 'none' : deltaMs < 1000 ? 'fast' : deltaMs < 3000 ? 'ok' : 'slow';
+  const xstyle =
+    deltaMs == null
+      ? undefined
+      : deltaMs < 1000
+      ? styles.fast
+      : deltaMs < 3000
+      ? styles.ok
+      : styles.slow;
   return (
-    <div className={`fetch-duration-info fetch-duration-${assessment}`}>
-      {name} <VSCodeBadge>{deltaMs == null ? 'N/A' : `${deltaMs}ms`}</VSCodeBadge>
+    <div className={`fetch-duration-info`}>
+      {name} <Badge xstyle={xstyle}>{deltaMs == null ? 'N/A' : `${deltaMs}ms`}</Badge>
       {end == null ? null : (
         <Subtle>
           <Tooltip title={new Date(end).toLocaleString()} placement="right">

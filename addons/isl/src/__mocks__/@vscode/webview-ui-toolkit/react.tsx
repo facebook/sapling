@@ -10,7 +10,6 @@ import type {
   VSCodeCheckbox as VSCodeCheckboxType,
   VSCodeLink as VSCodeLinkType,
   VSCodeDivider as VSCodeDividerType,
-  VSCodeBadge as VSCodeBadgeType,
   VSCodeRadio as VSCodeRadioType,
   VSCodeRadioGroup as VSCodeRadioGroupType,
 } from '@vscode/webview-ui-toolkit/react';
@@ -22,7 +21,6 @@ import React, {useEffect, useRef, forwardRef} from 'react';
 // We need to provide mock verison of these components for now
 
 export const VSCodeLink = (p: React.PropsWithChildren<typeof VSCodeLinkType>) => <a {...p} />;
-export const VSCodeBadge = (p: React.PropsWithChildren<typeof VSCodeBadgeType>) => <div {...p} />;
 export const VSCodeButton = forwardRef(
   (
     p: React.PropsWithChildren<typeof VSCodeButtonType>,
