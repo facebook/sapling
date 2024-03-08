@@ -74,7 +74,7 @@
   $ setconfig remotefilelog.lfs=True
 
   $ hg pull -q
-  $ hg goto master
+  $ hg goto master --config checkout.use-rust=false
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat x
   THIS IS AN LFS BLOB
