@@ -974,7 +974,7 @@ export class Repository {
     );
   }
 
-  public async getActiveAlerts(): Promise<Array<Alert>> {
+  public async getActiveAlerts(ctx: RepositoryContext): Promise<Array<Alert>> {
     const result = await this.runCommand(
       ['config', '-Tjson', 'alerts'],
       'GetAlertsCommand',
@@ -987,7 +987,7 @@ export class Repository {
     try {
       const configs = JSON.parse(result.stdout) as [{name: string; value: unknown}];
       const alerts = parseAlerts(configs);
-      this.initialConnectionContext.logger.info('Found active alerts:', alerts);
+      ctx.logger.info('Found active alerts:', alerts);
       return alerts;
     } catch (e) {
       return [];

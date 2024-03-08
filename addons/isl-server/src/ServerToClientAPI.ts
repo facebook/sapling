@@ -848,7 +848,7 @@ export default class ServerToClientAPI {
       }
       case 'fetchActiveAlerts': {
         repo
-          .getActiveAlerts()
+          .getActiveAlerts(ctx)
           .then(alerts => {
             if (alerts.length === 0) {
               return;
