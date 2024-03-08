@@ -39,6 +39,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <csignal>
 
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
@@ -81,7 +82,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"

@@ -59,9 +59,9 @@ cpp_library(
     name = "hive_logger",
     headers = [
         "IHiveLogger.h",
-        "SessionInfo.h",
     ],
     exported_deps = [
+        "//eden/common/telemetry:log_info",
         "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
@@ -100,20 +100,8 @@ cpp_library(
 
 cpp_library(
     name = "log_info",
-    srcs = [
-        "SessionId.cpp",
-        "SessionInfo.cpp",
-    ],
     headers = [
         "LogEvent.h",
-        "SessionId.h",
-        "SessionInfo.h",
-    ],
-    deps = [
-        "//eden/common/utils:sysctl_util",
-        "//folly:conv",
-        "//folly:exception",
-        "//folly/portability:unistd",
     ],
     exported_deps = [
         "//eden/common/os:os",
@@ -142,6 +130,7 @@ cpp_library(
     ],
     exported_deps = [
         ":log_info",
+        "//eden/common/telemetry:log_info",
         "//eden/common/utils:ref_ptr",
     ],
 )

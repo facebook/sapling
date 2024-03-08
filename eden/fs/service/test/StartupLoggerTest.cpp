@@ -29,7 +29,7 @@
  */
 
 #include "eden/fs/service/StartupLogger.h"
-#include "eden/fs/telemetry/SessionId.h"
+#include "eden/common/telemetry/SessionId.h"
 
 #include <folly/Exception.h>
 #include <folly/File.h>

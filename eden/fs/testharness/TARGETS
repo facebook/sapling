@@ -262,6 +262,7 @@ cpp_library(
     headers = ["TestServer.h"],
     deps = [
         ":fake_privhelper",
+        "//eden/common/telemetry:log_info",
         "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",
         "//eden/fs/service:server",
@@ -269,7 +270,6 @@ cpp_library(
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/telemetry:activity_recorder",
         "//eden/fs/telemetry:hive_logger",
-        "//eden/fs/telemetry:log_info",
         "//eden/fs/utils:user_info",
         "//folly/portability:gflags",
     ],

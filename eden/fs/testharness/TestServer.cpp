@@ -9,6 +9,7 @@
 
 #include <folly/portability/GFlags.h>
 
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/service/EdenServer.h"
@@ -16,7 +17,6 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
-#include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/utils/UserInfo.h"
 

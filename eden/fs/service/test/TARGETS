@@ -9,11 +9,11 @@ cpp_unittest(
         "ovr_config//os:linux",
     ],
     deps = [
+        "//eden/common/telemetry:log_info",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:process",
         "//eden/fs/service:startup_logger",
         "//eden/fs/service:startup_status_subscriber",
-        "//eden/fs/telemetry:log_info",
         "//folly:exception",
         "//folly:file",
         "//folly:file_util",

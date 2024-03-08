@@ -7,11 +7,11 @@
 
 #pragma once
 
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/telemetry/SessionInfo.h"
 
 namespace facebook::eden {
 

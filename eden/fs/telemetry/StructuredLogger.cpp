@@ -7,7 +7,7 @@
 
 #include "eden/fs/telemetry/StructuredLogger.h"
 
-#include "eden/fs/telemetry/SessionId.h"
+#include "eden/common/telemetry/SessionId.h"
 
 #include <ctime>
 
