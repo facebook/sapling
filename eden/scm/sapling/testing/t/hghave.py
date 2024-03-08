@@ -105,7 +105,8 @@ def checkfeatures(features):
             feature = feature[3:]
 
         if feature not in checks:
-            result["missing"].append(feature)
+            if not negate:
+                result["missing"].append(feature)
             continue
 
         available, desc = checks[feature]

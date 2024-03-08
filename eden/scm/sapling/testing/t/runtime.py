@@ -36,6 +36,10 @@ def hasfeature(feature: str) -> bool:
     False
     >>> hasfeature("false")
     False
+    >>> hasfeature("banana")
+    False
+    >>> hasfeature("no-banana")
+    True
     """
     res = hghave.checkfeatures([feature])
     return all(not res.get(k) for k in ["error", "missing", "skipped"])
