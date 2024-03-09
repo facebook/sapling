@@ -52,7 +52,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use slog::Logger;
 use source_control as thrift;
-use source_control::services::source_control_service as service;
+use source_control_services::errors::source_control_service as service;
 use source_control_services::SourceControlService;
 use srserver::RequestContext;
 use stats::prelude::*;

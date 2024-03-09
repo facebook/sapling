@@ -13,7 +13,7 @@ use git_types::GitError;
 use megarepo_error::MegarepoError;
 use mononoke_api::MononokeError;
 use source_control as thrift;
-use source_control::services::source_control_service as service;
+use source_control_services::errors::source_control_service as service;
 
 pub(crate) enum ServiceError {
     Request(thrift::RequestError),

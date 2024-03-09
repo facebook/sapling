@@ -16,7 +16,7 @@ use mononoke_api::MononokeError;
 use pushrebase::PushrebaseConflict;
 use service::RepoLandStackExn;
 use source_control as thrift;
-use source_control::services::source_control_service as service;
+use source_control_services::errors::source_control_service as service;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;

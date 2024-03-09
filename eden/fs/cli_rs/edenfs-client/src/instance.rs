@@ -27,7 +27,7 @@ use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
 #[cfg(fbcode_build)]
-use thrift_streaming::streaming_eden_service::StreamStartStatusError;
+use thrift_streaming_clients::errors::StreamStartStatusError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 use thrift_types::edenfs::types::DaemonInfo;

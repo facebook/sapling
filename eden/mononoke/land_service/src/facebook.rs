@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use fb303_core::fb303_status;
-use fb303_core::services::base_service::GetNameExn;
-use fb303_core::services::base_service::GetStatusDetailsExn;
-use fb303_core::services::base_service::GetStatusExn;
+use fb303_core_services::errors::GetNameExn;
+use fb303_core_services::errors::GetStatusDetailsExn;
+use fb303_core_services::errors::GetStatusExn;
 use fb303_core_services::BaseService;
 
 #[derive(Clone)]

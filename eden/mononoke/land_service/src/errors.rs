@@ -11,8 +11,8 @@ use anyhow::Error;
 use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::HookRejection;
-use land_service_if::services::land_service::LandChangesetsExn;
 use land_service_if::InternalError;
+use land_service_if_services::errors::LandChangesetsExn;
 use mononoke_api::MononokeError;
 use pushrebase::PushrebaseConflict;
 use pushrebase::PushrebaseError;
@@ -66,7 +66,7 @@ impl From<LandChangesetsError> for LandChangesetsExn {
     fn from(e: LandChangesetsError) -> LandChangesetsExn {
         match e {
             LandChangesetsError::InternalError(e) => {
-                land_service_if::services::land_service::LandChangesetsExn::internal_error(e)
+                land_service_if_services::errors::LandChangesetsExn::internal_error(e)
             }
             LandChangesetsError::HookRejections(rejections) => {
                 LandChangesetsExn::hook_rejections(land_service_if::HookRejectionsException {

@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use futures::stream::BoxStream;
 #[cfg(fbcode_build)]
-use thrift_streaming::errors::streaming_eden_service::StreamStartStatusStreamError;
-#[cfg(fbcode_build)]
 use thrift_streaming::types::EdenStartStatusUpdate;
+#[cfg(fbcode_build)]
+use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::StreamingEdenService;
 use thrift_types::edenfs_clients::EdenService;

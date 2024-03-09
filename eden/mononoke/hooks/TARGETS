@@ -71,7 +71,6 @@ rust_library(
         "//infrasec/authorization/if:if-aclchecker-rust",
         "//infrasec/authorization/if:if-aclchecker-rust-clients",
         "//infrasec/authorization/if:if-aclchecker-rust-srclients",
-        "//infrasec/authorization/if:if-service-rust",
         "//infrasec/authorization/if:if-service-rust-clients",
         "//infrasec/authorization/if:if-service-rust-srclients",
         "//security/source_control/verify_integrity:verify_integrity_client_lib",

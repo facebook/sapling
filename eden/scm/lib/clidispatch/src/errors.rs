@@ -11,7 +11,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use thiserror::Error;
 #[cfg(feature = "eden")]
-use thrift_types::edenfs as eden;
+use thrift_types::edenfs_clients as eden_clients;
 
 #[derive(Debug, Error)]
 #[error("cannot decode arguments")]
@@ -79,9 +79,7 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
     } else {
         #[cfg(feature = "eden")]
         {
-            if let Some(eden::errors::eden_service::GetScmStatusV2Error::ex(e)) =
-                err.downcast_ref::<eden::errors::eden_service::GetScmStatusV2Error>()
-            {
+            if let Some(eden_clients::errors::GetScmStatusV2Error::ex(e)) = err.downcast_ref() {
                 let _ = io.write_err(format!("abort: {}\n", e.message));
                 let _ = io.flush();
                 return;
@@ -164,6 +162,9 @@ pub fn triage_error(
 mod tests {
     use std::io::Cursor;
 
+    #[cfg(feature = "eden")]
+    use thrift_types::edenfs as eden;
+
     use super::*;
 
     #[test]
@@ -172,14 +173,13 @@ mod tests {
         let error_msg = "cannot compute status while a checkout is currently in progress";
         let expected_error = format!("abort: {}\n", error_msg);
 
-        let error: anyhow::Error =
-            eden::errors::eden_service::GetScmStatusV2Error::ex(eden::EdenError {
-                message: error_msg.to_string(),
-                errorCode: Some(255),
-                errorType: eden::EdenErrorType::CHECKOUT_IN_PROGRESS,
-                ..Default::default()
-            })
-            .into();
+        let error: anyhow::Error = eden_clients::errors::GetScmStatusV2Error::ex(eden::EdenError {
+            message: error_msg.to_string(),
+            errorCode: Some(255),
+            errorType: eden::EdenErrorType::CHECKOUT_IN_PROGRESS,
+            ..Default::default()
+        })
+        .into();
 
         let tin = Cursor::new(Vec::new());
         let tout = Cursor::new(Vec::new());

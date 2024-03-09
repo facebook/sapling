@@ -94,7 +94,7 @@ rust_library(
     name = "pushrebase_client",
     srcs = glob(["client/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "client"},
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "//common/rust/smc-thrift:smc-thrift",
@@ -115,5 +115,5 @@ rust_library(
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:regex",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-    ]),
+    ])) + ["//eden/mononoke/land_service/if:land_service_if-rust-clients"],
 )
