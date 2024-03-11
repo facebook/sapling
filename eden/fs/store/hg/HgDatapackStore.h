@@ -65,76 +65,6 @@ class HgDatapackStore {
 
   void getTreeBatch(const ImportRequestsList& requests);
 
-  folly::Try<TreePtr> getTree(
-      const RelativePath& path,
-      const Hash20& manifestId,
-      const ObjectId& edenTreeId,
-      const ObjectFetchContextPtr& context);
-
-  /**
-   * Imports the tree identified by the given hash from the local store.
-   * Returns nullptr if not found.
-   */
-  TreePtr getTreeLocal(
-      const ObjectId& edenTreeId,
-      const HgProxyHash& proxyHash);
-
-  /**
-   * Imports the tree identified by the given hash from the remote store.
-   * Returns nullptr if not found.
-   */
-  folly::Try<TreePtr> getTreeRemote(
-      const RelativePath& path,
-      const Hash20& manifestId,
-      const ObjectId& edenTreeId,
-      const ObjectFetchContextPtr& context);
-
-  /**
-   * Import multiple blobs at once. The vector parameters have to be the same
-   * length. Promises passed in will be resolved if a blob is successfully
-   * imported. Otherwise the promise will be left untouched.
-   */
-  void getBlobBatch(const ImportRequestsList& requests);
-
-  /**
-   * Imports the blob identified by the given hash from the backing store.
-   * If localOnly is set to true, only fetch the blob from local (memory or
-   * disk) store.
-   *
-   * Returns nullptr if not found.
-   */
-  folly::Try<BlobPtr> getBlob(
-      const HgProxyHash& hgInfo,
-      sapling::FetchMode fetchMode);
-
-  /**
-   * Imports the blob identified by the given hash from the local store.
-   * Returns nullptr if not found.
-   */
-  folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
-    return getBlob(hgInfo, sapling::FetchMode::LocalOnly);
-  }
-
-  /**
-   * Imports the blob identified by the given hash from the remote store.
-   * Returns nullptr if not found.
-   */
-  folly::Try<BlobPtr> getBlobRemote(const HgProxyHash& hgInfo) {
-    return getBlob(hgInfo, sapling::FetchMode::RemoteOnly);
-  }
-
-  /**
-   * Reads blob metadata from hg cache.
-   */
-  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
-
-  /**
-   * Fetch multiple aux data at once.
-   *
-   * This function returns when all the aux data have been fetched.
-   */
-  void getBlobMetadataBatch(const ImportRequestsList& requests);
-
   /**
    * Flush any pending writes to disk.
    *
@@ -143,34 +73,10 @@ class HgDatapackStore {
    */
   void flush();
 
-  /**
-   * Get the metrics tracking the number of live batched blobs.
-   */
-  RequestMetricsScope::LockedRequestWatchList& getLiveBatchedBlobWatches()
-      const {
-    return liveBatchedBlobWatches_;
-  }
-
-  /**
-   * Get the metrics tracking the number of live batched trees.
-   */
-  RequestMetricsScope::LockedRequestWatchList& getLiveBatchedTreeWatches()
-      const {
-    return liveBatchedTreeWatches_;
-  }
-
-  /**
-   * Get the metrics tracking the number of live batched aux data.
-   */
-  RequestMetricsScope::LockedRequestWatchList& getLiveBatchedBlobMetaWatches()
-      const {
-    return liveBatchedBlobMetaWatches_;
-  }
-
- private:
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
 
+ private:
   template <typename T>
   std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
   prepareRequests(

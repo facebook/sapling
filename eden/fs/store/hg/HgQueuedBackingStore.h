@@ -195,6 +195,8 @@ class HgQueuedBackingStore final : public BackingStore {
   static ObjectId staticParseObjectId(folly::StringPiece objectId);
   static std::string staticRenderObjectId(const ObjectId& objectId);
 
+  std::optional<Hash20> getManifestNode(const ObjectId& commitId);
+
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
@@ -204,6 +206,9 @@ class HgQueuedBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& /* context */) override {
     throw std::domain_error("unimplemented");
   }
+
+  void getTreeBatch(const HgDatapackStore::ImportRequestsList& requests);
+
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
@@ -213,6 +218,11 @@ class HgQueuedBackingStore final : public BackingStore {
   folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+
+  /**
+   * Reads blob metadata from hg cache.
+   */
+  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
 
   // Get blob step functions
   folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
@@ -272,6 +282,12 @@ class HgQueuedBackingStore final : public BackingStore {
       Hash20 manifestNode,
       const ObjectFetchContextPtr& context);
 
+  folly::Try<TreePtr> getTreeFromBackingStore(
+      const RelativePath& path,
+      const Hash20& manifestId,
+      const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context);
+
   folly::Future<TreePtr> retryGetTree(
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,
@@ -289,6 +305,21 @@ class HgQueuedBackingStore final : public BackingStore {
       std::vector<std::shared_ptr<HgImportRequest>>&& requests);
   void processBlobMetaImportRequests(
       std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+
+  /**
+   * Import multiple blobs at once. The vector parameters have to be the same
+   * length. Promises passed in will be resolved if a blob is successfully
+   * imported. Otherwise the promise will be left untouched.
+   */
+  void getBlobBatch(const HgDatapackStore::ImportRequestsList& requests);
+
+  /**
+   * Fetch multiple aux data at once.
+   *
+   * This function returns when all the aux data have been fetched.
+   */
+  void getBlobMetadataBatch(
+      const HgDatapackStore::ImportRequestsList& requests);
 
   /**
    * The worker runloop function.
@@ -309,6 +340,17 @@ class HgQueuedBackingStore final : public BackingStore {
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
+  /**
+   * Imports the blob identified by the given hash from the backing store.
+   * If localOnly is set to true, only fetch the blob from local (memory or
+   * disk) store.
+   *
+   * Returns nullptr if not found.
+   */
+  folly::Try<BlobPtr> getBlobFromBackingStore(
+      const HgProxyHash& hgInfo,
+      sapling::FetchMode fetchMode);
+
  public:
   /**
    * Fetch the blob metadata from Mercurial.
@@ -325,6 +367,22 @@ class HgQueuedBackingStore final : public BackingStore {
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
+
+  /**
+   * Imports the blob identified by the given hash from the local store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
+    return getBlobFromBackingStore(hgInfo, sapling::FetchMode::LocalOnly);
+  }
+
+  /**
+   * Imports the blob identified by the given hash from the remote store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<BlobPtr> getBlobRemote(const HgProxyHash& hgInfo) {
+    return getBlobFromBackingStore(hgInfo, sapling::FetchMode::RemoteOnly);
+  }
 
  private:
   /**
@@ -380,6 +438,30 @@ class HgQueuedBackingStore final : public BackingStore {
   RequestMetricsScope::LockedRequestWatchList& getLiveImportWatches(
       HgImportObject object) const;
 
+  template <typename T>
+  std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
+  prepareRequests(
+      const HgDatapackStore::ImportRequestsList& importRequests,
+      const std::string& requestType);
+
+  /**
+   * Imports the tree identified by the given hash from the local store.
+   * Returns nullptr if not found.
+   */
+  TreePtr getTreeLocal(
+      const ObjectId& edenTreeId,
+      const HgProxyHash& proxyHash);
+
+  /**
+   * Imports the tree identified by the given hash from the remote store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<TreePtr> getTreeRemote(
+      const RelativePath& path,
+      const Hash20& manifestId,
+      const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context);
+
   /**
    * isRecordingFetch_ indicates if HgQueuedBackingStore is recording paths
    * for fetched files. Initially we don't record paths. When
@@ -428,6 +510,8 @@ class HgQueuedBackingStore final : public BackingStore {
    */
   std::unique_ptr<BackingStoreLogger> logger_;
 
+  FaultInjector& faultInjector_;
+
   // The last time we logged a missing proxy hash so the minimum interval is
   // limited to EdenConfig::missingHgProxyHashLogInterval.
   folly::Synchronized<std::chrono::steady_clock::time_point>
@@ -448,6 +532,12 @@ class HgQueuedBackingStore final : public BackingStore {
       liveImportBlobMetaWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       liveImportPrefetchWatches_;
+
+  // Track metrics for the number of live batches
+  mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList liveBatchedTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveBatchedBlobMetaWatches_;
 
   std::unique_ptr<HgBackingStoreOptions> runtimeOptions_;
 

@@ -27,12 +27,14 @@
 
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/EnumValue.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/LocalStore.h"
@@ -95,14 +97,14 @@ class SaplingRetryThreadFactory : public folly::InitThreadFactory {
             [] {}) {}
 };
 
-HgDatapackStore::SaplingNativeOptions computeSaplingOptions() {
-  HgDatapackStore::SaplingNativeOptions options{};
+sapling::SaplingNativeBackingStoreOptions computeSaplingOptions() {
+  sapling::SaplingNativeBackingStoreOptions options{};
   options.allow_retries = false;
   return options;
 }
 
-HgDatapackStore::SaplingNativeOptions computeTestSaplingOptions() {
-  HgDatapackStore::SaplingNativeOptions options{};
+sapling::SaplingNativeBackingStoreOptions computeTestSaplingOptions() {
+  sapling::SaplingNativeBackingStoreOptions options{};
   options.allow_retries = false;
   return options;
 }
@@ -119,6 +121,92 @@ std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
   options->ignoreFilteredPathsConfig =
       options->ignoreFilteredPathsConfig.value_or(false);
   return options;
+}
+
+TreeEntryType fromRawTreeEntryType(sapling::TreeEntryType type) {
+  switch (type) {
+    case sapling::TreeEntryType::RegularFile:
+      return TreeEntryType::REGULAR_FILE;
+    case sapling::TreeEntryType::Tree:
+      return TreeEntryType::TREE;
+    case sapling::TreeEntryType::ExecutableFile:
+      return TreeEntryType::EXECUTABLE_FILE;
+    case sapling::TreeEntryType::Symlink:
+      return TreeEntryType::SYMLINK;
+  }
+  EDEN_BUG() << "unknown tree entry type " << static_cast<uint32_t>(type)
+             << " loaded from data store";
+}
+
+Tree::value_type fromRawTreeEntry(
+    sapling::TreeEntry entry,
+    RelativePathPiece path,
+    HgObjectIdFormat hgObjectIdFormat) {
+  std::optional<uint64_t> size;
+  std::optional<Hash20> contentSha1;
+  std::optional<Hash32> contentBlake3;
+
+  if (entry.has_size) {
+    size = entry.size;
+  }
+
+  if (entry.has_sha1) {
+    contentSha1.emplace(Hash20(std::move(entry.content_sha1)));
+  }
+
+  if (entry.has_blake3) {
+    contentBlake3.emplace(Hash32(std::move(entry.content_blake3)));
+  }
+
+  auto name = PathComponent(folly::StringPiece{
+      folly::ByteRange{entry.name.data(), entry.name.size()}});
+  Hash20 hash(std::move(entry.hash));
+
+  auto fullPath = path + name;
+  auto proxyHash = HgProxyHash::store(fullPath, hash, hgObjectIdFormat);
+
+  auto treeEntry = TreeEntry{
+      proxyHash,
+      fromRawTreeEntryType(entry.ttype),
+      size,
+      contentSha1,
+      contentBlake3};
+  return {std::move(name), std::move(treeEntry)};
+}
+
+bool doFilteredPathsApply(
+    bool ignoreFilteredPathsConfig,
+    const std::unordered_set<RelativePath>& filteredPaths,
+    const RelativePath& path) {
+  return ignoreFilteredPathsConfig || filteredPaths.empty() ||
+      filteredPaths.count(path) == 0;
+}
+
+TreePtr fromRawTree(
+    const sapling::Tree* tree,
+    const ObjectId& edenTreeId,
+    RelativePathPiece path,
+    HgObjectIdFormat hgObjectIdFormat,
+    const std::unordered_set<RelativePath>& filteredPaths,
+    bool ignoreFilteredPathsConfig) {
+  Tree::container entries{kPathMapDefaultCaseSensitive};
+
+  entries.reserve(tree->entries.size());
+  for (uintptr_t i = 0; i < tree->entries.size(); i++) {
+    try {
+      auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
+      // TODO(xavierd): In the case where this checks becomes too hot, we may
+      // need to change to a Trie like datastructure for fast filtering.
+      if (doFilteredPathsApply(
+              ignoreFilteredPathsConfig, filteredPaths, path + entry.first)) {
+        entries.emplace(entry.first, std::move(entry.second));
+      }
+    } catch (const PathComponentContainsDirectorySeparator& ex) {
+      XLOG(WARN) << "Ignoring directory entry: " << ex.what();
+    }
+  }
+  return std::make_shared<TreePtr::element_type>(
+      std::move(entries), edenTreeId);
 }
 } // namespace
 
@@ -182,6 +270,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
+      faultInjector_{*faultInjector},
       runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
@@ -235,6 +324,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
+      faultInjector_{*faultInjector},
       runtimeOptions_(
           computeTestRuntimeOptions(std::make_unique<HgBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/false))),
@@ -298,7 +388,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
 
-  datapackStore_->getBlobBatch(requests);
+  getBlobBatch(requests);
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;
@@ -358,7 +448,7 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
 
                // Retry using datapackStore (SaplingNativeBackingStore).
                auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
-               auto blob = datapackStore_->getBlob(
+               auto blob = getBlobFromBackingStore(
                    hgInfo, sapling::FetchMode::AllowRemote);
                if (blob.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
@@ -387,6 +477,79 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
       });
 }
 
+void HgQueuedBackingStore::getBlobBatch(
+    const HgDatapackStore::ImportRequestsList& importRequests) {
+  auto preparedRequests =
+      prepareRequests<HgImportRequest::BlobImport>(importRequests, "Blob");
+  auto importRequestsMap = std::move(preparedRequests.first);
+  auto requests = std::move(preparedRequests.second);
+
+  store_.getBlobBatch(
+      folly::range(requests),
+      false,
+      // store_->getBlobBatch is blocking, hence we can take these by reference.
+      [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+        if (content.hasException()) {
+          XLOGF(
+              DBG6,
+              "Failed to import node={} from EdenAPI (batch {}/{}): {}",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size(),
+              content.exception().what().toStdString());
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported node={} from EdenAPI (batch: {}/{})",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size());
+        }
+
+        if (content.hasException()) {
+          if (structuredLogger_) {
+            structuredLogger_->logEvent(FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::Blob,
+                content.exception().what().toStdString(),
+                false});
+          }
+
+          return;
+        }
+
+        XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(requests[index]));
+        const auto& nodeId = requests[index];
+        auto& [importRequestList, watch] = importRequestsMap[nodeId];
+        auto result = content.hasException()
+            ? folly::Try<BlobPtr>{content.exception()}
+            : folly::Try{
+                  std::make_shared<BlobPtr::element_type>(*content.value())};
+        for (auto& importRequest : importRequestList) {
+          importRequest->getPromise<BlobPtr>()->setWith(
+              [&]() -> folly::Try<BlobPtr> { return result; });
+        }
+
+        // Make sure that we're stopping this watch.
+        watch.reset();
+      });
+}
+
+folly::Try<BlobPtr> HgQueuedBackingStore::getBlobFromBackingStore(
+    const HgProxyHash& hgInfo,
+    sapling::FetchMode fetchMode) {
+  auto blob = store_.getBlob(hgInfo.byteHash(), fetchMode);
+
+  using GetBlobResult = folly::Try<BlobPtr>;
+
+  if (blob.hasValue()) {
+    return GetBlobResult{
+        std::make_shared<BlobPtr::element_type>(std::move(*blob.value()))};
+  } else {
+    return GetBlobResult{blob.exception()};
+  }
+}
+
 void HgQueuedBackingStore::processTreeImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
@@ -407,7 +570,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
-  datapackStore_->getTreeBatch(requests);
+  getTreeBatch(requests);
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;
@@ -449,6 +612,150 @@ void HgQueuedBackingStore::processTreeImportRequests(
   }
 }
 
+void HgQueuedBackingStore::getTreeBatch(
+    const HgDatapackStore::ImportRequestsList& importRequests) {
+  auto preparedRequests =
+      prepareRequests<HgImportRequest::TreeImport>(importRequests, "Tree");
+  auto importRequestsMap = std::move(preparedRequests.first);
+  auto requests = std::move(preparedRequests.second);
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
+  const auto filteredPaths =
+      config_->getEdenConfig()->hgFilteredPaths.getValue();
+
+  faultInjector_.check("HgDatapackStore::getTreeBatch", "");
+  store_.getTreeBatch(
+      folly::range(requests),
+      false,
+      // store_.getTreeBatch is blocking, hence we can take these by reference.
+      [&, filteredPaths = filteredPaths](
+          size_t index,
+          folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
+        if (content.hasException()) {
+          XLOGF(
+              DBG6,
+              "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size(),
+              content.exception().what().toStdString());
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported node={} from EdenAPI (batch tree: {}/{})",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size());
+        }
+
+        if (content.hasException()) {
+          if (structuredLogger_) {
+            structuredLogger_->logEvent(FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::Tree,
+                content.exception().what().toStdString(),
+                false});
+          }
+
+          return;
+        }
+
+        XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(requests[index]));
+        const auto& nodeId = requests[index];
+        auto& [importRequestList, watch] = importRequestsMap[nodeId];
+        for (auto& importRequest : importRequestList) {
+          auto* treeRequest =
+              importRequest->getRequest<HgImportRequest::TreeImport>();
+          importRequest->getPromise<TreePtr>()->setWith(
+              [&]() -> folly::Try<TreePtr> {
+                if (content.hasException()) {
+                  return folly::Try<TreePtr>{content.exception()};
+                }
+                return folly::Try{fromRawTree(
+                    content.value().get(),
+                    treeRequest->hash,
+                    treeRequest->proxyHash.path(),
+                    hgObjectIdFormat,
+                    *filteredPaths,
+                    runtimeOptions_->ignoreConfigFilter())};
+              });
+        }
+
+        // Make sure that we're stopping this watch.
+        watch.reset();
+      });
+}
+
+template <typename T>
+std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
+HgQueuedBackingStore::prepareRequests(
+    const HgDatapackStore::ImportRequestsList& importRequests,
+    const std::string& requestType) {
+  // TODO: extract each ClientRequestInfo from importRequests into a
+  // sapling::ClientRequestInfo and pass them with the corresponding
+  // sapling::NodeId
+
+  // Group requests by proxyHash to ensure no duplicates in fetch request to
+  // SaplingNativeBackingStore.
+  HgDatapackStore::ImportRequestsMap importRequestsMap;
+  for (const auto& importRequest : importRequests) {
+    auto nodeId = importRequest->getRequest<T>()->proxyHash.byteHash();
+
+    // Look for and log duplicates.
+    const auto& importRequestsEntry = importRequestsMap.find(nodeId);
+    if (importRequestsEntry != importRequestsMap.end()) {
+      XLOGF(
+          DBG9,
+          "Duplicate {} fetch request with proxyHash: {}",
+          requestType,
+          nodeId);
+      auto& importRequestList = importRequestsEntry->second.first;
+
+      // Only look for mismatched requests if logging level is high enough.
+      // Make sure this level is the same as the XLOG_IF statement below.
+      if (XLOG_IS_ON(DBG9)) {
+        // Log requests that do not have the same hash (ObjectId).
+        // This happens when two paths (file or directory) have same content.
+        for (const auto& priorRequest : importRequestList) {
+          XLOGF_IF(
+              DBG9,
+              UNLIKELY(
+                  priorRequest->template getRequest<T>()->hash !=
+                  importRequest->getRequest<T>()->hash),
+              "{} requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
+              "This should not happen. Previous request: hash='{}', proxyHash='{}', proxyHash.path='{}'; "
+              "current request: hash='{}', proxyHash ='{}', proxyHash.path='{}'.",
+              requestType,
+              priorRequest->template getRequest<T>()->hash.asHexString(),
+              folly::hexlify(
+                  priorRequest->template getRequest<T>()->proxyHash.byteHash()),
+              priorRequest->template getRequest<T>()->proxyHash.path(),
+              importRequest->getRequest<T>()->hash.asHexString(),
+              folly::hexlify(
+                  importRequest->getRequest<T>()->proxyHash.byteHash()),
+              importRequest->getRequest<T>()->proxyHash.path());
+        }
+      }
+
+      importRequestList.emplace_back(importRequest);
+    } else {
+      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
+      importRequestsMap.emplace(
+          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
+    }
+  }
+
+  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
+  std::vector<sapling::NodeId> requests;
+  requests.reserve(importRequestsMap.size());
+  std::transform(
+      importRequestsMap.begin(),
+      importRequestsMap.end(),
+      std::back_inserter(requests),
+      [](auto& pair) { return pair.first; });
+
+  return std::make_pair(std::move(importRequestsMap), std::move(requests));
+}
+
 void HgQueuedBackingStore::processBlobMetaImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
@@ -470,7 +777,7 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
     XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
   }
 
-  datapackStore_->getBlobMetadataBatch(requests);
+  getBlobMetadataBatch(requests);
 
   {
     for (auto& request : requests) {
@@ -488,6 +795,76 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
       promise->setValue(nullptr);
     }
   }
+}
+
+void HgQueuedBackingStore::getBlobMetadataBatch(
+    const HgDatapackStore::ImportRequestsList& importRequests) {
+  auto preparedRequests = prepareRequests<HgImportRequest::BlobMetaImport>(
+      importRequests, "BlobMetadata");
+  auto importRequestsMap = std::move(preparedRequests.first);
+  auto requests = std::move(preparedRequests.second);
+
+  store_.getBlobMetadataBatch(
+      folly::range(requests),
+      false,
+      // store_.getBlobMetadataBatch is blocking, hence we can take these by
+      // reference.
+      [&](size_t index,
+          folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
+        if (auxTry.hasException()) {
+          XLOGF(
+              DBG6,
+              "Failed to import metadata node={} from EdenAPI (batch {}/{}): {}",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size(),
+              auxTry.exception().what().toStdString());
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported metadata node={} from EdenAPI (batch: {}/{})",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size());
+        }
+
+        if (auxTry.hasException()) {
+          if (structuredLogger_) {
+            structuredLogger_->logEvent(FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::BlobMetadata,
+                auxTry.exception().what().toStdString(),
+                false});
+          }
+
+          return;
+        }
+
+        XLOGF(
+            DBG9, "Imported BlobMetadata={}", folly::hexlify(requests[index]));
+        const auto& nodeId = requests[index];
+        auto& [importRequestList, watch] = importRequestsMap[nodeId];
+        folly::Try<BlobMetadataPtr> result;
+        if (auxTry.hasException()) {
+          result = folly::Try<BlobMetadataPtr>{auxTry.exception()};
+        } else {
+          auto& aux = auxTry.value();
+          std::optional<Hash32> blake3;
+          if (aux->has_blake3) {
+            blake3.emplace(Hash32{std::move(aux->content_blake3)});
+          }
+
+          result = folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
+              Hash20{std::move(aux->content_sha1)}, blake3, aux->total_size)};
+        }
+        for (auto& importRequest : importRequestList) {
+          importRequest->getPromise<BlobMetadataPtr>()->setWith(
+              [&]() -> folly::Try<BlobMetadataPtr> { return result; });
+        }
+
+        // Make sure that we're stopping this watch.
+        watch.reset();
+      });
 }
 
 void HgQueuedBackingStore::processRequest() {
@@ -622,7 +999,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = datapackStore_->getTreeLocal(id, proxyHash)) {
+  if (auto tree = getTreeLocal(id, proxyHash)) {
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
     return folly::makeSemiFuture(GetTreeResult{
@@ -683,6 +1060,56 @@ HgQueuedBackingStore::getTreeEnqueue(
       });
 }
 
+TreePtr HgQueuedBackingStore::getTreeLocal(
+    const ObjectId& edenTreeId,
+    const HgProxyHash& proxyHash) {
+  auto tree =
+      store_.getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
+  if (tree.hasValue()) {
+    auto hgObjectIdFormat =
+        config_->getEdenConfig()->hgObjectIdFormat.getValue();
+    const auto filteredPaths =
+        config_->getEdenConfig()->hgFilteredPaths.getValue();
+    return fromRawTree(
+        tree.value().get(),
+        edenTreeId,
+        proxyHash.path(),
+        hgObjectIdFormat,
+        *filteredPaths,
+        runtimeOptions_->ignoreConfigFilter());
+  }
+
+  return nullptr;
+}
+
+folly::Try<TreePtr> HgQueuedBackingStore::getTreeRemote(
+    const RelativePath& path,
+    const Hash20& manifestId,
+    const ObjectId& edenTreeId,
+    const ObjectFetchContextPtr& /*context*/) {
+  auto tree = store_.getTree(
+      manifestId.getBytes(),
+      sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
+
+  using GetTreeResult = folly::Try<TreePtr>;
+
+  if (tree.hasValue()) {
+    auto hgObjectIdFormat =
+        config_->getEdenConfig()->hgObjectIdFormat.getValue();
+    const auto filteredPaths =
+        config_->getEdenConfig()->hgFilteredPaths.getValue();
+    return GetTreeResult{fromRawTree(
+        tree.value().get(),
+        edenTreeId,
+        path,
+        std::move(hgObjectIdFormat),
+        std::move(*filteredPaths),
+        runtimeOptions_->ignoreConfigFilter())};
+  } else {
+    return GetTreeResult{tree.exception()};
+  }
+}
+
 folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
@@ -701,7 +1128,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  auto blob = datapackStore_->getBlobLocal(proxyHash);
+  auto blob = getBlobLocal(proxyHash);
   if (blob.hasValue()) {
     return folly::makeSemiFuture(GetBlobResult{
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
@@ -783,7 +1210,7 @@ HgQueuedBackingStore::getBlobMetadata(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::BlobMetadata);
 
-  auto metadata = datapackStore_->getLocalBlobMetadata(proxyHash);
+  auto metadata = getLocalBlobMetadata(proxyHash);
   if (metadata.hasValue()) {
     return folly::makeSemiFuture(GetBlobMetaResult{
         std::move(metadata.value()),
@@ -853,6 +1280,28 @@ HgQueuedBackingStore::getBlobMetadataImpl(
       });
 }
 
+folly::Try<BlobMetadataPtr> HgQueuedBackingStore::getLocalBlobMetadata(
+    const HgProxyHash& hgInfo) {
+  auto metadata =
+      store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
+
+  using GetBlobMetadataResult = folly::Try<BlobMetadataPtr>;
+
+  if (metadata.hasValue()) {
+    std::optional<Hash32> blake3;
+    if (metadata.value()->has_blake3) {
+      blake3.emplace(Hash32{std::move(metadata.value()->content_blake3)});
+    }
+    return GetBlobMetadataResult{
+        std::make_shared<BlobMetadataPtr::element_type>(BlobMetadata{
+            Hash20{std::move(metadata.value()->content_sha1)},
+            blake3,
+            metadata.value()->total_size})};
+  } else {
+    return GetBlobMetadataResult{metadata.exception()};
+  }
+}
+
 ImmediateFuture<BackingStore::GetRootTreeResult>
 HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
@@ -896,9 +1345,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifest(
     const ObjectFetchContextPtr& context) {
   return folly::via(
              serverThreadPool_,
-             [this, commitId] {
-               return datapackStore_->getManifestNode(commitId);
-             })
+             [this, commitId] { return getManifestNode(commitId); })
       .thenValue([this, commitId, fetchContext = context.copy()](
                      auto manifestNode) {
         if (!manifestNode.has_value()) {
@@ -913,6 +1360,16 @@ folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifest(
             manifestNode.value());
         return importTreeManifestImpl(*std::move(manifestNode), fetchContext);
       });
+}
+
+std::optional<Hash20> HgQueuedBackingStore::getManifestNode(
+    const ObjectId& commitId) {
+  auto manifestNode = store_.getManifestNode(commitId.getBytes());
+  if (!manifestNode.has_value()) {
+    XLOGF(DBG2, "Error while getting manifest node from datapackstore");
+    return std::nullopt;
+  }
+  return Hash20(*std::move(manifestNode));
 }
 
 folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifestImpl(
@@ -937,7 +1394,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifestImpl(
   // try SaplingNativeBackingStore
   folly::stop_watch<std::chrono::milliseconds> watch;
   auto tree =
-      datapackStore_->getTree(path.copy(), manifestNode, objectId, context);
+      getTreeFromBackingStore(path.copy(), manifestNode, objectId, context);
   if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from SaplingNativeBackingStore";
@@ -983,6 +1440,49 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTree(
       });
 }
 
+folly::Try<TreePtr> HgQueuedBackingStore::getTreeFromBackingStore(
+    const RelativePath& path,
+    const Hash20& manifestId,
+    const ObjectId& edenTreeId,
+    const ObjectFetchContextPtr& /*context*/) {
+  // For root trees we will try getting the tree locally first.  This allows
+  // us to catch when Mercurial might have just written a tree to the store,
+  // and refresh the store so that the store can pick it up.  We don't do
+  // this for all trees, as it would cause a lot of additional work on every
+  // cache miss, and just doing it for root trees is sufficient to detect the
+  // scenario where Mercurial just wrote a brand new tree.
+  sapling::FetchMode fetchMode = sapling::FetchMode::AllowRemote;
+  if (path.empty()) {
+    fetchMode = sapling::FetchMode::LocalOnly;
+  }
+  auto tree = store_.getTree(manifestId.getBytes(), fetchMode);
+  if (tree.hasException() && fetchMode == sapling::FetchMode::LocalOnly) {
+    // Mercurial might have just written the tree to the store. Refresh the
+    // store and try again, this time allowing remote fetches.
+    store_.flush();
+    tree =
+        store_.getTree(manifestId.getBytes(), sapling::FetchMode::AllowRemote);
+  }
+
+  using GetTreeResult = folly::Try<TreePtr>;
+
+  if (tree.hasValue()) {
+    auto hgObjectIdFormat =
+        config_->getEdenConfig()->hgObjectIdFormat.getValue();
+    const auto filteredPaths =
+        config_->getEdenConfig()->hgFilteredPaths.getValue();
+    return GetTreeResult{fromRawTree(
+        tree.value().get(),
+        edenTreeId,
+        path,
+        std::move(hgObjectIdFormat),
+        std::move(*filteredPaths),
+        runtimeOptions_->ignoreConfigFilter())};
+  } else {
+    return GetTreeResult{tree.exception()};
+  }
+}
+
 folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
     Hash20 manifestNode,
     ObjectId edenTreeID,
@@ -1012,7 +1512,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
 
                // Retry using datapackStore (SaplingNativeBackingStore)
                auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
-               auto tree = datapackStore_->getTree(
+               auto tree = getTreeFromBackingStore(
                    path, manifestNode, edenTreeID, /*context*/ nullptr);
                if (tree.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
@@ -1179,11 +1679,11 @@ HgQueuedBackingStore::getLiveImportWatches(HgImportObject object) const {
     case HgImportObject::PREFETCH:
       return liveImportPrefetchWatches_;
     case HgImportObject::BATCHED_BLOB:
-      return datapackStore_->getLiveBatchedBlobWatches();
+      return liveBatchedBlobWatches_;
     case HgImportObject::BATCHED_TREE:
-      return datapackStore_->getLiveBatchedTreeWatches();
+      return liveBatchedTreeWatches_;
     case HgImportObject::BATCHED_BLOBMETA:
-      return datapackStore_->getLiveBatchedBlobMetaWatches();
+      return liveBatchedBlobMetaWatches_;
   }
   EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
