@@ -17,7 +17,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
-use commit_graph_types::edges::ChangesetParents;
+pub use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;

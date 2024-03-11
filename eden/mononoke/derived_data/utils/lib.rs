@@ -24,10 +24,10 @@ use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
-use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
+use commit_graph::ChangesetParents;
 use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
@@ -796,7 +796,7 @@ impl Hash for DeriveGraph {
 ///       function in mononoke.
 pub async fn build_derive_graph(
     ctx: &CoreContext,
-    repo: &(impl RepoDerivedDataArc + ChangesetFetcherArc + Send + Sync + Clone + 'static),
+    repo: &(impl RepoDerivedDataArc + CommitGraphArc + Send + Sync + Clone + 'static),
     csids: Vec<ChangesetId>,
     mut derivers: Vec<Arc<dyn DerivedUtils>>,
     batch_size: usize,
@@ -973,14 +973,14 @@ impl ThinOut {
 ///   - derivers that should be used on this changeset
 pub fn find_underived_many(
     ctx: CoreContext,
-    repo: impl RepoDerivedDataArc + ChangesetFetcherArc + Send + Sync + Clone + 'static,
+    repo: impl RepoDerivedDataArc + CommitGraphArc + Send + Sync + Clone + 'static,
     csids: Vec<ChangesetId>,
     derivers: Vec<Arc<dyn DerivedUtils>>,
     thin_out: ThinOut,
 ) -> impl Stream<
     Item = Result<(
         ChangesetId,
-        Vec<ChangesetId>,
+        ChangesetParents,
         Arc<Vec<Arc<dyn DerivedUtils>>>,
     )>,
 > {
@@ -991,10 +991,10 @@ pub fn find_underived_many(
         .collect();
 
     let visited = Arc::new(Mutex::new(HashSet::new()));
-    let changeset_fetcher = repo.changeset_fetcher_arc();
+    let commit_graph = repo.commit_graph_arc();
     bounded_traversal::bounded_traversal_stream(100, init, {
         move |(csid, derivers, mut thin_out)| {
-            cloned!(changeset_fetcher, visited, repo, ctx);
+            cloned!(commit_graph, visited, repo, ctx);
             async move {
                 let derivers = if thin_out.check_and_update() {
                     let repo = &repo;
@@ -1026,7 +1026,7 @@ pub fn find_underived_many(
                     // all derived data has already been derived
                     anyhow::Ok((None, Vec::new()))
                 } else {
-                    let parents = changeset_fetcher.get_parents(&ctx, csid).await?;
+                    let parents = commit_graph.changeset_parents(&ctx, csid).await?;
                     let dependencies: Vec<_> = parents
                         .iter()
                         .copied()
@@ -1143,7 +1143,6 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use commit_graph::CommitGraph;
     use derived_data::BonsaiDerived;
@@ -1177,8 +1176,6 @@ mod tests {
         repo_derived_data: RepoDerivedData,
         #[facet]
         filestore_config: FilestoreConfig,
-        #[facet]
-        changeset_fetcher: dyn ChangesetFetcher,
         #[facet]
         changesets: dyn Changesets,
         #[facet]
