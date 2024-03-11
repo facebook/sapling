@@ -43,6 +43,7 @@ use pathmatcher::UnionMatcher;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
+use serde::Deserialize;
 use storemodel::FileStore;
 use tracing::debug;
 use tracing::instrument;
@@ -90,7 +91,8 @@ use status::Status;
 // Affects progress update frequency and thread count for small checkout.
 const VFS_BATCH_SIZE: usize = 128;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CheckoutMode {
     RevertConflicts,
     AbortIfConflicts,
@@ -892,7 +894,8 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
     truncated as i32
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "action", content = "maybe_bookmark")]
 pub enum BookmarkAction {
     // Don't touch active bookmark.
     None,
@@ -902,7 +905,8 @@ pub enum BookmarkAction {
     SetActiveIfValid(String),
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ReportMode {
     // No informational output.
     Quiet,

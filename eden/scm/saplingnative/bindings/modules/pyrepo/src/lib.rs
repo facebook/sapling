@@ -16,8 +16,14 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use checkout::BookmarkAction;
+use checkout::CheckoutMode;
+use checkout::ReportMode;
 use configmodel::config::ConfigExt;
+use context::CoreContext;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
+use cpython_ext::convert::Serde;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
@@ -35,6 +41,7 @@ use pyworkingcopy::workingcopy as PyWorkingCopy;
 use revisionstore::ContentStoreBuilder;
 use rsrepo::repo::Repo;
 use rsworkingcopy::workingcopy::WorkingCopy;
+use types::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "repo"].join(".");
@@ -240,6 +247,30 @@ py_class!(pub class repo |py| {
         let repo = self.inner(py).write();
         let _ = repo.file_store().map_pyerr(py)?;
         PyEagerRepoStore::create_instance(py, repo.eager_store().unwrap())
+    }
+
+    def goto(
+        &self,
+        ctx: ImplInto<CoreContext>,
+        target: Serde<HgId>,
+        bookmark: Serde<BookmarkAction>,
+        mode: Serde<CheckoutMode>,
+        report_mode: Serde<ReportMode>,
+    ) -> PyResult<(usize, usize, usize, usize)> {
+        let repo = self.inner(py).read();
+        let wc = repo.working_copy().map_pyerr(py)?;
+        checkout::checkout(
+            &ctx.0,
+            &repo,
+            &wc.lock().map_pyerr(py)?,
+            target.0,
+            bookmark.0,
+            mode.0,
+            report_mode.0,
+        ).map(|opt_stats| {
+            let (updated, removed) = opt_stats.unwrap_or_default();
+            (updated, 0, removed, 0)
+        }).map_pyerr(py)
     }
 });
 
