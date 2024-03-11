@@ -97,10 +97,10 @@ command = registrar.command(cmdtable)
 WHITE_SPACE_PATTERN = re.compile(b"\\s+")
 
 
-def gen_3way_merger(ui, basetext, atext, btext, algos=()):
+def gen_3way_merger(ui, basetext, atext, btext, filepath, algos=()):
     ui.setconfig("automerge", "mode", "accept")
     ui.setconfig("automerge", "merge-algos", ",".join(algos))
-    return Merge3Text(basetext, atext, btext, ui=ui)
+    return Merge3Text(basetext, atext, btext, ui=ui, file_path=filepath)
 
 
 @dataclass
@@ -132,7 +132,7 @@ def debugsmerge(ui, repo, *args, **opts):
 
     algos = str_to_tuple(opts.get("algos"))
     desttext, srctext, basetext = [readfile(p) for p in args]
-    m3 = gen_3way_merger(ui, basetext, desttext, srctext, algos)
+    m3 = gen_3way_merger(ui, basetext, desttext, srctext, args[-1], algos)
     lines = render_mergediff2(m3, b"dest", b"source", b"base")[0]
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
@@ -175,7 +175,7 @@ def sresolve(ui, repo, *args, **opts):
     basetext = repo[base][filepath].data()
     algos = str_to_tuple(opts.get("algos"))
 
-    m3 = gen_3way_merger(ui, basetext, desttext, srctext, algos)
+    m3 = gen_3way_merger(ui, basetext, desttext, srctext, filepath, algos)
 
     def gen_label(prefix, ctx):
         s = f"{prefix}: {ctx} - " + ctx.description().split("\n")[0]
@@ -353,7 +353,7 @@ def merge_file(repo, dstctx, srcctx, basectx, mergectx, filepath, algos, bench_s
 
     bench_stats.changed_files += 1
 
-    m3 = gen_3way_merger(repo.ui, basetext, dsttext, srctext, algos)
+    m3 = gen_3way_merger(repo.ui, basetext, dsttext, srctext, filepath, algos)
     mergedlines, conflictscount = render_minimized(m3)
     mergedtext = b"".join(mergedlines)
 

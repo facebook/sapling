@@ -369,7 +369,14 @@ class Merge3Text:
     incorporating the changes from both BASE->OTHER and BASE->THIS."""
 
     def __init__(
-        self, basetext, atext, btext, ui=None, in_wordmerge=False, premerge=False
+        self,
+        basetext,
+        atext,
+        btext,
+        ui=None,
+        in_wordmerge=False,
+        premerge=False,
+        file_path=None,
     ):
         self.in_wordmerge = in_wordmerge
 
@@ -379,6 +386,7 @@ class Merge3Text:
         self.automerge_mode = ""
         self.init_automerge_fields(ui)
         self.premerge = premerge
+        self.file_path = file_path
 
         if in_wordmerge and self.automerge_fns:
             raise error.Abort(
@@ -1000,8 +1008,16 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
 
     _automerge_metrics.set_commits(localctx, basectx, otherctx)
 
+    file_path = basectx.path()
     premerge = opts.get("premerge", False)
-    m3 = Merge3Text(basetext, localtext, othertext, ui=ui, premerge=premerge)
+    m3 = Merge3Text(
+        basetext,
+        localtext,
+        othertext,
+        ui=ui,
+        premerge=premerge,
+        file_path=file_path,
+    )
 
     conflictscount = 0
     if mode == "union":
