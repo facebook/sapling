@@ -25,8 +25,6 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
-        "//eden/common/testharness:temp_file",
-        "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
@@ -35,7 +33,6 @@ cpp_unittest(
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/store/hg:hg_backing_store_options",
-        "//eden/fs/store/hg:hg_datapack_store",
         "//eden/fs/store/hg:hg_import_request",
         "//eden/fs/store/hg:hg_import_request_queue",
         "//eden/fs/store/hg:hg_proxy_hash",

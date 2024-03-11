@@ -143,6 +143,7 @@ class HgQueuedBackingStore final : public BackingStore {
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       std::shared_ptr<ReloadableConfig> config,
+      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);

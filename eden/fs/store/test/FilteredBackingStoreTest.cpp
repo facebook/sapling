@@ -119,12 +119,17 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
 
   FaultInjector faultInjector{/*enabled=*/false};
 
+  std::unique_ptr<HgBackingStoreOptions> runtimeOptions =
+      std::make_unique<HgBackingStoreOptions>(
+          /*ignoreFilteredPathsConfig=*/false);
+
   std::shared_ptr<HgQueuedBackingStore> wrappedStore_{
       std::make_shared<HgQueuedBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
           edenConfig,
+          std::move(runtimeOptions),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector)};

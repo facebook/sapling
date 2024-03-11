@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 
+#include <algorithm>
 #include <chrono>
 #include <thread>
 #include <utility>
@@ -110,13 +111,6 @@ sapling::SaplingNativeBackingStoreOptions computeTestSaplingOptions() {
 }
 
 std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
-    std::unique_ptr<HgBackingStoreOptions> options) {
-  options->ignoreFilteredPathsConfig =
-      options->ignoreFilteredPathsConfig.value_or(false);
-  return options;
-}
-
-std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
     std::unique_ptr<HgBackingStoreOptions> options) {
   options->ignoreFilteredPathsConfig =
       options->ignoreFilteredPathsConfig.value_or(false);
@@ -313,6 +307,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     std::shared_ptr<ReloadableConfig> config,
+    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
@@ -325,9 +320,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
-      runtimeOptions_(
-          computeTestRuntimeOptions(std::make_unique<HgBackingStoreOptions>(
-              /*ignoreFilteredPathsConfig=*/false))),
+      runtimeOptions_(std::move(runtimeOptions)),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
       traceBus_{TraceBus<HgImportTraceEvent>::create(
@@ -622,7 +615,7 @@ void HgQueuedBackingStore::getTreeBatch(
   const auto filteredPaths =
       config_->getEdenConfig()->hgFilteredPaths.getValue();
 
-  faultInjector_.check("HgDatapackStore::getTreeBatch", "");
+  faultInjector_.check("HgQueuedBackingStore::getTreeBatch", "");
   store_.getTreeBatch(
       folly::range(requests),
       false,
