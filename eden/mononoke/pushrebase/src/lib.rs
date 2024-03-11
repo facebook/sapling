@@ -66,7 +66,6 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -238,7 +237,6 @@ pub struct PushrebaseOutcome {
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
     + ChangesetsRef
-    + ChangesetFetcherArc
     + RepoBlobstoreArc
     + RepoDerivedDataRef
     + RepoIdentityRef
@@ -1242,7 +1240,6 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkTransactionError;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use cloned::cloned;
     use commit_graph::CommitGraph;
@@ -1294,9 +1291,6 @@ mod tests {
 
         #[facet]
         bookmarks: dyn Bookmarks,
-
-        #[facet]
-        changeset_fetcher: dyn ChangesetFetcher,
 
         #[facet]
         repo_blobstore: RepoBlobstore,

@@ -19,8 +19,6 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarksRef;
-use changeset_fetcher::ChangesetFetcherArc;
-use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
@@ -400,8 +398,8 @@ impl ValidationHelper {
         paths_and_payloads: Vec<(NonRootMPath, &FilenodeDiffPayload)>,
     ) -> Result<Vec<NonRootMPath>, Error> {
         let maybe_p1 = repo
-            .changeset_fetcher()
-            .get_parents(ctx, cs_id.clone())
+            .commit_graph()
+            .changeset_parents(ctx, cs_id.clone())
             .await?
             .first()
             .cloned();
@@ -598,8 +596,8 @@ impl ValidationHelpers {
     ) -> Result<FullManifestDiff, Error> {
         let cs_root_mf_id_fut = fetch_root_mf_id(ctx, repo, cs_id.clone());
         let maybe_p1 = repo
-            .changeset_fetcher()
-            .get_parents(ctx, cs_id.clone())
+            .commit_graph()
+            .changeset_parents(ctx, cs_id.clone())
             .await?
             .first()
             .cloned();
@@ -976,10 +974,7 @@ pub async fn prepare_entry(
 
 /// Validate that parents of a changeset in a small repo are
 /// ancestors of it's equivalent in the large repo
-async fn validate_topological_order<
-    'a,
-    R: ChangesetFetcherArc + RepoIdentityRef + CommitGraphArc,
->(
+async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + CommitGraphArc>(
     ctx: &'a CoreContext,
     large_repo: &'a Large<R>,
     large_cs_id: Large<ChangesetId>,
@@ -997,8 +992,8 @@ async fn validate_topological_order<
 
     let small_parents = small_repo
         .0
-        .changeset_fetcher()
-        .get_parents(ctx, small_cs_id.0.clone())
+        .commit_graph()
+        .changeset_parents(ctx, small_cs_id.0.clone())
         .await?;
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =

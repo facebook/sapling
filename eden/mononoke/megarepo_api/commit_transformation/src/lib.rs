@@ -21,7 +21,6 @@ use blobsync::copy_content;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
-use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -96,7 +95,6 @@ pub struct FileChangeFilter<'a> {
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
     + ChangesetsRef
-    + ChangesetFetcherArc
     + BookmarksRef
     + BonsaiHgMappingRef
     + RepoDerivedDataRef

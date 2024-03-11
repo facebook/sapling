@@ -22,7 +22,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::InProcessLease;
-use changeset_fetcher::ChangesetFetcherRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::types::Target;
@@ -428,9 +428,10 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     // And check that the synced commit has correct parentage
     assert_eq!(
         megarepo
-            .changeset_fetcher()
-            .get_parents(&ctx, megarepo_second_bcs_id.unwrap())
-            .await?,
+            .commit_graph()
+            .changeset_parents(&ctx, megarepo_second_bcs_id.unwrap())
+            .await?
+            .into_vec(),
         vec![megarepo_base_bcs_id]
     );
 

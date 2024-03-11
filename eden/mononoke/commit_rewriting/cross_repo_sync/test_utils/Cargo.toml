@@ -19,7 +19,6 @@ bonsai_git_mapping = { version = "0.1.0", path = "../../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
-changeset_fetcher = { version = "0.1.0", path = "../../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../../changesets" }
 commit_graph = { version = "0.1.0", path = "../../../repo_attributes/commit_graph/commit_graph" }
 commit_transformation = { version = "0.1.0", path = "../../../megarepo_api/commit_transformation" }

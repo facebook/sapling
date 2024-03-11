@@ -43,9 +43,6 @@ use borrowed::borrowed;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
-use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
-use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
@@ -476,7 +473,7 @@ where
                         &ChangesetInfo::derive(ctx, commit_syncer.get_source_repo(), cs_id).await?,
                     )
                 };
-                let parents = source_repo.changeset_fetcher().get_parents(ctx, cs_id);
+                let parents = source_repo.commit_graph().changeset_parents(ctx, cs_id);
                 let (maybe_mapping_change, parents) =
                     try_join(maybe_mapping_change, parents).await?;
 
@@ -606,8 +603,6 @@ pub trait Repo = BookmarksArc
     + RepoIdentityRef
     + MutableCountersArc
     + PhasesRef
-    + ChangesetFetcherArc
-    + ChangesetFetcherRef
     + RepoBlobstoreRef
     + RepoConfigRef
     + RepoDerivedDataRef
@@ -656,9 +651,6 @@ pub struct ConcreteRepo {
 
     #[facet]
     repo_bookmark_attrs: RepoBookmarkAttrs,
-
-    #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
 
     #[facet]
     config: RepoConfig,
@@ -1124,8 +1116,8 @@ where
             let sync = || async {
                 let parents = self
                     .get_source_repo()
-                    .changeset_fetcher()
-                    .get_parents(ctx, ancestor)
+                    .commit_graph()
+                    .changeset_parents(ctx, ancestor)
                     .await?;
                 if parents.is_empty() {
                     let version = self

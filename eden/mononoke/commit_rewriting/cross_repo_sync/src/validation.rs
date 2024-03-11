@@ -1314,15 +1314,12 @@ mod test {
 
     use ascii::AsciiString;
     use bookmarks::BookmarkKey;
-    use changeset_fetcher::ChangesetFetcherArc;
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use futures::compat::Future01CompatExt;
-    use futures_old::stream::Stream;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::hashmap;
     use metaconfig_types::CommitSyncConfig;
@@ -1333,7 +1330,6 @@ mod test {
     use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
-    use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -1651,11 +1647,10 @@ mod test {
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
-        let changesets =
-            AncestorsNodeStream::new(ctx.clone(), &small_repo.changeset_fetcher_arc(), master_val)
-                .collect()
-                .compat()
-                .await?;
+        let changesets = small_repo
+            .commit_graph()
+            .ancestors_difference(&ctx, vec![master_val], vec![])
+            .await?;
 
         let current_version = CommitSyncConfigVersion("noop".to_string());
 

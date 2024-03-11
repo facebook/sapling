@@ -19,8 +19,6 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use changeset_fetcher::ChangesetFetcherArc;
-use changeset_fetcher::ChangesetFetcherRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -725,18 +723,12 @@ where
 /// This function returns new commits that were introduced by this merge
 async fn validate_if_new_repo_merge(
     ctx: &CoreContext,
-    repo: &(
-         impl ChangesetFetcherRef
-         + ChangesetFetcherArc
-         + RepoBlobstoreRef
-         + RepoIdentityRef
-         + CommitGraphRef
-     ),
+    repo: &(impl RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let p1gen = repo.changeset_fetcher().get_generation_number(ctx, p1);
-    let p2gen = repo.changeset_fetcher().get_generation_number(ctx, p2);
+    let p1gen = repo.commit_graph().changeset_generation(ctx, p1);
+    let p2gen = repo.commit_graph().changeset_generation(ctx, p2);
     let (p1gen, p2gen) = try_join!(p1gen, p2gen)?;
     // FIXME: this code has an assumption that parent with a smaller generation number is a
     // parent that introduces a new repo. This is usually the case, however it might not be true
@@ -761,7 +753,7 @@ async fn validate_if_new_repo_merge(
 /// i.e. (::branch_tips) is returned in mercurial's revset terms
 async fn check_if_independent_branch_and_return(
     ctx: &CoreContext,
-    repo: &(impl ChangesetFetcherArc + RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
+    repo: &(impl RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
     branch_tips: Vec<ChangesetId>,
     other_branches: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {

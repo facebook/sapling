@@ -23,7 +23,6 @@ rust_library(
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:rand_distr",
         "//common/rust/shed/facet:facet",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",

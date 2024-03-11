@@ -47,8 +47,6 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bookmarks::Freshness;
-use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
 use changesets::Changesets;
 use cloned::cloned;
 use commit_graph::CommitGraph;
@@ -60,7 +58,6 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use filestore::FilestoreConfig;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream;
 use futures::Future;
@@ -86,7 +83,6 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_new_bonsai_changesets;
-use revset::AncestorsNodeStream;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -109,7 +105,6 @@ pub struct Repo(
     dyn Bookmarks,
     dyn BookmarkUpdateLog,
     dyn Changesets,
-    dyn ChangesetFetcher,
     FilestoreConfig,
     dyn MutableCounters,
     dyn Phases,
@@ -401,8 +396,9 @@ async fn commits_added_by_bookmark_move(
     match (from_cs_id, to_cs_id) {
         (_, None) => Ok(HashSet::new()),
         (None, Some(to_id)) => {
-            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), to_id)
-                .compat()
+            repo.commit_graph()
+                .ancestors_difference_stream(ctx, vec![to_id], vec![])
+                .await?
                 .try_collect()
                 .await
         }

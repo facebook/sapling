@@ -25,7 +25,6 @@ rust_binary(
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobrepo:blobrepo",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:blobstore_factory",

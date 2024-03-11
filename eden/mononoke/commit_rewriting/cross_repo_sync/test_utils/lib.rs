@@ -23,7 +23,6 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
 use commit_transformation::upload_commits;
@@ -83,7 +82,6 @@ pub struct TestRepo {
         dyn PushrebaseMutationMapping,
         RepoBookmarkAttrs,
         dyn Changesets,
-        dyn ChangesetFetcher,
         dyn Filenodes,
         FilestoreConfig,
         dyn MutableCounters,

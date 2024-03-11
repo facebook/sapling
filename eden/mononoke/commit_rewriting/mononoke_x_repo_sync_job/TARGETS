@@ -23,7 +23,6 @@ rust_binary(
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
