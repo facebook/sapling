@@ -103,6 +103,7 @@ export const Button = forwardRef(
   ) => {
     return (
       <button
+        tabIndex={disabled ? -1 : 0}
         onClick={e => {
           // don't allow clicking a disabled button
           disabled !== true && onClick?.(e);
