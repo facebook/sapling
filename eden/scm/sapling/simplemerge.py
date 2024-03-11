@@ -324,6 +324,10 @@ def is_sub_list(list1, list2):
 
 
 def unmatching_blocks(lines1, lines2):
+    """Produce unmatching blocks, in (a1, a2, b1, b2) format.
+
+    `lines1[a1:a2]` unmatches `lines2[b1:b2]`.
+    """
     text1 = b"".join(lines1)
     text2 = b"".join(lines2)
     blocks = mdiff.allblocks(text1, text2, lines1=lines1, lines2=lines2)
