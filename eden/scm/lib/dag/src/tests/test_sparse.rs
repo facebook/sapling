@@ -547,6 +547,52 @@ async fn test_flush_no_over_fetch() {
 }
 
 #[tokio::test]
+async fn test_offline_commit() {
+    // Test that in A-B-C-D-E, inserting Z with parent B does not trigger
+    // remote lookup if "C" is known (so "Z" and "C" are different vertexes).
+    //
+    // Practically, when checking out "B", prefetch its children "C" to make
+    // offline committing on top of "B" possible.
+
+    let server = TestDag::draw("A..E # master: E");
+
+    {
+        let mut client = server.client_cloned_data().await;
+
+        // Prefetch "B" and "C". Emulate the behavior of checking out "B"
+        // and prefetching B's children.
+        client
+            .dag
+            .vertex_id_batch(&["B".into(), "C".into()])
+            .await
+            .unwrap();
+        assert_eq!(client.output(), ["resolve names: [B, C], heads: [E]",]);
+        client.flush("").await;
+
+        // Add Z as pending, then flush. This should not trigger remote lookup.
+        // This emulates committing on top of "B".
+        client.add_one_vertex("Z", "B").await;
+        client.flush("").await;
+        assert_eq!(client.output(), [] as [&str; 0]);
+    }
+
+    {
+        // Comparsion. What will happen without prefetching children on checkout.
+        let mut client = server.client_cloned_data().await;
+
+        // Prefetch only B. Emulate checking out B without prefetching its children.
+        client.dag.vertex_id("B".into()).await.unwrap();
+        assert_eq!(client.output(), ["resolve names: [B], heads: [E]",]);
+
+        // Add Z as pending, then flush. This will trigger remote lookups to confirm that "Z" does
+        // not exist in the existing lazy graph.
+        client.add_one_vertex("Z", "B").await;
+        client.flush("").await;
+        assert_eq!(client.output(), ["resolve names: [Z], heads: [E]"]);
+    }
+}
+
+#[tokio::test]
 async fn test_resolve_misleading_merges() {
     // Test when the server graph gets more merges making vertexes
     // previously not a parent of a merge become a parent of a merge.

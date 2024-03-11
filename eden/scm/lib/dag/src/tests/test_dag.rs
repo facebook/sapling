@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -184,6 +185,24 @@ impl TestDag {
             self.validate().await;
         }
         assert_eq!(self.dag.check_segments().await.unwrap(), [] as [String; 0]);
+    }
+
+    /// Add one vertex to the non-master group. `parents` is split by whitespaces.
+    pub async fn add_one_vertex(&mut self, name: &str, parents: &str) {
+        let name = Vertex::copy_from(name.as_bytes());
+        let parents: Vec<Vertex> = parents
+            .split_whitespace()
+            .map(|s| Vertex::copy_from(s.as_bytes()))
+            .collect();
+        let heads =
+            VertexListWithOptions::from(&[name.clone()][..]).with_highest_group(Group::NON_MASTER);
+        self.dag
+            .add_heads(
+                &std::iter::once((name, parents)).collect::<HashMap<Vertex, Vec<Vertex>>>(),
+                &heads,
+            )
+            .await
+            .unwrap();
     }
 
     /// Flush space-separated master heads.
