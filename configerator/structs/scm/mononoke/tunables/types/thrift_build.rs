@@ -53,13 +53,9 @@ tunables crate //configerator/structs/scm/mononoke/tunables:tunables_structs-rus
             conf.options(options);
         }
 
-        let lib_include_srcs = vec![
-            
-        ];
         let types_include_srcs = vec![
             
         ];
-        conf.lib_include_srcs(lib_include_srcs);
         conf.types_include_srcs(types_include_srcs);
 
         conf
