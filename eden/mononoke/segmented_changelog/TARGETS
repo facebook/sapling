@@ -57,6 +57,7 @@ rust_library(
         "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/phases:phases",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/revset:revset",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",

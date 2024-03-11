@@ -54,7 +54,6 @@ use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
@@ -85,7 +84,6 @@ use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 pub use filestore::StoreRequest;
-use futures::compat::Stream01CompatExt;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -145,7 +143,6 @@ use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
-use revset::AncestorsNodeStream;
 use segmented_changelog::CloneData;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
@@ -707,12 +704,10 @@ impl Repo {
         // This is a generation number beyond which we don't need to traverse
         let min_gen_num = self.fetch_gen_num(ctx, &ancestor).await?;
 
-        let mut ancestors = AncestorsNodeStream::new(
-            ctx.clone(),
-            &self.blob_repo().changeset_fetcher_arc(),
-            descendant,
-        )
-        .compat();
+        let mut ancestors = self
+            .commit_graph()
+            .ancestors_difference_stream(ctx, vec![descendant], vec![])
+            .await?;
 
         let mut traversed = 0;
         while let Some(cs_id) = ancestors.next().await {
@@ -966,6 +961,10 @@ impl RepoContext {
             .await?)
     }
 
+    pub fn commit_graph(&self) -> &CommitGraph {
+        self.repo.commit_graph()
+    }
+
     /// Look up a changeset specifier to find the canonical bonsai changeset
     /// ID for a changeset.
     pub async fn resolve_specifier(
@@ -1102,7 +1101,6 @@ impl RepoContext {
         let repo = self.clone();
 
         Ok(self
-            .repo()
             .commit_graph()
             .ancestors_difference_stream(&self.ctx, includes, excludes)
             .await?
@@ -1735,8 +1733,7 @@ impl RepoContext {
 
         let ancestors = match use_commit_graph {
             true => {
-                self.repo()
-                    .commit_graph()
+                self.commit_graph()
                     .locations_to_changeset_ids(
                         self.ctx(),
                         location.descendant,
@@ -1775,7 +1772,6 @@ impl RepoContext {
 
         match use_commit_graph {
             true => Ok(self
-                .repo()
                 .commit_graph()
                 .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
                 .await

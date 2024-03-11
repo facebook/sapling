@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
@@ -68,7 +67,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         if bonsai.is_snapshot() {
             bail!("Can't derive Hg changeset for snapshot")
         }
@@ -248,9 +247,10 @@ mod test {
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
     use borrowed::borrowed;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use cloned::cloned;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphRef;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::BranchEven;
@@ -264,16 +264,12 @@ mod test {
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeEven;
     use fixtures::UnsharedMergeUneven;
-    use futures::compat::Stream01CompatExt;
     use futures::Future;
-    use futures::Stream;
-    use futures::TryFutureExt;
     use futures::TryStreamExt;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
-    use revset::AncestorsNodeStream;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -293,36 +289,39 @@ mod test {
         #[facet]
         filestore_config: FilestoreConfig,
         #[facet]
-        changeset_fetcher: dyn ChangesetFetcher,
+        commit_graph: CommitGraph,
         #[facet]
         changesets: dyn Changesets,
         #[facet]
         repo_identity: RepoIdentity,
     }
 
-    fn all_commits_descendants_to_ancestors(
+    async fn all_commits_descendants_to_ancestors(
         ctx: CoreContext,
         repo: TestRepo,
-    ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>> {
         let master_book = BookmarkKey::new("master").unwrap();
-        repo.bookmarks
+        let bcs_id = repo
+            .bookmarks
             .get(ctx.clone(), &master_book)
-            .map_ok(move |maybe_bcs_id| {
-                let bcs_id = maybe_bcs_id.unwrap();
-                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher, bcs_id.clone())
-                    .compat()
-                    .and_then(move |new_bcs_id| {
-                        cloned!(ctx, repo);
-                        async move {
-                            let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
-                            Result::<_, Error>::Ok((new_bcs_id, hg_cs_id))
-                        }
-                    })
+            .await?
+            .ok_or_else(|| anyhow!("Missing master bookmark"))?;
+
+        repo.commit_graph()
+            .ancestors_difference_stream(&ctx, vec![bcs_id], vec![])
+            .await?
+            .and_then(move |new_bcs_id| {
+                cloned!(ctx, repo);
+                async move {
+                    let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
+                    Result::<_>::Ok((new_bcs_id, hg_cs_id))
+                }
             })
-            .try_flatten_stream()
+            .try_collect()
+            .await
     }
 
-    async fn verify_repo<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<(), Error>
+    async fn verify_repo<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<()>
     where
         F: Fn() -> Fut,
         Fut: Future<Output = TestRepo>,
@@ -332,9 +331,8 @@ mod test {
         println!("Processing {}", repo.repo_identity.name());
         borrowed!(ctx, repo);
 
-        let commits_desc_to_anc = all_commits_descendants_to_ancestors(ctx.clone(), repo.clone())
-            .try_collect::<Vec<_>>()
-            .await?;
+        let commits_desc_to_anc =
+            all_commits_descendants_to_ancestors(ctx.clone(), repo.clone()).await?;
 
         // Recreate repo from scratch and derive everything again
         let repo = repo_func().await;
@@ -362,7 +360,7 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_batch_derive(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_batch_derive(fb: FacebookInit) -> Result<()> {
         verify_repo(fb, || Linear::get_custom_test_repo::<TestRepo>(fb)).await?;
         verify_repo(fb, || BranchEven::get_custom_test_repo::<TestRepo>(fb)).await?;
         verify_repo(fb, || BranchUneven::get_custom_test_repo::<TestRepo>(fb)).await?;

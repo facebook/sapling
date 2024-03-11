@@ -116,17 +116,14 @@ mod test {
 
     use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMappingRef;
-    use changeset_fetcher::ChangesetFetcherArc;
+    use commit_graph::CommitGraphRef;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use futures::compat::Stream01CompatExt;
-    use futures::TryStreamExt;
     use mercurial_types::HgChangesetId;
     use mononoke_types::BonsaiChangeset;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
-    use revset::AncestorsNodeStream;
     use tests_utils::resolve_cs_id;
 
     use super::*;
@@ -175,11 +172,10 @@ mod test {
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let manager = repo.repo_derived_data().manager();
 
-        let mut cs_ids =
-            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
-                .compat()
-                .try_collect::<Vec<_>>()
-                .await?;
+        let mut cs_ids = repo
+            .commit_graph()
+            .ancestors_difference(&ctx, vec![master_cs_id], vec![])
+            .await?;
         cs_ids.reverse();
         manager
             .derive_exactly_batch::<ChangesetInfo>(&ctx, cs_ids.clone(), None)

@@ -14,10 +14,10 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
 use bounded_traversal::bounded_traversal_stream;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use changesets_creation::save_changesets;
 use cloned::cloned;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_test_utils::bonsai_changeset_from_hg;
 use fbinit::FacebookInit;
@@ -70,7 +70,7 @@ pub(crate) struct TestRepo {
     #[facet]
     filestore_config: FilestoreConfig,
     #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
+    commit_graph: CommitGraph,
     #[facet]
     changesets: dyn Changesets,
 }

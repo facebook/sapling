@@ -247,6 +247,7 @@ mod test {
     use bookmarks::BookmarkKey;
     use borrowed::borrowed;
     use cloned::cloned;
+    use commit_graph::CommitGraphRef;
     use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
@@ -261,9 +262,7 @@ mod test {
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeEven;
     use fixtures::UnsharedMergeUneven;
-    use futures::compat::Stream01CompatExt;
     use futures::Future;
-    use futures::Stream;
     use futures::TryStreamExt;
     use manifest::Entry;
     use mercurial_derivation::DeriveHgChangeset;
@@ -271,7 +270,6 @@ mod test {
     use mercurial_types::HgManifestId;
     use mononoke_types::ChangesetId;
     use repo_derived_data::RepoDerivedDataRef;
-    use revset::AncestorsNodeStream;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -281,7 +279,7 @@ mod test {
         ctx: &CoreContext,
         repo: &TestRepo,
         hg_cs_id: HgChangesetId,
-    ) -> Result<HgManifestId, Error> {
+    ) -> Result<HgManifestId> {
         Ok(hg_cs_id.load(ctx, &repo.repo_blobstore).await?.manifestid())
     }
 
@@ -290,7 +288,7 @@ mod test {
         repo: &TestRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
-    ) -> Result<RootUnodeManifestId, Error> {
+    ) -> Result<RootUnodeManifestId> {
         let (unode_entries, mf_unode_id) = async move {
             let mf_unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id)
                 .await?
@@ -301,7 +299,7 @@ mod test {
                 .try_collect::<Vec<_>>()
                 .await?;
             paths.sort();
-            Result::<_, Error>::Ok((paths, RootUnodeManifestId(mf_unode_id)))
+            anyhow::Ok((paths, RootUnodeManifestId(mf_unode_id)))
         }
         .await?;
 
@@ -312,7 +310,7 @@ mod test {
                 .try_collect::<Vec<_>>()
                 .await?;
             paths.sort();
-            Result::<_, Error>::Ok(paths)
+            anyhow::Ok(paths)
         };
 
         let filenode_entries = filenode_entries.await?;
@@ -321,26 +319,30 @@ mod test {
         Ok(mf_unode_id)
     }
 
-    fn all_commits_descendants_to_ancestors(
+    async fn all_commits_descendants_to_ancestors(
         ctx: CoreContext,
         repo: TestRepo,
-    ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
+    ) -> Result<Vec<(ChangesetId, HgChangesetId, RootUnodeManifestId)>> {
         let master_book = BookmarkKey::new("master").unwrap();
-        repo.bookmarks
+        let bcs_id = repo
+            .bookmarks
             .get(ctx.clone(), &master_book)
-            .map_ok(move |maybe_bcs_id| {
-                let bcs_id = maybe_bcs_id.unwrap();
-                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher, bcs_id.clone())
-                    .compat()
-                    .and_then(move |new_bcs_id| {
-                        cloned!(ctx, repo);
-                        async move {
-                            let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
-                            Result::<_, Error>::Ok((new_bcs_id, hg_cs_id))
-                        }
-                    })
+            .await?
+            .unwrap();
+
+        repo.commit_graph()
+            .ancestors_difference_stream(&ctx, vec![bcs_id], vec![])
+            .await?
+            .and_then(move |new_bcs_id| {
+                cloned!(ctx, repo);
+                async move {
+                    let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
+                    let unode_id = verify_unode(&ctx, &repo, new_bcs_id, hg_cs_id).await?;
+                    Ok((new_bcs_id, hg_cs_id, unode_id))
+                }
             })
-            .try_flatten_stream()
+            .try_collect()
+            .await
     }
 
     async fn verify_repo<F, Fut>(fb: FacebookInit, repo_func: F)
@@ -354,11 +356,6 @@ mod test {
         borrowed!(ctx, repo);
 
         let commits_desc_to_anc = all_commits_descendants_to_ancestors(ctx.clone(), repo.clone())
-            .and_then(move |(bcs_id, hg_cs_id)| async move {
-                let unode_id = verify_unode(ctx, repo, bcs_id, hg_cs_id).await?;
-                Ok((bcs_id, hg_cs_id, unode_id))
-            })
-            .try_collect::<Vec<_>>()
             .await
             .unwrap();
 

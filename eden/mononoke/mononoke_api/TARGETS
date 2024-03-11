@@ -134,7 +134,6 @@ rust_library(
         "//eden/mononoke/repo_client:streaming_clone",
         "//eden/mononoke/repo_client:unbundle",
         "//eden/mononoke/repo_factory:test_repo_factory",
-        "//eden/mononoke/revset:revset",
         "//eden/mononoke/segmented_changelog:segmented_changelog",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/wireproto_handler:wireproto_handler",

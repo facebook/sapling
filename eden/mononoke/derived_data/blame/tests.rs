@@ -12,8 +12,8 @@ use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
 use borrowed::borrowed;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -47,7 +47,7 @@ struct TestRepo {
     #[facet]
     filestore_config: FilestoreConfig,
     #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
+    commit_graph: CommitGraph,
     #[facet]
     changesets: dyn Changesets,
 }

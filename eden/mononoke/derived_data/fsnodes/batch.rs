@@ -159,18 +159,16 @@ pub async fn new_batch_derivation(
 mod test {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
-    use changeset_fetcher::ChangesetFetcherArc;
     use changesets::Changesets;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphRef;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use futures::compat::Stream01CompatExt;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
-    use revset::AncestorsNodeStream;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
@@ -188,7 +186,7 @@ mod test {
         #[facet]
         repo_derived_data: RepoDerivedData,
         #[facet]
-        changeset_fetcher: dyn ChangesetFetcher,
+        commit_graph: CommitGraph,
         #[facet]
         repo_blobstore: RepoBlobstore,
         #[facet]
@@ -204,11 +202,10 @@ mod test {
             let repo = Linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
-            let mut cs_ids =
-                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
-                    .compat()
-                    .try_collect::<Vec<_>>()
-                    .await?;
+            let mut cs_ids = repo
+                .commit_graph()
+                .ancestors_difference(&ctx, vec![master_cs_id], vec![])
+                .await?;
             cs_ids.reverse();
 
             let manager = repo.repo_derived_data().manager();
@@ -245,11 +242,10 @@ mod test {
             let repo = repo_with_merge(&ctx).await?;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
-            let mut cs_ids =
-                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
-                    .compat()
-                    .try_collect::<Vec<_>>()
-                    .await?;
+            let mut cs_ids = repo
+                .commit_graph()
+                .ancestors_difference(&ctx, vec![master_cs_id], vec![])
+                .await?;
             cs_ids.reverse();
 
             let manager = repo.repo_derived_data().manager();

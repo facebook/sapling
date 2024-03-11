@@ -183,7 +183,7 @@ mod test {
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use borrowed::borrowed;
-    use changeset_fetcher::ChangesetFetcherArc;
+    use commit_graph::CommitGraphRef;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::BranchEven;
@@ -197,7 +197,6 @@ mod test {
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeEven;
     use fixtures::UnsharedMergeUneven;
-    use futures::compat::Stream01CompatExt;
     use futures::future::Future;
     use futures::stream::Stream;
     use futures::stream::TryStreamExt;
@@ -209,7 +208,6 @@ mod test {
     use mononoke_types::ChangesetId;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
-    use revset::AncestorsNodeStream;
     use tokio::runtime::Runtime;
 
     use super::*;
@@ -258,7 +256,7 @@ mod test {
 
     async fn all_commits<'a>(
         ctx: &'a CoreContext,
-        repo: &'a (impl BookmarksRef + ChangesetFetcherArc + RepoDerivedDataRef + Send + Sync),
+        repo: &'a (impl BookmarksRef + CommitGraphRef + RepoDerivedDataRef + Send + Sync),
     ) -> Result<impl Stream<Item = Result<(ChangesetId, HgChangesetId)>> + 'a> {
         let master_book = BookmarkKey::new("master").unwrap();
         let bcs_id = repo
@@ -267,20 +265,20 @@ mod test {
             .await?
             .unwrap();
 
-        Ok(
-            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), bcs_id.clone())
-                .compat()
-                .and_then(move |new_bcs_id| async move {
-                    let hg_cs_id = repo.derive_hg_changeset(ctx, new_bcs_id).await?;
-                    Ok((new_bcs_id, hg_cs_id))
-                }),
-        )
+        Ok(repo
+            .commit_graph()
+            .ancestors_difference_stream(ctx, vec![bcs_id], vec![])
+            .await?
+            .and_then(move |new_bcs_id| async move {
+                let hg_cs_id = repo.derive_hg_changeset(ctx, new_bcs_id).await?;
+                Ok((new_bcs_id, hg_cs_id))
+            }))
     }
 
     fn verify_repo<F, R>(fb: FacebookInit, repo: F, runtime: &Runtime)
     where
         F: Future<Output = R>,
-        R: BookmarksRef + ChangesetFetcherArc + RepoBlobstoreRef + RepoDerivedDataRef + Send + Sync,
+        R: BookmarksRef + CommitGraphRef + RepoBlobstoreRef + RepoDerivedDataRef + Send + Sync,
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = runtime.block_on(repo);

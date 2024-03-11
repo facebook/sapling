@@ -133,8 +133,8 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
     use borrowed::borrowed;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
+    use commit_graph::CommitGraph;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
@@ -162,7 +162,7 @@ mod tests {
         #[facet]
         pub(crate) filestore_config: FilestoreConfig,
         #[facet]
-        pub(crate) changeset_fetcher: dyn ChangesetFetcher,
+        pub(crate) commit_graph: CommitGraph,
         #[facet]
         pub(crate) changesets: dyn Changesets,
         #[facet]

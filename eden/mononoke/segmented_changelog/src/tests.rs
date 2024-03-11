@@ -24,6 +24,7 @@ use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::ChangesetEntry;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::set_bookmark;
@@ -33,7 +34,6 @@ use fixtures::MergeEven;
 use fixtures::MergeUneven;
 use fixtures::TestRepoFixture;
 use fixtures::UnsharedMergeEven;
-use futures::compat::Stream01CompatExt;
 use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::stream;
@@ -50,7 +50,6 @@ use phases::PhasesArc;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::resolve_cs_id;
@@ -280,8 +279,10 @@ async fn validate_build_idmap(
     seed(&ctx, &blobrepo, &conns, head).await?;
     let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
-    let mut ancestors =
-        AncestorsNodeStream::new(ctx.clone(), &blobrepo.changeset_fetcher_arc(), head).compat();
+    let mut ancestors = blobrepo
+        .commit_graph()
+        .ancestors_difference_stream(&ctx, vec![head], vec![])
+        .await?;
     while let Some(cs_id) = ancestors.next().await {
         let cs_id = cs_id?;
         let parents = blobrepo

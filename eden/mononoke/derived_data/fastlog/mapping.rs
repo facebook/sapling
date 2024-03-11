@@ -205,8 +205,9 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphRef;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
@@ -220,9 +221,6 @@ mod tests {
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeEven;
     use fixtures::UnsharedMergeUneven;
-    use futures::compat::Stream01CompatExt;
-    use futures::Stream;
-    use futures::TryFutureExt;
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_derivation::DeriveHgChangeset;
@@ -238,7 +236,6 @@ mod tests {
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
-    use revset::AncestorsNodeStream;
 
     use super::*;
     use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
@@ -258,7 +255,7 @@ mod tests {
         #[facet]
         filestore_config: FilestoreConfig,
         #[facet]
-        changeset_fetcher: dyn ChangesetFetcher,
+        commit_graph: CommitGraph,
         #[facet]
         changesets: dyn Changesets,
     }
@@ -578,7 +575,7 @@ mod tests {
 
         {
             let repo: TestRepo = MergeUneven::get_custom_test_repo(fb).await;
-            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
                 verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
@@ -587,7 +584,7 @@ mod tests {
 
         {
             let repo: TestRepo = MergeEven::get_custom_test_repo(fb).await;
-            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
                 verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
@@ -596,7 +593,7 @@ mod tests {
 
         {
             let repo: TestRepo = UnsharedMergeEven::get_custom_test_repo(fb).await;
-            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
                 verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
@@ -605,7 +602,7 @@ mod tests {
 
         {
             let repo: TestRepo = UnsharedMergeUneven::get_custom_test_repo(fb).await;
-            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
                 verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
@@ -671,26 +668,29 @@ mod tests {
         Ok(())
     }
 
-    fn all_commits(
+    async fn all_commits(
         ctx: CoreContext,
         repo: TestRepo,
-    ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>> {
         let master_book = BookmarkKey::new("master").unwrap();
-        repo.bookmarks
+        let bcs_id = repo
+            .bookmarks
             .get(ctx.clone(), &master_book)
-            .map_ok(move |maybe_bcs_id| {
-                let bcs_id = maybe_bcs_id.unwrap();
-                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher, bcs_id.clone())
-                    .compat()
-                    .and_then(move |new_bcs_id| {
-                        cloned!(ctx, repo);
-                        async move {
-                            let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
-                            Ok((new_bcs_id, hg_cs_id))
-                        }
-                    })
+            .await?
+            .unwrap();
+
+        repo.commit_graph()
+            .ancestors_difference_stream(&ctx, vec![bcs_id], vec![])
+            .await?
+            .and_then(move |new_bcs_id| {
+                cloned!(ctx, repo);
+                async move {
+                    let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
+                    Ok((new_bcs_id, hg_cs_id))
+                }
             })
-            .try_flatten_stream()
+            .try_collect()
+            .await
     }
 
     async fn verify_all_entries_for_commit(
