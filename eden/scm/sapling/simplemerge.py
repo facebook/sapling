@@ -207,7 +207,7 @@ class CantShowWordConflicts(Exception):
     pass
 
 
-def automerge_wordmerge(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
+def automerge_wordmerge(m3, base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     """Try resolve conflicts using wordmerge.
     Return resolved lines, or None if merge failed.
     """
@@ -215,14 +215,16 @@ def automerge_wordmerge(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     atext = b"".join(a_lines)
     btext = b"".join(b_lines)
     try:
-        m3 = Merge3Text(basetext, atext, btext, in_wordmerge=True)
-        text = b"".join(render_minimized(m3)[0])
+        m3_word = Merge3Text(basetext, atext, btext, in_wordmerge=True)
+        text = b"".join(render_minimized(m3_word)[0])
         return text.splitlines(True)
     except CantShowWordConflicts:
         return None
 
 
-def automerge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
+def automerge_adjacent_changes(
+    m3, base_lines, a_lines, b_lines
+) -> Optional[List[bytes]]:
     # require something to be changed
     if not base_lines:
         return None
@@ -278,11 +280,11 @@ def automerge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[by
     return merged_lines
 
 
-def automerge_subset_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
+def automerge_subset_changes(m3, base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     if base_lines:
         return None
     if len(a_lines) > len(b_lines):
-        return automerge_subset_changes(base_lines, b_lines, a_lines)
+        return automerge_subset_changes(m3, base_lines, b_lines, a_lines)
     if is_sub_list(a_lines, b_lines):
         return b_lines
 
@@ -453,7 +455,7 @@ class Merge3Text:
 
     def run_automerge(self, base_lines, a_lines, b_lines):
         for name, fn in self.automerge_fns.items():
-            merged_lines = fn(base_lines, a_lines, b_lines)
+            merged_lines = fn(self, base_lines, a_lines, b_lines)
             if merged_lines is not None:
                 return name, merged_lines
         return None
