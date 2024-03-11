@@ -22,11 +22,11 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStoreOptions.h"
-#include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/TraceBus.h"
+#include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {
 
@@ -37,6 +37,11 @@ class UnboundedQueueExecutor;
 class EdenStats;
 class HgImportRequest;
 class StructuredLogger;
+class FaultInjector;
+template <typename T>
+class RefPtr;
+class ObjectFetchContext;
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 struct HgImportTraceEvent : TraceEventBase {
   enum EventType : uint8_t {
@@ -122,6 +127,11 @@ struct HgImportTraceEvent : TraceEventBase {
  */
 class HgQueuedBackingStore final : public BackingStore {
  public:
+  using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
+  using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
+  using ImportRequestsMap = std::
+      map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
+
   HgQueuedBackingStore(
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
@@ -218,7 +228,7 @@ class HgQueuedBackingStore final : public BackingStore {
     throw std::domain_error("unimplemented");
   }
 
-  void getTreeBatch(const HgDatapackStore::ImportRequestsList& requests);
+  void getTreeBatch(const ImportRequestsList& requests);
 
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
@@ -318,15 +328,14 @@ class HgQueuedBackingStore final : public BackingStore {
    * length. Promises passed in will be resolved if a blob is successfully
    * imported. Otherwise the promise will be left untouched.
    */
-  void getBlobBatch(const HgDatapackStore::ImportRequestsList& requests);
+  void getBlobBatch(const ImportRequestsList& requests);
 
   /**
    * Fetch multiple aux data at once.
    *
    * This function returns when all the aux data have been fetched.
    */
-  void getBlobMetadataBatch(
-      const HgDatapackStore::ImportRequestsList& requests);
+  void getBlobMetadataBatch(const ImportRequestsList& requests);
 
   /**
    * The worker runloop function.
@@ -446,9 +455,8 @@ class HgQueuedBackingStore final : public BackingStore {
       HgImportObject object) const;
 
   template <typename T>
-  std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
-  prepareRequests(
-      const HgDatapackStore::ImportRequestsList& importRequests,
+  std::pair<ImportRequestsMap, std::vector<sapling::NodeId>> prepareRequests(
+      const ImportRequestsList& importRequests,
       const std::string& requestType);
 
   /**
@@ -558,9 +566,6 @@ class HgQueuedBackingStore final : public BackingStore {
   TraceSubscriptionHandle<HgImportTraceEvent> hgTraceHandle_;
 
   sapling::SaplingNativeBackingStore store_;
-
-  // The datapack store using with this HgQueuedBackingStore
-  std::unique_ptr<HgDatapackStore> datapackStore_;
 };
 
 } // namespace facebook::eden

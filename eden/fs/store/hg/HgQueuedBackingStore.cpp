@@ -271,13 +271,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), computeSaplingOptions()},
-      datapackStore_{std::make_unique<HgDatapackStore>(
-          &store_,
-          runtimeOptions_.get(),
-          config_,
-          structuredLogger_,
-          faultInjector)} {
+      store_{repository.view(), computeSaplingOptions()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -326,13 +320,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), computeTestSaplingOptions()},
-      datapackStore_{std::make_unique<HgDatapackStore>(
-          &store_,
-          runtimeOptions_.get(),
-          config_,
-          nullptr,
-          faultInjector)} {
+      store_{repository.view(), computeTestSaplingOptions()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -471,7 +459,7 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
 }
 
 void HgQueuedBackingStore::getBlobBatch(
-    const HgDatapackStore::ImportRequestsList& importRequests) {
+    const ImportRequestsList& importRequests) {
   auto preparedRequests =
       prepareRequests<HgImportRequest::BlobImport>(importRequests, "Blob");
   auto importRequestsMap = std::move(preparedRequests.first);
@@ -606,7 +594,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
 }
 
 void HgQueuedBackingStore::getTreeBatch(
-    const HgDatapackStore::ImportRequestsList& importRequests) {
+    const ImportRequestsList& importRequests) {
   auto preparedRequests =
       prepareRequests<HgImportRequest::TreeImport>(importRequests, "Tree");
   auto importRequestsMap = std::move(preparedRequests.first);
@@ -679,9 +667,9 @@ void HgQueuedBackingStore::getTreeBatch(
 }
 
 template <typename T>
-std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
+std::pair<HgQueuedBackingStore::ImportRequestsMap, std::vector<sapling::NodeId>>
 HgQueuedBackingStore::prepareRequests(
-    const HgDatapackStore::ImportRequestsList& importRequests,
+    const ImportRequestsList& importRequests,
     const std::string& requestType) {
   // TODO: extract each ClientRequestInfo from importRequests into a
   // sapling::ClientRequestInfo and pass them with the corresponding
@@ -689,7 +677,7 @@ HgQueuedBackingStore::prepareRequests(
 
   // Group requests by proxyHash to ensure no duplicates in fetch request to
   // SaplingNativeBackingStore.
-  HgDatapackStore::ImportRequestsMap importRequestsMap;
+  ImportRequestsMap importRequestsMap;
   for (const auto& importRequest : importRequests) {
     auto nodeId = importRequest->getRequest<T>()->proxyHash.byteHash();
 
@@ -791,7 +779,7 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
 }
 
 void HgQueuedBackingStore::getBlobMetadataBatch(
-    const HgDatapackStore::ImportRequestsList& importRequests) {
+    const ImportRequestsList& importRequests) {
   auto preparedRequests = prepareRequests<HgImportRequest::BlobMetaImport>(
       importRequests, "BlobMetadata");
   auto importRequestsMap = std::move(preparedRequests.first);

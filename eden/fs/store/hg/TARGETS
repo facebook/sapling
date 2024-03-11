@@ -66,7 +66,6 @@ cpp_library(
     ],
     exported_deps = [
         ":hg_backing_store_options",
-        ":hg_datapack_store",
         ":hg_import_request_queue",
         "//eden/common/utils:ref_ptr",
         "//eden/fs:config",
@@ -76,51 +75,14 @@ cpp_library(
         "//eden/fs/store:store",
         "//eden/fs/telemetry:activity_buffer",
         "//eden/fs/telemetry:telemetry",
+        "//eden/scm/lib/backingstore:backingstore",  # @manual
+        "//eden/scm/lib/backingstore:backingstore_bridge@header",  # @manual
+        "//eden/scm/lib/backingstore:sapling_native_backingstore-include",
         "//folly:range",
         "//folly:synchronized",
     ],
     external_deps = [
         "re2",
-    ],
-)
-
-cpp_library(
-    name = "hg_datapack_store",
-    srcs = ["HgDatapackStore.cpp"],
-    headers = ["HgDatapackStore.h"],
-    # TODO: This is a hack to work around the fact that Rust framework
-    # dependencies do not propagate to downstream libraries and
-    # binaries. Remove when that's fixed.
-    os_deps = [(
-        "macos",
-        [
-            "fbsource//third-party/toolchains/macos:CoreFoundation",
-            "fbsource//third-party/toolchains/macos:Security",
-        ],
-    )],
-    deps = [
-        ":hg_import_request",
-        ":hg_proxy_hash",
-        "//eden/common/utils:ref_ptr",
-        "//eden/common/utils:utils",
-        "//eden/fs/config:config",
-        "//eden/fs/model:model",
-        "//eden/fs/store:context",
-        "//eden/fs/telemetry:log_info",
-        "//eden/fs/telemetry:structured_logger",
-        "//folly/io:iobuf",
-        "//folly/logging:logging",
-    ],
-    exported_deps = [
-        ":hg_backing_store_options",
-        "//eden/common/utils:path",
-        "//eden/fs/model:model-fwd",
-        "//eden/fs/telemetry:telemetry",
-        "//eden/scm/lib/backingstore:backingstore",  # @manual
-        "//eden/scm/lib/backingstore:backingstore_bridge@header",  # @manual
-        "//eden/scm/lib/backingstore:sapling_native_backingstore-include",
-        "//folly:range",
-        "//folly/futures:core",
     ],
 )
 
