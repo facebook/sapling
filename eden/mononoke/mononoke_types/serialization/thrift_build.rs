@@ -36,7 +36,7 @@ unodes crate //eden/mononoke/mononoke_types/serialization:mononoke_types_seriali
     ).expect("Failed to write cratemap");
 
     let conf = {
-        let mut conf = Config::from_env(GenContext::Lib).expect("Failed to instantiate thrift_compiler::Config");
+        let mut conf = Config::from_env(GenContext::Types).expect("Failed to instantiate thrift_compiler::Config");
 
         let path_from_manifest_to_base: &Path = "../../../..".as_ref();
         let cargo_manifest_dir =
