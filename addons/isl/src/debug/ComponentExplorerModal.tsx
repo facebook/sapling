@@ -21,6 +21,7 @@ import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {
+  VSCodeButton,
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
@@ -87,7 +88,38 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
             </ColorBadge>
           ))}
         </Row>
+        <Row>
+          <span style={{border: '1px solid var(--focus-border)'}}>Focus border</span>
+          <span style={{border: '1px solid var(--contrast-border)'}}>Contrast Border</span>
+          <span style={{border: '1px solid var(--contrast-active-border)'}}>
+            Contrast Active Border
+          </span>
+        </Row>
         <GroupName>Components</GroupName>
+        <Row>
+          <VSCodeButton appearance="primary">Primary</VSCodeButton>
+          <VSCodeButton disabled appearance="primary">
+            Primary
+          </VSCodeButton>
+          <VSCodeButton appearance="secondary">Secondary</VSCodeButton>
+          <VSCodeButton appearance="secondary" disabled>
+            Secondary
+          </VSCodeButton>
+          <VSCodeButton appearance="icon">Icon</VSCodeButton>
+          <VSCodeButton appearance="icon">
+            <Icon icon="rocket" slot="start" />
+            Icon
+          </VSCodeButton>
+          <VSCodeButton appearance="icon">
+            <Icon icon="rocket" />
+          </VSCodeButton>
+          <VSCodeButton appearance="icon" disabled>
+            <Icon icon="rocket" slot="start" /> Icon
+          </VSCodeButton>
+          <VSCodeButton appearance="secondary">
+            <Icon icon="rocket" slot="start" /> Secondary With Icon
+          </VSCodeButton>
+        </Row>
         <Row>
           <Button primary>Primary</Button>
           <Button disabled primary>
@@ -109,6 +141,8 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           <Button>
             <Icon icon="rocket" /> Secondary With Icon
           </Button>
+        </Row>
+        <Row>
           <VSCodeDropdown>
             <VSCodeOption>Dropdown</VSCodeOption>
             <VSCodeOption>Option</VSCodeOption>

@@ -14,6 +14,18 @@ import {colors} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, type ReactNode} from 'react';
 
+/**
+ * StyleX tries to evaluate CSS variables and store them separately.
+ * Use a layer of indirection so the CSS variable is used literally.
+ */
+export const vars = {
+  fg: 'var(--foreground)',
+  border: 'var(--contrast-border)',
+  /** very bright border, usually only set in high-contrast themes */
+  activeBorder: 'var(--contrast-active-border)',
+  focusBorder: 'var(--focus-border)',
+};
+
 const styles = stylex.create({
   button: {
     background: {
@@ -23,7 +35,7 @@ const styles = stylex.create({
     color: 'var(--button-secondary-foreground)',
     border: '1px solid var(--button-border)',
     borderRadius: '2px',
-    padding: 'var(--button-padding-vertical) var(--button-padding-horizontal)',
+    padding: '4px 11px',
     fontFamily: 'var(--font-family)',
     lineHeight: '16px',
     cursor: 'pointer',
@@ -33,7 +45,7 @@ const styles = stylex.create({
     outlineWidth: '1px',
     outlineColor: {
       default: 'transparent',
-      ':focus-visible': colors.focusBorder,
+      ':focus-visible': vars.focusBorder,
     },
   },
   primary: {
@@ -41,6 +53,7 @@ const styles = stylex.create({
       default: 'var(--button-primary-background)',
       ':hover': 'var(--button-primary-hover-background)',
     },
+    color: 'var(--button-primary-foreground)',
   },
   icon: {
     border: '1px solid',
@@ -49,13 +62,23 @@ const styles = stylex.create({
       default: colors.subtleHoverDarken,
       ':hover': 'var(--button-icon-hover-background)',
     },
-    borderRadius: 'var(--button-icon-corner-radius)',
-    color: colors.fg,
+    borderRadius: '5px',
+    color: vars.fg,
     padding: '3px',
+    outlineStyle: {
+      default: 'solid',
+      ':hover': 'dotted',
+      ':focus-within': 'solid',
+    },
     outlineOffset: 0,
+    outlineColor: {
+      default: 'transparent',
+      ':hover': vars.activeBorder,
+      ':focus-visible': vars.focusBorder,
+    },
   },
   disabled: {
-    opacity: 'var(--disabled-opacity)',
+    opacity: '0.4',
     cursor: 'not-allowed',
   },
 });

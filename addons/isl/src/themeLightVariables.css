@@ -27,6 +27,7 @@
   --button-secondary-background: #5f6a79;
   --button-secondary-foreground: #ffffff;
   --button-secondary-hover-background: #4c5561;
+  --button-icon-hover-background: rgba(90, 93, 94, 0.31);
   --checkbox-background: #ffffff;
   --checkbox-border: #cecece;
   --checkbox-foreground: var(--foreground);
