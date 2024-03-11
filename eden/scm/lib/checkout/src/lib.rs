@@ -26,6 +26,7 @@ use async_runtime::block_on;
 use atexit::AtExit;
 use context::CoreContext;
 use crossbeam::channel;
+use dag::VertexName;
 #[cfg(windows)]
 use fs_err as fs;
 use manifest::FileMetadata;
@@ -953,6 +954,17 @@ pub fn checkout(
     }
 
     let source_commit = wc.first_parent()?;
+
+    if ctx
+        .config
+        .get_or("merge", "recordupdatedistance", || true)?
+    {
+        match update_distance(repo, &source_commit, &target_commit) {
+            Ok(update_distance) => tracing::info!(target: "update_size", update_distance),
+            Err(err) => tracing::warn!(?err, "error calculating update distance"),
+        }
+    }
+
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
@@ -1062,7 +1074,7 @@ fn prefetch_children(repo: &Repo, node: &HgId) -> Result<()> {
         return Ok(());
     }
 
-    let vertex = dag::VertexName::copy_from(node.as_ref());
+    let vertex = VertexName::copy_from(node.as_ref());
 
     let dag = repo.dag_commits()?;
     let mut dag = dag.write();
@@ -1089,6 +1101,32 @@ fn prefetch_children(repo: &Repo, node: &HgId) -> Result<()> {
     block_on(dag.flush(&[]))?;
 
     Ok(())
+}
+
+#[instrument(skip(repo))]
+fn update_distance(repo: &Repo, source: &HgId, dest: &HgId) -> Result<usize> {
+    let dag = repo.dag_commits()?;
+    let dag = dag.read();
+
+    let to_nameset = |id: &HgId| -> dag::NameSet {
+        if id.is_null() {
+            dag::NameSet::empty()
+        } else {
+            VertexName::copy_from(id.as_ref()).into()
+        }
+    };
+
+    let source = to_nameset(source);
+    let dest = to_nameset(dest);
+
+    block_on(async {
+        Ok(dag
+            .only(source.clone(), dest.clone())
+            .await?
+            .count()
+            .await?
+            + dag.only(dest, source).await?.count().await?)
+    })
 }
 
 fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {

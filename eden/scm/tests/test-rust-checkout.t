@@ -433,3 +433,25 @@ Don't output too many conflicts:
    ...and 95 more
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
+
+Test update_distance logging:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C
+  > |
+  > B D
+  > |/
+  > A
+  > EOS
+  $ LOG=update_size=trace hg go -q $A
+   INFO update_size: update_distance=1
+  $ LOG=update_size=trace hg go -q $A
+   INFO update_size: update_distance=0
+  $ LOG=update_size=trace hg go -q $D
+   INFO update_size: update_distance=1
+  $ LOG=update_size=trace hg go -q $C
+   INFO update_size: update_distance=3
+  $ LOG=update_size=trace hg go -q $B
+   INFO update_size: update_distance=1
+  $ LOG=update_size=trace hg go -q null
+   INFO update_size: update_distance=2
