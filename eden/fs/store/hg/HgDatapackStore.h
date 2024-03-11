@@ -57,31 +57,8 @@ class HgDatapackStore {
         logger_{std::move(logger)},
         faultInjector_{*faultInjector} {}
 
-  std::string_view getRepoName() const {
-    return store_->getRepoName();
-  }
-
-  std::optional<Hash20> getManifestNode(const ObjectId& commitId);
-
-  void getTreeBatch(const ImportRequestsList& requests);
-
-  /**
-   * Flush any pending writes to disk.
-   *
-   * As a side effect, this also reloads the current state of Mercurial's
-   * cache, picking up any writes done by Mercurial.
-   */
-  void flush();
-
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
-
- private:
-  template <typename T>
-  std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
-  prepareRequests(
-      const ImportRequestsList& importRequests,
-      const std::string& requestType);
 
   // Raw pointer to the `std::unique_ptr<sapling::SaplingNativeBackingStore>`
   // owned by the same `HgQueuedBackingStore` that also has a `std::unique_ptr`

@@ -429,7 +429,7 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
                RequestMetricsScope queueTracker{&liveImportBlobWatches};
 
                // NOTE: In the future we plan to update
-               // SaplingNativeBackingStore (and HgDatapackStore) to provide and
+               // SaplingNativeBackingStore to provide and
                // asynchronous interface enabling us to perform our retries
                // there. In the meantime we use retryThreadPool_ for these
                // longer-running retry requests to avoid starving
@@ -437,7 +437,7 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
 
                // Flush (and refresh) SaplingNativeBackingStore to ensure all
                // data is written and to rescan pack files or local indexes
-               datapackStore_->flush();
+               flush();
 
                // Retry using datapackStore (SaplingNativeBackingStore).
                auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
@@ -450,7 +450,7 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
                  // Record miss and return error
                  if (structuredLogger_) {
                    structuredLogger_->logEvent(FetchMiss{
-                       datapackStore_->getRepoName(),
+                       store_.getRepoName(),
                        FetchMiss::Blob,
                        blob.exception().what().toStdString(),
                        true});
@@ -1493,7 +1493,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
                RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
                // NOTE: In the future we plan to update
-               // SaplingNativeBackingStore (and HgDatapackStore) to provide and
+               // SaplingNativeBackingStore to provide and
                // asynchronous interface enabling us to perform our retries
                // there. In the meantime we use retryThreadPool_ for these
                // longer-running retry requests to avoid starving
@@ -1501,7 +1501,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
 
                // Flush (and refresh) SaplingNativeBackingStore to ensure all
                // data is written and to rescan pack files or local indexes
-               datapackStore_->flush();
+               flush();
 
                // Retry using datapackStore (SaplingNativeBackingStore)
                auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
@@ -1514,7 +1514,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
                  // Record miss and return error
                  if (structuredLogger_) {
                    structuredLogger_->logEvent(FetchMiss{
-                       datapackStore_->getRepoName(),
+                       store_.getRepoName(),
                        FetchMiss::Tree,
                        tree.exception().what().toStdString(),
                        true});
@@ -1756,7 +1756,7 @@ ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {
-  datapackStore_->flush();
+  flush();
 }
 
 namespace {

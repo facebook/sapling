@@ -181,6 +181,16 @@ class HgQueuedBackingStore final : public BackingStore {
     return *traceBus_;
   }
 
+  /**
+   * Flush any pending writes to disk.
+   *
+   * As a side effect, this also reloads the current state of Mercurial's
+   * cache, picking up any writes done by Mercurial.
+   */
+  void flush() {
+    store_.flush();
+  }
+
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 
@@ -265,11 +275,7 @@ class HgQueuedBackingStore final : public BackingStore {
   void periodicManagementTask() override;
 
   std::optional<folly::StringPiece> getRepoName() override {
-    return datapackStore_->getRepoName();
-  }
-
-  HgDatapackStore& getDatapackStore() {
-    return *datapackStore_;
+    return store_.getRepoName();
   }
 
   int64_t dropAllPendingRequestsFromQueue() override;
