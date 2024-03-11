@@ -22,8 +22,8 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 thrift_clients = { version = "0.1.0", path = "../../clients" }
-thrift_streaming__types = { package = "thrift_streaming_types", version = "0.1.0", path = "../types" }
-thrift_types = { version = "0.1.0", path = "../../types" }
+thrift_streaming__types = { package = "thrift_streaming_types", version = "0.1.0", path = ".." }
+thrift_types = { version = "0.1.0", path = "../.." }
 tracing = "0.1.40"
 
 [build-dependencies]

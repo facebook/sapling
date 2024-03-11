@@ -15,11 +15,11 @@ path = "test/main.rs"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-commitsync = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
+commitsync_types = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-pushredirect_enable = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
+pushredirect_enable_types = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.49"
 

@@ -22,18 +22,14 @@ members = [
   "config",
   "config/clients",
   "config/services",
-  "config/types",
   "inodes/overlay",
   "inodes/overlay/clients",
   "inodes/overlay/services",
-  "inodes/overlay/types",
   "service",
   "service/clients",
   "service/services",
   "service/thrift_streaming",
   "service/thrift_streaming/clients",
   "service/thrift_streaming/services",
-  "service/thrift_streaming/types",
-  "service/types",
 ]
 resolver = "2"

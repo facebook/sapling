@@ -22,12 +22,12 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 megarepo_api = { version = "0.1.0", path = ".." }
 megarepo_config = { version = "0.1.0", path = "../megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
-megarepo_types_thrift = { version = "0.1.0", path = "../if" }
+megarepo_types_thrift_types = { version = "0.1.0", path = "../if" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-source_control = { version = "0.1.0", path = "../../scs/if" }
+source_control_types = { version = "0.1.0", path = "../../scs/if" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

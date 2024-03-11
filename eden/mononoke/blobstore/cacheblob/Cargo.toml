@@ -23,7 +23,7 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-memcache_lock_thrift = { version = "0.1.0", path = "../if" }
+memcache_lock_thrift_types = { version = "0.1.0", path = "../if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../redactedblobstore" }

@@ -19,19 +19,19 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
-derived_data_service_if__types = { package = "derived_data_service_if_types", version = "0.1.0", path = "../types" }
+derived_data_service_if__types = { package = "derived_data_service_if_types", version = "0.1.0", path = ".." }
 fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fb303_core_types = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes_if_clients = { version = "0.1.0", path = "../../../../filenodes/if/clients" }
-filenodes_if_types = { version = "0.1.0", path = "../../../../filenodes/if/types" }
+filenodes_if_types = { version = "0.1.0", path = "../../../../filenodes/if" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_types_thrift_clients = { version = "0.1.0", path = "../../../../git/git_types/if/clients" }
-git_types_thrift_types = { version = "0.1.0", path = "../../../../git/git_types/if/types" }
+git_types_thrift_types = { version = "0.1.0", path = "../../../../git/git_types/if" }
 mercurial_thrift_clients = { version = "0.1.0", path = "../../../../mercurial/types/if/clients" }
-mercurial_thrift_types = { version = "0.1.0", path = "../../../../mercurial/types/if/types" }
+mercurial_thrift_types = { version = "0.1.0", path = "../../../../mercurial/types/if" }
 mononoke_types_serialization_clients = { version = "0.1.0", path = "../../../../mononoke_types/serialization/clients" }
-mononoke_types_serialization_types = { version = "0.1.0", path = "../../../../mononoke_types/serialization/types" }
+mononoke_types_serialization_types = { version = "0.1.0", path = "../../../../mononoke_types/serialization" }
 tracing = "0.1.40"
 
 [build-dependencies]

@@ -26,7 +26,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data_constants = { version = "0.1.0", path = "../constants" }
 derived_data_remote = { version = "0.1.0", path = "../remote" }
-derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
+derived_data_service_if_types = { version = "0.1.0", path = "../remote/if" }
 either = "1.5"
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }

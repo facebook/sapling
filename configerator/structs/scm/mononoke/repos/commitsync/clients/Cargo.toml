@@ -18,12 +18,12 @@ doc = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-commitsync__types = { package = "commitsync_types", version = "0.1.0", path = "../types" }
+commitsync__types = { package = "commitsync_types", version = "0.1.0", path = ".." }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 repos_clients = { version = "0.1.0", path = "../../repos/clients" }
-repos_types = { version = "0.1.0", path = "../../repos/types" }
+repos_types = { version = "0.1.0", path = "../../repos" }
 rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_types = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = "0.1.40"
