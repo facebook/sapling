@@ -56,16 +56,17 @@ where
 }
 
 /// Sort nodes of DAG topologically. Implemented as depth-first search with tail-call
-/// eliminated. Complexity: `O(N)` from number of nodes.
+/// eliminated. Complexity: `O(N)` map lookups where N is number of nodes.
 /// It returns None if graph has a cycle.
 /// Nodes with no outgoing edges will be *first* in the resulting vector i.e. ancestors go first
 ///
 /// The function accepts either BTreeMap or HashMap. BTreeMap has advantage of providing
 /// stable output.
-pub fn sort_topological<T, M>(dag: M) -> Option<Vec<T>>
+pub fn sort_topological<T, M, V>(dag: M) -> Option<Vec<T>>
 where
     T: Clone + Eq + Hash + Ord + 'static + Debug,
-    M: GenericMap<T, Vec<T>>, // either &BTreeMap or &HashMap
+    M: GenericMap<T, V>, // either &BTreeMap or &HashMap
+    for<'a> &'a V: IntoIterator<Item = &'a T>,
 {
     sort_topological_starting_with_heads(dag, &[])
 }
@@ -78,10 +79,11 @@ where
 /// start from one of the heads the merge branches would be continous parts
 /// of the sorted list.  If we start from the leaves we might end up
 /// interleaving merges which matters for some consumer of this sorted order.
-pub fn sort_topological_starting_with_heads<T, M>(dag: M, heads: &[T]) -> Option<Vec<T>>
+pub fn sort_topological_starting_with_heads<T, M, V>(dag: M, heads: &[T]) -> Option<Vec<T>>
 where
     T: Clone + Eq + Hash + Ord + 'static + Debug,
-    M: GenericMap<T, Vec<T>>, // either &BTreeMap or &HashMap
+    M: GenericMap<T, V>, // either &BTreeMap or &HashMap
+    for<'a> &'a V: IntoIterator<Item = &'a T>,
 {
     /// Current state of the node in the DAG
     #[derive(Debug)]

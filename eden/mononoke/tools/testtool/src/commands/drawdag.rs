@@ -483,7 +483,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     if any_derivation_needed {
         let dag: HashMap<_, _> = dag
             .into_iter()
-            .map(|(k, v)| (k, v.into_iter().collect()))
+            .map(|(k, v)| (k, v.into_iter().collect::<Vec<_>>()))
             .collect();
         let sorted = sort_topological(&dag).ok_or_else(|| anyhow!("Graph has a cycle"))?;
         let csids = sorted
