@@ -2509,6 +2509,56 @@ def cachedstringmatcher(pattern, _cache={}):
     return result
 
 
+def bytesmatcher(pattern):
+    """
+    accepts a byte string, possibly starting with b're:' or b'literal:' prefix.
+    returns the matcher name, pattern, and matcher function.
+    missing or unknown prefixes are treated as literal matches.
+
+    helper for tests:
+    >>> def test(pattern, *tests):
+    ...     kind, pattern, matcher = bytesmatcher(pattern)
+    ...     return (kind, pattern, [bool(matcher(t)) for t in tests])
+
+    exact matching (no prefix):
+    >>> test(b'abcdefg', b'abc', b'def', b'abcdefg')
+    ('literal', b'abcdefg', [False, False, True])
+
+    regex matching ('re:' prefix)
+    >>> test(b're:a.+b', b'nomatch', b'fooadef', b'fooadefbar')
+    ('re', b'a.+b', [False, False, True])
+
+    force exact matches ('literal:' prefix)
+    >>> test(b'literal:re:foobar', b'foobar', b're:foobar')
+    ('literal', b're:foobar', [False, True])
+
+    unknown prefixes are ignored and treated as literals
+    >>> test(b'foo:bar', b'foo', b'bar', b'foo:bar')
+    ('literal', b'foo:bar', [False, False, True])
+    """
+    if pattern.startswith(b"re:"):
+        pattern = pattern[3:]
+        try:
+            regex = remod.compile(pattern)
+        except remod.error as e:
+            raise error.ParseError(_("invalid regular expression: %s") % e)
+        return "re", pattern, regex.search
+    elif pattern.startswith(b"literal:"):
+        pattern = pattern[8:]
+
+    match = lambda x: x == pattern
+    return "literal", pattern, match
+
+
+def cachedbytesmatcher(pattern, _cache={}):
+    # _cache is shared across function calls
+    result = _cache.get(pattern)
+    if result is None:
+        result = bytesmatcher(pattern)[-1]
+        _cache[pattern] = result
+    return result
+
+
 def shortuser(user: str) -> str:
     """Return a short representation of a user name or email address."""
     f = user.find("@")
