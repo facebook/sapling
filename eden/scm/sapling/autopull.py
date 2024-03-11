@@ -127,15 +127,6 @@ class deferredpullattempt(pullattempt):
         return None
 
 
-def _cachedstringmatcher(pattern, _cache={}):
-    # _cache is shared across function calls
-    result = _cache.get(pattern)
-    if result is None:
-        result = util.stringmatcher(pattern)[-1]
-        _cache[pattern] = result
-    return result
-
-
 def trypull(repo, xs):
     """Pull the list of given names xs.
 
@@ -229,7 +220,7 @@ def _pullremotebookmarks(repo, x):
     pattern = repo.ui.config("remotenames", "autopullpattern")
     hoist = repo.ui.config("remotenames", "hoist")
     if pattern and "/" in x:
-        matchfn = _cachedstringmatcher(pattern)
+        matchfn = util.cachedstringmatcher(pattern)
         if matchfn(x):
             remotename, name = bookmarks.splitremotename(x)
             if remotename == hoist:
@@ -251,7 +242,7 @@ def _pullhoistnames(repo, x):
     # Pull hoist remote names automatically. For example, "foo" -> "remote/foo".
     hoistpattern = repo.ui.config("remotenames", "autopullhoistpattern")
     if hoistpattern:
-        matchfn = _cachedstringmatcher(hoistpattern)
+        matchfn = util.cachedstringmatcher(hoistpattern)
         if matchfn(x):
             # XXX: remotenames.hoist config should be the "source" but is
             # ignored here. See "_pullremotebookmarks" for reasons.

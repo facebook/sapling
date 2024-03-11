@@ -2500,6 +2500,15 @@ def stringmatcher(pattern, casesensitive=True):
     return "literal", pattern, match
 
 
+def cachedstringmatcher(pattern, _cache={}):
+    # _cache is shared across function calls
+    result = _cache.get(pattern)
+    if result is None:
+        result = stringmatcher(pattern)[-1]
+        _cache[pattern] = result
+    return result
+
+
 def shortuser(user: str) -> str:
     """Return a short representation of a user name or email address."""
     f = user.find("@")
