@@ -3033,7 +3033,9 @@ class TextTestRunner(unittest.TextTestRunner):
                     self.stream.write("\n")
                     # Also write the file names to temporary files.  So it can be
                     # used in adhoc scripts like `hg revert $(cat .testfailed)`.
-                    with open(".test%s" % title.lower(), "a") as f:
+                    testsdir = os.path.abspath(os.path.dirname(__file__))
+                    filepath = os.path.join(testsdir, f".test{title.lower()}")
+                    with open(filepath, "a") as f:
                         for name in names:
                             f.write(name + "\n")
                         f.write("\n")
