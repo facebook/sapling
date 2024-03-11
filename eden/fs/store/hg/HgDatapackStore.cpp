@@ -120,37 +120,9 @@ TreePtr fromRawTree(
 
 } // namespace
 
-HgDatapackStore::SaplingNativeOptions HgDatapackStore::computeSaplingOptions() {
-  SaplingNativeOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
-HgDatapackStore::SaplingNativeOptions
-HgDatapackStore::computeTestSaplingOptions() {
-  SaplingNativeOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
-std::unique_ptr<HgBackingStoreOptions> HgDatapackStore::computeRuntimeOptions(
-    std::unique_ptr<HgBackingStoreOptions> options) {
-  options->ignoreFilteredPathsConfig =
-      options->ignoreFilteredPathsConfig.value_or(false);
-  return options;
-}
-
-std::unique_ptr<HgBackingStoreOptions>
-HgDatapackStore::computeTestRuntimeOptions(
-    std::unique_ptr<HgBackingStoreOptions> options) {
-  options->ignoreFilteredPathsConfig =
-      options->ignoreFilteredPathsConfig.value_or(false);
-  return options;
-}
-
 std::optional<Hash20> HgDatapackStore::getManifestNode(
     const ObjectId& commitId) {
-  auto manifestNode = store_.getManifestNode(commitId.getBytes());
+  auto manifestNode = store_->getManifestNode(commitId.getBytes());
   if (!manifestNode.has_value()) {
     XLOGF(DBG2, "Error while getting manifest node from datapackstore");
     return std::nullopt;
@@ -168,10 +140,10 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
       config_->getEdenConfig()->hgFilteredPaths.getValue();
 
   faultInjector_.check("HgDatapackStore::getTreeBatch", "");
-  store_.getTreeBatch(
+  store_->getTreeBatch(
       folly::range(requests),
       false,
-      // store_.getTreeBatch is blocking, hence we can take these by reference.
+      // store_->getTreeBatch is blocking, hence we can take these by reference.
       [&, filteredPaths](
           size_t index,
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
@@ -195,7 +167,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
         if (content.hasException()) {
           if (logger_) {
             logger_->logEvent(FetchMiss{
-                store_.getRepoName(),
+                store_->getRepoName(),
                 FetchMiss::Tree,
                 content.exception().what().toStdString(),
                 false});
@@ -245,13 +217,13 @@ folly::Try<TreePtr> HgDatapackStore::getTree(
   if (path.empty()) {
     fetchMode = sapling::FetchMode::LocalOnly;
   }
-  auto tree = store_.getTree(manifestId.getBytes(), fetchMode);
+  auto tree = store_->getTree(manifestId.getBytes(), fetchMode);
   if (tree.hasException() && fetchMode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
-    store_.flush();
+    store_->flush();
     tree =
-        store_.getTree(manifestId.getBytes(), sapling::FetchMode::AllowRemote);
+        store_->getTree(manifestId.getBytes(), sapling::FetchMode::AllowRemote);
   }
 
   using GetTreeResult = folly::Try<TreePtr>;
@@ -277,7 +249,7 @@ TreePtr HgDatapackStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
   auto tree =
-      store_.getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
+      store_->getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
   if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -300,7 +272,7 @@ folly::Try<TreePtr> HgDatapackStore::getTreeRemote(
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& /*context*/) {
-  auto tree = store_.getTree(
+  auto tree = store_->getTree(
       manifestId.getBytes(),
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
 
@@ -329,10 +301,10 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
-  store_.getBlobBatch(
+  store_->getBlobBatch(
       folly::range(requests),
       false,
-      // store_.getBlobBatch is blocking, hence we can take these by reference.
+      // store_->getBlobBatch is blocking, hence we can take these by reference.
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
         if (content.hasException()) {
           XLOGF(
@@ -354,7 +326,7 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
         if (content.hasException()) {
           if (logger_) {
             logger_->logEvent(FetchMiss{
-                store_.getRepoName(),
+                store_->getRepoName(),
                 FetchMiss::Blob,
                 content.exception().what().toStdString(),
                 false});
@@ -383,7 +355,7 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
 folly::Try<BlobPtr> HgDatapackStore::getBlob(
     const HgProxyHash& hgInfo,
     sapling::FetchMode fetchMode) {
-  auto blob = store_.getBlob(hgInfo.byteHash(), fetchMode);
+  auto blob = store_->getBlob(hgInfo.byteHash(), fetchMode);
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
@@ -398,7 +370,7 @@ folly::Try<BlobPtr> HgDatapackStore::getBlob(
 folly::Try<BlobMetadataPtr> HgDatapackStore::getLocalBlobMetadata(
     const HgProxyHash& hgInfo) {
   auto metadata =
-      store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
+      store_->getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
 
   using GetBlobMetadataResult = folly::Try<BlobMetadataPtr>;
 
@@ -424,10 +396,10 @@ void HgDatapackStore::getBlobMetadataBatch(
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
-  store_.getBlobMetadataBatch(
+  store_->getBlobMetadataBatch(
       folly::range(requests),
       false,
-      // store_.getBlobMetadataBatch is blocking, hence we can take these by
+      // store_->getBlobMetadataBatch is blocking, hence we can take these by
       // reference.
       [&](size_t index,
           folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
@@ -451,7 +423,7 @@ void HgDatapackStore::getBlobMetadataBatch(
         if (auxTry.hasException()) {
           if (logger_) {
             logger_->logEvent(FetchMiss{
-                store_.getRepoName(),
+                store_->getRepoName(),
                 FetchMiss::BlobMetadata,
                 auxTry.exception().what().toStdString(),
                 false});
@@ -559,7 +531,7 @@ HgDatapackStore::prepareRequests(
 }
 
 void HgDatapackStore::flush() {
-  store_.flush();
+  store_->flush();
 }
 
 } // namespace facebook::eden

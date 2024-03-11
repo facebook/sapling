@@ -449,6 +449,8 @@ class HgQueuedBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       liveImportPrefetchWatches_;
 
+  std::unique_ptr<HgBackingStoreOptions> runtimeOptions_;
+
   ActivityBuffer<HgImportTraceEvent> activityBuffer_;
 
   // The traceBus_ and hgTraceHandle_ should be last so any internal subscribers
@@ -457,6 +459,8 @@ class HgQueuedBackingStore final : public BackingStore {
 
   // Handle for TraceBus subscription.
   TraceSubscriptionHandle<HgImportTraceEvent> hgTraceHandle_;
+
+  sapling::SaplingNativeBackingStore store_;
 
   // The datapack store using with this HgQueuedBackingStore
   std::unique_ptr<HgDatapackStore> datapackStore_;

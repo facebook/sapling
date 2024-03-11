@@ -94,6 +94,32 @@ class SaplingRetryThreadFactory : public folly::InitThreadFactory {
              logger] {},
             [] {}) {}
 };
+
+HgDatapackStore::SaplingNativeOptions computeSaplingOptions() {
+  HgDatapackStore::SaplingNativeOptions options{};
+  options.allow_retries = false;
+  return options;
+}
+
+HgDatapackStore::SaplingNativeOptions computeTestSaplingOptions() {
+  HgDatapackStore::SaplingNativeOptions options{};
+  options.allow_retries = false;
+  return options;
+}
+
+std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
+
+std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
+    std::unique_ptr<HgBackingStoreOptions> options) {
+  options->ignoreFilteredPathsConfig =
+      options->ignoreFilteredPathsConfig.value_or(false);
+  return options;
+}
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -156,15 +182,16 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
+      runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
+      store_{repository.view(), computeSaplingOptions()},
       datapackStore_{std::make_unique<HgDatapackStore>(
-          repository,
-          HgDatapackStore::computeSaplingOptions(),
-          HgDatapackStore::computeRuntimeOptions(std::move(runtimeOptions)),
+          &store_,
+          runtimeOptions_.get(),
           config_,
           structuredLogger_,
           faultInjector)} {
@@ -208,17 +235,18 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
+      runtimeOptions_(
+          computeTestRuntimeOptions(std::make_unique<HgBackingStoreOptions>(
+              /*ignoreFilteredPathsConfig=*/false))),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
+      store_{repository.view(), computeTestSaplingOptions()},
       datapackStore_{std::make_unique<HgDatapackStore>(
-          repository,
-          HgDatapackStore::computeTestSaplingOptions(),
-          HgDatapackStore::computeTestRuntimeOptions(
-              std::make_unique<HgBackingStoreOptions>(
-                  /*ignoreFilteredPathsConfig=*/false)),
+          &store_,
+          runtimeOptions_.get(),
           config_,
           nullptr,
           faultInjector)} {

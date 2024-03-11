@@ -46,33 +46,24 @@ class HgDatapackStore {
    * for FaultInjector though. TODO: T171327256.
    */
   HgDatapackStore(
-      AbsolutePathPiece repository,
-      const SaplingNativeOptions& saplingNativeOptions,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+      sapling::SaplingNativeBackingStore* store,
+      HgBackingStoreOptions* runtimeOptions,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector)
-      : store_{repository.view(), saplingNativeOptions},
-        runtimeOptions_{std::move(runtimeOptions)},
+      : store_{store},
+        runtimeOptions_{runtimeOptions},
         config_{std::move(config)},
         logger_{std::move(logger)},
         faultInjector_{*faultInjector} {}
 
   std::string_view getRepoName() const {
-    return store_.getRepoName();
+    return store_->getRepoName();
   }
 
   std::optional<Hash20> getManifestNode(const ObjectId& commitId);
 
   void getTreeBatch(const ImportRequestsList& requests);
-  static SaplingNativeOptions computeTestSaplingOptions();
-  static std::unique_ptr<HgBackingStoreOptions> computeTestRuntimeOptions(
-      std::unique_ptr<HgBackingStoreOptions> options);
-
-  static SaplingNativeOptions computeSaplingOptions();
-
-  static std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
-      std::unique_ptr<HgBackingStoreOptions> options);
 
   folly::Try<TreePtr> getTree(
       const RelativePath& path,
@@ -186,8 +177,20 @@ class HgDatapackStore {
       const ImportRequestsList& importRequests,
       const std::string& requestType);
 
-  sapling::SaplingNativeBackingStore store_;
-  std::unique_ptr<HgBackingStoreOptions> runtimeOptions_;
+  // Raw pointer to the `std::unique_ptr<sapling::SaplingNativeBackingStore>`
+  // owned by the same `HgQueuedBackingStore` that also has a `std::unique_ptr`
+  // to this class. Holding this raw pointer is safe because this class's
+  // lifetime is controlled by the same class (`HgQueuedBackingStore`) that
+  // controls the lifetime of the underlying
+  // `sapling::SaplingNativeBackingStore` here
+  sapling::SaplingNativeBackingStore* store_;
+
+  // Raw pointer to the `std::unique_ptr<HgBackingStoreOptions>` owned
+  // by the same `HgQueuedBackingStore` that also has a `std::unique_ptr` to
+  // this class. Holding this raw pointer is safe because this class's lifetime
+  // is controlled by the same class (`HgQueuedBackingStore`) that controls the
+  // lifetime of the underlying `HgBackingStoreOptions` here
+  HgBackingStoreOptions* runtimeOptions_;
   std::shared_ptr<ReloadableConfig> config_;
   std::shared_ptr<StructuredLogger> logger_;
   FaultInjector& faultInjector_;

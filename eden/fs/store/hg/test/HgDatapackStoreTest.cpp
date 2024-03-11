@@ -73,7 +73,6 @@ std::vector<PathComponent> getTreeNames(
 struct HgDatapackStoreTestBase : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
 
-  HgDatapackStore::SaplingNativeOptions options{computeTestSaplingOptions()};
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
 
@@ -90,16 +89,22 @@ struct HgDatapackStoreTestBase : TestRepo, ::testing::Test {
       std::make_shared<ReloadableConfig>(rawEdenConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
 
+  HgBackingStoreOptions runtimeOptions{/*ignoreFilteredPathsConfig=*/false};
+  HgBackingStoreOptions runtimeOptionsIgnoreConfig{
+      /*ignoreFilteredPathsConfig=*/true};
+
+  sapling::SaplingNativeBackingStore store{
+      repo.path().view(),
+      computeTestSaplingOptions()};
+
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>(stats.copy())};
 };
 
 struct HgDatapackStoreTest : HgDatapackStoreTestBase {
   HgDatapackStore datapackStore{
-      repo.path(),
-      options,
-      std::make_unique<HgBackingStoreOptions>(
-          /*ignoreFilteredPathsConfig=*/false),
+      &store,
+      &runtimeOptions,
       edenConfig,
       nullptr,
       &faultInjector};
@@ -107,10 +112,8 @@ struct HgDatapackStoreTest : HgDatapackStoreTestBase {
 
 struct HgDatapackStoreTestIgnoreConfig : HgDatapackStoreTestBase {
   HgDatapackStore datapackStore{
-      repo.path(),
-      options,
-      std::make_unique<HgBackingStoreOptions>(
-          /*ignoreFilteredPathsConfig=*/true),
+      &store,
+      &runtimeOptionsIgnoreConfig,
       edenConfig,
       nullptr,
       &faultInjector};
