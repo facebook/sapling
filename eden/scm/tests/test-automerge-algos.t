@@ -233,3 +233,64 @@ adjacent-changes merge - (keep-in-file & mergediff):
   d'
   >>>>>>>
   e
+
+Successful sort-inserts merge for Python file:
+
+  $ newrepo
+  $ setconfig automerge.mode=accept
+  $ setconfig automerge.merge-algos=sort-inserts
+  $ drawdag <<'EOS'
+  > B C # C/a.py=import a\nimport c\n
+  > |/  # B/a.py=import a\nimport b\n
+  > A   # A/a.py=import a\n
+  > EOS
+  $ hg rebase -r $C -d $B
+  rebasing 07adb317b9bf "C"
+  merging a.py
+   lines 2-3 have been resolved by automerge algorithms
+  $ hg cat -r tip a.py
+  import a
+  import b
+  import c
+
+Successful sort-inserts merge for Buck file:
+
+  $ newrepo
+  $ setconfig automerge.mode=accept
+  $ setconfig automerge.merge-algos=sort-inserts
+  $ drawdag <<'EOS'
+  > B C # C/BUCK="//a/b/bar:bar",\n"//a/b/c:t",\n
+  > |/  # B/BUCK="repo//third-party/foo:foo",\n"//a/b/c:t",\n
+  > A   # A/BUCK="//a/b/c:t",\n
+  > EOS
+  $ hg rebase -r $C -d $B
+  rebasing 3b394aaff4e9 "C"
+  merging BUCK
+   lines 1-2 have been resolved by automerge algorithms
+  $ hg cat -r tip BUCK
+  "//a/b/bar:bar",
+  "repo//third-party/foo:foo",
+  "//a/b/c:t",
+
+Unsuccessful sort-inserts merge for normal Python statements:
+  $ newrepo
+  $ setconfig automerge.mode=accept
+  $ setconfig automerge.merge-algos=sort-inserts
+  $ drawdag <<'EOS'
+  > B C # C/a.py=a=1\nc=3\n
+  > |/  # B/a.py=a=1\nb=2\n
+  > A   # A/a.py=a=1\n
+  > EOS
+  $ hg rebase -r $C -d $B
+  rebasing a4de9208fa9e "C"
+  merging a.py
+  warning: 1 conflicts while merging a.py! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ cat a.py
+  a=1
+  <<<<<<< dest:   0f8ce9ef6fda - test: B
+  b=2
+  =======
+  c=3
+  >>>>>>> source: a4de9208fa9e - test: C

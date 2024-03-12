@@ -30,7 +30,7 @@ from typing import List, Optional, Tuple
 
 from bindings import clientinfo
 
-from . import error, mdiff, pycompat, util
+from . import error, match, mdiff, pycompat, util
 from .i18n import _
 from .pycompat import range
 
@@ -222,6 +222,26 @@ def automerge_wordmerge(m3, base_lines, a_lines, b_lines) -> Optional[List[bytes
         return None
 
 
+def automerge_sort_inserts(m3, base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
+    """This algorithm tries to resolve conflicts caused by insertions
+    on both sides (e.g.: import insertions)."""
+    if base_lines or not m3.file_type:
+        return None
+
+    key = f"import-pattern:{m3.file_type}"
+    pattern = m3.ui.config("automerge", key)
+    if not pattern:
+        return None
+    matchfn = util.cachedbytesmatcher(pattern.encode())
+    if all(matchfn(line) for line in a_lines) and all(
+        matchfn(line) for line in b_lines
+    ):
+        merged_lines = sorted(set(a_lines + b_lines))
+        return merged_lines
+
+    return None
+
+
 def automerge_adjacent_changes(
     m3, base_lines, a_lines, b_lines
 ) -> Optional[List[bytes]]:
@@ -363,6 +383,7 @@ AUTOMERGE_ALGORITHMS = {
     "word-merge": automerge_wordmerge,
     "adjacent-changes": automerge_adjacent_changes,
     "subset-changes": automerge_subset_changes,
+    "sort-inserts": automerge_sort_inserts,
 }
 
 
@@ -422,6 +443,16 @@ class Merge3Text:
                     _("unknown automerge algorithm '%s', availabe algorithms are %s")
                     % (name, list(AUTOMERGE_ALGORITHMS.keys()))
                 )
+
+    @util.propertycache
+    def file_type(self) -> Optional[str]:
+        if not self.file_path:
+            return None
+        for pat, typ in self.ui.configitems("filetype-patterns"):
+            mf = match.match("", "", [pat])
+            if mf(self.file_path):
+                return typ
+        return None
 
     def merge_groups(self):
         """Yield sequence of line groups.

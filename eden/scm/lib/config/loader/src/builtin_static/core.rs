@@ -70,7 +70,37 @@ autopullhoistpattern=
 autopullpattern=re:^(?:default|remote)/[A-Za-z0-9._/-]+$
 hoist=default
 
+[filetype-patterns]
+**/BUCK=buck
+**.bzl=buck
+**.php=hack
+**.cpp=cpp
+**.c=c
+**.m=object-c
+**.h=dot-h
+**.py=python
+**.js=javascript
+**.ts=typescript
+**.java=java
+**.kt=kotlin
+**.rs=rust
+**.cs=csharp
+
 [automerge]
 merge-algos=adjacent-changes,subset-changes
 mode=accept
+import-pattern:buck=re:^\s*(".*//.*",|load\(.*)$
+import-pattern:hack=re:^\s*use .*$
+import-pattern:cpp=re:^\s*#include .*$
+import-pattern:c=re:^\s*#include .*$
+import-pattern:object-c=re:^\s*(#include|#import) .*$
+import-pattern:dot-h=re:^\s*(#include|#import) .*$
+import-pattern:python=re:^\s*import .*$
+import-pattern:javascript=re:^\s*import .*$
+import-pattern:typescript=re:^\s*import .*$
+import-pattern:java=re:^\s*import .*$
+import-pattern:kotlin=re:^\s*import .*$
+import-pattern:rust=re:^\s*use .*$
+import-pattern:csharp=re:^\s*using .*$
+import-pattern:go=re:^\s*using .*$
 "#);
