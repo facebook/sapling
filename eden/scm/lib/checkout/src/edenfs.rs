@@ -13,6 +13,7 @@ use std::os::unix::prelude::MetadataExt;
 use std::process::Command;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
@@ -157,6 +158,10 @@ pub fn edenfs_checkout(
     }
 
     // Update the treestate and parents with the new changes
+    if fail::eval("checkout-pre-set-parents", |_| ()).is_some() {
+        bail!("Error set by checkout-pre-set-parents FAILPOINTS");
+    }
+
     wc.set_parents(vec![target_commit], Some(target_commit_tree_hash))?;
     wc.treestate().lock().flush()?;
     // Clear the update state

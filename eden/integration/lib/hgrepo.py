@@ -376,7 +376,7 @@ class HgRepository(repobase.Repository):
         return typing.cast(List[Dict[str, Any]], json_data)
 
     def status(
-        self, include_ignored: bool = False, rev: Optional[str] = None
+        self, include_ignored: bool = False, rev: Optional[str] = None, **opts
     ) -> Dict[str, str]:
         """Returns the output of `hg status` as a dictionary of {path: status char}.
 
@@ -389,7 +389,7 @@ class HgRepository(repobase.Repository):
             args.append("--rev")
             args.append(rev)
 
-        output = self.hg(*args)
+        output = self.hg(*args, **opts)
         status = {}
         for entry in output.split("\0"):
             if not entry:
@@ -401,14 +401,14 @@ class HgRepository(repobase.Repository):
 
         return status
 
-    def update(self, rev: str, clean: bool = False, merge: bool = False) -> str:
+    def update(self, rev: str, clean: bool = False, merge: bool = False, **opts) -> str:
         args = ["update"]
         if clean:
             args.append("--clean")
         if merge:
             args.append("--merge")
         args.append(rev)
-        return self.hg(*args)
+        return self.hg(*args, **opts)
 
     def reset(self, rev: str, keep: bool = True) -> None:
         if keep:

@@ -920,6 +920,38 @@ class UpdateTest(EdenHgTestCase):
 
         first_update.join()
 
+    def test_update_with_hg_failure(self) -> None:
+        """
+        Test running `hg update` to check that a failure that leads to hg and
+        edenfs states diverging is detected and fixed correctly.
+        """
+        new_contents = "New contents for bar.txt\n"
+        self.backing_repo.write_file("foo/bar.txt", new_contents)
+        self.backing_repo.commit("Update foo/bar.txt")
+
+        self.assert_status_empty()
+        self.assertNotEqual(new_contents, self.read_file("foo/bar.txt"))
+
+        # We expect an exception, and expect it to leave the repo in a bad state
+        with self.assertRaisesRegex(
+            hgrepo.HgError, r"Error set by checkout-pre-set-parents FAILPOINTS"
+        ):
+            self.repo.update(
+                self.commit2,
+                env={
+                    "FAILPOINTS": "checkout-pre-set-parents=return",
+                },
+            )
+
+        # Confirm that we'll get an error message about the divergent state
+        self.hg("config", "--local", "experimental.repair-eden-dirstate", "False")
+        with self.assertRaisesRegex(BaseException, r"error computing status: .*"):
+            self.repo.status()
+
+        # Setting the experimental.repair-eden-dirstate config option to true (the default) will fix the issue
+        self.hg("config", "--local", "experimental.repair-eden-dirstate", "True")
+        self.repo.status()
+
 
 class PrjFsState(Enum):
     UNKNOWN = 0

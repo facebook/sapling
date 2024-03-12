@@ -57,6 +57,10 @@ class DoctorTest(EdenHgTestCase):
         return data.rstrip()
 
     def test_eden_doctor_fixes_valid_mismatched_parents(self) -> None:
+        # this test is only meaningful when the default behavior of fixing the
+        # dirstate is disabled
+        self.hg("config", "--local", "experimental.repair-eden-dirstate", "False")
+
         # this specifically tests when EdenFS and Mercurial are out of sync,
         # but and mercurial does know about EdenFS's WCP
         mount_path = Path(self.mount)

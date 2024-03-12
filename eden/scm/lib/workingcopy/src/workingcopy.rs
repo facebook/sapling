@@ -8,6 +8,7 @@
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -24,6 +25,7 @@ use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
@@ -32,6 +34,7 @@ use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NegateMatcher;
 use pathmatcher::UnionMatcher;
+use regex::Regex;
 use repolock::LockedPath;
 use repolock::RepoLocker;
 use repostate::MergeState;
@@ -406,6 +409,45 @@ impl WorkingCopy {
     pub fn status(
         &self,
         ctx: &CoreContext,
+        matcher: DynMatcher,
+        include_ignored: bool,
+    ) -> Result<Status> {
+        let result = self.status_internal(ctx, matcher.clone(), include_ignored);
+
+        result.or_else(|e| {
+            if self
+                .config
+                .get_or("experimental", "repair-eden-dirstate", || true)?
+            {
+                let errmsg = e.to_string();
+                if errmsg.contains("EdenError: error computing status") {
+                    match parse_edenfs_status_error(&errmsg) {
+                        Some(parent) => {
+                            self.treestate
+                                .lock()
+                                .set_parents(&mut std::iter::once(&parent))?;
+                        }
+
+                        None => {
+                            tracing::warn!(
+                                "could not parse a parent from error message {}",
+                                errmsg
+                            );
+                            return Err(e);
+                        }
+                    }
+
+                    // retry
+                    return self.status_internal(ctx, matcher, include_ignored);
+                }
+            }
+            Err(e)
+        })
+    }
+
+    pub fn status_internal(
+        &self,
+        ctx: &CoreContext,
         mut matcher: DynMatcher,
         include_ignored: bool,
     ) -> Result<Status> {
@@ -635,6 +677,17 @@ impl WorkingCopy {
     pub fn config(&self) -> &Arc<dyn Config> {
         &self.config
     }
+}
+
+// Example:
+// error.EdenError: error computing status: requested parent commit is out-of-date: requested 71060cd2999820e7c1e8cb85a48ef045b1ae79b4, but current parent commit is 01f208e3ffbfa4c32985e9247f26567bf2ec4683. Try running `eden doctor` to remediate
+static EDENFS_STATUS_ERROR_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"current parent commit is ([^.]*)\.").unwrap());
+
+fn parse_edenfs_status_error(errmsg: &str) -> Option<HgId> {
+    let caps = EDENFS_STATUS_ERROR_RE.captures(errmsg)?;
+    let hash = caps.get(1)?;
+    HgId::from_str(hash.as_str()).ok()
 }
 
 pub struct LockedWorkingCopy<'a> {
