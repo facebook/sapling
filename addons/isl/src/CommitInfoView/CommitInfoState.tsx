@@ -95,6 +95,7 @@ export const __TEST__ = {
     editedCommitMessageSuccessionDisposable = updateEditedCommitMessagesFromSuccessions();
   },
 };
+registerCleanup(successionTracker, updateEditedCommitMessagesFromSuccessions, import.meta.hot);
 
 export const latestCommitMessageFieldsWithEdits = atomFamilyWeak((hashOrHead: Hash | 'head') => {
   return atom(get => {

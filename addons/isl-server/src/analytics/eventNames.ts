@@ -108,6 +108,8 @@ export type TrackEventName =
   | 'SplitOpenFromCommitContextMenu'
   | 'SplitOpenFromHeadCommit'
   | 'SplitOpenRangeSelector'
+  | 'SuccessionsDetected'
+  | 'BuggySuccessionDetected'
   | 'SyncDiffMessageMutation'
   | 'ConfirmSyncNewDiffNumber'
   | 'UncommitOperation'

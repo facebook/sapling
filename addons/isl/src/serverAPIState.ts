@@ -218,6 +218,7 @@ export const latestCommitsData = atom<{
 registerCleanup(
   latestCommitsData,
   subscriptionEffect('smartlogCommits', data => {
+    const previousDag = readAtom(latestDag);
     writeAtom(latestCommitsData, last => {
       let commits = last.commits;
       const newCommits = data.commits.value;
@@ -232,7 +233,7 @@ registerCleanup(
       };
     });
     if (data.commits.value) {
-      successionTracker.findNewSuccessionsFromCommits(data.commits.value);
+      successionTracker.findNewSuccessionsFromCommits(previousDag, data.commits.value);
     }
   }),
 );
