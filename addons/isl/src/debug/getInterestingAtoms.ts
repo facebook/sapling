@@ -105,6 +105,10 @@ function serialize(initialArg: Serializable): Json {
   } else if (typeof arg === 'object') {
     const newObj: Json = {};
     for (const [propertyName, propertyValue] of Object.entries(arg)) {
+      // Skip functions.
+      if (typeof propertyValue === 'function') {
+        continue;
+      }
       newObj[propertyName] = serialize(propertyValue);
     }
 
