@@ -12,6 +12,7 @@ import {latestSuccessorsMapAtom} from '../SuccessionTracker';
 import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {readAtom} from '../jotaiUtils';
 import {uncommittedSelection} from '../partialSelection';
+import {dagWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {
   operationBeingPreviewed,
@@ -35,6 +36,7 @@ function listInterestingAtoms(): Array<Atom<unknown>> {
     latestCommitsData,
     latestSuccessorsMapAtom,
     latestUncommittedChangesData,
+    dagWithPreviews,
     mergeConflicts,
     operationBeingPreviewed,
     operationList,
