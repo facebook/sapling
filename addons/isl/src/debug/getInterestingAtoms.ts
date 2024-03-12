@@ -9,6 +9,7 @@ import type {AtomFamilyWeak} from '../jotaiUtils';
 import type {Atom} from 'jotai';
 import type {Json} from 'shared/typeUtils';
 
+import {editedCommitMessages} from '../CommitInfoView/CommitInfoState';
 import {latestSuccessorsMapAtom} from '../SuccessionTracker';
 import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {readAtom} from '../jotaiUtils';
@@ -46,8 +47,8 @@ function listInterestingAtoms(): Array<AtomOrFamily> {
     queuedOperations,
     selectedCommits,
     uncommittedSelection,
-    // This is an atomFamily. Need extra work to read it.
-    // unsavedFieldsBeingEdited,
+    // These are atomFamilies.
+    editedCommitMessages,
   ];
 }
 
