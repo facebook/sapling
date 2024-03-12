@@ -59,7 +59,7 @@ import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
-import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo, useCallback, useEffect, useState} from 'react';

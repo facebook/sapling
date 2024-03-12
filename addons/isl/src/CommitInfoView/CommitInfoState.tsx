@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, Hash} from '../types';
+import type {Hash} from '../types';
 import type {CommitMessageFields} from './types';
 
 import serverAPI from '../ClientToServerAPI';
