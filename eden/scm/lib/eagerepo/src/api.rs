@@ -262,7 +262,12 @@ impl EdenApi for EagerRepo {
 
     async fn clone_data(&self) -> edenapi::Result<dag::CloneData<HgId>> {
         debug!("clone_data");
-        let clone_data = self.dag().export_clone_data().await.map_err(map_dag_err)?;
+        let clone_data = self
+            .dag()
+            .await
+            .export_clone_data()
+            .await
+            .map_err(map_dag_err)?;
         convert_clone_data(clone_data)
     }
 
@@ -280,6 +285,7 @@ impl EdenApi for EagerRepo {
         let missing = to_vec_vertex(&missing);
         let set = self
             .dag()
+            .await
             .only(
                 Set::from_static_names(missing),
                 Set::from_static_names(common),
@@ -288,6 +294,7 @@ impl EdenApi for EagerRepo {
             .map_err(map_dag_err)?;
         let clone_data = self
             .dag()
+            .await
             .export_pull_data(&set)
             .await
             .map_err(map_dag_err)?;
@@ -308,6 +315,7 @@ impl EdenApi for EagerRepo {
                 })
                 .collect();
             self.dag()
+                .await
                 .resolve_relative_paths_to_names(paths)
                 .await
                 .map_err(map_dag_err)?
@@ -347,6 +355,7 @@ impl EdenApi for EagerRepo {
             let heads: Vec<Vertex> = to_vec_vertex(&master_heads);
             let names: Vec<Vertex> = to_vec_vertex(&hgids);
             self.dag()
+                .await
                 .resolve_names_to_relative_paths(heads, names)
                 .await
                 .map_err(map_dag_err)?
@@ -406,13 +415,18 @@ impl EdenApi for EagerRepo {
         );
         let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
-        let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
+        let graph = self
+            .dag()
+            .await
+            .only(heads, common)
+            .await
+            .map_err(map_dag_err)?;
         let stream = graph.iter_rev().await.map_err(map_dag_err)?;
         let stream: BoxStream<edenapi::Result<CommitGraphEntry>> = stream
             .then(|s| async move {
                 let s = s?;
                 let hgid = HgId::from_slice(s.as_ref()).unwrap();
-                let parents = self.dag().parent_names(s).await?;
+                let parents = self.dag().await.parent_names(s).await?;
                 let parents: Vec<HgId> = parents
                     .into_iter()
                     .map(|v| HgId::from_slice(v.as_ref()).unwrap())
@@ -446,10 +460,16 @@ impl EdenApi for EagerRepo {
         );
         let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
-        let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
+        let graph = self
+            .dag()
+            .await
+            .only(heads, common)
+            .await
+            .map_err(map_dag_err)?;
 
         let graph_segments: CommitGraphSegments = self
             .dag()
+            .await
             .export_pull_data(&graph)
             .await
             .map_err(map_dag_err)?
@@ -477,15 +497,15 @@ impl EdenApi for EagerRepo {
         &self,
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
+        let dag = self.dag().await;
         prefixes
             .into_iter()
             .map(
                 move |prefix| -> Result<CommitHashLookupResponse, EdenApiError> {
                     let req = make_hash_lookup_request(prefix.clone())?;
-                    let resp = non_blocking_result(
-                        self.dag().vertexes_by_hex_prefix(prefix.as_bytes(), 100),
-                    )
-                    .map_err(|e| EdenApiError::Other(e.into()));
+                    let resp =
+                        non_blocking_result(dag.vertexes_by_hex_prefix(prefix.as_bytes(), 100))
+                            .map_err(|e| EdenApiError::Other(e.into()));
                     resp.and_then(|vertexes| {
                         Ok(CommitHashLookupResponse {
                             request: req,

@@ -22,12 +22,16 @@ use dag::Dag;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use futures::lock::Mutex;
+use futures::lock::MutexGuard;
 use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::TreeEntry;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use parking_lot::lock_api::RwLockReadGuard;
+use parking_lot::RawRwLock;
 use parking_lot::RwLock;
 use storemodel::SerializationFormat;
 use zstore::Id20;
@@ -63,9 +67,9 @@ use crate::Result;
 /// Currently backed by [`metalog::MetaLog`]. It's a lightweight source control
 /// for atomic metadata changes.
 pub struct EagerRepo {
-    pub(crate) dag: Dag,
+    pub(crate) dag: Mutex<Dag>,
     pub(crate) store: EagerRepoStore,
-    metalog: MetaLog,
+    metalog: RwLock<MetaLog>,
     pub(crate) dir: PathBuf,
 }
 
@@ -229,9 +233,9 @@ impl EagerRepo {
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
 
         let repo = Self {
-            dag,
+            dag: Mutex::new(dag),
             store,
-            metalog,
+            metalog: RwLock::new(metalog),
             dir: dir.to_path_buf(),
         };
 
@@ -318,7 +322,7 @@ impl EagerRepo {
     }
 
     /// Write pending changes to disk.
-    pub async fn flush(&mut self) -> Result<()> {
+    pub async fn flush(&self) -> Result<()> {
         self.store.flush()?;
         let master_heads = {
             let books = self.get_bookmarks_map()?;
@@ -331,9 +335,9 @@ impl EagerRepo {
             }
             VertexListWithOptions::from(heads).with_highest_group(Group::MASTER)
         };
-        self.dag.flush(&master_heads).await?;
+        self.dag.lock().await.flush(&master_heads).await?;
         let opts = CommitOptions::default();
-        self.metalog.commit(opts)?;
+        self.metalog.write().commit(opts)?;
         Ok(())
     }
 
@@ -343,7 +347,7 @@ impl EagerRepo {
 
     /// Insert SHA1 blob to zstore.
     /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.
-    pub fn add_sha1_blob(&mut self, data: &[u8]) -> Result<Id20> {
+    pub fn add_sha1_blob(&self, data: &[u8]) -> Result<Id20> {
         // SPACE: This does not utilize zstore's delta features to save space.
         self.store.add_sha1_blob(data, &[])
     }
@@ -354,7 +358,7 @@ impl EagerRepo {
     }
 
     /// Insert a commit. Return the commit hash.
-    pub async fn add_commit(&mut self, parents: &[Id20], raw_text: &[u8]) -> Result<Id20> {
+    pub async fn add_commit(&self, parents: &[Id20], raw_text: &[u8]) -> Result<Id20> {
         let parents: Vec<Vertex> = parents
             .iter()
             .map(|v| Vertex::copy_from(v.as_ref()))
@@ -392,8 +396,11 @@ impl EagerRepo {
         let parent_map: HashMap<Vertex, Vec<Vertex>> =
             vec![(vertex.clone(), parents)].into_iter().collect();
         self.dag
+            .lock()
+            .await
             .add_heads(&parent_map, &vec![vertex].into())
             .await?;
+
         Ok(id)
     }
 
@@ -412,7 +419,7 @@ impl EagerRepo {
     pub fn get_bookmarks_map(&self) -> Result<BTreeMap<String, Id20>> {
         // Attempt to match the format used by a real client repo.
         let text: String = {
-            let data = self.metalog.get("bookmarks")?;
+            let data = self.metalog.read().get("bookmarks")?;
             let opt_text = data.map(|b| String::from_utf8_lossy(&b).to_string());
             opt_text.unwrap_or_default()
         };
@@ -447,18 +454,18 @@ impl EagerRepo {
             .map(|(name, id)| format!("{} {}\n", id.to_hex(), name))
             .collect::<Vec<_>>()
             .concat();
-        self.metalog.set("bookmarks", text.as_bytes())?;
+        self.metalog.write().set("bookmarks", text.as_bytes())?;
         Ok(())
     }
 
     /// Obtain a reference to the commit graph.
-    pub fn dag(&self) -> &Dag {
-        &self.dag
+    pub async fn dag(&self) -> MutexGuard<'_, Dag> {
+        self.dag.lock().await
     }
 
     /// Obtain a reference to the metalog.
-    pub fn metalog(&self) -> &MetaLog {
-        &self.metalog
+    pub fn metalog(&self) -> RwLockReadGuard<RawRwLock, MetaLog> {
+        self.metalog.read()
     }
 
     /// Obtain an instance to the store.
@@ -565,7 +572,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir).unwrap();
         let text = &b"blob-text-foo-bar"[..];
         let id = repo.add_sha1_blob(text).unwrap();
         assert_eq!(repo.get_sha1_blob(id).unwrap().as_deref(), Some(text));
@@ -585,14 +592,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir).unwrap();
         let commit1 = repo.add_commit(&[], b"A").await.unwrap();
         let commit2 = repo.add_commit(&[], b"B").await.unwrap();
         let _commit3 = repo.add_commit(&[commit1, commit2], b"C").await.unwrap();
         repo.flush().await.unwrap();
 
         let repo2 = EagerRepo::open(dir).unwrap();
-        let rendered = dag::render::render_namedag(repo2.dag(), |v| {
+        let rendered = dag::render::render_namedag(&*repo2.dag().await, |v| {
             let id = Id20::from_slice(v.as_ref()).unwrap();
             let blob = repo2.get_sha1_blob(id).unwrap().unwrap();
             Some(String::from_utf8_lossy(&blob[Id20::len() * 2..]).to_string())
@@ -674,7 +681,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir).unwrap();
         let missing_id = missing_id();
 
         // Root tree missing.

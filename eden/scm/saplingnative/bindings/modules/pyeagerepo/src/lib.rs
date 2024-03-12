@@ -58,7 +58,7 @@ py_class!(class EagerRepo |py| {
 
     /// Write pending changes to disk.
     def flush(&self) -> PyResult<PyNone> {
-        let mut inner = self.inner(py).borrow_mut();
+        let inner = self.inner(py).borrow_mut();
         block_on(inner.flush()).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -67,7 +67,7 @@ py_class!(class EagerRepo |py| {
     /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.
     /// (rawtext: bytes) -> node
     def addsha1blob(&self, data: PyBytes) -> PyResult<PyBytes> {
-        let mut inner = self.inner(py).borrow_mut();
+        let inner = self.inner(py).borrow_mut();
         let id = inner.add_sha1_blob(data.data(py)).map_pyerr(py)?;
         Ok(PyBytes::new(py, id.as_ref()))
     }
@@ -111,7 +111,7 @@ py_class!(class EagerRepo |py| {
     /// Obtain a dag snapshot.
     def dag(&self) -> PyResult<PyDag> {
         let inner = self.inner(py).borrow();
-        let dag = inner.dag().dag_snapshot().map_pyerr(py)?;
+        let dag = block_on(inner.dag()).dag_snapshot().map_pyerr(py)?;
         PyDag::from_arc_dag(py, dag)
     }
 
