@@ -95,6 +95,8 @@ impl EdenApi for EagerRepo {
         Ok(vec![
             "segmented-changelog".to_string(),
             "commit-graph-segments".to_string(),
+            // Inform client that we only support sha1 content addressing.
+            "sha1-only".to_string(),
         ])
     }
 

@@ -28,6 +28,7 @@ rust_python_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:sha1",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/cpython-async:cpython-async",
         "//eden/scm/lib/cpython-ext:cpython-ext",

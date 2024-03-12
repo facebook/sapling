@@ -350,8 +350,9 @@ py_class!(pub class client |py| {
             Serde<HgId>,   /* p1 */
             Serde<HgId>,   /* p2 */
         )>,
+        use_sha1: bool,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
-        self.inner(py).as_ref().uploadfiles_py(py, store, keys)
+        self.inner(py).as_ref().uploadfiles_py(py, store, keys, use_sha1)
     }
 
     /// Upload trees

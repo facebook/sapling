@@ -33,7 +33,8 @@ Test APIs:
 
   $ hg debugapi -e capabilities
   ["segmented-changelog",
-   "commit-graph-segments"]
+   "commit-graph-segments",
+   "sha1-only"]
 
   $ hg debugapi -e bookmarks -i '["master", "foo"]'
   {"foo": None,

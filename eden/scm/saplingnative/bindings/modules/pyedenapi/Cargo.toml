@@ -22,4 +22,5 @@ progress-model = { version = "0.1.0", path = "../../../../lib/progress/model" }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }
 revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
+sha1 = "0.10.5"
 types = { version = "0.1.0", path = "../../../../lib/types" }
