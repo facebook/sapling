@@ -6,6 +6,7 @@
  */
 
 import App from '../../App';
+import {CommitInfoTestUtils} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -13,11 +14,13 @@ import {
   COMMIT,
   simulateUncommittedChangedFiles,
   simulateMessageFromServer,
+  openCommitInfoSidebar,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
+import * as utils from 'shared/utils';
 
 describe('CommitOperation', () => {
   beforeEach(() => {
@@ -174,5 +177,91 @@ describe('CommitOperation', () => {
     clickQuickCommit();
 
     expect(quickInput).toHaveValue('');
+  });
+
+  it('on error, restores edited commit message to try again', () => {
+    act(() => openCommitInfoSidebar());
+    act(() => CommitInfoTestUtils.clickCommitMode());
+
+    act(() => {
+      const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.type(title, 'My Commit');
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.type(desc, 'My description');
+    });
+
+    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '1111');
+    act(() => {
+      CommitInfoTestUtils.clickCommitButton();
+    });
+
+    CommitInfoTestUtils.expectIsNOTEditingTitle();
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        kind: 'exit',
+        exitCode: 1,
+        id: '1111',
+        timestamp: 0,
+      });
+    });
+
+    waitFor(() => {
+      CommitInfoTestUtils.expectIsEditingTitle();
+      const title = CommitInfoTestUtils.getTitleEditor();
+      expect(title).toHaveValue('My Commit');
+      CommitInfoTestUtils.expectIsEditingDescription();
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      expect(desc).toHaveValue('My description');
+    });
+  });
+
+  it('on error, merges messages when restoring edited commit message to try again', () => {
+    act(() => openCommitInfoSidebar());
+    act(() => CommitInfoTestUtils.clickCommitMode());
+
+    act(() => {
+      const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.type(title, 'My Commit');
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.type(desc, 'My description');
+    });
+
+    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '2222');
+    act(() => {
+      CommitInfoTestUtils.clickCommitButton();
+    });
+    CommitInfoTestUtils.expectIsNOTEditingTitle();
+
+    act(() => {
+      openCommitInfoSidebar();
+      CommitInfoTestUtils.clickCommitMode();
+    });
+    act(() => {
+      const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.type(title, 'other title');
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.type(desc, 'other description');
+    });
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        kind: 'exit',
+        exitCode: 1,
+        id: '2222',
+        timestamp: 0,
+      });
+    });
+
+    waitFor(() => {
+      CommitInfoTestUtils.expectIsEditingTitle();
+      const title = CommitInfoTestUtils.getTitleEditor();
+      expect(title).toHaveValue('other title, My Commit');
+      CommitInfoTestUtils.expectIsEditingDescription();
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      expect(desc).toHaveValue('other description, My description');
+    });
   });
 });

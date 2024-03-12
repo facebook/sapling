@@ -29,7 +29,7 @@ export class CommitOperation extends Operation {
    * @param filesPathsToCommit if provided, only these file paths will be included in the commit operation. If undefined, ALL uncommitted changes are included. Paths should be relative to repo root.
    */
   constructor(
-    private message: string,
+    public message: string,
     private originalHeadHash: Hash,
     private filesPathsToCommit?: Array<RepoRelativePath>,
   ) {

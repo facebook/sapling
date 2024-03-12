@@ -12,6 +12,8 @@ import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, readAtom, writeAtom} from '../jotaiUtils';
+import {CommitOperation} from '../operations/CommitOperation';
+import {onOperationExited} from '../operationsState';
 import {dagWithPreviews} from '../previews';
 import {selectedCommitInfos} from '../selection';
 import {registerCleanup, registerDisposable} from '../utils';
@@ -21,6 +23,7 @@ import {
   anyEditsMade,
   applyEditedFields,
   commitMessageFieldsSchema,
+  mergeCommitMessageFields,
 } from './CommitMessageFields';
 import {atom} from 'jotai';
 import {firstLine} from 'shared/utils';
@@ -96,6 +99,32 @@ export const __TEST__ = {
   },
 };
 registerCleanup(successionTracker, updateEditedCommitMessagesFromSuccessions, import.meta.hot);
+
+registerDisposable(
+  serverAPI,
+  onOperationExited((progress, operation) => {
+    if (progress.exitCode !== 0 && operation instanceof CommitOperation) {
+      // Commit operation failed, let's restore your edited commit message so you might save it or try again
+      const message = operation.message;
+
+      const [title] = message.split(/\n+/, 1);
+      const description = message.slice(title.length);
+
+      const schema = readAtom(commitMessageFieldsSchema);
+      const fields = parseCommitMessageFields(schema, title, description);
+      const currentMessage = readAtom(editedCommitMessages('head'));
+      writeAtom(editedCommitMessages('head'), {
+        fields: mergeCommitMessageFields(
+          schema,
+          currentMessage.fields as CommitMessageFields,
+          fields,
+        ),
+      });
+      writeAtom(commitMode, 'commit');
+    }
+  }),
+  import.meta.hot,
+);
 
 export const latestCommitMessageFieldsWithEdits = atomFamilyWeak((hashOrHead: Hash | 'head') => {
   return atom(get => {

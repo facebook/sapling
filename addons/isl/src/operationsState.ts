@@ -6,7 +6,7 @@
  */
 
 import type {Operation} from './operations/Operation';
-import type {Hash, ProgressStep} from './types';
+import type {Disposable, Hash, ProgressStep, ServerToClientMessage} from './types';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
@@ -249,6 +249,26 @@ const operationsById = new Map<string, Operation>();
 /** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
 const operationCompletionCallbacks = new Map<string, (error?: Error) => void>();
 
+/**
+ * Subscribe to an operation exiting. Useful for handling cases where an operation fails
+ * and it should reset the UI to try again.
+ */
+export function onOperationExited(
+  cb: (
+    message: ServerToClientMessage & {type: 'operationProgress'; kind: 'exit'},
+    operation: Operation,
+  ) => unknown,
+): Disposable {
+  return serverAPI.onMessageOfType('operationProgress', progress => {
+    if (progress.kind === 'exit') {
+      const op = operationsById.get(progress.id);
+      if (op) {
+        cb(progress, op);
+      }
+    }
+  });
+}
+
 export const queuedOperations = atomResetOnCwdChange<Array<Operation>>([]);
 registerDisposable(
   queuedOperations,
@@ -268,7 +288,11 @@ registerDisposable(
         break;
       case 'exit':
         writeAtom(queuedOperations, current => {
-          operationsById.delete(progress.id); // we don't need to care about this operation anymore
+          setTimeout(() => {
+            // we don't need to care about this operation anymore after this tick,
+            // once all other callsites processing 'operationProgress' messages have run.
+            operationsById.delete(progress.id);
+          });
           if (progress.exitCode != null && progress.exitCode !== 0) {
             // if any process in the queue exits with an error, the entire queue is cleared.
             return [];
