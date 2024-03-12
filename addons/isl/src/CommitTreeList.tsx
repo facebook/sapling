@@ -12,7 +12,7 @@ import type {HashSet} from './dag/set';
 import type {Hash} from './types';
 
 import serverAPI from './ClientToServerAPI';
-import {Commit} from './Commit';
+import {Commit, InlineProgressSpan} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {isHighlightedCommit} from './HighlightedCommits';
@@ -23,7 +23,7 @@ import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {useRunOperation} from './operationsState';
+import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
@@ -91,10 +91,19 @@ function renderCommitExtras(info: DagCommitInfo, row: ExtendedGraphRow) {
 
 function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
   if (info.isYouAreHere) {
-    return ['replace-tile', <YouAreHereGlyph info={info} />];
+    return ['replace-tile', <YouAreHereGlyphWithProgress info={info} />];
   } else {
     return ['inside-tile', <HighlightedGlyph info={info} />];
   }
+}
+
+function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {
+  const inlineProgress = useAtomValue(inlineProgressByHash(info.hash));
+  return (
+    <YouAreHereGlyph info={info}>
+      {inlineProgress && <InlineProgressSpan message={inlineProgress} />}
+    </YouAreHereGlyph>
+  );
 }
 
 const dagHasChildren = atomFamilyWeak((key: string) => {
