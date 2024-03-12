@@ -15,7 +15,6 @@ import {currentComparisonMode} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
 import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
-import {InlineBadge} from './InlineBadge';
 import {SubmitSelectionButton} from './SubmitSelectionButton';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -532,44 +531,6 @@ function UnsavedEditedMessageIndicator({commit}: {commit: CommitInfo}) {
           <Icon icon="circle-large-filled" />
         </IconStack>
       </Tooltip>
-    </div>
-  );
-}
-
-export function YouAreHere({
-  previewType,
-  hideSpinner,
-}: {
-  previewType?: CommitPreview;
-  hideSpinner?: boolean;
-}) {
-  const isFetching = useAtomValue(isFetchingUncommittedChanges) && !hideSpinner;
-
-  let text;
-  let spinner = false;
-  switch (previewType) {
-    case CommitPreview.GOTO_DESTINATION:
-      text = <T>You're moving here...</T>;
-      spinner = true;
-      break;
-    case CommitPreview.GOTO_PREVIOUS_LOCATION:
-      text = <T>You were here...</T>;
-      break;
-    default:
-      text = <T>You are here</T>;
-      break;
-  }
-  return (
-    <div className="you-are-here-container">
-      <InlineBadge kind="primary">
-        {spinner ? <Icon icon="loading" /> : null}
-        {text}
-      </InlineBadge>
-      {isFetching &&
-      // don't show fetch spinner on previous location
-      previewType !== CommitPreview.GOTO_PREVIOUS_LOCATION ? (
-        <Icon icon="loading" />
-      ) : null}
     </div>
   );
 }

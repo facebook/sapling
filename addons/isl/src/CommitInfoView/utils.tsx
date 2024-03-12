@@ -9,10 +9,10 @@ import type {CommitInfo} from '../types';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 import type {ReactNode} from 'react';
 
-import {YouAreHere} from '../Commit';
 import {InlineBadge} from '../InlineBadge';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {YouAreHereLabel} from '../YouAreHereLabel';
 import {t, T} from '../i18n';
 import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
@@ -24,7 +24,7 @@ export function CommitTitleByline({commit}: {commit: CommitInfo}) {
   );
   return (
     <Subtle className="commit-info-title-byline">
-      {commit.isHead ? <YouAreHere hideSpinner /> : null}
+      {commit.isHead ? <YouAreHereLabel /> : null}
       {commit.phase === 'public' ? <PublicCommitBadge /> : null}
       <OverflowEllipsis shrink>
         <Tooltip trigger="hover" component={() => createdByInfo}>
