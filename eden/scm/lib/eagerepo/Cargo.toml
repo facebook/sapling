@@ -20,6 +20,7 @@ identity = { version = "0.1.0", path = "../identity" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metalog = { version = "0.1.0", path = "../metalog" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
+mutationstore = { version = "0.1.0", path = "../mutationstore" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 storemodel = { version = "0.1.0", path = "../storemodel" }

@@ -30,6 +30,7 @@ use manifest_tree::TreeEntry;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use mutationstore::MutationStore;
 use parking_lot::lock_api::RwLockReadGuard;
 use parking_lot::RawRwLock;
 use parking_lot::RwLock;
@@ -71,6 +72,7 @@ pub struct EagerRepo {
     pub(crate) store: EagerRepoStore,
     metalog: RwLock<MetaLog>,
     pub(crate) dir: PathBuf,
+    pub(crate) mut_store: Mutex<MutationStore>,
 }
 
 /// Storage used by `EagerRepo`. Wrapped by `Arc<RwLock>` for easier sharing.
@@ -231,12 +233,14 @@ impl EagerRepo {
         let dag = Dag::open(store_dir.join("segments").join("v1"))?;
         let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
+        let mut_store = MutationStore::open(store_dir.join("mutation"))?;
 
         let repo = Self {
             dag: Mutex::new(dag),
             store,
             metalog: RwLock::new(metalog),
             dir: dir.to_path_buf(),
+            mut_store: Mutex::new(mut_store),
         };
 
         // "eagercompat" is a revlog repo secretly using an eager store under the hood.
@@ -338,6 +342,7 @@ impl EagerRepo {
         self.dag.lock().await.flush(&master_heads).await?;
         let opts = CommitOptions::default();
         self.metalog.write().commit(opts)?;
+        self.mut_store.lock().await.flush().await?;
         Ok(())
     }
 

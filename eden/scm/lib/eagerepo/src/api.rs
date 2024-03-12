@@ -38,6 +38,7 @@ use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
+use edenapi::types::Extra;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileResponse;
@@ -73,6 +74,7 @@ use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
 use minibytes::Bytes;
+use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
 use tracing::debug;
 use tracing::error;
@@ -540,8 +542,37 @@ impl EdenApi for EagerRepo {
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
         commits.sort();
         debug!("commit_mutations {}", debug_hgid_list(&commits));
-        let _ = (commits,);
-        Ok(vec![])
+
+        let mut seen_commits = HashSet::new();
+        let mut mutations = Vec::new();
+        let mut_store = self.mut_store.lock().await;
+
+        // Max of 100 mutation depth.
+        for _ in 0..100 {
+            commits.retain(|c| seen_commits.insert(*c));
+
+            let new_mutations: Vec<_> = mut_store
+                .get_entries(&commits, &commits)
+                .unwrap()
+                .into_iter()
+                .map(|e| CommitMutationsResponse {
+                    mutation: local_mutation_to_edenapi(e),
+                })
+                .collect();
+            if new_mutations.is_empty() {
+                break;
+            }
+
+            for m in new_mutations.iter() {
+                commits.push(m.mutation.successor);
+                commits.extend_from_slice(&m.mutation.predecessors);
+                commits.extend_from_slice(&m.mutation.split);
+            }
+
+            mutations.extend(new_mutations);
+        }
+
+        Ok(mutations)
     }
 
     async fn process_files_upload(
@@ -686,9 +717,9 @@ impl EdenApi for EagerRepo {
     async fn upload_changesets(
         &self,
         changesets: Vec<UploadHgChangeset>,
-        _mutations: Vec<HgMutationEntryContent>,
+        mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        debug!(?changesets, "upload_changesets");
+        debug!(?changesets, ?mutations, "upload_changesets");
 
         let mut res = Vec::with_capacity(changesets.len());
         for UploadHgChangeset {
@@ -736,6 +767,20 @@ impl EdenApi for EagerRepo {
                     // I don't think that is good, but let's go with the flow for now.
                     error!(?err, "error inserting commit");
                     continue;
+                }
+            }
+        }
+
+        {
+            let mut mut_store = self.mut_store.lock().await;
+            for m in mutations {
+                if let Err(err) = mut_store.add(&edenapi_mutation_to_local(m)) {
+                    return Err(EdenApiError::HttpError {
+                        status: StatusCode::INTERNAL_SERVER_ERROR,
+                        message: format!("error inserting mutation entry: {:?}", err),
+                        headers: Default::default(),
+                        url: self.url("upload_changesets"),
+                    });
                 }
             }
         }
@@ -799,6 +844,43 @@ impl EdenApi for EagerRepo {
         }
 
         Ok(res)
+    }
+}
+
+fn edenapi_mutation_to_local(m: HgMutationEntryContent) -> MutationEntry {
+    MutationEntry {
+        succ: m.successor,
+        preds: m.predecessors,
+        split: m.split,
+        op: m.op,
+        user: String::from_utf8_lossy(&m.user).to_string(),
+        time: m.time,
+        tz: m.tz,
+        extra: m
+            .extras
+            .into_iter()
+            .map(|e| (e.key.into_boxed_slice(), e.value.into_boxed_slice()))
+            .collect(),
+    }
+}
+
+fn local_mutation_to_edenapi(m: MutationEntry) -> HgMutationEntryContent {
+    HgMutationEntryContent {
+        successor: m.succ,
+        predecessors: m.preds,
+        split: m.split,
+        op: m.op,
+        user: m.user.into_bytes(),
+        time: m.time,
+        tz: m.tz,
+        extras: m
+            .extra
+            .into_iter()
+            .map(|(k, v)| Extra {
+                key: k.to_vec(),
+                value: v.to_vec(),
+            })
+            .collect(),
     }
 }
 

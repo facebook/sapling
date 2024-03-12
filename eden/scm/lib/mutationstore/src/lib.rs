@@ -52,7 +52,7 @@ use indexedlog::log::{self as ilog};
 use indexedlog::DefaultOpenOptions;
 use indexedlog::OpenWithRepair;
 pub use indexedlog::Repair;
-use types::mutation::MutationEntry;
+pub use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
 
