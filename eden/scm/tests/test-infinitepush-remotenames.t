@@ -5,6 +5,7 @@
   $ enable infinitepush
   $ setconfig remotenames.hoist=default 'remotenames.autopullhoistpattern=re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
+  $ setconfig remotefilelog.http=false pull.httpbookmarks=false
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"

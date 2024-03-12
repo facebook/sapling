@@ -41,6 +41,7 @@ manually.
   $ hg bookmark -r $Y other
 
   $ cd $TESTTMP
+  $ setconfig 'remotenames.selectivepulldefault=master other'
   $ clone server client1
   $ cd client1
   $ hg goto -q 'desc(Y)'
@@ -197,7 +198,7 @@ Move by hash with two related commits removes both of them
   │
   o  P: draft
   │
-  o  Y: draft
+  o  Y: public  remote/other
   │
   │ o  W: public  remote/master
   │ │
@@ -259,7 +260,7 @@ Move by hash moves commit, all descendants and their bookmarks
   │ │
   │ o  M: draft
   ├─╯
-  o  Y: draft
+  o  Y: public  remote/other
   │
   │ o  W: public  remote/master
   │ │
@@ -319,7 +320,7 @@ Move when other heads keep ancestors alive, moving it just moves the head
   ├─╯ │
   │   o  A: draft
   │   │
-  o   │  Y: draft
+  o   │  Y: public  remote/other
   │   │
   │   o  W: public  remote/master
   │   │
@@ -381,7 +382,7 @@ Move by bookmark leaves commits alone if there are other bookmarks. The moved bo
   ├─╯ │
   │   o  A: draft
   │   │
-  o   │  Y: draft
+  o   │  Y: public  remote/other
   │   │
   │   o  W: public  remote/master
   │   │
@@ -444,7 +445,7 @@ But moving all of the bookmarks pointing to a head removes the head from the sou
   ├─╯ │
   │   o  A: draft
   │   │
-  o   │  Y: draft
+  o   │  Y: public  remote/other
   │   │
   │   o  W: public  remote/master
   │   │
@@ -504,7 +505,7 @@ Moving a bookmark in the stack doesn't hide the commit in the source workspace.
   ├─╯ │
   │   o  A: draft
   │   │
-  o   │  Y: draft
+  o   │  Y: public  remote/other
   │   │
   │   o  W: public  remote/master
   │   │
@@ -564,7 +565,7 @@ Moving a bookmark on a public commit just moves it.
   ├─╯ │
   │   o  A: draft
   │   │
-  o   │  Y: draft
+  o   │  Y: public  remote/other
   │   │
   │   o  W: public  remote/master
   │   │
@@ -622,7 +623,7 @@ Moving a lone commit just moves that head.
   ├─╯ │
   │   o  A: draft
   │   │
-  o   │  Y: draft
+  o   │  Y: public  remote/other
   │   │
   │   o  W: public  remote/master
   │   │
@@ -649,7 +650,7 @@ Moving a remote bookmark works.
   │
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -715,7 +716,7 @@ Merge commits can be moved
   ├─╯
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -746,7 +747,7 @@ Merge commits can be moved
   ├─╯
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -767,10 +768,12 @@ Merge commits can be moved
   ├─╯
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public
 
 
@@ -789,7 +792,7 @@ Try to move the same stack twice
   │
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -806,10 +809,12 @@ Try to move the same stack twice
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public
 
   $ hg pull -r 080f94b3ed7f
@@ -825,7 +830,7 @@ Try to move the same stack twice
   ├─╯
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -848,7 +853,7 @@ Try to move the same stack twice
   │
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -865,10 +870,12 @@ Try to move the same stack twice
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public
 
 
@@ -887,7 +894,7 @@ Try move with specified raw source and raw destination
   $ showgraph
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -900,10 +907,12 @@ Try move with specified raw source and raw destination
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public
 
 
@@ -919,19 +928,23 @@ Test `hg cloud archive` command
   finished in * (glob)
 
   $ showgraph
-  o  W: public  remote/master
+  o  Y: public  remote/other
   │
-  o  X: public
-  │
+  │ o  W: public  remote/master
+  │ │
+  │ o  X: public
+  ├─╯
   @  Z: public
 
   $ showgraphother archive
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public
 
 Test copying commits and bookmarks between workspaces
@@ -957,10 +970,12 @@ Test copying commits and bookmarks between workspaces
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public
 
   $ showgraph copytest
@@ -968,8 +983,10 @@ Test copying commits and bookmarks between workspaces
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
-  o  X: public
-  │
+  │ o  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
+  │ │
+  o │  X: public
+  ├─╯
   @  Z: public

@@ -648,6 +648,7 @@ def clone(
                 # client?
                 if (
                     getattr(destrepo, "nullableedenapi", None)
+                    and ui.configbool("remotenames", "selectivepull")
                     and destrepo.name
                     and (
                         (

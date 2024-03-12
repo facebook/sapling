@@ -60,7 +60,7 @@ setup repo2
   > [remotefilelog]
   > cachepath=$TESTTMP/cachepath
   > EOF
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
   $ cd repo2
   $ hg pull
   pulling from ssh://user@dummy/repo-hg
@@ -138,7 +138,7 @@ start mononoke
   $ cd repo2
   $ hg up -q 0
 Test a pull of one specific revision
-  $ hgmn pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
+  $ hgedenapi pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
 (with selectivepull, pulling a commit hash also pulls the selected bookmarks)
 
   $ hg log -r '3903775176ed::586ef37a04f7' --graph  -T '{node|short} {desc}'

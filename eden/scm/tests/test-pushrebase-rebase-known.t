@@ -30,7 +30,7 @@ The client repo1 has commit C known to the server.
   │ o  B remote/b1 remote/b2 public
   ├─╯
   o  A  public
-  
+
 Trying to push C (public) to b1 (B) is a no-op:
 
   $ hg push -r $C --to b1
@@ -43,11 +43,13 @@ The client repo2 has draft C known to the server.
 
   $ clone server repo2
   $ cd repo2
+  $ hg pull -q -B b2
   $ drawdag << 'EOS'
   >  C
   >  |
   > desc(A)
   > EOS
+  $ hg go $C -q
 
   $ hg pull -B b2 -q
   $ hg log -Gr: -T '{desc} {remotenames} {phase}'
@@ -77,4 +79,3 @@ Rebase C (draft) to b2 (B) when the server already knows C:
   o  B
   │
   o  A
-  

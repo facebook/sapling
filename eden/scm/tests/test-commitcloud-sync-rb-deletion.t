@@ -70,6 +70,10 @@ Pull the other bookmark so we have a subscription.
   $ cd $TESTTMP/client1
   $ hg pull -B other
   pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
   $ hg book --list-subs
      remote/master             9da34b1aa207
      remote/other              4c8ee072cf16

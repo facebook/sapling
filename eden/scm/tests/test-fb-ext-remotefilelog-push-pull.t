@@ -16,8 +16,7 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { ssh : { connections : 2,
-                        getpack : { calls : 1,  revs : 1},
+  { metrics : { ssh : { connections : 1,
                         read : { bytes : *}, (glob)
                         write : { bytes : *}}}} (glob)
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
@@ -78,10 +77,6 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
-  { metrics : { ssh : { connections : 2,
-                        getpack : { calls : 2,  revs : 2},
-                        read : { bytes : *}, (glob)
-                        write : { bytes : *}}}} (glob)
 
 # pull from shallow to shallow (ssh)
 
@@ -93,8 +88,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { ssh : { connections : 2,
-                        getpack : { calls : 1,  revs : 1},
+  { metrics : { ssh : { connections : 1,
                         read : { bytes : *}, (glob)
                         write : { bytes : *}}}} (glob)
 

@@ -65,14 +65,11 @@ create new commit in repo2 and check that push to a bookmark fails
   $ hg add b_dir/b
   $ hg ci -mb
 
-  $ hgmn push --to master_bookmark --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
+  $ hgedenapi push --to master_bookmark --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
   sending hello command
   sending clienttelemetry command
   pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/test/repo bookmark master_bookmark
   query 1; heads
-  preparing listkeys for "bookmarks" with pattern "['master']"
-  sending batch command
-  received listkey for "bookmarks": 0 bytes
   sending heads command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
@@ -115,24 +112,22 @@ create new commit in repo2 and check that push to a bookmark fails
   [255]
 
 Try to bypass the check
-  $ hgmn push --force --to master_bookmark --config treemanifest.treeonly=True mononoke://$(mononoke_address)/test%2Frepo --pushvars "BYPASS_READONLY=true"
+  $ hgedenapi push --force --to master_bookmark --config treemanifest.treeonly=True mononoke://$(mononoke_address)/test%2Frepo --pushvars "BYPASS_READONLY=true"
   pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/test/repo bookmark master_bookmark
   searching for changes
+  no changes found
   updating bookmark master_bookmark
 
 Check that a push which doesn't move a bookmark is allowed
-  $ hgmn push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
+  $ hgedenapi push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
   tracking on None {}
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/test/repo
   sending hello command
   sending clienttelemetry command
   query 1; heads
-  preparing listkeys for "bookmarks" with pattern "['master']"
-  sending batch command
-  received listkey for "bookmarks": 0 bytes
   sending heads command
   searching for changes
-  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
+  local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
   all local heads known remotely
   checking for updated bookmarks
   preparing listkeys for "bookmarks"

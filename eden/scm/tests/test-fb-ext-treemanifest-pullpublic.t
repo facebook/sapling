@@ -1,6 +1,5 @@
   $ . "$TESTDIR/library.sh"
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig devel.print-metrics=1 devel.skip-metrics=watchman
   $ setconfig treemanifest.treeonly=False
 
   $ hginit master
@@ -21,21 +20,6 @@
 Clone it
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  { metrics : { scmstore : { file : { api : { hg : { getfilecontent : { calls : 2},
-                                                     getmeta : { calls : 2},
-                                                     getmissing : { calls : 1,
-                                                                    keys : 2},
-                                                     prefetch : { calls : 7,
-                                                                  keys : 4}}},
-                                      fetch : { indexedlog : { cache : { hits : 10,
-                                                                         keys : 10,
-                                                                         requests : 7,
-                                                                         time : *}}}}}, (glob)
-                ssh : { connections : 2,
-                        getpack : { calls : 1,  revs : 2},
-                        read : { bytes : *}, (glob)
-                        write : { bytes : *}}}} (glob)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -80,10 +64,6 @@ Pull exactly up to d into the client
   adding changesets
   adding manifests
   adding file changes
-  { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 3}}}}},
-                ssh : { connections : 1,
-                        read : { bytes : *}, (glob)
-                        write : { bytes : *}}}} (glob)
 
 Test error message about MissingNodesError
   $ drawdag --config paths.default=ssh://user@dummy/master-lagged --config remotefilelog.debug=0 --config devel.print-metrics=0 << 'EOS'

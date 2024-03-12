@@ -153,7 +153,7 @@ Switch workspace back
   
 
 Create a bookmark and switch workspace. The bookmark should be preserved in the original workspace
-  $ hg bookmark "book (W1)" -r 2
+  $ hg bookmark "book (W1)" -r 'desc("B (W1)")'
   $ showgraph
   o  B (W1): draft book (W1)
   │
@@ -179,7 +179,7 @@ Create a bookmark and switch workspace. The bookmark should be preserved in the 
   
 
 Create a bookmark in w2 and switch workspace. The bookmark should be preserved in the w2. The w1 bookmark should appear.
-  $ hg bookmark "book (W2)" -r 4
+  $ hg bookmark "book (W2)" -r 'desc("D (W2)")'
   $ showgraph
   o  D (W2): draft book (W2)
   │
@@ -355,116 +355,108 @@ Testing switching workspace with different remote bookmarks
   $ hg pull -B feature -q
   $ hg pull -B master -q
   $ showgraph
-  o  M: public  remote/master
+  o  F: public  remote/feature
   │
-  │ o  F: public  remote/feature
-  ├─╯
   │ o  B (W1): draft book (W1)
   │ │
   │ o  A (W1): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
  
 Bookmark feature should disappear in w2 but master will stay as it is a protected bookmark in this configuration. 
   $ hg cloud join -w w2 --switch -q 
   $ showgraph
-  o  M: public  remote/master
+  o  D (W2): draft book (W2)
   │
-  │ o  D (W2): draft book (W2)
-  │ │
-  │ o  C (W2): draft
+  o  C (W2): draft
+  │
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
-  
 
   $ hg pull -B stable -q
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
 
 Switch back. Bookmark stable should disappear.
   $ hg cloud join -w w1 --switch -q
   $ showgraph
-  o  M: public  remote/master
+  o  F: public  remote/feature
   │
-  │ o  F: public  remote/feature
-  ├─╯
   │ o  B (W1): draft book (W1)
   │ │
   │ o  A (W1): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
 
 Switch one more time. Bookmark stable should return and feature disappear.
   $ hg cloud join -w w2 --switch -q
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
 
 Pull a commit from another workspace
   $ hg pull -r b624c739a2da -q
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
   ├─╯
   │ o  A (W1): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
 
 Switch back to W1
 
   $ hg cloud join -w w1 --switch -q
   $ showgraph
-  o  M: public  remote/master
+  o  F: public  remote/feature
   │
-  │ o  F: public  remote/feature
-  ├─╯
   │ o  B (W1): draft book (W1)
   │ │
   │ o  A (W1): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
 
 Switch back to W2 and check that the pulled commit is there.
   $ hg cloud join -w w2 --switch -q
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
   ├─╯
   │ o  A (W1): draft
   ├─╯
+  │ o  M: public  remote/master
+  ├─╯
   @  base: public
-  
  
 
 Test switch to non default non-existent workspace

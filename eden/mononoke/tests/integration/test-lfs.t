@@ -11,6 +11,8 @@
   $ LFS_THRESHOLD=1000 setup_common_config
   $ cd $TESTTMP
 
+  $ setconfig remotefilelog.http=false
+
 # Setup nolfs hg repo, create several commit to it
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs

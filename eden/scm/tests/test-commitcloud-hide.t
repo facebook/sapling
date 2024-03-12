@@ -31,6 +31,7 @@ manually.
   $ hg bookmark -r $Y other
 
   $ cd $TESTTMP
+  $ setconfig 'remotenames.selectivepulldefault=master other'
   $ clone server client1
   $ cd client1
   $ hg goto -q 'desc(Y)'
@@ -351,7 +352,7 @@ Removing a remote bookmark works
   │
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -385,7 +386,7 @@ Merge commits can be removed
   ├─╯
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │
@@ -414,7 +415,7 @@ Merge commits can be removed
   ├─╯
   o  A: draft
   │
-  │ @  Y: draft
+  │ @  Y: public  remote/other
   │ │
   o │  W: public  remote/master
   │ │

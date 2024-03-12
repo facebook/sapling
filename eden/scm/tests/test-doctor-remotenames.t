@@ -54,8 +54,8 @@ Test too many names:
   $ hg log -r 'all()' -T '{desc}: {remotenames}.\n'
   A: .
   B: debugremote/name1 debugremote/name2 debugremote/name3.
-  C: .
   D: remote/master.
+  C: .
 
   $ hg doctor --config doctor.check-too-many-names-threshold=1
   checking internal storage
@@ -67,8 +67,8 @@ Test too many names:
   $ hg log -r 'all()' -T '{desc}: {remotenames}.\n'
   A: .
   B: .
-  C: .
   D: remote/master.
+  C: .
 
 Test less relevant branches:
 
