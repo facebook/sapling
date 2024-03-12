@@ -12,6 +12,7 @@ import {
   OSSDefaultFieldSchema,
 } from './CommitInfoView/CommitMessageFields';
 import {readAtom} from './jotaiUtils';
+import {individualToggleKey} from './selection';
 import {screen, within, fireEvent, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 import {nullthrows} from 'shared/utils';
@@ -49,7 +50,7 @@ export const CommitInfoTestUtils = {
     const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
     expect(commit).toBeInTheDocument();
     act(() => {
-      fireEvent.click(nullthrows(commit), {metaKey: cmdClick === true});
+      fireEvent.click(nullthrows(commit), {[individualToggleKey]: cmdClick === true});
     });
   },
 

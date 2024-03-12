@@ -21,6 +21,13 @@ import {latestDag} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom} from 'jotai';
 import {useCallback} from 'react';
+import {isMac} from 'shared/OperatingSystem';
+
+/**
+ * The name of the key to toggle individual selection.
+ * On Windows / Linux, it is Ctrl. On Mac, it is Command.
+ */
+export const individualToggleKey: 'metaKey' | 'ctrlKey' = isMac ? 'metaKey' : 'ctrlKey';
 
 /**
  * See {@link selectedCommitInfos}
@@ -107,6 +114,8 @@ export function useCommitSelection(hash: string): {
           }
         }
 
+        const individualToggle = e[individualToggleKey];
+
         const selected = new Set(last);
         if (selected.has(hash)) {
           // multiple selected, then click an existing selected:
@@ -115,7 +124,7 @@ export function useCommitSelection(hash: string): {
           // only one selected, then click on it
           //   if cmd, unselect it
           //   it not cmd, unselect it
-          if (!e.metaKey && selected.size > 1) {
+          if (!individualToggle && selected.size > 1) {
             // only select this commit
             selected.clear();
             selected.add(hash);
@@ -125,7 +134,7 @@ export function useCommitSelection(hash: string): {
             writeAtom(previouslySelectedCommit, undefined);
           }
         } else {
-          if (!e.metaKey) {
+          if (!individualToggle) {
             // clear if not holding cmd key
             selected.clear();
           }
