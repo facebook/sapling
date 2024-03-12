@@ -66,6 +66,19 @@ type Serializable = Json | {toJSON: () => Serializable};
 function serialize(initialArg: Serializable): Json {
   let arg = initialArg;
 
+  const isObject = arg != null && typeof arg === 'object';
+
+  // Extract debug state provided by the object. This applies to both immutable and regular objects.
+  // This needs to happen before unwrapping SelfUpdate.
+  let debugState = null;
+  if (isObject) {
+    // If the object defines `getDebugState`. Call it to get more (easier to visualize) states.
+    const maybeGetDebugState = (arg as {getDebugState?: () => {[key: string]: Json}}).getDebugState;
+    if (maybeGetDebugState != null) {
+      debugState = maybeGetDebugState.call(arg);
+    }
+  }
+
   // Unwrap SelfUpdate types.
   if (arg instanceof SelfUpdate) {
     arg = arg.inner;
@@ -76,6 +89,9 @@ function serialize(initialArg: Serializable): Json {
     const maybeToJSON = (arg as {toJSON?: () => Json}).toJSON;
     if (maybeToJSON !== undefined) {
       arg = maybeToJSON.call(arg);
+      if (typeof arg === 'object' && debugState != null) {
+        arg = {...debugState, ...arg};
+      }
     }
   }
 
@@ -103,7 +119,7 @@ function serialize(initialArg: Serializable): Json {
   } else if (Array.isArray(arg)) {
     return arg.map(a => serialize(a));
   } else if (typeof arg === 'object') {
-    const newObj: Json = {};
+    const newObj: Json = debugState ?? {};
     for (const [propertyName, propertyValue] of Object.entries(arg)) {
       // Skip functions.
       if (typeof propertyValue === 'function') {
