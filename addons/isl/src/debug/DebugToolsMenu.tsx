@@ -9,7 +9,6 @@ import type {Heartbeat} from '../heartbeat';
 import type {ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
-import {holdingAltAtom} from '../ChangedFile';
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
@@ -18,11 +17,12 @@ import messageBus from '../MessageBus';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
+import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
 import {Badge} from '../components/Badge';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
-import {atomWithOnChange, readAtom} from '../jotaiUtils';
+import {atomWithOnChange} from '../jotaiUtils';
 import {NopOperation} from '../operations/NopOperation';
 import platform from '../platform';
 import {dagWithPreviews} from '../previews';
@@ -87,14 +87,14 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
 function InternalState() {
   const [reduxTools, setReduxTools] = useAtom(enableReduxTools);
   const [reactTools, setReactTools] = useAtom(enableReactTools);
+  const needSerialize = useAtomValue(holdingCtrlAtom);
 
   const showToast = useShowToast();
   const generate = () => {
     // No need for useAtomValue - no need to re-render or recalculate this function.
-    const needSerialize = readAtom(holdingAltAtom);
     const atomsState = readInterestingAtoms();
     const value = needSerialize ? serializeAtomsState(atomsState) : atomsState;
-    console.log('jotai state:', value);
+    console.log(`jotai state (${needSerialize ? 'JSON' : 'objects'}):`, value);
     showToast.show(`logged jotai state to console!${needSerialize ? ' (serialized)' : ''}`);
   };
 
@@ -104,10 +104,11 @@ function InternalState() {
         <Tooltip
           placement="bottom"
           title={t(
-            'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.',
+            'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.\n\n' +
+              'Hold Ctrl to use serailzied JSON instead of Javascript objects.',
           )}>
           <VSCodeButton onClick={generate} appearance="secondary">
-            <T>Take Snapshot</T>
+            {needSerialize ? <T>Take Snapshot (JSON)</T> : <T>Take Snapshot (objects)</T>}
           </VSCodeButton>
         </Tooltip>
         <Tooltip
