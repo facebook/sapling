@@ -564,4 +564,4 @@ coreconfigitem("rebase", "experimental.inmemory", default=False)
 
 # Remote names.
 # XXX: Enable selectivepull for tests.
-coreconfigitem("remotenames", "selectivepull", default=not util.istest())
+coreconfigitem("remotenames", "selectivepull", default=lambda: not util.istest())
