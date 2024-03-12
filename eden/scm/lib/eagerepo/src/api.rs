@@ -582,8 +582,56 @@ impl EdenApi for EagerRepo {
         &self,
         items: Vec<HgFilenodeData>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let _ = items;
-        Err(EdenApiError::NotSupported)
+        debug!(?items, "upload_filenodes_batch");
+
+        self.refresh_for_api();
+
+        let mut res = Vec::with_capacity(items.len());
+        for data in items {
+            let content_sha1 = self.sha1_from_anyid(
+                data.file_content_upload_token.data.id,
+                "upload_filesnodes_batch",
+            )?;
+            let content = self.get_sha1_blob_for_api(content_sha1, "upload_filenodes_batch")?;
+
+            let mut content_with_parents =
+                Vec::<u8>::with_capacity(content.len() + 40 + 4 + data.metadata.len());
+            let (mut p1, mut p2) = data.parents.into_nodes();
+            if p2 < p1 {
+                std::mem::swap(&mut p1, &mut p2);
+            }
+            content_with_parents.extend_from_slice(p1.as_ref());
+            content_with_parents.extend_from_slice(p2.as_ref());
+
+            // see sapling.filelog.filelog.add
+            if content.starts_with(b"\x01\n") || !data.metadata.is_empty() {
+                content_with_parents.extend_from_slice(b"\x01\n");
+                content_with_parents.extend(data.metadata);
+                content_with_parents.extend_from_slice(b"\x01\n");
+            }
+            content_with_parents.extend_from_slice(content.as_ref());
+
+            self.add_sha1_blob_for_api(
+                data.node_id,
+                content_with_parents.into(),
+                "upload_filenodes_batch",
+            )?;
+
+            res.push(Ok(UploadTokensResponse {
+                token: UploadToken {
+                    data: UploadTokenData {
+                        id: AnyId::HgFilenodeId(data.node_id),
+                        bubble_id: None,
+                        metadata: None,
+                    },
+                    signature: Default::default(),
+                },
+            }));
+        }
+
+        self.flush_for_api("upload_filenodes_batch").await?;
+
+        Ok(convert_to_response(res))
     }
 
     async fn upload_trees_batch(
