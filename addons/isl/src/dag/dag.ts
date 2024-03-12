@@ -633,6 +633,12 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     }
     return renderedRows.join('').trimEnd();
   }
+
+  /** Provided extra fileds for debugging use-case. For now, this includes an ASCII graph. */
+  getDebugState(): {rendered: Array<string>} {
+    const rendered = this.renderAscii().split('\n');
+    return {rendered};
+  }
 }
 
 const rootsCache = new LRU(1000);

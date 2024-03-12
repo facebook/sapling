@@ -9,6 +9,8 @@ import type {Hash} from '../types';
 import type {HashWithParents} from './base_dag';
 
 import {BaseDag} from './base_dag';
+import {Ancestor, AncestorType} from './render';
+import {TextRenderer} from './renderText';
 
 /**
  * Dag that tracks predecessor -> successor relationships.
@@ -74,5 +76,25 @@ export class MutationDag extends BaseDag<HashWithParents> {
     }
     const baseDag = this.add(infoMap.values());
     return new MutationDag(baseDag);
+  }
+
+  /** Provided extra fileds for debugging use-case. For now, this includes an ASCII graph. */
+  getDebugState(): {rendered: Array<string>} {
+    const renderer = new TextRenderer();
+    const rendered = [];
+
+    // Render row by row. The main complexity is to figure out the "ancestors",
+    // especially when the provided `set` is a subset of the dag.
+    for (const hash of this.sortDesc(this, {gap: false})) {
+      const parents = this.parentHashes(hash);
+      const typedParents: Ancestor[] = parents.map(
+        hash => new Ancestor({type: AncestorType.Parent, hash}),
+      );
+      const renderedRow = renderer.nextRow(hash, typedParents, hash);
+      for (const line of renderedRow.trimEnd().split('\n')) {
+        rendered.push(line);
+      }
+    }
+    return {rendered};
   }
 }
