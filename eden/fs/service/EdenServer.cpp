@@ -1838,73 +1838,105 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
   // the +1 is so we count the current checkout that hasn't quite started yet
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
-  return edenMount
-      .checkout(
-          mountHandle.getRootInode(),
-          rootId,
-          fetchContext,
-          callerName,
-          checkoutMode)
-      .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](
-                     CheckoutResult&& result) {
-        getServerState()->getNotifier()->signalCheckout(
-            enumerateInProgressCheckouts());
-        if (checkoutMode == CheckoutMode::DRY_RUN) {
-          return std::move(result);
-        }
 
-        // In NFSv3 the kernel never tells us when its safe to unload
-        // inodes ("safe" meaning all file handles to the inode have been
-        // closed).
-        //
-        // To avoid unbounded memory and disk use we need to periodically
-        // clean them up. Checkout will likely create a lot of stale innodes
-        // so we run a delayed cleanup after checkout.
-        if (isNfs &&
-            serverState_->getReloadableConfig()
-                ->getEdenConfig()
-                ->unloadUnlinkedInodes.getValue()) {
-          // During whole Eden Process shutdown, this function can only be run
-          // before the mount is destroyed.
-          // This is because the function is either run before the server
-          // event base is destroyed or it is not run at all, and the server
-          // event base is destroyed before the mountPoints. Since the function
-          // must be run before the eventbase is destroyed and the eventbase is
-          // destroyed before the mountPoints, this function can only be called
-          // before the mount points are destroyed during normal destruction.
-          // However, the mount pont might have been unmounted before this
-          // function is run outside of shutdown.
-          auto delay = serverState_->getReloadableConfig()
-                           ->getEdenConfig()
-                           ->postCheckoutDelayToUnloadInodes.getValue();
-          XLOG(DBG9) << "Scheduling unlinked inode cleanup for mount "
-                     << mountPath << " in " << durationStr(delay)
-                     << " seconds.";
-          this->scheduleCallbackOnMainEventBase(
-              std::chrono::duration_cast<std::chrono::milliseconds>(delay),
-              [this, mountPath = mountPath.copy()]() {
-                try {
-                  // TODO: This might be a pretty expensive operation to run on
-                  // an EventBase. Maybe we should debounce onto a different
-                  // executor.
-                  auto mountHandle = this->getMount(mountPath);
-                  mountHandle.getEdenMount().forgetStaleInodes();
-                } catch (EdenError& err) {
-                  // This is an expected error if the mount has been
-                  // unmounted before this callback ran.
-                  if (err.errorCode_ref() == ENOENT) {
-                    XLOG(DBG3)
-                        << "Callback to clear inodes: Mount cannot be found. "
-                        << (*err.message());
-                  } else {
-                    throw;
-                  }
-                }
-              });
-        }
-        return std::move(result);
-      })
-      .ensure([mountHandle] {});
+  auto checkoutFuture =
+      edenMount
+          .checkout(
+              mountHandle.getRootInode(),
+              rootId,
+              fetchContext,
+              callerName,
+              checkoutMode)
+          .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](
+                         CheckoutResult&& result) {
+            getServerState()->getNotifier()->signalCheckout(
+                enumerateInProgressCheckouts());
+            if (checkoutMode == CheckoutMode::DRY_RUN) {
+              return std::move(result);
+            }
+
+            // In NFSv3 the kernel never tells us when its safe to unload
+            // inodes ("safe" meaning all file handles to the inode have been
+            // closed).
+            //
+            // To avoid unbounded memory and disk use we need to periodically
+            // clean them up. Checkout will likely create a lot of stale innodes
+            // so we run a delayed cleanup after checkout.
+            if (isNfs &&
+                serverState_->getReloadableConfig()
+                    ->getEdenConfig()
+                    ->unloadUnlinkedInodes.getValue()) {
+              // During whole Eden Process shutdown, this function can only be
+              // run before the mount is destroyed. This is because the function
+              // is either run before the server event base is destroyed or it
+              // is not run at all, and the server event base is destroyed
+              // before the mountPoints. Since the function must be run before
+              // the eventbase is destroyed and the eventbase is destroyed
+              // before the mountPoints, this function can only be called before
+              // the mount points are destroyed during normal destruction.
+              // However, the mount pont might have been unmounted before this
+              // function is run outside of shutdown.
+              auto delay = serverState_->getReloadableConfig()
+                               ->getEdenConfig()
+                               ->postCheckoutDelayToUnloadInodes.getValue();
+              XLOG(DBG9) << "Scheduling unlinked inode cleanup for mount "
+                         << mountPath << " in " << durationStr(delay)
+                         << " seconds.";
+              this->scheduleCallbackOnMainEventBase(
+                  std::chrono::duration_cast<std::chrono::milliseconds>(delay),
+                  [this, mountPath = mountPath.copy()]() {
+                    try {
+                      // TODO: This might be a pretty expensive operation to run
+                      // on an EventBase. Maybe we should debounce onto a
+                      // different executor.
+                      auto mountHandle = this->getMount(mountPath);
+                      mountHandle.getEdenMount().forgetStaleInodes();
+                    } catch (EdenError& err) {
+                      // This is an expected error if the mount has been
+                      // unmounted before this callback ran.
+                      if (err.errorCode_ref() == ENOENT) {
+                        XLOG(DBG3)
+                            << "Callback to clear inodes: Mount cannot be found. "
+                            << (*err.message());
+                      } else {
+                        throw;
+                      }
+                    }
+                  });
+            }
+            return std::move(result);
+          });
+
+  if (config_->getEdenConfig()->runCheckoutOnEdenCPUThreadpool.getValue()) {
+    // This is a temporary workaround for S399431: The checkoutFuture is
+    // scheduled on the EdenServer's EdenCPUThreadPool threadpool. This is a
+    // UnboundedQueueExecutor, which is guaranteed to never block. nor throw
+    // (except OOM), nor execute inline from `add()`. At the time of writing, it
+    // has a default threadpool size of 12.
+    //
+    // Thrift documentation states that "it is almost never a good idea to send
+    // work off Thrift’s CPU worker". However, it also notes that "user code may
+    // delegate the rest of the work to other thread pools, thus shifting load
+    // off Thrift’s CPU Workers thread and letting the thread pick up new
+    // incoming work" but warns that "if there is work offloaded to other thread
+    // pools, there should be backpressure mechanism that would block Thrift CPU
+    // Workers thread when those internal thread pools are overloaded."
+    //
+    // Without backpressure, EdenFS would see an increase in memory pressure.
+    // potential slowdowns, and/or OOMS. EdenFS only allows one checkout at a
+    // time (https://fburl.com/code/a6eoy8wu), which acts as the aformentioned
+    // backpressure mechanism.
+    //
+    // Futher investigation is needed to understand the underlying performance
+    // issues that are causing S399431, likely due to Overlay slowness and
+    // contention of the contents_ lock that is held while doing Overlay IO in
+    // TreeInode::childMaterialized (https://fburl.com/code/gxpaifv3).
+    checkoutFuture = std::move(checkoutFuture)
+                         .semi()
+                         .via(getServerState()->getThreadPool().get());
+  }
+
+  return std::move(checkoutFuture).ensure([mountHandle] {});
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
