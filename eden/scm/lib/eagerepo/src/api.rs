@@ -24,6 +24,7 @@ use dag::VertexName;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
 use edenapi::types::AnyFileContentId;
+use edenapi::types::AnyId;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitGraphSegments;
@@ -51,6 +52,7 @@ use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
 use edenapi::types::UploadHgChangeset;
 use edenapi::types::UploadToken;
+use edenapi::types::UploadTokenData;
 use edenapi::types::UploadTokensResponse;
 use edenapi::types::UploadTreeEntry;
 use edenapi::types::UploadTreeResponse;
@@ -481,7 +483,7 @@ impl EdenApi for EagerRepo {
     }
 
     async fn bookmarks(&self, bookmarks: Vec<String>) -> edenapi::Result<Vec<BookmarkEntry>> {
-        debug!("bookmarks {}", debug_string_list(&bookmarks),);
+        debug!("bookmarks {}", debug_string_list(&bookmarks));
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
         for name in bookmarks {
@@ -541,8 +543,39 @@ impl EdenApi for EagerRepo {
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Response<UploadToken>, EdenApiError> {
-        let _ = (data, bubble_id, copy_from_bubble_id);
-        Err(EdenApiError::NotSupported)
+        debug!(?data, "process_files_upload");
+
+        self.refresh_for_api();
+
+        if bubble_id.is_some() || copy_from_bubble_id.is_some() {
+            return Err(self.not_implemented_error(
+                "EagerRepo does not support bubble_id".to_string(),
+                "process_files_upload",
+            ));
+        }
+
+        let mut res = Vec::with_capacity(data.len());
+        for (id, data) in data {
+            match self.add_sha1_blob_for_api(
+                self.sha1_from_anyid(AnyId::AnyFileContentId(id), "process_files_upload")?,
+                data,
+                "process_files_upload",
+            ) {
+                Err(err) => res.push(Err(err)),
+                Ok(()) => res.push(Ok(UploadToken {
+                    data: UploadTokenData {
+                        id: AnyId::AnyFileContentId(id),
+                        bubble_id: None,
+                        metadata: None,
+                    },
+                    signature: Default::default(),
+                })),
+            }
+        }
+
+        self.flush_for_api("process_files_upload").await?;
+
+        Ok(convert_to_response(res))
     }
 
     async fn upload_filenodes_batch(
@@ -597,6 +630,44 @@ impl EagerRepo {
         }
     }
 
+    fn add_sha1_blob_for_api(
+        &self,
+        id: HgId,
+        blob: minibytes::Bytes,
+        handler: &str,
+    ) -> edenapi::Result<()> {
+        let actual_id = match self.add_sha1_blob(blob.as_ref()) {
+            Ok(actual_id) => actual_id,
+            Err(e) => {
+                return Err(EdenApiError::HttpError {
+                    status: StatusCode::INTERNAL_SERVER_ERROR,
+                    message: format!("{:?}", e),
+                    headers: Default::default(),
+                    url: self.url(handler),
+                });
+            }
+        };
+        if id != actual_id {
+            return Err(EdenApiError::HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: "content hash mismatch".to_string(),
+                headers: Default::default(),
+                url: self.url(handler),
+            });
+        }
+
+        Ok(())
+    }
+
+    async fn flush_for_api(&self, handler: &str) -> edenapi::Result<()> {
+        self.flush().await.map_err(|err| EdenApiError::HttpError {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: format!("error flushing dag/store: {:?}", err),
+            headers: Default::default(),
+            url: self.url(handler),
+        })
+    }
+
     /// Not implement error.
     fn not_implemented_error(&self, message: String, handler: &str) -> EdenApiError {
         EdenApiError::HttpError {
@@ -610,6 +681,21 @@ impl EagerRepo {
     /// Provide the URL for HTTP error reporting.
     fn url(&self, handler: &str) -> String {
         format!("eager://{}/{}", self.dir.display(), handler)
+    }
+
+    fn sha1_from_anyid(&self, id: AnyId, handler: &str) -> edenapi::Result<HgId> {
+        match id {
+            AnyId::HgFilenodeId(hgid) => Ok(hgid),
+            AnyId::HgTreeId(hgid) => Ok(hgid),
+            AnyId::HgChangesetId(hgid) => Ok(hgid),
+            AnyId::AnyFileContentId(AnyFileContentId::Sha1(id)) => {
+                Ok(HgId::from_byte_array(id.into_byte_array()))
+            }
+            _ => Err(self.not_implemented_error(
+                format!("id type {:?} not supported by EagerRepo", id),
+                handler,
+            )),
+        }
     }
 }
 
