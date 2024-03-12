@@ -107,7 +107,7 @@ export class PartialAmendOperation extends Operation {
    * uses `debugimportstack` under the hood, to achieve `amend -i` effect.
    */
   constructor(
-    private message: string | undefined,
+    public message: string | undefined,
     private originalHeadHash: Hash,
     private selection: PartialSelection,
     // We need "selected" or "all" files since `selection` only tracks deselected files.

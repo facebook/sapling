@@ -13,8 +13,8 @@ import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, readAtom, writeAtom} from '../jotaiUtils';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
-import {AmendOperation} from '../operations/AmendOperation';
-import {CommitOperation} from '../operations/CommitOperation';
+import {AmendOperation, PartialAmendOperation} from '../operations/AmendOperation';
+import {CommitOperation, PartialCommitOperation} from '../operations/CommitOperation';
 import {onOperationExited} from '../operationsState';
 import {dagWithPreviews} from '../previews';
 import {selectedCommitInfos, selectedCommits} from '../selection';
@@ -109,8 +109,10 @@ registerDisposable(
     if (progress.exitCode === 0) {
       return;
     }
-    const isCommit = operation instanceof CommitOperation;
-    const isAmend = operation instanceof AmendOperation;
+    const isCommit =
+      operation instanceof CommitOperation || operation instanceof PartialCommitOperation;
+    const isAmend =
+      operation instanceof AmendOperation || operation instanceof PartialAmendOperation;
     const isMetaedit = operation instanceof AmendMessageOperation;
     if (!(isCommit || isAmend || isMetaedit)) {
       return;

@@ -146,7 +146,7 @@ export class PartialCommitOperation extends Operation {
    * uses `debugimportstack` under the hood, to achieve `commit -i` effect.
    */
   constructor(
-    private message: string,
+    public message: string,
     private originalHeadHash: Hash,
     private selection: PartialSelection,
     // We need "selected" or "all" files since `selection` only tracks deselected files.
