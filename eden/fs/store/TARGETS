@@ -114,10 +114,14 @@ cpp_library(
     ],
 )
 
+BACKING_STORE_TYPE_INF = ["BackingStoreType.h"]
+
+BACKING_STORE_TYPE_SRCS = ["BackingStoreType.cpp"]
+
 cpp_library(
     name = "store_type",
-    srcs = ["BackingStoreType.cpp"],
-    headers = ["BackingStoreType.h"],
+    srcs = BACKING_STORE_TYPE_SRCS,
+    headers = BACKING_STORE_TYPE_INF,
     deps = [
         "//eden/common/utils:throw",
     ],
@@ -167,11 +171,11 @@ cpp_library(
     name = "store",
     srcs = glob(
         ["*.cpp"],
-        exclude = EDEN_STORE_UTIL_SRCS + ROCKSDB_SRCS + SQLITE_SRCS + CONTEXT_SRCS + FILTERED_BACKING_STORE_SRCS,
+        exclude = EDEN_STORE_UTIL_SRCS + ROCKSDB_SRCS + SQLITE_SRCS + CONTEXT_SRCS + FILTERED_BACKING_STORE_SRCS + BACKING_STORE_TYPE_SRCS,
     ),
     headers = glob(
         ["*.h"],
-        exclude = ROCKSDB_HEADERS + SQLITE_HEADERS + CONTEXT_HEADERS + BACKING_STORE_INF + FILTERED_BACKING_STORE_HEADERS,
+        exclude = ROCKSDB_HEADERS + SQLITE_HEADERS + CONTEXT_HEADERS + BACKING_STORE_INF + FILTERED_BACKING_STORE_HEADERS + BACKING_STORE_TYPE_INF,
     ),
     deps = [
         "//eden/common/utils:process_info_cache",
