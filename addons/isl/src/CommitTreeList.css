@@ -144,6 +144,10 @@
   user-select: none;
 }
 
+.commit-title {
+  min-width: 180px;
+}
+
 .commit-details:focus-visible {
   outline: var(--focus-border) 1px auto;
   outline-offset: var(--halfpad);
