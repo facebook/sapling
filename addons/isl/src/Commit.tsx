@@ -423,11 +423,7 @@ export const Commit = memo(
             {commit.successorInfo != null ? (
               <SuccessorInfoToDisplay successorInfo={commit.successorInfo} />
             ) : null}
-            {inlineProgress && (
-              <span className="commit-inline-operation-progress">
-                <Icon icon="loading" /> <T>{inlineProgress}</T>
-              </span>
-            )}
+            {inlineProgress && <InlineProgressSpan message={inlineProgress} />}
           </DivIfChildren>
           {!isNarrow ? commitActions : null}
         </div>
@@ -446,6 +442,14 @@ export const Commit = memo(
     );
   },
 );
+
+export function InlineProgressSpan(props: {message: string}) {
+  return (
+    <span className="commit-inline-operation-progress">
+      <Icon icon="loading" /> <T>{props.message}</T>
+    </span>
+  );
+}
 
 function OpenCommitInfoButton({
   commit,
