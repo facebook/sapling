@@ -8,10 +8,11 @@
 import type {Dag, DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
 import type {HashSet} from './dag/set';
+import type {ReactNode} from 'react';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
-import {InlineBadge} from './InlineBadge';
+import {YouAreHereLabel} from './YouAreHereLabel';
 import {LinkLine, NodeLine, PadLine} from './dag/render';
 import React from 'react';
 
@@ -662,12 +663,19 @@ export const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps)
   return nextInfo.equals(prevInfo);
 });
 
-export function YouAreHereGlyph({info}: {info: DagCommitInfo}) {
-  // Render info.description in a rounded blue box.
+/**
+ * The default "You are here" glyph - render as a blue bubble. Intended to be used in
+ * different `RenderDag` configurations.
+ *
+ * If you want to customize the rendering for the main graph, or introducing dependencies
+ * that seem "extra" (like code review states, operation-related progress state), consider
+ * passing the `renderGlyph` prop to `RenderDag` instead. See `CommitTreeList` for example.
+ */
+export function YouAreHereGlyph({info, children}: {info: DagCommitInfo; children?: ReactNode}) {
   return (
-    <div className="you-are-here-container" style={{marginLeft: -defaultStrokeWidth * 1.5}}>
-      <InlineBadge kind="primary">{info.description}</InlineBadge>
-    </div>
+    <YouAreHereLabel title={info.description} style={{marginLeft: -defaultStrokeWidth * 1.5}}>
+      {children}
+    </YouAreHereLabel>
   );
 }
 
