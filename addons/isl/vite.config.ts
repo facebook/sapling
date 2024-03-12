@@ -45,6 +45,7 @@ export default defineConfig({
                 'atomWithOnChange',
                 'atomWithRefresh',
                 'atomLoadableWithRefresh',
+                'atomResetOnCwdChange',
                 'atomResetOnDepChange',
                 'configBackedAtom',
                 'jotaiAtom',
