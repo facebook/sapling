@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
+import type {CommitInfo, Hash} from '../types';
 import type {CommitMessageFields} from './types';
 
 import serverAPI from '../ClientToServerAPI';
@@ -138,7 +138,39 @@ export const hasUnsavedEditedCommitMessage = atomFamilyWeak((hashOrHead: Hash | 
   });
 });
 
-export const commitMode = atom<CommitInfoMode>('amend');
+/**
+ * Toggle state between commit/amend modes. Note that this may be "commit" even if
+ * the commit info is not looking at the head commit (this allows persistance as you select other commits and come back).
+ * We should only behave in "commit" mode when in commit mode AND looking at the head commit.
+ * Prefer using `commitMode` atom.
+ */
+const rawCommitMode = atom<CommitInfoMode>('amend');
+
+/**
+ * Whether the commit info view is in "commit" or "amend" mode.
+ * It may only be in the "commit" mode when the commit being viewed is the head commit,
+ * though it may be set to "commit" mode even when looking at a non-head commit,
+ * and it'll be in commit when when you do look at the head commit.
+ */
+export const commitMode = atom(
+  get => {
+    const commitInfoCommit = get(commitInfoViewCurrentCommits);
+    const rawMode = get(rawCommitMode);
+    if (commitInfoCommit == null) {
+      // loading state
+      return 'amend';
+    }
+    if (commitInfoCommit.length === 1 && commitInfoCommit[0].isHead) {
+      // allow using "commit" mode only if looking at exactly the single head commit
+      return rawMode;
+    }
+    // otherwise, it's a non-head commit or multi-selection, so only show "amend" mode
+    return 'amend';
+  },
+  (_get, set, newMode: CommitInfoMode | ((m: CommitInfoMode) => CommitInfoMode)) => {
+    set(rawCommitMode, newMode);
+  },
+);
 
 export const commitInfoViewCurrentCommits = atom(get => {
   const selected = get(selectedCommitInfos);

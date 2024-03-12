@@ -164,7 +164,7 @@ function useFetchActiveDiffDetails(diffId?: string) {
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [mode, setMode] = useAtom(commitMode);
-  const isCommitMode = commit.isHead && mode === 'commit';
+  const isCommitMode = mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
   const [editedMessage, setEditedCommitMessage] = useAtom(editedCommitMessages(hashOrHead));
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
@@ -244,13 +244,13 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </Tooltip>
         </div>
       )}
-      {mode === 'commit' && commit.isHead && <FillCommitMessage commit={commit} mode={mode} />}
+      {isCommitMode && <FillCommitMessage commit={commit} mode={mode} />}
       <div
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
         key={mode}>
         {schema
-          .filter(field => mode !== 'commit' || field.type !== 'read-only')
+          .filter(field => !isCommitMode || field.type !== 'read-only')
           .map(field => {
             const setField = (newVal: string) =>
               setEditedCommitMessage(val => ({
@@ -261,7 +261,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               }));
 
             let editedFieldValue = editedMessage.fields?.[field.key];
-            if (editedFieldValue == null && mode === 'commit' && commit.isHead) {
+            if (editedFieldValue == null && isCommitMode) {
               // If the field is supposed to edited but not in the editedMessage,
               // it means we're loading from a blank slate. This is when we can load from the commit template.
               editedFieldValue = parsedFields[field.key];
@@ -279,7 +279,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 editedField={editedFieldValue}
                 setEditedField={setField}
                 extra={
-                  mode !== 'commit' && field.key === 'Title' ? (
+                  !isCommitMode && field.key === 'Title' ? (
                     <>
                       <CommitTitleByline commit={commit} />
                       {isFoldPreview && <FoldPreviewBanner />}
