@@ -225,6 +225,24 @@
   margin-right: var(--halfpad);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes delayFadeIn {
+    0% {
+      opacity: 0;
+    }
+    90% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .commit-inline-operation-progress {
+    animation: delayFadeIn 1s ease-in-out;
+  }
+}
+
 .goto-button .codicon {
   margin-left: var(--halfpad);
 }
