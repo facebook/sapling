@@ -17,13 +17,8 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {tracker} from './analytics';
 import {DebugToolsButton} from './debug/DebugToolsButton';
 import {t} from './i18n';
-import {
-  haveCommitsLoadedYet,
-  haveRemotePath,
-  isFetchingCommits,
-  maybeRemoveForgottenOperation,
-  useClearAllOptimisticState,
-} from './serverAPIState';
+import {maybeRemoveForgottenOperation, useClearAllOptimisticState} from './operationsState';
+import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';

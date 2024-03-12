@@ -19,7 +19,7 @@ import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
-import {useRunOperation} from '../serverAPIState';
+import {useRunOperation} from '../operationsState';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {DiffCommentsDetails} from './DiffComments';

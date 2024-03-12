@@ -13,17 +13,15 @@ import {editedCommitMessages} from '../CommitInfoView/CommitInfoState';
 import {latestSuccessorsMapAtom} from '../SuccessionTracker';
 import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {readAtom} from '../jotaiUtils';
+import {operationBeingPreviewed, operationList, queuedOperations} from '../operationsState';
 import {uncommittedSelection} from '../partialSelection';
 import {dagWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {
-  operationBeingPreviewed,
   repositoryData,
   latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
-  operationList,
-  queuedOperations,
 } from '../serverAPIState';
 import {SelfUpdate} from 'shared/immutableExt';
 

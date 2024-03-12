@@ -24,9 +24,10 @@ import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {SetConfigOperation} from './operations/SetConfigOperation';
+import {useRunOperation} from './operationsState';
 import platform from './platform';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
-import {repositoryInfo, useRunOperation} from './serverAPIState';
+import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
 import {
   VSCodeButton,

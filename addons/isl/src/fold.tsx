@@ -23,9 +23,9 @@ import {
   FoldOperation,
   getFoldRangeCommitHash,
 } from './operations/FoldOperation';
+import {operationBeingPreviewed, useRunPreviewedOperation} from './operationsState';
 import {type Dag, dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
-import {operationBeingPreviewed, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue} from 'jotai';

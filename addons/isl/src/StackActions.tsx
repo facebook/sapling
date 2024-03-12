@@ -19,8 +19,9 @@ import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo'
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
+import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
-import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
+import {latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';

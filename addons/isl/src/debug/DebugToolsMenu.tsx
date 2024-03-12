@@ -24,6 +24,7 @@ import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
 import {atomWithOnChange} from '../jotaiUtils';
 import {NopOperation} from '../operations/NopOperation';
+import {useRunOperation} from '../operationsState';
 import platform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
@@ -32,7 +33,6 @@ import {
   latestUncommittedChangesData,
   mergeConflicts,
   repositoryInfo,
-  useRunOperation,
 } from '../serverAPIState';
 import {useShowToast} from '../toast';
 import {colors} from '../tokens.stylex';

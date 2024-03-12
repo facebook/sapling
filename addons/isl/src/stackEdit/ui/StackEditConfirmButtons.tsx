@@ -16,7 +16,8 @@ import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
 import {RebaseOperation} from '../../operations/RebaseOperation';
-import {latestDag, latestHeadCommit, useRunOperation} from '../../serverAPIState';
+import {useRunOperation} from '../../operationsState';
+import {latestDag, latestHeadCommit} from '../../serverAPIState';
 import {exactRevset, succeedableRevset} from '../../types';
 import {UndoDescription} from './StackEditSubTree';
 import {

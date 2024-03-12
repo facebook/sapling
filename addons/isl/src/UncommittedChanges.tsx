@@ -50,6 +50,7 @@ import {DiscardOperation, PartialDiscardOperation} from './operations/DiscardOpe
 import {PurgeOperation} from './operations/PurgeOperation';
 import {RevertOperation} from './operations/RevertOperation';
 import {getShelveOperation} from './operations/ShelveOperation';
+import {operationList, useRunOperation} from './operationsState';
 import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {
@@ -58,12 +59,7 @@ import {
   useIsOperationRunningOrQueued,
 } from './previews';
 import {selectedCommits} from './selection';
-import {
-  latestHeadCommit,
-  operationList,
-  uncommittedChangesFetchError,
-  useRunOperation,
-} from './serverAPIState';
+import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';

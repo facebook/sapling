@@ -17,9 +17,9 @@ import {
   EXIT_CODE_FORGET,
   operationList,
   queuedOperations,
-  repositoryInfo,
   useAbortRunningOperation,
-} from './serverAPIState';
+} from './operationsState';
+import {repositoryInfo} from './serverAPIState';
 import {CommandRunner} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';

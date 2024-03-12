@@ -23,6 +23,7 @@ import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
+import {useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
@@ -31,7 +32,6 @@ import {
   commitsShownRange,
   isFetchingAdditionalCommits,
   latestUncommittedChangesData,
-  useRunOperation,
 } from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';

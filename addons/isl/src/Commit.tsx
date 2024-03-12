@@ -41,18 +41,17 @@ import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
+import {
+  operationBeingPreviewed,
+  useRunOperation,
+  useRunPreviewedOperation,
+  inlineProgressByHash,
+} from './operationsState';
 import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitSelection} from './selection';
-import {
-  inlineProgressByHash,
-  isFetchingUncommittedChanges,
-  latestDag,
-  operationBeingPreviewed,
-  useRunOperation,
-  useRunPreviewedOperation,
-} from './serverAPIState';
+import {isFetchingUncommittedChanges, latestDag} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';

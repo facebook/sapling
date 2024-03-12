@@ -8,21 +8,19 @@
 import type {Dag} from './dag/dag';
 import type {CommitTreeWithPreviews} from './getCommitTree';
 import type {Operation} from './operations/Operation';
-import type {OperationInfo, OperationList} from './serverAPIState';
+import type {OperationInfo, OperationList} from './operationsState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
 import {latestSuccessorsMapAtom} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
+import {operationBeingPreviewed, queuedOperations, operationList} from './operationsState';
 import {
   latestUncommittedChanges,
   latestCommits,
   latestDag,
-  operationBeingPreviewed,
   latestHeadCommit,
-  queuedOperations,
-  operationList,
   mergeConflicts,
   latestUncommittedChangesData,
   latestCommitsData,

@@ -15,8 +15,9 @@ import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './Succ
 import {islDrawerState} from './drawerState';
 import {readAtom, useAtomHas, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
+import {operationBeingPreviewed} from './operationsState';
 import {dagWithPreviews} from './previews';
-import {latestDag, operationBeingPreviewed} from './serverAPIState';
+import {latestDag} from './serverAPIState';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom} from 'jotai';
 import {useCallback} from 'react';

@@ -9,8 +9,8 @@ import type {Operation} from './operations/Operation';
 import type {PrimitiveAtom} from 'jotai';
 
 import {atomFamilyWeak} from './jotaiUtils';
+import {useRunOperation} from './operationsState';
 import {useMostRecentPendingOperation} from './previews';
-import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom} from 'jotai';
 import {Icon} from 'shared/Icon';
