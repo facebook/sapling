@@ -8,7 +8,7 @@
 import type {ApplicationInfo} from './types';
 
 import os from 'os';
-import {randomId, unwrap} from 'shared/utils';
+import {randomId, nullthrows} from 'shared/utils';
 
 export function getUsername(): string {
   try {
@@ -16,7 +16,7 @@ export function getUsername(): string {
   } catch (osInfoError) {
     try {
       const {env} = process;
-      return unwrap(env.LOGNAME || env.USER || env.LNAME || env.USERNAME);
+      return nullthrows(env.LOGNAME || env.USER || env.LNAME || env.USERNAME);
     } catch (processEnvError) {
       throw new Error(String(processEnvError) + String(osInfoError));
     }

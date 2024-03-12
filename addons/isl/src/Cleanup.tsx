@@ -19,7 +19,7 @@ import {type Dag, dagWithPreviews} from './previews';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 export function isStackEligibleForCleanup(
   hash: Hash,
@@ -99,7 +99,7 @@ export function CleanupAllButton() {
         contextKey="cleanup-all"
         runOperation={() => {
           return cleanableStacks.map(hash => {
-            const info = unwrap(dag.get(hash));
+            const info = nullthrows(dag.get(hash));
             return new HideOperation(latestSuccessorUnlessExplicitlyObsolete(info));
           });
         }}

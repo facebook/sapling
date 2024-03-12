@@ -85,7 +85,7 @@ import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {exists} from 'shared/fs';
 import {removeLeadingPathSep} from 'shared/pathUtils';
-import {notEmpty, randomId, unwrap} from 'shared/utils';
+import {notEmpty, randomId, nullthrows} from 'shared/utils';
 
 /**
  * This class is responsible for providing information about the working copy
@@ -497,7 +497,7 @@ export class Repository {
   }
 
   private normalizeOperationArgs(cwd: string, args: Array<CommandArg>): Array<string> {
-    const repoRoot = unwrap(this.info.repoRoot);
+    const repoRoot = nullthrows(this.info.repoRoot);
     return args.flatMap(arg => {
       if (typeof arg === 'object') {
         switch (arg.type) {

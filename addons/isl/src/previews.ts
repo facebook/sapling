@@ -27,7 +27,7 @@ import {
 } from './serverAPIState';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
-import {notEmpty, unwrap} from 'shared/utils';
+import {notEmpty, nullthrows} from 'shared/utils';
 
 export enum CommitPreview {
   REBASE_ROOT = 'rebase-root',
@@ -402,7 +402,7 @@ export function useMarkOperationsCompleted(): void {
             if (optimisticApplier == null || operation.exitCode !== 0) {
               files = true;
             } else if (
-              uncommittedChanges.fetchStartTimestamp > unwrap(operation.endTime).valueOf()
+              uncommittedChanges.fetchStartTimestamp > nullthrows(operation.endTime).valueOf()
             ) {
               getTracker()?.track('OptimisticFilesStateForceResolved', {extras: {}});
               files = true;
@@ -422,7 +422,7 @@ export function useMarkOperationsCompleted(): void {
               conflicts = true;
             } else if (
               (mergeConflictsContext.conflicts?.fetchStartTimestamp ?? 0) >
-              unwrap(operation.endTime).valueOf()
+              nullthrows(operation.endTime).valueOf()
             ) {
               getTracker()?.track('OptimisticConflictsStateForceResolved', {
                 extras: {operation: getOpName(operation.operation)},

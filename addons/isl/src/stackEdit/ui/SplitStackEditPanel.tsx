@@ -39,7 +39,7 @@ import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
-import {firstLine, unwrap} from 'shared/utils';
+import {firstLine, nullthrows} from 'shared/utils';
 
 import './SplitStackEditPanel.css';
 
@@ -580,7 +580,7 @@ function StackRangeSelector() {
   const selectEnd = orderedDrag.end ?? selectStart;
 
   const commits = mutableRevs.map(rev => {
-    const commit = unwrap(commitStack.get(rev));
+    const commit = nullthrows(commitStack.get(rev));
     return (
       <div
         onPointerDown={() => {
@@ -588,7 +588,7 @@ function StackRangeSelector() {
         }}
         onPointerEnter={() => {
           if (dragSelection?.isDragging === true) {
-            setDragSelection(old => ({...unwrap(old), end: rev, endKey: commit.key}));
+            setDragSelection(old => ({...nullthrows(old), end: rev, endKey: commit.key}));
           }
         }}
         key={rev}
@@ -783,7 +783,7 @@ export function SplitFile(props: SplitFileProps) {
       for (const div of divs) {
         const child = div.lastChild;
         if (child && selection.containsNode(child, true)) {
-          selIds.push(unwrap(div.dataset.selId));
+          selIds.push(nullthrows(div.dataset.selId));
         }
       }
 

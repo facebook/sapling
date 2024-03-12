@@ -22,7 +22,7 @@ import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
 import {List, Record} from 'immutable';
 import {atom, useAtom} from 'jotai';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 type StackStateWithOperationProps = {
   op: StackEditOpDescription;
@@ -83,7 +83,7 @@ type HistoryRecord = RecordOf<HistoryProps>;
 
 class History extends HistoryRecord {
   get current(): StackStateWithOperation {
-    return unwrap(this.history.get(this.currentIndex));
+    return nullthrows(this.history.get(this.currentIndex));
   }
 
   push(

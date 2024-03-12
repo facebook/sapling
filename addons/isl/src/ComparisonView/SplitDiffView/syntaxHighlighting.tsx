@@ -22,7 +22,7 @@ import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 import {tokenizeLines} from 'shared/textmate-lib/tokenize';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 import {loadWASM} from 'vscode-oniguruma';
 
 const URL_TO_ONIG_WASM = 'generated/textmate/onig.wasm';
@@ -208,7 +208,7 @@ async function tokenizeContent(
 const grammarCache: Map<string, Promise<IGrammar | null>> = new Map();
 function getGrammar(store: Registry, scopeName: string): Promise<IGrammar | null> {
   if (grammarCache.has(scopeName)) {
-    return unwrap(grammarCache.get(scopeName));
+    return nullthrows(grammarCache.get(scopeName));
   }
   const grammarPromise = store.loadGrammar(scopeName);
   grammarCache.set(scopeName, grammarPromise);

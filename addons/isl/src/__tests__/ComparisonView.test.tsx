@@ -26,7 +26,7 @@ import fs from 'fs';
 import path from 'path';
 import {ComparisonType} from 'shared/Comparison';
 import {nextTick} from 'shared/testUtils';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 afterEach(cleanup);
 
@@ -594,7 +594,7 @@ function mockFetchToSupportSyntaxHighlighting(): jest.SpyInstance {
     jest.fn(async url => {
       if (url.includes('generated/textmate')) {
         const match = /.*generated\/textmate\/(.*)$/.exec(url);
-        const filename = unwrap(match)[1];
+        const filename = nullthrows(match)[1];
         const toPublicDir = (filename: string) =>
           path.normalize(path.join(__dirname, '../../public/generated/textmate', filename));
         if (filename === 'onig.wasm') {

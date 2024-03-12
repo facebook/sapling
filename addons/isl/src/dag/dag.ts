@@ -20,7 +20,7 @@ import {arrayFromHashes, HashSet} from './set';
 import {List, Record, Map as ImMap, Set as ImSet} from 'immutable';
 import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
-import {group, notEmpty, splitOnce, unwrap} from 'shared/utils';
+import {group, notEmpty, splitOnce, nullthrows} from 'shared/utils';
 
 /**
  * Main commit graph type used for preview calculation and queries.
@@ -369,7 +369,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
       const pureHash = isSucc ? h.substring(REBASE_SUCC_PREFIX.length) : h;
       const isPred = !isSucc && duplicated.contains(h);
       const isRoot = srcRoots.contains(pureHash);
-      const info = unwrap(isSucc ? this.get(pureHash) : c);
+      const info = nullthrows(isSucc ? this.get(pureHash) : c);
       return info.withMutations(mut => {
         // Reset the seqNumber so the rebase preview tends to show as right-most branches.
         let newInfo = mut.set('seqNumber', undefined);
@@ -565,7 +565,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     // Render row by row. The main complexity is to figure out the "ancestors",
     // especially when the provided `set` is a subset of the dag.
     for (const hash of sorted) {
-      const info = unwrap(this.get(hash));
+      const info = nullthrows(this.get(hash));
       const parents: ReadonlyArray<Hash> = info?.parents ?? [];
       // directParents: solid edges
       // indirectParents: dashed edges

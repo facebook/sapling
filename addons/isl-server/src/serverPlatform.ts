@@ -15,7 +15,7 @@ import type {
 
 import {spawn} from 'child_process';
 import pathModule from 'path';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 /**
  * Platform-specific server-side API for each target: vscode extension host, electron standalone, browser, ...
@@ -43,7 +43,10 @@ export const browserServerPlatform: ServerPlatform = {
   ) => {
     switch (message.type) {
       case 'platform/openContainingFolder': {
-        const absPath: AbsolutePath = pathModule.join(unwrap(repo?.info.repoRoot), message.path);
+        const absPath: AbsolutePath = pathModule.join(
+          nullthrows(repo?.info.repoRoot),
+          message.path,
+        );
         let args: Array<string> = [];
         // use OS-builtin open command to open parent directory
         // (which may open different file extensions with different programs)

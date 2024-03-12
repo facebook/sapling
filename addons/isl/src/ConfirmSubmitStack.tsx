@@ -22,7 +22,7 @@ import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-t
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useAutofocusRef} from 'shared/hooks';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 import './ConfirmSubmitStack.css';
 
@@ -66,7 +66,10 @@ export function useShowConfirmSubmitStack() {
 
     const provider = readAtom(codeReviewProvider);
 
-    const replace = {$numCommits: String(stack.length), $cmd: unwrap(provider).submitCommandName()};
+    const replace = {
+      $numCommits: String(stack.length),
+      $cmd: nullthrows(provider).submitCommandName(),
+    };
     const title =
       mode === 'submit'
         ? t('Submitting $numCommits commits for review with $cmd', {replace})

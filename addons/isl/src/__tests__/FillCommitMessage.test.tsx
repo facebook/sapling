@@ -18,7 +18,7 @@ import {
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
@@ -110,7 +110,7 @@ describe('FillCommitMessage', () => {
     expect(loadFromLastCommit).toBeInTheDocument();
     fireEvent.click(loadFromLastCommit);
     await waitFor(() => expect(getTitleEditor().value).toMatch('Head Commit'));
-    expect(getFieldEditor(unwrap(Internal.diffFieldTag))).toHaveValue('');
+    expect(getFieldEditor(nullthrows(Internal.diffFieldTag))).toHaveValue('');
   });
 
   it('Load from commit template', async () => {

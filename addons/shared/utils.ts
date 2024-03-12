@@ -14,7 +14,7 @@ export function notEmpty<T>(value: T | null | undefined): value is T {
 /**
  * Throw if value is `null` or `undefined`.
  */
-export function unwrap<T>(value: T | undefined | null): T {
+export function nullthrows<T>(value: T | undefined | null): T {
   if (value == null) {
     throw new Error(`expected value not to be ${value}`);
   }

@@ -21,7 +21,7 @@ import {fireEvent, render, screen, waitFor, within} from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 import {ComparisonType} from 'shared/Comparison';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 describe('Shelve', () => {
   beforeEach(() => {
@@ -99,7 +99,7 @@ describe('Shelve', () => {
 
       // uncheck one file
       fireEvent.click(
-        unwrap(
+        nullthrows(
           screen.getByTestId('changed-file-src/file2.js').querySelector('input[type=checkbox]'),
         ),
       );

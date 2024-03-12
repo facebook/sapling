@@ -23,7 +23,7 @@ import {
 } from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom} from 'jotai';
 import {useState} from 'react';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 import './VSCodeDropdown.css';
 
@@ -94,7 +94,7 @@ export default function FileStackEditPanel() {
   }
 
   // Properties for file stack editing.
-  const stack = unwrap(commitStack.fileStacks.get(fileIdx));
+  const stack = nullthrows(commitStack.fileStacks.get(fileIdx));
   const getTitle = (rev: Rev) =>
     commitStack.getCommitFromFileStackRev(fileIdx, rev)?.text ??
     t(

@@ -87,7 +87,7 @@ import {useCallback, useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
-import {firstLine, notEmpty, unwrap} from 'shared/utils';
+import {firstLine, notEmpty, nullthrows} from 'shared/utils';
 
 import './CommitInfoView.css';
 
@@ -779,7 +779,7 @@ function ActionsBar({
                     answer,
                   );
                   setRepoInfo(info => ({
-                    ...unwrap(info),
+                    ...nullthrows(info),
                     preferredSubmitCommand: answer,
                   }));
                   // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
@@ -802,7 +802,7 @@ function ActionsBar({
                 // during another amend or amend message.
                 const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
 
-                const submitOp = unwrap(provider).submitOperation(
+                const submitOp = nullthrows(provider).submitOperation(
                   commit.isHead ? [] : [commit], // [] means to submit the head commit
                   {
                     draft: shouldSubmitAsDraft,

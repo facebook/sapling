@@ -29,7 +29,7 @@ import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 import './DownloadCommitsMenu.css';
 
@@ -128,7 +128,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       const dest =
         rebaseType === 'rebase_ontop'
           ? '.'
-          : unwrap(findCurrentPublicBase(readAtom(dagWithPreviews))?.hash);
+          : nullthrows(findCurrentPublicBase(readAtom(dagWithPreviews))?.hash);
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
       runOperation(new Op(exactRevset(enteredDiffNum), succeedableRevset(dest)));

@@ -24,7 +24,7 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {is} from 'immutable';
 import {useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 import {getZoomLevel} from 'shared/zoom';
 
 import './StackEditSubTree.css';
@@ -102,7 +102,7 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
             name: 'move',
             offset: currentReorderState.offset,
             depCount: currentReorderState.draggingRevs.size - 1,
-            commit: unwrap(commitStack.stack.get(currentReorderState.draggingRev)),
+            commit: nullthrows(commitStack.stack.get(currentReorderState.draggingRev)),
           });
           bumpStackEditMetric('moveDnD');
         }
@@ -168,7 +168,7 @@ export function StackEditCommit({
   const canDrop = state.canDrop(rev);
   const canMoveDown = state.canMoveDown(rev);
   const canMoveUp = state.canMoveUp(rev);
-  const commit = unwrap(state.stack.get(rev));
+  const commit = nullthrows(state.stack.get(rev));
   const titleText = commit.text.split('\n', 1).at(0) ?? '';
 
   const handleMoveUp = () => {
@@ -299,7 +299,7 @@ function calculateReorderOffset(
   invisibleRevCount = 1,
 ): number {
   let belowCount = 0;
-  const parentY: number = unwrap(container).getBoundingClientRect().y;
+  const parentY: number = nullthrows(container).getBoundingClientRect().y;
   container.querySelectorAll('.commit').forEach(element => {
     const commitDiv = element as HTMLDivElement;
     // commitDiv.getBoundingClientRect() will consider the animation transform.

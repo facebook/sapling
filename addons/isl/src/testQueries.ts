@@ -14,7 +14,7 @@ import {
 import {readAtom} from './jotaiUtils';
 import {screen, within, fireEvent, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {
   withinCommitTree() {
@@ -49,7 +49,7 @@ export const CommitInfoTestUtils = {
     const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
     expect(commit).toBeInTheDocument();
     act(() => {
-      fireEvent.click(unwrap(commit), {metaKey: cmdClick === true});
+      fireEvent.click(nullthrows(commit), {metaKey: cmdClick === true});
     });
   },
 
@@ -77,7 +77,7 @@ export const CommitInfoTestUtils = {
     ).queryByText('Amend');
     expect(amendButton).toBeInTheDocument();
     act(() => {
-      fireEvent.click(unwrap(amendButton));
+      fireEvent.click(nullthrows(amendButton));
     });
   },
 
@@ -87,7 +87,7 @@ export const CommitInfoTestUtils = {
     ).queryByText('Amend Message');
     expect(amendMessageButton).toBeInTheDocument();
     act(() => {
-      fireEvent.click(unwrap(amendMessageButton));
+      fireEvent.click(nullthrows(amendMessageButton));
     });
   },
 
@@ -97,7 +97,7 @@ export const CommitInfoTestUtils = {
     ).queryByText('Commit');
     expect(commitButton).toBeInTheDocument();
     act(() => {
-      fireEvent.click(unwrap(commitButton));
+      fireEvent.click(nullthrows(commitButton));
     });
   },
 
@@ -107,7 +107,7 @@ export const CommitInfoTestUtils = {
     expect(cancelButton).toBeInTheDocument();
 
     act(() => {
-      fireEvent.click(unwrap(cancelButton));
+      fireEvent.click(nullthrows(cancelButton));
     });
   },
 

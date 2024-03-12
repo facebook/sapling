@@ -17,7 +17,7 @@ import {locale, t} from './i18n';
 import crypto from 'crypto';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
 
 let islPanelOrView: vscode.WebviewPanel | vscode.WebviewView | undefined = undefined;
@@ -48,7 +48,7 @@ function createOrFocusISLWebview(
     platform,
     logger,
   );
-  return unwrap(islPanelOrView);
+  return nullthrows(islPanelOrView);
 }
 
 function getWebviewOptions(

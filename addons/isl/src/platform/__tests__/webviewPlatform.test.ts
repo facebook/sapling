@@ -6,7 +6,7 @@
  */
 
 import {webviewPlatform} from '../webviewPlatform';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 (window.external as unknown as Record<string, unknown>).invoke = jest.fn();
 
@@ -39,7 +39,7 @@ describe('webview platform', () => {
       id: 1,
     });
 
-    const result = unwrap(await promise);
+    const result = nullthrows(await promise);
     expect(result[0].name).toEqual('file.txt');
     expect(await result[0].size).toEqual(5);
   });

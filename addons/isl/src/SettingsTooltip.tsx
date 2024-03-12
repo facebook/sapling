@@ -39,7 +39,7 @@ import {
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
-import {tryJsonParse, unwrap} from 'shared/utils';
+import {tryJsonParse, nullthrows} from 'shared/utils';
 
 import './VSCodeDropdown.css';
 import './SettingsTooltip.css';
@@ -159,7 +159,7 @@ function SettingsDropdown({
               runOperation(
                 new SetConfigOperation('local', 'github.preferred_submit_command', value),
               );
-              setRepoInfo(info => ({...unwrap(info), preferredSubmitCommand: value}));
+              setRepoInfo(info => ({...nullthrows(info), preferredSubmitCommand: value}));
             }}>
             {repoInfo.preferredSubmitCommand == null ? (
               <VSCodeOption value={'not set'}>(not set)</VSCodeOption>

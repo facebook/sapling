@@ -30,7 +30,7 @@ import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
-import {randomId, unwrap} from 'shared/utils';
+import {randomId, nullthrows} from 'shared/utils';
 
 import './GenerateWithAI.css';
 
@@ -145,7 +145,7 @@ const generatedCommitMessages = atomFamilyWeak((hashKey: string | undefined) =>
         const comparison: Comparison = hashKey.startsWith('commit/')
           ? {type: ComparisonType.UncommittedChanges}
           : {type: ComparisonType.Committed, hash: hashKey};
-        const response = await unwrap(Internal.generateAICommitMessage)({
+        const response = await nullthrows(Internal.generateAICommitMessage)({
           comparison,
           title: latestWrittenTitle,
         });
@@ -296,7 +296,7 @@ class FunnelTracker {
   /** Get or create the funnel tracker for this hashKey */
   static get(hashKey: HashKey): FunnelTracker {
     if (this.trackersByHashKey.has(hashKey)) {
-      return unwrap(this.trackersByHashKey.get(hashKey));
+      return nullthrows(this.trackersByHashKey.get(hashKey));
     }
     const tracker = new FunnelTracker();
     this.trackersByHashKey.set(hashKey, tracker);

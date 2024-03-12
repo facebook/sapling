@@ -20,7 +20,7 @@ import deepEqual from 'fast-deep-equal';
 import {Set as ImSet, Range, List} from 'immutable';
 import React, {useState, useRef, useEffect, useLayoutEffect} from 'react';
 import {mergeBlocks, collapseContextBlocks, diffBlocks, splitLines} from 'shared/diff';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 import './FileStackEditor.css';
 
@@ -89,7 +89,7 @@ export function FileStackEditor(props: EditorProps) {
       for (const div of divs) {
         const child = div.lastChild;
         if (child && selection.containsNode(child, true)) {
-          selIds.push(unwrap(div.dataset.selId));
+          selIds.push(nullthrows(div.dataset.selId));
         }
       }
       setSelectedLineIds(ImSet(selIds));
@@ -372,14 +372,14 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
       );
 
       if (textEdit) {
-        const len = Range(b1, b2).reduce((acc, i) => acc + unwrap(lines.get(i)).data.length, 0);
+        const len = Range(b1, b2).reduce((acc, i) => acc + nullthrows(lines.get(i)).data.length, 0);
         nextRangeId(len);
       }
 
       return;
     }
     for (let i = b1; i < b2; ++i) {
-      const line = unwrap(lines.get(i));
+      const line = nullthrows(lines.get(i));
       const checkboxes = revs.map(rev => {
         const checked = line.revs.contains(rev);
         let className = 'checkbox' + (rev > 0 ? ' mutable' : ' immutable');

@@ -18,7 +18,7 @@ import {
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {ComparisonType} from 'shared/Comparison';
 import {mockLogger} from 'shared/testUtils';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
 
 const mockCancelToken = {} as vscode.CancellationToken;
@@ -72,8 +72,8 @@ function mockRepoAdded(): NonNullable<typeof activeRepo> {
       savedOnChangeHeadCommit(commit);
     },
   } as unknown as typeof activeRepo;
-  activeReposCallback?.([unwrap(activeRepo)]);
-  return unwrap(activeRepo);
+  activeReposCallback?.([nullthrows(activeRepo)]);
+  return nullthrows(activeRepo);
 }
 function mockNoActiveRepo() {
   activeRepo = undefined;

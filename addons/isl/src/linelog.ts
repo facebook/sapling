@@ -37,7 +37,7 @@ import {hash, List, Record, Set as ImSet} from 'immutable';
 import {cached, cachedMethod, LRU} from 'shared/LRU';
 import {diffLines, splitLines} from 'shared/diff';
 import {SelfUpdate} from 'shared/immutableExt';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 /** Operation code. */
 enum Op {
@@ -378,7 +378,7 @@ class Code implements ValueObject {
       if (aLinesMutable) {
         aLines[a1] = {...aLines[a1], pc: jlInst == null ? code.size : code.size + 1};
       }
-      const a1Inst = unwrap(code.get(a1Pc));
+      const a1Inst = nullthrows(code.get(a1Pc));
       if (jlInst === undefined) {
         // [3]
         code = code.push(a1Inst);
@@ -551,7 +551,7 @@ class Code implements ValueObject {
         delStack.pop();
         onStackPop?.(delStack);
       }
-      const code = unwrap(this.get(pc));
+      const code = nullthrows(this.get(pc));
       switch (code.op) {
         case Op.LINE:
           onLine?.(code);
@@ -898,7 +898,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
     let patience = this.code.getSize() * 2;
     const deleted = present == null ? () => false : (pc: Pc) => !present[pc];
     while (patience > 0) {
-      const code = unwrap(this.code.get(pc));
+      const code = nullthrows(this.code.get(pc));
       switch (code.op) {
         case Op.END:
           lines.push({data: '', rev: 0, pc, deleted: deleted(pc)});

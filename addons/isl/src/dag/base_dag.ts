@@ -13,7 +13,7 @@ import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
 import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 
 /**
  * Hash-map like container with graph related queries.
@@ -263,7 +263,8 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
     const filledSet = gap ? this.range(hashSet, hashSet) : hashSet;
     const alreadyVisited = new Set<Hash>();
     // We use concat and pop (not unshift) so the order is reversed.
-    const compareHash = (a: Hash, b: Hash) => -compare(unwrap(this.get(a)), unwrap(this.get(b)));
+    const compareHash = (a: Hash, b: Hash) =>
+      -compare(nullthrows(this.get(a)), nullthrows(this.get(b)));
     // The number of parents remaining to be visited. This ensures merges are not
     // outputted until all parents are outputted.
     const remaining = new Map<Hash, number>(

@@ -25,7 +25,7 @@ import {getUsername} from 'isl-server/src/analytics/environment';
 import {relativeDate} from 'isl/src/relativeDate';
 import {LRU} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
-import {unwrap} from 'shared/utils';
+import {nullthrows} from 'shared/utils';
 import {DecorationRangeBehavior, MarkdownString, Position, Range, window, workspace} from 'vscode';
 
 function areYouTheAuthor(author: string) {
@@ -278,7 +278,7 @@ export class InlineBlameProvider implements Disposable {
       this.ctx.logger.info(`No blame found for path ${path}`);
     }
 
-    const blameLines = unwrap(blame.value);
+    const blameLines = nullthrows(blame.value);
 
     repoCaches.blameCache.set(fileUri, {
       baseBlameLines: blameLines,
@@ -294,7 +294,7 @@ export class InlineBlameProvider implements Disposable {
     const uri = textEditor.document.uri.fsPath;
     const repo = this.reposList.repoForPath(uri)?.repo;
     try {
-      return {value: await unwrap(repo).blame(this.ctx, uri, baseHash)};
+      return {value: await nullthrows(repo).blame(this.ctx, uri, baseHash)};
     } catch (err: unknown) {
       return {error: err as Error};
     }
@@ -363,7 +363,7 @@ export class InlineBlameProvider implements Disposable {
       this.updateBlame(this.currentEditor.document);
     }
 
-    const blameLines = unwrap(revisionSet.currentBlameLines);
+    const blameLines = nullthrows(revisionSet.currentBlameLines);
     if (line >= blameLines.length) {
       return undefined;
     }

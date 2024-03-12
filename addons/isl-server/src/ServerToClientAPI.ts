@@ -36,7 +36,7 @@ import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetForComparison} from 'shared/Comparison';
-import {randomId, unwrap} from 'shared/utils';
+import {randomId, nullthrows} from 'shared/utils';
 import {Readable} from 'stream';
 
 export type IncomingMessage = ClientToServerMessage;
@@ -254,7 +254,7 @@ export default class ServerToClientAPI {
         }
         this.tracker
           .operation('UploadImage', 'UploadImageError', {}, () =>
-            uploadFile(unwrap(this.connection.logger), {filename, data: payload}),
+            uploadFile(nullthrows(this.connection.logger), {filename, data: payload}),
           )
           .then((result: string) => {
             this.connection.logger?.info('sucessfully uploaded file', filename, result);
