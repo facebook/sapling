@@ -25,7 +25,7 @@ export class AmendOperation extends Operation {
    * @param filePathsToAmend if provided, only these file paths will be included in the amend operation. If undefined, ALL uncommitted changes are included. Paths should be relative to repo root.
    * @param message if provided, update commit description to use this title & description
    */
-  constructor(private filePathsToAmend?: Array<RepoRelativePath>, private message?: string) {
+  constructor(private filePathsToAmend?: Array<RepoRelativePath>, public message?: string) {
     super(filePathsToAmend ? 'AmendFileSubsetOperation' : 'AmendOperation');
 
     this.restackBehavior = readAtom(restackBehaviorAtom);

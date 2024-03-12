@@ -12,10 +12,13 @@ import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, readAtom, writeAtom} from '../jotaiUtils';
+import {AmendMessageOperation} from '../operations/AmendMessageOperation';
+import {AmendOperation} from '../operations/AmendOperation';
 import {CommitOperation} from '../operations/CommitOperation';
 import {onOperationExited} from '../operationsState';
 import {dagWithPreviews} from '../previews';
-import {selectedCommitInfos} from '../selection';
+import {selectedCommitInfos, selectedCommits} from '../selection';
+import {latestHeadCommit} from '../serverAPIState';
 import {registerCleanup, registerDisposable} from '../utils';
 import {
   parseCommitMessageFields,
@@ -103,24 +106,48 @@ registerCleanup(successionTracker, updateEditedCommitMessagesFromSuccessions, im
 registerDisposable(
   serverAPI,
   onOperationExited((progress, operation) => {
-    if (progress.exitCode !== 0 && operation instanceof CommitOperation) {
-      // Commit operation failed, let's restore your edited commit message so you might save it or try again
-      const message = operation.message;
+    if (progress.exitCode === 0) {
+      return;
+    }
+    const isCommit = operation instanceof CommitOperation;
+    const isAmend = operation instanceof AmendOperation;
+    const isMetaedit = operation instanceof AmendMessageOperation;
+    if (!(isCommit || isAmend || isMetaedit)) {
+      return;
+    }
 
-      const [title] = message.split(/\n+/, 1);
-      const description = message.slice(title.length);
+    // Operation involving commit message failed, let's restore your edited commit message so you might save it or try again
+    const message = operation.message;
+    if (message == null) {
+      return;
+    }
 
-      const schema = readAtom(commitMessageFieldsSchema);
-      const fields = parseCommitMessageFields(schema, title, description);
-      const currentMessage = readAtom(editedCommitMessages('head'));
-      writeAtom(editedCommitMessages('head'), {
-        fields: mergeCommitMessageFields(
-          schema,
-          currentMessage.fields as CommitMessageFields,
-          fields,
-        ),
-      });
-      writeAtom(commitMode, 'commit');
+    const headOrHash = isCommit
+      ? 'head'
+      : isMetaedit
+      ? operation.getCommitHash()
+      : readAtom(latestHeadCommit)?.hash;
+
+    if (!headOrHash) {
+      return;
+    }
+
+    const [title] = message.split(/\n+/, 1);
+    const description = message.slice(title.length);
+
+    const schema = readAtom(commitMessageFieldsSchema);
+    const fields = parseCommitMessageFields(schema, title, description);
+    const currentMessage = readAtom(editedCommitMessages(headOrHash));
+    writeAtom(editedCommitMessages(headOrHash), {
+      fields: mergeCommitMessageFields(
+        schema,
+        currentMessage.fields as CommitMessageFields,
+        fields,
+      ),
+    });
+    writeAtom(commitMode, isCommit ? 'commit' : 'amend');
+    if (!isCommit) {
+      writeAtom(selectedCommits, new Set([headOrHash]));
     }
   }),
   import.meta.hot,

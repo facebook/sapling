@@ -6,16 +6,24 @@
  */
 
 import type {Dag} from '../previews';
-import type {CommandArg, ExactRevset, SucceedableRevset} from '../types';
+import type {CommandArg, ExactRevset, Hash, SucceedableRevset} from '../types';
 
 import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
-  constructor(private revset: SucceedableRevset | ExactRevset, private message: string) {
+  constructor(public revset: SucceedableRevset | ExactRevset, public message: string) {
     super('AmendMessageOperation');
   }
 
   static opName = 'Metaedit';
+
+  /** If the input revset refers to a specific commit hash, return it */
+  getCommitHash(): Hash | undefined {
+    if (/[a-fA-F0-9]{12,40}/.test(this.revset.revset)) {
+      return this.revset.revset;
+    }
+    return undefined;
+  }
 
   getArgs() {
     const args: Array<CommandArg> = ['metaedit', '--rev', this.revset, '--message', this.message];
