@@ -3034,6 +3034,9 @@ class TextTestRunner(unittest.TextTestRunner):
                     # Also write the file names to temporary files.  So it can be
                     # used in adhoc scripts like `hg revert $(cat .testfailed)`.
                     testsdir = os.path.abspath(os.path.dirname(__file__))
+                    if not os.path.exists(testsdir):
+                        # It's possible for the current directory to not exist if tests are run using Buck
+                        testsdir = ""
                     filepath = os.path.join(testsdir, f".test{title.lower()}")
                     with open(filepath, "a") as f:
                         for name in names:
