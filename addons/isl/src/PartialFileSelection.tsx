@@ -251,16 +251,18 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
           <col width={'40px'} />
           <col width={'100%'} />
         </colgroup>
-        {lineAContent.map((line, i) => {
-          return (
-            <tr key={i} className="column-unified">
-              {lineCheckbox[i]}
-              {lineANumber[i]}
-              {lineBNumber[i]}
-              {line}
-            </tr>
-          );
-        })}
+        <tbody>
+          {lineAContent.map((line, i) => {
+            return (
+              <tr key={i} className="column-unified">
+                {lineCheckbox[i]}
+                {lineANumber[i]}
+                {lineBNumber[i]}
+                {line}
+              </tr>
+            );
+          })}
+        </tbody>
       </table>
     </>
   );
