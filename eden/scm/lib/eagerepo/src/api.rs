@@ -44,7 +44,10 @@ use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
 use edenapi::types::HgMutationEntryContent;
 use edenapi::types::HistoryEntry;
+use edenapi::types::IndexableId;
 use edenapi::types::Key;
+use edenapi::types::LookupResponse;
+use edenapi::types::LookupResult;
 use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
@@ -683,6 +686,62 @@ impl EdenApi for EagerRepo {
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         let _ = (changesets, mutations);
         Err(EdenApiError::NotSupported)
+    }
+
+    async fn lookup_batch(
+        &self,
+        items: Vec<AnyId>,
+        bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
+    ) -> Result<Vec<LookupResponse>, EdenApiError> {
+        debug!(?items, "lookup_batch");
+
+        self.refresh_for_api();
+
+        if bubble_id.is_some() || copy_from_bubble_id.is_some() {
+            return Err(self.not_implemented_error(
+                "EagerRepo does not support bubble_id".to_string(),
+                "lookup_batch",
+            ));
+        }
+
+        let mut res = Vec::with_capacity(items.len());
+        for item in items {
+            let sha1 = self.sha1_from_anyid(item, "lookup_batch")?;
+
+            match self.get_sha1_blob(sha1) {
+                Ok(None) => {
+                    res.push(LookupResponse {
+                        result: LookupResult::NotPresent(IndexableId {
+                            id: item,
+                            bubble_id: None,
+                        }),
+                    });
+                }
+                Ok(Some(_)) => {
+                    res.push(LookupResponse {
+                        result: LookupResult::Present(UploadToken {
+                            data: UploadTokenData {
+                                id: item,
+                                bubble_id: None,
+                                metadata: None,
+                            },
+                            signature: Default::default(),
+                        }),
+                    });
+                }
+                Err(e) => {
+                    return Err(EdenApiError::HttpError {
+                        status: StatusCode::INTERNAL_SERVER_ERROR,
+                        message: format!("{:?}", e),
+                        headers: Default::default(),
+                        url: self.url("lookup_batch"),
+                    });
+                }
+            }
+        }
+
+        Ok(res)
     }
 }
 

@@ -20,7 +20,7 @@ use crate::IndexableId;
 use crate::UploadToken;
 
 #[auto_wire]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum AnyId {
     #[id(1)]
