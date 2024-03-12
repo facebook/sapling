@@ -11,4 +11,4 @@ license = "GPLv2+"
 path = "src/tls.rs"
 
 [dependencies]
-clap = { version = "4.4.12", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }

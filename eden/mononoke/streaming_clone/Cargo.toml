@@ -12,7 +12,7 @@ anyhow = "1.0.75"
 blake2 = "0.10"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-clap = { version = "4.4.12", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

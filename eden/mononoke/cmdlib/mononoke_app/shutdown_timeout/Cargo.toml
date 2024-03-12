@@ -12,4 +12,4 @@ path = "src/shutdown_timeout.rs"
 
 [dependencies]
 anyhow = "1.0.75"
-clap = { version = "4.4.12", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
