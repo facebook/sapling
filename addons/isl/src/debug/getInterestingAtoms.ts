@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AtomFamilyWeak} from '../jotaiUtils';
 import type {Atom} from 'jotai';
 import type {Json} from 'shared/typeUtils';
 
@@ -28,7 +29,9 @@ import {SelfUpdate} from 'shared/immutableExt';
 export type UIStateSnapshot = {[key: string]: Json};
 export type AtomsState = {[key: string]: unknown};
 
-function listInterestingAtoms(): Array<Atom<unknown>> {
+type AtomOrFamily = Atom<unknown> | AtomFamilyWeak<string, Atom<unknown>>;
+
+function listInterestingAtoms(): Array<AtomOrFamily> {
   return [
     allDiffSummaries,
     codeReviewProvider,
@@ -51,7 +54,7 @@ function listInterestingAtoms(): Array<Atom<unknown>> {
 /** Read all "interesting" atoms and returns a single object that contains them all. */
 export function readInterestingAtoms(): AtomsState {
   return Object.fromEntries(
-    listInterestingAtoms().map(a => [a.debugLabel ?? a.toString(), readAtom(a)]),
+    listInterestingAtoms().map(a => [a.debugLabel ?? a.toString(), readAtomOrFamily(a)]),
   );
 }
 
@@ -61,6 +64,20 @@ export function serializeAtomsState(state: AtomsState): UIStateSnapshot {
     return [key, serialize(value as Serializable)];
   });
   return Object.fromEntries(newEntries);
+}
+
+function readAtomOrFamily(atomOrFamily: AtomOrFamily): unknown {
+  if (typeof atomOrFamily === 'function') {
+    // atomFamily. Read its values from weakCache.
+    const result = new Map<string, unknown>();
+    for (const [key, weak] of atomOrFamily.weakCache.entries()) {
+      const value = weak.deref();
+      result.set(key, value === undefined ? undefined : readAtom(value));
+    }
+    return result;
+  } else {
+    return readAtom(atomOrFamily);
+  }
 }
 
 type Serializable = Json | {toJSON: () => Serializable};
