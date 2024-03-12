@@ -1703,8 +1703,7 @@ mod test {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
-                    git_submodules_action: Default::default(),
-                    submodule_dependencies: HashMap::new(),
+                    submodule_config: Default::default(),
                 },
             },
             version_name: current_version.clone(),

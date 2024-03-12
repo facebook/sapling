@@ -265,7 +265,7 @@ pub async fn get_all_possible_small_repo_submodule_deps_from_matches<R: Repo>(
         .filter_map(|mut cfg| {
             cfg.small_repos
                 .remove(&source_repo_id)
-                .map(|small_repo_cfg| small_repo_cfg.submodule_dependencies)
+                .map(|small_repo_cfg| small_repo_cfg.submodule_config.submodule_dependencies)
         })
         .flatten()
         .collect::<HashSet<_>>();

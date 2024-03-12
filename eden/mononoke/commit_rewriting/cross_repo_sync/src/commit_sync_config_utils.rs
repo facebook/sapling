@@ -37,7 +37,10 @@ pub async fn get_strip_git_submodules_by_version(
         .await?;
     let small_repo_configs = commit_sync_config.small_repos;
     if let Some(small_repo_config) = small_repo_configs.get(&source_repo_id) {
-        return Ok(small_repo_config.git_submodules_action.clone());
+        return Ok(small_repo_config
+            .submodule_config
+            .git_submodules_action
+            .clone());
     };
 
     Ok(GitSubmodulesChangesAction::default())

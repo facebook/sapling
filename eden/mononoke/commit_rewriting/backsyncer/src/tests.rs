@@ -727,8 +727,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                     NonRootMPath::new("current_prefix").unwrap(),
                 ),
                 map: hashmap! { },
-                git_submodules_action: Default::default(),
-                submodule_dependencies: HashMap::new(),
+                submodule_config: Default::default(),
             },
         },
         version_name: current_version.clone(),
@@ -745,8 +744,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                     NonRootMPath::new("new_prefix").unwrap(),
                 ),
                 map: hashmap! { },
-                git_submodules_action: Default::default(),
-                submodule_dependencies: HashMap::new(),
+                submodule_config: Default::default(),
             },
         },
         version_name: new_version.clone(),
@@ -1261,8 +1259,7 @@ impl MoverType {
             Noop => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
-                git_submodules_action: Default::default(),
-                submodule_dependencies: HashMap::new(),
+                submodule_config: Default::default(),
             },
             Except(files) => {
                 let mut map = hashmap! {};
@@ -1275,8 +1272,7 @@ impl MoverType {
                 SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map,
-                    git_submodules_action: Default::default(),
-                    submodule_dependencies: HashMap::new(),
+                    submodule_config: Default::default(),
                 }
             }
             Only(path) => SmallRepoCommitSyncConfig {
@@ -1286,8 +1282,7 @@ impl MoverType {
                 map: hashmap! {
                     NonRootMPath::new(path).unwrap() => NonRootMPath::new(path).unwrap(),
                 },
-                git_submodules_action: Default::default(),
-                submodule_dependencies: HashMap::new(),
+                submodule_config: Default::default(),
             },
         }
     }
@@ -1656,8 +1651,7 @@ async fn init_merged_repos(
                         NonRootMPath::new(format!("smallrepo{}", small_repo.repo_identity().id().id())).unwrap(),
                     ),
                     map: hashmap! { },
-                    git_submodules_action: Default::default(),
-                    submodule_dependencies: HashMap::new(),
+                    submodule_config: Default::default(),
                 },
             },
             version_name: after_merge_version.clone(),

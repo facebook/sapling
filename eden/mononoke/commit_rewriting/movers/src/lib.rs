@@ -484,8 +484,7 @@ mod test {
             map: hashmap! {
                 mp("preserved2") => mp("repo1-rest/preserved2"),
             },
-            git_submodules_action: Default::default(),
-            submodule_dependencies: HashMap::new(),
+            submodule_config: Default::default(),
         }
     }
 
@@ -497,8 +496,7 @@ mod test {
                 mp("sub1") => mp("repo2-rest/sub1"),
                 mp("sub2") => mp("repo2-rest/sub2"),
             },
-            git_submodules_action: Default::default(),
-            submodule_dependencies: HashMap::new(),
+            submodule_config: Default::default(),
         }
     }
 
@@ -655,8 +653,7 @@ mod test {
                     map: hashmap! {
                         mp("preserved2") => mp("preserved2"),
                     },
-                    git_submodules_action: Default::default(),
-                    submodule_dependencies: HashMap::new(),
+                    submodule_config: Default::default(),
                 },
                 RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
@@ -665,8 +662,7 @@ mod test {
                         mp("sub1") => mp("repo2-rest/sub1"),
                         mp("sub2") => mp("repo2-rest/sub2"),
                     },
-                    git_submodules_action: Default::default(),
-                    submodule_dependencies: HashMap::new(),
+                    submodule_config: Default::default(),
                 },
             },
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -751,8 +747,7 @@ mod test {
                 mp("sub1") => mp("repo2-rest/sub1"),
                 mp("sub1/preserved") => mp("sub1/preserved"),
             },
-            git_submodules_action: Default::default(),
-            submodule_dependencies: HashMap::new(),
+            submodule_config: Default::default(),
         }
     }
 
@@ -802,8 +797,7 @@ mod test {
                 mp("preserved") => mp("preserved"),
                 mp("preserved/excluded") => mp("shifted/preserved/excluded"),
             },
-            git_submodules_action: Default::default(),
-            submodule_dependencies: HashMap::new(),
+            submodule_config: Default::default(),
         }
     }
 

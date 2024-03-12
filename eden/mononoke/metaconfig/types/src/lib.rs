@@ -1256,6 +1256,21 @@ pub enum GitSubmodulesChangesAction {
     Expand,
 }
 
+/// Stores all the information related to git submodules in a small repo,
+/// e.g. how to handle them and what other repos the small repo might depend on
+/// to expand submodule file changes.
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub struct SmallRepoGitSubmoduleConfig {
+    /// Whether any changes made to git submodules should be stripped from
+    /// the changesets before being synced.
+    pub git_submodules_action: GitSubmodulesChangesAction,
+    /// Map from submodule path in the small repo to the ID of the submodule's
+    /// repository in Mononoke.
+    /// These repos have to be loaded with the small repo before syncing starts,
+    /// as file changes from the submodule dependencies might need to be copied.
+    pub submodule_dependencies: HashMap<NonRootMPath, RepositoryId>,
+}
+
 /// Commit sync configuration for a small repo
 /// Note: this configuration is always from the point of view
 /// of the small repo, meaning a key in the `map` is a path
@@ -1266,14 +1281,8 @@ pub struct SmallRepoCommitSyncConfig {
     pub default_action: DefaultSmallToLargeCommitSyncPathAction,
     /// A map of prefix replacements when syncing
     pub map: HashMap<NonRootMPath, NonRootMPath>,
-    /// Whether any changes made to git submodules should be stripped from
-    /// the changesets before being synced.
-    pub git_submodules_action: GitSubmodulesChangesAction,
-    /// Map from submodule path in the small repo to the ID of the submodule's
-    /// repository in Mononoke.
-    /// These repos have to be loaded with the small repo before syncing starts,
-    /// as file changes from the submodule dependencies might need to be copied.
-    pub submodule_dependencies: HashMap<NonRootMPath, RepositoryId>,
+    /// All information related to git submodules
+    pub submodule_config: SmallRepoGitSubmoduleConfig,
 }
 
 /// Commit sync direction

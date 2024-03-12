@@ -21,6 +21,7 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
+use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -225,8 +226,10 @@ impl Convert for RawCommitSyncSmallRepoConfig {
         Ok(SmallRepoCommitSyncConfig {
             default_action,
             map,
-            git_submodules_action,
-            submodule_dependencies,
+            submodule_config: SmallRepoGitSubmoduleConfig {
+                git_submodules_action,
+                submodule_dependencies,
+            },
         })
     }
 }

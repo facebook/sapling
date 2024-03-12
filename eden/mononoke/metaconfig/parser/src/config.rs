@@ -643,8 +643,7 @@ mod test {
                             NonRootMPath::new("p1").unwrap() => NonRootMPath::new(".r2-legacy/p1").unwrap(),
                             NonRootMPath::new("p5").unwrap() => NonRootMPath::new(".r2-legacy/p5").unwrap(),
                         },
-                        git_submodules_action: Default::default(),
-                        submodule_dependencies: HashMap::new(),
+                        submodule_config: Default::default(),
                     },
                     RepositoryId::new(3) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new("subdir").unwrap()),
@@ -652,8 +651,7 @@ mod test {
                             NonRootMPath::new("p1").unwrap() => NonRootMPath::new("p1").unwrap(),
                             NonRootMPath::new("p4").unwrap() => NonRootMPath::new("p5/p4").unwrap(),
                         },
-                        git_submodules_action: Default::default(),
-                        submodule_dependencies: HashMap::new(),
+                        submodule_config: Default::default(),
                     }
                 },
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
