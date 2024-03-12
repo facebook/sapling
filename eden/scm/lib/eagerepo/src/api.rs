@@ -638,8 +638,42 @@ impl EdenApi for EagerRepo {
         &self,
         items: Vec<UploadTreeEntry>,
     ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
-        let _ = items;
-        Err(EdenApiError::NotSupported)
+        debug!(?items, "upload_trees_batch");
+
+        self.refresh_for_api();
+
+        let mut res = Vec::with_capacity(items.len());
+        for tree in items {
+            let mut content_with_parents = Vec::<u8>::with_capacity(tree.data.len() + 40);
+            let (mut p1, mut p2) = tree.parents.into_nodes();
+            if p2 < p1 {
+                std::mem::swap(&mut p1, &mut p2);
+            }
+            content_with_parents.extend_from_slice(p1.as_ref());
+            content_with_parents.extend_from_slice(p2.as_ref());
+            content_with_parents.extend(tree.data);
+
+            self.add_sha1_blob_for_api(
+                tree.node_id,
+                content_with_parents.into(),
+                "upload_trees_batch",
+            )?;
+
+            res.push(Ok(UploadTreeResponse {
+                token: UploadToken {
+                    data: UploadTokenData {
+                        id: AnyId::HgFilenodeId(tree.node_id),
+                        bubble_id: None,
+                        metadata: None,
+                    },
+                    signature: Default::default(),
+                },
+            }));
+        }
+
+        self.flush_for_api("upload_trees_batch").await?;
+
+        Ok(convert_to_response(res))
     }
 
     async fn upload_changesets(
