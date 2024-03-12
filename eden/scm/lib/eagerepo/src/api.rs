@@ -6,9 +6,11 @@
  */
 
 use std::collections::HashSet;
+use std::io::Write;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::ops::DagAlgorithm;
@@ -40,6 +42,7 @@ use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileResponse;
 use edenapi::types::FileSpec;
+use edenapi::types::HgChangesetContent;
 use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
 use edenapi::types::HgMutationEntryContent;
@@ -72,6 +75,7 @@ use http::Version;
 use minibytes::Bytes;
 use nonblocking::non_blocking_result;
 use tracing::debug;
+use tracing::error;
 use tracing::trace;
 
 use crate::EagerRepo;
@@ -682,10 +686,63 @@ impl EdenApi for EagerRepo {
     async fn upload_changesets(
         &self,
         changesets: Vec<UploadHgChangeset>,
-        mutations: Vec<HgMutationEntryContent>,
+        _mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let _ = (changesets, mutations);
-        Err(EdenApiError::NotSupported)
+        debug!(?changesets, "upload_changesets");
+
+        let mut res = Vec::with_capacity(changesets.len());
+        for UploadHgChangeset {
+            node_id: node,
+            changeset_content: cs,
+        } in changesets
+        {
+            let mut parents = Vec::with_capacity(2);
+            let (p1, p2) = cs.parents.into_nodes();
+            if !p1.is_null() {
+                parents.push(p1);
+                if !p2.is_null() {
+                    parents.push(p2);
+                }
+            }
+
+            let text = match changeset_to_text(cs) {
+                Ok(text) => text,
+                Err(err) => {
+                    res.push(Err(err.context("creating changset text").into()));
+                    continue;
+                }
+            };
+
+            match self.add_commit(&parents, &text).await {
+                Ok(actual_id) => {
+                    if actual_id != node {
+                        res.push(Err(anyhow!("commit id mismatch").into()));
+                    } else {
+                        res.push(Ok(UploadTokensResponse {
+                            token: UploadToken {
+                                data: UploadTokenData {
+                                    id: AnyId::HgChangesetId(node),
+                                    bubble_id: None,
+                                    metadata: None,
+                                },
+                                signature: Default::default(),
+                            },
+                        }));
+                    }
+                }
+                Err(err) => {
+                    // edenapi_upload.py has the expectation that errors are not
+                    // propagated by the server. "failed" commits are simply not returned.
+                    // I don't think that is good, but let's go with the flow for now.
+                    error!(?err, "error inserting commit");
+                    continue;
+                }
+            }
+        }
+
+        self.flush_for_api("upload_changesets").await?;
+
+        Ok(convert_to_response(res))
     }
 
     async fn lookup_batch(
@@ -743,6 +800,54 @@ impl EdenApi for EagerRepo {
 
         Ok(res)
     }
+}
+
+fn changeset_to_text(mut cs: HgChangesetContent) -> anyhow::Result<Vec<u8>> {
+    // TODO: validate stuff better
+    let mut text = Vec::<u8>::new();
+
+    writeln!(text, "{}", cs.manifestid)?;
+
+    writeln!(text, "{}", String::from_utf8(cs.user)?)?;
+
+    write!(text, "{} {}", cs.time, cs.tz)?;
+
+    if !cs.extras.is_empty() {
+        write!(text, " ")?;
+
+        let mut extras: Vec<(String, String)> = Vec::with_capacity(cs.extras.len());
+        for extra in cs.extras {
+            extras.push((
+                String::from_utf8(extra.key)?,
+                String::from_utf8(extra.value)?,
+            ));
+        }
+        extras.sort_by(|a, b| a.0.cmp(&b.0));
+        for (idx, (k, v)) in extras.into_iter().enumerate() {
+            let extra = format!("{k}:{v}")
+                .replace('\\', r"\\")
+                .replace('\n', r"\n")
+                .replace('\r', r"\r")
+                .replace('\0', r"\0");
+            if idx > 0 {
+                text.push(0);
+            }
+            write!(text, "{extra}")?;
+        }
+    }
+
+    text.push(b'\n');
+
+    cs.files.sort();
+    for file in cs.files {
+        writeln!(text, "{file}")?;
+    }
+
+    text.push(b'\n');
+
+    text.extend_from_slice(&cs.message);
+
+    Ok(text)
 }
 
 impl EagerRepo {
