@@ -72,7 +72,6 @@ ENV = {
 }
 
 python_unittest(
-    # @autodeps-skip
     name = "hg_run_tests",
     srcs = SRCS,
     # non-python deps should be in cpp_deps (even if not cpp)
@@ -103,7 +102,6 @@ W_ENV["HGTEST_BLOCKLIST"] = get_blocklist()
 W_ENV["HGTEST_WATCHMAN"] = "$(location //watchman:watchman)"
 
 python_unittest(
-    # @autodeps-skip
     name = "hg_watchman_run_tests",
     srcs = SRCS,
     env = W_ENV,
@@ -140,7 +138,6 @@ M_ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixt
 M_ENV["FB_TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration/facebook:facebook_test_fixtures)"
 
 python_unittest(
-    # @autodeps-skip
     name = "hg_mononoke_run_tests",
     srcs = SRCS,
     compatible_with = [
@@ -165,7 +162,6 @@ python_unittest(
 )
 
 buck_filegroup(
-    # @autodeps-skip
     name = "test_runner",
     srcs = [
         "default_hgrc.py",
