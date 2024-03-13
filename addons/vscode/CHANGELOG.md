@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.42
+
+### Mar 13 2024
+
+- Add "Focus mode" to hide commits other than the current stack
+- Add "Apply" button to unshelve without deleting the shelved changes
+- Shift click to select ranges of commits now prefers selecting without including branching children
+- Remember the collapsed state of generated files
+- Show inline spinner next to "you are here" while goto is running
+- If commit / amend / amend message hit an error, restore your typed commit message so you can try again
+- Clear quick commit title after committing
+- Hide generated file content by default in the Split UI
+- Ensure commit titles don't shrink too much in compact mode
+- Prevent successions from persisting commit message edits to different diffs
+- Elided obsolete commits will now be shown if selected
+- Fix last run command showing '?' 5 seconds after exiting
+- Fix issues when viewing commits after writing a commit message
+- Fix "Fold down" button in "Edit Stack" not working
+
 ## 0.1.41
 
 ### Mar 4 2024
