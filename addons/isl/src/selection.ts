@@ -191,17 +191,35 @@ export function useArrowKeysToChangeSelection() {
       }));
     }
 
-    const linearHistory = readAtom(linearizedCommitHistory);
-    if (linearHistory == null || linearHistory.length === 0) {
+    const dag = readAtom(dagWithPreviews);
+    const [sortIndex, sorted] = dag.defaultSortAscIndex();
+
+    if (sorted.length === 0) {
       return;
     }
 
-    const linearNonPublicHistory = linearHistory.filter(commit => commit.phase !== 'public');
+    const lastSelected = readAtom(previouslySelectedCommit);
+    const lastIndex = lastSelected == null ? undefined : sortIndex.get(lastSelected);
+
+    const nextSelectableHash = (step = 1 /* 1: up; -1: down */, start = lastIndex ?? 0) => {
+      let index = start;
+      while (index > 0) {
+        index += step;
+        const hash = sorted.at(index);
+        if (hash == null) {
+          return undefined;
+        }
+        // public commits are not selectable for now.
+        if (dag.get(hash)?.phase !== 'public') {
+          return hash;
+        }
+      }
+    };
 
     const existingSelection = readAtom(selectedCommits);
     if (existingSelection.size === 0) {
       if (which === 'SelectDownwards' || which === 'ContinueSelectionDownwards') {
-        const top = linearNonPublicHistory.at(-1)?.hash;
+        const top = nextSelectableHash(-1, sorted.length);
         if (top != null) {
           writeAtom(selectedCommits, new Set([top]));
           writeAtom(previouslySelectedCommit, top);
@@ -210,52 +228,41 @@ export function useArrowKeysToChangeSelection() {
       return;
     }
 
-    const lastSelected = readAtom(previouslySelectedCommit);
-    if (lastSelected == null) {
+    if (lastSelected == null || lastIndex == null) {
       return;
     }
 
-    let currentIndex = linearNonPublicHistory.findIndex(commit => commit.hash === lastSelected);
-    if (currentIndex === -1) {
-      return;
-    }
-
+    let newSelected: Hash | undefined;
     let extendSelection = false;
 
     switch (which) {
       case 'SelectUpwards': {
-        if (currentIndex < linearNonPublicHistory.length - 1) {
-          currentIndex++;
-        }
+        newSelected = nextSelectableHash(1);
         break;
       }
       case 'SelectDownwards': {
-        if (currentIndex > 0) {
-          currentIndex--;
-        }
+        newSelected = nextSelectableHash(-1);
         break;
       }
       case 'ContinueSelectionUpwards': {
-        if (currentIndex < linearNonPublicHistory.length - 1) {
-          currentIndex++;
-        }
+        newSelected = nextSelectableHash(1);
         extendSelection = true;
         break;
       }
       case 'ContinueSelectionDownwards': {
-        if (currentIndex > 0) {
-          currentIndex--;
-        }
+        newSelected = nextSelectableHash(-1);
         extendSelection = true;
         break;
       }
     }
 
-    const newSelected = linearNonPublicHistory[currentIndex];
-    writeAtom(selectedCommits, last =>
-      extendSelection ? new Set([...last, newSelected.hash]) : new Set([newSelected.hash]),
-    );
-    writeAtom(previouslySelectedCommit, newSelected.hash);
+    if (newSelected != null) {
+      const newHash = newSelected;
+      writeAtom(selectedCommits, last =>
+        extendSelection ? new Set([...last, newHash]) : new Set([newHash]),
+      );
+      writeAtom(previouslySelectedCommit, newHash);
+    }
   }, []);
 
   useCommand('OpenDetails', () => cb('OpenDetails'));
