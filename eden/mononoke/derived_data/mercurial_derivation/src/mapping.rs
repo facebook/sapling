@@ -35,7 +35,7 @@ define_stats! {
     new_parallel: timeseries(Rate, Sum),
 }
 
-use derived_data_service_if::types as thrift;
+use derived_data_service_if as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(HgChangesetId);

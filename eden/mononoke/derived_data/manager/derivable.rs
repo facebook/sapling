@@ -16,7 +16,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use derived_data_service_if::types::DerivedData;
+use derived_data_service_if::DerivedData;
 use futures::future::try_join;
 use futures::stream;
 use futures::stream::StreamExt;

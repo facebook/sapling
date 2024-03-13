@@ -11,7 +11,7 @@ use std::io::Write;
 use anyhow::Result;
 use chrono::naive::NaiveDateTime;
 use chrono::DateTime;
-use source_control::types as thrift;
+use source_control as thrift;
 
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;

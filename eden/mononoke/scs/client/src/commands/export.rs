@@ -26,7 +26,7 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use source_control::types as thrift;
+use source_control as thrift;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 

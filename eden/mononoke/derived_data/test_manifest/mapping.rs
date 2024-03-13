@@ -16,7 +16,7 @@ use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
-use derived_data_service_if::types as thrift;
+use derived_data_service_if as thrift;
 use mononoke_types::test_manifest::TestManifestDirectory;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;

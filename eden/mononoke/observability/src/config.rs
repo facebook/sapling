@@ -9,11 +9,11 @@ use std::sync::RwLock;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use observability_config::types::ObservabilityConfig as CfgrObservabilityConfig;
-use observability_config::types::ScubaObservabilityConfig as CfgrScubaObservabilityConfig;
-use observability_config::types::ScubaVerbosityLevel as CfgrScubaVerbosityLevel;
-use observability_config::types::SlogLoggingLevel as CfgrLoggingLevel;
-use observability_config::types::SlogObservabilityConfig as CfgrSlogObservabilityConfig;
+use observability_config::ObservabilityConfig as CfgrObservabilityConfig;
+use observability_config::ScubaObservabilityConfig as CfgrScubaObservabilityConfig;
+use observability_config::ScubaVerbosityLevel as CfgrScubaVerbosityLevel;
+use observability_config::SlogLoggingLevel as CfgrLoggingLevel;
+use observability_config::SlogObservabilityConfig as CfgrSlogObservabilityConfig;
 use regex::Regex;
 use serde::de::Deserializer;
 use serde::de::Error as _;

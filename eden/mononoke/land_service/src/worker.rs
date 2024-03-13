@@ -22,7 +22,7 @@ use futures_ext::future::FbFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
 use identity::Identity;
-use land_service_if::types::*;
+use land_service_if::*;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;

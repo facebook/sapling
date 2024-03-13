@@ -19,7 +19,7 @@ use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
-use derived_data_service_if::types as thrift;
+use derived_data_service_if as thrift;
 use futures::stream::TryStreamExt;
 use manifest::find_intersection_of_diffs;
 use manifest::Entry;

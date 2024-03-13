@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
 use futures::future::Shared;
-use land_service_if::types::*;
+use land_service_if::*;
 use land_service_if_services::errors::LandChangesetsExn;
 use land_service_if_services::LandService;
 use mononoke_api::CoreContext;

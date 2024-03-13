@@ -31,7 +31,7 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
-use megarepo_configs::types::SourceMappingRules;
+use megarepo_configs::SourceMappingRules;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;

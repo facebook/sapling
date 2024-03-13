@@ -46,7 +46,7 @@ impl StatusCmd {
     async fn get_status_simple(
         &self,
         instance: &EdenFsInstance,
-    ) -> edenfs_error::Result<thrift_types::edenfs::types::DaemonInfo> {
+    ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
         let timeout = Duration::from_secs(self.timeout);
         let health = instance.get_health(Some(timeout));
 
@@ -59,7 +59,7 @@ impl StatusCmd {
     async fn get_status_blocking_on_startup(
         &self,
         instance: &EdenFsInstance,
-    ) -> edenfs_error::Result<thrift_types::edenfs::types::DaemonInfo> {
+    ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
         let timeout = Duration::from_secs(self.timeout);
         let initial_result_and_stream = instance.get_health_with_startup_updates_included(timeout);
         let waited_health = time::timeout(timeout, initial_result_and_stream)
@@ -93,7 +93,7 @@ impl StatusCmd {
     async fn get_status(
         &self,
         instance: &EdenFsInstance,
-    ) -> edenfs_error::Result<thrift_types::edenfs::types::DaemonInfo> {
+    ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
         #[cfg(fbcode_build)]
         if self.wait {
             let waited_status = self.get_status_blocking_on_startup(instance).await;
@@ -114,7 +114,7 @@ impl StatusCmd {
     fn interpret_status(
         &self,
         instance: &EdenFsInstance,
-        health: edenfs_error::Result<thrift_types::edenfs::types::DaemonInfo>,
+        health: edenfs_error::Result<thrift_types::edenfs::DaemonInfo>,
     ) -> Result<EdenFsRunningStatus, anyhow::Error> {
         match health {
             Ok(health) if health.is_healthy() => {

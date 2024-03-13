@@ -322,8 +322,6 @@ mod tests {
     use mononoke_api::Repo;
     use requests_table::ClaimedBy;
     use requests_table::RequestStatus;
-    use source_control::types::MegarepoTarget as ThriftMegarepoTarget;
-    use source_control::types::RepoSpecifier;
     use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
     use source_control::MegarepoAddBranchingTargetResult;
     use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
@@ -335,6 +333,8 @@ mod tests {
     use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
     use source_control::MegarepoSyncChangesetResult;
     use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
+    use source_control::MegarepoTarget as ThriftMegarepoTarget;
+    use source_control::RepoSpecifier;
 
     use super::*;
     use crate::types::MegarepoAddBranchingSyncTarget;

@@ -12,7 +12,7 @@ use std::io::Write;
 use anyhow::Result;
 use clap::Parser;
 use serde::Serialize;
-use source_control::types as thrift;
+use source_control as thrift;
 
 use crate::render::Render;
 use crate::ScscApp;

@@ -41,9 +41,9 @@ use futures::StreamExt;
 use sysinfo::Pid;
 use sysinfo::System;
 use sysinfo::SystemExt;
-use thrift_types::edenfs::types::pid_t;
-use thrift_types::edenfs::types::AccessCounts;
-use thrift_types::edenfs::types::GetAccessCountsResult;
+use thrift_types::edenfs::pid_t;
+use thrift_types::edenfs::AccessCounts;
+use thrift_types::edenfs::GetAccessCountsResult;
 
 #[cfg(unix)]
 use self::unix::trim_cmd_binary_path;

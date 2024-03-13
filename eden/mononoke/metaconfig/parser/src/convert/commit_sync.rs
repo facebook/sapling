@@ -13,7 +13,7 @@ use anyhow::Context;
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
-use commitsync::types::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
+use commitsync::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
 use itertools::Itertools;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;

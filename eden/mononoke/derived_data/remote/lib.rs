@@ -10,7 +10,7 @@ use arg_extensions::ArgDefaults;
 use async_trait::async_trait;
 use clap::Args;
 use context::CoreContext;
-use derived_data_service_if::types as thrift;
+use derived_data_service_if as thrift;
 
 #[derive(Clone, Debug)]
 pub struct RemoteDerivationOptions {

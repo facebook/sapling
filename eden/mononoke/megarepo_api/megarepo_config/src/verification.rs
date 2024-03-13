@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Result;
 use context::CoreContext;
-use megarepo_configs::types::SyncTargetConfig;
+use megarepo_configs::SyncTargetConfig;
 use slog::warn;
 
 /// Verify the config
@@ -46,12 +46,12 @@ fn verify_unique_source_names(ctx: &CoreContext, config: &SyncTargetConfig) -> R
 mod verification_tests {
     use fbinit::FacebookInit;
     use maplit::btreemap;
-    use megarepo_configs::types::MergeMode;
-    use megarepo_configs::types::Source;
-    use megarepo_configs::types::SourceMappingRules;
-    use megarepo_configs::types::SourceRevision;
-    use megarepo_configs::types::Target;
-    use megarepo_configs::types::WithExtraMoveCommit;
+    use megarepo_configs::MergeMode;
+    use megarepo_configs::Source;
+    use megarepo_configs::SourceMappingRules;
+    use megarepo_configs::SourceRevision;
+    use megarepo_configs::Target;
+    use megarepo_configs::WithExtraMoveCommit;
 
     use super::*;
 

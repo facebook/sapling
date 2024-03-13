@@ -18,8 +18,8 @@ use edenfs_client::EdenFsInstance;
 #[cfg(windows)]
 use edenfs_utils::find_python;
 use hg_util::path::expand_path;
-use thrift_types::edenfs::types::GetConfigParams;
-use thrift_types::edenfs_config::types::ConfigSourceType;
+use thrift_types::edenfs::GetConfigParams;
+use thrift_types::edenfs_config::ConfigSourceType;
 
 use crate::ExitCode;
 

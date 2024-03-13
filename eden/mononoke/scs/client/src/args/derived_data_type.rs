@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use source_control::types as thrift;
+use source_control as thrift;
 
 #[derive(clap::Args, Clone)]
 pub(crate) struct DerivedDataTypeArgs {

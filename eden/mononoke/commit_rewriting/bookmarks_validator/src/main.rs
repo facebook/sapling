@@ -39,7 +39,7 @@ use futures::future;
 use futures::TryStreamExt;
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use mononoke_types::ChangesetId;
-use pushredirect_enable::types::MononokePushRedirectEnable;
+use pushredirect_enable::MononokePushRedirectEnable;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::error;

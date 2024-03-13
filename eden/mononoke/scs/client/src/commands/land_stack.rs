@@ -13,7 +13,7 @@ use anyhow::bail;
 use anyhow::Result;
 use maplit::btreeset;
 use serde::Serialize;
-use source_control::types as thrift;
+use source_control as thrift;
 
 use crate::args::commit_id::map_commit_id;
 use crate::args::commit_id::map_commit_ids;

@@ -16,7 +16,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use serde::Serialize;
-use source_control::types as thrift;
+use source_control as thrift;
 
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_id;

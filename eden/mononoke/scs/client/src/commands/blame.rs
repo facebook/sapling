@@ -15,7 +15,7 @@ use anyhow::Result;
 use clap::Parser;
 use maplit::btreeset;
 use serde_json::json;
-use source_control::types as thrift;
+use source_control as thrift;
 use unicode_truncate::Alignment;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;

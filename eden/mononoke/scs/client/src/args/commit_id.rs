@@ -27,7 +27,7 @@ use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
-use source_control::types as thrift;
+use source_control as thrift;
 
 use crate::connection::Connection;
 

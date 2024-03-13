@@ -20,7 +20,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource;
-use land_service_if::types::*;
+use land_service_if::*;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
