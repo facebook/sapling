@@ -1,6 +1,7 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
 oncall("mononoke")
 
@@ -55,9 +56,17 @@ rust_binary(
     ],
 )
 
-fbpkg.builder(
-    name = "mononoke.git_server",
-    path_actions = {
-        "git_server": "//eden/mononoke/git_server:git_server",
-    },
+tw.container(
+    name = "tw.mononoke.git_server",
+    features = [
+        tw.build_fbpkg(
+            fbpkg.builder(
+                name = "mononoke.git_server",
+                path_actions = {
+                    "git_server": "//eden/mononoke/git_server:git_server",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
 )
