@@ -18,11 +18,12 @@ import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
-function getAllDraftCommits(): Set<string> {
+/** By default, "select all" selects draft, non-obsoleted commits. */
+function getSelectAllCommitHashSet(): Set<string> {
   const dag = readAtom(dagWithPreviews);
   return new Set(
     dag
-      .draft()
+      .nonObsolete(dag.draft())
       .toArray()
       .filter(hash => !hash.startsWith('OPTIMISTIC')),
   );
@@ -35,7 +36,7 @@ export function useSelectAllCommitsShortcut() {
 
 export function useSelectAllCommits() {
   return useCallback(() => {
-    const draftCommits = getAllDraftCommits();
+    const draftCommits = getSelectAllCommitHashSet();
     writeAtom(selectedCommits, draftCommits);
     // pop open sidebar so you can act on the bulk selection
     writeAtom(islDrawerState, last => ({
