@@ -23,9 +23,12 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::ConfigInfo;
 use repos::RawRepoConfigs;
+use sha2::Digest;
+use sha2::Sha256;
 use slog::error;
 use slog::info;
 use slog::trace;
+use slog::warn;
 use slog::Logger;
 use stats::prelude::*;
 use tokio::runtime::Handle;
@@ -65,11 +68,21 @@ impl MononokeConfigs {
     ) -> Result<Self> {
         let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage_configs));
-        let config_info = Arc::new(ArcSwap::from_pointee(None));
         let repo_configs = metaconfig_parser::load_repo_configs(&config_path, config_store)?;
         let repo_configs = Arc::new(ArcSwap::from_pointee(repo_configs));
         let update_receivers = Arc::new(ArcSwap::from_pointee(vec![]));
         let maybe_config_handle = configerator_config_handle(config_path.as_ref(), config_store)?;
+        let config_info = if let Some(config_handle) = maybe_config_handle.as_ref() {
+            if let Ok(new_config_info) = build_config_info(config_handle.get()) {
+                Some(new_config_info)
+            } else {
+                warn!(logger, "Could not compute new config_info");
+                None
+            }
+        } else {
+            None
+        };
+        let config_info = Arc::new(ArcSwap::from_pointee(config_info));
         let maybe_config_watcher = maybe_config_handle
             .as_ref()
             .map(|config_handle| config_handle.watcher())
@@ -187,9 +200,12 @@ async fn watch_and_update(
                 let original_raw_repo_configs = raw_repo_configs.clone();
                 match load_configs_from_raw(Arc::unwrap_or_clone(raw_repo_configs)) {
                     Ok((new_repo_configs, new_storage_configs)) => {
-                        let new_config_info =
-                            Arc::new(Some(build_config_info(original_raw_repo_configs)));
-                        config_info.store(new_config_info);
+                        if let Ok(new_config_info) = build_config_info(original_raw_repo_configs) {
+                            let new_config_info = Arc::new(Some(new_config_info));
+                            config_info.store(new_config_info);
+                        } else {
+                            warn!(logger, "Could not compute new config_info");
+                        }
                         let new_repo_configs = Arc::new(new_repo_configs);
                         let new_storage_configs = Arc::new(new_storage_configs);
                         repo_configs.store(new_repo_configs.clone());
@@ -250,20 +266,24 @@ pub trait ConfigUpdateReceiver: Send + Sync {
     ) -> Result<()>;
 }
 
-fn build_config_info(raw_repo_configs: Arc<RawRepoConfigs>) -> ConfigInfo {
-    // FIXME compute the actual hash
-    let content_hash = format!("{:?}", raw_repo_configs)
-        .to_string()
-        .len()
-        .to_string();
-    let now = SystemTime::now();
-    let now = now
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_secs();
+fn build_config_info(raw_repo_configs: Arc<RawRepoConfigs>) -> Result<ConfigInfo> {
+    let content_hash = {
+        let serialized = serde_json::to_string(&raw_repo_configs).unwrap();
+        let mut hasher = Sha256::new();
+        hasher.update(serialized);
+        let hash = hasher.finalize();
+        hex::encode(hash)
+    };
 
-    ConfigInfo {
+    let last_updated_at = {
+        let now = SystemTime::now();
+        now.duration_since(SystemTime::UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs()
+    };
+
+    Ok(ConfigInfo {
         content_hash,
-        last_updated_at: now,
-    }
+        last_updated_at,
+    })
 }
