@@ -352,7 +352,7 @@ describe('Dag', () => {
           {...info, hash: 'a1'},
           {...info, hash: 'a2', closestPredecessors: ['a1']},
           {...info, hash: 'a3', closestPredecessors: ['a2']},
-          {...info, hash: 'b'},
+          {...info, hash: 'b', closestPredecessors: ['b0']},
         ].map(toInfo),
       )
       .remove(['a', 'a3']);
@@ -366,6 +366,12 @@ describe('Dag', () => {
     it('successors()', () => {
       expect(dag.successors(['a', 'b']).toSortedArray()).toEqual(['a', 'a1', 'a2', 'b']);
       expect(dag.successors(['a1', 'a2']).toSortedArray()).toEqual(['a1', 'a2']);
+    });
+
+    it('predecessors()', () => {
+      expect(dag.predecessors(['a', 'b']).toSortedArray()).toEqual(['b']);
+      expect(dag.predecessors(['a2']).toSortedArray()).toEqual(['a1', 'a2']);
+      expect(dag.predecessors(['a3']).toSortedArray()).toEqual(['a1', 'a2']);
     });
 
     it('picks stack top when following a split', () => {

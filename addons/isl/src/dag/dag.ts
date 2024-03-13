@@ -442,6 +442,11 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return this.mutationDag.range(set, this);
   }
 
+  /** All visible predecessors of commits in `set`, including `set`. */
+  predecessors(set: SetLike): HashSet {
+    return this.present(this.mutationDag.ancestors(set));
+  }
+
   /**
    * Follow successors for the given set.
    *
