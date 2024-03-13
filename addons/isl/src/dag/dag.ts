@@ -242,25 +242,27 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   // Sort
 
-  // sortAsc all commits, with the default compare function.
+  /**
+   * sortAsc all commits, with the default compare function.
+   * Return `[map, array]`. The array is the sorted hashes.
+   * The map provides look-up from hash to array index. `map.get(h)` is `array.indexOf(h)`.
+   */
   defaultSortAscIndex = cachedMethod(this.defaultSortAscIndexImpl, {
     cache: defaultSortAscIndexCache,
   });
-  private defaultSortAscIndexImpl(): ReadonlyMap<Hash, number> {
-    return new Map(
-      this.commitDag
-        .sortAsc(this.all(), {compare: sortAscCompare, gap: false})
-        .map((h, i) => [h, i]),
-    );
+  private defaultSortAscIndexImpl(): [ReadonlyMap<Hash, number>, ReadonlyArray<Hash>] {
+    const sorted = this.commitDag.sortAsc(this.all(), {compare: sortAscCompare, gap: false});
+    const index = new Map(sorted.map((h, i) => [h, i]));
+    return [index, sorted];
   }
 
   sortAsc(set: SetLike, props?: SortProps<DagCommitInfo>): Array<Hash> {
     if (props?.compare == null) {
       // If no custom compare function, use the sortAsc index to answer subset
       // sortAsc, which can be slow to calculate otherwise.
-      const index = this.defaultSortAscIndex();
+      const [index, sorted] = this.defaultSortAscIndex();
       if (set === undefined) {
-        return [...index.keys()];
+        return [...sorted];
       }
       const hashes = arrayFromHashes(set === undefined ? this.all() : set);
       return hashes.sort((a, b) => {
