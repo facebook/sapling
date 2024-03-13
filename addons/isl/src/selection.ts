@@ -162,23 +162,6 @@ export function useCommitSelection(hash: string): {
   return {isSelected, onClickToSelect, overrideSelection};
 }
 
-/**
- * Convert commit tree to linear history, where commits are neighbors in the array
- * if they are visually next to each other when rendered as a tree
- * c            c
- * b            b
- * | e    ->    e
- * | d          d
- * |/           a
- * a
- * in bottom to top order: [a,d,e,b,c]
- */
-export const linearizedCommitHistory = atom(get => {
-  const dag = get(dagWithPreviews);
-  const sorted: Hash[] = dag.sortAsc(dag, {gap: false});
-  return dag.getBatch(sorted);
-});
-
 export function useArrowKeysToChangeSelection() {
   const cb = useCallback((which: ISLCommandName) => {
     if (which === 'OpenDetails') {
