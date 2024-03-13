@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-structopt = "0.3.23"
+structopt = "0.3.26"

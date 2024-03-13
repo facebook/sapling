@@ -18,7 +18,7 @@ plist = "1.4.3"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 sha2 = "0.10.6"
-structopt = "0.3.23"
+structopt = "0.3.26"
 
 [dev-dependencies]
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
