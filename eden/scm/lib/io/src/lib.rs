@@ -922,7 +922,7 @@ fn write_term_progress(
 
 impl Drop for IOState {
     fn drop(&mut self) {
-        let _ = self.set_progress(&[]);
+        let _ = self.disable_progress(true);
         let _ = self.flush();
         // Drop the output and error. This sends EOF to pager.
         self.output = Box::<Vec<u8>>::default();
