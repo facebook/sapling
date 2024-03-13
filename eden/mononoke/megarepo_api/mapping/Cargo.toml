@@ -14,7 +14,7 @@ derived_data = { version = "0.1.0", path = "../../derived_data" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 manifest = { version = "0.1.0", path = "../../manifest" }
-megarepo_configs_types = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
+megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

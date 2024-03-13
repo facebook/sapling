@@ -13,7 +13,7 @@ async-trait = "0.1.71"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-rate_limiting_config_types = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/ratelimiting" }
+rate_limiting_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/ratelimiting" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.49"

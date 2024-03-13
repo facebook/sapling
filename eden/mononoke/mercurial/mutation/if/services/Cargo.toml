@@ -21,9 +21,9 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-hg_mutation_entry_thrift__types = { package = "hg_mutation_entry_thrift_types", version = "0.1.0", path = ".." }
+hg_mutation_entry_thrift__types = { package = "hg_mutation_entry_thrift", version = "0.1.0", path = ".." }
+mercurial_thrift = { version = "0.1.0", path = "../../../types/if" }
 mercurial_thrift_services = { version = "0.1.0", path = "../../../types/if/services" }
-mercurial_thrift_types = { version = "0.1.0", path = "../../../types/if" }
 tracing = "0.1.40"
 
 [build-dependencies]

@@ -21,10 +21,10 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-rust_types = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = "0.1.40"
-tunables_structs__types = { package = "tunables_structs_types", version = "0.1.0", path = ".." }
+tunables_structs__types = { package = "tunables_structs", version = "0.1.0", path = ".." }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

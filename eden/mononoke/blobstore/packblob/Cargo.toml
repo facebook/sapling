@@ -19,7 +19,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-packblob_thrift_types = { version = "0.1.0", path = "if" }
+packblob_thrift = { version = "0.1.0", path = "if" }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [dev-dependencies]

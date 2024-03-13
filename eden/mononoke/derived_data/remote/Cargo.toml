@@ -16,4 +16,4 @@ arg_extensions = { version = "0.1.0", path = "../../cmdlib/extensions" }
 async-trait = "0.1.71"
 clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
-derived_data_service_if_types = { version = "0.1.0", path = "if" }
+derived_data_service_if = { version = "0.1.0", path = "if" }

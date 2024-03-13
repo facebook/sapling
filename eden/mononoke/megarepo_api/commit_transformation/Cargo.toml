@@ -22,7 +22,7 @@ derivative = "2.2"
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
-megarepo_configs_types = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
+megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

@@ -17,13 +17,13 @@ doc = false
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
-bonsai_git_mapping_entry_thrift__types = { package = "bonsai_git_mapping_entry_thrift_types", version = "0.1.0", path = ".." }
+bonsai_git_mapping_entry_thrift__types = { package = "bonsai_git_mapping_entry_thrift", version = "0.1.0", path = ".." }
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 mononoke_types_serialization_clients = { version = "0.1.0", path = "../../../mononoke_types/serialization/clients" }
-mononoke_types_serialization_types = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 tracing = "0.1.40"
 
 [build-dependencies]

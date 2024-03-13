@@ -29,7 +29,7 @@ tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 twox-hash = "1.6.1"
 vec1 = { version = "1", features = ["serde"] }
-xdb_gc_structs_types = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/xdb_gc" }
+xdb_gc_structs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/xdb_gc" }
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -18,14 +18,14 @@ doc = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+config_thrift = { version = "0.1.0", path = "../../config" }
 config_thrift_clients = { version = "0.1.0", path = "../../config/clients" }
-config_thrift_types = { version = "0.1.0", path = "../../config" }
 const-cstr = "0.3.0"
+fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
-fb303_core_types = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-thrift__types = { package = "thrift_types", version = "0.1.0", path = ".." }
+thrift__types = { package = "thrift", version = "0.1.0", path = ".." }
 tracing = "0.1.40"
 
 [build-dependencies]

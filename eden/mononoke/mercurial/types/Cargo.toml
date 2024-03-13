@@ -26,7 +26,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
-mercurial_thrift_types = { version = "0.1.0", path = "if" }
+mercurial_thrift = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 quickcheck = "1.0"
@@ -45,4 +45,4 @@ tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
-mononoke_types_serialization_types = { version = "0.1.0", path = "../../mononoke_types/serialization" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }

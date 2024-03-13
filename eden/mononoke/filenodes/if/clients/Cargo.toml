@@ -20,12 +20,12 @@ async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-filenodes_if__types = { package = "filenodes_if_types", version = "0.1.0", path = ".." }
+filenodes_if__types = { package = "filenodes_if", version = "0.1.0", path = ".." }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+mercurial_thrift = { version = "0.1.0", path = "../../../mercurial/types/if" }
 mercurial_thrift_clients = { version = "0.1.0", path = "../../../mercurial/types/if/clients" }
-mercurial_thrift_types = { version = "0.1.0", path = "../../../mercurial/types/if" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 mononoke_types_serialization_clients = { version = "0.1.0", path = "../../../mononoke_types/serialization/clients" }
-mononoke_types_serialization_types = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 tracing = "0.1.40"
 
 [build-dependencies]

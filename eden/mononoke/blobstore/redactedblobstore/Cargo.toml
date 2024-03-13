@@ -17,7 +17,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
-redaction_set_types = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }
+redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

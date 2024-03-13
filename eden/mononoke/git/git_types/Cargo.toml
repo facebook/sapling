@@ -17,14 +17,14 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
-derived_data_service_if_types = { version = "0.1.0", path = "../../derived_data/remote/if" }
+derived_data_service_if = { version = "0.1.0", path = "../../derived_data/remote/if" }
 digest = "0.10"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
-git_types_thrift_types = { version = "0.1.0", path = "if" }
+git_types_thrift = { version = "0.1.0", path = "if" }
 gix-actor = "0.24"
 gix-date = "0.7"
 gix-diff = "0.33"
@@ -33,7 +33,7 @@ gix-object = "0.33"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-mononoke_types_serialization_types = { version = "0.1.0", path = "../../mononoke_types/serialization" }
+mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 multimap = "0.8.1"
 packfile = { version = "0.1.0", path = "../packfile" }
 quickcheck = "1.0"

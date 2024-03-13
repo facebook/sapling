@@ -17,7 +17,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 filenodes = { version = "0.1.0", path = "../filenodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
-microwave_if_types = { version = "0.1.0", path = "if" }
+microwave_if = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

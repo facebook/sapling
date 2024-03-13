@@ -24,7 +24,7 @@ manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-mutable_rename_thrift_types = { version = "0.1.0", path = "if" }
+mutable_rename_thrift = { version = "0.1.0", path = "if" }
 path_hash = { version = "0.1.0", path = "../common/path_hash" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

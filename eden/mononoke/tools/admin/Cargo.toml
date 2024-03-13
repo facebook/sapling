@@ -102,7 +102,7 @@ serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_de
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-source_control_types = { version = "0.1.0", path = "../../scs/if" }
+source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
