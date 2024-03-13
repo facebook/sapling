@@ -126,6 +126,10 @@ impl<Repo> MononokeReposManager<Repo> {
         &self.repos
     }
 
+    pub fn configs(&self) -> Arc<MononokeConfigs> {
+        self.configs.clone()
+    }
+
     /// The logger for the app.
     pub fn logger(&self) -> &Logger {
         &self.logger

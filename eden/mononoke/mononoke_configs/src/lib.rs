@@ -7,6 +7,7 @@
 
 use std::path::Path;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use arc_swap::ArcSwap;
@@ -20,6 +21,7 @@ use metaconfig_parser::config::configerator_config_handle;
 use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
+use metaconfig_types::ConfigInfo;
 use repos::RawRepoConfigs;
 use slog::error;
 use slog::info;
@@ -45,6 +47,7 @@ pub struct MononokeConfigs {
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
+    config_info: Swappable<Option<ConfigInfo>>,
     maybe_config_updater: Option<JoinHandle<()>>,
     maybe_liveness_updater: Option<JoinHandle<()>>,
     maybe_config_handle: Option<ConfigHandle<RawRepoConfigs>>,
@@ -62,6 +65,7 @@ impl MononokeConfigs {
     ) -> Result<Self> {
         let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage_configs));
+        let config_info = Arc::new(ArcSwap::from_pointee(None));
         let repo_configs = metaconfig_parser::load_repo_configs(&config_path, config_store)?;
         let repo_configs = Arc::new(ArcSwap::from_pointee(repo_configs));
         let update_receivers = Arc::new(ArcSwap::from_pointee(vec![]));
@@ -77,10 +81,11 @@ impl MononokeConfigs {
         // If the configuration is backed by a static source, the config update watcher
         // and the config updater handle will be None.
         let maybe_config_updater = maybe_config_watcher.map(|config_watcher| {
-            cloned!(storage_configs, repo_configs, update_receivers);
+            cloned!(storage_configs, repo_configs, config_info, update_receivers);
             runtime_handle.spawn(watch_and_update(
                 repo_configs,
                 storage_configs,
+                config_info,
                 update_receivers,
                 config_watcher,
                 logger,
@@ -90,6 +95,7 @@ impl MononokeConfigs {
             repo_configs,
             storage_configs,
             update_receivers,
+            config_info,
             maybe_config_updater,
             maybe_config_handle,
             maybe_liveness_updater,
@@ -106,6 +112,11 @@ impl MononokeConfigs {
     pub fn storage_configs(&self) -> Arc<StorageConfigs> {
         // Load full since there could be lots of calls to storage_configs.
         self.storage_configs.load_full()
+    }
+
+    /// The info on the latest config fetched from the underlying configuration store.
+    pub fn config_info(&self) -> Arc<Option<ConfigInfo>> {
+        self.config_info.load_full()
     }
 
     /// Is automatic update of the underlying configuration enabled?
@@ -160,6 +171,7 @@ async fn liveness_updater() {
 async fn watch_and_update(
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
+    config_info: Swappable<Option<ConfigInfo>>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     mut config_watcher: ConfigUpdateWatcher<RawRepoConfigs>,
     logger: Logger,
@@ -172,8 +184,12 @@ async fn watch_and_update(
                     "Raw Repo Configs changed in config store, applying update"
                 );
                 trace!(logger, "Applied configs: {:?}", raw_repo_configs);
+                let original_raw_repo_configs = raw_repo_configs.clone();
                 match load_configs_from_raw(Arc::unwrap_or_clone(raw_repo_configs)) {
                     Ok((new_repo_configs, new_storage_configs)) => {
+                        let new_config_info =
+                            Arc::new(Some(build_config_info(original_raw_repo_configs)));
+                        config_info.store(new_config_info);
                         let new_repo_configs = Arc::new(new_repo_configs);
                         let new_storage_configs = Arc::new(new_storage_configs);
                         repo_configs.store(new_repo_configs.clone());
@@ -232,4 +248,22 @@ pub trait ConfigUpdateReceiver: Send + Sync {
         repo_configs: Arc<RepoConfigs>,
         storage_configs: Arc<StorageConfigs>,
     ) -> Result<()>;
+}
+
+fn build_config_info(raw_repo_configs: Arc<RawRepoConfigs>) -> ConfigInfo {
+    // FIXME compute the actual hash
+    let content_hash = format!("{:?}", raw_repo_configs)
+        .to_string()
+        .len()
+        .to_string();
+    let now = SystemTime::now();
+    let now = now
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs();
+
+    ConfigInfo {
+        content_hash,
+        last_updated_at: now,
+    }
 }

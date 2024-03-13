@@ -39,6 +39,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/yield_stream:yield_stream",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_configs:mononoke_configs",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/quiet_stream:quiet_stream",
         "//eden/mononoke/rate_limiting:rate_limiting",

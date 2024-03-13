@@ -60,6 +60,7 @@ rust_binary(
         "//eden/mononoke/gotham_ext:gotham_ext",
         "//eden/mononoke/lfs_protocol:lfs_protocol",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_configs:mononoke_configs",
         "//eden/mononoke/mononoke_repos:mononoke_repos",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",

@@ -11,6 +11,7 @@ use gotham::state::State;
 use hyper::Body;
 use hyper::Response;
 
+pub mod config_info;
 pub mod load;
 pub mod log;
 pub mod metadata;
@@ -20,6 +21,8 @@ pub mod server_identity;
 pub mod timer;
 pub mod tls_session_data;
 
+pub use self::config_info::ConfigInfo;
+pub use self::config_info::ConfigInfoMiddleware;
 pub use self::load::LoadMiddleware;
 pub use self::load::RequestLoad;
 pub use self::log::LogMiddleware;

@@ -1842,3 +1842,12 @@ pub struct CommitGraphConfig {
     /// Blobstore key for a preloaded commit graph
     pub preloaded_commit_graph_blobstore_key: Option<String>,
 }
+
+/// Information on a loaded config
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct ConfigInfo {
+    /// A hash of the raw config content
+    pub content_hash: String,
+    /// The time when the config was last updated
+    pub last_updated_at: u64,
+}
