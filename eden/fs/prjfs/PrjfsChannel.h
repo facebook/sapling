@@ -11,6 +11,7 @@
 #include <folly/portability/Windows.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
+#include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/Guid.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
@@ -18,7 +19,6 @@
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 #ifdef _WIN32

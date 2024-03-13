@@ -11,10 +11,10 @@
 #include <atomic>
 #include <utility>
 
+#include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 namespace facebook::eden {

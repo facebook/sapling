@@ -10,11 +10,11 @@
 // Implementation of the NFSv3 protocol as described in:
 // https://tools.ietf.org/html/rfc1813
 
+#include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/RpcServer.h"
-#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 namespace folly {

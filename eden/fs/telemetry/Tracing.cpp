@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/telemetry/Tracing.h"
+#include "eden/common/telemetry/Tracing.h"
 
 namespace facebook::eden::detail {
 Tracer globalTracer;

@@ -11,9 +11,9 @@
 
 #include <folly/logging/xlog.h>
 
+#include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/notifications/Notifier.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
 
 using namespace folly;
 

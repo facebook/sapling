@@ -25,6 +25,7 @@ cpp_unittest(
     },
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
@@ -39,7 +40,6 @@ cpp_unittest(
         "//eden/fs/store/hg:hg_queued_backing_store",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
-        "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_config_source",
         "//folly:range",

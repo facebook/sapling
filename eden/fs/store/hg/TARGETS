@@ -11,10 +11,10 @@ cpp_library(
     ],
     exported_deps = [
         ":hg_proxy_hash",
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
-        "//eden/fs/telemetry:telemetry",
         "//folly/futures:core",
     ],
 )
@@ -67,6 +67,7 @@ cpp_library(
     exported_deps = [
         ":hg_backing_store_options",
         ":hg_import_request_queue",
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils:ref_ptr",
         "//eden/fs:config",
         "//eden/fs/model:model",
@@ -74,7 +75,6 @@ cpp_library(
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:activity_buffer",
-        "//eden/fs/telemetry:telemetry",
         "//eden/scm/lib/backingstore:backingstore",  # @manual
         "//eden/scm/lib/backingstore:backingstore_bridge@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore-include",

@@ -11,7 +11,7 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 
-#include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/common/telemetry/RequestMetricsScope.h"
 
 namespace facebook::eden {
 

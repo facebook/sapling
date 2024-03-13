@@ -11,10 +11,10 @@
 
 #include <folly/ThreadLocal.h>
 
+#include "eden/common/telemetry/DurationScope.h"
+#include "eden/common/telemetry/StatsGroup.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/telemetry/DurationScope.h"
-#include "eden/fs/telemetry/StatsGroup.h"
 
 namespace facebook::eden {
 

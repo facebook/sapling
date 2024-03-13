@@ -14,6 +14,8 @@
 #include <memory>
 #include <vector>
 
+#include "eden/common/telemetry/RequestMetricsScope.h"
+#include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/model/Hash.h"
@@ -24,8 +26,6 @@
 #include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {

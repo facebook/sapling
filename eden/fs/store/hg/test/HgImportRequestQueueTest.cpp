@@ -11,6 +11,7 @@
 #include <array>
 #include <memory>
 
+#include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Hash.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
 
 using namespace facebook::eden;
 

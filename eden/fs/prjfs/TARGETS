@@ -35,6 +35,7 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/common/utils:ref_ptr",
@@ -44,7 +45,6 @@ cpp_library(
         "//eden/fs/inodes:request_context",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift-cpp2-types",
-        "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:process_access_log",
         "//folly/executors:sequenced_executor",
         "//folly/experimental:atomic_read_mostly_main_ptr",

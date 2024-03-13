@@ -11,6 +11,7 @@
 #include <utility>
 #include <variant>
 
+#include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/fs/model/Blob.h"
@@ -19,7 +20,6 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
 
 namespace facebook::eden {
 

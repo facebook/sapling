@@ -11,46 +11,10 @@ cpp_library(
         "EdenStats.h",
     ],
     exported_deps = [
-        ":telemetry",
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils:ref_ptr",
         "//eden/fs:config",
         "//folly:thread_local",
-    ],
-)
-
-cpp_library(
-    name = "telemetry",
-    srcs = [
-        "RequestMetricsScope.cpp",
-        "StatsGroup.cpp",
-        "Tracing.cpp",
-    ],
-    headers = [
-        "DurationScope.h",
-        "StatsGroup.h",
-        "TraceBus.h",
-        "TraceBus-inl.h",
-    ],
-    deps = [
-        "//eden/common/utils:enum",
-        "//folly:string",
-    ],
-    exported_deps = [
-        "//eden/common/utils:utils",
-        "//fb303/detail:quantile_stat_wrappers",
-        "//folly:clock_gettime_wrappers",
-        "//folly:range",
-        "//folly:singleton",
-        "//folly:spin_lock",
-        "//folly:stop_watch",
-        "//folly:synchronized",
-        "//folly:thread_local",
-        "//folly:utility",
-        "//folly/io/async:request_context",
-        "//folly/lang:aligned",
-        "//folly/logging:logging",
-        "//folly/synchronization:call_once",
-        "//folly/system:thread_name",
     ],
 )
 
@@ -67,7 +31,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
-        ":telemetry",
+        "//eden/common/telemetry:telemetry",
     ],
 )
 

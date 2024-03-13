@@ -29,6 +29,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/common/telemetry/SessionInfo.h"
+#include "eden/common/telemetry/Tracing.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -83,7 +84,6 @@
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
-#include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/GlobMatcher.h"

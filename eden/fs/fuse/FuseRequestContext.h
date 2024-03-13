@@ -12,12 +12,12 @@
 #include <utility>
 
 #include "eden/common/os/ProcessId.h"
+#include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 
 namespace facebook::eden {

@@ -5,21 +5,6 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("scm_client_infra")
 
 cpp_unittest(
-    name = "test",
-    srcs = [
-        "TraceBusTest.cpp",
-        "TracingTest.cpp",
-    ],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/telemetry:telemetry",
-        "//folly/executors:threaded_executor",
-        "//folly/futures:core",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "task_trace_test",
     srcs = [
         "TaskTraceTest.cpp",
@@ -84,8 +69,8 @@ cpp_benchmark(
     ),
     deps = [
         "fbsource//third-party/benchmark:benchmark",
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils/benchharness:benchharness",
-        "//eden/fs/telemetry:telemetry",
         "//folly/init:init",
         "//folly/synchronization/test:barrier",
     ],

@@ -23,6 +23,7 @@ cpp_library(
     ],
     exported_deps = [
         "//eden/common/os:os",
+        "//eden/common/telemetry:telemetry",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
@@ -34,7 +35,6 @@ cpp_library(
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:bufvec",
         "//eden/fs/utils:fs_channel_types",
         "//eden/fs/utils:process_access_log",

@@ -24,14 +24,14 @@
 #include <variant>
 #include <vector>
 
+#include "eden/common/telemetry/RequestMetricsScope.h"
+#include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/telemetry/RequestMetricsScope.h"
-#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 

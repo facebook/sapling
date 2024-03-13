@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "eden/fs/telemetry/TraceBus.h"
+#include "eden/common/telemetry/TraceBus.h"
 
 #include <chrono>
 #include <string>
