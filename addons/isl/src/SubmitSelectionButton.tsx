@@ -15,7 +15,8 @@ import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo'
 import {submitAsDraft} from './codeReview/DraftCheckbox';
 import {t, T} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
-import {linearizedCommitHistory, selectedCommits} from './selection';
+import {dagWithPreviews} from './previews';
+import {selectedCommits} from './selection';
 import {atom, useAtomValue} from 'jotai';
 
 /**
@@ -34,7 +35,8 @@ export const submittableSelection = atom(get => {
     return undefined;
   }
 
-  const commits = get(linearizedCommitHistory).filter(commit => selection.has(commit.hash));
+  const dag = get(dagWithPreviews);
+  const commits = dag.getBatch(dag.sortAsc(selection));
   const submittable =
     (diffSummaries.value != null
       ? provider?.getSubmittableDiffs(commits, diffSummaries.value)
