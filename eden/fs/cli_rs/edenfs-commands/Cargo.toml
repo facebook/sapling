@@ -12,7 +12,7 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 colored = "2.1.0"
-comfy-table = "6.1.4"
+comfy-table = "7.1.0"
 crossterm = { version = "0.27.0", features = ["event-stream"] }
 dirs = "2.0"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }

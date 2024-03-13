@@ -10,7 +10,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cliparser = { version = "0.1.0", path = "../../../cliparser" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-comfy-table = "6.1.4"
+comfy-table = "7.1.0"
 debugtop = { version = "0.1.0", path = "../../../debugtop" }
 repo = { version = "0.1.0", path = "../../../repo" }
 runlog = { version = "0.1.0", path = "../../../runlog" }
