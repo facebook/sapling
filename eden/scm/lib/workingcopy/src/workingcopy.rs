@@ -426,6 +426,7 @@ impl WorkingCopy {
                             self.treestate
                                 .lock()
                                 .set_parents(&mut std::iter::once(&parent))?;
+                            tracing::warn!("repaired eden dirstate: set parent to {}", parent);
                         }
 
                         None => {

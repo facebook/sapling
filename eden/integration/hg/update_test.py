@@ -884,7 +884,7 @@ class UpdateTest(EdenHgTestCase):
                 flags=DIS_ENABLE_FLAGS,
                 sync=SyncBehavior(),
             )
-            inodes = dict((i.path.decode("utf8"), i) for i in inode_status)
+            inodes = {i.path.decode("utf8"): i for i in inode_status}
             self.assertNotIn("dir1", inodes)
             # dir2 will either be not loaded or not materialized.
             dir2 = next(inode for inode in inodes[""].entries if inode.name == b"dir2")
@@ -1085,7 +1085,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         poststats = os.stat(filepath)
         self.assertEqual(poststats.st_size, 7)
 
-    if sys.platform == "win32":
+    if sys.platform == "win32":  # noqa: C901
 
         def _retry_update_after_failed_entry_cache_invalidation(
             self,
