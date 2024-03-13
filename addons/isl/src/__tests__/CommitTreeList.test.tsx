@@ -61,7 +61,7 @@ describe('CommitTreeList', () => {
           value: [
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
             COMMIT('a', 'My Commit', '1'),
-            COMMIT('b', 'Another Commit', 'a', {isHead: true}),
+            COMMIT('b', 'Another Commit', 'a', {isDot: true}),
           ],
         });
       });
@@ -116,7 +116,7 @@ describe('CommitTreeList', () => {
         act(() => {
           simulateCommits({
             value: [
-              COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
+              COMMIT('1', 'some public base', '0', {phase: 'public', isDot: true}),
               COMMIT('a', 'My Commit', '1', {successorInfo: {hash: 'a2', type: 'land'}}),
               COMMIT('b', 'Another Commit', 'a'),
             ],
@@ -284,7 +284,7 @@ describe('CommitTreeList', () => {
           value: [
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
             COMMIT('a', 'My Commit', '1', {successorInfo: {hash: 'a2', type: 'land'}}),
-            COMMIT('b', 'Another Commit', 'a', {isHead: true}),
+            COMMIT('b', 'Another Commit', 'a', {isDot: true}),
           ],
         });
       });
@@ -296,7 +296,7 @@ describe('CommitTreeList', () => {
         simulateCommits({
           value: [
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
-            COMMIT('a', 'Commit A', '1', {isHead: true}),
+            COMMIT('a', 'Commit A', '1', {isDot: true}),
             COMMIT('b', 'Commit B', '1'),
           ],
         });
@@ -324,7 +324,7 @@ describe('CommitTreeList', () => {
         simulateCommits({
           value: [
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
-            COMMIT('a', 'Commit A', '1', {isHead: true}),
+            COMMIT('a', 'Commit A', '1', {isDot: true}),
             COMMIT('b', 'Commit B', '1'),
           ],
         });

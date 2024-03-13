@@ -43,7 +43,7 @@ describe('Image upload inside TextArea ', () => {
         value: [
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('b', 'My Commit', '1'),
-          COMMIT('a', 'My Commit', 'b', {isHead: true}),
+          COMMIT('a', 'My Commit', 'b', {isDot: true}),
         ],
       });
     });

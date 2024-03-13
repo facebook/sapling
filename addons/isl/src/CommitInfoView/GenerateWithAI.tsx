@@ -124,7 +124,7 @@ const generatedCommitMessages = atomFamilyWeak((hashKey: string | undefined) =>
       fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
     } else {
       const commit = get(commitByHash(hashKey));
-      if (commit?.isHead) {
+      if (commit?.isDot) {
         const uncommittedChanges = get(uncommittedChangesWithPreviews);
         fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
       }

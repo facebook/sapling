@@ -63,7 +63,7 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
       filesSubset={fetchedAllFiles ?? commit.filesSample}
       totalFiles={commit.totalFileCount}
       comparison={
-        commit.isHead
+        commit.isDot
           ? {type: ComparisonType.HeadChanges}
           : {
               type: ComparisonType.Committed,

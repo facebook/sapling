@@ -232,7 +232,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         i.phase === 'public' &&
         i.remoteBookmarks.length === 0 &&
         i.bookmarks.length === 0 &&
-        !i.isHead,
+        !i.isDot,
       all,
     );
     const toHidePublic = unamedPublic.subtract(this.parents(draft));
@@ -634,7 +634,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
           [hash, title, author, date.valueOf() < 1000 ? '' : date.toISOString()]
             .join(' ')
             .trimEnd() + '\n';
-        const glyph = info?.isHead ? '@' : info?.successorInfo == null ? 'o' : 'x';
+        const glyph = info?.isDot ? '@' : info?.successorInfo == null ? 'o' : 'x';
         renderedRows.push(renderer.nextRow(info.hash, typedParents, message, glyph));
       }
     }
@@ -670,8 +670,8 @@ function infoToNameMapEntries(info: DagCommitInfo): Array<NameMapEntry> {
   //         of access to the code review abstraction.
   // - partial hash (handled by dag.resolve())
   const result: Array<NameMapEntry> = [];
-  const {hash, isHead, bookmarks, remoteBookmarks} = info;
-  if (isHead) {
+  const {hash, isDot, bookmarks, remoteBookmarks} = info;
+  if (isDot) {
     result.push(['.', HashPriRecord({hash, priority: 1})]);
   }
   bookmarks.forEach(b => result.push([b, HashPriRecord({hash, priority: 10})]));

@@ -102,7 +102,7 @@ describe('ComparisonView', () => {
         value: [
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('a', 'My Commit', '1'),
-          COMMIT('b', 'Another Commit', 'a', {isHead: true}),
+          COMMIT('b', 'Another Commit', 'a', {isDot: true}),
         ],
       });
       simulateUncommittedChangedFiles({
@@ -278,7 +278,7 @@ describe('ComparisonView', () => {
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('a', 'My Commit', '1'),
           COMMIT('b', 'Another Commit', 'a'),
-          COMMIT('c', 'New commit!', 'b', {isHead: true}),
+          COMMIT('c', 'New commit!', 'b', {isDot: true}),
         ],
       });
     });

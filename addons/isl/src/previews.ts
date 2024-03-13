@@ -266,7 +266,7 @@ export const treeWithPreviews = atom(get => {
 
   let headCommit = get(latestHeadCommit);
   // The headCommit might be changed by dag previews. Double check.
-  if (headCommit && !dag.get(headCommit.hash)?.isHead) {
+  if (headCommit && !dag.get(headCommit.hash)?.isDot) {
     headCommit = dag.resolve('.');
   }
   // Open-code latestCommitTreeMap to pick up tree changes done by `dag`.

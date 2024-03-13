@@ -179,7 +179,11 @@ export type CommitInfo = {
    */
   parents: ReadonlyArray<Hash>;
   phase: CommitPhaseType;
-  isHead: boolean;
+  /**
+   * Whether this commit is the "." (working directory parent).
+   * It is the parent of "wdir()" or the "You are here" virtual commit.
+   */
+  isDot: boolean;
   author: string;
   date: Date;
   description: string;

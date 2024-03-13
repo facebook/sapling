@@ -19,7 +19,7 @@ import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
  * your current selection is not a partial selection.
  */
 export function isAmendToAllowedForCommit(commit: CommitInfo): boolean {
-  if (commit.isHead || commit.phase === 'public' || commit.successorInfo != null) {
+  if (commit.isDot || commit.phase === 'public' || commit.successorInfo != null) {
     // no point, just amend normally
     return false;
   }

@@ -37,7 +37,7 @@ export class HideOperation extends Operation {
     const toCleanup = dag.parents(hash);
     // If the head is being hidden, we need to move the head to the parent.
     const newHead = [];
-    if (toHide.toHashes().some(h => dag.get(h)?.isHead == true)) {
+    if (toHide.toHashes().some(h => dag.get(h)?.isDot == true)) {
       const parent = dag.get(hash)?.parents?.at(0);
       if (parent && dag.has(parent)) {
         newHead.push(parent);
@@ -46,7 +46,7 @@ export class HideOperation extends Operation {
     return dag
       .remove(toHide)
       .replaceWith(newHead, (_h, c) => {
-        return c?.merge({isHead: true, previewType: CommitPreview.GOTO_DESTINATION});
+        return c?.merge({isDot: true, previewType: CommitPreview.GOTO_DESTINATION});
       })
       .cleanup(toCleanup);
   }

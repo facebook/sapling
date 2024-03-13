@@ -37,7 +37,7 @@ describe('RevertOperation', () => {
         value: [
           COMMIT('c', 'Commit C', 'b', {
             filesSample: [{path: 'file.txt', status: 'M'}],
-            isHead: true,
+            isDot: true,
           }),
           COMMIT('b', 'Commit B', 'a', {filesSample: [{path: 'file.txt', status: 'M'}]}),
           COMMIT('a', 'Commit A', '1', {filesSample: [{path: 'file.txt', status: 'M'}]}),

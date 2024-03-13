@@ -39,7 +39,7 @@ describe('tooltips in ISL', () => {
         value: [
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('a', 'My Commit', '1'),
-          COMMIT('b', 'Another Commit', 'a', {isHead: true}),
+          COMMIT('b', 'Another Commit', 'a', {isDot: true}),
         ],
       });
     });

@@ -186,7 +186,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [forceEditAll, setForceEditAll] = useAtom(forceNextCommitToEditAllFields);
 
   useEffect(() => {
-    if (isCommitMode && commit.isHead) {
+    if (isCommitMode && commit.isDot) {
       // no use resetting edited state for commit mode, where it's always being edited.
       return;
     }
@@ -225,7 +225,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
-      {!commit.isHead ? null : (
+      {!commit.isDot ? null : (
         <div className="commit-info-view-toolbar-top" data-testid="commit-info-toolbar-top">
           <Tooltip
             title={t(
@@ -296,7 +296,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             );
           })}
         <VSCodeDivider />
-        {commit.isHead && !isAmendDisabled ? (
+        {commit.isDot && !isAmendDisabled ? (
           <Section data-testid="changes-to-amend">
             <SmallCapsTitle>
               {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
@@ -520,7 +520,7 @@ function ActionsBar({
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
   const deselectIfHeadIsSelected = useAtomCallback((get, set) => {
-    if (!commit.isHead) {
+    if (!commit.isDot) {
       return;
     }
     const selected = get(selectedCommits);
@@ -586,7 +586,7 @@ function ActionsBar({
 
   // Generally "Amend"/"Commit" for head commit, but if there's no changes while amending, just use "Amend message"
   const showCommitOrAmend =
-    commit.isHead && (isCommitMode || anythingToCommit || !isAnythingBeingEdited);
+    commit.isDot && (isCommitMode || anythingToCommit || !isAnythingBeingEdited);
 
   const onCommitFormSubmit = platform.onCommitFormSubmit;
 
@@ -695,8 +695,8 @@ function ActionsBar({
             </OperationDisabledButton>
           </Tooltip>
         )}
-        {(commit.isHead && (anythingToCommit || !isAnythingBeingEdited)) ||
-        (!commit.isHead &&
+        {(commit.isDot && (anythingToCommit || !isAnythingBeingEdited)) ||
+        (!commit.isDot &&
           canSubmitIndividualDiffs &&
           // For non-head commits, "submit" doesn't update the message, which is confusing.
           // Just hide the submit button so you're encouraged to "amend message" first.
@@ -715,7 +715,7 @@ function ActionsBar({
             }
             placement="top">
             <OperationDisabledButton
-              contextKey={`submit-${commit.isHead ? 'head' : commit.hash}`}
+              contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
               disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
               runOperation={async () => {
                 if (onCommitFormSubmit !== undefined) {
@@ -803,7 +803,7 @@ function ActionsBar({
                 const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
 
                 const submitOp = nullthrows(provider).submitOperation(
-                  commit.isHead ? [] : [commit], // [] means to submit the head commit
+                  commit.isDot ? [] : [commit], // [] means to submit the head commit
                   {
                     draft: shouldSubmitAsDraft,
                     updateFields: shouldUpdateMessage,
@@ -817,7 +817,7 @@ function ActionsBar({
 
                 return [amendOrCommitOp, submitOp].filter(notEmpty);
               }}>
-              {commit.isHead && anythingToCommit ? (
+              {commit.isDot && anythingToCommit ? (
                 isCommitMode ? (
                   <T>Commit and Submit</T>
                 ) : (

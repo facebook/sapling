@@ -23,7 +23,7 @@ describe('focus mode', () => {
       remoteBookmarks: ['remote/master'],
     }),
     COMMIT('f', 'Commit F', 'e'), // after `.` still incldued
-    COMMIT('e', 'Commit E', 'd', {isHead: true}),
+    COMMIT('e', 'Commit E', 'd', {isDot: true}),
     COMMIT('d', 'Commit D', 'c'), // branch
     COMMIT('c', 'Commit C', 'b'),
     COMMIT('b2', 'Commit B2', 'a', {closestPredecessors: ['b']}), // succeeded within this branch

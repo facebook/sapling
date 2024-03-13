@@ -45,7 +45,7 @@ describe('Changed Files', () => {
         value: [
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('a', 'My Commit', '1'),
-          COMMIT('b', 'Another Commit', 'a', {isHead: true}),
+          COMMIT('b', 'Another Commit', 'a', {isDot: true}),
         ],
       });
       // Reset to the default display type.
@@ -309,7 +309,7 @@ describe('Changed Files', () => {
           value: [
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
             COMMIT('a', 'Commit', '1', {
-              isHead: true,
+              isDot: true,
               filesSample: makeFiles(500),
               totalFileCount: 1010,
             }),

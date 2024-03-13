@@ -37,12 +37,12 @@ export class UncommitOperation extends Operation {
     if (dag.get(hash) == null || p1 == null || dag.get(p1) == null) {
       return dag;
     }
-    // Hide `hash` and set `isHead` on `p1`.
+    // Hide `hash` and set `isDot` on `p1`.
     return dag.replaceWith([p1, hash], (h, c) => {
       if (h === hash) {
         return undefined;
       } else {
-        return c?.set('isHead', true);
+        return c?.set('isDot', true);
       }
     });
   }

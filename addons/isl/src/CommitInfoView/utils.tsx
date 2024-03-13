@@ -24,7 +24,7 @@ export function CommitTitleByline({commit}: {commit: CommitInfo}) {
   );
   return (
     <Subtle className="commit-info-title-byline">
-      {commit.isHead ? <YouAreHereLabel /> : null}
+      {commit.isDot ? <YouAreHereLabel /> : null}
       {commit.phase === 'public' ? <PublicCommitBadge /> : null}
       <OverflowEllipsis shrink>
         <Tooltip trigger="hover" component={() => createdByInfo}>

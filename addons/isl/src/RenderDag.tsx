@@ -252,7 +252,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
             line={l}
             isHead={isHead}
             isRoot={isRoot}
-            aboveNodeColor={info.isHead ? YOU_ARE_HERE_COLOR : undefined}
+            aboveNodeColor={info.isDot ? YOU_ARE_HERE_COLOR : undefined}
             stretchY={isIrregular && l != NodeLine.Node}
             scaleY={isIrregular ? 0.5 : 1}
             glyph={glyph}
@@ -267,7 +267,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
       className="render-dag-row-left-side-line pre-node-line grow"
       data-nodecolumn={row.nodeColumn}>
       {row.preNodeLine.map((l, i) => {
-        const c = i === row.nodeColumn ? (info.isHead ? YOU_ARE_HERE_COLOR : color) : undefined;
+        const c = i === row.nodeColumn ? (info.isDot ? YOU_ARE_HERE_COLOR : color) : undefined;
         return <PadTile key={i} line={l} scaleY={0.1} stretchY={true} color={c} />;
       })}
     </div>
@@ -623,7 +623,7 @@ const YOU_ARE_HERE_COLOR = 'var(--button-primary-hover-background)';
 const DEFAULT_GLYPH_RADIUS = (defaultTileWidth * 7) / 20;
 
 function RegularGlyphInner({info}: {info: DagCommitInfo}) {
-  const stroke = info.isHead ? YOU_ARE_HERE_COLOR : 'var(--foreground)';
+  const stroke = info.isDot ? YOU_ARE_HERE_COLOR : 'var(--foreground)';
   const r = DEFAULT_GLYPH_RADIUS;
   const strokeWidth = defaultStrokeWidth * 0.9;
   const isObsoleted = info.successorInfo != null;

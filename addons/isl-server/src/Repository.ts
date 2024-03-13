@@ -700,7 +700,7 @@ export class Repository {
 
   /** Get the current head commit if loaded */
   getHeadCommit(): CommitInfo | undefined {
-    return this.smartlogCommits?.commits.value?.find(commit => commit.isHead);
+    return this.smartlogCommits?.commits.value?.find(commit => commit.isDot);
   }
 
   /** Watch for changes to the head commit, e.g. from checking out a new commit */
@@ -710,7 +710,7 @@ export class Repository {
       callback(headCommit);
     }
     const onData = (data: FetchedCommits) => {
-      const newHead = data?.commits.value?.find(commit => commit.isHead);
+      const newHead = data?.commits.value?.find(commit => commit.isDot);
       if (newHead != null && newHead.hash !== headCommit?.hash) {
         callback(newHead);
         headCommit = newHead;

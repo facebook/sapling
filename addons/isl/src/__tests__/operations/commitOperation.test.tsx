@@ -44,7 +44,7 @@ describe('CommitOperation', () => {
           COMMIT('2', 'master', '00', {phase: 'public', remoteBookmarks: ['remote/master']}),
           COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
           COMMIT('a', 'Commit A', '1'),
-          COMMIT('b', 'Commit B', 'a', {isHead: true}),
+          COMMIT('b', 'Commit B', 'a', {isDot: true}),
         ],
       });
     });

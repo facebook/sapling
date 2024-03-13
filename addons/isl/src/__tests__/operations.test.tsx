@@ -367,7 +367,7 @@ describe('operations', () => {
     it('force clears optimistic state after fetching after an operation has finished', () => {
       const commitsBeforeOperations = {
         value: [
-          COMMIT('e', 'Commit E', 'd', {isHead: true}),
+          COMMIT('e', 'Commit E', 'd', {isDot: true}),
           COMMIT('d', 'Commit D', 'c'),
           COMMIT('c', 'Commit C', 'b'),
           COMMIT('b', 'Commit B', 'a'),
@@ -378,7 +378,7 @@ describe('operations', () => {
       const commitsAfterOperations = {
         value: [
           COMMIT('e2', 'Commit E', 'd2'),
-          COMMIT('d2', 'Commit D', 'c2', {isHead: true}), // goto
+          COMMIT('d2', 'Commit D', 'c2', {isDot: true}), // goto
           COMMIT('c2', 'Commit C', 'a'), // rebased
           COMMIT('b', 'Commit B', 'a'),
           COMMIT('a', 'Commit A', '1'),

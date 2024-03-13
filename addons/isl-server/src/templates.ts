@@ -22,7 +22,7 @@ import {fromEntries} from './utils';
 export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
 export const NULL_CHAR = '\0';
 export const ESCAPED_NULL_CHAR = '\\0';
-export const HEAD_MARKER = '@';
+export const WDIR_PARENT_MARKER = '@';
 
 ///// Main commits fetch /////
 
@@ -37,7 +37,7 @@ export const FIELDS = {
   bookmarks: `{bookmarks % '{bookmark}${ESCAPED_NULL_CHAR}'}`,
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
   parents: `{parents % "{node}${ESCAPED_NULL_CHAR}"}`,
-  isHead: `{ifcontains(rev, revset('.'), '${HEAD_MARKER}')}`,
+  isDot: `{ifcontains(rev, revset('.'), '${WDIR_PARENT_MARKER}')}`,
   filesAdded: '{file_adds|json}',
   filesModified: '{file_mods|json}',
   filesRemoved: '{file_dels|json}',
@@ -90,7 +90,7 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         phase: lines[FIELD_INDEX.phase] as CommitPhaseType,
         bookmarks: splitLine(lines[FIELD_INDEX.bookmarks]),
         remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),
-        isHead: lines[FIELD_INDEX.isHead] === HEAD_MARKER,
+        isDot: lines[FIELD_INDEX.isDot] === WDIR_PARENT_MARKER,
         filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
         totalFileCount: files.length,
         successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),

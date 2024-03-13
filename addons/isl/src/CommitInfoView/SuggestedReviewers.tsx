@@ -99,7 +99,7 @@ const suggestedReviewersForCommit = atomFamilyWeak((hashOrHead: string | 'head' 
         context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
       } else {
         const commit = get(commitByHash(hashOrHead));
-        if (commit?.isHead) {
+        if (commit?.isDot) {
           const uncommittedChanges = get(uncommittedChangesWithPreviews);
           context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
         }
@@ -137,7 +137,7 @@ export function SuggestedReviewers({
   const currentCommitInfoViewCommit = useAtomValue(commitInfoViewCurrentCommits);
   const currentCommit = currentCommitInfoViewCommit?.[0]; // assume we only have one commit
 
-  const key = currentCommit?.isHead && mode === 'commit' ? 'head' : currentCommit?.hash ?? '';
+  const key = currentCommit?.isDot && mode === 'commit' ? 'head' : currentCommit?.hash ?? '';
   const suggestedReviewers = useAtomValue(suggestedReviewersForCommit(key));
 
   const filteredSuggestions = (

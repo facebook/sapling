@@ -42,7 +42,7 @@ describe('AmendMessageOperation', () => {
         value: [
           COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
           COMMIT('a', 'Commit A', '1'),
-          COMMIT('b', 'Commit B', 'a', {isHead: true}),
+          COMMIT('b', 'Commit B', 'a', {isDot: true}),
         ],
       });
     });

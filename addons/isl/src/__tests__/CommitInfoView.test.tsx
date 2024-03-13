@@ -75,7 +75,7 @@ describe('CommitInfoView', () => {
           value: [
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
             COMMIT('a', 'My Commit', '1'),
-            COMMIT('b', 'Head Commit', 'a', {isHead: true}),
+            COMMIT('b', 'Head Commit', 'a', {isDot: true}),
           ],
         });
       });
@@ -123,7 +123,7 @@ describe('CommitInfoView', () => {
               COMMIT('1', 'some public base', '0', {phase: 'public'}),
               COMMIT('a', 'My Commit', '1', {filesSample: [{path: 'src/ca.js', status: 'M'}]}),
               COMMIT('b', 'Head Commit', 'a', {
-                isHead: true,
+                isDot: true,
                 filesSample: [{path: 'src/cb.js', status: 'M'}],
                 totalFileCount: 1,
               }),
@@ -188,7 +188,7 @@ describe('CommitInfoView', () => {
             value: [
               COMMIT('1', 'some public base', '0', {phase: 'public'}),
               COMMIT('a', 'Head Commit', '1', {
-                isHead: true,
+                isDot: true,
                 filesSample: new Array(25)
                   .fill(null)
                   .map((_, i) => ({path: `src/file${i}.txt`, status: 'M'})),
@@ -295,7 +295,7 @@ describe('CommitInfoView', () => {
               COMMIT('a', 'My Commit', '1', {description: 'Summary: First commit in the stack'}),
               COMMIT('b', 'Head Commit', 'a', {
                 description: 'Summary: stacked commit',
-                isHead: true,
+                isDot: true,
               }),
             ],
           });
@@ -1218,7 +1218,7 @@ describe('CommitInfoView', () => {
                 COMMIT('a', 'My Commit', '1'),
                 COMMIT('b', 'Head Commit', 'a'),
                 COMMIT('c', 'New Commit', 'b', {
-                  isHead: true,
+                  isDot: true,
                   description: 'Summary: Message!',
                 }),
               ],
@@ -1265,7 +1265,7 @@ describe('CommitInfoView', () => {
                 COMMIT('1', 'some public base', '0', {phase: 'public'}),
                 COMMIT('a', 'My Commit', '1'),
                 COMMIT('b', 'Head Commit', 'a'),
-                COMMIT('c', 'New Commit', 'b', {isHead: true, description: 'Summary: Message!'}),
+                COMMIT('c', 'New Commit', 'b', {isDot: true, description: 'Summary: Message!'}),
               ],
             });
           });
@@ -1316,7 +1316,7 @@ describe('CommitInfoView', () => {
                 COMMIT('1', 'some public base', '0', {phase: 'public'}),
                 COMMIT('a', 'My Commit', '1'),
                 COMMIT('b2', 'Head Commit Hey', 'a', {
-                  isHead: true,
+                  isDot: true,
                   description: 'Summary: stacked commit\nHello',
                 }),
               ],
@@ -1491,7 +1491,7 @@ describe('CommitInfoView', () => {
         act(() => {
           simulateCommits({
             value: [
-              COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
+              COMMIT('1', 'some public base', '0', {phase: 'public', isDot: true}),
               COMMIT('a', 'My Commit', '1'),
               COMMIT('b', 'Head Commit', 'a'),
             ],
@@ -1514,7 +1514,7 @@ describe('CommitInfoView', () => {
               COMMIT('1', 'some public base', '0', {phase: 'public'}),
               COMMIT('a', 'My Commit V1', '1', {
                 successorInfo: {hash: 'b', type: 'amend'},
-                isHead: true,
+                isDot: true,
               }),
               COMMIT('b', 'Head Commit', '1'),
             ],

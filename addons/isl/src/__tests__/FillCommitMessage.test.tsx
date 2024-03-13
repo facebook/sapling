@@ -47,7 +47,7 @@ describe('FillCommitMessage', () => {
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('a', 'My Commit', '1'),
           COMMIT('b', 'Head Commit', 'a', {
-            isHead: true,
+            isDot: true,
             description: 'Summary: This is my commit message\n',
           }),
         ],
@@ -95,7 +95,7 @@ describe('FillCommitMessage', () => {
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
           COMMIT('a', 'My Commit', '1'),
           COMMIT('b', 'Head Commit', 'a', {
-            isHead: true,
+            isDot: true,
             description: 'Summary: This is my commit message\nDifferential Revision: D12345',
           }),
         ],

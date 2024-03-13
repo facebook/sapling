@@ -219,7 +219,7 @@ export const commitMode = atom(
       // loading state
       return 'amend';
     }
-    if (commitInfoCommit.length === 1 && commitInfoCommit[0].isHead) {
+    if (commitInfoCommit.length === 1 && commitInfoCommit[0].isDot) {
       // allow using "commit" mode only if looking at exactly the single head commit
       return rawMode;
     }

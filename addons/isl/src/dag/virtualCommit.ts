@@ -13,7 +13,7 @@ export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = DagCommitInfo.fromComm
   title: '',
   parents: [],
   phase: 'draft',
-  isHead: false,
+  isDot: false,
   date: new Date(8640000000000000),
   bookmarks: [],
   remoteBookmarks: [],

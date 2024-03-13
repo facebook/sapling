@@ -46,7 +46,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   hash: '',
   parents: [],
   phase: 'draft',
-  isHead: false,
+  isDot: false,
   author: '',
   date: new Date(0),
   description: '',
@@ -115,8 +115,8 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
     return this.inner.phase;
   }
 
-  get isHead(): boolean {
-    return this.inner.isHead;
+  get isDot(): boolean {
+    return this.inner.isDot;
   }
 
   get author(): string {

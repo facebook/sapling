@@ -33,7 +33,7 @@ export function isStackEligibleForCleanup(
     .every(h => {
       const info = dag.get(h);
       // don't allow hiding a stack you're checked out on
-      if (info == null || info.isHead) {
+      if (info == null || info.isDot) {
         return false;
       }
       // allow clean up obsoleted commits regardless of review state

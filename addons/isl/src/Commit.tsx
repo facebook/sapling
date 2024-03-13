@@ -153,11 +153,11 @@ export const Commit = memo(
           collapsed: false,
         },
       }));
-      if (commit.isHead) {
+      if (commit.isDot) {
         // if we happened to be in commit mode, swap to amend mode so you see the details instead
         writeAtom(commitMode, 'amend');
       }
-    }, [overrideSelection, isSelected, commit.hash, commit.isHead]);
+    }, [overrideSelection, isSelected, commit.hash, commit.isDot]);
 
     const viewChangesCallback = useAtomCallback((_get, set) => {
       set(currentComparisonMode, {
@@ -309,7 +309,7 @@ export const Commit = memo(
       );
     }
 
-    if (!actionsPrevented && !commit.isHead) {
+    if (!actionsPrevented && !commit.isDot) {
       commitActions.push(
         <span className="goto-button" key="goto-button">
           <Tooltip
@@ -342,10 +342,10 @@ export const Commit = memo(
       );
     }
 
-    if (!isPublic && !actionsPrevented && commit.isHead) {
+    if (!isPublic && !actionsPrevented && commit.isDot) {
       commitActions.push(<UncommitButton key="uncommit" />);
     }
-    if (!isPublic && !actionsPrevented && commit.isHead && !isObsoleted) {
+    if (!isPublic && !actionsPrevented && commit.isDot && !isObsoleted) {
       commitActions.push(<SplitButton key="split" commit={commit} />);
     }
 
@@ -371,7 +371,7 @@ export const Commit = memo(
       <div
         className={
           'commit' +
-          (commit.isHead ? ' head-commit' : '') +
+          (commit.isDot ? ' head-commit' : '') +
           (commit.successorInfo != null ? ' obsolete' : '')
         }
         onContextMenu={contextMenu}

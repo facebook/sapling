@@ -346,7 +346,7 @@ registerDisposable(
  */
 export const latestHeadCommit = atom(get => {
   const commits = get(latestCommits);
-  return commits.find(commit => commit.isHead);
+  return commits.find(commit => commit.isDot);
 });
 
 /**

@@ -45,7 +45,7 @@ export class GotoOperation extends Operation {
       const previewType = isDest
         ? CommitPreview.GOTO_DESTINATION
         : CommitPreview.GOTO_PREVIOUS_LOCATION;
-      return c?.merge({isHead: isDest, previewType});
+      return c?.merge({isDot: isDest, previewType});
     });
   }
 }

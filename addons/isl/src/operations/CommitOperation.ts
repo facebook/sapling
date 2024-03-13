@@ -121,7 +121,7 @@ export class CommitOperation extends Operation {
       title,
       bookmarks: [],
       remoteBookmarks: [],
-      isHead: true,
+      isDot: true,
       parents: [base],
       hash,
       phase: 'draft',
@@ -132,7 +132,7 @@ export class CommitOperation extends Operation {
 
     return dag.replaceWith([base, hash], (h, _c) => {
       if (h === base) {
-        return baseInfo?.set('isHead', false);
+        return baseInfo?.set('isDot', false);
       } else {
         return info;
       }

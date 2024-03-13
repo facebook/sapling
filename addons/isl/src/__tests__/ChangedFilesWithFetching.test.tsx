@@ -41,7 +41,7 @@ describe('ChangedFilesWithFetching', () => {
       });
       simulateCommits({
         value: [
-          COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
+          COMMIT('1', 'some public base', '0', {phase: 'public', isDot: true}),
           COMMIT('a', 'My Commit', '1', {
             totalFileCount: 2,
             filesSample: [
