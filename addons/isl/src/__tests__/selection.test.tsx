@@ -6,7 +6,8 @@
  */
 
 import App from '../App';
-import {individualToggleKey} from '../selection';
+import {readAtom} from '../jotaiUtils';
+import {individualToggleKey, selectedCommits} from '../selection';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {CommitTreeListTestUtils, CommitInfoTestUtils} from '../testQueries';
 import {
@@ -260,6 +261,35 @@ describe('selection', () => {
       expect(
         CommitInfoTestUtils.withinCommitInfo().getByText('4 Commits Selected'),
       ).toBeInTheDocument();
+    });
+
+    it('prefers dag range to flatten range', () => {
+      // a-b--c-d-e
+      //     \
+      //      f-g
+      act(() =>
+        simulateCommits({
+          value: [
+            COMMIT('f', 'Commit F', 'b'),
+            COMMIT('g', 'Commit G', 'f'),
+            ...TEST_COMMIT_HISTORY,
+          ],
+        }),
+      );
+
+      {
+        click('Commit A'); // select
+        click('Commit G', {shiftKey: true});
+        const selected = readAtom(selectedCommits);
+        expect([...selected].sort()).toEqual(['a', 'b', 'f', 'g']);
+      }
+
+      {
+        click('Commit D'); // select
+        click('Commit A', {shiftKey: true});
+        const selected = readAtom(selectedCommits);
+        expect([...selected].sort()).toEqual(['a', 'b', 'c', 'd']);
+      }
     });
 
     it('deselecting clears last selected', () => {

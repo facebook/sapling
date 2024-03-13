@@ -97,13 +97,26 @@ export function useCommitSelection(hash: string): {
         if (e.shiftKey) {
           const previouslySelected = readAtom(previouslySelectedCommit);
           if (previouslySelected != null) {
+            let slice: Array<Hash> | null = null;
             const dag = readAtom(dagWithPreviews);
-            const [sortIndex, sorted] = dag.defaultSortAscIndex();
-            const prevIdx = sortIndex.get(previouslySelected);
-            const nextIdx = sortIndex.get(hash);
-            if (prevIdx != null && nextIdx != null) {
-              const [fromIdx, toIdx] = prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
-              const slice = sorted.slice(fromIdx, toIdx + 1);
+            // Prefer dag range for shift selection.
+            const range = dag
+              .range(hash, previouslySelected)
+              .union(dag.range(previouslySelected, hash));
+            if (range.size > 0) {
+              slice = range.toArray();
+            } else {
+              // Fall back to displayed (flatten) range.
+              const [sortIndex, sorted] = dag.defaultSortAscIndex();
+              const prevIdx = sortIndex.get(previouslySelected);
+              const nextIdx = sortIndex.get(hash);
+              if (prevIdx != null && nextIdx != null) {
+                const [fromIdx, toIdx] =
+                  prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
+                slice = sorted.slice(fromIdx, toIdx + 1);
+              }
+            }
+            if (slice != null) {
               return new Set([...last, ...slice.filter(hash => dag.get(hash)?.phase !== 'public')]);
             }
           }
