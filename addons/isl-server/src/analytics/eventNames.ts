@@ -45,6 +45,7 @@ export type TrackEventName =
   | 'FoldOperation'
   | 'FillCommitMessage'
   | 'FocusChanged'
+  | 'SetFocusMode'
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
   | 'GetAlertsCommand'

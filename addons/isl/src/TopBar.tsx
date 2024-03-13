@@ -10,6 +10,7 @@ import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
+import {FocusModeToggle} from './FocusMode';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {ShelvedChangesMenu} from './ShelvedChanges';
@@ -44,6 +45,7 @@ export function TopBar() {
       </span>
       <span className="button-group">
         <DebugToolsButton />
+        <FocusModeToggle />
         <BugButton />
         <SettingsGearButton />
         <RefreshButton />
