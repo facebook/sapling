@@ -40,7 +40,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO" --derive-hg --generate-bookmarks full-repo &> /dev/null
+  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo &> /dev/null
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
@@ -69,7 +69,7 @@
 
 # Import the newly added commits to Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo &> /dev/null
+  $ gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo &> /dev/null
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
   $ git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git &> /dev/null

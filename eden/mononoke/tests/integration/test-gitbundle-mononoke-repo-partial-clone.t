@@ -35,7 +35,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
@@ -88,7 +88,7 @@
 
 # Import the new commits into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:$TESTTMP/repo-git commit 1 of 4 - Oid:8ce3eae4 => Bid:032cd4dc (already exists) (glob)
   * GitRepo:$TESTTMP/repo-git commit 2 of 4 - Oid:e8615d6f => Bid:da93dc81 (already exists) (glob)

@@ -45,7 +45,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
+  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)

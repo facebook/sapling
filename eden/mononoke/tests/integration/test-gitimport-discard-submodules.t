@@ -104,7 +104,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport --record-head-symref "$GIT_REPO" --generate-bookmarks --discard-submodules full-repo
+  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks --discard-submodules full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 3 - Oid:8ce3eae4 => Bid:032cd4dc
   GitRepo:$TESTTMP/repo-git commit 2 of 3 - Oid:e8615d6f => Bid:da93dc81

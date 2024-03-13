@@ -35,7 +35,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO" --concurrency 100 --derive-hg full-repo
+  $ gitimport "$GIT_REPO" --concurrency 100 --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
@@ -137,7 +137,7 @@
   * Nothing to import for repo *repo-git. (glob)
 
 # Also check that a readonly import works
-  $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-hg full-repo
+  $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-hg --skip-head-symref full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)

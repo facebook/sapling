@@ -42,7 +42,7 @@ Go back to the master branch
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo &> /dev/null
+  $ gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo &> /dev/null
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service

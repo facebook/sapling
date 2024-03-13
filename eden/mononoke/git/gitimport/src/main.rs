@@ -119,9 +119,9 @@ struct GitimportArgs {
     /// Use at your own risk!
     #[clap(long)]
     generate_bookmarks: bool,
-    /// If set, will record the HEAD symref in Mononoke for the given repo
+    /// If set, will skip recording the HEAD symref in Mononoke for the given repo
     #[clap(long)]
-    record_head_symref: bool,
+    skip_head_symref: bool,
     /// When set, the gitimport tool would bypass the read-only check while creating and moving bookmarks.
     #[clap(long)]
     bypass_readonly: bool,
@@ -299,7 +299,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .await
             .context("derive_hg failed")?;
     }
-    if args.record_head_symref {
+    if !args.skip_head_symref {
         let symref_entry = import_tools::read_symref(HEAD_SYMREF, path, &prefs)
             .await
             .context("read_symrefs failed")?;
