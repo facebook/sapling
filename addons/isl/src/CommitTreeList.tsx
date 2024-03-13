@@ -6,9 +6,8 @@
  */
 
 import type {RenderGlyphResult} from './RenderDag';
-import type {Dag, DagCommitInfo} from './dag/dag';
+import type {DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
-import type {HashSet} from './dag/set';
 import type {Hash} from './types';
 
 import serverAPI from './ClientToServerAPI';
@@ -26,7 +25,11 @@ import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitial
 import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
-import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
+import {
+  selectedCommits,
+  useArrowKeysToChangeSelection,
+  useBackspaceToHideSelected,
+} from './selection';
 import {
   commitFetchError,
   commitsShownRange,
@@ -55,11 +58,19 @@ const dagWithYouAreHere = atom(get => {
   return dag;
 });
 
+const renderSubsetUnionSelection = atom(get => {
+  const dag = get(dagWithYouAreHere);
+  const subset = dag.subsetForRendering();
+  // If selectedCommits includes commits unknown to dag (ex. in tests), ignore them to avoid errors.
+  const selection = dag.present(get(selectedCommits));
+  return subset.union(selection);
+});
+
 function DagCommitList(props: DagCommitListProps) {
   const {isNarrow} = props;
 
   const dag = useAtomValue(dagWithYouAreHere);
-  const subset = getRenderSubset(dag);
+  const subset = useAtomValue(renderSubsetUnionSelection);
 
   return (
     <RenderDag
@@ -162,10 +173,6 @@ function HighlightedGlyph({info}: {info: DagCommitInfo}) {
       <RegularGlyph info={info} />
     </>
   );
-}
-
-function getRenderSubset(dag: Dag): HashSet {
-  return dag.subsetForRendering();
 }
 
 export function CommitTreeList() {
