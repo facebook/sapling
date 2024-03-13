@@ -96,22 +96,19 @@ export function useCommitSelection(hash: string): {
       writeAtom(selectedCommits, last => {
         if (e.shiftKey) {
           const previouslySelected = readAtom(previouslySelectedCommit);
-          const linearHistory = readAtom(linearizedCommitHistory);
-          if (linearHistory != null && previouslySelected != null) {
-            const prevIdx = linearHistory.findIndex(val => val.hash === previouslySelected);
-            const nextIdx = linearHistory.findIndex(val => val.hash === hash);
-
-            const [fromIdx, toIdx] = prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
-            const slice = linearHistory.slice(fromIdx, toIdx + 1);
-
-            return new Set([
-              ...last,
-              ...slice.filter(commit => commit.phase !== 'public').map(commit => commit.hash),
-            ]);
-          } else {
-            // Holding shift, but we don't have a previous selected commit.
-            // Fall through to treat it like a normal click.
+          if (previouslySelected != null) {
+            const dag = readAtom(dagWithPreviews);
+            const [sortIndex, sorted] = dag.defaultSortAscIndex();
+            const prevIdx = sortIndex.get(previouslySelected);
+            const nextIdx = sortIndex.get(hash);
+            if (prevIdx != null && nextIdx != null) {
+              const [fromIdx, toIdx] = prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
+              const slice = sorted.slice(fromIdx, toIdx + 1);
+              return new Set([...last, ...slice.filter(hash => dag.get(hash)?.phase !== 'public')]);
+            }
           }
+          // Holding shift, but we don't have a previous selected commit.
+          // Fall through to treat it like a normal click.
         }
 
         const individualToggle = e[individualToggleKey];
