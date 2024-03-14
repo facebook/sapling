@@ -38,8 +38,13 @@ Can still clone the repo
 
 Can still push to commit cloud
   $ hgedenapi cloud backup
-  backing up stack rooted at 9c00c53d25b3
-  commitcloud: backed up 1 commit
+  commitcloud: head '9c00c53d25b3' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
 
 Cannot push to the server
   $ hgmn push --to master

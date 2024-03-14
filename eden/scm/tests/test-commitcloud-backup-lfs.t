@@ -12,7 +12,7 @@ Setup common infinitepush
 Setup lfs
   $ setconfig remotefilelog.lfs=true
   $ setconfig experimental.changegroup3=true
-  $ setconfig lfs.threshold=10B lfs.url="file:$TESTTMP/dummy-remote/" scmstore.enableshim=True
+  $ setconfig lfs.threshold=10B lfs.url="file:$TESTTMP/dummy-remote/"
 
 Setup server repo
   $ hg init repo
@@ -54,13 +54,14 @@ Make pushbackup that contains bundle with 2 heads
   [0da81a] commit
   $ mkcommit newcommit2
   $ hg cloud backup
-  backing up stack rooted at 5f9d85f9e1c6
-  backing up stack rooted at c800524c1b76
-  commitcloud: backed up 2 commits
-  remote: pushing 1 commit:
-  remote:     5f9d85f9e1c6  newcommit
-  remote: pushing 1 commit:
-  remote:     c800524c1b76  newcommit2
+  commitcloud: head '5f9d85f9e1c6' hasn't been uploaded yet
+  commitcloud: head 'c800524c1b76' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
   $ hg cloud check -r .
   c800524c1b7637c6f3f997d1459237d01fe1ea10 backed up
 

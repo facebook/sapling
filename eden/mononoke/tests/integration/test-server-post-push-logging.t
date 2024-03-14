@@ -168,20 +168,6 @@ Use infinitepush push
   $ hgmn up -q master_bookmark
 
 Stop tracking master_bookmark
-  $ hg up -q .
-  $ echo pushbackup > pushbackup
-  $ hg add -q pushbackup
-  $ hg ci -m pushbackup
-  $ hgedenapi pushbackup -r .
-  backing up stack rooted at 0ed0fbff8a24
-  commitcloud: backed up 1 commit
-  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
-  null
-  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
-  "29259d73c8207a083a44f2635df387b194f76c41d2ccb71e7529ec0f70a4af28"
-  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
-
-
   $ hgmn up -q master_bookmark
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush

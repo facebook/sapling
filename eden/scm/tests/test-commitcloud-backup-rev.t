@@ -57,15 +57,14 @@ Check backing up top stack commit and mid commit
   * not backed up (glob)
 
   $ hg cloud backup $A1 $A2 $B2
-  backing up stack rooted at * (glob)
-  backing up stack rooted at * (glob)
-  commitcloud: backed up 4 commits
-  remote: pushing 2 commits:
-  remote:     *  A1 (glob)
-  remote:     *  A2 (glob)
-  remote: pushing 2 commits:
-  remote:     *  B1 (glob)
-  remote:     *  B2 (glob)
+  commitcloud: head '0d0424fa7cf4' hasn't been uploaded yet
+  commitcloud: head 'ecd738f5fb6c' hasn't been uploaded yet
+  edenapi: queue 4 commits for upload
+  edenapi: queue 7 files for upload
+  edenapi: uploaded 7 files
+  edenapi: queue 4 trees for upload
+  edenapi: uploaded 4 trees
+  edenapi: uploaded 4 changesets
 
   $ hg cloud check -r $A1+$A2+$A3+$B1+$B2
   * backed up (glob)
@@ -76,15 +75,16 @@ Check backing up top stack commit and mid commit
 
 Check backing up new top commit
   $ hg cloud backup $A3
-  backing up stack rooted at * (glob)
-  commitcloud: backed up 1 commit
-  remote: pushing 3 commits:
-  remote:     *  A1 (glob)
-  remote:     *  A2 (glob)
-  remote:     *  A3 (glob)
+  commitcloud: head '78c4e4751ca8' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
 
   $ hg cloud backup $A2
-  nothing to back up
+  commitcloud: nothing to upload
 
   $ cd ..
 
@@ -103,6 +103,7 @@ Check that backup doesn't interfere with commit cloud
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'master' repo
   commitcloud: synchronizing 'master' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -110,15 +111,17 @@ Check that backup doesn't interfere with commit cloud
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ B3=$(mkcommit B3)
   $ hg cloud backup $B3
-  backing up stack rooted at * (glob)
-  commitcloud: backed up 1 commit
-  remote: pushing 3 commits:
-  remote:     *  B1 (glob)
-  remote:     *  B2 (glob)
-  remote:     *  B3 (glob)
+  commitcloud: head '901656c16420' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
 
   $ hg cloud sync
   commitcloud: synchronizing 'master' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -126,11 +129,12 @@ Check that backup doesn't interfere with commit cloud
   7b520430ff426d7f4a6c305bef4a90507afe1b32
   $ hg cloud sync
   commitcloud: synchronizing 'master' with 'user/test/default'
-  backing up stack rooted at 458a3fc7650d
+  commitcloud: head '7b520430ff42' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 4 commits:
-  remote:     458a3fc7650d  B1
-  remote:     ecd738f5fb6c  B2
-  remote:     901656c16420  B3
-  remote:     7b520430ff42  B4

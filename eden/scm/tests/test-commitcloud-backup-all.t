@@ -44,27 +44,18 @@ Check backing up top stack commit and mid commit
   * not backed up (glob)
 
   $ hg cloud backup --traceback
-  backing up stack rooted at 64164d1e0f82
-  backing up stack rooted at 42952ab62cec
-  backing up stack rooted at d0d71d09c927
-  backing up stack rooted at d79a807cba78
-  backing up stack rooted at 4903fdffd9c6
-  backing up stack rooted at eccc11f58a56
-  commitcloud: backed up 8 commits
-  remote: pushing 2 commits:
-  remote:     64164d1e0f82  A1
-  remote:     796f1f48de85  B
-  remote: pushing 1 commit:
-  remote:     42952ab62cec  E1
-  remote: pushing 2 commits:
-  remote:     d0d71d09c927  A2
-  remote:     daeeb2f180d6  C
-  remote: pushing 1 commit:
-  remote:     d79a807cba78  D2
-  remote: pushing 1 commit:
-  remote:     4903fdffd9c6  E2
-  remote: pushing 1 commit:
-  remote:     eccc11f58a56  D3
+  commitcloud: head '42952ab62cec' hasn't been uploaded yet
+  commitcloud: head '796f1f48de85' hasn't been uploaded yet
+  commitcloud: head 'd79a807cba78' hasn't been uploaded yet
+  commitcloud: head '4903fdffd9c6' hasn't been uploaded yet
+  commitcloud: head 'daeeb2f180d6' hasn't been uploaded yet
+  commitcloud: head 'eccc11f58a56' hasn't been uploaded yet
+  edenapi: queue 8 commits for upload
+  edenapi: queue 8 files for upload
+  edenapi: uploaded 8 files
+  edenapi: queue 8 trees for upload
+  edenapi: uploaded 8 trees
+  edenapi: uploaded 8 changesets
 
   $ hg cloud check -r $A1 -r $D2 -r $E1
   64164d1e0f82f6a670c84728b83061df1b126b5c backed up
@@ -75,14 +66,26 @@ Check backing up top stack commit and mid commit
 
 Test --force option
   $ hg cloud backup --debug
-  nothing to back up
+  commitcloud: nothing to upload
 
   $ hg cloud backup -f --debug
-  running * (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: * (glob)
-  remote: * (glob)
-  sending knownnodes command
-  nothing to back up
+  commitcloud: head '42952ab62cec' hasn't been uploaded yet
+  commitcloud: head '796f1f48de85' hasn't been uploaded yet
+  commitcloud: head 'd79a807cba78' hasn't been uploaded yet
+  commitcloud: head '4903fdffd9c6' hasn't been uploaded yet
+  commitcloud: head 'daeeb2f180d6' hasn't been uploaded yet
+  commitcloud: head 'eccc11f58a56' hasn't been uploaded yet
+  edenapi: queue 8 commits for upload
+  edenapi: queue 8 files for upload
+  edenapi: uploaded 8 files
+  edenapi: queue 8 trees for upload
+  edenapi: uploaded 8 trees
+  edenapi: uploading commit '64164d1e0f82f6a670c84728b83061df1b126b5c'...
+  edenapi: uploading commit '42952ab62cecf85e36eaab6965b6bf3f5e3e9fe1'...
+  edenapi: uploading commit 'd0d71d09c927a6b27ee30a38e721e7d96414cd06'...
+  edenapi: uploading commit '796f1f48de85135450ec0786f9f986b72b07be15'...
+  edenapi: uploading commit 'd79a807cba78db45ec042b74da65ebfd6d58eadd'...
+  edenapi: uploading commit '4903fdffd9c679d607110970995686c46924320c'...
+  edenapi: uploading commit 'daeeb2f180d680211d3aa1592558e4eb10459dc0'...
+  edenapi: uploading commit 'eccc11f58a56da53c6d0d1fc9d0dfaa396e6f232'...
+  edenapi: uploaded 8 changesets

@@ -273,30 +273,27 @@ Pushbackup also works
   $ echo aa > aa && hg addremove && hg ci -q -m newrepo
   adding aa
   $ hgedenapi cloud backup --debug
-  sending hello command
-  sending clienttelemetry command
-  sending knownnodes command
-  backing up stack rooted at 47da8b81097c
-  reusing connection from pool
-  3 changesets found
-  list of changesets:
-  47da8b81097c5534f3eb7947a8764dd323cffe3d
-  007299f6399f84ad9c3b269137902d47d908936d
-  2cfeca6399fdb0084a6eba69275ea7aeb1d07667
-  sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
-  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  commitcloud: backed up 1 commit
+  commitcloud: head '2cfeca6399fd' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit '2cfeca6399fdb0084a6eba69275ea7aeb1d07667'...
+  edenapi: uploaded 1 changeset
 
 Pushbackup to mononoke peer with compression enabled
 (a larger file is needed to repro problems with zstd compression)
   $ dd if=/dev/zero of=aa bs=4048 count=1024 2> /dev/null
   $ hg amend -m "xxx"
   $ MONONOKE_DIRECT_PEER=1 hgedenapi cloud backup --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
-  backing up stack rooted at 47da8b81097c
-  commitcloud: backed up 1 commit
+  commitcloud: head 'd88fdbcae092' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
 
   $ grep "Root cause: unconsumed data" "$TESTTMP/mononoke.out"
   [1]
@@ -338,7 +335,7 @@ Pushbackup that does nothing, as only bookmarks have changed
   $ cd ../repo-push
   $ hg book newbook
   $ hgedenapi cloud backup
-  nothing to back up
+  commitcloud: nothing to upload
 
   $ tglogp
   @  2cfeca6399fd draft 'newrepo' newbook
@@ -421,8 +418,12 @@ Check phases on another side (for pull command and pull -r)
   $ hg addremove -q
   $ hg ci -m "change on top of the release"
   $ hgedenapi cloud backup
-  backing up stack rooted at eca836c7c651
-  commitcloud: backed up 1 commit
+  commitcloud: head 'eca836c7c651' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
 
   $ tglogp
   @  eca836c7c651 draft 'change on top of the release'
@@ -565,11 +566,11 @@ More sophisticated test for phases
 
   $ hgedenapi cloud backup -q
 
-  $ hgmn cloud check -r 7d67c7248d48 --remote
+  $ hgedenapi cloud check -r 7d67c7248d48 --remote
   7d67c7248d486cb264270530ef906f1d09d6c650 backed up
-  $ hgmn cloud check -r bf677f20a49d --remote
+  $ hgedenapi cloud check -r bf677f20a49d --remote
   bf677f20a49dc5ac94946f3d91ad181f8a6fdbab backed up
-  $ hgmn cloud check -r 5e59ac0f4dd0 --remote
+  $ hgedenapi cloud check -r 5e59ac0f4dd0 --remote
   5e59ac0f4dd00fd4d751f9f3663be99df0f4765d backed up
 
   $ tglogp

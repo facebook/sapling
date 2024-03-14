@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ configure dummyssh
   $ enable amend directaccess commitcloud infinitepush rebase remotenames undo
@@ -28,6 +27,7 @@ Create a client with some initial commits and sync them to the cloud workspace.
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ drawdag << EOS
@@ -52,14 +52,16 @@ Create a client with some initial commits and sync them to the cloud workspace.
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at dae3b312bb78
+  commitcloud: head '6ba5de8abe43' hasn't been uploaded yet
+  commitcloud: head 'c70a9bd6bfd1' hasn't been uploaded yet
+  edenapi: queue 4 commits for upload
+  edenapi: queue 4 files for upload
+  edenapi: uploaded 4 files
+  edenapi: queue 4 trees for upload
+  edenapi: uploaded 4 trees
+  edenapi: uploaded 4 changesets
   commitcloud: commits synchronized
   finished in * sec (glob)
-  remote: pushing 4 commits:
-  remote:     dae3b312bb78  Z
-  remote:     2d0f0af04f18  C
-  remote:     6ba5de8abe43  D
-  remote:     c70a9bd6bfd1  E
 
 Create another client and use it to modify the commits and create some new ones.
 
@@ -70,14 +72,10 @@ Create another client and use it to modify the commits and create some new ones.
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 6ba5de8abe43 c70a9bd6bfd1 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 4 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -110,14 +108,16 @@ Create another client and use it to modify the commits and create some new ones.
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at dae3b312bb78
+  commitcloud: head 'd8fc5ae9b7ef' hasn't been uploaded yet
+  commitcloud: head 'dd114d9b2f9e' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in * sec (glob)
-  remote: pushing 4 commits:
-  remote:     dae3b312bb78  Z
-  remote:     c70a9bd6bfd1  E
-  remote:     d8fc5ae9b7ef  D
-  remote:     dd114d9b2f9e  X
 
 Before syncing, create a new commit in the original client
 
@@ -146,20 +146,17 @@ Now cloud sync.  The sets of commits should be merged.
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at dae3b312bb78
+  commitcloud: head 'ba83c5428cb2' hasn't been uploaded yet
+  commitcloud: head '6caded0e9807' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
   pulling d8fc5ae9b7ef dd114d9b2f9e from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  adding changesets
-  adding manifests
-  adding file changes
-  remote: pushing 4 commits:
-  remote:     dae3b312bb78  Z
-  remote:     c70a9bd6bfd1  E
-  remote:     ba83c5428cb2  F
-  remote:     6caded0e9807  D
+  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -183,43 +180,38 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   $ cd $TESTTMP/client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling ba83c5428cb2 6caded0e9807 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
-  o  ba83c5428cb2 'F'
+  o  6caded0e9807 'D'
   │
-  │ o  6caded0e9807 'D'
+  │ o  ba83c5428cb2 'F'
   │ │
   │ │ @  dd114d9b2f9e 'X'
-  │ ├─╯
-  │ │ o  d8fc5ae9b7ef 'D'
   ├───╯
-  o │  c70a9bd6bfd1 'E'
+  │ │ o  d8fc5ae9b7ef 'D'
+  │ ├─╯
+  │ o  c70a9bd6bfd1 'E'
   ├─╯
   o  dae3b312bb78 'Z'
   │
   o  d20a80d4def3 'base'
-  
 It should also have mutations made on both sides visible.
 
   $ tglogm -r 'predecessors(all())'
-  o  ba83c5428cb2 'F'
+  o  6caded0e9807 'D'
   │
-  │ o  6caded0e9807 'D'
+  │ o  ba83c5428cb2 'F'
   │ │
   │ │ @  dd114d9b2f9e 'X'
-  │ ├─╯
-  │ │ o  d8fc5ae9b7ef 'D'
   ├───╯
-  o │  c70a9bd6bfd1 'E'
+  │ │ o  d8fc5ae9b7ef 'D'
+  │ ├─╯
+  │ o  c70a9bd6bfd1 'E'
   ├─╯
   │ x  6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
   │ │
@@ -228,4 +220,3 @@ It should also have mutations made on both sides visible.
   o  dae3b312bb78 'Z'
   │
   o  d20a80d4def3 'base'
-  

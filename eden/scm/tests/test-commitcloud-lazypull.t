@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ configure dummyssh mutation-norecord
   $ enable amend commitcloud infinitepush rebase remotenames share
@@ -62,20 +61,26 @@ Make a commit in the first client, and sync it
   $ mkcommit "feature1"
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 1cf4a5a0e8fc
+  commitcloud: head '1cf4a5a0e8fc' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 1 commit:
-  remote:     1cf4a5a0e8fc  feature1
 
   $ hg amend -m "feature1 renamed"
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at b68dd726c6c6
+  commitcloud: head 'b68dd726c6c6' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 0 trees for upload
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 1 commit:
-  remote:     b68dd726c6c6  feature1 renamed
 
   $ cd ..
 
@@ -83,11 +88,10 @@ Sync from the second client and `hg unamend` there
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling b68dd726c6c6 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -99,7 +103,6 @@ Sync from the second client and `hg unamend` there
 
   $ hg up b68dd726c6c6
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
 
   $ hg unamend
   pulling '1cf4a5a0e8fc41ef1289e833ebdb22d754c080ac' from 'ssh://user@dummy/server'
@@ -114,6 +117,7 @@ Sync from the second client and `hg unamend` there
 amend, therefore the "has been replaced" message)
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -123,6 +127,7 @@ amend, therefore the "has been replaced" message)
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -147,8 +152,12 @@ Amend twice, unamend, then unhide
   
   $ P=1 hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at cb45bbd0ae75
-  backing up stack rooted at 74b668b6b779
+  commitcloud: head 'cb45bbd0ae75' hasn't been uploaded yet
+  commitcloud: head '74b668b6b779' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 0 trees for upload
+  edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision cb45bbd0ae75 has been moved remotely to 74b668b6b779
@@ -157,23 +166,15 @@ Amend twice, unamend, then unhide
   updateonmove = true
   to your .hgrc config file
   hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
-  remote: pushing 1 commit:
-  remote:     cb45bbd0ae75  feature1 renamed2
-  remote: pushing 1 commit:
-  remote:     74b668b6b779  feature1 renamed3
 
 Now cloud sync in the other client.  The cycle means we can't reliably pick a destination.
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling cb45bbd0ae75 74b668b6b779 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision 1cf4a5a0e8fc has been moved remotely to 74b668b6b779

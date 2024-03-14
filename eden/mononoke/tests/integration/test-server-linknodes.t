@@ -69,8 +69,13 @@ push an infinitepush commit with new content
   $ echo "content1" > file
   $ hgedenapi commit -q -m branch
   $ hgedenapi cloud backup
-  backing up stack rooted at 60ab8a6c8e65
-  commitcloud: backed up 1 commit
+  commitcloud: head '60ab8a6c8e65' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   $ hgedenapi log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
   │

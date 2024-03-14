@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ configure modern
 

@@ -31,7 +31,6 @@ mononoke + local commit cloud backend
   > servicelocation = $TESTTMP
   > owner_team = The Test Team
   > updateonmove = true
-  > usehttpupload = true
   > EOF
 
 setup repo

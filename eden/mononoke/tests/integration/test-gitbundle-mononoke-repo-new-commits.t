@@ -96,8 +96,13 @@
 
 # Backup the created commits to commit cloud
   $ hgedenapi cloud backup
-  backing up stack rooted at addc9caddba0
-  commitcloud: backed up 3 commits
+  commitcloud: head 'c2e143a98b79' hasn't been uploaded yet
+  edenapi: queue 3 commits for upload
+  edenapi: queue 3 files for upload
+  edenapi: uploaded 3 files
+  edenapi: queue 3 trees for upload
+  edenapi: uploaded 3 trees
+  edenapi: uploaded 3 changesets
 
 # Get the bonsai changeset ID for the latest commit in the stack
   $ mononoke_newadmin convert -R repo -f hg -t bonsai $(hg whereami)

@@ -3,7 +3,6 @@
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig commitcloud.usehttpupload=true
 
   $ enable amend
   $ setconfig infinitepushbackup.hostname=testhost
@@ -37,7 +36,7 @@ Make commit and backup it.
 
 Make first commit public (by doing push) and then backup new commit
   $ hg debugmakepublic .
-  $ hg push --to master --create 
+  $ hg push --to master --create
   pushing rev 7e6a6fd9c7c8 to destination ssh://user@dummy/repo bookmark master
   searching for changes
   no changes found

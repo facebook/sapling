@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ configure dummyssh mutation-norecord
   $ enable amend arcdiff commitcloud infinitepush rebase remotenames share
@@ -94,11 +93,15 @@ Test for `hg diff --since-last-submit`
   162e0a8b5732f1fa168b0a6d8cf9809053ae272a (no-eol)
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 162e0a8b5732
+  commitcloud: head '162e0a8b5732' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 3 files for upload
+  edenapi: uploaded 3 files
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 1 commit:
-  remote:     162e0a8b5732  Differential Revision: https://phabricator.fb.com/
 
   $ cat > $TESTTMP/mockduit << 'EOF'
   > [{"data": {"query": [{"results": {"nodes": [{
@@ -120,11 +123,15 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 1166f984c176
+  commitcloud: head '1166f984c176' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 1 commit:
-  remote:     1166f984c176  Differential Revision: https://phabricator.fb.com/
 
   $ cd ..
 
@@ -132,11 +139,10 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 1166f984c176 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -166,11 +172,10 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 1166f984c176 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
 

@@ -60,8 +60,13 @@ Do infinitepush (aka commit cloud) push
   $ hg addremove -q
   $ hg ci -m new
   $ hgedenapi cloud backup
-  backing up stack rooted at 68394cf51f7e
-  commitcloud: backed up 1 commit
+  commitcloud: head '68394cf51f7e' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"

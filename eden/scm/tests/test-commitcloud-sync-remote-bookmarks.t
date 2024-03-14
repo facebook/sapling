@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ enable amend commitcloud infinitepush remotenames
   $ configure dummyssh
@@ -257,24 +256,23 @@ sync and create a new commit on top of the draft-3
   $ showgraph
   @  draft-4: draft
   │
-  o  draft-2: draft
-  │
-  │ o  draft-1: draft
+  │ o  draft-3: draft
   │ │
-  │ │ o  draft-3: draft
+  o │  draft-2: draft
+  │ │
+  │ │ o  draft-1: draft
   │ │ │
-  │ o │  a3: draft
+  │ │ o  a3: draft
   │ │ │
-  │ o │  a2: public  default/master
+  │ │ o  a2: public  default/master
   │ │ │
-  │ o │  a1: public
+  │ │ o  a1: public
   │ │ │
   o │ │  b1: draft
-  ├─╯ │
-  │   o  c1: draft
   ├───╯
+  │ o  c1: draft
+  ├─╯
   o  root: public
-  
   $ hg cloud sync -q
 
   $ cd ../client2

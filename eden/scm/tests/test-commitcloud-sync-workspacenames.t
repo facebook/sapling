@@ -50,6 +50,7 @@
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -57,6 +58,7 @@
   $ HGUSER='Test Longname <test.longname@example.com>' hg cloud join
   commitcloud: this repository is now connected to the 'user/test.longname@example.com/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test.longname@example.com/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -64,6 +66,7 @@
   $ HGUSER='Test Longname <test.longname@example.com>' hg cloud join --config 'commitcloud.email_domains=example.com'
   commitcloud: this repository is now connected to the 'user/test.longname/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test.longname/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -71,6 +74,7 @@
   $ HGUSER='Another Domain <other.longname@example.org>' hg cloud join --config 'commitcloud.email_domains=example.com'
   commitcloud: this repository is now connected to the 'user/other.longname@example.org/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/other.longname@example.org/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -81,6 +85,7 @@
   $ hg cloud join --raw-workspace project/unsupported
   commitcloud: this repository is now connected to the 'project/unsupported' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'project/unsupported'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -93,6 +98,7 @@
   (use '-u' to select another user's workspaces)
   commitcloud: this repository is now connected to the 'user/other/work' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/other/work'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -103,6 +109,7 @@
   $ hg cloud join -u other -w user/nested/name
   commitcloud: this repository is now connected to the 'user/other/user/nested/name' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/other/user/nested/name'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -113,6 +120,7 @@
   $ hg cloud join -u other -w work
   commitcloud: this repository is now connected to the 'user/other/work' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/other/work'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -123,6 +131,7 @@
   $ hg cloud join -u other
   commitcloud: this repository is now connected to the 'user/other/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/other/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
@@ -133,6 +142,7 @@
   $ hg cloud join -u 'other@example.com' --config 'commitcloud.email_domains=example.net example.com'
   commitcloud: this repository is now connected to the 'user/other/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/other/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave

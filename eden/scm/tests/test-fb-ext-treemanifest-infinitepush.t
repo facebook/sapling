@@ -211,10 +211,13 @@ trees
   $ hg commit -Aqm 'add foo'
   $ hg up -q '.^'
   $ hg cloud backup
-  backing up stack rooted at 7e75be1136c3
-  commitcloud: backed up 1 commit
-  remote: pushing 1 commit:
-  remote:     7e75be1136c3  add foo
+  commitcloud: head '7e75be1136c3' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   $ cd ..
 
 Verify its not on the server
@@ -283,20 +286,11 @@ treemanifest data for the public commits.
   (branch merge, don't forget to commit)
   $ hg commit -qm "merge"
   $ hg cloud backup
-  backing up stack rooted at d32fd17cb041
-  commitcloud: backed up 2 commits
-  remote: pushing 2 commits:
-  remote:     d32fd17cb041  add z
-  remote:     8b1db7b72253  merge
-
-# Check the bundle.  It should only have 2 trees (one from z and one for the merged
-# root directory)
-  $ hg debugbundle $TESTTMP/master/.hg/scratchbranches/filebundlestore/95/ac/95ac1702067611e314fd8e7d61ed1ff6d2485228
-  Stream params: {}
-  changegroup -- {version: 02}
-      d32fd17cb041b810cad28724776c6d51faad59dc
-      8b1db7b722533971a8133917e17a356a729cc281
-  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
-      2 data items, 2 history items
-      03e96018741b6da273fcfabe5defa390ba0da1ae 
-      ddb35f099a648a43a997aef53123bce309c794fd 
+  commitcloud: head '02c12aef64ff' hasn't been uploaded yet
+  commitcloud: head '8b1db7b72253' hasn't been uploaded yet
+  edenapi: queue 3 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 4 trees for upload
+  edenapi: uploaded 4 trees
+  edenapi: uploaded 3 changesets

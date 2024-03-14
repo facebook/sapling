@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ configure modern
   $ setconfig infinitepush.branchpattern=re:scratch/.+
@@ -72,9 +71,6 @@ Pull the other bookmark so we have a subscription.
   $ hg pull -B other
   pulling from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg book --list-subs
      remote/master             9da34b1aa207
      remote/other              4c8ee072cf16
@@ -258,6 +254,7 @@ Sync in the fourth repo
   $ cd $TESTTMP/client4
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * sec (glob)
 
@@ -274,6 +271,7 @@ Sync in the second repo with one of the deleted bookmarks protected
   $ setconfig remotenames.selectivepulldefault="master, other"
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph

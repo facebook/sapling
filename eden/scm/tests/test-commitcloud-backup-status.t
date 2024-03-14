@@ -50,11 +50,13 @@ Setup client
   $ changeset_time=$(($now - 12 * 60))
   $ hg commit -d "$commit_time 0" -m "Backed up changeset 2"
   $ hg cloud backup
-  backing up stack rooted at * (glob)
-  commitcloud: backed up 2 commits
-  remote: pushing 2 commits:
-  remote:     *  Backed up changeset (glob)
-  remote:     *  Backed up changeset 2 (glob)
+  commitcloud: head '9d434400bf7f' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
 
 Check hiding the backup head doesn't affect backed-up changesets
   $ hg up -q 6a37606e3792afff17078859861bbbbdb1227bc2
@@ -109,7 +111,7 @@ Check smartlog output
   o  Public changeset
   
   note: background backup is currently disabled so your commits are not being backed up.
-  note: changeset * is not backed up. (glob)
+  note: changeset 0cb59ea5a50c is not backed up.
   (run 'hg cloud backup' to perform a backup)
   (if this fails, please report to the Source Control Team)
 
@@ -126,7 +128,6 @@ Check smartlog summary can be suppressed
   │ o  Backed up changeset
   ├─╯
   o  Public changeset
-  
 Check smartlog summary with multiple unbacked up changesets
   $ hg up 6a37606e3792afff17078859861bbbbdb1227bc2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -227,7 +228,6 @@ Advance time so that the disable has expired
   │ o  Backed up changeset
   ├─╯
   o  Public changeset
-  
 
 Hide or obsolete some of the non-backed-up commits.  The hidden commits that
 have not been backed up should no longer show up as "not backed up", even if

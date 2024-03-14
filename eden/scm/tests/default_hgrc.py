@@ -76,6 +76,9 @@ logdefaultfollow=False
 
 [checkout]
 use-rust=true
+
+[commitcloud]
+usehttpupload=true
 """
     if use_watchman:
         content += """

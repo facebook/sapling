@@ -1,7 +1,6 @@
 #debugruntest-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig pull.httpcommitgraph2=false
 
   $ configure modern
   $ showgraph() {
@@ -27,6 +26,7 @@ Make the first clone of the server
   $ hg cloud join -w w1
   commitcloud: this repository is now connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -39,6 +39,7 @@ Make the second clone of the server
   $ hg cloud join -w w2
   commitcloud: this repository is now connected to the 'user/test/w2' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -50,12 +51,15 @@ Make a commit in the first client, and sync it
   $ mkcommit "B (W1)"
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/w1'
-  backing up stack rooted at b624c739a2da
+  commitcloud: head 'aab6fffb2884' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 2 commits:
-  remote:     b624c739a2da  A (W1)
-  remote:     aab6fffb2884  B (W1)
 
   $ cd ..
 
@@ -65,12 +69,15 @@ Make a commit in the second client, and sync it
   $ mkcommit "D (W2)"
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/w2'
-  backing up stack rooted at 8440f5b0f1c3
+  commitcloud: head 'dff058cfb955' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)
-  remote: pushing 2 commits:
-  remote:     8440f5b0f1c3  C (W2)
-  remote:     dff058cfb955  D (W2)
 
   $ cd ..
 
@@ -80,6 +87,7 @@ Switch workspace without specifying merge or switch strategy
   $ hg cloud join -w w1
   commitcloud: this repository has been already connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -87,12 +95,14 @@ Switch workspace to the same workspace
   $ hg cloud join --switch -w w1
   commitcloud: this repository has been already connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
 Switch workspace from a draft commit that is an ancestor of a main bookmark
   $ hg cloud join --switch -w w2
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w1' to the 'user/test/w2' workspace
@@ -100,11 +110,9 @@ Switch workspace from a draft commit that is an ancestor of a main bookmark
   working directory now at d20a80d4def3
   commitcloud: this repository is now connected to the 'user/test/w2' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   pulling dff058cfb955 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -125,6 +133,7 @@ Switch workspace using merge strategy
   commitcloud: all local commits and bookmarks will be merged into 'user/test/w2_rename' workspace
   commitcloud: this repository is now connected to the 'user/test/w2_rename' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w2_rename'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -138,11 +147,13 @@ Switch workspace using merge strategy
 Switch workspace back
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/w2_rename'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w2_rename' to the 'user/test/w1' workspace
   commitcloud: this repository is now connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -164,11 +175,13 @@ Create a bookmark and switch workspace. The bookmark should be preserved in the 
   
   $ hg cloud join -w w2 --switch
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w1' to the 'user/test/w2' workspace
   commitcloud: this repository is now connected to the 'user/test/w2' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -191,11 +204,13 @@ Create a bookmark in w2 and switch workspace. The bookmark should be preserved i
 
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/w1' workspace
   commitcloud: this repository is now connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -220,16 +235,15 @@ Switch between workspaces w1 and w2 in client2
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/w1' workspace
   commitcloud: this repository is now connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   pulling aab6fffb2884 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -241,11 +255,13 @@ Switch between workspaces w1 and w2 in client2
   
   $ hg cloud join -w w2 --switch
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w1' to the 'user/test/w2' workspace
   commitcloud: this repository is now connected to the 'user/test/w2' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -257,11 +273,13 @@ Switch between workspaces w1 and w2 in client2
   
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/w1' workspace
   commitcloud: this repository is now connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -288,6 +306,7 @@ Join a new workspace
   $ hg cloud join -w3
   commitcloud: this repository is now connected to the 'user/test/3' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/3'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -298,12 +317,16 @@ Try to switch with uncommitted changes from a draft commit. So the uncommitted c
   $ echo 'goodbye' > hello.txt
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/3'
-  backing up stack rooted at dfa54c832678
+  commitcloud: head 'dfa54c832678' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/3' to the 'user/test/w1' workspace
-  remote: pushing 1 commit:
-  remote:     dfa54c832678  new file
   abort: uncommitted changes
   [255]
 
@@ -313,20 +336,21 @@ Commit changes to be able to switch
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/3'
-  backing up stack rooted at dfa54c832678
+  commitcloud: head '5fe2dc2fae70' hasn't been uploaded yet
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/3' to the 'user/test/w1' workspace
   commitcloud: this repository is now connected to the 'user/test/w1' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w1'
+  commitcloud: nothing to upload
   pulling aab6fffb2884 from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  remote: pushing 2 commits:
-  remote:     dfa54c832678  new file
-  remote:     5fe2dc2fae70  new file
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -467,11 +491,13 @@ Test switch to non default non-existent workspace
   [255]
   $ hg cloud join --switch -w brand_new_empty --create
   commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/brand_new_empty' workspace
   commitcloud: this repository is now connected to the 'user/test/brand_new_empty' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/brand_new_empty'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -484,11 +510,13 @@ Test switch to non default non-existent workspace
 Test switch back to the default workpsace using a shorter `switch` command
   $ hg cloud switch -w default
   commitcloud: synchronizing 'server' with 'user/test/brand_new_empty'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/brand_new_empty' to the 'user/test/default' workspace
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -522,6 +550,7 @@ Clean the repository and try again. Disconnected but clean repo should be allowe
   $ hg cloud switch -w default
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 

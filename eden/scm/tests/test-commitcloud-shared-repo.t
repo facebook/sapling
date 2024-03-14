@@ -18,6 +18,7 @@ Don't try connecting to the real hosts's scm_daemon.
   $ hg -R dest1 cloud join --debug
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'reponame-default' repo
   commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud local service: get_references for current version 0
   commitcloud local service: get_references for current version 0
   commitcloud local service: update_references to 1 (0 heads, 0 bookmarks, 0 remote bookmarks)
@@ -28,6 +29,7 @@ Don't try connecting to the real hosts's scm_daemon.
   $ hg -R dest2 cloud join --debug
   commitcloud: this repository has been already connected to the 'user/test/default' workspace for the 'reponame-default' repo
   commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud local service: get_references for current version 1
   commitcloud local service: get_references for versions from 0 to 1
   commitcloud: commits synchronized
@@ -46,6 +48,7 @@ Simulate an old subscription entry for the non-shared dest1/.hg path:
 Old subscriptions are cleaned up automatically:
   $ hg -R dest1 cloud sync --debug
   commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud local service: get_references for current version 1
   commitcloud local service: get_references for versions from 0 to 1
   commitcloud: commits synchronized
@@ -72,6 +75,7 @@ Can rename:
   $ hg -R dest1 cloud join --create -w apple
   commitcloud: this repository is now connected to the 'user/test/apple' workspace for the 'reponame-default' repo
   commitcloud: synchronizing 'reponame-default' with 'user/test/apple'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * sec (glob)
 
@@ -79,6 +83,7 @@ Write out old non-shared subscription file:
   $ echo whatever > .commitcloud/joined/e6b1156ad250e44b62e81726deb0ee83
   $ hg -R dest1 cloud rename -d banana
   commitcloud: synchronizing 'reponame-default' with 'user/test/apple'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: rename the 'user/test/apple' workspace to 'user/test/banana' for the repo 'reponame-default'

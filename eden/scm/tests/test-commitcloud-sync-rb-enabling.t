@@ -28,9 +28,11 @@ Set remotebookmarkssync True initially for the first repo and False for the seco
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig commitcloud.remotebookmarkssync=True
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
+  $ hg pull -q
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph
@@ -43,9 +45,11 @@ Set remotebookmarkssync True initially for the first repo and False for the seco
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig commitcloud.remotebookmarkssync=False
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
+  $ hg pull -q
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph
