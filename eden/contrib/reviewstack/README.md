@@ -7,11 +7,17 @@
 A hosted instance of ReviewStack is publicly available at https://reviewstack.dev/.
 Note that it has _no server component_ (though it does leverage [Netlify's OAuth signing to authenticate with GitHub](https://docs.netlify.com/visitor-access/oauth-provider-tokens/)).
 
-## Local Development
+## Local Development (Deprecated)
 
 - Run `yarn` in the `addons/` folder to install all the dependencies.
 - Run `yarn codegen` in the `addons/reviewstack` to build the generated code.
 - Run `yarn start` in the `addons/reviewstack.dev` folder to run a local instance of ReviewStack.
+
+## Local Development (Updated)
+
+- Run `yarn` in the `eden/contrib` folder to install all the dependencies.
+- Run `yarn codegen` in the `eden/contrib/reviewstack` to build the generated code.
+- Run `yarn start` in the `eden/contrib/reviewstack.dev` folder to run a local instance of ReviewStack.
 
 The development environment was created using
 [Create React App](https://create-react-app.dev/), so it should be available on `http://localhost:3000/` by default.
