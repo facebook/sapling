@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 use std::num::NonZeroU64;
@@ -55,6 +56,7 @@ use edenapi::types::LookupResult;
 use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
+use edenapi::types::SetBookmarkResponse;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
 use edenapi::types::UploadHgChangeset;
@@ -511,6 +513,72 @@ impl EdenApi for EagerRepo {
             values.push(entry);
         }
         Ok(values)
+    }
+
+    async fn set_bookmark(
+        &self,
+        bookmark: String,
+        to: Option<HgId>,
+        from: Option<HgId>,
+        _pushvars: HashMap<String, String>,
+    ) -> Result<SetBookmarkResponse, EdenApiError> {
+        debug!("bookmarks {:?} -> {:?}", from, to);
+        self.refresh_for_api();
+
+        let mut bms = self.get_bookmarks_map().map_err(map_crate_err)?;
+
+        if to.is_none() && from.is_none() {
+            return Err(EdenApiError::HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: "must specify one of 'to' or 'from'".to_string(),
+                headers: Default::default(),
+                url: self.url("set_bookmark"),
+            });
+        }
+
+        if let Some(from) = from {
+            match bms.get(&bookmark) {
+                None => {
+                    return Err(EdenApiError::HttpError {
+                        status: StatusCode::NOT_FOUND,
+                        message: format!("bookmark {bookmark} doesn't exist"),
+                        headers: Default::default(),
+                        url: self.url("set_bookmark"),
+                    });
+                }
+                Some(node) => {
+                    if *node != from {
+                        return Err(EdenApiError::HttpError {
+                            status: StatusCode::BAD_REQUEST,
+                            message: format!(
+                                "bookmark {bookmark}'s current value is {node}, not {from}"
+                            ),
+                            headers: Default::default(),
+                            url: self.url("set_bookmark"),
+                        });
+                    }
+                }
+            }
+        } else if bms.contains_key(&bookmark) {
+            return Err(EdenApiError::HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("bookmark {bookmark} already exists"),
+                headers: Default::default(),
+                url: self.url("set_bookmark"),
+            });
+        }
+
+        match to {
+            None => bms.remove(&bookmark),
+            Some(to) => bms.insert(bookmark, to),
+        };
+
+        // This validates that the bookmark value is a valid commit.
+        self.set_bookmarks_map(bms).map_err(map_crate_err)?;
+
+        self.flush_for_api("set_bookmark").await?;
+
+        Ok(SetBookmarkResponse { data: Ok(()) })
     }
 
     async fn hash_prefixes_lookup(

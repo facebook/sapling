@@ -445,7 +445,7 @@ impl EagerRepo {
     }
 
     /// Set bookmarks.
-    pub fn set_bookmarks_map(&mut self, map: BTreeMap<String, Id20>) -> Result<()> {
+    pub fn set_bookmarks_map(&self, map: BTreeMap<String, Id20>) -> Result<()> {
         for (name, id) in map.iter() {
             if self.store.get_content(*id)?.is_none() {
                 return Err(crate::Error::BookmarkMissingCommit(
