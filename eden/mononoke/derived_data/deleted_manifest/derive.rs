@@ -1019,6 +1019,7 @@ mod test {
                 r##"
                     LAST - NEW
                 "##,
+                None,
                 changes! {
                     "NEW" => |c| {
                         let c = if has1 {

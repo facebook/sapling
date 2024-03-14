@@ -43,9 +43,23 @@ enum Action {
     Bookmark { name: String, bookmark: BookmarkKey },
     /// Change a commit.  See ChangeAction for details.
     Change { name: String, change: ChangeAction },
+    /// Change all commits in the same way.  Specify name as "*".   See ChangeAction for details.
+    /// All-commit changes are applied before per-commit changes.
+    ChangeAll { change: ChangeAction },
 }
 
-/// An action that changes one of the commits in the graph.
+impl Action {
+    fn make_change(name: String, change: ChangeAction) -> Self {
+        if name == "*" {
+            Action::ChangeAll { change }
+        } else {
+            Action::Change { name, change }
+        }
+    }
+}
+
+/// An action that changes one (or all) of the commits in the graph.  If the commit name is specified as "*",
+/// then the action is applied to all commits before the commit-specific actions.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ChangeAction {
     /// Set the content of a file (optionally with file type).
@@ -143,42 +157,36 @@ impl Action {
                 ("message", [name, message]) => {
                     let name = name.to_string()?;
                     let message = message.to_string()?;
-                    Ok(Action::Change {
-                        name,
-                        change: ChangeAction::Message { message },
-                    })
+                    Ok(Action::make_change(name, ChangeAction::Message { message }))
                 }
                 ("author", [name, author]) => {
                     let name = name.to_string()?;
                     let author = author.to_string()?;
-                    Ok(Action::Change {
-                        name,
-                        change: ChangeAction::Author { author },
-                    })
+                    Ok(Action::make_change(name, ChangeAction::Author { author }))
                 }
                 ("author_date", [name, author_date]) => {
                     let name = name.to_string()?;
                     let author_date = DateTime::from_rfc3339(&author_date.to_string()?)?;
-                    Ok(Action::Change {
+                    Ok(Action::make_change(
                         name,
-                        change: ChangeAction::AuthorDate { author_date },
-                    })
+                        ChangeAction::AuthorDate { author_date },
+                    ))
                 }
                 ("committer", [name, committer]) => {
                     let name = name.to_string()?;
                     let committer = committer.to_string()?;
-                    Ok(Action::Change {
+                    Ok(Action::make_change(
                         name,
-                        change: ChangeAction::Committer { committer },
-                    })
+                        ChangeAction::Committer { committer },
+                    ))
                 }
                 ("committer_date", [name, committer_date]) => {
                     let name = name.to_string()?;
                     let committer_date = DateTime::from_rfc3339(&committer_date.to_string()?)?;
-                    Ok(Action::Change {
+                    Ok(Action::make_change(
                         name,
-                        change: ChangeAction::CommitterDate { committer_date },
-                    })
+                        ChangeAction::CommitterDate { committer_date },
+                    ))
                 }
                 ("modify", [name, path, rest @ .., content]) if rest.len() < 2 => {
                     let name = name.to_string()?;
@@ -188,39 +196,33 @@ impl Action {
                         None => FileType::Regular,
                     };
                     let content = content.to_bytes();
-                    Ok(Action::Change {
+                    Ok(Action::make_change(
                         name,
-                        change: ChangeAction::Modify {
+                        ChangeAction::Modify {
                             path,
                             file_type,
                             content,
                         },
-                    })
+                    ))
                 }
                 ("delete", [name, path]) => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    Ok(Action::Change {
-                        name,
-                        change: ChangeAction::Delete { path },
-                    })
+                    Ok(Action::make_change(name, ChangeAction::Delete { path }))
                 }
                 ("forget", [name, path]) => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    Ok(Action::Change {
-                        name,
-                        change: ChangeAction::Forget { path },
-                    })
+                    Ok(Action::make_change(name, ChangeAction::Forget { path }))
                 }
                 ("extra", [name, key, value]) => {
                     let name = name.to_string()?;
                     let key = key.to_string()?;
                     let value = value.to_bytes();
-                    Ok(Action::Change {
+                    Ok(Action::make_change(
                         name,
-                        change: ChangeAction::Extra { key, value },
-                    })
+                        ChangeAction::Extra { key, value },
+                    ))
                 }
                 ("copy", [name, path, rest @ .., content, parent, parent_path])
                     if rest.len() < 2 =>
@@ -234,16 +236,16 @@ impl Action {
                     let content = content.to_bytes();
                     let parent = parent.to_string()?;
                     let parent_path = parent_path.to_bytes();
-                    Ok(Action::Change {
+                    Ok(Action::make_change(
                         name,
-                        change: ChangeAction::Copy {
+                        ChangeAction::Copy {
                             path,
                             file_type,
                             content,
                             parent,
                             parent_path,
                         },
-                    })
+                    ))
                 }
                 _ => Err(anyhow!("Invalid spec for key: {}", key)),
             }
@@ -330,7 +332,10 @@ impl ActionArg {
                             arg = ActionArg::new();
                         }
                     }
-                    ch if ch.is_alphanumeric() || "_-./".contains(ch) => {
+                    ch if ch.is_alphanumeric()
+                        || "_-./".contains(ch)
+                        || (ch == '*' && arg.is_empty()) =>
+                    {
                         arg.push(ch);
                     }
                     '&' => {
@@ -420,6 +425,7 @@ pub async fn extend_from_dag_with_actions<'a, R: Repo>(
 
     let mut existing: BTreeMap<String, ChangesetId> = BTreeMap::new();
     let mut commit_changes: BTreeMap<String, Vec<ChangeAction>> = BTreeMap::new();
+    let mut all_commit_changes = Vec::new();
     let mut bookmarks: BTreeMap<BookmarkKey, String> = BTreeMap::new();
     let mut default_files = true;
 
@@ -440,6 +446,9 @@ pub async fn extend_from_dag_with_actions<'a, R: Repo>(
                     .or_insert_with(Vec::new)
                     .push(change);
             }
+            Action::ChangeAll { change } => {
+                all_commit_changes.push(change);
+            }
         }
     }
 
@@ -447,15 +456,28 @@ pub async fn extend_from_dag_with_actions<'a, R: Repo>(
     for (name, changes) in commit_changes {
         let apply: Box<ChangeFn<R>> = Box::new(
             move |c: CreateCommitContext<R>, committed: &'_ BTreeMap<String, ChangesetId>| {
-                apply_changes(c, committed, changes)
+                apply_changes(c, committed, changes.clone())
             },
         );
         change_fns.insert(name, apply);
     }
 
-    let (commits, dag) =
-        extend_from_dag_with_changes(ctx, repo, &dag_buffer, change_fns, existing, default_files)
-            .await?;
+    let all_changes_fn: Option<Box<ChangeFn<R>>> = Some(Box::new(
+        move |c: CreateCommitContext<R>, committed: &'_ BTreeMap<String, ChangesetId>| {
+            apply_changes(c, committed, all_commit_changes.clone())
+        },
+    ));
+
+    let (commits, dag) = extend_from_dag_with_changes(
+        ctx,
+        repo,
+        &dag_buffer,
+        all_changes_fn,
+        change_fns,
+        existing,
+        default_files,
+    )
+    .await?;
 
     if !bookmarks.is_empty() {
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
@@ -487,7 +509,7 @@ pub async fn extend_from_dag_with_actions<'a, R: Repo>(
     Ok((commits, dag))
 }
 
-pub type ChangeFn<R> = dyn for<'a, 'b> FnOnce(
+pub type ChangeFn<R> = dyn for<'a, 'b> FnMut(
         CreateCommitContext<'a, R>,
         &'b BTreeMap<String, ChangesetId>,
     ) -> CreateCommitContext<'a, R>
@@ -498,6 +520,7 @@ pub async fn extend_from_dag_with_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     repo: &'a R,
     dag: &'a str,
+    mut all_changes: Option<Box<ChangeFn<R>>>,
     mut changes: BTreeMap<String, Box<ChangeFn<R>>>,
     existing: BTreeMap<String, ChangesetId>,
     default_files: bool,
@@ -538,7 +561,10 @@ pub async fn extend_from_dag_with_changes<'a, R: Repo>(
             if default_files {
                 create_commit = create_commit.add_file(name.as_str(), name.as_str());
             }
-            if let Some(change) = changes.remove(name.as_str()) {
+            if let Some(change) = all_changes.as_mut() {
+                create_commit = change(create_commit, &committed);
+            }
+            if let Some(mut change) = changes.remove(name.as_str()) {
                 create_commit = change(create_commit, &committed);
             }
             let new_id = create_commit.commit().await?;
@@ -600,7 +626,7 @@ pub async fn create_from_dag_with_changes<'a, R: Repo>(
     changes: BTreeMap<String, Box<ChangeFn<R>>>,
 ) -> Result<BTreeMap<String, ChangesetId>> {
     let (commits, _dag) =
-        extend_from_dag_with_changes(ctx, repo, dag, changes, BTreeMap::new(), true).await?;
+        extend_from_dag_with_changes(ctx, repo, dag, None, changes, BTreeMap::new(), true).await?;
     Ok(commits)
 }
 
@@ -731,6 +757,14 @@ mod test {
                 name: "x".to_string(),
                 change: ChangeAction::Delete {
                     path: b"path/to a deleted file".to_vec(),
+                }
+            }
+        );
+        assert_eq!(
+            Action::new("author_date: * \"2024-02-29T13:37:00Z\"")?,
+            Action::ChangeAll {
+                change: ChangeAction::AuthorDate {
+                    author_date: DateTime::from_rfc3339("2024-02-29T13:37:00Z")?,
                 }
             }
         );
