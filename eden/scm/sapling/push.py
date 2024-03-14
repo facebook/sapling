@@ -51,10 +51,12 @@ def get_edenapi_for_dest(repo, _dest):
         return None
 
 
-def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
+def push(
+    repo, dest, head_node, remote_bookmark, force=False, opargs=None, edenapi=None
+):
     """Push via EdenApi (HTTP)"""
     ui = repo.ui
-    edenapi = get_edenapi_for_dest(repo, dest)
+    edenapi = edenapi or get_edenapi_for_dest(repo, dest)
     opargs = opargs or {}
 
     draft_nodes = repo.dageval(lambda: only([head_node], public()))
