@@ -31,7 +31,6 @@ from sapling.node import hex
 from sapling.pycompat import encodeutf8
 
 from . import (
-    backup,
     backuplock,
     backupstate,
     error as ccerror,
@@ -196,23 +195,13 @@ def _sync(
 
     remotepath = ccutil.getremotepath(ui)
 
-    getconnection = lambda: repo.connectionpool.get(
-        remotepath, connect_opts, reason="cloudsync"
-    )
-
-    # Load the backup state under the repo lock to ensure a consistent view.
-    usehttp = ui.configbool("commitcloud", "usehttpupload")
     state = backupstate.BackupState(repo)
 
     with repo.ui.timesection("commitcloud_sync_push"):
-        if usehttp:
-            uploaded, failed = upload.upload(repo, None, localbackupstate=state)
-            # Upload returns a list of all newly uploaded heads and failed nodes (not just heads).
-            # Backup returns a revset for failed. Create a revset for compatibility.
-            failed = repo.revs("%ln", failed)
-        else:
-            # Back up all local commits that are not already backed up.
-            backedup, failed = backup._backup(repo, state, remotepath, getconnection)
+        uploaded, failed = upload.upload(repo, None, localbackupstate=state)
+        # Upload returns a list of all newly uploaded heads and failed nodes (not just heads).
+        # Backup returns a revset for failed. Create a revset for compatibility.
+        failed = repo.revs("%ln", failed)
 
     # Now that commits are backed up, check that visibleheads are enabled
     # locally, and only sync if visibleheads is enabled.

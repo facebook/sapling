@@ -293,7 +293,7 @@ Throw in an empty transaction - this should not trigger a backup.
 Check the logs, make sure just one process was started
   $ cat $TESTTMP/logs/test/*
   
-  * starting: *hg cloud backup * (glob)
+  * starting: *hg cloud upload * (glob)
   commitcloud: head 'ffeec75ec603' hasn't been uploaded yet
   edenapi: queue 2 commits for upload
   edenapi: queue 0 files for upload

@@ -11,7 +11,6 @@
 #    pull.httpcommitgraph2    ENABLED
 #    pull.httphashprefix    ENABLED
 #    pull.httpmutation      ENABLED
-#    commitcloud.usehttpupload    ENABLED
 #    exchange.httpcommitlookup    ENABLED
 # Sync of remote bookmarks is also enabled in this test
 

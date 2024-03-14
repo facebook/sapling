@@ -77,9 +77,6 @@ Configs::
     # By default only local bookmarks that belong to draft commits or their public roots are returned.
     sl_showallbookmarks = False
 
-    # Use EdenApi Uploads for uploading commit cloud commits during sync
-    usehttpupload = True
-
     # Sync remote bookmarks via commitcloud
     remotebookmarkssync = True
 
@@ -126,7 +123,6 @@ from . import (
     dependencies,
     status,
     sync,
-    syncstate,
     util as ccutil,
     workspace,
 )
@@ -152,7 +148,6 @@ configitem("commitcloud", "enableprogress", default=True)
 configitem("commitcloud", "pullsizelimit", 300)
 configitem("commitcloud", "sl_showremotebookmarks", default=False)
 configitem("commitcloud", "sl_showallbookmarks", default=False)
-configitem("commitcloud", "usehttpupload", default=False)
 configitem("commitcloud", "remotebookmarkssync", default=False)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
