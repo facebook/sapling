@@ -67,7 +67,7 @@ const downloadCommitShouldGoto = configBackedAtom<boolean>(
 );
 
 function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
-  const [enteredDiffNum, setEnteredDiffNum] = useState('');
+  const [enteredRevset, setEnteredRevset] = useState('');
   const runOperation = useRunOperation();
   const supportsDiffDownload = Internal.diffDownloadOperation != null;
   const downloadDiffTextArea = useRef(null);
@@ -91,15 +91,12 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
     // Worst case, the rebase/goto will be queued after some other unrelated actions which should be fine.
 
     try {
-      await runOperation(
-        new PullRevOperation(exactRevset(enteredDiffNum)),
-        /* throwOnError */ true,
-      );
+      await runOperation(new PullRevOperation(exactRevset(enteredRevset)), /* throwOnError */ true);
     } catch (err) {
       if (Internal.diffDownloadOperation != null) {
         // Note: try backup diff download system internally
         await runOperation(
-          Internal.diffDownloadOperation(exactRevset(enteredDiffNum)),
+          Internal.diffDownloadOperation(exactRevset(enteredRevset)),
           /* throwOnError */ true,
         );
       } else {
@@ -109,7 +106,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
     }
 
     // Lookup the result of the pull
-    const latest = await forceFetchCommit(enteredDiffNum).catch(() => null);
+    const latest = await forceFetchCommit(enteredRevset).catch(() => null);
     if (!latest) {
       // We can't continue with the rebase/goto if the lookup failed.
       return;
@@ -131,16 +128,22 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           : nullthrows(findCurrentPublicBase(readAtom(dagWithPreviews))?.hash);
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
-      runOperation(new Op(exactRevset(enteredDiffNum), succeedableRevset(dest)));
+      runOperation(new Op(exactRevset(enteredRevset), succeedableRevset(dest)));
     }
 
     if (
       shouldGoto &&
       // Goto for public commits will be handled by Graft.
-      // Goto on max(latest_successors(revset)) would just yield the existing public commit.
+      // Goto on max(latest_successors(revset)) would just yield the existing public commit,
+      // but for non-landed commits, using succeedableRevset allows goto the newly rebased commit.
       !isPublic
     ) {
-      runOperation(new GotoOperation(exactRevset(enteredDiffNum)));
+      runOperation(
+        new GotoOperation(
+          // if not rebasing, just use the exact revset.
+          rebaseType == null ? exactRevset(enteredRevset) : succeedableRevset(enteredRevset),
+        ),
+      );
     }
   };
 
@@ -155,12 +158,12 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
             placeholder={
               supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')
             }
-            value={enteredDiffNum}
+            value={enteredRevset}
             data-testid="download-commits-input"
-            onInput={e => setEnteredDiffNum((e.target as unknown as {value: string})?.value ?? '')}
+            onInput={e => setEnteredRevset((e.target as unknown as {value: string})?.value ?? '')}
             onKeyDown={e => {
               if (e.key === 'Enter') {
-                if (enteredDiffNum.trim().length > 0) {
+                if (enteredRevset.trim().length > 0) {
                   doCommitDownload();
                 }
               }
@@ -170,7 +173,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           <VSCodeButton
             appearance="secondary"
             data-testid="download-commit-button"
-            disabled={enteredDiffNum.trim().length === 0}
+            disabled={enteredRevset.trim().length === 0}
             onClick={doCommitDownload}>
             <T>Pull</T>
           </VSCodeButton>
