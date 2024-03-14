@@ -287,7 +287,7 @@ coreconfigitem("format", "manifestcachesize", default=None)
 coreconfigitem("format", "maxchainlen", default=None)
 coreconfigitem("format", "obsstore-version", default=None)
 coreconfigitem("format", "usegeneraldelta", default=True)
-coreconfigitem("format", "use-segmented-changelog", default=util.istest())
+coreconfigitem("format", "use-segmented-changelog", default=util.istest)
 coreconfigitem("fsmonitor", "warn_when_unused", default=True)
 coreconfigitem("fsmonitor", "warn_update_file_count", default=50000)
 coreconfigitem("git", "submodules", default=True)
@@ -395,7 +395,9 @@ coreconfigitem("progress", "width", default=dynamicdefault)
 coreconfigitem("pull", "automigrate", default=True)
 # Practically, 100k commit data takes about 200MB memroy (or 400MB if
 # duplicated in Python / Rust).
-coreconfigitem("pull", "buffer-commit-count", default=(util.istest() and 5 or 100000))
+coreconfigitem(
+    "pull", "buffer-commit-count", default=lambda: util.istest() and 5 or 100000
+)
 coreconfigitem("pull", "httpbookmarks", default=True)
 coreconfigitem("pull", "httphashprefix", default=False)
 coreconfigitem("pull", "httpcommitgraph2", default=False)
