@@ -11,7 +11,7 @@ crate-type = ["lib", "staticlib"]
 [dependencies]
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-cxx = "1.0.118"
+cxx = "1.0.119"
 identity = { version = "0.1.0", path = "../identity" }
 manifest = { version = "0.1.0", path = "../manifest" }
 once_cell = "1.12"
@@ -22,4 +22,4 @@ sparse = { version = "0.1.0", path = "../sparse" }
 types = { version = "0.1.0", path = "../types" }
 
 [build-dependencies]
-cxx-build = "1.0.118"
+cxx-build = "1.0.119"

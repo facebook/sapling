@@ -1,6 +1,10 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
+bindgen = { git = "https://github.com/rust-lang/rust-bindgen", rev = "2997017b5a3065b83e9d76f0080d6cb99c94c0c1" }
+bindgen-cli = { git = "https://github.com/rust-lang/rust-bindgen", rev = "2997017b5a3065b83e9d76f0080d6cb99c94c0c1" }
+cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "5ee925d9300ddafc627ac0a15d3dd2488dab6d2c" }
+cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "5ee925d9300ddafc627ac0a15d3dd2488dab6d2c" }
 graphql-parser = { git = "https://github.com/graphql-rust//graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "47bb38be50fafe99021b6436672dea1c28920e70" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }

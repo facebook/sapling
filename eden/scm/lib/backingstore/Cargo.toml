@@ -14,7 +14,7 @@ anyhow = "1.0.75"
 arc-swap = "1.5"
 configloader = { version = "0.1.0", path = "../config/loader" }
 constructors = { version = "0.1.0", path = "../constructors", default-features = false }
-cxx = "1.0.118"
+cxx = "1.0.119"
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 env_logger = "0.10"
