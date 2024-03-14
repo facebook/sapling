@@ -30,4 +30,9 @@ test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_fa
 tests_utils = { version = "0.1.0", path = "../utils" }
 
 [dev-dependencies]
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+changesets = { version = "0.1.0", path = "../../changesets" }
+dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
+dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
