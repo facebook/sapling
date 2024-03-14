@@ -213,6 +213,19 @@ def cat(
 
 
 @command
+def cmp(args: List[str], env: Env, fs: ShellFS) -> int:
+    expected = None
+    for path in args:
+        with fs.open(path, "rb") as f:
+            current = f.read()
+        if expected is None:
+            expected = current
+        elif expected != current:
+            return 1
+    return 0
+
+
+@command
 def dos2unix(
     args: List[str],
     stdout: BinaryIO,

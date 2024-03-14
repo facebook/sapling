@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
