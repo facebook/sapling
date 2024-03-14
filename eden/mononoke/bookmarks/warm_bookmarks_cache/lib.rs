@@ -1225,7 +1225,7 @@ mod tests {
             .with_blobstore(blobstore)
             .build()
             .await?;
-        Linear::initrepo(fb, &repo.blob_repo).await;
+        Linear::init_repo(fb, &repo.blob_repo).await?;
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
@@ -1882,7 +1882,7 @@ mod tests {
     async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
         let factory = TestRepoFactory::new(fb)?;
         let repo: InnerRepo = factory.build().await?;
-        Linear::initrepo(fb, &repo.blob_repo).await;
+        Linear::init_repo(fb, &repo.blob_repo).await?;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));

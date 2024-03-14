@@ -1505,7 +1505,7 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let factory = TestRepoFactory::new(fb)?;
             let repo: PushrebaseTestRepo = factory.build().await?;
-            Linear::initrepo(fb, &repo).await;
+            Linear::init_repo(fb, &repo).await?;
             // Bottom commit of the repo
             let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)

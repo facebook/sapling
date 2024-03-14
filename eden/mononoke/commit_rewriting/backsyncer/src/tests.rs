@@ -1307,7 +1307,7 @@ async fn init_repos(
     let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
     let source_repo: TestRepo = factory.with_id(source_repo_id).build().await?;
-    Linear::initrepo(fb, &source_repo).await;
+    Linear::init_repo(fb, &source_repo).await?;
 
     let target_repo_id = RepositoryId::new(2);
     let target_repo: TestRepo = factory.with_id(target_repo_id).build().await?;

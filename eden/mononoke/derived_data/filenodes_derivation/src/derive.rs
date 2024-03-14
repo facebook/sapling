@@ -556,9 +556,9 @@ mod tests {
     async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo1: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        Linear::initrepo(fb, &repo1).await;
+        Linear::init_repo(fb, &repo1).await?;
         let repo2: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        Linear::initrepo(fb, &repo2).await;
+        Linear::init_repo(fb, &repo2).await?;
         let master_cs_id = resolve_cs_id(&ctx, &repo1, "master").await?;
         let mut cs_ids = repo1
             .commit_graph()
@@ -610,7 +610,7 @@ mod tests {
             })
             .build()
             .await?;
-        Linear::initrepo(fb, &repo).await;
+        Linear::init_repo(fb, &repo).await?;
         let commit8 =
             resolve_cs_id(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await?;
         let commit8 = repo.derive_hg_changeset(&ctx, commit8).await?;

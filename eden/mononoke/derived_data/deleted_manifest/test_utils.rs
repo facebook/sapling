@@ -284,7 +284,7 @@ pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(
     fb: FacebookInit,
 ) -> Result<(), Error> {
     let repo: TestRepo = build_repo(fb).await.unwrap();
-    ManyFilesDirs::initrepo(fb, &repo).await;
+    ManyFilesDirs::init_repo(fb, &repo).await?;
     let ctx = CoreContext::test_mock(fb);
 
     let mf_id_1 = {

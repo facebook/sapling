@@ -5,33 +5,9 @@ oncall("mononoke")
 rust_library(
     name = "fixtures",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dev-dependencies": {
-                    "dag-types": {"features": [
-                        "for-tests",
-                        "serialize-abomonation",
-                    ]},
-                },
-            },
-            "extra_buck_dependencies": {
-                # This rule already depends on dag-lite, but it doesn't have a
-                # generated Cargo.toml file. Instead depend on dag and enable
-                # only lite features on it.
-                "dev-dependencies": [
-                    "//eden/scm/lib/dag:dag",
-                    "//eden/scm/lib/dag/dag-types:dag-types",
-                ],
-            },
-        },
-    },
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/blobrepo:repo_blobstore",
-        "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/changesets:changesets",
-        "//eden/scm/lib/dag:dag-lite",
     ],
     deps = [
         "fbcode//common/rust/shed/facet:facet",
@@ -39,8 +15,6 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:maplit",
-        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobrepo:blobrepo",
