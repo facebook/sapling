@@ -11,7 +11,7 @@ import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
-import {VSCodeCheckbox} from './VSCodeCheckbox';
+import {Checkbox} from './components/Checkbox';
 import {findCurrentPublicBase} from './getCommitTree';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
@@ -177,37 +177,33 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
         </div>
         <div className="download-commits-input-row">
           <Tooltip title={t('After downloading this commit, also go there')}>
-            <VSCodeCheckbox
-              checked={shouldGoto}
-              onChange={e => {
-                setShouldGoto((e.target as HTMLInputElement).checked);
-              }}>
+            <Checkbox checked={shouldGoto} onChange={setShouldGoto}>
               <T>Go to</T>
-            </VSCodeCheckbox>
+            </Checkbox>
           </Tooltip>
           <Tooltip
             title={t(
               'After downloading this commit, rebase it onto the public base of the current stack. Public commits will be copied instead of moved.',
             )}>
-            <VSCodeCheckbox
+            <Checkbox
               checked={rebaseType === 'rebase_base'}
-              onChange={e => {
-                setRebaseType((e.target as HTMLInputElement).checked ? 'rebase_base' : null);
+              onChange={checked => {
+                setRebaseType(checked ? 'rebase_base' : null);
               }}>
               <T>Rebase to Stack Base</T>
-            </VSCodeCheckbox>
+            </Checkbox>
           </Tooltip>
           <Tooltip
             title={t(
               'After downloading this commit, rebase it on top of the current commit. Public commits will be copied instead of moved.',
             )}>
-            <VSCodeCheckbox
+            <Checkbox
               checked={rebaseType === 'rebase_ontop'}
-              onChange={e => {
-                setRebaseType((e.target as HTMLInputElement).checked ? 'rebase_ontop' : null);
+              onChange={checked => {
+                setRebaseType(checked ? 'rebase_ontop' : null);
               }}>
               <T>Rebase onto Stack</T>
-            </VSCodeCheckbox>
+            </Checkbox>
           </Tooltip>
         </div>
       </div>
