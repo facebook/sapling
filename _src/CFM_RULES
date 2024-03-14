@@ -1,0 +1,5 @@
+publish(
+    wiki_root_path = "Sapling/Documentation",
+    folder = "./",
+    oncall = "source_control",
+)
