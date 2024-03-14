@@ -3045,8 +3045,14 @@ def _makelogrevset(repo, pats, opts, revs):
                     if os.path.exists(repo.wjoin(f)):
                         continue
                     else:
+                        hint = None
+                        if len(pats) == 1 and pats[0] in repo:
+                            hint = _(
+                                """did you mean "@prog@ log -r '%s'", or "@prog@ log -r '%s' -f" to follow history?"""
+                            ) % (pats[0], pats[0])
                         raise error.Abort(
-                            _("cannot follow file not in parent " 'revision: "%s"') % f
+                            _("cannot follow file not in parent " 'revision: "%s"') % f,
+                            hint=hint,
                         )
 
             # follow() revset interprets its file argument as a
