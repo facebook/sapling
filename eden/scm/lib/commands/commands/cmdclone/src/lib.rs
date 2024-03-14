@@ -252,14 +252,12 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     config.set("paths", "default", Some(&source.path), &"arg".into());
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
-        // This gets the reponame from the --configfile config. Ignore
-        // bogus "no-repo" value that internalconfig sets when there is
-        // no repo name.
-        Some(c) if c != "no-repo" => {
+        // This gets the reponame from the --configfile config.
+        Some(c) => {
             logger.verbose(|| format!("Repo name is {} from config", c));
             c
         }
-        Some(_) | None => match configloader::hg::repo_name_from_url(&config, &ctx.opts.source) {
+        None => match configloader::hg::repo_name_from_url(&config, &ctx.opts.source) {
             Some(name) => {
                 logger.verbose(|| format!("Repo name is {} via URL {}", name, ctx.opts.source));
                 config.set(
