@@ -48,7 +48,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 switch to client and enable infinitepush extension
   $ cd repo-client
-  $ setconfig extensions.infinitepush=
+  $ setconfig extensions.infinitepush= extensions.commitcloud=
 
 match with glob pattern
   $ hgedenapi book --list-remote test/*

@@ -118,6 +118,7 @@ from . import (
     background,
     backuplock,
     backupstate,
+    bookmarks,
     checkoutlocations,
     commands as cccommands,
     dependencies,
@@ -151,10 +152,13 @@ configitem("commitcloud", "sl_showallbookmarks", default=False)
 configitem("commitcloud", "remotebookmarkssync", default=False)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
+# Use the http Edenapi protocol to fetch bookmarks
+configitem("infinitepush", "httpbookmarks", default=True)
 
 
 def extsetup(ui):
     background.extsetup(ui)
+    bookmarks.extsetup(ui)
     dependencies.extsetup(ui)
 
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)

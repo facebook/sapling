@@ -13,7 +13,7 @@ Disable boookmarks cache because we manually modify bookmarks table
 
 setup common configuration for these tests
 
-  $ enable amend infinitepush infinitepushbackup remotenames
+  $ enable amend infinitepush infinitepushbackup remotenames commitcloud
 
 setup repo
 

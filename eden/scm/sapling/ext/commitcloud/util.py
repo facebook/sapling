@@ -83,3 +83,16 @@ def getcommandandoptions(command):
     cmd = commands.table[command][0]
     opts = dict(opt[1:3] for opt in commands.table[command][1])
     return cmd, opts
+
+
+class scratchbranchmatcher:
+    def __init__(self, ui):
+        scratchbranchpat = ui.config("infinitepush", "branchpattern")
+        if scratchbranchpat:
+            _, _, matchfn = util.stringmatcher(scratchbranchpat)
+        else:
+            matchfn = lambda x: False
+        self._matchfn = matchfn
+
+    def match(self, bookmark):
+        return self._matchfn(bookmark)

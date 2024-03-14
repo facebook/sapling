@@ -5,7 +5,7 @@
 
 import struct
 
-from sapling import error, extensions, json, node as nodemod, pycompat
+from sapling import extensions, json, node as nodemod, pycompat
 from sapling.i18n import _
 
 
@@ -66,44 +66,6 @@ def savelocalbookmarks(repo, bookmarks) -> None:
             changectx = repo[node]
             changes.append((scratchbook, changectx.node()))
         repo._bookmarks.applychanges(repo, tr, changes)
-
-
-def deleteremotebookmarks(ui, repo, path, names) -> None:
-    """Prune remote names by removing the bookmarks we don't want anymore,
-    then writing the result back to disk
-    """
-    remotenamesext = extensions.find("remotenames")
-
-    # remotename format is:
-    # (node, nametype ("bookmarks"), remote, name)
-    nametype_idx = 1
-    remote_idx = 2
-    name_idx = 3
-    remotenames = [
-        remotename
-        for remotename in remotenamesext.readremotenames(repo)
-        if remotename[remote_idx] == path
-    ]
-    remote_bm_names = [
-        remotename[name_idx]
-        for remotename in remotenames
-        if remotename[nametype_idx] == "bookmarks"
-    ]
-
-    for name in names:
-        if name not in remote_bm_names:
-            raise error.Abort(
-                _("infinitepush bookmark '{}' does not exist " "in path '{}'").format(
-                    name, path
-                )
-            )
-
-    bookmarks = {}
-    for node, nametype, remote, name in remotenames:
-        if nametype == "bookmarks" and name not in names:
-            bookmarks[name] = node
-
-    remotenamesext.saveremotenames(repo, {path: bookmarks})
 
 
 def encodebookmarks(bookmarks) -> bytes:

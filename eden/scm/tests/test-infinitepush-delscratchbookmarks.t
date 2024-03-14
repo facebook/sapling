@@ -2,7 +2,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
-  $ enable infinitepush remotenames
+  $ enable infinitepush remotenames commitcloud
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -81,19 +81,19 @@ Test deleting both regular and scratch
 
 Test deleting nonexistent bookmarks
   $ hg book -d scratch/nonexistent1
-  abort: infinitepush bookmark 'scratch/nonexistent1' does not exist in path 'default'
+  abort: scratch bookmark 'scratch/nonexistent1' does not exist in path 'default'
   [255]
   $ hg book -d localnonexistent1
   abort: bookmark 'localnonexistent1' does not exist
   [255]
   $ hg book -d scratch/nonexistent2 localnonexistent2
-  abort: infinitepush bookmark 'scratch/nonexistent2' does not exist in path 'default'
+  abort: scratch bookmark 'scratch/nonexistent2' does not exist in path 'default'
   [255]
 
 Test deleting a nonexistent bookmark with an existing tag that has the right name
   $ hg book --remote
   $ hg book -d scratch/serverbranch
-  abort: infinitepush bookmark 'scratch/serverbranch' does not exist in path 'default'
+  abort: scratch bookmark 'scratch/serverbranch' does not exist in path 'default'
   [255]
   $ hg book --remote
 
