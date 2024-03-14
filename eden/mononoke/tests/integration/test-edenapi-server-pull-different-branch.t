@@ -115,9 +115,6 @@ Pulling branch1 as main branch now uses fastpath:
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   imported commit graph for 8 commits (1 segment)
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
 
 The pulled commits I..P are lazy. They can be resolved via a new server:
 

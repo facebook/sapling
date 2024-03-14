@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig pull.httpcommitgraph2=false
 
   $ configure dummyssh
   $ enable infinitepush

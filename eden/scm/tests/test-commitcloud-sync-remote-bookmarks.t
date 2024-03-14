@@ -1,5 +1,6 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig pull.httpcommitgraph2=false
 
   $ enable amend commitcloud infinitepush remotenames
   $ configure dummyssh

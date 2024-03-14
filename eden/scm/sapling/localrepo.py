@@ -1275,7 +1275,7 @@ class localrepository:
                     "obsolete": False,
                     "updatevisibility": False,
                 }
-                opargs = {"extras": extras}
+                opargs = {"extras": extras, "newpull": True}
                 pullheads = sorted(pullheads)
                 exchange.pull(self, remote, pullheads, opargs=opargs)
 

@@ -80,7 +80,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   ├─╯
   o  root |  |
   
-  $ hg pull --rebase -d tip
+  $ hg pull --rebase -d .
   pulling from test:remoterepo
   searching for changes
   nothing to rebase - working directory parent is also destination

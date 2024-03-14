@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig pull.httpcommitgraph2=false
 
   $ cat >>$TESTTMP/ccdelay.py <<EOF
   > 

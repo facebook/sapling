@@ -1,3 +1,13 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 """
 Default config file for testing
 """
@@ -46,6 +56,9 @@ cachepath=$TESTTMP/default-hgcache
 
 [mutation]
 record=False
+
+[pull]
+httpcommitgraph2=true
 
 [hint]
 ack-match-full-traversal=True

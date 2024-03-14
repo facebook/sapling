@@ -1,6 +1,7 @@
 #debugruntest-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig pull.httpcommitgraph2=false
 
   $ configure modern
   $ showgraph() {

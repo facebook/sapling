@@ -337,9 +337,7 @@ Back to client1 and sync.
   commitcloud: nothing to upload
   pulling 32551ca74417 from mononoke://$LOCALIP:*/repo (glob)
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
 

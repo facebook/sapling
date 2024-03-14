@@ -2,6 +2,7 @@
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig pull.httpcommitgraph2=false
 
 #require jq
   $ configure mutation-norecord dummyssh

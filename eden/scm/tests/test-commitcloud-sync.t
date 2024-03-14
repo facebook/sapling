@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig pull.httpcommitgraph2=false
 
   $ configure dummyssh mutation-norecord
   $ enable amend directaccess commitcloud infinitepush rebase remotenames share smartlog

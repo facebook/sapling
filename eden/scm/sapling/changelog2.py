@@ -355,7 +355,7 @@ class changelog:
             text = hgcommittext(manifest, files, desc, user, date, extra)
             node = revlog.hash(text, p1, p2)
 
-        # Avoid updating "tip" is node is known locally.
+        # Avoid updating "tip" if node is known locally.
         # Strictly speaking this should check with the remote server for lazy
         # changelog. Practically that breaks offline committing and the server
         # check is almost always "not found", and "tip" does not matter that
