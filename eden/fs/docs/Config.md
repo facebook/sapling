@@ -6,7 +6,7 @@ and inside files `edenfs.rc` and `edenfs_dynamic.rc`. The files in `/etc/eden`
 generally should not be edited by hand. Instead, these system configs can be
 overridden by the user in the `~/.edenrc` user configuration file.
 
-As of Febuaray 2024, the different system configs locations have the following
+As of February 2024, the different system configs locations have the following
 purposes:
 
 - `/etc/eden/config.d/` is actively being removed to reduce confusion
