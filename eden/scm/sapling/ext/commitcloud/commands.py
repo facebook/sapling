@@ -1724,8 +1724,9 @@ def isbackedup(ui, repo, **opts):
             "reupload commits without checking what is present on the server",
         ),
     ],
+    _("[-r] REV..."),
 )
-def cloudupload(ui, repo, **opts):
+def cloudupload(ui, repo, *revs, **opts):
     """Upload draft commits using EdenApi Uploads
 
     Commits that have already been uploaded will be skipped.
@@ -1734,7 +1735,7 @@ def cloudupload(ui, repo, **opts):
 
     repo.ignoreautobackup = True
 
-    revs = opts.get("rev")
+    revs = list(revs) + list(opts.get("rev", []))
     if revs:
         revs = scmutil.revrange(repo, revs)
     else:
