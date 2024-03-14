@@ -6,7 +6,7 @@
 # shallowrepo.py - shallow repository that uses remote filelogs
 from __future__ import absolute_import
 
-from sapling import error, match, progress, util
+from sapling import match, progress, util
 from sapling.i18n import _
 from sapling.node import hex, nullid
 
@@ -33,9 +33,9 @@ def wraprepo(repo) -> None:
                 ),
             )
             if not path:
-                raise error.Abort(
-                    "no remotefilelog server " "configured - is your .hg/hgrc trusted?"
-                )
+                # raise AttributeError insteal of error.Abort, so `getattr(repo, "fallbackpath", None)`
+                # will not break
+                raise AttributeError("fallbackpath")
 
             return path
 
