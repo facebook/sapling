@@ -1,4 +1,6 @@
-#chg-compatible
+#debugruntest-compatible
+#inprocess-hg-incompatible
+
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
@@ -11,7 +13,7 @@
   >     print('--binary found !')
   > EOF
 
-  $ setconfig ui.patch="$PYTHON $TESTTMP/patchtool.py"
+  $ setconfig ui.patch="hg debugpython $TESTTMP/patchtool.py"
 
   $ hg init a
   $ cd a

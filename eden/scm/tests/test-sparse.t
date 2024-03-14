@@ -1,4 +1,6 @@
-#chg-compatible
+#debugruntest-compatible
+#inprocess-hg-incompatible
+
   $ configure modernclient
 
 BUG: this shouldn't be necessary, but currently "hg add -s ..." or "hg sparse
@@ -466,7 +468,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   $ rm -f $LOGDIR/samplingpath.txt
   $ hg status
   >>> import json
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> with open(f'{getenv("LOGDIR")}/samplingpath.txt') as f:
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
@@ -497,7 +499,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   hint[sparse-largecheckout]: Your repository checkout has * files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse (glob)
   hint[hint-ack]: use 'hg hint --ack sparse-largecheckout' to silence these hints
   >>> import json
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> with open(f'{getenv("LOGDIR")}/samplingpath.txt') as f:
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)

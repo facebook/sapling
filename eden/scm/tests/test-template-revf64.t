@@ -1,3 +1,6 @@
+#debugruntest-compatible
+#inprocess-hg-incompatible
+
   $ configure modern
 
   $ newrepo
