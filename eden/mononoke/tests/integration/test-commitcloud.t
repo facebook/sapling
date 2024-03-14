@@ -31,6 +31,7 @@ mononoke + local commit cloud backend
   > servicelocation = $TESTTMP
   > owner_team = The Test Team
   > updateonmove = true
+  > usehttpupload = true
   > EOF
 
 setup repo
@@ -59,16 +60,18 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 
   $ cd client1
-  $ hgmn cloud join
-  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'client1' repo
-  commitcloud: synchronizing 'client1' with 'user/test/default'
+  $ hgedenapi cloud join
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
   $ cd ../client2
-  $ hgmn cloud join
-  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'client2' repo
-  commitcloud: synchronizing 'client2' with 'user/test/default'
+  $ hgedenapi cloud join
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -79,9 +82,15 @@ Make commits in the first client, and sync it
   $ mkcommit "commit1"
   $ mkcommit "commit2"
   $ mkcommit "commit3"
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at 660cb078da57
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head '44641a2b1a42' hasn't been uploaded yet
+  edenapi: queue 3 commits for upload
+  edenapi: queue 3 files for upload
+  edenapi: uploaded 3 files
+  edenapi: queue 3 trees for upload
+  edenapi: uploaded 3 trees
+  edenapi: uploaded 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -96,13 +105,12 @@ Make commits in the first client, and sync it
   
 Sync from the second client - the commits should appear
   $ cd ../client2
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client2' with 'user/test/default'
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 44641a2b1a42 from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -120,9 +128,15 @@ Make commits from the second client and sync it
   $ mkcommit "commit4"
   $ mkcommit "commit5"
   $ mkcommit "commit6"
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client2' with 'user/test/default'
-  backing up stack rooted at 15f040cf571c
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head '58508421158d' hasn't been uploaded yet
+  edenapi: queue 3 commits for upload
+  edenapi: queue 3 files for upload
+  edenapi: uploaded 3 files
+  edenapi: queue 3 trees for upload
+  edenapi: uploaded 3 trees
+  edenapi: uploaded 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -130,13 +144,12 @@ Make commits from the second client and sync it
 On the first client, make a bookmark, then sync - the bookmark and the new commits should be synced
   $ cd ../client1
   $ hg bookmark -r "min(all())" bookmark1
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client1' with 'user/test/default'
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 58508421158d from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -161,22 +174,26 @@ On the first client rebase the stack
   rebasing 15f040cf571c "commit4"
   rebasing a1806767adaa "commit5"
   rebasing 58508421158d "commit6"
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at 660cb078da57
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head '8e3f03f8d9db' hasn't been uploaded yet
+  edenapi: queue 3 commits for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 3 trees for upload
+  edenapi: uploaded 3 trees
+  edenapi: uploaded 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
 
 
 On the second client sync it
   $ cd ../client2
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client2' with 'user/test/default'
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 8e3f03f8d9db from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 6 commits
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
@@ -200,7 +217,7 @@ On the second client sync it
   
 
 On the second client hide all draft commits
-  $ hgmn hide -r 'draft()'
+  $ hgedenapi hide -r 'draft()'
   hiding commit 660cb078da57 "commit1"
   hiding commit eba3648c3275 "commit2"
   hiding commit 44641a2b1a42 "commit3"
@@ -210,11 +227,12 @@ On the second client hide all draft commits
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   working directory now at 8b2dca0c8a72
   6 changesets hidden
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client2' with 'user/test/default'
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
-  $ hgmn up master_bookmark -q
+  $ hgedenapi up master_bookmark -q
 
   $ tglogp
   @  8b2dca0c8a72 public 'base_commit' bookmark1
@@ -222,8 +240,9 @@ On the second client hide all draft commits
 
 On the first client check that all commits were hidden
   $ cd ../client1
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client1' with 'user/test/default'
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -252,28 +271,30 @@ On the first client make 2 stacks
   
 Make one of the commits public when it shouldn't be.
   $ hgmn debugmakepublic 8d621fa11677
-  $ hgmn cloud sync 2>&1 | grep "Error while uploading data for changesets"
-  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
-  remote:             context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]",
-  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874))), HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
-  remote:             context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874))), HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]",
+  $ hgedenapi cloud sync 2>&1 | grep fail
+  commitcloud: failed to synchronize ec61bf312a03
 
   $ hgmn debugmakepublic --delete 8d621fa11677
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at 8d621fa11677
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head 'ec61bf312a03' hasn't been uploaded yet
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in 0.00 sec
 
 Commit still becomes available in the other repo
   $ cd ../client2
-  $ hgmn cloud sync
-  commitcloud: synchronizing 'client2' with 'user/test/default'
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   pulling 88d416aed919 ec61bf312a03 from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 4 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -297,9 +318,9 @@ Fix up that public commit, set it back to draft
 
 Clean up
   $ hgmn hide -r 'draft()' -q
-  $ hgmn cloud sync -q
+  $ hgedenapi cloud sync -q
   $ cd ../client2
-  $ hgmn cloud sync -q
+  $ hgedenapi cloud sync -q
 
   $ tglogp
   @  8b2dca0c8a72 public 'base_commit' bookmark1

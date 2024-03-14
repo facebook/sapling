@@ -130,7 +130,7 @@ The same procedure, but with commit cloud commit
   $ hg up -q "min(all())"
   $ echo commitcloud > commitcloud && hg addremove -q
   $ hg ci -m commitcloud
-  $ hgmn cloud backup -q
+  $ hgedenapi cloud backup -q
 
 Move master again
   $ cd ../repo3

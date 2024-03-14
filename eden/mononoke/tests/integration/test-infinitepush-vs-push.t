@@ -54,7 +54,7 @@ Do infinitepush (aka commit cloud) push
   $ cd repo-push
   $ hg up -q tip
   $ hg ci -m new --config ui.allowemptycommit=True
-  $ hgmn pushbackup -r .
+  $ hgedenapi pushbackup -r .
   backing up stack rooted at * (glob)
   commitcloud: backed up 1 commit
 

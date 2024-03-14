@@ -37,7 +37,7 @@ Can still clone the repo
   $ hg commit -Aqm D
 
 Can still push to commit cloud
-  $ hgmn cloud backup
+  $ hgedenapi cloud backup
   backing up stack rooted at 9c00c53d25b3
   commitcloud: backed up 1 commit
 

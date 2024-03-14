@@ -731,6 +731,15 @@ impl EdenApi for EagerRepo {
         debug!(?changesets, ?mutations, "upload_changesets");
         self.refresh_for_api();
 
+        ::fail::fail_point!("eagerepo::api::uploadchangesets", |_| {
+            Err(EdenApiError::HttpError {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: "failpoint".to_string(),
+                headers: Default::default(),
+                url: self.url("upload_changesets"),
+            })
+        });
+
         let mut res = Vec::with_capacity(changesets.len());
         for UploadHgChangeset {
             node_id: node,

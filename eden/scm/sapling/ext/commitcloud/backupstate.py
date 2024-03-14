@@ -11,8 +11,6 @@ import os
 from sapling import error, node as nodemod, util
 from sapling.pycompat import encodeutf8
 
-from . import dependencies, util as ccutil
-
 FORMAT_VERSION = "v2"
 
 
@@ -25,7 +23,7 @@ class BackupState:
     name = "backedupheads.remote"
     directory = "commitcloud"
 
-    def __init__(self, repo, resetlocalstate=False, usehttp=False):
+    def __init__(self, repo, resetlocalstate=False):
         # Don't take repo lock when loading backup state. This way, "cloud backup" etc.
         # won't conflict with stuck commands (e.g. "rebase" waiting for user input).
         if repo.ui.configbool("experimental", "lock-for-backup-state", False):
@@ -35,7 +33,6 @@ class BackupState:
 
         with cm:
             self.repo = repo
-            self.usehttp = usehttp
             repo.sharedvfs.makedirs(self.directory)
             self.filename = os.path.join(
                 self.directory,
@@ -71,36 +68,12 @@ class BackupState:
         if not unknown:
             return
 
-        if self.usehttp:
-            try:
-                unknown = [nodemod.bin(node) for node in unknown]
-                stream = repo.edenapi.commitknown(unknown)
-                nodes = {
-                    item["hgid"] for item in stream if item["known"].get("Ok") is True
-                }
-            except (error.UncategorizedNativeError, error.HttpError) as e:
-                raise error.Abort(e)
-        else:
-
-            def getconnection():
-                return repo.connectionpool.get(
-                    ccutil.getremotepath(repo.ui), reason="restore backup state"
-                )
-
-            nodes = {}
-            try:
-                nodes = {
-                    nodemod.bin(hexnode)
-                    for hexnode, backedup in zip(
-                        unknown,
-                        dependencies.infinitepush.isbackedupnodes(
-                            getconnection, unknown
-                        ),
-                    )
-                    if backedup
-                }
-            except error.RepoError:
-                pass
+        try:
+            unknown = [nodemod.bin(node) for node in unknown]
+            stream = repo.edenapi.commitknown(unknown)
+            nodes = {item["hgid"] for item in stream if item["known"].get("Ok") is True}
+        except (error.UncategorizedNativeError, error.HttpError) as e:
+            raise error.Abort(e)
 
         self.update(nodes)
 

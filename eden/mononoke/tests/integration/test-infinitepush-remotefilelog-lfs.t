@@ -59,7 +59,7 @@ Do infinitepush (aka commit cloud) push
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn cloud backup
+  $ hgedenapi cloud backup
   backing up stack rooted at 68394cf51f7e
   commitcloud: backed up 1 commit
 

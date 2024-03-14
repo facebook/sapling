@@ -172,7 +172,7 @@ Stop tracking master_bookmark
   $ echo pushbackup > pushbackup
   $ hg add -q pushbackup
   $ hg ci -m pushbackup
-  $ hgmn pushbackup -r .
+  $ hgedenapi pushbackup -r .
   backing up stack rooted at 0ed0fbff8a24
   commitcloud: backed up 1 commit
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark

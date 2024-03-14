@@ -202,7 +202,7 @@ def _sync(
 
     # Load the backup state under the repo lock to ensure a consistent view.
     usehttp = ui.configbool("commitcloud", "usehttpupload")
-    state = backupstate.BackupState(repo, usehttp=usehttp)
+    state = backupstate.BackupState(repo)
 
     with repo.ui.timesection("commitcloud_sync_push"):
         if usehttp:

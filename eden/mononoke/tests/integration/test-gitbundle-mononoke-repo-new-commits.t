@@ -95,7 +95,7 @@
   $ hg commit -q -m "Add file5"
 
 # Backup the created commits to commit cloud
-  $ hgmn cloud backup
+  $ hgedenapi cloud backup
   backing up stack rooted at addc9caddba0
   commitcloud: backed up 3 commits
 
