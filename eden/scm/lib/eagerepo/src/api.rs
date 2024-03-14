@@ -294,6 +294,7 @@ impl EdenApi for EagerRepo {
         });
 
         debug!("pull_lazy");
+        self.refresh_for_api();
         let common = to_vec_vertex(&common);
         let missing = to_vec_vertex(&missing);
         let set = self
@@ -318,6 +319,7 @@ impl EdenApi for EagerRepo {
         &self,
         requests: Vec<CommitLocationToHashRequest>,
     ) -> edenapi::Result<Vec<CommitLocationToHashResponse>> {
+        self.refresh_for_api();
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let paths: Vec<AncestorPath> = requests
                 .into_iter()
@@ -364,6 +366,7 @@ impl EdenApi for EagerRepo {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Vec<CommitHashToLocationResponse>> {
+        self.refresh_for_api();
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let heads: Vec<Vertex> = to_vec_vertex(&master_heads);
             let names: Vec<Vertex> = to_vec_vertex(&hgids);
@@ -404,6 +407,7 @@ impl EdenApi for EagerRepo {
 
     async fn commit_known(&self, hgids: Vec<HgId>) -> edenapi::Result<Vec<CommitKnownResponse>> {
         debug!("commit_known {}", debug_hgid_list(&hgids));
+        self.refresh_for_api();
         let mut values = Vec::new();
         for id in hgids {
             let known = self.get_sha1_blob(id).map_err(map_crate_err)?.is_some();
@@ -426,6 +430,7 @@ impl EdenApi for EagerRepo {
             debug_hgid_list(&heads),
             debug_hgid_list(&common),
         );
+        self.refresh_for_api();
         let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let graph = self
@@ -471,6 +476,7 @@ impl EdenApi for EagerRepo {
             debug_hgid_list(&heads),
             debug_hgid_list(&common),
         );
+        self.refresh_for_api();
         let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let graph = self
@@ -493,6 +499,7 @@ impl EdenApi for EagerRepo {
 
     async fn bookmarks(&self, bookmarks: Vec<String>) -> edenapi::Result<Vec<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks));
+        self.refresh_for_api();
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
         for name in bookmarks {
@@ -510,6 +517,7 @@ impl EdenApi for EagerRepo {
         &self,
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
+        self.refresh_for_api();
         let dag = self.dag().await;
         prefixes
             .into_iter()
@@ -542,6 +550,7 @@ impl EdenApi for EagerRepo {
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
         commits.sort();
         debug!("commit_mutations {}", debug_hgid_list(&commits));
+        self.refresh_for_api();
 
         let mut seen_commits = HashSet::new();
         let mut mutations = Vec::new();
@@ -720,6 +729,7 @@ impl EdenApi for EagerRepo {
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         debug!(?changesets, ?mutations, "upload_changesets");
+        self.refresh_for_api();
 
         let mut res = Vec::with_capacity(changesets.len());
         for UploadHgChangeset {
