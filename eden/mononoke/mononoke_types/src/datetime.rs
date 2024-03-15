@@ -57,7 +57,14 @@ impl DateTime {
         DateTime(now.with_timezone(now.offset()))
     }
 
+    /// Note: the way we store timezone offsets here is unconventional.
+    /// We store the timezone with `FixedOffset::west_opt`.
+    /// Typically, a negative timezone offset would indicate that the timezone is west (for
+    /// instance, if thinking of New York as UTC-5, thinking of the timezone offset as -5 is the
+    /// eastern convention that would be achieved with `FixedOffset::east_opt`).
+    /// We picked the western convention for Mononoke, but that contrasts with common practice.
     pub fn from_timestamp(secs: i64, tz_offset_secs: i32) -> Result<Self> {
+        // https://docs.rs/chrono/latest/chrono/struct.FixedOffset.html#method.west_opt
         let tz = FixedOffset::west_opt(tz_offset_secs).ok_or_else(|| {
             MononokeTypeError::InvalidDateTime(format!(
                 "timezone offset out of range: {}",
@@ -72,6 +79,19 @@ impl DateTime {
             ))),
         };
         Ok(Self::new(dt))
+    }
+
+    pub fn from_gix(time: gix_date::Time) -> Result<Self> {
+        // As you can see in from_timestamp, we store the timezone offset with
+        // `FixedOffset::west_opt` (offset would be 5 for UTC-5)
+        // gix uses the eastern convension (offset would be -5 for UTC-5)
+        Self::from_timestamp(time.seconds, -time.offset)
+    }
+
+    pub fn into_gix(&self) -> gix_date::Time {
+        // As you can see in tz_offset_secs, that offset is representes as UTC - local (offset would be 5 for UTC-5)
+        // gix needs the opposite (offset would be -5 for UTC-5)
+        gix_date::Time::new(self.timestamp_secs(), -self.tz_offset_secs())
     }
 
     /// Construct a new `DateTime` from an RFC3339 string.
@@ -334,5 +354,27 @@ mod test {
         let ts0 = Timestamp::from_timestamp_nanos(SEC_IN_NS);
         let ts1 = Timestamp::from_timestamp_secs(1);
         assert_eq!(ts0, ts1);
+    }
+
+    #[test]
+    fn gix_round_trip() {
+        // Let's use ISO8601_STRICT (subset of rfc 3339) as our human readable reference for a timestamp to ensure we don't
+        // only round trip between gix and our DateTime, but also that we are not doing a mistake
+        // and cancelling it out during the round trip
+        for human_readable in [
+            "2018-01-01T00:00:00+00:00",
+            "2018-01-01T00:00:00+04:00",
+            "2018-01-01T00:00:00-04:00",
+            "2018-01-01T01:02:03+05:45",
+        ] {
+            let original_date_time = DateTime::from_rfc3339(human_readable).unwrap();
+            let gix_time = original_date_time.into_gix();
+            assert_eq!(
+                human_readable.to_string(),
+                gix_time.format(gix_date::time::format::ISO8601_STRICT)
+            );
+            let roundtripped_date_time = DateTime::from_gix(gix_time).unwrap();
+            assert_eq!(original_date_time, roundtripped_date_time);
+        }
     }
 }

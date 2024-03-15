@@ -12,7 +12,6 @@ rust_library(
         "fbsource//third-party/rust:encoding_rs",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-actor",
-        "fbsource//third-party/rust:gix-date",
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:http",

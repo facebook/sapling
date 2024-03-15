@@ -46,7 +46,6 @@ use tokio::process::Command;
 use tokio::task;
 
 pub use crate::git_reader::GitRepoReader;
-pub use crate::gitimport_objects::convert_time_to_datetime;
 pub use crate::gitimport_objects::oid_to_sha1;
 use crate::gitimport_objects::read_raw_object;
 pub use crate::gitimport_objects::BackfillDerivation;

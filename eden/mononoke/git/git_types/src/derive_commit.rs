@@ -36,7 +36,7 @@ use crate::TreeHandle;
 
 fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
     let (name, email) = get_name_and_email(id_str)?;
-    let signature_time = gix_date::Time::new(time.timestamp_secs(), -time.tz_offset_secs());
+    let signature_time = time.into_gix();
     Ok(Signature {
         name: name.into(),
         email: email.into(),

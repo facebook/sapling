@@ -20,7 +20,6 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 gix-actor = "0.24"
-gix-date = "0.7"
 gix-hash = "0.11"
 gix-object = "0.33"
 http = "0.2"

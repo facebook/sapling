@@ -349,7 +349,7 @@ impl TagMetadata {
 
         let author_date = tagger
             .take()
-            .map(|tagger| convert_time_to_datetime(&tagger.time))
+            .map(|tagger| DateTime::from_gix(tagger.time))
             .transpose()?;
         let author = tagger
             .take()
@@ -499,8 +499,8 @@ impl ExtractedCommit {
             trees
         };
 
-        let author_date = convert_time_to_datetime(&author.time)?;
-        let committer_date = convert_time_to_datetime(&committer.time)?;
+        let author_date = DateTime::from_gix(author.time)?;
+        let committer_date = DateTime::from_gix(committer.time)?;
         let author = format_signature(author.to_ref());
         let committer = format_signature(committer.to_ref());
         let message = decode_message(&message, &encoding, ctx.logger())?;
@@ -618,10 +618,6 @@ impl ExtractedCommit {
                 .right_stream()
         }
     }
-}
-
-pub fn convert_time_to_datetime(time: &gix_date::Time) -> Result<DateTime, Error> {
-    DateTime::from_timestamp(time.seconds, -time.offset)
 }
 
 #[derive(Clone, Debug)]
