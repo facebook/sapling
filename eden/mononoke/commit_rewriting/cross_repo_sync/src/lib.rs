@@ -9,6 +9,7 @@
 #![feature(trait_alias)]
 #![feature(never_type)]
 
+mod commit_in_memory_syncer;
 mod commit_sync_config_utils;
 mod commit_sync_outcome;
 mod commit_syncers_lib;
