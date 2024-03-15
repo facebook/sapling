@@ -260,7 +260,7 @@ function FetchingAdditionalCommitsButton() {
   if (shownRange === undefined) {
     return null;
   }
-  const commitsShownMessage = t('Showing comits from the last $numDays days', {
+  const commitsShownMessage = t('Showing commits from the last $numDays days', {
     replace: {$numDays: shownRange.toString()},
   });
   return (
