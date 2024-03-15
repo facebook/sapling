@@ -33,14 +33,15 @@ use cmdlib::helpers;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::types::Large;
-use cross_repo_sync::types::Small;
-use cross_repo_sync::validation;
-use cross_repo_sync::validation::BookmarkDiff;
+use cross_repo_sync::find_bookmark_diff;
+use cross_repo_sync::verify_working_copy_fast_path;
+use cross_repo_sync::BookmarkDiff;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Large;
 use cross_repo_sync::PluralCommitSyncOutcome;
+use cross_repo_sync::Small;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -196,14 +197,9 @@ pub async fn subcommand_crossrepo<'a>(
                 helpers::csid_resolve(&ctx, large_repo, large_hash).await?
             };
 
-            validation::verify_working_copy_fast_path(
-                &ctx,
-                &commit_syncer,
-                large_hash,
-                live_commit_sync_config,
-            )
-            .await
-            .map_err(|e| e.into())
+            verify_working_copy_fast_path(&ctx, &commit_syncer, large_hash, live_commit_sync_config)
+                .await
+                .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
@@ -1065,7 +1061,7 @@ async fn subcommand_verify_bookmarks(
     )
     .await?;
 
-    let diff = validation::find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
+    let diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
 
     if diff.is_empty() {
         info!(ctx.logger(), "all is well!");
@@ -1173,7 +1169,7 @@ async fn update_large_repo_bookmarks(
             continue;
         }
 
-        use validation::BookmarkDiff::*;
+        use BookmarkDiff::*;
         match d {
             InconsistentValue {
                 target_bookmark,
@@ -1539,7 +1535,7 @@ mod test {
     use bookmarks::BookmarkKey;
     use cacheblob::InProcessLease;
     use changeset_fetcher::ChangesetFetcherArc;
-    use cross_repo_sync::validation::find_bookmark_diff;
+    use cross_repo_sync::find_bookmark_diff;
     use fixtures::set_bookmark;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;

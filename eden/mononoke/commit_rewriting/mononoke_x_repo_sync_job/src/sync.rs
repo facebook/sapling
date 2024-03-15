@@ -23,13 +23,13 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::find_toposorted_unsynced_ancestors_with_commit_graph;
-use cross_repo_sync::types::Source;
-use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::PushrebaseRewriteDates;
+use cross_repo_sync::Source;
+use cross_repo_sync::Target;
 use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -854,7 +854,8 @@ mod test {
     use bookmarks::BookmarkUpdateLogRef;
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::Freshness;
-    use cross_repo_sync::validation;
+    use cross_repo_sync::find_bookmark_diff;
+    use cross_repo_sync::verify_working_copy;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
@@ -1255,7 +1256,7 @@ mod test {
         )
         .await?;
 
-        let actually_missing = validation::find_bookmark_diff(ctx.clone(), commit_syncer)
+        let actually_missing = find_bookmark_diff(ctx.clone(), commit_syncer)
             .await?
             .into_iter()
             .map(|diff| diff.target_bookmark().clone())
@@ -1270,7 +1271,7 @@ mod test {
             .await?;
         for head in heads {
             println!("verifying working copy for {}", head);
-            validation::verify_working_copy(ctx.clone(), commit_syncer.clone(), head).await?;
+            verify_working_copy(ctx.clone(), commit_syncer.clone(), head).await?;
         }
 
         Ok(())

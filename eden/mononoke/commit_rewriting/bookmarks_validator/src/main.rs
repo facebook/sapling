@@ -25,8 +25,8 @@ use cmdlib::helpers;
 use cmdlib_x_repo::create_commit_syncers_from_matches;
 use context::CoreContext;
 use context::SessionContainer;
-use cross_repo_sync::validation;
-use cross_repo_sync::validation::BookmarkDiff;
+use cross_repo_sync::find_bookmark_diff;
+use cross_repo_sync::BookmarkDiff;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
@@ -381,7 +381,7 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     small_repo_name: &str,
 ) -> Result<(), ValidationError> {
     let commit_syncer = &syncers.small_to_large;
-    let diffs = validation::find_bookmark_diff(ctx.clone(), commit_syncer).await?;
+    let diffs = find_bookmark_diff(ctx.clone(), commit_syncer).await?;
 
     info!(ctx.logger(), "got {} bookmark diffs", diffs.len());
     for diff in diffs {

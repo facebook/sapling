@@ -16,8 +16,8 @@ mod git_submodules;
 mod pushrebase_hook;
 mod reporting;
 mod sync_config_version_utils;
-pub mod types;
-pub mod validation;
+mod types;
+mod validation;
 
 pub use commit_sync_config_utils::get_bookmark_renamer;
 pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
