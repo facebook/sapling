@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
@@ -27,4 +28,12 @@ fbpkg.builder(
     path_actions = {
         "scripts": ":scripts",
     },
+)
+
+custom_unittest(
+    name = "setup_common_test",
+    command = [
+        "eden/mononoke/facebook/scripts/setup_common_test.sh",
+    ],
+    type = "simple",
 )
