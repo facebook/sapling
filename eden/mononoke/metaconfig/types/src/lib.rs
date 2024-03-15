@@ -1256,10 +1256,13 @@ pub enum GitSubmodulesChangesAction {
     Expand,
 }
 
+/// Default prefix for git submodule metadata files
+pub const DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX: &str = "x-repo-submodule";
+
 /// Stores all the information related to git submodules in a small repo,
 /// e.g. how to handle them and what other repos the small repo might depend on
 /// to expand submodule file changes.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SmallRepoGitSubmoduleConfig {
     /// Whether any changes made to git submodules should be stripped from
     /// the changesets before being synced.
@@ -1269,6 +1272,20 @@ pub struct SmallRepoGitSubmoduleConfig {
     /// These repos have to be loaded with the small repo before syncing starts,
     /// as file changes from the submodule dependencies might need to be copied.
     pub submodule_dependencies: HashMap<NonRootMPath, RepositoryId>,
+    /// Each submodule expansion in the large repo will have a metadata file
+    /// named "<PREFIX><SUBMODULE_PATH>", e.g. ".x-repo-submodule-voip".
+    /// This file will store the git commit that the expansion corresponds to.
+    pub submodule_metadata_file_prefix: String,
+}
+
+impl Default for SmallRepoGitSubmoduleConfig {
+    fn default() -> Self {
+        Self {
+            git_submodules_action: GitSubmodulesChangesAction::default(),
+            submodule_dependencies: HashMap::new(),
+            submodule_metadata_file_prefix: DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX.to_string(),
+        }
+    }
 }
 
 /// Commit sync configuration for a small repo
