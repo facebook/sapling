@@ -15,6 +15,7 @@ use edenapi_types::AnyId;
 use edenapi_types::Batch;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::FileMetadata;
+use edenapi_types::TreeAttributes;
 use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
 use edenapi_types::TreeRequest;
@@ -106,9 +107,8 @@ fn fetch_all_trees(
 ) -> impl Stream<Item = Result<TreeEntry, EdenApiServerError>> {
     let ctx = repo.ctx().clone();
 
-    let fetch_metadata = request.attributes.child_metadata;
     let fetches = request.keys.into_iter().map(move |key| {
-        fetch_tree(repo.clone(), key.clone(), fetch_metadata)
+        fetch_tree(repo.clone(), key.clone(), request.attributes)
             .map(|r| r.map_err(|e| EdenApiServerError::with_key(key, e)))
     });
 
@@ -125,8 +125,9 @@ fn fetch_all_trees(
 async fn fetch_tree(
     repo: HgRepoContext,
     key: Key,
-    fetch_metadata: bool,
+    attributes: TreeAttributes,
 ) -> Result<TreeEntry, Error> {
+    let mut entry = TreeEntry::new(key.clone());
     let id = HgManifestId::from_node_hash(HgNodeHash::from(key.hgid));
 
     let ctx = id
@@ -135,15 +136,20 @@ async fn fetch_tree(
         .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
-    let (data, _) = ctx
-        .content()
-        .await
-        .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
-    let parents = ctx.hg_parents().into();
+    if attributes.manifest_blob {
+        let (data, _) = ctx
+            .content()
+            .await
+            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
 
-    let mut entry = TreeEntry::new(key.clone(), data, parents);
+        entry.with_data(Some(data));
+    }
 
-    if fetch_metadata {
+    if attributes.parents {
+        entry.with_parents(Some(ctx.hg_parents().into()));
+    }
+
+    if attributes.child_metadata {
         if let Some(entries) = fetch_child_metadata_entries(&repo, &ctx).await? {
             let children: Vec<Result<TreeChildEntry, EdenApiServerError>> = entries
                 .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)

@@ -301,7 +301,10 @@ impl FakeEdenApi {
                 let data = map.get(&key)?.clone();
                 let parents = Parents::default();
                 let data = data.to_vec().into();
-                Some(Ok(Ok(TreeEntry::new(key, data, parents))))
+                let mut tree_entry = TreeEntry::new(key);
+                tree_entry.with_parents(Some(parents));
+                tree_entry.with_data(Some(data));
+                Some(Ok(Ok(tree_entry)))
             })
             .collect::<Vec<_>>();
 

@@ -66,13 +66,21 @@ pub struct TreeEntry {
 }
 
 impl TreeEntry {
-    pub fn new(key: Key, data: Bytes, parents: Parents) -> Self {
+    pub fn new(key: Key) -> Self {
         Self {
             key,
-            data: Some(data),
-            parents: Some(parents),
-            children: None,
+            ..Default::default()
         }
+    }
+
+    pub fn with_data<'a>(&'a mut self, data: Option<Bytes>) -> &'a mut Self {
+        self.data = data;
+        self
+    }
+
+    pub fn with_parents<'a>(&'a mut self, parents: Option<Parents>) -> &'a mut Self {
+        self.parents = parents;
+        self
     }
 
     pub fn with_children<'a>(
