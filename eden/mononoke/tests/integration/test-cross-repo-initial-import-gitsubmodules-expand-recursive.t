@@ -78,8 +78,9 @@ Setup git repo B to be used as submodule in git repo A
   776166f Added git repo C as submodule in B
   b7dc5d8 Add bar/zoo
   1c7ecd4 Add foo
-  $ tree
+  $ tree -a -I ".git"
   .
+  |-- .gitmodules
   |-- bar
   |   `-- zoo
   |-- foo
@@ -88,7 +89,7 @@ Setup git repo B to be used as submodule in git repo A
       `-- hoo
           `-- qux
   
-  3 directories, 4 files
+  3 directories, 5 files
 
 
 Setup git repo A
@@ -122,13 +123,15 @@ Setup git repo A
   done.
   $ git add . && git commit -q -am "Added git repo C as submodule directly in A" 
 
-  $ tree
+  $ tree -a -I ".git"
   .
+  |-- .gitmodules
   |-- duplicates
   |   |-- x
   |   |-- y
   |   `-- z
   |-- git-repo-b
+  |   |-- .gitmodules
   |   |-- bar
   |   |   `-- zoo
   |   |-- foo
@@ -141,7 +144,7 @@ Setup git repo A
   |       `-- qux
   `-- root_file
   
-  7 directories, 9 files
+  7 directories, 11 files
 
 
   $ cd "$TESTTMP"
@@ -214,14 +217,16 @@ Import repos in reverse dependency order, C, B then A.
 
   $ hg co -q "$HG_SYNCED_HEAD"
 
-  $ tree | tee ${TESTTMP}/repo_a_tree_1
+  $ tree -a -I ".hg"| tee ${TESTTMP}/repo_a_tree_1
   .
   `-- smallrepofolder1
+      |-- .gitmodules
       |-- duplicates
       |   |-- x
       |   |-- y
       |   `-- z
       |-- git-repo-b
+      |   |-- .gitmodules
       |   |-- bar
       |   |   `-- zoo
       |   |-- foo
@@ -237,7 +242,7 @@ Import repos in reverse dependency order, C, B then A.
       |       `-- qux
       `-- root_file
   
-  9 directories, 11 files
+  9 directories, 13 files
 
 
 Make changes to submodule and make sure they're synced properly
@@ -342,15 +347,17 @@ deleted and the files deleted in repo B were deleted inside its copy.
 
 
 TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
-  $ tree &> ${TESTTMP}/repo_a_tree_2
+  $ tree -a -I ".hg" &> ${TESTTMP}/repo_a_tree_2
   $ diff -y -t -T ${TESTTMP}/repo_a_tree_1 ${TESTTMP}/repo_a_tree_2
   .                                                                  .
   `-- smallrepofolder1                                               `-- smallrepofolder1
+      |-- .gitmodules                                                    |-- .gitmodules
       |-- duplicates                                                     |-- duplicates
       |   |-- x                                                          |   |-- x
       |   |-- y                                                          |   |-- y
       |   `-- z                                                          |   `-- z
       |-- git-repo-b                                                     |-- git-repo-b
+      |   |-- .gitmodules                                                |   |-- .gitmodules
       |   |-- bar                                                 <
       |   |   `-- zoo                                             <
       |   |-- foo                                                 <
@@ -368,7 +375,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
       |       `-- qux                                             <
       `-- root_file                                                      `-- root_file
   
-  9 directories, 11 files                                         |  6 directories, 9 files
+  9 directories, 13 files                                         |  6 directories, 11 files
   [1]
 
 Check that the diff that updates the submodule generates the correct delta

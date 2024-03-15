@@ -131,7 +131,7 @@ use types::Source;
 use types::Target;
 
 use crate::commit_sync_outcome::DesiredRelationship;
-use crate::git_submodules::expand_git_submodule_file_changes;
+use crate::git_submodules::expand_all_git_submodule_file_changes;
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
 mod commit_sync_config_utils;
@@ -307,7 +307,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
                 }?;
 
                 let new_cs =
-                    expand_git_submodule_file_changes(ctx, cs, source_repo, submodule_deps_map)
+                    expand_all_git_submodule_file_changes(ctx, cs, source_repo, submodule_deps_map)
                         .await?;
                 (vec![], new_cs)
             }

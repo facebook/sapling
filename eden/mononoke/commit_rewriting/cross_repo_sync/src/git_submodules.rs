@@ -56,7 +56,10 @@ impl std::fmt::Display for SubmodulePath {
     }
 }
 
-pub async fn expand_git_submodule_file_changes<'a, R: Repo>(
+/// Iterate over all file changes from the bonsai being synced and expand any
+/// changes to git submodule files, generating the bonsai that will be synced
+/// to the large repo.
+pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     source_repo: &'a R,
