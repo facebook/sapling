@@ -200,20 +200,6 @@ async fn trees_and_blobs_count(
         .map(|objects| objects.len())
 }
 
-/// Get the tag entry for the given tag key
-async fn tag_entry(repo: &impl Repo, tag: &BookmarkKey) -> Result<Option<BonsaiTagMappingEntry>> {
-    let tag_name = tag.name().to_string();
-    repo.bonsai_tag_mapping()
-        .get_entry_by_tag_name(tag_name.clone())
-        .await
-        .with_context(|| {
-            format!(
-                "Error in gettting bonsai_tag_mapping entry for tag name {}",
-                tag_name
-            )
-        })
-}
-
 fn delta_below_threshold(
     delta: &ObjectDelta,
     entry: &GitDeltaManifestEntry,
@@ -331,30 +317,26 @@ async fn git_shas_to_bonsais(
     anyhow::Ok(commits_from_tags)
 }
 
-/// Get the Git counterpart for a bonsai commit, if it exists.
-async fn bonsai_to_git_sha(
+/// Fetch the Bonsai Git Mappings for the given bonsais
+async fn bonsai_git_mappings_by_bonsai(
     ctx: &CoreContext,
     repo: &impl Repo,
-    cs_id: ChangesetId,
-) -> Result<ObjectId> {
-    let maybe_git_sha1 = repo
-        .bonsai_git_mapping()
-        .get_git_sha1_from_bonsai(ctx, cs_id)
+    cs_ids: Vec<ChangesetId>,
+) -> Result<FxHashMap<ChangesetId, ObjectId>> {
+    // Get the Git shas corresponding to the Bonsai commits
+    repo.bonsai_git_mapping()
+        .get(ctx, BonsaisOrGitShas::Bonsai(cs_ids))
         .await
         .with_context(|| {
             format!(
-                "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping",
-                cs_id
+                "Failed to fetch bonsai_git_mapping for repo {}",
+                repo.repo_identity().name()
             )
-        })?;
-    let git_sha1 = maybe_git_sha1
-        .ok_or_else(|| anyhow::anyhow!("Git Sha1 not found for changeset {:?}", cs_id))?;
-    ObjectId::from_hex(git_sha1.to_hex().as_bytes()).with_context(|| {
-        format!(
-            "Error in converting GitSha1 {:?} to GitObjectId",
-            git_sha1.to_hex()
-        )
-    })
+        })?
+        .into_iter()
+        .map(|entry| anyhow::Ok((entry.bcs_id, entry.git_sha1.to_object_id()?)))
+        .collect::<Result<FxHashMap<_, _>>>()
+        .context("Error while converting Git Sha1 to Git Object Id during fetch")
 }
 
 /// Get the list of Git refs that need to be included in the stream of PackfileItem. On Mononoke end, this
@@ -366,46 +348,62 @@ async fn refs_to_include(
     bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     tag_inclusion: TagInclusion,
 ) -> Result<FxHashMap<String, RefTarget>> {
-    stream::iter(bookmarks.iter())
-        .map(|(bookmark, cs_id)| async move {
-            if bookmark.is_tag() {
-                match tag_inclusion {
-                    TagInclusion::AsIs => {
-                        if let Some(entry) = tag_entry(repo, bookmark).await? {
-                            let git_objectid = entry.tag_hash.to_object_id()?;
-                            let ref_name = format!("refs/{}", bookmark);
-                            return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid)));
-                        }
-                    }
-                    TagInclusion::Peeled => {
-                        let git_objectid = bonsai_to_git_sha(ctx, repo, *cs_id).await?;
+    let bonsai_git_map =
+        bonsai_git_mappings_by_bonsai(ctx, repo, bookmarks.values().cloned().collect()).await?;
+    let bonsai_tag_map = repo
+        .bonsai_tag_mapping()
+        .get_all_entries()
+        .await
+        .with_context(|| {
+            format!(
+                "Error while fetching tag entries for repo {}",
+                repo.repo_identity().name()
+            )
+        })?
+        .into_iter()
+        .map(|entry| anyhow::Ok((entry.tag_name, entry.tag_hash.to_object_id()?)))
+        .collect::<Result<FxHashMap<_, _>>>()?;
+
+    bookmarks.iter().map(|(bookmark, cs_id)| {
+        if bookmark.is_tag() {
+            match tag_inclusion {
+                TagInclusion::AsIs => {
+                    if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
                         let ref_name = format!("refs/{}", bookmark);
-                        return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid)));
-                    }
-                    TagInclusion::WithTarget => {
-                        if let Some(entry) = tag_entry(repo, bookmark).await? {
-                            let tag_objectid = entry.tag_hash.to_object_id()?;
-                            let commit_objectid = bonsai_to_git_sha(ctx, repo, *cs_id).await?;
-                            let ref_name = format!("refs/{}", bookmark);
-                            let metadata = format!("peeled:{}", commit_objectid.to_hex());
-                            return anyhow::Ok((
-                                ref_name,
-                                RefTarget::WithMetadata(tag_objectid, metadata),
-                            ));
-                        }
+                        return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
                     }
                 }
-            };
-            // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
-            // ref to target mapping based on the changeset id
-            let git_objectid = bonsai_to_git_sha(ctx, repo, *cs_id).await?;
-            let ref_name = format!("refs/{}", bookmark);
-            anyhow::Ok((ref_name, RefTarget::Plain(git_objectid)))
-        })
-        .boxed()
-        .buffer_unordered(1000)
-        .try_collect::<FxHashMap<_, _>>()
-        .await
+                TagInclusion::Peeled => {
+                    let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
+                        anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
+                    })?;
+                    let ref_name = format!("refs/{}", bookmark);
+                    return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
+                }
+                TagInclusion::WithTarget => {
+                    if let Some(tag_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
+                        let commit_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
+                            anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
+                        })?;
+                        let ref_name = format!("refs/{}", bookmark);
+                        let metadata = format!("peeled:{}", commit_objectid.to_hex());
+                        return anyhow::Ok((
+                            ref_name,
+                            RefTarget::WithMetadata(tag_objectid.clone(), metadata),
+                        ));
+                    }
+                }
+            }
+        };
+        // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
+        // ref to target mapping based on the changeset id
+        let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
+            anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
+        })?;
+        let ref_name = format!("refs/{}", bookmark);
+        anyhow::Ok((ref_name, RefTarget::Plain(git_objectid.clone())))
+    })
+    .collect::<Result<FxHashMap<_, _>>>()
 }
 
 /// Generate the appropriate RefTarget for symref based on the symref format
