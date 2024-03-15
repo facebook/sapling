@@ -20,10 +20,10 @@ use sql::Transaction;
 use synced_commit_mapping::add_many_in_txn;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 
+use crate::commit_syncers_lib::Repo;
 use crate::create_synced_commit_mapping_entry;
 use crate::CommitSyncRepos;
 use crate::ErrorKind;
-use crate::Repo;
 
 #[derive(Clone)]
 pub struct CrossRepoSyncPushrebaseHook<R> {

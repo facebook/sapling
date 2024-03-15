@@ -30,6 +30,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::FileType;
+use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::typed_hash::FsnodeId;
@@ -46,10 +47,8 @@ use slog::error;
 use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 
-use super::CommitSyncConfigVersion;
-use super::CommitSyncOutcome;
-use super::CommitSyncer;
-use super::Repo;
+use crate::commit_syncers_lib::CommitSyncer;
+use crate::commit_syncers_lib::Repo;
 use crate::types::Source;
 use crate::types::Target;
 
@@ -1203,7 +1202,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     let sync_outcome = maybe_sync_outcome
         .ok_or_else(|| format_err!("No sync outcome for {} in {:?}", hash, commit_syncer))?;
 
-    use CommitSyncOutcome::*;
+    use crate::commit_sync_outcome::CommitSyncOutcome::*;
     match sync_outcome {
         NotSyncCandidate(_) => Err(format_err!("{} does not remap in small repo", hash)),
         RewrittenAs(cs_id, mapping_version)
@@ -1267,7 +1266,8 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static, R:
                 .get_commit_sync_outcome(&ctx, cs_id)
                 .map(move |maybe_sync_outcome| {
                     let maybe_sync_outcome = maybe_sync_outcome?;
-                    use CommitSyncOutcome::*;
+                    use crate::commit_sync_outcome::CommitSyncOutcome::*;
+
                     let maybe_remapped_cs_id = match maybe_sync_outcome {
                         Some(RewrittenAs(cs_id, _))
                         | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Some(cs_id),

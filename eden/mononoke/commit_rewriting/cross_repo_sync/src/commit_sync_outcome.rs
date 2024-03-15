@@ -25,10 +25,10 @@ use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
+use crate::commit_syncers_lib::Repo;
 use crate::get_small_repos_for_version;
 use crate::types::Source;
 use crate::types::Target;
-use crate::Repo;
 
 /// The state of a source repo commit in a target repo, assuming
 /// that any multiple `RewrittenAs` options have been resolved

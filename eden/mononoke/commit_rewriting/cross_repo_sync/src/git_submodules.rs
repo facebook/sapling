@@ -20,6 +20,7 @@ use cloned::cloned;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
 use either::Either;
+use either::Either::*;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -45,8 +46,7 @@ use mononoke_types::TrackedFileChange;
 use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 
-use super::Repo;
-use crate::Either::*;
+use crate::commit_syncers_lib::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.
