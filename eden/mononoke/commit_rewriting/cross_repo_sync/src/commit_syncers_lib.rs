@@ -646,20 +646,7 @@ impl<R: Repo> CommitSyncRepos<R> {
             CommitSyncRepos::SmallToLarge { submodule_deps, .. } => submodule_deps,
         }
     }
-}
 
-pub fn create_commit_syncer_lease(
-    fb: FacebookInit,
-    caching: Caching,
-) -> Result<Arc<dyn LeaseOps>, Error> {
-    if let Caching::Enabled(_) = caching {
-        Ok(Arc::new(MemcacheOps::new(fb, "x-repo-sync-lease", "")?))
-    } else {
-        Ok(Arc::new(InProcessLease::new()))
-    }
-}
-
-impl<R: Repo> CommitSyncRepos<R> {
     pub fn get_source_repo(&self) -> &R {
         match self {
             CommitSyncRepos::LargeToSmall { large_repo, .. } => large_repo,
@@ -686,6 +673,17 @@ impl<R: Repo> CommitSyncRepos<R> {
             CommitSyncRepos::LargeToSmall { .. } => CommitSyncDirection::LargeToSmall,
             CommitSyncRepos::SmallToLarge { .. } => CommitSyncDirection::SmallToLarge,
         }
+    }
+}
+
+pub fn create_commit_syncer_lease(
+    fb: FacebookInit,
+    caching: Caching,
+) -> Result<Arc<dyn LeaseOps>, Error> {
+    if let Caching::Enabled(_) = caching {
+        Ok(Arc::new(MemcacheOps::new(fb, "x-repo-sync-lease", "")?))
+    } else {
+        Ok(Arc::new(InProcessLease::new()))
     }
 }
 

@@ -25,8 +25,8 @@ use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
+use crate::commit_sync_config_utils::get_small_repos_for_version;
 use crate::commit_syncers_lib::Repo;
-use crate::get_small_repos_for_version;
 use crate::types::Source;
 use crate::types::Target;
 
