@@ -144,7 +144,7 @@ lazy_static! {
         dag.insert(fsnodes, vec![]);
         dag.insert(deleted_mf_v2, vec![unodes]);
         dag.insert(skeleton_mf, vec![]);
-        dag.insert(bssm_v3, vec![]);
+        dag.insert(bssm_v3, vec![skeleton_mf]);
         dag.insert(git_tree, vec![]);
         dag.insert(git_commit, vec![git_tree]);
         dag.insert(git_delta_manifest, vec![git_tree, git_commit, unodes]);
