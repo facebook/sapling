@@ -36,7 +36,7 @@ def gen_hgpython():
             executable = True,
         )
 
-    # We cannot quite use symlinks outside of Windows since the `dev-lg` mode is
+    # We cannot quite use symlinks outside of Windows since the `dev-nosan-lg` mode is
     # used sometimes, and that copies the binary into another location rather
     # than actually creating a symlink like in other modes for some reason.
     return buck_sh_binary(
