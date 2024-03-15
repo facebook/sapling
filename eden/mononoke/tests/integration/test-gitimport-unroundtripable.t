@@ -25,21 +25,12 @@
   $ git commit -qa -m "Unroundtripable commit: we don't store the encoding"
 
 # Import it into Mononoke
-  $ gitimport "$GIT_REPO" --concurrency 1 full-repo 2> import_output
-  [1]
-# Dancing around displaying the output because the error can be spelled out in different ways based on a race condition
-  $ head -5 import_output
+  $ gitimport "$GIT_REPO" --concurrency 1 full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:a57065d8 => Bid:f1c2afeb (glob)
-  * Execution error: gitimport failed (glob)
-  
-  Caused by:
-  $ cat import_output | grep Conflicting
-  * Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(a57065d80c86fdef0f01cc4c822278257107ccad), bcs_id: ChangesetId(Blake2(f1c2afeb1a400c6b7d45af203fd2de012f5c55a08616cdd2a8499278ab1ddf3d)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(b206826a406290c524ea0e4fb3bce838b4c853dc), bcs_id: ChangesetId(Blake2(f1c2afeb1a400c6b7d45af203fd2de012f5c55a08616cdd2a8499278ab1ddf3d)) }]) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(f1c2afeb1a400c6b7d45af203fd2de012f5c55a08616cdd2a8499278ab1ddf3d))) (glob)
 
-  $ mononoke_newadmin git-objects -R repo fetch --id a57065d80c86fdef0f01cc4c822278257107ccad > imported_commit
-  $ mononoke_newadmin git-objects -R repo fetch --id b206826a406290c524ea0e4fb3bce838b4c853dc > derived_commit
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" imported_commit derived_commit 
+  $ mononoke_newadmin git-objects -R repo fetch --id a57065d80c86fdef0f01cc4c822278257107ccad
   The object is a Git Commit
   
   Commit {
@@ -63,11 +54,9 @@
               sign: Plus,
           },
       },
-  -     encoding: Some(
-  -         "ISO-8859-1",
-  -     ),
-  +     encoding: None,
+      encoding: Some(
+          "ISO-8859-1",
+      ),
       message: "Unroundtripable commit: we don\'t store the encoding\n",
       extra_headers: [],
   }
-  [1]

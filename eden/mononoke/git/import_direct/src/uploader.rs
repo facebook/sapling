@@ -42,6 +42,7 @@ use mononoke_types::hash;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -238,19 +239,58 @@ where
             stats.completion_time
         );
 
-        if !dry_run {
-            self.inner
-                .bonsai_git_mapping()
-                .bulk_add(ctx, &oid_to_bcsid)
-                .await?;
-            let csids = oid_to_bcsid.iter().map(|entry| entry.bcs_id).collect();
-            let config = self.inner.repo_derived_data().active_config();
-            self.inner
-                .repo_derived_data()
-                .manager()
-                .derive_bulk(ctx, csids, None, &backfill_derivation.types(&config.types))
-                .await?;
+        if dry_run {
+            // Short circuit the steps that write
+            return Ok(());
         }
+
+        let csids = oid_to_bcsid
+            .iter()
+            .map(|entry| entry.bcs_id)
+            .collect::<Vec<_>>();
+        let config = self.inner.repo_derived_data().active_config();
+
+        // Derive all types that don't depend on GitCommit
+        let non_git_types = backfill_derivation
+            .types(&config.types)
+            .into_iter()
+            .filter(|dt| match dt {
+                DerivableType::GitCommit | DerivableType::GitDeltaManifest => false,
+                _ => true,
+            })
+            .collect::<Vec<_>>();
+        self.inner
+            .repo_derived_data()
+            .manager()
+            .derive_bulk(ctx, csids.clone(), None, &non_git_types)
+            .await?;
+        // Upload all bonsai git mappings.
+        // This is done instead of deriving git commits. It is not equivalent as roundtrip from
+        // git to bonsai and back is not guaranteed.
+        // We want to do this as late as possible.
+        // Ideally, we would want to do it last as this is what is used to determine whether
+        // it is safe to proceed from there.
+        // We can't actually do it last as it must be done before deriving `GitDeltaManifest`
+        // since that depends on git commits.
+        self.inner
+            .bonsai_git_mapping()
+            .bulk_add(ctx, &oid_to_bcsid)
+            .await?;
+        // derive git delta manifests: note: GitCommit don't need to be explicitly
+        // derived as they were already imported
+        let delta_manifest = backfill_derivation
+            .types(&config.types)
+            .into_iter()
+            .filter(|dt| match dt {
+                DerivableType::GitDeltaManifest => true,
+                _ => false,
+            })
+            .collect::<Vec<_>>();
+        self.inner
+            .repo_derived_data()
+            .manager()
+            .derive_bulk(ctx, csids, None, &delta_manifest)
+            .await?;
         Ok(())
     }
 
