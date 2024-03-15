@@ -27,6 +27,7 @@ use changesets::Changesets;
 use commit_graph::CommitGraph;
 use commit_transformation::upload_commits;
 use context::CoreContext;
+use cross_repo_sync::get_x_repo_submodule_metadata_file_prefx_from_config;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncContext;
@@ -146,9 +147,8 @@ where
 
     let maybe_rewritten = {
         let map = HashMap::new();
-        let mover = commit_syncer
-            .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))
-            .await?;
+        let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let mover = commit_syncer.get_mover_by_version(&version).await?;
         rewrite_commit(
             &ctx,
             source_bcs_mut,
@@ -158,6 +158,12 @@ where
             submodule_deps,
             Default::default(),
             Default::default(),
+            get_x_repo_submodule_metadata_file_prefx_from_config(
+                source_repo.repo_identity().id(),
+                &version,
+                commit_syncer.live_commit_sync_config.clone(),
+            )
+            .await?,
         )
         .await?
     };

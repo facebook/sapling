@@ -278,6 +278,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
     submodule_deps: &'a SubmoduleDeps<R>,
     rewrite_opts: RewriteOpts,
     git_submodules_action: GitSubmodulesChangesAction,
+    x_repo_submodule_metadata_file_prefix: String,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     // TODO(T169695293): add filter to only keep submodules for implicit deletes?
     let (file_changes_filters, cs): (Vec<FileChangeFilter<'a>>, BonsaiChangesetMut) =
@@ -306,9 +307,14 @@ pub async fn rewrite_commit<'a, R: Repo>(
                     )),
                 }?;
 
-                let new_cs =
-                    expand_all_git_submodule_file_changes(ctx, cs, source_repo, submodule_deps_map)
-                        .await?;
+                let new_cs = expand_all_git_submodule_file_changes(
+                    ctx,
+                    cs,
+                    source_repo,
+                    submodule_deps_map,
+                    x_repo_submodule_metadata_file_prefix,
+                )
+                .await?;
                 (vec![], new_cs)
             }
         };
@@ -1363,6 +1369,14 @@ where
             None => remap_parents(ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
         };
 
+        let small_repo = self.get_small_repo();
+        let x_repo_submodule_metadata_file_prefix =
+            get_x_repo_submodule_metadata_file_prefx_from_config(
+                small_repo.repo_identity().id(),
+                sync_config_version,
+                self.live_commit_sync_config.clone(),
+            )
+            .await?;
         let rewritten_commit = rewrite_commit(
             ctx,
             source_cs,
@@ -1372,6 +1386,7 @@ where
             submodule_deps,
             Default::default(),
             git_submodules_action,
+            x_repo_submodule_metadata_file_prefix,
         )
         .await?;
         match rewritten_commit {
@@ -1496,6 +1511,15 @@ where
         }
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
+
+        let small_repo = self.get_small_repo();
+        let x_repo_submodule_metadata_file_prefix =
+            get_x_repo_submodule_metadata_file_prefx_from_config(
+                small_repo.repo_identity().id(),
+                &version,
+                self.live_commit_sync_config.clone(),
+            )
+            .await?;
         let rewritten = rewrite_commit(
             ctx,
             source_cs_mut,
@@ -1505,6 +1529,7 @@ where
             source_repo_deps,
             Default::default(),
             git_submodules_action,
+            x_repo_submodule_metadata_file_prefix,
         )
         .await?;
 
@@ -1767,6 +1792,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         Source(self.source_repo.repo_identity().name())
     }
 
+    fn small_repo_id(&self) -> RepositoryId {
+        if self.small_to_large {
+            self.source_repo.0.repo_identity().id()
+        } else {
+            self.target_repo_id.0
+        }
+    }
+
     /// Determine what should happen to commits that would be empty when synced
     /// to the target repo.
     fn get_empty_rewritten_commit_action(
@@ -1879,6 +1912,13 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         )
         .await?;
 
+        let x_repo_submodule_metadata_file_prefix =
+            get_x_repo_submodule_metadata_file_prefx_from_config(
+                self.small_repo_id(),
+                &expected_version,
+                self.live_commit_sync_config.clone(),
+            )
+            .await?;
         match rewrite_commit(
             self.ctx,
             cs.into_mut(),
@@ -1888,6 +1928,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             self.submodule_deps,
             rewrite_opts,
             git_submodules_action,
+            x_repo_submodule_metadata_file_prefix,
         )
         .await?
         {
@@ -1967,6 +2008,13 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 )
                 .await?;
 
+                let x_repo_submodule_metadata_file_prefix =
+                    get_x_repo_submodule_metadata_file_prefx_from_config(
+                        self.small_repo_id(),
+                        &version,
+                        self.live_commit_sync_config.clone(),
+                    )
+                    .await?;
                 let maybe_rewritten = rewrite_commit(
                     self.ctx,
                     cs,
@@ -1976,6 +2024,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     self.submodule_deps,
                     rewrite_opts,
                     git_submodules_action,
+                    x_repo_submodule_metadata_file_prefix,
                 )
                 .await?;
                 match maybe_rewritten {
@@ -2130,6 +2179,13 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             )
             .await?;
 
+            let x_repo_submodule_metadata_file_prefix =
+                get_x_repo_submodule_metadata_file_prefx_from_config(
+                    self.small_repo_id(),
+                    &version,
+                    self.live_commit_sync_config.clone(),
+                )
+                .await?;
             match rewrite_commit(
                 self.ctx,
                 cs,
@@ -2139,6 +2195,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 self.submodule_deps,
                 Default::default(),
                 git_submodules_action,
+                x_repo_submodule_metadata_file_prefix,
             )
             .await?
             {
@@ -2420,4 +2477,33 @@ where
     }
 
     Ok(())
+}
+
+/// Get the prefix used to generate the submodule metadata file name from the
+/// small repo sync config.
+pub async fn get_x_repo_submodule_metadata_file_prefx_from_config(
+    small_repo_id: RepositoryId,
+    config_version: &CommitSyncConfigVersion,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<String> {
+    // Get the full commit sync config for that version name.
+    let mut commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(small_repo_id, config_version)
+        .await?;
+
+    // Get the small repo sync config for the repo we're syncing
+    let small_repo_sync_config = commit_sync_config
+        .small_repos
+        .remove(&small_repo_id)
+        .ok_or(
+            anyhow!(
+                "Small repo config for repo with id {} not found in commit sync config with version {} ",
+                small_repo_id,
+                config_version.0
+            )
+        )?;
+
+    Ok(small_repo_sync_config
+        .submodule_config
+        .submodule_metadata_file_prefix)
 }

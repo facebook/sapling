@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_recursion::async_recursion;
+use blobstore::Storable;
 use cloned::cloned;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
@@ -31,10 +32,12 @@ use manifest::ManifestOps;
 use maplit::hashmap;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
+use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::NonRootMPath;
@@ -64,9 +67,11 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
     cs: BonsaiChangesetMut,
     source_repo: &'a R,
     source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    x_repo_submodule_metadata_file_prefix: String,
 ) -> Result<BonsaiChangesetMut> {
     let fcs: SortedVectorMap<NonRootMPath, FileChange> = cs.file_changes;
     let parents = cs.parents.as_slice();
+    let x_repo_submodule_metadata_prefix_str = x_repo_submodule_metadata_file_prefix.as_str();
 
     let expanded_fcs: SortedVectorMap<NonRootMPath, FileChange> = stream::iter(fcs)
         .then(|(p, fc)| async move {
@@ -80,15 +85,22 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
                             parents,
                             p,
                             tfc.content_id(),
+                            x_repo_submodule_metadata_prefix_str,
                         )
                         .await
                     }
                     _ => Ok(vec![(p, fc)]),
                 },
                 FileChange::Deletion => {
-                    let paths_to_delete =
-                        handle_submodule_deletion(ctx, source_repo, source_repo_deps, parents, p)
-                            .await?;
+                    let paths_to_delete = handle_submodule_deletion(
+                        ctx,
+                        source_repo,
+                        source_repo_deps,
+                        parents,
+                        p,
+                        x_repo_submodule_metadata_prefix_str,
+                    )
+                    .await?;
                     Ok(paths_to_delete
                         .into_iter()
                         .map(|p| (p, FileChange::Deletion))
@@ -161,7 +173,9 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
     parents: &'a [ChangesetId],
     submodule_file_path: NonRootMPath,
     submodule_file_content_id: ContentId,
+    x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<Vec<(NonRootMPath, FileChange)>> {
+    let submodule_path = SubmodulePath(submodule_file_path);
     // Contains lists of file changes along
     // with the submodule these file changes are
     // from, so that the file content blobs are
@@ -171,7 +185,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
         ctx,
         source_repo,
         parents,
-        SubmodulePath(submodule_file_path),
+        submodule_path.clone(),
         source_repo_deps,
         submodule_file_content_id,
     )
@@ -183,7 +197,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
     // This is performed as a fold to dedup duplicate content ids in file
     // changes from different submodules, which can lead to errors when copying
     // the blobs to the source repo.
-    let (copy_per_submodule, fcs, _) = exp_results.into_iter().fold(
+    let (copy_per_submodule, expanded_file_changes, _) = exp_results.into_iter().fold(
         (HashMap::new(), Vec::new(), HashSet::new()),
         move |(mut copy_per_submodule, mut acc_fcs, already_copied), (sm_path, fcs)| {
             let (submodule_ids, already_copied) = fcs.iter().fold(
@@ -228,13 +242,50 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
             )
             .await
             .with_context(|| format!("Failed to copy file blobs from submodule {}", &sm_path.0))
-
-            // Ok(())
         })
         .try_collect()
         .await?;
 
-    anyhow::Ok(fcs)
+    // After expanding the submodule, we also need to generate the x-repo
+    // submodule metadata file, to keep track of the git hash that this expansion
+    // corresponds to.
+    let x_repo_sm_metadata_path = get_x_repo_submodule_metadata_file_path(
+        &submodule_path,
+        x_repo_submodule_metadata_file_prefix,
+    )?;
+
+    // File changes generated for the expanded submodule and changes to its
+    // x-repo submodule metadata file
+    let all_file_changes = {
+        let mut all_changes = expanded_file_changes;
+        let git_submodule_sha1 = get_git_hash_from_submodule_file(
+            ctx,
+            source_repo,
+            submodule_file_content_id,
+            &submodule_path,
+        )
+        .await?;
+        let metadata_file_content = FileContents::new_bytes(git_submodule_sha1.to_string());
+        let metadata_file_size = metadata_file_content.size();
+        let metadata_file_content_id = metadata_file_content
+            .into_blob()
+            .store(ctx, source_repo.repo_blobstore())
+            .await?;
+
+        // The metadata file will have the same content as the submodule file
+        // change in the source repo, but it will be a regular file, because in
+        // the large repo we can never have file changes of type `GitSubmodule`.
+        let x_repo_sm_metadata_fc = FileChange::tracked(
+            metadata_file_content_id,
+            FileType::Regular,
+            metadata_file_size,
+            None,
+        );
+        all_changes.push((x_repo_sm_metadata_path, x_repo_sm_metadata_fc));
+        all_changes
+    };
+
+    anyhow::Ok(all_file_changes)
 }
 
 #[async_recursion]
@@ -608,6 +659,7 @@ async fn handle_submodule_deletion<'a, R: Repo>(
     source_repo_deps: &'a HashMap<NonRootMPath, R>,
     parents: &'a [ChangesetId],
     submodule_file_path: NonRootMPath,
+    x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<Vec<NonRootMPath>> {
     // If the path is in the source_repo_deps keys, it's almost
     // certainly a submodule being deleted.
@@ -657,6 +709,7 @@ async fn handle_submodule_deletion<'a, R: Repo>(
             source_repo_deps,
             parents,
             submodule_file_path,
+            x_repo_submodule_metadata_file_prefix,
         )
         .await;
     };
@@ -672,6 +725,7 @@ async fn delete_submodule_expansion<'a, R: Repo>(
     source_repo_deps: &'a HashMap<NonRootMPath, R>,
     parents: &'a [ChangesetId],
     submodule_file_path: NonRootMPath,
+    x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<Vec<NonRootMPath>> {
     let submodule_path = SubmodulePath(submodule_file_path.clone());
     let submodule_repo = get_submodule_repo(&submodule_path, source_repo_deps)?;
@@ -701,10 +755,42 @@ async fn delete_submodule_expansion<'a, R: Repo>(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let paths_to_delete: Vec<_> = submodule_leaves
-        .into_iter()
-        .map(|(path, _)| submodule_file_path.join(&path))
-        .collect();
+    // Make sure we delete the x-repo submodule metadata file as well
+    let paths_to_delete: Vec<_> = {
+        let mut paths_to_delete: Vec<_> = submodule_leaves
+            .into_iter()
+            .map(|(path, _)| submodule_file_path.join(&path))
+            .collect();
+        let x_repo_sm_metadata_path = get_x_repo_submodule_metadata_file_path(
+            &submodule_path,
+            x_repo_submodule_metadata_file_prefix,
+        )?;
+        paths_to_delete.push(x_repo_sm_metadata_path);
+        paths_to_delete
+    };
 
     Ok(paths_to_delete)
+}
+
+/// Builds the full path of the x-repo submodule metadata file for a given
+/// submodule.
+fn get_x_repo_submodule_metadata_file_path(
+    submodule_file_path: &SubmodulePath,
+    // Prefix used to generate the metadata file basename. Obtained from
+    // the small repo sync config.
+    x_repo_submodule_metadata_file_prefix: &str,
+) -> Result<NonRootMPath> {
+    let (mb_sm_parent_dir, sm_basename) = submodule_file_path.0.split_dirname();
+
+    let x_repo_sm_metadata_file: NonRootMPath = NonRootMPath::new(
+        format!(".{x_repo_submodule_metadata_file_prefix}-{sm_basename}")
+            .to_string()
+            .into_bytes(),
+    )?;
+
+    let x_repo_sm_metadata_path = match mb_sm_parent_dir {
+        Some(sm_parent_dir) => sm_parent_dir.join(&x_repo_sm_metadata_file),
+        None => x_repo_sm_metadata_file,
+    };
+    Ok(x_repo_sm_metadata_path)
 }

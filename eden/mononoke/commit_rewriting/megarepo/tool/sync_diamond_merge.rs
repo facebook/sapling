@@ -29,6 +29,7 @@ use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::get_x_repo_submodule_metadata_file_prefx_from_config;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CandidateSelectionHint;
@@ -61,6 +62,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
 use sorted_vector_map::SortedVectorMap;
@@ -281,6 +283,7 @@ async fn create_rewritten_merge_commit(
 
     let submodule_deps = syncers.small_to_large.get_submodule_deps();
 
+    let source_repo = syncers.small_to_large.get_source_repo();
     let maybe_rewritten = rewrite_commit(
         &ctx,
         merge_bcs,
@@ -289,10 +292,16 @@ async fn create_rewritten_merge_commit(
             .small_to_large
             .get_mover_by_version(&version_p1)
             .await?,
-        syncers.small_to_large.get_source_repo(),
+        source_repo,
         submodule_deps,
         Default::default(),
         Default::default(),
+        get_x_repo_submodule_metadata_file_prefx_from_config(
+            small_repo.repo_identity().id(),
+            &root_version,
+            syncers.small_to_large.live_commit_sync_config.clone(),
+        )
+        .await?,
     )
     .await?;
     let mut rewritten =

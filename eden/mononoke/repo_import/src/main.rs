@@ -67,6 +67,7 @@ use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SegmentedChangelogConfig;
+use metaconfig_types::DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -241,6 +242,7 @@ async fn rewrite_file_paths(
             &submodule_deps,
             Default::default(),
             Default::default(),
+            DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX.to_string(),
         )
         .await?;
 
