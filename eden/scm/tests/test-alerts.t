@@ -59,3 +59,16 @@ Alerts show in backtrace
   SEV 4 Test Alert in Backtrace
   This is a test
   Traceback (most recent call last):
+
+Make sure we see the alert when errorredirect is configured:
+  $ hg crash --config extensions.errorredirect= --config "errorredirect.script=echo redirected"
+  This crash may be related to an ongoing issue:
+  Ongoing issue
+  SEV 4 Test Alert in Backtrace
+  This is a test
+  redirected
+  [255]
+
+Don't show alert with HGPLAIN:
+  $ HGPLAIN=1 hg crash 2>&1 | grep SEV
+  [1]

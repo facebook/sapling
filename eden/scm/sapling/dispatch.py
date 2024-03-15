@@ -1157,6 +1157,7 @@ def _exceptionwarning(ui):
     return _("** @LongProduct@ (version %s) has crashed:\n") % util.version()
 
 
+# NB: handlecommandexception() is replaced by the errorredirect extension.
 def handlecommandexception(ui):
     """Produce a warning message for broken commands
 

@@ -111,6 +111,9 @@ def print_active_alerts(ui):
 
 
 def print_matching_alerts_for_exception(ui, crash: str):
+    if ui.plain():
+        return
+
     related_alerts = []
 
     alerts = get_alerts(ui)

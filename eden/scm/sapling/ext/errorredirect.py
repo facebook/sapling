@@ -35,7 +35,7 @@ import subprocess
 import sys
 import traceback
 
-from sapling import dispatch, encoding, extensions, pycompat, registrar, util
+from sapling import alerts, dispatch, encoding, extensions, pycompat, registrar, util
 
 
 configtable = {}
@@ -74,6 +74,8 @@ def _handlecommandexception(orig, ui):
     script = ui.config("errorredirect", "script")
     if not script:
         return orig(ui)
+
+    alerts.print_matching_alerts_for_exception(ui, trace)
 
     # run the external script
     env = encoding.environ.copy()
