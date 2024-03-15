@@ -37,6 +37,7 @@ use crate::state_ext::StateExt;
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_PORT: &str = "tfb-orig-client-port";
+const HEADER_REVPROXY_REGION: &str = "x-fb-revproxy-region";
 
 #[derive(StateData, Default)]
 pub struct MetadataState(Metadata);
@@ -100,6 +101,13 @@ fn request_port_from_headers(headers: &HeaderMap) -> Option<u16> {
     Some(ip)
 }
 
+fn revproxy_region_from_headers(headers: &HeaderMap) -> Option<String> {
+    let header = headers.get(HEADER_REVPROXY_REGION)?;
+    let header = header.to_str().ok()?;
+    let region = header.parse().ok()?;
+    Some(region)
+}
+
 fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
     let encoded_identities = headers.get(ENCODED_CLIENT_IDENTITY)?;
     let json_identities = percent_decode(encoded_identities.as_bytes())
@@ -118,6 +126,10 @@ impl Middleware for MetadataMiddleware {
             metadata = metadata
                 .set_client_ip(request_ip_from_headers(headers))
                 .set_client_port(request_port_from_headers(headers));
+
+            if let Some(revproxy_region) = revproxy_region_from_headers(headers) {
+                metadata.add_revproxy_region(revproxy_region);
+            }
 
             let maybe_identities = {
                 let maybe_cat_idents =
