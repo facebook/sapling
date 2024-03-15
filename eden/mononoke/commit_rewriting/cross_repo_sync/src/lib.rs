@@ -12,6 +12,7 @@
 mod commit_in_memory_syncer;
 mod commit_sync_config_utils;
 mod commit_sync_outcome;
+mod commit_syncer;
 mod commit_syncers_lib;
 mod git_submodules;
 mod pushrebase_hook;
@@ -36,6 +37,7 @@ pub use commit_sync_outcome::CandidateSelectionHint;
 pub use commit_sync_outcome::CommitSyncOutcome;
 pub use commit_sync_outcome::CommitSyncOutcome::*;
 pub use commit_sync_outcome::PluralCommitSyncOutcome;
+pub use commit_syncer::CommitSyncer;
 pub use commit_syncers_lib::create_commit_syncer_lease;
 pub use commit_syncers_lib::create_commit_syncers;
 pub use commit_syncers_lib::create_synced_commit_mapping_entry;
@@ -45,7 +47,6 @@ pub use commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config
 pub use commit_syncers_lib::rewrite_commit;
 pub use commit_syncers_lib::update_mapping_with_version;
 pub use commit_syncers_lib::CommitSyncRepos;
-pub use commit_syncers_lib::CommitSyncer;
 pub use commit_syncers_lib::ConcreteRepo;
 pub use commit_syncers_lib::ErrorKind;
 pub use commit_syncers_lib::PushrebaseRewriteDates;

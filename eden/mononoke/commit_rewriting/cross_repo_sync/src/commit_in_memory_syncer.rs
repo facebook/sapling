@@ -31,11 +31,11 @@ use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::commit_sync_config_utils::get_strip_git_submodules_by_version;
 use crate::commit_sync_outcome::CommitSyncOutcome;
+use crate::commit_syncer::CommitSyncer;
 use crate::commit_syncers_lib::get_mover_by_version;
 use crate::commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::strip_removed_parents;
-use crate::commit_syncers_lib::CommitSyncer;
 use crate::commit_syncers_lib::ErrorKind;
 use crate::commit_syncers_lib::Repo;
 use crate::commit_syncers_lib::SubmoduleDeps;

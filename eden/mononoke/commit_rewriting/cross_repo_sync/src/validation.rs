@@ -47,7 +47,7 @@ use slog::error;
 use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 
-use crate::commit_syncers_lib::CommitSyncer;
+use crate::commit_syncer::CommitSyncer;
 use crate::commit_syncers_lib::Repo;
 use crate::types::Source;
 use crate::types::Target;
