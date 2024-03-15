@@ -51,12 +51,7 @@
 
 # Derive the git commit for this commit
   $ mononoke_newadmin derived-data -R repo derive --rederive -T git_commits -i 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
-  Error: Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(9695b5ce077c0fba96f8e75694a4c02e4813bb87), bcs_id: ChangesetId(Blake2(53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(1fc739d9b6d155d0e07d42ee8a8df4f52c40c004), bcs_id: ChangesetId(Blake2(53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8)) }])
-  [1]
-  $ mononoke_newadmin git-objects -R repo fetch --id 9695b5ce077c0fba96f8e75694a4c02e4813bb87 > imported
-  $ mononoke_newadmin git-objects -R repo fetch --id 1fc739d9b6d155d0e07d42ee8a8df4f52c40c004 > derived
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" imported derived
+  $ mononoke_newadmin git-objects -R repo fetch --id 9695b5ce077c0fba96f8e75694a4c02e4813bb87
   The object is a Git Commit
   
   Commit {
@@ -67,10 +62,8 @@
           email: "mononoke@mononoke",
           time: Time {
               seconds: 1355258400,
-  -             offset: 28800,
-  -             sign: Plus,
-  +             offset: -28800,
-  +             sign: Minus,
+              offset: 28800,
+              sign: Plus,
           },
       },
       committer: Signature {
@@ -86,4 +79,11 @@
       message: "Commit with offset date time\n",
       extra_headers: [],
   }
-  [1]
+  $ mononoke_newadmin fetch -R repo -i 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
+  BonsaiChangesetId: 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
+  Author: mononoke <mononoke@mononoke>
+  Message: Commit with offset date time
+  
+  FileChanges:
+  	 ADDED/MODIFIED: file1 179d6c1fa76e759e00f5999c49430d9696671d1ebdc915314a600c46a18db653
+  
