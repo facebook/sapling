@@ -162,24 +162,36 @@ async fn fetch_file(
     let parents = ctx.hg_parents().into();
     let mut file = FileEntry::new(key.clone(), parents);
 
-    if attrs.content {
-        let (data, metadata) = ctx
-            .content()
-            .await
-            .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?;
+    let fetch_content = async {
+        if attrs.content {
+            Ok(Some(ctx.content().await.with_context(|| {
+                ErrorKind::FileFetchFailed(key.clone())
+            })?))
+        } else {
+            anyhow::Ok(None)
+        }
+    };
 
+    let fetch_aux_data = async {
+        if attrs.aux_data {
+            Ok(Some(ctx.content_metadata().await.with_context(|| {
+                ErrorKind::FileAuxDataFetchFailed(key.clone())
+            })?))
+        } else {
+            anyhow::Ok(None)
+        }
+    };
+
+    let (content, aux_data) = futures::try_join!(fetch_content, fetch_aux_data)?;
+
+    if let Some((hg_file_blob, metadata)) = content {
         file = file.with_content(FileContent {
-            hg_file_blob: data,
+            hg_file_blob,
             metadata,
         });
     }
 
-    if attrs.aux_data {
-        let content_metadata = ctx
-            .content_metadata()
-            .await
-            .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?;
-
+    if let Some(content_metadata) = aux_data {
         file = file.with_aux_data(FileAuxData {
             total_size: content_metadata.total_size,
             content_id: content_metadata.content_id.into(),

@@ -53,6 +53,8 @@ pub enum ErrorKind {
     DeserializationFailed,
     #[error("Failed to fetch file for key: {0:?}")]
     FileFetchFailed(Key),
+    #[error("Failed to fetch file's aux data for key: {0:?}")]
+    FileAuxDataFetchFailed(Key),
     #[error("Failed to fetch tree for key: {0:?}")]
     TreeFetchFailed(Key),
     #[error("Failed to fetch history for key: {0:?}")]
