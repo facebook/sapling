@@ -16,28 +16,11 @@ use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
-use bonsai_git_mapping::BonsaiGitMapping;
-use bonsai_git_mapping::BonsaiGitMappingArc;
-use bonsai_git_mapping::BonsaiGitMappingRef;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
-use bonsai_hg_mapping::BonsaiHgMapping;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkUpdateLog;
-use bookmarks::BookmarkUpdateLogArc;
-use bookmarks::BookmarkUpdateLogRef;
-use bookmarks::Bookmarks;
-use bookmarks::BookmarksArc;
-use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
 use changeset_info::ChangesetInfo;
-use changesets::Changesets;
-use changesets::ChangesetsRef;
-use commit_graph::CommitGraph;
-use commit_graph::CommitGraphRef;
 use commit_transformation::rewrite_commit_with_file_changes_filter;
 use commit_transformation::FileChangeFilter;
 use commit_transformation::FileChangeFilterApplication;
@@ -48,8 +31,6 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use environment::Caching;
 use fbinit::FacebookInit;
-use filestore::FilestoreConfig;
-use filestore::FilestoreConfigRef;
 use futures::channel::oneshot;
 use futures::future::try_join;
 use futures::stream;
@@ -62,8 +43,6 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::GitSubmodulesChangesAction;
-use metaconfig_types::RepoConfig;
-use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -71,30 +50,10 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
-use mutable_counters::MutableCounters;
-use mutable_counters::MutableCountersArc;
-use phases::Phases;
-use phases::PhasesRef;
-use pushrebase::PushrebaseError;
-use pushrebase_mutation_mapping::PushrebaseMutationMapping;
-use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
-use repo_blobstore::RepoBlobstore;
-use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
-use repo_bookmark_attrs::RepoBookmarkAttrs;
-use repo_bookmark_attrs::RepoBookmarkAttrsRef;
-use repo_cross_repo::RepoCrossRepo;
-use repo_cross_repo::RepoCrossRepoRef;
-use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataRef;
-use repo_identity::RepoIdentity;
-use repo_identity::RepoIdentityRef;
 use slog::info;
-use static_assertions::assert_impl_all;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
-use thiserror::Error;
 use topo_sort::sort_topological;
 
 use crate::commit_sync_config_utils::get_mover;
@@ -105,42 +64,13 @@ use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
 use crate::git_submodules::expand_all_git_submodule_file_changes;
 use crate::sync_config_version_utils::get_mapping_change_version;
+use crate::types::ErrorKind;
+use crate::types::Repo;
 use crate::types::Source;
+use crate::types::SubmoduleDeps;
 use crate::types::Target;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
-
-#[derive(Debug, Error)]
-pub enum ErrorKind {
-    #[error("Pushrebase of synced commit failed - check config for overlaps: {0:?}")]
-    PushrebaseFailure(PushrebaseError),
-    #[error("Remapped commit {0} expected in target repo, but not present")]
-    MissingRemappedCommit(ChangesetId),
-    #[error("Could not find a commit in the target repo with the same working copy as {0}")]
-    SameWcSearchFail(ChangesetId),
-    #[error("Parent commit {0} hasn't been remapped")]
-    ParentNotRemapped(ChangesetId),
-    #[error("Parent commit {0} is not a sync candidate")]
-    ParentNotSyncCandidate(ChangesetId),
-    #[error("Cannot choose working copy equivalent for {0}")]
-    AmbiguousWorkingCopyEquivalent(ChangesetId),
-    #[error(
-        "expected {expected_version} mapping version to be used to remap {cs_id}, but actually {actual_version} mapping version was used"
-    )]
-    UnexpectedVersion {
-        expected_version: CommitSyncConfigVersion,
-        actual_version: CommitSyncConfigVersion,
-        cs_id: ChangesetId,
-    },
-    #[error("X-repo sync is temporarily disabled, contact source control oncall")]
-    XRepoSyncDisabled,
-}
-
-#[derive(PartialEq, Copy, Clone, Debug)]
-pub enum PushrebaseRewriteDates {
-    Yes,
-    No,
-}
 
 /// Create a version of `cs` with `Mover` applied to all changes
 /// The return value can be:
@@ -477,109 +407,6 @@ where
             versions: synced_ancestors_versions,
         },
     ))
-}
-
-pub trait Repo = BookmarksArc
-    + BookmarksRef
-    + BookmarkUpdateLogArc
-    + BookmarkUpdateLogRef
-    + RepoBlobstoreArc
-    + BonsaiHgMappingRef
-    + BonsaiGlobalrevMappingArc
-    + RepoCrossRepoRef
-    + PushrebaseMutationMappingRef
-    + RepoBookmarkAttrsRef
-    + BonsaiGitMappingRef
-    + BonsaiGitMappingArc
-    + FilestoreConfigRef
-    + ChangesetsRef
-    + RepoIdentityRef
-    + MutableCountersArc
-    + PhasesRef
-    + RepoBlobstoreRef
-    + RepoConfigRef
-    + RepoDerivedDataRef
-    + CommitGraphRef
-    + Send
-    + Sync
-    + Clone
-    + 'static;
-
-/// Simplest repo that implements cross_repo_sync::Repo trait
-#[facet::container]
-#[derive(Clone)]
-pub struct ConcreteRepo {
-    #[facet]
-    bookmarks: dyn Bookmarks,
-
-    #[facet]
-    bookmark_update_log: dyn BookmarkUpdateLog,
-
-    #[facet]
-    bonsai_hg_mapping: dyn BonsaiHgMapping,
-
-    #[facet]
-    bonsai_git_mapping: dyn BonsaiGitMapping,
-
-    #[facet]
-    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
-
-    #[facet]
-    pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
-
-    #[facet]
-    filestore_config: FilestoreConfig,
-
-    #[facet]
-    changesets: dyn Changesets,
-
-    #[facet]
-    id: RepoIdentity,
-
-    #[facet]
-    phases: dyn Phases,
-
-    #[facet]
-    repo_cross_repo: RepoCrossRepo,
-
-    #[facet]
-    repo_bookmark_attrs: RepoBookmarkAttrs,
-
-    #[facet]
-    config: RepoConfig,
-
-    #[facet]
-    derived_data: RepoDerivedData,
-
-    #[facet]
-    blobstore: RepoBlobstore,
-
-    #[facet]
-    mutable_counters: dyn MutableCounters,
-
-    #[facet]
-    commit_graph: CommitGraph,
-}
-
-assert_impl_all!(ConcreteRepo: Repo);
-
-/// Syncing commits from a small Mononoke repo with submodule file changes to a
-/// large repo requires the small repo submodule dependencies to be available.
-///
-/// However, LargeToSmall sync and some SmallToLarge operations don't require
-/// loading these repos, in which case this value will be set to `None`.
-/// When rewriting commits from small to large (i.e. calling `rewrite_commit`),
-/// this map has to be available, or the operation will crash otherwise.
-#[derive(Clone)]
-pub enum SubmoduleDeps<R> {
-    ForSync(HashMap<NonRootMPath, R>),
-    NotNeeded,
-}
-
-impl<R> Default for SubmoduleDeps<R> {
-    fn default() -> Self {
-        Self::NotNeeded
-    }
 }
 
 #[derive(Clone)]

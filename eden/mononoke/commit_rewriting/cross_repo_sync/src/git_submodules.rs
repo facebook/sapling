@@ -46,7 +46,7 @@ use mononoke_types::TrackedFileChange;
 use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::commit_syncers_lib::Repo;
+use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.

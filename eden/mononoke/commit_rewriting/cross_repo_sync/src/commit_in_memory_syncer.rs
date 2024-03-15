@@ -36,14 +36,14 @@ use crate::commit_syncers_lib::get_mover_by_version;
 use crate::commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::strip_removed_parents;
-use crate::commit_syncers_lib::ErrorKind;
-use crate::commit_syncers_lib::Repo;
-use crate::commit_syncers_lib::SubmoduleDeps;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::get_version_for_merge;
+use crate::types::ErrorKind;
+use crate::types::Repo;
 use crate::types::Source;
+use crate::types::SubmoduleDeps;
 use crate::types::Target;
 
 // TODO(T182311609): remove duplication from `CommitSyncOutcome`

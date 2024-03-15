@@ -21,7 +21,7 @@ use synced_commit_mapping::add_many_in_txn;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 
 use crate::commit_syncers_lib::create_synced_commit_mapping_entry;
-use crate::commit_syncers_lib::Repo;
+use crate::types::Repo;
 use crate::CommitSyncRepos;
 use crate::ErrorKind;
 

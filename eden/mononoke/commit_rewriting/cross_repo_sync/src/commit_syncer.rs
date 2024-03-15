@@ -67,10 +67,6 @@ use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
-use crate::commit_syncers_lib::ErrorKind;
-use crate::commit_syncers_lib::PushrebaseRewriteDates;
-use crate::commit_syncers_lib::Repo;
-use crate::commit_syncers_lib::SubmoduleDeps;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use crate::reporting;
@@ -78,7 +74,11 @@ use crate::reporting::log_rewrite;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::set_mapping_change_version;
+use crate::types::ErrorKind;
+use crate::types::PushrebaseRewriteDates;
+use crate::types::Repo;
 use crate::types::Source;
+use crate::types::SubmoduleDeps;
 use crate::types::Target;
 
 #[derive(Clone)]

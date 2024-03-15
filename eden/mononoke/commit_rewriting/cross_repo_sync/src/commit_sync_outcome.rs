@@ -26,7 +26,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
 use crate::commit_sync_config_utils::get_small_repos_for_version;
-use crate::commit_syncers_lib::Repo;
+use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
 
