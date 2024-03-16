@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::io::Write;
 
 use async_runtime::block_on;
@@ -15,6 +16,7 @@ use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 use cmdutil::Config;
+use cmdutil::Error;
 use cmdutil::Result;
 use cmdutil::IO;
 use manifest::FileMetadata;
@@ -117,21 +119,48 @@ fn fetch_files(io: &IO, config: &dyn Config, keys: Vec<Key>, local: bool) -> Res
         FetchMode::AllowRemote
     };
 
-    let fetch_result = store.fetch(
-        keys.into_iter(),
+    let mut fetch_and_display_successes =
+        |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Vec<Error>> {
+            let fetch_result = store.fetch(keys.into_iter(), attrs, fetch_mode);
+
+            let (found, missing, _errors) = fetch_result.consume();
+            for (_, file) in found.into_iter() {
+                let _ = write!(stdout, "Successfully fetched file: {:#?}\n", file);
+            }
+
+            missing
+        };
+
+    let mut missing = fetch_and_display_successes(
+        keys,
         FileAttributes {
             content: true,
             aux_data: true,
         },
-        fetch_mode,
     );
 
-    let (found, missing, _errors) = fetch_result.consume();
-    for (_, file) in found.into_iter() {
-        write!(stdout, "Successfully fetched file: {:#?}\n", file)?;
-    }
-    for (key, _) in missing.into_iter() {
-        write!(stdout, "Failed to fetch file: {:#?}\n", key)?;
+    // Maybe we failed because only one of content or aux data is available.
+    // The API doesn't let us say "aux data if present", so try each separately.
+    missing = fetch_and_display_successes(
+        missing.into_keys().collect(),
+        FileAttributes {
+            content: true,
+            aux_data: false,
+        },
+    );
+    missing = fetch_and_display_successes(
+        missing.into_keys().collect(),
+        FileAttributes {
+            content: false,
+            aux_data: true,
+        },
+    );
+
+    for (key, errors) in missing.into_iter() {
+        write!(
+            stdout,
+            "Failed to fetch file: {key:#?}\nError: {errors:?}\n"
+        )?;
     }
 
     Ok(())

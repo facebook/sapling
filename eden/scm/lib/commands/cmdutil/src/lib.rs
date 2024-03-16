@@ -7,6 +7,7 @@
 
 //! Dependencies for command implementation. Shared code between `commands` and actual commands.
 
+pub use anyhow::Error;
 pub use anyhow::Result;
 pub use clidispatch;
 use clidispatch::errors::FallbackToPython;
