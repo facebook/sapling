@@ -167,9 +167,9 @@ Trigger file and tree downloading:
   $ cat err out
   DEBUG eagerepo::api: trees d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43
   TRACE eagerepo::api:  found: d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43, 170 bytes
-  DEBUG eagerepo::api: files 005d992c5dcf32993668f7cede29d296c494a5d9
+  DEBUG eagerepo::api: files_attrs FileSpec { key: Key { path: RepoPathBuf("A"), hgid: HgId("005d992c5dcf32993668f7cede29d296c494a5d9") }, attrs: FileAttributes { content: true, aux_data: false } }
   TRACE eagerepo::api:  found: 005d992c5dcf32993668f7cede29d296c494a5d9, 41 bytes
-  DEBUG eagerepo::api: files 35e7525ce3a48913275d7061dd9a867ffef1e34d
+  DEBUG eagerepo::api: files_attrs FileSpec { key: Key { path: RepoPathBuf("B"), hgid: HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d") }, attrs: FileAttributes { content: true, aux_data: false } }
   TRACE eagerepo::api:  found: 35e7525ce3a48913275d7061dd9a867ffef1e34d, 41 bytes
   AB (no-eol)
 
@@ -211,7 +211,7 @@ Read file content:
   $ hg cat -r $C C
   DEBUG eagerepo::api: trees 0ccf968573574750913fcee533939cc7ebe7327d
   TRACE eagerepo::api:  found: 0ccf968573574750913fcee533939cc7ebe7327d, 170 bytes
-  DEBUG eagerepo::api: files a2e456504a5e61f763f1a0b36a6c247c7541b2b3
+  DEBUG eagerepo::api: files_attrs FileSpec { key: Key { path: RepoPathBuf("C"), hgid: HgId("a2e456504a5e61f763f1a0b36a6c247c7541b2b3") }, attrs: FileAttributes { content: true, aux_data: false } }
   TRACE eagerepo::api:  found: a2e456504a5e61f763f1a0b36a6c247c7541b2b3, 41 bytes
   C (no-eol)
 

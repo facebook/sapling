@@ -40,6 +40,7 @@ use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
 use edenapi::types::Extra;
+use edenapi::types::FileAuxData;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileResponse;
@@ -142,7 +143,7 @@ impl EdenApi for EagerRepo {
     }
 
     async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileResponse>> {
-        debug!("files {}", debug_spec_list(&reqs));
+        debug!("files_attrs {}", debug_spec_list(&reqs));
         self.refresh_for_api();
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
@@ -151,17 +152,28 @@ impl EdenApi for EagerRepo {
             let data = self.get_sha1_blob_for_api(id, "files_attrs")?;
             let (p1, p2) = extract_p1_p2(&data);
             let parents = Parents::new(p1, p2);
-            // TODO(meyer): Actually implement aux data here.
-            let entry = FileEntry {
+
+            let mut entry = FileEntry {
                 key: key.clone(),
                 parents,
-                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
-                content: Some(FileContent {
-                    hg_file_blob: extract_body(&data).to_vec().into(),
-                    metadata: Default::default(),
-                }),
+                content: None,
                 aux_data: None,
             };
+
+            // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
+            let file_body = extract_body(&data).to_vec();
+
+            if spec.attrs.aux_data {
+                entry.aux_data = Some(FileAuxData::from_content(&file_body));
+            }
+
+            if spec.attrs.content {
+                entry.content = Some(FileContent {
+                    hg_file_blob: file_body.into(),
+                    metadata: Default::default(),
+                });
+            }
+
             let response = FileResponse {
                 key,
                 result: Ok(entry),
@@ -1232,7 +1244,7 @@ fn debug_key_list(keys: &[Key]) -> String {
 }
 
 fn debug_spec_list(reqs: &[FileSpec]) -> String {
-    debug_list(reqs, |s| s.key.hgid.to_hex())
+    debug_list(reqs, |s| format!("{s:?}"))
 }
 
 fn debug_hgid_list(ids: &[HgId]) -> String {
