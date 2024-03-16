@@ -9,12 +9,17 @@ use std::io::Write;
 
 use async_runtime::block_on;
 use async_runtime::stream_to_iter as block_on_stream;
+use clidispatch::abort;
+use clidispatch::abort_if;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 use cmdutil::Config;
 use cmdutil::Result;
 use cmdutil::IO;
+use manifest::FileMetadata;
+use manifest::FsNodeMetadata;
+use manifest::Manifest;
 use repo::repo::Repo;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FileAttributes;
@@ -22,6 +27,7 @@ use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
 use types::fetch_mode::FetchMode;
 use types::Key;
+use types::RepoPathBuf;
 
 define_flags! {
     pub struct DebugScmStoreOpts {
@@ -29,13 +35,22 @@ define_flags! {
         mode: String,
 
         /// Input file containing keys to fetch (hgid,path separated by newlines)
-        path: String,
+        requests_file: Option<String>,
 
         /// Only check for the entity locally, don't make a remote request
         local: bool,
+
+        /// Revision for positional file paths.
+        #[short('r')]
+        #[argtype("REV")]
+        rev: Option<String>,
+
+        #[args]
+        args: Vec<String>,
     }
 }
 
+#[derive(PartialEq)]
 enum FetchType {
     File,
     Tree,
@@ -48,8 +63,37 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
         _ => return Err(errors::Abort("'mode' must be one of 'file' or 'tree'".into()).into()),
     };
 
-    let keys: Vec<_> =
-        block_on_stream(block_on(file_to_async_key_stream(ctx.opts.path.into()))?).collect();
+    abort_if!(
+        ctx.opts.requests_file.is_some() == ctx.opts.rev.is_some(),
+        "must specify exactly one of --rev or --path"
+    );
+
+    abort_if!(
+        ctx.opts.rev.is_some() && mode == FetchType::Tree,
+        "--rev doesn't support trees yet",
+    );
+
+    let keys: Vec<Key> = if let Some(path) = ctx.opts.requests_file {
+        block_on_stream(block_on(file_to_async_key_stream(path.into()))?).collect()
+    } else {
+        let wc = repo.working_copy()?;
+        let commit = repo.resolve_commit(Some(&wc.treestate().lock()), &ctx.opts.rev.unwrap())?;
+        let manifest = repo.tree_resolver()?.get(&commit)?;
+        ctx.opts
+            .args
+            .into_iter()
+            .map(|path| {
+                let path = RepoPathBuf::from_string(path)?;
+                match manifest.get(&path)? {
+                    None => abort!("path {path} not in manifest"),
+                    Some(FsNodeMetadata::Directory(_)) => abort!("path {path} is a directory"),
+                    Some(FsNodeMetadata::File(FileMetadata { hgid, .. })) => {
+                        Ok(Key::new(path, hgid))
+                    }
+                }
+            })
+            .collect::<Result<_>>()?
+    };
 
     let config = repo.config();
 
