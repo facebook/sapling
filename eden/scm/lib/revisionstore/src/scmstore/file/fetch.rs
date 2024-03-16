@@ -111,7 +111,7 @@ impl FetchState {
 
             fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
-            compute_aux_data: true,
+            compute_aux_data: file_store.compute_aux_data,
             lfs_progress: file_store.lfs_progress.clone(),
             lfs_enabled,
         }

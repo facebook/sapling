@@ -367,6 +367,7 @@ mod tests {
         let mut store = FileStore::empty();
         store.indexedlog_local = Some(content);
         store.aux_local = Some(aux.clone());
+        store.compute_aux_data = true;
 
         let expected = Entry {
             total_size: 4,

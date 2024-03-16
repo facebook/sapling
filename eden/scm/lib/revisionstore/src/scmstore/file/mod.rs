@@ -75,6 +75,8 @@ pub struct FileStore {
     pub(crate) edenapi_retries: i32,
     /// Allow explicitly writing serialized LFS pointers outside of tests
     pub(crate) allow_write_lfs_ptrs: bool,
+
+    pub(crate) compute_aux_data: bool,
     pub(crate) prefer_computing_aux_data: bool,
 
     // Record remote fetches
@@ -417,6 +419,7 @@ impl FileStore {
             edenapi_retries: 0,
             allow_write_lfs_ptrs: false,
             prefer_computing_aux_data: false,
+            compute_aux_data: false,
 
             indexedlog_local: None,
             lfs_local: None,
@@ -488,6 +491,7 @@ impl LegacyStore for FileStore {
             edenapi_retries: self.edenapi_retries.clone(),
             allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
             prefer_computing_aux_data: self.prefer_computing_aux_data,
+            compute_aux_data: self.compute_aux_data,
 
             indexedlog_local: self.indexedlog_cache.clone(),
             lfs_local: self.lfs_cache.clone(),

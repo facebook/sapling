@@ -386,6 +386,10 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or_default::<bool>("scmstore", "prefercomputingauxdata")?;
 
+        let compute_aux_data =
+            self.config
+                .get_or::<bool>("scmstore", "compute-aux-data", || true)?;
+
         let activity_logger =
             if let Some(path) = self.config.get_opt::<String>("scmstore", "activitylog")? {
                 let f = fs_err::OpenOptions::new()
@@ -403,6 +407,8 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_threshold_bytes,
             edenapi_retries,
             allow_write_lfs_ptrs,
+
+            compute_aux_data,
             prefer_computing_aux_data,
 
             indexedlog_local,
