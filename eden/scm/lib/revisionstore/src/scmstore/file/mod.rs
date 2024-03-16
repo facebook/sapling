@@ -28,6 +28,7 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
 use rand::Rng;
+use tracing::debug;
 
 pub(crate) use self::fetch::FetchState;
 pub use self::metrics::FileStoreFetchMetrics;
@@ -75,6 +76,8 @@ pub struct FileStore {
     pub(crate) edenapi_retries: i32,
     /// Allow explicitly writing serialized LFS pointers outside of tests
     pub(crate) allow_write_lfs_ptrs: bool,
+
+    pub(crate) prefetch_aux_data: bool,
 
     pub(crate) compute_aux_data: bool,
     pub(crate) prefer_computing_aux_data: bool,
@@ -155,6 +158,12 @@ impl FileStore {
             found_tx,
             self.lfs_threshold_bytes.is_some(),
             fetch_mode,
+        );
+
+        debug!(
+            ?attrs,
+            num_keys = state.pending_len(),
+            first_keys = "fetching"
         );
 
         let keys_len = state.pending_len();
@@ -418,6 +427,8 @@ impl FileStore {
             lfs_threshold_bytes: None,
             edenapi_retries: 0,
             allow_write_lfs_ptrs: false,
+
+            prefetch_aux_data: false,
             prefer_computing_aux_data: false,
             compute_aux_data: false,
 
@@ -490,6 +501,8 @@ impl LegacyStore for FileStore {
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
             edenapi_retries: self.edenapi_retries.clone(),
             allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
+
+            prefetch_aux_data: self.prefetch_aux_data,
             prefer_computing_aux_data: self.prefer_computing_aux_data,
             compute_aux_data: self.compute_aux_data,
 
@@ -602,10 +615,16 @@ impl HgIdDataStore for FileStore {
 impl RemoteDataStore for FileStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.metrics.write().api.hg_prefetch.call(keys.len());
+
+        let mut attrs = FileAttributes::CONTENT;
+        if self.prefetch_aux_data {
+            attrs |= FileAttributes::AUX;
+        }
+
         let missing = self
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
-                FileAttributes::CONTENT,
+                attrs,
                 FetchMode::AllowRemote,
             )
             .missing()?

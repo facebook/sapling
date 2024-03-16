@@ -7,6 +7,7 @@
 
 use std::ops::BitAnd;
 use std::ops::BitOr;
+use std::ops::BitOrAssign;
 use std::ops::Not;
 use std::ops::Sub;
 
@@ -89,6 +90,12 @@ impl BitOr for FileAttributes {
             content: self.content | rhs.content,
             aux_data: self.aux_data | rhs.aux_data,
         }
+    }
+}
+
+impl BitOrAssign for FileAttributes {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 

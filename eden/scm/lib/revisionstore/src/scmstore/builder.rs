@@ -390,6 +390,10 @@ impl<'a> FileStoreBuilder<'a> {
             self.config
                 .get_or::<bool>("scmstore", "compute-aux-data", || true)?;
 
+        let prefetch_aux_data =
+            self.config
+                .get_or::<bool>("scmstore", "prefetch-aux-data", || true)?;
+
         let activity_logger =
             if let Some(path) = self.config.get_opt::<String>("scmstore", "activitylog")? {
                 let f = fs_err::OpenOptions::new()
@@ -408,6 +412,7 @@ impl<'a> FileStoreBuilder<'a> {
             edenapi_retries,
             allow_write_lfs_ptrs,
 
+            prefetch_aux_data,
             compute_aux_data,
             prefer_computing_aux_data,
 
