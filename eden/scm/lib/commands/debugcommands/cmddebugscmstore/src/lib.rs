@@ -42,6 +42,9 @@ define_flags! {
         /// Only check for the entity locally, don't make a remote request
         local: bool,
 
+        /// Only fetch AUX data (don't request file content).
+        aux_only: bool,
+
         /// Revision for positional file paths.
         #[short('r')]
         #[argtype("REV")]
@@ -100,14 +103,26 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     let config = repo.config();
 
     match mode {
-        FetchType::File => fetch_files(&ctx.core.io, config, keys, ctx.opts.local)?,
+        FetchType::File => fetch_files(
+            &ctx.core.io,
+            config,
+            keys,
+            ctx.opts.local,
+            ctx.opts.aux_only,
+        )?,
         FetchType::Tree => fetch_trees(&ctx.core.io, config, keys, ctx.opts.local)?,
     }
 
     Ok(0)
 }
 
-fn fetch_files(io: &IO, config: &dyn Config, keys: Vec<Key>, local: bool) -> Result<()> {
+fn fetch_files(
+    io: &IO,
+    config: &dyn Config,
+    keys: Vec<Key>,
+    local: bool,
+    aux_only: bool,
+) -> Result<()> {
     let file_builder = FileStoreBuilder::new(&config);
     let store = file_builder.build()?;
 
@@ -134,27 +149,29 @@ fn fetch_files(io: &IO, config: &dyn Config, keys: Vec<Key>, local: bool) -> Res
     let mut missing = fetch_and_display_successes(
         keys,
         FileAttributes {
-            content: true,
+            content: !aux_only,
             aux_data: true,
         },
     );
 
-    // Maybe we failed because only one of content or aux data is available.
-    // The API doesn't let us say "aux data if present", so try each separately.
-    missing = fetch_and_display_successes(
-        missing.into_keys().collect(),
-        FileAttributes {
-            content: true,
-            aux_data: false,
-        },
-    );
-    missing = fetch_and_display_successes(
-        missing.into_keys().collect(),
-        FileAttributes {
-            content: false,
-            aux_data: true,
-        },
-    );
+    if !aux_only {
+        // Maybe we failed because only one of content or aux data is available.
+        // The API doesn't let us say "aux data if present", so try each separately.
+        missing = fetch_and_display_successes(
+            missing.into_keys().collect(),
+            FileAttributes {
+                content: true,
+                aux_data: false,
+            },
+        );
+        missing = fetch_and_display_successes(
+            missing.into_keys().collect(),
+            FileAttributes {
+                content: false,
+                aux_data: true,
+            },
+        );
+    }
 
     for (key, errors) in missing.into_iter() {
         write!(
