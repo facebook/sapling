@@ -382,14 +382,12 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or_default::<bool>("scmstore", "lfsptrwrites")?;
 
-        let prefer_computing_aux_data = self
-            .config
-            .get_or_default::<bool>("scmstore", "prefercomputingauxdata")?;
-
+        // Top level flag allow disabling all local computation of aux data.
         let compute_aux_data =
             self.config
                 .get_or::<bool>("scmstore", "compute-aux-data", || true)?;
 
+        // Make prefetch() calls request aux data.
         let prefetch_aux_data =
             self.config
                 .get_or::<bool>("scmstore", "prefetch-aux-data", || true)?;
@@ -414,7 +412,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             prefetch_aux_data,
             compute_aux_data,
-            prefer_computing_aux_data,
 
             indexedlog_local,
             lfs_local,

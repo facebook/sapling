@@ -77,10 +77,10 @@ pub struct FileStore {
     /// Allow explicitly writing serialized LFS pointers outside of tests
     pub(crate) allow_write_lfs_ptrs: bool,
 
-    pub(crate) prefetch_aux_data: bool,
-
+    // Top level flag allow disabling all local computation of aux data.
     pub(crate) compute_aux_data: bool,
-    pub(crate) prefer_computing_aux_data: bool,
+    // Make prefetch() calls request aux data.
+    pub(crate) prefetch_aux_data: bool,
 
     // Record remote fetches
     pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
@@ -177,7 +177,6 @@ impl FileStore {
         let edenapi = self.edenapi.clone();
         let lfs_remote = self.lfs_remote.clone();
         let contentstore = self.contentstore.clone();
-        let prefer_computing_aux_data = self.prefer_computing_aux_data;
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
@@ -229,12 +228,6 @@ impl FileStore {
 
                 if let Some(ref lfs_local) = lfs_local {
                     state.fetch_lfs(lfs_local, StoreType::Local);
-                }
-                if prefer_computing_aux_data {
-                    state.derive_computable(
-                        aux_cache.as_ref().map(|s| s.as_ref()),
-                        aux_local.as_ref().map(|s| s.as_ref()),
-                    );
                 }
             }
 
@@ -429,7 +422,6 @@ impl FileStore {
             allow_write_lfs_ptrs: false,
 
             prefetch_aux_data: false,
-            prefer_computing_aux_data: false,
             compute_aux_data: false,
 
             indexedlog_local: None,
@@ -503,7 +495,6 @@ impl LegacyStore for FileStore {
             allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
 
             prefetch_aux_data: self.prefetch_aux_data,
-            prefer_computing_aux_data: self.prefer_computing_aux_data,
             compute_aux_data: self.compute_aux_data,
 
             indexedlog_local: self.indexedlog_cache.clone(),

@@ -53,3 +53,51 @@ Now we do have aux data locally:
           },
       ),
   }
+
+
+Fetch only content first:
+  $ hg cat -q -r $B B
+  B (no-eol)
+
+Make sure we don't have aux data yet:
+  $ hg debugscmstore -r $B B --local --mode=file --config scmstore.compute-aux-data=false
+  Successfully fetched file: StoreFile {
+      content: Some(
+          IndexedLog(
+              Entry {
+                  key: Key {
+                      path: RepoPathBuf(
+                          "B",
+                      ),
+                      hgid: HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
+                  },
+                  metadata: Metadata {
+                      size: None,
+                      flags: None,
+                  },
+                  content: OnceCell(Uninit),
+                  compressed_content: Some(
+                      b"\x01\x00\x00\x00\x10B",
+                  ),
+              },
+          ),
+      ),
+      aux_data: None,
+  }
+
+Fetching only aux data does not trigger a remote query:
+  $ LOG=eagerepo::api=debug hg debugscmstore -r $B B --aux-only --mode=file
+  Successfully fetched file: StoreFile {
+      content: None,
+      aux_data: Some(
+          FileAuxData {
+              total_size: 1,
+              content_id: ContentId("55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f"),
+              sha1: Sha1("ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec"),
+              sha256: Sha256("df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c"),
+              seeded_blake3: Some(
+                  Blake3("5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48"),
+              ),
+          },
+      ),
+  }
