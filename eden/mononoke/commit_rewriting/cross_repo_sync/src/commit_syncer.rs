@@ -44,6 +44,8 @@ use slog::debug;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitSourceRepo;
+use synced_commit_mapping_pushrebase_hook::CrossRepoSyncPushrebaseHook;
+use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 
 use crate::commit_in_memory_syncer::CommitInMemorySyncer;
 use crate::commit_sync_config_utils::get_bookmark_renamer;
@@ -68,8 +70,6 @@ use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
-use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
-use crate::pushrebase_hook::ForwardSyncedCommitInfo;
 use crate::reporting;
 use crate::reporting::log_rewrite;
 use crate::reporting::CommitSyncContext;

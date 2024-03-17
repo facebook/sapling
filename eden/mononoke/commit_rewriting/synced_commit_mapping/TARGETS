@@ -40,3 +40,23 @@ rust_unittest(
         "//eden/mononoke/server/context:context",
     ],
 )
+
+rust_library(
+    name = "synced_commit_mapping_pushrebase_hook",
+    srcs = glob([
+        "pushrebase_hook/**/*.rs",
+    ]),
+    autocargo = {"cargo_toml_dir": "pushrebase_hook"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        ":synced_commit_mapping",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/pushrebase:pushrebase_hook",
+        "//eden/mononoke/server/context:context",
+    ],
+)

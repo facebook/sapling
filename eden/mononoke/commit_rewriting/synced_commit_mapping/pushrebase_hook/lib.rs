@@ -221,24 +221,24 @@ impl PushrebaseCommitHook for CrossRepoSyncPushrebaseCommitHook {
             }
         } else {
             let large_repo_version_assignments = self
-                  .large_repo_version_assignments
-                  .into_iter()
-                  .map(|(cs_id, version)| {
-                      let replacement_bcs_id = rebased
-                          .get(&cs_id)
-                          .ok_or_else(|| {
-                              let e = format!(
-                                  "Commit was assigned a version, but is not found in rebased set: {}",
-                                  cs_id
-                              );
-                              Error::msg(e)
-                          })?
-                          .0;
+                 .large_repo_version_assignments
+                 .into_iter()
+                 .map(|(cs_id, version)| {
+                     let replacement_bcs_id = rebased
+                         .get(&cs_id)
+                         .ok_or_else(|| {
+                             let e = format!(
+                                 "Commit was assigned a version, but is not found in rebased set: {}",
+                                 cs_id
+                             );
+                             Error::msg(e)
+                         })?
+                         .0;
 
-                      let var_name = (self.large_repo_id, replacement_bcs_id, version);
-                      Ok(var_name)
-                  })
-                  .collect::<Result<Vec<_>, Error>>()?;
+                     let var_name = (self.large_repo_id, replacement_bcs_id, version);
+                     Ok(var_name)
+                 })
+                 .collect::<Result<Vec<_>, Error>>()?;
 
             Ok(Box::new(CrossRepoSyncTransactionHook {
                 forward_synced_entry: None,

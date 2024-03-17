@@ -15,7 +15,6 @@ mod commit_sync_outcome;
 mod commit_syncer;
 mod commit_syncers_lib;
 mod git_submodules;
-mod pushrebase_hook;
 mod reporting;
 mod sync_config_version_utils;
 mod types;

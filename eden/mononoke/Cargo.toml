@@ -228,6 +228,7 @@ members = [
   "commit_rewriting/mononoke_x_repo_sync_job",
   "commit_rewriting/movers",
   "commit_rewriting/synced_commit_mapping",
+  "commit_rewriting/synced_commit_mapping/pushrebase_hook",
   "common/assembly_line",
   "common/async_limiter",
   "common/async_limiter/examples/tokio_v2",
