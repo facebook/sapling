@@ -60,6 +60,10 @@ Before the change
   $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
   non_path_shifting/bar
   smallrepofolder/foo
+-- prepare for config change by making the state match both old and new config versions
+  $ hg cp -q smallrepofolder smallrepofolder_after
+  $ hg commit -m "prepare for config change"
+  $ REPONAME=large-mon hgmn push -q --to master_bookmark
 
 Make a config change
   $ update_commit_sync_map_first_option
@@ -111,9 +115,9 @@ After the change
   $ REPONAME=large-mon hgmn pull -q
   $ REPONAME=large-mon hgmn up -q master_bookmark
   $ log -r "master_bookmark^::master_bookmark"
-  @  after config change [public;rev=5;*] default/master_bookmark (glob)
+  @  after config change [public;rev=6;*] default/master_bookmark (glob)
   │
-  o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=4;*] (glob)
+  o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=5;*] (glob)
   │
   ~
   $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
@@ -129,14 +133,7 @@ After the change
     }
   } (no-eol)
 -- Verify the working copy state after the operation
--- TODO(mitrandir): in this test we're getting ourselves into inconsistent state, this needs fixing
   $ with_stripped_logs verify_wc $(hg whereami)
-  Verification failed!!!
-  Some(NonRootMPath("file.txt")) is present in small-mon, but not in large-mon (under Some(NonRootMPath("smallrepofolder_after/file.txt")))
-  Some(NonRootMPath("filetoremove")) is present in small-mon, but not in large-mon (under Some(NonRootMPath("smallrepofolder_after/filetoremove")))
-  Some(NonRootMPath("foo")) is present in small-mon, but not in large-mon (under Some(NonRootMPath("smallrepofolder_after/foo")))
-  
-  verification failed, found 3 differences
 
 -- Show the list of files in the repo after the operation
   $ hg files
@@ -146,6 +143,9 @@ After the change
   smallrepofolder/filetoremove
   smallrepofolder/foo
   smallrepofolder_after/boo
+  smallrepofolder_after/file.txt
+  smallrepofolder_after/filetoremove
+  smallrepofolder_after/foo
   smallrepofolder_after/mapping.json
 
 -- Show the actual mapping version used for the operation
