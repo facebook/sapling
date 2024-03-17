@@ -1011,8 +1011,9 @@ where
                     // We are assuming that pushrebase is always small to large.
                     target_repo.repo_identity().id(),
                     Some(ForwardSyncedCommitInfo {
-                        cs_id: hash,
-                        repos: self.repos.clone(),
+                        small_bcs_id: hash,
+                        small_repo_id: self.repos.get_source_repo().repo_identity().id(),
+                        large_repo_id: self.repos.get_target_repo().repo_identity().id(),
                         version_name: version.clone(),
                     }),
                 ));

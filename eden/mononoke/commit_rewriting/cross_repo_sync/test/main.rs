@@ -14,7 +14,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use ascii::AsciiString;
-use assert_matches::assert_matches;
 use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -1617,9 +1616,9 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
 }
 
 fn check_x_repo_sync_disabled(err: &Error) {
-    assert_matches!(
-        err.downcast_ref::<ErrorKind>(),
-        Some(ErrorKind::XRepoSyncDisabled)
+    assert_eq!(
+        err.to_string(),
+        "X-repo sync is temporarily disabled, contact source control oncall"
     );
 }
 

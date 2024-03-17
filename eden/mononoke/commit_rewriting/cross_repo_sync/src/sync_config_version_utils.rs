@@ -156,14 +156,6 @@ pub fn get_mapping_change_version(
     get_mapping_change_version_from_hg_extra(cs_info.hg_extra())
 }
 
-pub fn get_mapping_change_version_from_bonsai_changeset_mut(
-    bcs: &BonsaiChangesetMut,
-) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    get_mapping_change_version_from_hg_extra(
-        bcs.hg_extra.iter().map(|(k, v)| (k.as_str(), v.as_slice())),
-    )
-}
-
 /// Set mapping change version into changeset extras
 /// Some changesets are used as "boundaries" to change CommmitSyncConfigVersion
 /// used in syncing. This is determined by the `CHANGE_XREPO_MAPPING_EXTRA`'s

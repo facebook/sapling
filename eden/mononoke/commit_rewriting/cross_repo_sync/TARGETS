@@ -132,7 +132,6 @@ rust_unittest(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
-        "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         ":cross_repo_sync",

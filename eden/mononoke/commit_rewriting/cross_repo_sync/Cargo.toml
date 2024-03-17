@@ -73,7 +73,6 @@ topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 
 [dev-dependencies]
 ascii = "1.0"
-assert_matches = "1.5"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
