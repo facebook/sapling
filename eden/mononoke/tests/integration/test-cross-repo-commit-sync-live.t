@@ -95,8 +95,10 @@ After the change
       "non_path_shifting": "non_path_shifting"
     }
   } (no-eol)
-  $ log -r master_bookmark
+  $ log -r master_bookmark^::master_bookmark
   @  after config change [public;rev=4;*] default/master_bookmark (glob)
+  │
+  o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=3;*] (glob)
   │
   ~
 
@@ -126,3 +128,31 @@ After the change
       "non_path_shifting": "non_path_shifting"
     }
   } (no-eol)
+-- Verify the working copy state after the operation
+-- TODO(mitrandir): the verifier output seems to backwards (the files exist in small but are missing in large not otherwise)
+-- TODO(mitrandir): in this test we're getting ourselves into inconsistent state, this needs fixing
+  $ with_stripped_logs verify_wc $(hg whereami)
+  Verification failed!!!
+  Some(NonRootMPath("smallrepofolder_after/file.txt")) is present in large-mon, but not in small-mon (under Some(NonRootMPath("file.txt")))
+  Some(NonRootMPath("smallrepofolder_after/filetoremove")) is present in large-mon, but not in small-mon (under Some(NonRootMPath("filetoremove")))
+  Some(NonRootMPath("smallrepofolder_after/foo")) is present in large-mon, but not in small-mon (under Some(NonRootMPath("foo")))
+  
+  verification failed, found 3 differences
+
+-- Show the list of files in the repo after the operation
+  $ hg files
+  non_path_shifting/bar
+  non_path_shifting/baz
+  smallrepofolder/file.txt
+  smallrepofolder/filetoremove
+  smallrepofolder/foo
+  smallrepofolder_after/boo
+  smallrepofolder_after/mapping.json
+
+-- Show the actual mapping version used for the operation
+  $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
+  using repo "large-mon" repoid RepositoryId(0)
+  using repo "small-mon" repoid RepositoryId(1)
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)
+
