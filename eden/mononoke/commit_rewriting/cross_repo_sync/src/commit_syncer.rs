@@ -1008,6 +1008,8 @@ where
                 )?;
                 pushrebase_hooks.push(CrossRepoSyncPushrebaseHook::new(
                     self.mapping.clone(),
+                    // We are assuming that pushrebase is always small to large.
+                    target_repo.repo_identity().id(),
                     Some(ForwardSyncedCommitInfo {
                         cs_id: hash,
                         repos: self.repos.clone(),

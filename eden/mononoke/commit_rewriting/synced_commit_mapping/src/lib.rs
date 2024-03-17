@@ -834,3 +834,18 @@ pub async fn add_many_in_txn(
         InsertWorkingCopyEquivalence::query_with_transaction(txn, &ref_entries).await?;
     Ok((txn, result.affected_rows()))
 }
+
+pub async fn add_many_large_repo_commit_versions_in_txn(
+    txn: Transaction,
+    large_repo_commit_versions: &[(RepositoryId, ChangesetId, CommitSyncConfigVersion)],
+) -> Result<(Transaction, u64), Error> {
+    let (txn, result) = InsertVersionForLargeRepoCommit::query_with_transaction(
+        txn,
+        &large_repo_commit_versions
+            .iter()
+            .map(|(repo_id, cs_id, version_name)| (repo_id, cs_id, version_name))
+            .collect::<Vec<_>>(),
+    )
+    .await?;
+    Ok((txn, result.affected_rows()))
+}
