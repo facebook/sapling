@@ -480,8 +480,10 @@ async fn change_mapping_via_extras<'a>(
     config_store: &ConfigStore,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
+    // XXX(mitrandir): remove this check once this mode works regardless of sync direction
     if !live_commit_sync_config
         .push_redirector_enabled_for_public(commit_syncer.get_small_repo().repo_identity().id())
+        && std::env::var("MONONOKE_ADMIN_ALWAYS_ALLOW_MAPPING_CHANGE_VIA_EXTRA").is_err()
     {
         return Err(format_err!(
             "not allowed to run {} if pushredirection is not enabled",

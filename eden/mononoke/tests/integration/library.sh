@@ -2455,3 +2455,13 @@ function zeloscli() {
   shift
   "$ZELOSCLI" --server localhost:"$PORT" -x "$@" 2>/dev/null
 }
+
+function x_repo_lookup() {
+  SOURCE_REPO="$1"
+  TARGET_REPO="$2"
+  HASH="$3"
+  TRANSLATED=$(REPONAME=$SOURCE_REPO hgedenapi debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'")
+  hgedenapi debugshell <<EOF
+print(hex(${TRANSLATED}[0]["translated"]["Hg"]))
+EOF
+}
