@@ -1439,7 +1439,7 @@ async fn init_x_repo(
         ),
         commit_sync_config.clone(),
         mapping.clone(),
-        Arc::new(lv_cfg),
+        lv_cfg,
     )
     .await?;
     lv_cfg_src.add_config(commit_sync_config);

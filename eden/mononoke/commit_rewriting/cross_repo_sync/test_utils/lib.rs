@@ -208,15 +208,25 @@ pub async fn init_small_large_repo(
     (
         Syncers<SqlSyncedCommitMapping, TestRepo>,
         CommitSyncConfig,
-        TestLiveCommitSyncConfig,
+        Arc<dyn LiveCommitSyncConfig>,
         TestLiveCommitSyncConfigSource,
     ),
     Error,
 > {
     let mut factory = TestRepoFactory::new(ctx.fb)?;
-    let megarepo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    let sync_config = Arc::new(sync_config);
+    let megarepo: TestRepo = factory
+        .with_id(RepositoryId::new(1))
+        .with_live_commit_sync_config(sync_config.clone())
+        .build()
+        .await?;
     let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
-    let smallrepo: TestRepo = factory.with_id(RepositoryId::new(0)).build().await?;
+    let smallrepo: TestRepo = factory
+        .with_id(RepositoryId::new(0))
+        .with_live_commit_sync_config(sync_config.clone())
+        .build()
+        .await?;
 
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: smallrepo.clone(),
@@ -226,7 +236,6 @@ pub async fn init_small_large_repo(
 
     let noop_version = CommitSyncConfigVersion("noop".to_string());
     let version_with_small_repo = xrepo_mapping_version_with_small_repo();
-    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 
     let noop_version_config = CommitSyncConfig {
         large_repo_id: RepositoryId::new(1),
@@ -260,7 +269,7 @@ pub async fn init_small_large_repo(
         large_repo_id: RepositoryId::new(1),
     });
 
-    let live_commit_sync_config = Arc::new(sync_config.clone());
+    let live_commit_sync_config = sync_config.clone();
 
     let small_to_large_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         ctx,

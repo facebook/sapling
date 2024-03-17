@@ -290,35 +290,49 @@ fn create_commit_sync_config(
     })
 }
 
-fn create_small_to_large_commit_syncer(
-    ctx: &CoreContext,
-    small_repo: TestRepo,
-    large_repo: TestRepo,
+fn populate_config(
+    small_repo: &TestRepo,
+    large_repo: &TestRepo,
     prefix: &str,
-    mapping: SqlSyncedCommitMapping,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+    source: &TestLiveCommitSyncConfigSource,
+) -> Result<(), Error> {
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
 
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.repo_identity().id() => SmallRepoPermanentConfig {
+            small_repo_id => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
                 common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id: large_repo.repo_identity().id(),
     };
-    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
-    let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps, &common_config)?;
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
 
-    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config);
     source.add_common_config(common_config);
+    Ok(())
+}
 
-    let live_commit_sync_config = Arc::new(sync_config);
+fn create_small_to_large_commit_syncer(
+    ctx: &CoreContext,
+    small_repo: TestRepo,
+    large_repo: TestRepo,
+    mapping: SqlSyncedCommitMapping,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+    let large_repo_id = large_repo.repo_identity().id();
+
+    let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
+    let repos = CommitSyncRepos::new(
+        small_repo,
+        large_repo,
+        submodule_deps,
+        &live_commit_sync_config.get_common_config(large_repo_id)?,
+    )?;
+
     let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
         ctx,
@@ -329,70 +343,49 @@ fn create_small_to_large_commit_syncer(
     ))
 }
 
-fn create_large_to_small_commit_syncer_and_config_source(
-    ctx: &CoreContext,
-    small_repo: TestRepo,
-    large_repo: TestRepo,
-    prefix: &str,
-    mapping: SqlSyncedCommitMapping,
-) -> Result<
-    (
-        CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-        TestLiveCommitSyncConfigSource,
-    ),
-    Error,
-> {
-    let small_repo_id = small_repo.repo_identity().id();
-    let large_repo_id = large_repo.repo_identity().id();
-
-    let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
-    let common_config = CommonCommitSyncConfig {
-        common_pushrebase_bookmarks: vec![],
-        small_repos: hashmap! {
-            small_repo.repo_identity().id() => SmallRepoPermanentConfig {
-                bookmark_prefix: AsciiString::new(),
-                common_pushrebase_bookmarks_map: HashMap::new(),
-            }
-        },
-        large_repo_id: large_repo.repo_identity().id(),
-    };
-
-    // Large to small has no submodule_deps
-    let submodule_deps = SubmoduleDeps::NotNeeded;
-    let repos = CommitSyncRepos::new(large_repo, small_repo, submodule_deps, &common_config)?;
-
-    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
-    source.add_config(commit_sync_config);
-    source.add_common_config(common_config);
-
-    let live_commit_sync_config = Arc::new(sync_config);
-    let lease = Arc::new(InProcessLease::new());
-    Ok((
-        CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config, lease),
-        source,
-    ))
-}
-
 fn create_large_to_small_commit_syncer(
     ctx: &CoreContext,
     small_repo: TestRepo,
     large_repo: TestRepo,
-    prefix: &str,
     mapping: SqlSyncedCommitMapping,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
-    let (syncer, _) = create_large_to_small_commit_syncer_and_config_source(
-        ctx, small_repo, large_repo, prefix, mapping,
+    let large_repo_id = large_repo.repo_identity().id();
+
+    // Large to small has no submodule_deps
+    let submodule_deps = SubmoduleDeps::NotNeeded;
+    let repos = CommitSyncRepos::new(
+        large_repo,
+        small_repo,
+        submodule_deps,
+        &live_commit_sync_config.get_common_config(large_repo_id)?,
     )?;
-    Ok(syncer)
+
+    let lease = Arc::new(InProcessLease::new());
+    Ok(CommitSyncer::new(
+        ctx,
+        mapping,
+        repos,
+        live_commit_sync_config,
+        lease,
+    ))
 }
 
 #[fbinit::test]
 async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
+    let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await?;
+
     Linear::init_repo(fb, &small_repo).await?;
-    let config =
-        create_small_to_large_commit_syncer(&ctx, small_repo, megarepo.clone(), "linear", mapping)?;
+    populate_config(&small_repo, &megarepo, "linear", &source)?;
+    let config = create_small_to_large_commit_syncer(
+        &ctx,
+        small_repo,
+        megarepo.clone(),
+        mapping,
+        live_commit_sync_config.clone(),
+    )?;
     create_initial_commit(ctx.clone(), &megarepo).await;
 
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
@@ -478,20 +471,24 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let linear: TestRepo = Linear::get_custom_test_repo(fb).await;
+    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    populate_config(&linear, &megarepo, "linear", &source)?;
     let linear_config = create_small_to_large_commit_syncer(
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping.clone(),
+        Arc::new(live_commit_sync_config),
     )?;
 
+    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    populate_config(&linear, &megarepo, "master_file", &source)?;
     let master_file_config = create_small_to_large_commit_syncer(
         &ctx,
         linear,
         megarepo.clone(),
-        "master_file",
         mapping,
+        Arc::new(live_commit_sync_config),
     )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -524,39 +521,65 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn prepare_repos_and_mapping(
+async fn prepare_repos_mapping_and_config(
     fb: FacebookInit,
-) -> Result<(TestRepo, TestRepo, SqlSyncedCommitMapping), Error> {
+) -> Result<
+    (
+        TestRepo,
+        TestRepo,
+        SqlSyncedCommitMapping,
+        Arc<dyn LiveCommitSyncConfig>,
+        TestLiveCommitSyncConfigSource,
+    ),
+    Error,
+> {
     let metadata_con = SqliteConnection::open_in_memory()?;
     metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let hg_mutation_con = SqliteConnection::open_in_memory()?;
     let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_con, hg_mutation_con)?;
-    let megarepo = factory.with_id(RepositoryId::new(1)).build().await?;
-    let small_repo = factory.with_id(RepositoryId::new(0)).build().await?;
+    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
+    let megarepo = factory
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .with_id(RepositoryId::new(1))
+        .build()
+        .await?;
+    let small_repo = factory
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .with_id(RepositoryId::new(0))
+        .build()
+        .await?;
     let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
-    Ok((small_repo, megarepo, mapping))
+    Ok((
+        small_repo,
+        megarepo,
+        mapping,
+        live_commit_sync_config,
+        source,
+    ))
 }
 
 #[fbinit::test]
 async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
-    Linear::init_repo(fb, &small_repo).await?;
-    let linear = small_repo;
+    let (linear, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await?;
+    populate_config(&linear, &megarepo, "linear", &source)?;
+    Linear::init_repo(fb, &linear).await?;
 
     let stl_config = create_small_to_large_commit_syncer(
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
     let lts_config = create_large_to_small_commit_syncer(
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -609,7 +632,9 @@ async fn megarepo_copy_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
 #[fbinit::test]
 async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
+    let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await.unwrap();
+    populate_config(&small_repo, &megarepo, "linear", &source)?;
     Linear::init_repo(fb, &small_repo).await?;
     let linear = small_repo;
 
@@ -617,15 +642,15 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
     let lts_config = create_large_to_small_commit_syncer(
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping,
+        live_commit_sync_config.clone(),
     )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -689,7 +714,9 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
+    let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await.unwrap();
+    populate_config(&small_repo, &megarepo, "linear", &source)?;
     ManyFilesDirs::init_repo(fb, &small_repo).await?;
     let repo = small_repo.clone();
 
@@ -697,8 +724,8 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         &ctx,
         repo.clone(),
         megarepo.clone(),
-        "linear",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
 
     let small_repo_config = SmallRepoCommitSyncConfig {
@@ -833,7 +860,9 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId 
 #[fbinit::test]
 async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
+    let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await?;
+    populate_config(&small_repo, &megarepo, "linear", &source)?;
     Linear::init_repo(fb, &small_repo).await?;
     let linear = small_repo;
 
@@ -841,15 +870,15 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
     let reverse_config = create_large_to_small_commit_syncer(
         &ctx,
         linear.clone(),
         megarepo.clone(),
-        "linear",
         mapping,
+        live_commit_sync_config.clone(),
     )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -953,14 +982,16 @@ async fn get_multiple_master_mapping_setup(
     Error,
 > {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
+    let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await.unwrap();
+    populate_config(&small_repo, &megarepo, "prefix", &source)?;
     Linear::init_repo(fb, &small_repo).await?;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
         &ctx,
         small_repo.clone(),
         megarepo.clone(),
-        "prefix",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -1497,14 +1528,16 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
+    let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await.unwrap();
+    populate_config(&small_repo, &megarepo, "prefix", &source)?;
     Linear::init_repo(fb, &small_repo).await?;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
         &ctx,
         small_repo.clone(),
         megarepo.clone(),
-        "prefix",
         mapping.clone(),
+        live_commit_sync_config.clone(),
     )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -1601,15 +1634,16 @@ async fn prepare_commit_syncer_with_mapping_change(
     Error,
 > {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping(fb).await?;
-    let (large_to_small_syncer, config_source) =
-        create_large_to_small_commit_syncer_and_config_source(
-            &ctx,
-            small_repo.clone(),
-            megarepo.clone(),
-            "prefix",
-            mapping,
-        )?;
+    let (small_repo, megarepo, mapping, live_commit_sync_config, config_source) =
+        prepare_repos_mapping_and_config(fb).await?;
+    populate_config(&small_repo, &megarepo, "prefix", &config_source)?;
+    let large_to_small_syncer = create_large_to_small_commit_syncer(
+        &ctx,
+        small_repo.clone(),
+        megarepo.clone(),
+        mapping.clone(),
+        live_commit_sync_config.clone(),
+    )?;
 
     let root_cs_id = CreateCommitContext::new_root(&ctx, &megarepo)
         .add_file("tools/somefile", "somefile")
@@ -1799,15 +1833,17 @@ async fn merge_test_setup(
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
+    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    populate_config(&small_repo, &large_repo, "-", &source)?;
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
 
     let lts_syncer = {
         let mut lts_syncer = create_large_to_small_commit_syncer(
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
-            // This is ignored
-            "_",
             mapping.clone(),
+            live_commit_sync_config.clone(),
         )?;
         lts_syncer.repos = CommitSyncRepos::LargeToSmall {
             small_repo: small_repo.clone(),
@@ -2027,6 +2063,7 @@ async fn test_no_accidental_preserved_roots(
     ctx: CoreContext,
     commit_sync_repos: CommitSyncRepos<TestRepo>,
     mapping: SqlSyncedCommitMapping,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     let version = version_name_with_small_repo();
     let commit_syncer = {
@@ -2039,8 +2076,8 @@ async fn test_no_accidental_preserved_roots(
                 &ctx,
                 small_repo.clone(),
                 large_repo.clone(),
-                "ignored",
                 mapping.clone(),
+                live_commit_sync_config.clone(),
             )?,
             SmallToLarge {
                 small_repo,
@@ -2050,8 +2087,8 @@ async fn test_no_accidental_preserved_roots(
                 &ctx,
                 small_repo.clone(),
                 large_repo.clone(),
-                "ignored",
                 mapping.clone(),
+                live_commit_sync_config.clone(),
             )?,
         };
 
@@ -2124,24 +2161,30 @@ async fn test_no_accidental_preserved_roots(
 #[fbinit::test]
 async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
+    let (small_repo, large_repo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await.unwrap();
+    populate_config(&small_repo, &large_repo, "prefix", &source)?;
     let commit_sync_repos = CommitSyncRepos::LargeToSmall {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
     };
-    test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
+    test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping, live_commit_sync_config)
+        .await
 }
 
 #[fbinit::test]
 async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping(fb).await.unwrap();
+    let (small_repo, large_repo, mapping, live_commit_sync_config, source) =
+        prepare_repos_mapping_and_config(fb).await.unwrap();
+    populate_config(&small_repo, &large_repo, "prefix", &source)?;
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
         submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
-    test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
+    test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping, live_commit_sync_config)
+        .await
 }
 
 #[fbinit::test]

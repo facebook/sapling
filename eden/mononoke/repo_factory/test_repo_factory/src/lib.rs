@@ -51,6 +51,7 @@ use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::hashmap;
 use megarepo_mapping::MegarepoMapping;
@@ -144,6 +145,7 @@ pub struct TestRepoFactory {
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
+    live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
     metadata_db: SqlConnections,
     hg_mutation_db: SqlConnections,
     redacted: Option<Arc<RedactedBlobs>>,
@@ -275,6 +277,7 @@ impl TestRepoFactory {
             permission_checker: None,
             derived_data_lease: None,
             filenodes_override: None,
+            live_commit_sync_config: None,
         })
     }
 
@@ -328,6 +331,15 @@ impl TestRepoFactory {
         lease: impl Fn() -> Arc<dyn LeaseOps> + Send + Sync + 'static,
     ) -> &mut Self {
         self.derived_data_lease = Some(Box::new(lease));
+        self
+    }
+
+    /// Override the live commit sync config used by factor.
+    pub fn with_live_commit_sync_config(
+        &mut self,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    ) -> &mut Self {
+        self.live_commit_sync_config = Some(live_commit_sync_config);
         self
     }
 
@@ -647,7 +659,10 @@ impl TestRepoFactory {
         &self,
         synced_commit_mapping: &ArcSyncedCommitMapping,
     ) -> Result<ArcRepoCrossRepo> {
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        let live_commit_sync_config = self
+            .live_commit_sync_config
+            .clone()
+            .unwrap_or_else(|| Arc::new(TestLiveCommitSyncConfig::new_empty()));
         let sync_lease = Arc::new(InProcessLease::new());
         Ok(Arc::new(RepoCrossRepo::new(
             synced_commit_mapping.clone(),
