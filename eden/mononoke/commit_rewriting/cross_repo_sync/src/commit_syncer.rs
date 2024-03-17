@@ -69,6 +69,7 @@ use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
+use crate::pushrebase_hook::ForwardSyncedCommitInfo;
 use crate::reporting;
 use crate::reporting::log_rewrite;
 use crate::reporting::CommitSyncContext;
@@ -1006,9 +1007,12 @@ where
                     &target_repo.repo_config().pushrebase,
                 )?;
                 pushrebase_hooks.push(CrossRepoSyncPushrebaseHook::new(
-                    hash,
-                    self.repos.clone(),
-                    version.clone(),
+                    self.mapping.clone(),
+                    Some(ForwardSyncedCommitInfo {
+                        cs_id: hash,
+                        repos: self.repos.clone(),
+                        version_name: version.clone(),
+                    }),
                 ));
 
                 let pushrebase_res = do_pushrebase_bonsai(
