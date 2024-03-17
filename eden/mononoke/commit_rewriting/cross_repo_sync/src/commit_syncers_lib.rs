@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use bookmarks::BookmarkKey;
 use borrowed::borrowed;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
@@ -192,6 +193,8 @@ pub(crate) async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, 
 pub struct SyncedAncestorsVersions {
     // Versions of all synced ancestors
     pub versions: HashSet<CommitSyncConfigVersion>,
+    // Rewritten ancestors
+    pub rewritten_ancestors: HashMap<ChangesetId, CommitSyncConfigVersion>,
 }
 
 impl SyncedAncestorsVersions {
@@ -280,8 +283,11 @@ where
                         synced_ancestors_versions.versions.insert(version);
                     }
                     RewrittenAs(cs_ids_versions) => {
-                        for (_, version) in cs_ids_versions {
-                            synced_ancestors_versions.versions.insert(version);
+                        for (cs_id, version) in cs_ids_versions {
+                            synced_ancestors_versions.versions.insert(version.clone());
+                            synced_ancestors_versions
+                                .rewritten_ancestors
+                                .insert(cs_id, version);
                         }
                     }
                     EquivalentWorkingCopyAncestor(_, version) => {
@@ -362,7 +368,7 @@ where
         .await?;
 
     // Get the config versions from all synced ancestors
-    let synced_ancestors_versions = stream::iter(&synced_ancestors_frontier)
+    let synced_ancestors_list = stream::iter(&synced_ancestors_frontier)
         .then(|cs_id| {
             borrowed!(ctx, commit_syncer);
 
@@ -375,11 +381,12 @@ where
                     Some(plural) => {
                         use PluralCommitSyncOutcome::*;
                         match plural {
-                            NotSyncCandidate(version) => Ok(vec![version]),
-                            RewrittenAs(cs_ids_versions) => {
-                                Ok(cs_ids_versions.into_iter().map(|(_, v)| v).collect())
-                            }
-                            EquivalentWorkingCopyAncestor(_, version) => Ok(vec![version]),
+                            NotSyncCandidate(version) => Ok(vec![(None, version)]),
+                            RewrittenAs(cs_ids_versions) => Ok(cs_ids_versions
+                                .into_iter()
+                                .map(|(cs_id, v)| (Some(cs_id), v))
+                                .collect()),
+                            EquivalentWorkingCopyAncestor(_, version) => Ok(vec![(None, version)]),
                         }
                     }
                     None => Err(anyhow!("Failed to get config version from synced ancestor")),
@@ -390,7 +397,17 @@ where
         .await?
         .into_iter()
         .flatten()
-        .collect::<HashSet<_>>();
+        .collect::<Vec<_>>();
+
+    let synced_ancestors_versions = synced_ancestors_list
+        .iter()
+        .cloned()
+        .map(|(_, v)| v)
+        .collect();
+    let rewritten_ancestors = synced_ancestors_list
+        .into_iter()
+        .filter_map(|(maybe_cs_id, version)| maybe_cs_id.map(|cs_id| (cs_id, version)))
+        .collect();
 
     // Get the oldest unsynced ancestors by getting the difference between the
     // ancestors from the starting changeset and its synced ancestors.
@@ -405,8 +422,98 @@ where
         commits_to_sync,
         SyncedAncestorsVersions {
             versions: synced_ancestors_versions,
+            rewritten_ancestors,
         },
     ))
+}
+
+/// Finds what's the "current" version for large repo (it may have been updated since last
+/// pushrebase), and returns the version and the mapping of the synced ancestors to the
+/// more-up-to-date changesets with equivalent working copy id.
+///
+/// This is written with assumption of no diamond merges (which are not supported by other parts of
+/// x_repo_sync) and that small repo bookmark is never moving backwards (which is not supported by
+/// other pieces of the infra).
+pub async fn get_version_and_parent_map_for_sync_via_pushrebase<
+    'a,
+    M: SyncedCommitMapping + Clone + 'static,
+    R,
+>(
+    ctx: &'a CoreContext,
+    commit_syncer: &CommitSyncer<M, R>,
+    target_bookmark: &Target<BookmarkKey>,
+    parent_version: CommitSyncConfigVersion,
+    synced_ancestors_versions: &SyncedAncestorsVersions,
+) -> Result<(CommitSyncConfigVersion, HashMap<ChangesetId, ChangesetId>), Error>
+where
+    R: Repo,
+{
+    // Killswitch to disable this logic alltogether.
+    if let Ok(true) = justknobs::eval(
+        "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change",
+        None,
+        None,
+    ) {
+        return Ok((parent_version, HashMap::new()));
+    }
+    let target_repo = commit_syncer.get_target_repo();
+    // Value for the target bookmark. This is not a part of transaction and we're ok with the fact
+    // it might be a bit stale.
+    let target_bookmark_csid = target_repo
+        .bookmarks()
+        .get(ctx.clone(), &target_bookmark.0)
+        .await?
+        .ok_or_else(|| anyhow!("Bookmark {} does not exist", target_bookmark.0))?;
+
+    let target_bookmark_version = if let Some(target_bookmark_version) = target_repo
+        .repo_cross_repo()
+        .synced_commit_mapping()
+        .get_large_repo_commit_version(ctx, target_repo.repo_identity().id(), target_bookmark_csid)
+        .await?
+    {
+        target_bookmark_version
+    } else {
+        // If we don't have a version for the target bookmark, we can't do anything.
+        return Ok((parent_version, HashMap::new()));
+    };
+
+    if parent_version == target_bookmark_version {
+        // If the parent version is the same as the target bookmark version we don't neet
+        // to be smart: we can just use the parent version.
+        return Ok((parent_version, HashMap::new()));
+    }
+
+    // Let's see if we can find a better ancestor to use for the sync.
+    let mut parent_mapping = HashMap::new();
+    for (parent, _version) in synced_ancestors_versions.rewritten_ancestors.iter() {
+        // If the bookmark value is descendant of our parent it should have equivalent working
+        // copy.
+        // TODO(mitrandir): we could actually trigger a sync and validate such equivalence instead
+        // of assuming it.
+        if target_repo
+            .commit_graph()
+            .is_ancestor(ctx, *parent, target_bookmark_csid)
+            .await?
+        {
+            parent_mapping.insert(*parent, target_bookmark_csid);
+        }
+    }
+
+    if parent_mapping.is_empty() {
+        // None of the parents are ancestors of current position of target_bookmark. Perhaps
+        // our view of target bookmark is stale. It's better to avoid changing version.
+        Ok((parent_version, parent_mapping))
+    } else if parent_mapping.len() == 1 {
+        // There's exactly one parent that's ancestor of target_bookmark.
+        // let's assume that the target_bookmark is still equivalent to what it represents.
+        Ok((target_bookmark_version, parent_mapping))
+    } else {
+        // There are at least two synced parents that are ancestors of target_bookmark. This
+        // practically mean we have a diamond merge at hand.
+        Err(anyhow!(
+            "Diamond merges are not supported for pushrebase sync"
+        ))
+    }
 }
 
 #[derive(Clone)]

@@ -17,7 +17,8 @@
     "scm/mononoke:sql_disable_auto_retries": false,
     "scm/mononoke:static-backend": false,
     "scm/mononoke:disable_running_hooks_in_pushredirected_repo": false,
-    "scm/mononoke:xrepo_assign_large_repo_version_on_pushrebase": true
+    "scm/mononoke:xrepo_assign_large_repo_version_on_pushrebase": true,
+    "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

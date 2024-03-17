@@ -139,42 +139,42 @@ After the change
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
 
 -- trigger xrepo sync and show that it fails to sync the config change
-  $ with_stripped_logs wait_for_xrepo_sync 3 | grep "Execution error"
-  Execution error: Pushrebase of synced commit failed - check config for overlaps: ForceFailPushrebase(ChangesetId(Blake2(*))) (glob)
+  $ with_stripped_logs wait_for_xrepo_sync 3
 Rest of this test won't pass as we failed the previous command so is commented out.
---  $ flush_mononoke_bookmarks
----- check the same commit in the large repo
---  $ cd "$TESTTMP/large-hg-client"
---  $ REPONAME=large-mon hgmn pull -q
---  $ REPONAME=large-mon hgmn up -q master_bookmark
---  $ log -r "master_bookmark^::master_bookmark"
---  @  after config change [public;rev=6;*] default/master_bookmark (glob)
---  │
---  o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=5;*] (glob)
---  │
---  ~
---  $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
---  non_path_shifting/baz
---  smallrepofolder_after/boo
----- Verify the working copy state after the operation
---  $ with_stripped_logs verify_wc $(hg whereami)
+  $ flush_mononoke_bookmarks
+-- check the same commit in the large repo
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ log -r "master_bookmark^::master_bookmark"
+  @  after config change from large [public;rev=7;ad029e9c7735] default/master_bookmark
+  │
+  o  after config change from small [public;rev=6;9a1a082f2f8e]
+  │
+  ~
+  $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
+  after_change
+-- Verify the working copy state after the operation
+  $ with_stripped_logs verify_wc $(hg whereami)
+  No sync outcome for 9f9f06e1ce1a68c130d34de4ac92506b9749b51f39c4a7338bba6b07cf5f9535 in CommitSyncer{0->1}
 
----- Show the list of files in the repo after the operation
---  $ hg files
---  non_path_shifting/bar
---  non_path_shifting/baz
---  smallrepofolder/file.txt
---  smallrepofolder/filetoremove
---  smallrepofolder/foo
---  smallrepofolder_after/boo
---  smallrepofolder_after/file.txt
---  smallrepofolder_after/filetoremove
---  smallrepofolder_after/foo
+-- Show the list of files in the repo after the operation
+  $ hg files
+  after_change
+  non_path_shifting/bar
+  non_path_shifting/baz
+  smallrepofolder/file.txt
+  smallrepofolder/filetoremove
+  smallrepofolder/foo
+  smallrepofolder_after/boo
+  smallrepofolder_after/file.txt
+  smallrepofolder_after/filetoremove
+  smallrepofolder_after/foo
 
----- Show the actual mapping version used for the operation
---  $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
---  using repo "large-mon" repoid RepositoryId(0)
---  using repo "small-mon" repoid RepositoryId(1)
---  changeset resolved as: ChangesetId(Blake2(*)) (glob)
---  RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)
+-- Show the actual mapping version used for rewriting of small repo change
+  $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg log -T "{node}" -r .^)
+  using repo "large-mon" repoid RepositoryId(0)
+  using repo "small-mon" repoid RepositoryId(1)
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  RewrittenAs([(ChangesetId(Blake2(e7a0827177ac9caf3578f2c5e4307f3d11a8954ccaa576c3813f166d174f4e64)), CommitSyncConfigVersion("new_version"))])
 

@@ -205,6 +205,7 @@ where
             PushrebaseRewriteDates::No,
             version,
             None,
+            Default::default(),
         )
         .await
 }
@@ -1056,6 +1057,7 @@ async fn get_multiple_master_mapping_setup(
             PushrebaseRewriteDates::No,
             version.clone(),
             None,
+            Default::default(),
         )
         .await
         .expect("sync should have succeeded");
@@ -1069,6 +1071,7 @@ async fn get_multiple_master_mapping_setup(
             PushrebaseRewriteDates::No,
             version,
             None,
+            Default::default(),
         )
         .await
         .expect("sync should have succeeded");
@@ -1170,6 +1173,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
             PushrebaseRewriteDates::No,
             version,
             None,
+            Default::default(),
         )
         .await
         .expect("sync should have succeeded");
@@ -1218,6 +1222,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
             PushrebaseRewriteDates::No,
             version,
             None,
+            Default::default(),
         )
         .await
         .expect("sync should have succeeded");
@@ -1590,6 +1595,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                     PushrebaseRewriteDates::No,
                     version,
                     None,
+                    Default::default(),
                 )
                 .await
         }

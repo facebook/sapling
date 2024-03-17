@@ -303,6 +303,10 @@ where
     /// for a (small repo -> large repo) pair.
     ///
     /// Validation that the version is applicable is done by the caller.
+    ///
+    /// Optional parent mapping allows to override the selection for the parent when rewriting small
+    /// repo commit to large repo before pushrebasing it. Such commit must be one of the commits with
+    /// working copy equivalent to the small repo commit.
     pub async fn unsafe_sync_commit_pushrebase<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -312,6 +316,7 @@ where
         rewritedates: PushrebaseRewriteDates,
         version: CommitSyncConfigVersion,
         change_mapping_version: Option<CommitSyncConfigVersion>,
+        parent_mapping: HashMap<ChangesetId, ChangesetId>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
@@ -323,6 +328,7 @@ where
                 rewritedates,
                 version,
                 change_mapping_version,
+                parent_mapping,
             )
             .await;
         let elapsed = before.elapsed();
@@ -882,6 +888,7 @@ where
         rewritedates: PushrebaseRewriteDates,
         version: CommitSyncConfigVersion,
         change_mapping_version: Option<CommitSyncConfigVersion>,
+        parent_mapping: HashMap<ChangesetId, ChangesetId>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
@@ -923,6 +930,17 @@ where
         }
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
+
+        let remapped_parents = remapped_parents
+            .into_iter()
+            .map(|(source_parent, target_parent)| {
+                if let Some(new_target) = parent_mapping.get(&target_parent) {
+                    (source_parent, *new_target)
+                } else {
+                    (source_parent, target_parent)
+                }
+            })
+            .collect();
 
         let small_repo = self.get_small_repo();
         let x_repo_submodule_metadata_file_prefix =

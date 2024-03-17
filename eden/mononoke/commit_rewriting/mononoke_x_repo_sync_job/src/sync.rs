@@ -23,6 +23,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::find_toposorted_unsynced_ancestors_with_commit_graph;
+use cross_repo_sync::get_version_and_parent_map_for_sync_via_pushrebase;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -165,13 +166,13 @@ where
         ),
         _ => None,
     };
-    let (unsynced_ancestors, unsynced_ancestors_versions) =
+    let (unsynced_ancestors, synced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint).await?;
 
-    let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
+    let version = if !synced_ancestors_versions.has_ancestor_with_a_known_outcome() {
         return Ok(SyncResult::SkippedNoKnownVersion);
     } else {
-        let maybe_version = unsynced_ancestors_versions
+        let maybe_version = synced_ancestors_versions
             .get_only_version()
             .with_context(|| format!("failed to sync cs id {}", to_cs_id))?;
         maybe_version.ok_or_else(|| {
@@ -199,6 +200,15 @@ where
                 check_forward_move(ctx, commit_syncer, to_cs_id, from_cs_id).await?;
             }
 
+            let (version, parent_mapping) = get_version_and_parent_map_for_sync_via_pushrebase(
+                ctx,
+                commit_syncer,
+                target_bookmark,
+                version,
+                &synced_ancestors_versions,
+            )
+            .await?;
+
             return sync_commits_via_pushrebase(
                 ctx,
                 commit_syncer,
@@ -210,6 +220,7 @@ where
                 pushrebase_rewrite_dates,
                 bookmark_update_timestamp,
                 unsafe_change_mapping_version_during_pushrebase,
+                parent_mapping,
             )
             .await
             .map(SyncResult::Synced);
@@ -275,6 +286,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     bookmark_update_timestamp: Option<Timestamp>,
     unsafe_change_mapping_version: &Option<CommitSyncConfigVersion>,
+    parent_mapping: HashMap<ChangesetId, ChangesetId>,
 ) -> Result<Vec<ChangesetId>, Error>
 where
     R: Repo,
@@ -340,6 +352,7 @@ where
                 pushrebase_rewrite_dates,
                 version.clone(),
                 change_mapping_version.clone(),
+                parent_mapping.clone(),
             )
             .timed()
             .await;
@@ -691,6 +704,7 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R>(
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     version: CommitSyncConfigVersion,
     change_mapping_version: Option<CommitSyncConfigVersion>,
+    parent_mapping: HashMap<ChangesetId, ChangesetId>,
 ) -> Result<Option<ChangesetId>, Error>
 where
     R: Repo,
@@ -706,6 +720,7 @@ where
             pushrebase_rewrite_dates,
             version,
             change_mapping_version,
+            parent_mapping,
         )
         .await
 }

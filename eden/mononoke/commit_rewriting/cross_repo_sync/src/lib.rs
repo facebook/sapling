@@ -39,6 +39,7 @@ pub use commit_syncers_lib::create_commit_syncer_lease;
 pub use commit_syncers_lib::create_commit_syncers;
 pub use commit_syncers_lib::find_toposorted_unsynced_ancestors;
 pub use commit_syncers_lib::find_toposorted_unsynced_ancestors_with_commit_graph;
+pub use commit_syncers_lib::get_version_and_parent_map_for_sync_via_pushrebase;
 pub use commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 pub use commit_syncers_lib::rewrite_commit;
 pub use commit_syncers_lib::update_mapping_with_version;
