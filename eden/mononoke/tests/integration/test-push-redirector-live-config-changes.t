@@ -274,8 +274,8 @@ Again, normal pushrebase with one commit
   specialsmallrepofolder_after_change/f
 
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
-  Some(NonRootMPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(NonRootMPath("special/f")))
-  Some(NonRootMPath("specialsmallrepofolder1/f")) is present in large-mon, but not in small-mon-1 (under Some(NonRootMPath("special/f")))
+  Some(NonRootMPath("special/f")) is present in small-mon-1, but not in large-mon (under Some(NonRootMPath("specialsmallrepofolder1/f")))
+  Some(NonRootMPath("special/f")) is present in small-mon-1, but not in large-mon (under Some(NonRootMPath("specialsmallrepofolder1/f")))
   [1]
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
   * all is well! (glob)

@@ -148,13 +148,13 @@ Same for version C with TEST_VERSION_NAME
 
 With COMPLEX mappping mulitiple paths are in wrong place (but the tool fails on first)
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_C $FBS_C TEST_VERSION_NAME_COMPLEX | sort
-  Some(NonRootMPath("ma/b/c1/f")) is present in meg-mon, but not in fbs-mon (under Some(NonRootMPath("a/b/c1/f")))
-  Some(NonRootMPath("ma/b/c2/d/e")) is present in meg-mon, but not in fbs-mon (under Some(NonRootMPath("d/e")))
-  Some(NonRootMPath("ma/b/c2/f")) is present in meg-mon, but not in fbs-mon (under Some(NonRootMPath("a/b/c2/f")))
+  Some(NonRootMPath("a/b/c1/f")) is present in fbs-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c1/f")))
+  Some(NonRootMPath("a/b/c2/f")) is present in fbs-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/f")))
+  Some(NonRootMPath("d/e")) is present in fbs-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
 
 In version E one file is missing
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath"  -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_E $FBS_C TEST_VERSION_NAME_COMPLEX
-  Some(NonRootMPath("ma/b/c2/d/e")) is present in meg-mon, but not in fbs-mon (under Some(NonRootMPath("d/e")))
+  Some(NonRootMPath("d/e")) is present in fbs-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
   [1]
 
 In version F the file is present but the contents are wrong
@@ -169,7 +169,7 @@ Version G is good
 
 Version H has file vs directory conflict
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_H $FBS_C TEST_VERSION_NAME_COMPLEX
-  Some(NonRootMPath("ma/b")) is present in fbs-mon, but not in meg-mon (under Some(NonRootMPath("ma/b")))
+  Some(NonRootMPath("ma/b")) is present in meg-mon, but not in fbs-mon (under Some(NonRootMPath("ma/b")))
   [1]
 
 PART TWO: testing meg-mon <-> ovr-mon mapping verification
@@ -194,13 +194,13 @@ Same for version C
   * all is well! (glob)
 
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_C $MEG_G TEST_VERSION_NAME_COMPLEX | sort
-  Some(NonRootMPath("a/b/c1/f")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c1/f")))
-  Some(NonRootMPath("a/b/c2/f")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/f")))
-  Some(NonRootMPath("d/e")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
+  Some(NonRootMPath("ma/b/c1/f")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("a/b/c1/f")))
+  Some(NonRootMPath("ma/b/c2/d/e")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("d/e")))
+  Some(NonRootMPath("ma/b/c2/f")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("a/b/c2/f")))
 
 In version E one file is missing
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath"  -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_E $MEG_G TEST_VERSION_NAME_COMPLEX
-  Some(NonRootMPath("d/e")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
+  Some(NonRootMPath("ma/b/c2/d/e")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("d/e")))
   [1]
 
 In version F the file is present but the contents are wrong
@@ -214,6 +214,6 @@ Version G is good
 
 Version H has file vs directory conflict
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_H $MEG_G TEST_VERSION_NAME_COMPLEX | sort
-  Some(NonRootMPath("a/b/c1/f")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c1/f")))
-  Some(NonRootMPath("a/b/c2/f")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/f")))
-  Some(NonRootMPath("d/e")) is present in ovr-mon, but not in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
+  Some(NonRootMPath("ma/b/c1/f")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("a/b/c1/f")))
+  Some(NonRootMPath("ma/b/c2/d/e")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("d/e")))
+  Some(NonRootMPath("ma/b/c2/f")) is present in meg-mon, but not in ovr-mon (under Some(NonRootMPath("a/b/c2/f")))

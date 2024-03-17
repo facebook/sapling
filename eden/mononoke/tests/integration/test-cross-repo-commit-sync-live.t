@@ -129,13 +129,12 @@ After the change
     }
   } (no-eol)
 -- Verify the working copy state after the operation
--- TODO(mitrandir): the verifier output seems to backwards (the files exist in small but are missing in large not otherwise)
 -- TODO(mitrandir): in this test we're getting ourselves into inconsistent state, this needs fixing
   $ with_stripped_logs verify_wc $(hg whereami)
   Verification failed!!!
-  Some(NonRootMPath("smallrepofolder_after/file.txt")) is present in large-mon, but not in small-mon (under Some(NonRootMPath("file.txt")))
-  Some(NonRootMPath("smallrepofolder_after/filetoremove")) is present in large-mon, but not in small-mon (under Some(NonRootMPath("filetoremove")))
-  Some(NonRootMPath("smallrepofolder_after/foo")) is present in large-mon, but not in small-mon (under Some(NonRootMPath("foo")))
+  Some(NonRootMPath("file.txt")) is present in small-mon, but not in large-mon (under Some(NonRootMPath("smallrepofolder_after/file.txt")))
+  Some(NonRootMPath("filetoremove")) is present in small-mon, but not in large-mon (under Some(NonRootMPath("smallrepofolder_after/filetoremove")))
+  Some(NonRootMPath("foo")) is present in small-mon, but not in large-mon (under Some(NonRootMPath("smallrepofolder_after/foo")))
   
   verification failed, found 3 differences
 

@@ -312,7 +312,7 @@ impl fmt::Display for PrintableValidationOutput {
                     writeln!(
                         f,
                         "{:?} is present in {}, but not in {} (under {:?})",
-                        source_path, source_name, target_name, target_path,
+                        target_path, target_name, source_name, source_path,
                     )?;
                 }
                 (
@@ -322,7 +322,7 @@ impl fmt::Display for PrintableValidationOutput {
                     writeln!(
                         f,
                         "{:?} is present in {}, but not in {} (under {:?})",
-                        target_path, target_name, source_name, source_path,
+                        source_path, source_name, target_name, target_path,
                     )?;
                 }
                 (
