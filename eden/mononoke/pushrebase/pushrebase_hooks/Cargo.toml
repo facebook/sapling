@@ -24,4 +24,5 @@ pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_muta
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+synced_commit_mapping_pushrebase_hook = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping/pushrebase_hook" }
 thiserror = "1.0.49"

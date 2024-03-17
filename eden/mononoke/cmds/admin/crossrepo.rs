@@ -540,6 +540,7 @@ async fn change_mapping_via_extras<'a>(
         large_repo,
         &large_bookmark,
         &repo_config.pushrebase,
+        None,
     )?;
 
     let bcs = large_cs_id

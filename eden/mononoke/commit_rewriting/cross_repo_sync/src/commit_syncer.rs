@@ -44,7 +44,6 @@ use slog::debug;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitSourceRepo;
-use synced_commit_mapping_pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 
 use crate::commit_in_memory_syncer::CommitInMemorySyncer;
@@ -1000,23 +999,19 @@ where
                 // We need to run all pushrebase hooks because the're not only validating if the
                 // commit should be pushed. Some of them do important housekeeping that we shouldn't
                 // pass on.
-                let mut pushrebase_hooks = get_pushrebase_hooks(
+
+                let pushrebase_hooks = get_pushrebase_hooks(
                     ctx,
                     &target_repo,
                     &target_bookmark,
                     &target_repo.repo_config().pushrebase,
-                )?;
-                pushrebase_hooks.push(CrossRepoSyncPushrebaseHook::new(
-                    self.mapping.clone(),
-                    // We are assuming that pushrebase is always small to large.
-                    target_repo.repo_identity().id(),
                     Some(ForwardSyncedCommitInfo {
                         small_bcs_id: hash,
                         small_repo_id: self.repos.get_source_repo().repo_identity().id(),
                         large_repo_id: self.repos.get_target_repo().repo_identity().id(),
                         version_name: version.clone(),
                     }),
-                ));
+                )?;
 
                 let pushrebase_res = do_pushrebase_bonsai(
                     ctx,

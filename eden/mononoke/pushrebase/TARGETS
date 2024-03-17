@@ -79,6 +79,7 @@ rust_library(
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/bonsai_globalrev_mapping:globalrev_pushrebase_hook",
         "//eden/mononoke/bookmarks:bookmarks_types",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping_pushrebase_hook",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/pushrebase:pushrebase_hook",
         "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",

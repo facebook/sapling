@@ -17,6 +17,8 @@ use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
+use synced_commit_mapping_pushrebase_hook::CrossRepoSyncPushrebaseHook;
+use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 use thiserror::Error;
 
 /// An error encountered during an attempt to move a bookmark.
@@ -60,8 +62,10 @@ pub fn get_pushrebase_hooks(
      ),
     bookmark: &BookmarkKey,
     pushrebase_params: &PushrebaseParams,
+    forward_synced_commit_info: Option<ForwardSyncedCommitInfo>,
 ) -> Result<Vec<Box<dyn PushrebaseHook>>, PushrebaseHooksError> {
     let mut pushrebase_hooks = Vec::new();
+    let repo_id = repo.repo_identity().id();
 
     match pushrebase_params.globalrev_config.as_ref() {
         Some(config) if config.publishing_bookmark == *bookmark => {
@@ -77,7 +81,7 @@ pub fn get_pushrebase_hooks(
                 let hook = GlobalrevPushrebaseHook::new(
                     ctx.clone(),
                     repo.bonsai_globalrev_mapping_arc().clone(),
-                    repo.repo_identity().id(),
+                    repo_id,
                     config.small_repo_id,
                 );
                 pushrebase_hooks.push(hook);
@@ -108,6 +112,26 @@ pub fn get_pushrebase_hooks(
     if pushrebase_params.populate_git_mapping {
         let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping_arc().clone());
         pushrebase_hooks.push(hook);
+    }
+    if let Some(config) = repo
+        .repo_cross_repo()
+        .live_commit_sync_config()
+        .get_common_config_if_exists(repo_id)?
+    {
+        // The || forward_synced_commit_info.is_some() shouldn't be necessary but
+        // some tests are doing this in large->small direction.
+        if forward_synced_commit_info.is_some()
+            || (config.large_repo_id == repo_id
+                && config.common_pushrebase_bookmarks.contains(bookmark))
+        {
+            let hook = CrossRepoSyncPushrebaseHook::new(
+                repo.repo_cross_repo().synced_commit_mapping().clone(),
+                // We are assuming that pushrebase is always small to large.
+                repo.repo_identity().id(),
+                forward_synced_commit_info,
+            );
+            pushrebase_hooks.push(hook);
+        }
     }
 
     match repo.pushrebase_mutation_mapping().get_hook() {

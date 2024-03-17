@@ -316,6 +316,7 @@ async fn push_merge_commit(
         &repo,
         bookmark_to_merge_into,
         &repo.repo_config().pushrebase,
+        None,
     )?;
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,

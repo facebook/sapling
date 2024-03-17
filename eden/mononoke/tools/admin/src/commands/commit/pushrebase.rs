@@ -58,6 +58,7 @@ pub async fn pushrebase(
         repo,
         &pushrebase_args.bookmark,
         &repo.repo_config().pushrebase,
+        None,
     )
     .map_err(Error::from)?;
 

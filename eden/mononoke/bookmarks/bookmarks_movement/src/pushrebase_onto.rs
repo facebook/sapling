@@ -163,8 +163,13 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             )
             .await?;
 
-        let mut pushrebase_hooks =
-            get_pushrebase_hooks(ctx, repo, self.bookmark, &repo.repo_config().pushrebase)?;
+        let mut pushrebase_hooks = get_pushrebase_hooks(
+            ctx,
+            repo,
+            self.bookmark,
+            &repo.repo_config().pushrebase,
+            None,
+        )?;
 
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
