@@ -92,26 +92,26 @@ Find the hash of mapping change commit in the large repo
   $ REPONAME=large-mon hgmn up -q master_bookmark
 
 After the change
--- new problem - an empty, mapping changing commit from large repo is backsynced when we ask for mapping
+-- an empty, mapping changing commit from large repo shouldn't be backsynced when forward sync is on
   $ X=$(x_repo_lookup large-mon small-mon "$(hg whereami)")
   $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
   using repo "large-mon" repoid RepositoryId(0)
   using repo "small-mon" repoid RepositoryId(1)
   changeset resolved as: ChangesetId(Blake2(a45c6ed3a8522811955be9b4eb0b80f29d2229eeeb43f7f017b2411c0feab955))
-  RewrittenAs([(ChangesetId(Blake2(63527e566888990715f9fbe3ee7a05945f129193d70aae2afd4f4280d3593ace)), CommitSyncConfigVersion("new_version"))])
+  EquivalentWorkingCopyAncestor(ChangesetId(Blake2(cdd50b2d186ce87fe6d2428b01caf9994a98ac51e65f7d6bb43c6a0f6e8d7a56)), CommitSyncConfigVersion("new_version"))
 
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn pull -r $X
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/small-mon
-  searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes
   $ REPONAME=small-mon hgmn up -q $X
   $ log -r .^::.
-  @  Changing synced mapping version to new_version for large-mon->small-mon sync [draft;rev=3;07a4d345141a]
+  @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
   │
-  o  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
+  o  first post-move commit [public;rev=1;11f848659bfc]
   │
   ~
 
@@ -124,7 +124,7 @@ After the change
   $ hg ci -Aqm "after config change from small"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark^::master_bookmark
-  @  after config change from small [public;rev=4;6bfa38885cea] default/master_bookmark
+  @  after config change from small [public;rev=3;6bfa38885cea] default/master_bookmark
   │
   o  before config change [public;rev=2;bc6a206054d0] (glob)
   │

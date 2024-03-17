@@ -137,10 +137,17 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         let commit_rewritten_to_empty = self
             .get_empty_rewritten_commit_action(&maybe_mapping_change_version, commit_sync_context);
 
-        // During backsyncing we provide an option to skip emmpty commits but we
+        // We are using the state of pushredirection to determine which repo is "source of truth" for the contents
+        // if it's the small repo we can't be rewriting the "mapping change" commits as even if we
+        // do they won't be synced back.
+        let pushredirection_disabled = !self
+            .live_commit_sync_config
+            .push_redirector_enabled_for_public(self.target_repo_id.0);
+
+        // During backsyncing we provide an option to skip empty commits but we
         // can only do that when they're not changing the mapping.
-        let empty_commit_from_large_repo = if !self.small_to_large
-            && maybe_mapping_change_version.is_none()
+        let empty_commit_from_large_repo: EmptyCommitFromLargeRepo = if !self.small_to_large
+            && (maybe_mapping_change_version.is_none() || pushredirection_disabled)
             && justknobs::eval(
                 "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits",
                 None,
