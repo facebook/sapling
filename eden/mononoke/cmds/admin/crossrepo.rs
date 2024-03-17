@@ -88,6 +88,7 @@ use crate::error::SubcommandError;
 
 pub const CROSSREPO: &str = "crossrepo";
 const AUTHOR_ARG: &str = "author";
+const DATE_ARG: &str = "date";
 const ONCALL_ARG: &str = "oncall";
 const DUMP_MAPPING_LARGE_REPO_PATH_ARG: &str = "dump-mapping-large-repo-path";
 const MAP_SUBCOMMAND: &str = "map";
@@ -759,6 +760,10 @@ async fn create_commit_for_mapping_change(
         .value_of(AUTHOR_ARG)
         .ok_or_else(|| format_err!("{} is not specified", AUTHOR_ARG))?;
 
+    let author_date = sub_m
+        .value_of(DATE_ARG)
+        .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)?;
+
     let oncall = sub_m.value_of(ONCALL_ARG);
     let oncall_msg_part = oncall.map(|o| format!("\n\nOncall Short Name: {}\n", o));
 
@@ -795,7 +800,7 @@ async fn create_commit_for_mapping_change(
     let bcs = BonsaiChangesetMut {
         parents: vec![parent.0.clone()],
         author: author.to_string(),
-        author_date: DateTime::now(),
+        author_date,
         committer: None,
         committer_date: None,
         message: commit_msg,
@@ -1334,6 +1339,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
                 .takes_value(true)
                 .help("Author of the commit that will change the mapping"),
+        )
+        .arg(
+            Arg::with_name(DATE_ARG)
+                .long(DATE_ARG)
+                .required(false)
+                .takes_value(true)
+                .help("Date for the commit that will change the mapping (in RFC-3339 format)"),
         )
         .arg(
             Arg::with_name(ONCALL_ARG)
