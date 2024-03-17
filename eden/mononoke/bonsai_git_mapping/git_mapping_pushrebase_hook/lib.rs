@@ -41,7 +41,11 @@ impl GitMappingPushrebaseHook {
 
 #[async_trait]
 impl PushrebaseHook for GitMappingPushrebaseHook {
-    async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+    async fn in_critical_section(
+        &self,
+        _ctx: &CoreContext,
+        _old_bookmark_value: Option<ChangesetId>,
+    ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let hook = Box::new(GitMappingCommitHook {
             bonsai_git_mapping: self.bonsai_git_mapping.clone(),
             assignments: HashMap::new(),

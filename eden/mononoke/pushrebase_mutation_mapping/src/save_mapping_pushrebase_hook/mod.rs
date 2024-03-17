@@ -36,7 +36,11 @@ impl SaveMappingPushrebaseHook {
 
 #[async_trait]
 impl PushrebaseHook for SaveMappingPushrebaseHook {
-    async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>> {
+    async fn in_critical_section(
+        &self,
+        _ctx: &CoreContext,
+        _old_bookmark_value: Option<ChangesetId>,
+    ) -> Result<Box<dyn PushrebaseCommitHook>> {
         Ok(Box::new(SaveMappingCommitHook {
             repository_id: self.repository_id,
         }))

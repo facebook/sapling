@@ -58,7 +58,11 @@ impl GlobalrevPushrebaseHook {
 
 #[async_trait]
 impl PushrebaseHook for GlobalrevPushrebaseHook {
-    async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+    async fn in_critical_section(
+        &self,
+        _ctx: &CoreContext,
+        _old_bookmark_value: Option<ChangesetId>,
+    ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let max = self.mapping.get_max(&self.ctx).await?;
         let increment = 1;
 

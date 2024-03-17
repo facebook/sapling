@@ -331,11 +331,10 @@ async fn rebase_in_loop(
         let start_critical_section = Instant::now();
         // CRITICAL SECTION START: After getting the value of the bookmark
         let old_bookmark_value = get_bookmark_value(ctx, repo, onto_bookmark).await?;
-        let hooks = try_join_all(
-            prepushrebase_hooks
-                .iter()
-                .map(|h| h.in_critical_section().map_err(PushrebaseError::from)),
-        )
+        let hooks = try_join_all(prepushrebase_hooks.iter().map(|h| {
+            h.in_critical_section(ctx, old_bookmark_value)
+                .map_err(PushrebaseError::from)
+        }))
         .await?;
 
         let server_bcs = fetch_bonsai_range_ancestor_not_included(
@@ -1451,7 +1450,11 @@ mod tests {
 
         #[async_trait]
         impl PushrebaseHook for Hook {
-            async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+            async fn in_critical_section(
+                &self,
+                _ctx: &CoreContext,
+                _old_bookmark_value: Option<ChangesetId>,
+            ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
                 Ok(Box::new(*self) as Box<dyn PushrebaseCommitHook>)
             }
         }
@@ -2406,7 +2409,11 @@ mod tests {
 
     #[async_trait]
     impl PushrebaseHook for SleepHook {
-        async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+        async fn in_critical_section(
+            &self,
+            _ctx: &CoreContext,
+            _old_bookmark_value: Option<ChangesetId>,
+        ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
             let us = rand::thread_rng().gen_range(0..100);
             tokio::time::sleep(Duration::from_micros(us)).await;
             Ok(Box::new(*self) as Box<dyn PushrebaseCommitHook>)
@@ -3203,7 +3210,11 @@ mod tests {
 
         #[async_trait]
         impl PushrebaseHook for InvalidPushrebaseHook {
-            async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+            async fn in_critical_section(
+                &self,
+                _ctx: &CoreContext,
+                _old_bookmark_value: Option<ChangesetId>,
+            ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
                 Ok(Box::new(InvalidPushrebaseHook {}))
             }
         }
