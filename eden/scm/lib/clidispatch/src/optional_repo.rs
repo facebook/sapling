@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use configmodel::Config;
+use gitcompat::init::maybe_init_inside_dotgit;
 use repo::errors;
 use repo::repo::Repo;
 
@@ -29,7 +30,8 @@ impl OptionalRepo {
     /// Return None if there is no repo found from the current directory or its
     /// parent directories.
     fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
-        if let Some((path, _)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
+        if let Some((path, ident)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
+            maybe_init_inside_dotgit(&path, ident)?;
             let repo = Repo::load(path, &pinned_configs(opts))?;
             Ok(OptionalRepo::Some(repo))
         } else {
@@ -58,7 +60,8 @@ impl OptionalRepo {
                 cwd.join(repository_path)
             };
         if let Ok(path) = util::path::absolute(full_repository_path) {
-            if identity::sniff_dir(&path)?.is_some() {
+            if let Some(ident) = identity::sniff_dir(&path)? {
+                maybe_init_inside_dotgit(&path, ident)?;
                 let repo = Repo::load(path, &pinned_configs(opts))?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
