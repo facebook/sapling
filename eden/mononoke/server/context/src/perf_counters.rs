@@ -76,6 +76,7 @@ define_perf_counters! {
         EdenapiFiles,
         EdenapiFilesAuxData,
         EdenapiTrees,
+        EdenapiTreesAuxData,
         GetbundleFilenodesTotalWeight,
         GetbundleNumCommits,
         GetbundleNumDrafts,
@@ -180,6 +181,7 @@ impl PerfCounterType {
             | EdenapiFiles
             | EdenapiFilesAuxData
             | EdenapiTrees
+            | EdenapiTreesAuxData
             | GetbundleFilenodesTotalWeight
             | GetbundleNumCommits
             | GetbundleNumDrafts

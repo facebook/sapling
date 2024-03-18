@@ -88,9 +88,6 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
         rd.add_request(&request);
     };
-    repo.ctx()
-        .perf_counters()
-        .add_to_counter(PerfCounterType::EdenapiTrees, request.keys.len() as i64);
 
     ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
@@ -137,6 +134,10 @@ async fn fetch_tree(
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
     if attributes.manifest_blob {
+        repo.ctx()
+            .perf_counters()
+            .increment_counter(PerfCounterType::EdenapiTrees);
+
         let (data, _) = ctx
             .content()
             .await
@@ -150,6 +151,10 @@ async fn fetch_tree(
     }
 
     if attributes.child_metadata {
+        repo.ctx()
+            .perf_counters()
+            .increment_counter(PerfCounterType::EdenapiTreesAuxData);
+
         if let Some(entries) = fetch_child_metadata_entries(&repo, &ctx).await? {
             let children: Vec<Result<TreeChildEntry, EdenApiServerError>> = entries
                 .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
