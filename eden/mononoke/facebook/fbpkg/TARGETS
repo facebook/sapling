@@ -1,4 +1,5 @@
 load("//eden/mononoke/facebook/fbpkg:lib.bzl", "mononoke_fbpkg")
+load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
 oncall("mononoke")
 
@@ -230,4 +231,19 @@ mononoke_fbpkg(
     path_actions = {
         "bookmark_service_server": "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
     },
+)
+
+tw.container(
+    name = "tw.mononoke.git_server",
+    features = [
+        tw.build_fbpkg(
+            mononoke_fbpkg(
+                name = "mononoke.git_server",
+                path_actions = {
+                    "git_server": "//eden/mononoke/git_server:git_server",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
 )
