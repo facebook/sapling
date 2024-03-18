@@ -9,6 +9,7 @@
 #include <folly/portability/GTest.h>
 #include <memory>
 
+#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -17,7 +18,6 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 
 using namespace facebook::eden;

@@ -11,6 +11,7 @@
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/Guid.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/StaticAssert.h"
 

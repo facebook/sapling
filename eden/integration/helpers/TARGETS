@@ -59,11 +59,11 @@ cpp_binary(
     name = "zero_blob",
     srcs = ["ZeroBlob.cpp"],
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/store:rocksdb",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:structured_logger",
         "//folly/init:init",
         "//folly/logging:init",
         "//folly/logging:logging",

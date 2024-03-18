@@ -15,6 +15,7 @@
 #include <folly/portability/Stdlib.h>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
@@ -25,7 +26,6 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/StaticAssert.h"
 

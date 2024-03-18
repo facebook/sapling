@@ -11,11 +11,11 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <array>
 #include <iterator>
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/lmdb/LMDBDatabase.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 
 namespace facebook::eden {
 

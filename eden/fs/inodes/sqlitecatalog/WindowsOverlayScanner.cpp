@@ -13,11 +13,11 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
+#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
-#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/WinStackTrace.h"
 
 DEFINE_string(

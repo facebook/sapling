@@ -91,25 +91,19 @@ cpp_library(
 )
 
 cpp_library(
-    name = "structured_logger",
+    name = "structured_logger_factory",
     srcs = [
-        "ScubaStructuredLogger.cpp",
-        "StructuredLogger.cpp",
         "StructuredLoggerFactory.cpp",
-    ],
-    headers = [
-        "NullStructuredLogger.h",
     ],
     deps = [
         ":stats",
         "//eden/common/telemetry:scribe_logger",
+        "//eden/common/telemetry:structured_logger",
         "//eden/fs/config:config",
         "//fb303:service_data",
-        "//folly/json:dynamic",
         "//folly/logging:logging",
     ],
     exported_deps = [
-        "//eden/common/telemetry:log_info",
         "//eden/common/utils:ref_ptr",
     ],
 )

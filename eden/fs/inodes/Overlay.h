@@ -17,6 +17,7 @@
 #include <optional>
 #include <thread>
 
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/DirType.h"
 #include "eden/common/utils/ImmediateFuture.h"
@@ -27,7 +28,6 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"

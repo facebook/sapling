@@ -10,6 +10,7 @@
 #include <folly/executors/ManualExecutor.h>
 #include <memory>
 
+#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -18,7 +19,6 @@
 #include "eden/fs/notifications/CommandNotifier.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
-#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/utils/UserInfo.h"

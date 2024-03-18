@@ -15,10 +15,10 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
 
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 
 using folly::AsyncServerSocket;
 using folly::AsyncSocket;

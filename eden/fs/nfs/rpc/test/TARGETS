@@ -8,10 +8,10 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/fs/nfs/rpc:rpc",
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/nfs/testharness:xdr_test_utils",
-        "//eden/fs/telemetry:structured_logger",
         "//folly/portability:gtest",
     ],
 )

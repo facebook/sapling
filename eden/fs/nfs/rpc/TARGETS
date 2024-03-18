@@ -30,9 +30,9 @@ cpp_library(
     srcs = ["RpcServer.cpp"],
     headers = ["RpcServer.h"],
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:throw",
         "//eden/fs/telemetry:log_info",
-        "//eden/fs/telemetry:structured_logger",
         "//folly:exception",
         "//folly:string",
         "//folly/futures:core",

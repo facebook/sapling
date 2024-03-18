@@ -21,6 +21,7 @@
 #include <folly/system/Pid.h>
 #include <folly/system/ThreadName.h>
 
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/Future.h"
@@ -62,7 +63,6 @@
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FsChannelTypes.h"

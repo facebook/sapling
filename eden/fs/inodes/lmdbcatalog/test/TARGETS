@@ -24,6 +24,7 @@ cpp_unittest(
     srcs = ["LMDBOverlayTest.cpp"],
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
@@ -33,7 +34,6 @@ cpp_unittest(
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/inodes/test:overlay_test_util",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
         "//folly/portability:gtest",

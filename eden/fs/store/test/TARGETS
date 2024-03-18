@@ -29,6 +29,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
@@ -38,7 +39,6 @@ cpp_unittest(
         "//eden/fs/store/filter:hg_sparse_filter",
         "//eden/fs/store/hg:hg_backing_store_options",
         "//eden/fs/store/hg:hg_queued_backing_store",
-        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:fake_filter",
         "//eden/fs/testharness:hg_repo",
@@ -68,6 +68,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
@@ -82,7 +83,6 @@ cpp_unittest(
         "//eden/fs/store:sqlite",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:logging_fetch_context",
         "//eden/fs/testharness:stored_object",
@@ -110,12 +110,12 @@ cpp_binary(
     name = "rocksdb_benchmark",
     srcs = ["RocksDbLocalStoreBench.cpp"],
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:utils",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/model:model",
         "//eden/fs/store:rocksdb",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:structured_logger",
     ],
 )

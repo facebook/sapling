@@ -16,6 +16,7 @@
 #include <folly/stop_watch.h>
 #include <optional>
 
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -30,7 +31,6 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 
 namespace facebook::eden {
 

@@ -8,7 +8,7 @@
 #include "eden/fs/nfs/rpc/RpcServer.h"
 
 #include <folly/portability/GTest.h>
-#include "eden/fs/telemetry/NullStructuredLogger.h"
+#include "eden/common/telemetry/NullStructuredLogger.h"
 
 namespace {
 

@@ -44,6 +44,7 @@ cpp_library(
     deps = [
         ":hg_import_request",
         ":hg_proxy_hash",
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:enum",
         "//eden/common/utils:path",
         "//eden/common/utils:throw",
@@ -52,7 +53,6 @@ cpp_library(
         "//eden/fs/service:thrift_util",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:static_assert",
         "//folly:executor",
         "//folly:string",

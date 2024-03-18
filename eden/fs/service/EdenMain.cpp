@@ -27,6 +27,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/common/telemetry/SessionInfo.h"
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
@@ -46,7 +47,6 @@
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/UserInfo.h"
 #include "eden/fs/utils/WinStackTrace.h"
 

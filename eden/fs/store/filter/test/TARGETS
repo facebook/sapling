@@ -8,6 +8,7 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
@@ -17,7 +18,6 @@ cpp_unittest(
         "//eden/fs/store/filter:filtered_object_id",
         "//eden/fs/store/filter:glob_filter",
         "//eden/fs/telemetry:stats",
-        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//folly:range",
         "//folly/executors:manual_executor",

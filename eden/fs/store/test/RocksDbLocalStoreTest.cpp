@@ -6,9 +6,9 @@
  */
 
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/fs/store/test/LocalStoreTest.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 namespace {
 

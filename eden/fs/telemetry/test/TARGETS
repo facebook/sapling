@@ -29,21 +29,6 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
-    name = "scuba_test",
-    srcs = [
-        "ScubaStructuredLoggerTest.cpp",
-    ],
-    supports_static_listing = False,
-    deps = [
-        "//eden/common/telemetry:scribe_logger",
-        "//eden/fs/telemetry:structured_logger",
-        "//folly/json:dynamic",
-        "//folly/portability:gmock",
-        "//folly/portability:gtest",
-    ],
-)
-
 cpp_benchmark(
     name = "activity_buffer_benchmark",
     srcs = [

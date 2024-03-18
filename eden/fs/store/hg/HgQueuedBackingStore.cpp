@@ -27,6 +27,7 @@
 #include <folly/system/ThreadName.h>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
@@ -46,7 +47,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 DEFINE_bool(
