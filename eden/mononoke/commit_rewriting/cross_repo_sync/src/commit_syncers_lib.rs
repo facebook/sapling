@@ -70,6 +70,7 @@ use crate::types::Repo;
 use crate::types::Source;
 use crate::types::SubmoduleDeps;
 use crate::types::Target;
+use crate::CommitSyncContext;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
@@ -193,8 +194,8 @@ pub(crate) async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, 
 pub struct SyncedAncestorsVersions {
     // Versions of all synced ancestors
     pub versions: HashSet<CommitSyncConfigVersion>,
-    // Rewritten ancestors
-    pub rewritten_ancestors: HashMap<ChangesetId, CommitSyncConfigVersion>,
+    // Rewritten ancestors: source_cs_id -> (rewritten_cs_id, version)
+    pub rewritten_ancestors: HashMap<ChangesetId, (ChangesetId, CommitSyncConfigVersion)>,
 }
 
 impl SyncedAncestorsVersions {
@@ -283,11 +284,11 @@ where
                         synced_ancestors_versions.versions.insert(version);
                     }
                     RewrittenAs(cs_ids_versions) => {
-                        for (cs_id, version) in cs_ids_versions {
+                        for (rewritten_cs_id, version) in cs_ids_versions {
                             synced_ancestors_versions.versions.insert(version.clone());
                             synced_ancestors_versions
                                 .rewritten_ancestors
-                                .insert(cs_id, version);
+                                .insert(cs_id, (rewritten_cs_id, version));
                         }
                     }
                     EquivalentWorkingCopyAncestor(_, version) => {
@@ -381,12 +382,14 @@ where
                     Some(plural) => {
                         use PluralCommitSyncOutcome::*;
                         match plural {
-                            NotSyncCandidate(version) => Ok(vec![(None, version)]),
+                            NotSyncCandidate(version) => Ok(vec![(*cs_id, (None, version))]),
                             RewrittenAs(cs_ids_versions) => Ok(cs_ids_versions
                                 .into_iter()
-                                .map(|(cs_id, v)| (Some(cs_id), v))
+                                .map(|(rewritten_cs_id, v)| (*cs_id, (Some(rewritten_cs_id), v)))
                                 .collect()),
-                            EquivalentWorkingCopyAncestor(_, version) => Ok(vec![(None, version)]),
+                            EquivalentWorkingCopyAncestor(equivalent_cs_id, version) => {
+                                Ok(vec![(*cs_id, (Some(equivalent_cs_id), version))])
+                            }
                         }
                     }
                     None => Err(anyhow!("Failed to get config version from synced ancestor")),
@@ -397,16 +400,17 @@ where
         .await?
         .into_iter()
         .flatten()
-        .collect::<Vec<_>>();
+        .collect::<Vec<(ChangesetId, (Option<ChangesetId>, CommitSyncConfigVersion))>>();
 
     let synced_ancestors_versions = synced_ancestors_list
         .iter()
-        .cloned()
-        .map(|(_, v)| v)
+        .map(|(_source, (_target, v))| v.clone())
         .collect();
     let rewritten_ancestors = synced_ancestors_list
         .into_iter()
-        .filter_map(|(maybe_cs_id, version)| maybe_cs_id.map(|cs_id| (cs_id, version)))
+        .filter_map(|(source, (maybe_target, version))| {
+            maybe_target.map(|target| (source, (target, version)))
+        })
         .collect();
 
     // Get the oldest unsynced ancestors by getting the difference between the
@@ -483,19 +487,38 @@ where
         return Ok((parent_version, HashMap::new()));
     }
 
-    // Let's see if we can find a better ancestor to use for the sync.
-    let mut parent_mapping = HashMap::new();
-    for (parent, _version) in synced_ancestors_versions.rewritten_ancestors.iter() {
-        // If the bookmark value is descendant of our parent it should have equivalent working
-        // copy.
-        // TODO(mitrandir): we could actually trigger a sync and validate such equivalence instead
-        // of assuming it.
-        if target_repo
-            .commit_graph()
-            .is_ancestor(ctx, *parent, target_bookmark_csid)
+    // Let's first validate that the target bookmark is still working-copy equivalent to what the
+    // parent of the commit we'd like to sync
+    let backsyncer = commit_syncer.reverse()?;
+    let small_csid_equivalent_to_target_bookmark =
+        if let Some(small_csid_equivalent_to_target_bookmark) = backsyncer
+            .sync_commit(
+                ctx,
+                target_bookmark_csid,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::XRepoSyncJob,
+                false,
+            )
             .await?
         {
-            parent_mapping.insert(*parent, target_bookmark_csid);
+            small_csid_equivalent_to_target_bookmark
+        } else {
+            return Ok((parent_version, HashMap::new()));
+        };
+
+    let mut parent_mapping = HashMap::new();
+    for (source_parent_csid, (target_parent_csid, _version)) in
+        synced_ancestors_versions.rewritten_ancestors.iter()
+    {
+        // If the bookmark value is descendant of our parent it should have equivalent working
+        // copy.
+        if target_repo
+            .commit_graph()
+            .is_ancestor(ctx, *target_parent_csid, target_bookmark_csid)
+            .await?
+            && small_csid_equivalent_to_target_bookmark == *source_parent_csid
+        {
+            parent_mapping.insert(*target_parent_csid, target_bookmark_csid);
         }
     }
 
