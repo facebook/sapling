@@ -266,6 +266,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::change_detect::SharedChangeDetector;
 
     #[test]
     fn test_file_lock() {
@@ -458,5 +459,34 @@ mod tests {
         let buf3 = l3.shared_mmap_mut(v1.len()).unwrap();
         buf3.as_ref().read_exact(&mut v2).unwrap();
         assert_eq!(v1, v2);
+
+        // The mmap buffer can be used for SharedChangeDetector.
+        let d1 = SharedChangeDetector::new(l3.shared_mmap_mut(v1.len()).unwrap());
+        let d2 = SharedChangeDetector::new(l3.shared_mmap_mut(v1.len()).unwrap());
+        let d3 = d2.clone();
+
+        assert!(!d1.is_changed());
+        assert!(!d2.is_changed());
+        assert!(!d3.is_changed());
+
+        d1.bump();
+
+        assert!(!d1.is_changed());
+        assert!(d2.is_changed());
+        assert!(d3.is_changed());
+
+        d2.reload();
+        assert!(!d2.is_changed());
+        assert!(d3.is_changed());
+
+        d3.bump();
+        assert!(d1.is_changed());
+        assert!(d2.is_changed());
+        assert!(!d3.is_changed());
+
+        d2.bump();
+        assert!(d1.is_changed());
+        assert!(!d2.is_changed());
+        assert!(d3.is_changed());
     }
 }
