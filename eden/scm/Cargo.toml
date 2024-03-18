@@ -97,6 +97,7 @@ members = [
   "lib/formatter",
   "lib/fsinfo",
   "lib/fsyncglob",
+  "lib/gitcompat",
   "lib/gitstore",
   "lib/hg-http",
   "lib/hg-metrics",
