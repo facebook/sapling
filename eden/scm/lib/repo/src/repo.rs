@@ -26,7 +26,6 @@ use edenapi::EdenApiError;
 use fs_err as fs;
 use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
-use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use repolock::RepoLocker;
@@ -159,12 +158,10 @@ impl Repo {
 
         let requirements = Requirements::open(
             &dot_hg_path.join("requires"),
-            Lazy::force(&SUPPORTED_DEFAULT_REQUIREMENTS),
+            &SUPPORTED_DEFAULT_REQUIREMENTS,
         )?;
-        let store_requirements = Requirements::open(
-            &store_path.join("requires"),
-            Lazy::force(&SUPPORTED_STORE_REQUIREMENTS),
-        )?;
+        let store_requirements =
+            Requirements::open(&store_path.join("requires"), &SUPPORTED_STORE_REQUIREMENTS)?;
 
         let locker = Arc::new(RepoLocker::new(&config, store_path.clone())?);
 
@@ -199,11 +196,11 @@ impl Repo {
     pub fn reload_requires(&mut self) -> Result<()> {
         self.requirements = Requirements::open(
             &self.dot_hg_path.join("requires"),
-            Lazy::force(&SUPPORTED_DEFAULT_REQUIREMENTS),
+            &SUPPORTED_DEFAULT_REQUIREMENTS,
         )?;
         self.store_requirements = Requirements::open(
             &self.store_path.join("requires"),
-            Lazy::force(&SUPPORTED_STORE_REQUIREMENTS),
+            &SUPPORTED_STORE_REQUIREMENTS,
         )?;
         Ok(())
     }

@@ -44,6 +44,7 @@ rust_library(
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:phf",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/async-runtime:async-runtime",

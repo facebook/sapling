@@ -22,6 +22,7 @@ manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metalog = { version = "0.1.0", path = "../metalog" }
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+phf = { version = "0.11", features = ["macros"] }
 refencode = { version = "0.1.0", path = "../refencode" }
 repolock = { version = "0.1.0", path = "../repolock" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }

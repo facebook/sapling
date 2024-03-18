@@ -34,7 +34,10 @@ impl Requirements {
     /// Load requirements from the given path.
     ///
     /// If the given path does not exist, it is treated as an empty file.
-    pub fn open(path: &Path, supported: &HashSet<String>) -> Result<Self, RequirementsOpenError> {
+    pub fn open(
+        path: &Path,
+        supported: &phf::Set<&'static str>,
+    ) -> Result<Self, RequirementsOpenError> {
         let requirements: HashSet<String> = match fs::read_to_string(path) {
             Ok(s) => s.split_whitespace().map(|s| s.to_string()).collect(),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Default::default(),
@@ -46,10 +49,13 @@ impl Requirements {
                 ));
             }
         };
-        let mut unsupported = requirements.difference(supported).peekable();
-        if unsupported.peek().is_some() {
-            let mut unsupported_vec: Vec<_> = unsupported.cloned().collect();
-            unsupported_vec.sort();
+        let mut unsupported_vec: Vec<_> = requirements
+            .iter()
+            .filter(|s| !supported.contains(s))
+            .map(|s| s.as_str())
+            .collect();
+        if !unsupported_vec.is_empty() {
+            unsupported_vec.sort_unstable();
             return Err(RequirementsOpenError::UnsupportedRequirements(
                 UnsupportedRequirements(unsupported_vec.join(", ")),
             ));
@@ -106,6 +112,7 @@ impl Requirements {
 
 #[cfg(test)]
 mod tests {
+    use phf::phf_set;
     use tempfile::tempdir;
 
     use super::*;
@@ -114,7 +121,7 @@ mod tests {
     fn test_requires_basic() {
         let tmp = tempdir().unwrap();
         let path = tmp.path().join("requires");
-        let allowed = HashSet::<String>::from(["a".to_owned(), "b".to_owned(), "c".to_owned()]);
+        let allowed = phf_set!("a", "b", "c");
         let mut reqs = Requirements::open(&path, &allowed).unwrap();
 
         assert!(!reqs.contains("a"));
@@ -148,7 +155,7 @@ mod tests {
     fn test_unallowed_requirements() {
         let tmp = tempdir().unwrap();
         let path = tmp.path().join("requires");
-        let allowed = HashSet::<String>::from(["a".to_owned()]);
+        let allowed = phf_set!("a");
         let mut reqs = Requirements::open(&path, &allowed).unwrap();
         reqs.add("foo");
         reqs.add("bar");
