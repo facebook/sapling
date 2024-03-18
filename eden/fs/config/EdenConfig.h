@@ -260,6 +260,19 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * If Eden is using custom permission checking, the list of methods that any
+   * user can call.
+   */
+  ConfigSetting<std::vector<std::string>> thriftFunctionsAllowlist{
+      "thrift:functions-allowlist",
+      std::vector<std::string>{
+          "BaseService.getCounter",
+          "BaseService.getCounters",
+          "BaseService.getRegexCounters",
+          "BaseService.getSelectedCounters"},
+      this};
+
+  /**
    * The number of Thrift worker threads.
    */
   ConfigSetting<size_t> thriftNumWorkers{

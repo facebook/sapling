@@ -8,18 +8,11 @@
 #include "eden/fs/service/ThriftPermissionChecker.h"
 
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/ServerState.h"
 
 namespace {
-/**
- * Any user can call these methods.
- */
-constexpr folly::StringPiece METHOD_WHITELIST[] = {
-    "BaseService.getCounter",
-    "BaseService.getCounters",
-    "BaseService.getRegexCounters",
-    "BaseService.getSelectedCounters",
-};
 
 /**
  * A linear scan is faster than a non-lexical binary search until about 10
@@ -29,8 +22,10 @@ constexpr folly::StringPiece METHOD_WHITELIST[] = {
  * All of the implementations I benchmarked finish in under 100 ns, so perhaps
  * it doesn't matter.
  */
-bool isWhitelisted(folly::StringPiece methodName) {
-  for (auto& name : METHOD_WHITELIST) {
+bool isAllowlisted(
+    folly::StringPiece methodName,
+    const std::vector<std::string>& methodAllowlist) {
+  for (auto& name : methodAllowlist) {
     if (methodName == name) {
       return true;
     }
@@ -59,7 +54,11 @@ void ThriftPermissionChecker::freeContext(
 }
 
 void ThriftPermissionChecker::preRead(void* ctx, const char* fn_name) {
-  if (isWhitelisted(fn_name)) {
+  if (isAllowlisted(
+          fn_name,
+          serverState_->getReloadableConfig()
+              ->getEdenConfig()
+              ->thriftFunctionsAllowlist.getValue())) {
     return;
   }
 
