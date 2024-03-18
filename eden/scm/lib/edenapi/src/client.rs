@@ -463,7 +463,7 @@ impl Client {
         let requests = self.prepare_requests(
             &url,
             keys,
-            self.config().max_trees,
+            self.config().max_trees_per_batch,
             min_batch_size,
             |keys| {
                 let req = TreeRequest {
@@ -507,7 +507,7 @@ impl Client {
         let requests = self.prepare_requests(
             &url,
             reqs,
-            self.config().max_files,
+            self.config().max_files_per_batch,
             min_batch_size,
             |reqs| {
                 let req = FileRequest { reqs, keys: vec![] };
@@ -749,7 +749,7 @@ impl Client {
         let requests = self.prepare_requests(
             &url,
             keys,
-            self.config().max_history,
+            self.config().max_history_per_batch,
             min_batch_size,
             |keys| {
                 let req = HistoryRequest { keys, length };
@@ -816,7 +816,7 @@ impl Client {
         let requests = self.prepare_requests(
             &url,
             commits,
-            self.config().max_commit_translate_id,
+            self.config().max_commit_translate_id_per_batch,
             None,
             |commits| {
                 let req = CommitTranslateIdRequest {
@@ -1208,7 +1208,7 @@ impl EdenApi for Client {
         let formatted = self.prepare_requests(
             &url,
             requests,
-            self.config().max_location_to_hash,
+            self.config().max_location_to_hash_per_batch,
             None,
             |requests| {
                 let batch = CommitLocationToHashRequestBatch { requests };
@@ -1241,7 +1241,7 @@ impl EdenApi for Client {
         let formatted = self.prepare_requests(
             &url,
             hgids,
-            self.config().max_location_to_hash,
+            self.config().max_location_to_hash_per_batch,
             None,
             |hgids| {
                 let batch = CommitHashToLocationRequestBatch {
@@ -1544,7 +1544,7 @@ impl EdenApi for Client {
         let requests = self.prepare_requests(
             &url,
             commits,
-            self.config().max_commit_mutations,
+            self.config().max_commit_mutations_per_batch,
             None,
             |commits| {
                 let req = CommitMutationsRequest { commits };
