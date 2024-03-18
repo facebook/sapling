@@ -423,6 +423,7 @@ def _makerage(ui, repo, **opts) -> str:
                 else "uptime"
             ),
         ),
+        ("watchman debug-status", lambda: shcmd("watchman debug-status", check=False)),
         ("rpm info", (partial(rpminfo, ui))),
         ("klist", lambda: shcmd("klist", check=False)),
         ("ifconfig", lambda: shcmd("ipconfig" if pycompat.iswindows else "ifconfig")),
