@@ -24,6 +24,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
 use clap::Parser;
+use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_caching::CachelibSettings;
 use commit_graph::CommitGraph;
@@ -35,8 +36,15 @@ use futures::pin_mut;
 use futures::TryFutureExt;
 use git_symbolic_refs::GitSymbolicRefs;
 use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::LoadMiddleware;
+use gotham_ext::middleware::LogMiddleware;
+use gotham_ext::middleware::MetadataMiddleware;
+use gotham_ext::middleware::PostResponseMiddleware;
+use gotham_ext::middleware::ServerIdentityMiddleware;
+use gotham_ext::middleware::TimerMiddleware;
 use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
+use http::HeaderValue;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
@@ -219,8 +227,21 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
+                .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
+                    "mononoke_git_server",
+                )))
+                .add(MetadataMiddleware::new(
+                    fb,
+                    logger.clone(),
+                    common.internal_identity.clone(),
+                    ClientEntryPoint::MononokeGitServer,
+                ))
                 .add(RequestContentEncodingMiddleware {})
                 .add(ResponseContentTypeMiddleware {})
+                .add(PostResponseMiddleware::default())
+                .add(LoadMiddleware::new())
+                .add(LogMiddleware::slog(logger.clone()))
+                .add(TimerMiddleware::new())
                 .build(router);
 
             info!(&logger, "Listening on {}", bound_addr);
