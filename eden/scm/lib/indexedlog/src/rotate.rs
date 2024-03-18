@@ -21,6 +21,7 @@ use tracing::debug;
 use tracing::debug_span;
 use tracing::trace;
 
+use crate::change_detect::SharedChangeDetector;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
@@ -50,6 +51,7 @@ pub struct RotateLog {
     latest: u8,
     // Indicate an active reader. Destrictive writes (repair) are unsafe.
     reader_lock: Option<ScopedDirLock>,
+    change_detector: Option<SharedChangeDetector>,
     // Run after log.sync(). For testing purpose only.
     #[cfg(test)]
     hook_after_log_sync: Option<Box<dyn Fn()>>,
@@ -162,6 +164,7 @@ impl OpenOptions {
         let dir = dir.as_ref();
         let result: crate::Result<_> = (|| {
             let reader_lock = ScopedDirLock::new_with_options(dir, &READER_LOCK_OPTS)?;
+            let change_detector = reader_lock.shared_change_detector()?;
             let span = debug_span!("RotateLog::open", dir = &dir.to_string_lossy().as_ref());
             let _guard = span.enter();
 
@@ -238,6 +241,7 @@ impl OpenOptions {
                 logs_len,
                 latest,
                 reader_lock: Some(reader_lock),
+                change_detector: Some(change_detector),
                 #[cfg(test)]
                 hook_after_log_sync: None,
             })
@@ -246,7 +250,7 @@ impl OpenOptions {
         result.context(|| format!("in rotate::OpenOptions::open({:?})", dir))
     }
 
-    /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`sync`].
+    /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`RotateLog::sync`].
     pub fn create_in_memory(&self) -> crate::Result<RotateLog> {
         let result: crate::Result<_> = (|| {
             let cell = create_log_cell(self.log_open_options.open(())?);
@@ -260,6 +264,7 @@ impl OpenOptions {
                 logs_len,
                 latest: 0,
                 reader_lock: None,
+                change_detector: None,
                 #[cfg(test)]
                 hook_after_log_sync: None,
             })
@@ -468,6 +473,9 @@ impl RotateLog {
                     // If latest can not be read, do not error out.
                     // This RotateLog can still be used to answer queries.
                 }
+                if let Some(detector) = &self.change_detector {
+                    detector.reload();
+                }
             } else {
                 // Read-write path. Take the directory lock.
                 let dir = self.dir.clone().unwrap();
@@ -524,6 +532,9 @@ impl RotateLog {
                     self.writable_log().finalize_indexes(&lock)?;
                     self.rotate_internal(&lock)?;
                 }
+                if let Some(detector) = &self.change_detector {
+                    detector.bump();
+                }
             }
 
             Ok(self.latest)
@@ -548,6 +559,20 @@ impl RotateLog {
             }
         }
         Ok(())
+    }
+
+    /// Returns `true` if `sync` will load more data on disk.
+    ///
+    /// This function is optimized to be called frequently. It does not access
+    /// the filesystem directly, but communicate using a shared mmap buffer.
+    ///
+    /// This is not about testing buffered pending changes. To access buffered
+    /// pending changes, use [`RotateLog::iter_dirty`] instead.
+    pub fn is_changed_on_disk(&self) -> bool {
+        match &self.change_detector {
+            Some(detector) => detector.is_changed(),
+            None => false,
+        }
     }
 
     /// Force create a new [`Log`]. Bump latest.
@@ -1337,6 +1362,61 @@ mod tests {
 
         assert_eq!(rotate1.sync().unwrap(), 1); // trigger flush filter by RotateLog
         assert_eq!(read_log("1"), vec![b"xx", b"aa"]);
+    }
+
+    #[test]
+    fn test_is_changed_on_disk() {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(5000)
+            .max_log_count(2);
+
+        // Repeat a few times to trigger rotation.
+        for _ in 0..10 {
+            let mut rotate1 = open_opts.open(&dir).unwrap();
+            let mut rotate2 = open_opts.open(&dir).unwrap();
+
+            assert!(!rotate1.is_changed_on_disk());
+            assert!(!rotate2.is_changed_on_disk());
+
+            // no-op sync() does not set is_changed().
+            rotate1.sync().unwrap();
+            assert!(!rotate2.is_changed_on_disk());
+
+            // change before flush does not set is_changed().
+            rotate1.append([b'a'; 1000]).unwrap();
+
+            assert!(!rotate1.is_changed_on_disk());
+            assert!(!rotate2.is_changed_on_disk());
+
+            // sync() does not set is_changed().
+            rotate1.sync().unwrap();
+            assert!(!rotate1.is_changed_on_disk());
+
+            // rotate2 should be able to detect the on-disk change from rotate1.
+            assert!(rotate2.is_changed_on_disk());
+
+            // is_changed() does not clear is_changed().
+            assert!(rotate2.is_changed_on_disk());
+
+            // read-only sync() should clear is_changed().
+            rotate2.sync().unwrap();
+            assert!(!rotate2.is_changed_on_disk());
+            // ... and not set other Logs' is_changed().
+            assert!(!rotate1.is_changed_on_disk());
+
+            rotate2.append([b'a'; 1000]).unwrap();
+            rotate2.sync().unwrap();
+
+            // rotate1 should be able to detect the on-disk change from rotate2.
+            assert!(rotate1.is_changed_on_disk());
+
+            // read-write sync() should clear is_changed().
+            rotate1.append([b'a'; 1000]).unwrap();
+            rotate1.sync().unwrap();
+            assert!(!rotate1.is_changed_on_disk());
+        }
     }
 
     #[test]
