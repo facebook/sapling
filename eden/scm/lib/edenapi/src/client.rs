@@ -258,23 +258,26 @@ impl Client {
     /// The keys will be grouped into batches of the specified size and
     /// passed to the `make_req` callback, which should insert them into
     /// a struct that will be CBOR-encoded and used as the request body.
-    fn prepare_requests<T, K, F, R>(
+    fn prepare_requests<T, K, F, R, G>(
         &self,
         url: &Url,
         keys: K,
         batch_size: Option<usize>,
         mut make_req: F,
+        mut mutate_url: G,
     ) -> Result<Vec<Request>, EdenApiError>
     where
         K: IntoIterator<Item = T>,
         F: FnMut(Vec<T>) -> R,
+        G: FnMut(&Url, &Vec<T>) -> Url,
         R: ToWire,
     {
         split_into_batches(keys, batch_size)
             .into_iter()
             .map(|keys| {
+                let url = mutate_url(url, &keys);
                 let req = make_req(keys).to_wire();
-                self.configure_request(self.inner.client.post(url.clone()))?
+                self.configure_request(self.inner.client.post(url))?
                     .cbor(&req)
                     .map_err(EdenApiError::RequestSerializationFailed)
             })
@@ -451,21 +454,30 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let mut url = self.build_url(paths::TREES)?;
+        let url = self.build_url(paths::TREES)?;
 
-        if self.config().try_route_consistently && keys.len() == 1 {
-            url.set_query(Some(&format!("routing_key={}", keys.first().unwrap().hgid)));
-            tracing::debug!("Requesting tree with a routing key: {}", url);
-        }
+        let try_route_consistently = self.config().try_route_consistently;
 
-        let requests = self.prepare_requests(&url, keys, self.config().max_trees, |keys| {
-            let req = TreeRequest {
-                keys,
-                attributes: attributes.clone().unwrap_or_default(),
-            };
-            self.log_request(&req, "trees");
-            req
-        })?;
+        let requests = self.prepare_requests(
+            &url,
+            keys,
+            self.config().max_trees,
+            |keys| {
+                let req = TreeRequest {
+                    keys,
+                    attributes: attributes.clone().unwrap_or_default(),
+                };
+                self.log_request(&req, "trees");
+                req
+            },
+            |url, keys| {
+                let mut url = url.clone();
+                if try_route_consistently && keys.len() == 1 {
+                    url.set_query(Some(&format!("routing_key={}", keys.first().unwrap().hgid)));
+                }
+                url
+            },
+        )?;
 
         self.fetch::<Result<TreeEntry, EdenApiServerError>>(requests)
     }
@@ -485,20 +497,29 @@ impl Client {
 
         let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
 
-        let mut url = self.build_url(paths::FILES2)?;
-        if self.config().try_route_consistently && reqs.len() == 1 {
-            url.set_query(Some(&format!(
-                "routing_key={}",
-                reqs.first().unwrap().key.hgid
-            )));
-            tracing::debug!("Requesting file with a routing key: {}", url);
-        }
+        let url = self.build_url(paths::FILES2)?;
+        let try_route_consistently = self.config().try_route_consistently;
 
-        let requests = self.prepare_requests(&url, reqs, self.config().max_files, |reqs| {
-            let req = FileRequest { reqs, keys: vec![] };
-            self.log_request(&req, "files");
-            req
-        })?;
+        let requests = self.prepare_requests(
+            &url,
+            reqs,
+            self.config().max_files,
+            |reqs| {
+                let req = FileRequest { reqs, keys: vec![] };
+                self.log_request(&req, "files");
+                req
+            },
+            |url, keys| {
+                let mut url = url.clone();
+                if try_route_consistently && keys.len() == 1 {
+                    url.set_query(Some(&format!(
+                        "routing_key={}",
+                        keys.first().unwrap().key.hgid
+                    )));
+                }
+                url
+            },
+        )?;
 
         self.fetch_guard::<FileResponse>(requests, guards)
     }
@@ -715,18 +736,27 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let mut url = self.build_url(paths::HISTORY)?;
+        let url = self.build_url(paths::HISTORY)?;
 
-        if self.config().try_route_consistently && keys.len() == 1 {
-            url.set_query(Some(&format!("routing_key={}", keys.first().unwrap().hgid)));
-            tracing::debug!("Requesting history for 1 file with a routing key: {}", url);
-        }
+        let try_route_consistently = self.config().try_route_consistently;
 
-        let requests = self.prepare_requests(&url, keys, self.config().max_history, |keys| {
-            let req = HistoryRequest { keys, length };
-            self.log_request(&req, "history");
-            req
-        })?;
+        let requests = self.prepare_requests(
+            &url,
+            keys,
+            self.config().max_history,
+            |keys| {
+                let req = HistoryRequest { keys, length };
+                self.log_request(&req, "history");
+                req
+            },
+            |url, keys| {
+                let mut url = url.clone();
+                if try_route_consistently && keys.len() == 1 {
+                    url.set_query(Some(&format!("routing_key={}", keys.first().unwrap().hgid)));
+                }
+                url
+            },
+        )?;
 
         let Response { entries, stats } = self.fetch::<HistoryResponseChunk>(requests)?;
 
@@ -756,6 +786,7 @@ impl Client {
                 self.log_request(&req, "blame");
                 req
             },
+            |url, _keys| url.clone(),
         )?;
 
         self.fetch::<BlameResult>(requests)
@@ -788,6 +819,7 @@ impl Client {
                 self.log_request(&req, "commit_translate_id");
                 req
             },
+            |url, _keys| url.clone(),
         )?;
         self.fetch::<CommitTranslateIdResponse>(requests)
     }
@@ -908,6 +940,7 @@ impl Client {
                     .map(|item| UploadHgFilenodeRequest { data: item })
                     .collect(),
             },
+            |url, _keys| url.clone(),
         )?;
         self.fetch::<UploadTokensResponse>(requests)
     }
@@ -933,6 +966,7 @@ impl Client {
                     .map(|item| UploadTreeRequest { entry: item })
                     .collect(),
             },
+            |url, _keys| url.clone(),
         )?;
 
         self.fetch::<UploadTreeResponse>(requests)
@@ -1049,6 +1083,7 @@ impl EdenApi for Client {
             prefixes,
             Some(MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST),
             |prefixes| Batch::<_> { batch: prefixes },
+            |url, _keys| url.clone(),
         )?;
         self.fetch_vec_with_retry::<CommitHashLookupResponse>(requests)
             .await
@@ -1167,6 +1202,7 @@ impl EdenApi for Client {
                 self.log_request(&batch, "commit_location_to_hash");
                 batch
             },
+            |url, _keys| url.clone(),
         )?;
 
         self.fetch_vec_with_retry::<CommitLocationToHashResponse>(formatted)
@@ -1189,8 +1225,11 @@ impl EdenApi for Client {
 
         let url = self.build_url(paths::COMMIT_HASH_TO_LOCATION)?;
 
-        let formatted =
-            self.prepare_requests(&url, hgids, self.config().max_location_to_hash, |hgids| {
+        let formatted = self.prepare_requests(
+            &url,
+            hgids,
+            self.config().max_location_to_hash,
+            |hgids| {
                 let batch = CommitHashToLocationRequestBatch {
                     master_heads: master_heads.clone(),
                     hgids,
@@ -1198,7 +1237,9 @@ impl EdenApi for Client {
                 };
                 self.log_request(&batch, "commit_hash_to_location");
                 batch
-            })?;
+            },
+            |url, _keys| url.clone(),
+        )?;
 
         self.fetch_vec_with_retry::<CommitHashToLocationResponse>(formatted)
             .await
@@ -1325,6 +1366,7 @@ impl EdenApi for Client {
                     })
                     .collect(),
             },
+            |url, _keys| url.clone(),
         )?;
 
         self.fetch_vec_with_retry::<LookupResponse>(requests).await
@@ -1493,6 +1535,7 @@ impl EdenApi for Client {
                 self.log_request(&req, "commit_mutations");
                 req
             },
+            |url, _keys| url.clone(),
         )?;
 
         self.fetch_vec_with_retry::<CommitMutationsResponse>(requests)
