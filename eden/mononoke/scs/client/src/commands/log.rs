@@ -14,7 +14,9 @@ use chrono::DateTime;
 use source_control as thrift;
 
 use crate::args::commit_id::resolve_commit_ids;
-use crate::args::commit_id::CommitIdsArgs;
+use crate::args::commit_id::resolve_optional_commit_id;
+use crate::args::commit_id::CommitIdNames;
+use crate::args::commit_id::NamedCommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
 use crate::library::commit::render_commit_info;
@@ -23,10 +25,33 @@ use crate::library::commit::CommitInfo as CommitInfoOutput;
 use crate::render::Render;
 use crate::ScscApp;
 
+#[derive(Copy, Clone)]
+struct LogCommitIdNames;
+
+impl CommitIdNames for LogCommitIdNames {
+    const NAMES: &'static [(&'static str, &'static str)] = &[
+        (
+            "descendants-of",
+            "Include only descendants of the next commit",
+        ),
+        (
+            "exclude-ancestors-of",
+            "Exclude ancestors of the next commit",
+        ),
+    ];
+}
+
 /// Show the history of a commit or a path in a commit
 ///
-/// If a second commit id is provided, the results are limited to descendants
-/// of that commit.
+/// If you want to restrict the returned commits to the descendants of another
+/// commit (inclusive), then specify the other commit using '--descendants-of'.
+///
+/// scsc log -i HEAD --descendants-of -i BASE
+///
+/// If you want to exclude ancestors of another commit (inclusive), then specify
+/// the other commit using '--exclude-ancestors-of'.
+///
+/// scsc log -i HEAD --exclude-ancestors-of -i BRANCH
 #[derive(clap::Parser)]
 pub(super) struct CommandArgs {
     #[clap(flatten)]
@@ -34,7 +59,7 @@ pub(super) struct CommandArgs {
     #[clap(flatten)]
     scheme_args: SchemeArgs,
     #[clap(flatten)]
-    commit_ids_args: CommitIdsArgs,
+    commit_ids_args: NamedCommitIdsArgs<LogCommitIdNames>,
     #[clap(long, short)]
     /// Optional path to query history
     path: Option<String>,
@@ -115,14 +140,34 @@ fn convert_to_ts(date_str: Option<&str>) -> Result<Option<i64>> {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
-    let commit_ids = args.commit_ids_args.clone().into_commit_ids();
+    let commit_ids = args.commit_ids_args.positional_commit_ids();
     if commit_ids.len() > 2 || commit_ids.is_empty() {
         anyhow::bail!("expected 1 or 2 commit_ids (got {})", commit_ids.len())
     }
     let conn = app.get_connection(Some(&repo.name))?;
-    let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
+    let ids = resolve_commit_ids(&conn, &repo, commit_ids).await?;
     let id = ids[0].clone();
-    let descendants_of = ids.get(1).cloned();
+    let positional_descendants_of = ids.get(1).cloned();
+    let named_descendants_of = resolve_optional_commit_id(
+        &conn,
+        &repo,
+        args.commit_ids_args
+            .named_commit_ids()
+            .get("descendants-of"),
+    )
+    .await?;
+    if positional_descendants_of.is_some() && named_descendants_of.is_some() {
+        anyhow::bail!("descendants-of must be specified either positionally or by name, not both");
+    }
+    let descendants_of = positional_descendants_of.xor(named_descendants_of);
+    let exclude_changeset_and_ancestors = resolve_optional_commit_id(
+        &conn,
+        &repo,
+        args.commit_ids_args
+            .named_commit_ids()
+            .get("exclude-ancestors-of"),
+    )
+    .await?;
     let commit = thrift::CommitSpecifier {
         repo,
         id,
@@ -155,7 +200,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 identity_schemes,
                 follow_history_across_deletions,
                 descendants_of,
-                exclude_changeset_and_ancestors: None,
+                exclude_changeset_and_ancestors,
                 follow_mutable_file_history,
                 ..Default::default()
             };
@@ -172,7 +217,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 after_timestamp,
                 identity_schemes,
                 descendants_of,
-                exclude_changeset_and_ancestors: None,
+                exclude_changeset_and_ancestors,
                 ..Default::default()
             };
             conn.commit_history(&commit, &params).await?.history
