@@ -235,7 +235,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
     This function collects the copytrace information from the working copy and
     stores it against the amended commit in a separate dbm file. Later,
-    in _domergecopies, this information will be merged with the rebase
+    in _mergecopies, this information will be merged with the rebase
     copytrace data to incorporate renames and copies made during the amend.
     """
 
@@ -358,28 +358,8 @@ def _getamendcopies(repo, dest, ancestor):
             pass
 
 
-def _mergecopies(orig, repo, cdst, csrc, base):
-    start = time.time()
-    try:
-        return _domergecopies(orig, repo, cdst, csrc, base)
-    except Exception as e:
-        # make sure we don't break clients
-        repo.ui.log(
-            "copytrace",
-            "Copytrace failed: %s" % e,
-            reponame=_getreponame(repo, repo.ui),
-        )
-        return {}, {}, {}, {}, {}
-    finally:
-        repo.ui.log(
-            "copytracingduration",
-            "",
-            copytracingduration=time.time() - start,
-        )
-
-
 @util.timefunction("mergecopies")
-def _domergecopies(orig, repo, cdst, csrc, base):
+def _mergecopies(orig, repo, cdst, csrc, base):
     """Fast copytracing using filename heuristics
 
     Handle one case where we assume there are no merge commits in
