@@ -27,8 +27,6 @@ Rebase with fastcopytrace hits conflicts as it doesn't detect the dir rename.
   $ hg rebase --restack
   rebasing 75532295d2d9 "move directory"
   local [dest] changed dir1/file2 which other [source] deleted (as dir1/file1)
-  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
-  Source control team is working on fixing this problem.
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

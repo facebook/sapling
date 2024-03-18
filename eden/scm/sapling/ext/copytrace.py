@@ -71,10 +71,7 @@ The following are configs to tune the behavior of copy tracing algorithm:
 """
 
 import codecs
-import collections
-
 import os
-import time
 
 from sapling import (
     cmdutil,
@@ -103,16 +100,6 @@ configitem("copytrace", "enableamendcopytrace", default=True)
 configitem("copytrace", "amendcopytracecommitlimit", default=100)
 configitem("copytrace", "dagcopytrace", default=False)
 
-defaultdict = collections.defaultdict
-_copytracinghint: str = (
-    "hint: if this message is due to a moved file, you can "
-    + "ask mercurial to attempt to automatically resolve this "
-    + "change by re-running with the --config=experimental.copytrace=on flag, but "
-    + "this will significantly slow down the operation, so you "
-    + "will need to be patient.\n"
-    + "Source control team is working on fixing this problem.\n"
-)
-
 
 def uisetup(ui) -> None:
     extensions.wrapfunction(dispatch, "runcommand", _runcommand)
@@ -124,7 +111,6 @@ def extsetup(ui) -> None:
     # enabled copytracing
     filemerge._localchangedotherdeletedmsg = _(
         "local%(l)s changed %(fd)s which other%(o)s deleted%(fa)s\n"
-        + _copytracinghint
         + "use (c)hanged version, (d)elete, or leave (u)nresolved?"
         "$$ &Changed $$ &Delete $$ &Unresolved"
     )
