@@ -38,18 +38,11 @@ impl SharedChangeDetector {
         }
     }
 
-    /// Bump the value by 1. This will be readable from other processes.
-    pub fn bump(&self) {
-        let current = mmap_as_atomic_u64(&self.mmap)
-            .fetch_add(1, Ordering::AcqRel)
-            .wrapping_add(1);
-        self.last_read.store(current, Ordering::Release);
-    }
-
-    /// Reload `last_read` from the shared buffer.
-    pub fn reload(&self) {
-        let current = mmap_as_atomic_u64(&self.mmap).load(Ordering::Acquire);
-        self.last_read.store(current, Ordering::Release);
+    /// Set the shared value and clear this detector.
+    /// If the value is changed, other detectors' `is_changed` would return true.
+    pub fn set(&self, value: u64) {
+        mmap_as_atomic_u64(&self.mmap).store(value, Ordering::Release);
+        self.last_read.store(value, Ordering::Release);
     }
 
     /// Returns `true` if the value is changed since the last `reset` or `bump` call.

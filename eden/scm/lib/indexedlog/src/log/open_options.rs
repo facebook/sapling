@@ -486,6 +486,7 @@ impl OpenOptions {
                 return self.open_internal(dir, reuse_indexes, Some(&lock));
             }
         }
+        log.update_change_detector_to_match_meta();
         Ok(log)
     }
 

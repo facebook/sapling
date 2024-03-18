@@ -234,7 +234,7 @@ impl OpenOptions {
             };
 
             let logs_len = AtomicUsize::new(logs.len());
-            Ok(RotateLog {
+            let mut rotate_log = RotateLog {
                 dir: Some(dir.into()),
                 open_options: self.clone(),
                 logs,
@@ -244,7 +244,9 @@ impl OpenOptions {
                 change_detector: Some(change_detector),
                 #[cfg(test)]
                 hook_after_log_sync: None,
-            })
+            };
+            rotate_log.update_change_detector_to_match_meta();
+            Ok(rotate_log)
         })();
 
         result.context(|| format!("in rotate::OpenOptions::open({:?})", dir))
@@ -473,9 +475,6 @@ impl RotateLog {
                     // If latest can not be read, do not error out.
                     // This RotateLog can still be used to answer queries.
                 }
-                if let Some(detector) = &self.change_detector {
-                    detector.reload();
-                }
             } else {
                 // Read-write path. Take the directory lock.
                 let dir = self.dir.clone().unwrap();
@@ -532,17 +531,23 @@ impl RotateLog {
                     self.writable_log().finalize_indexes(&lock)?;
                     self.rotate_internal(&lock)?;
                 }
-                if let Some(detector) = &self.change_detector {
-                    detector.bump();
-                }
             }
 
+            self.update_change_detector_to_match_meta();
             Ok(self.latest)
         })();
 
         result
             .context("in RotateLog::sync")
             .context(|| format!("  RotateLog.dir = {:?}", self.dir))
+    }
+
+    fn update_change_detector_to_match_meta(&mut self) {
+        let meta = &self.writable_log().meta;
+        let value = meta.primary_len ^ meta.epoch ^ ((self.latest as u64) << 56);
+        if let Some(detector) = &self.change_detector {
+            detector.set(value);
+        }
     }
 
     /// Attempt to remove outdated logs.

@@ -511,9 +511,7 @@ impl Log {
                     // does a `sync()` just for loading new data. Not erroring
                     // out and pretend that nothing happended.
                 }
-                if let Some(detector) = &self.change_detector {
-                    detector.reload();
-                }
+                self.update_change_detector_to_match_meta();
                 return Ok(self.meta.primary_len);
             }
 
@@ -674,9 +672,7 @@ impl Log {
             self.dir.write_meta(&self.meta, self.open_options.fsync)?;
 
             // Bump the change detector to communicate the change.
-            if let Some(detector) = &self.change_detector {
-                detector.bump();
-            }
+            self.update_change_detector_to_match_meta();
 
             Ok(self.meta.primary_len)
         })();
@@ -684,6 +680,12 @@ impl Log {
         result
             .context("in Log::sync")
             .context(|| format!("  Log.dir = {:?}", self.dir))
+    }
+
+    pub(crate) fn update_change_detector_to_match_meta(&self) {
+        if let Some(detector) = &self.change_detector {
+            detector.set(self.meta.primary_len ^ self.meta.epoch);
+        }
     }
 
     /// Write (updated) lagging indexes back to disk.

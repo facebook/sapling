@@ -545,7 +545,7 @@ def fshash(path: str) -> int:
         paths = [
             os.path.join(path, dirpath, name)
             for name in filenames + dirnames
-            if name != "repair.log"
+            if name not in {"repair.log", "rlock"}
         ]
         value += len(paths)
         value += sum(

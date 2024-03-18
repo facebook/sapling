@@ -475,22 +475,22 @@ mod tests {
         assert!(!d2.is_changed());
         assert!(!d3.is_changed());
 
-        d1.bump();
+        d1.set(1);
 
         assert!(!d1.is_changed());
         assert!(d2.is_changed());
         assert!(d3.is_changed());
 
-        d2.reload();
+        d2.set(1);
         assert!(!d2.is_changed());
         assert!(d3.is_changed());
 
-        d3.bump();
+        d3.set(2);
         assert!(d1.is_changed());
         assert!(d2.is_changed());
         assert!(!d3.is_changed());
 
-        d2.bump();
+        d2.set(3);
         assert!(d1.is_changed());
         assert!(!d2.is_changed());
         assert!(d3.is_changed());
