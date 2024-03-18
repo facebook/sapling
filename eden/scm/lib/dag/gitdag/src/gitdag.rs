@@ -19,6 +19,7 @@ use dag::Vertex;
 use dag::VertexListWithOptions;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
+use phf::phf_set;
 
 use crate::errors::MapDagError;
 
@@ -35,24 +36,42 @@ pub struct GitDag {
     dag: Dag,
     heads: Set,
     references: BTreeMap<String, Vertex>,
+    pub opts: GitDagOptions,
+}
+
+/// Config for `GitDag`.
+#[derive(Debug, Default)]
+pub struct GitDagOptions {
+    /// Sync all branches including refs/remotes/.
+    ///
+    /// This can be set to `true` for `sl clone`-ed Git repos.
+    ///
+    /// However, for `git clone`-ed repos there might be too many references (tags, release
+    /// branches) that it is better to set this to `false`.
+    ///
+    /// When set to `false`:
+    /// - In `refs/remotes/`, only a hardcoded list of "main" references will be imported.
+    /// - Local branches will be imported as bookmarks, except for "main", "master" bookmarks.
+    /// - Tags will be skipped.
+    pub import_all_references: bool,
 }
 
 impl GitDag {
-    /// `open` a Git repo at `git_dir`. Build index at `dag_dir`, with specified `main_branch`.
-    pub fn open(git_dir: &Path, dag_dir: &Path, main_branch: &str) -> dag::Result<Self> {
+    /// `open` a Git repo at `git_dir`. Build index at `dag_dir`, with specified `opts`.
+    pub fn open(git_dir: &Path, dag_dir: &Path, opts: GitDagOptions) -> dag::Result<Self> {
         let git_repo = git2::Repository::open(git_dir)
             .with_context(|| format!("opening git repo at {}", git_dir.display()))?;
-        Self::open_git_repo(&git_repo, dag_dir, main_branch)
+        Self::open_git_repo(&git_repo, dag_dir, opts)
     }
 
-    /// For an git repo, build index at `dag_dir` with specified `main_branch`.
+    /// For an git repo, build index at `dag_dir` with specified `opts`.
     pub fn open_git_repo(
         git_repo: &git2::Repository,
         dag_dir: &Path,
-        main_branch: &str,
+        opts: GitDagOptions,
     ) -> dag::Result<Self> {
         let dag = Dag::open(dag_dir)?;
-        sync_from_git(dag, git_repo, main_branch)
+        sync_from_git(dag, git_repo, opts)
     }
 
     /// Get "snapshotted" references.
@@ -80,21 +99,60 @@ impl DerefMut for GitDag {
     }
 }
 
+/// Main refs have 2 use-cases:
+/// - Filter out "unineresting" remote branches when `import_all_references` is false.
+/// - Figure out what to insert to the MASTER group in segmented changelog (for better perf).
+const MAIN_REFS: phf::Set<&str> = phf_set! {
+    // "origin" is the default remote name used by `git clone`.
+    "refs/remotes/origin/main",
+    "refs/remotes/origin/master",
+    // "remote" is the default remote name used by `sl clone`.
+    "refs/remotes/remote/main",
+    "refs/remotes/remote/master",
+};
+
+const DISALLOWED_REFS: phf::Set<&str> = phf_set! {
+    "refs/heads/main",
+    "refs/heads/master",
+};
+
 /// Read references from git, build segments for new heads.
 ///
 /// Useful when the git repo is changed by other processes or threads.
 fn sync_from_git(
     mut dag: Dag,
     git_repo: &git2::Repository,
-    main_branch: &str,
+    opts: GitDagOptions,
 ) -> dag::Result<GitDag> {
     let mut master_heads = Vec::new();
     let mut non_master_heads = Vec::new();
     let mut references = BTreeMap::new();
 
     let git_refs = git_repo.references().context("listing git references")?;
+    tracing::info!(all = opts.import_all_references, "importing git references",);
     for git_ref in git_refs {
         let git_ref = git_ref.context("resolving git reference")?;
+        let name = match git_ref.name() {
+            None => continue,
+            Some(name) => name,
+        };
+
+        let mut is_main = false;
+        if !opts.import_all_references {
+            let mut should_import = false;
+            if master_heads.is_empty() && name.starts_with("refs/remotes/") {
+                is_main = MAIN_REFS.contains(name);
+                should_import = is_main;
+            } else if name.starts_with("refs/heads/") && !DISALLOWED_REFS.contains(name) {
+                should_import = true;
+            } else if name.starts_with("refs/visibleheads/") {
+                should_import = true;
+            }
+            if !should_import {
+                continue;
+            }
+        }
+
         let commit = match git_ref.peel_to_commit() {
             Err(e) => {
                 tracing::warn!(
@@ -110,10 +168,8 @@ fn sync_from_git(
         };
         let oid = commit.id();
         let vertex = Vertex::copy_from(oid.as_bytes());
-        if let Some(name) = git_ref.name() {
-            references.insert(name.to_string(), vertex.clone());
-        }
-        if git_ref.name() == Some(main_branch) {
+        references.insert(name.to_string(), vertex.clone());
+        if is_main {
             master_heads.push(vertex);
         } else {
             non_master_heads.push(vertex);
@@ -157,5 +213,6 @@ fn sync_from_git(
         dag,
         heads,
         references,
+        opts,
     })
 }

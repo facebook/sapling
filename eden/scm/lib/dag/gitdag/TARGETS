@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:git2",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:phf",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/nonblocking:nonblocking",

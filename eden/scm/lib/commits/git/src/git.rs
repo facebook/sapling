@@ -34,6 +34,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use gitdag::git2;
 use gitdag::GitDag;
+use gitdag::GitDagOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -66,10 +67,10 @@ pub struct GitSegmentedCommits {
 impl DagCommits for GitSegmentedCommits {}
 
 impl GitSegmentedCommits {
-    pub fn new(git_dir: &Path, dag_dir: &Path) -> Result<Self> {
+    pub fn new(git_dir: &Path, dag_dir: &Path, opts: GitDagOptions) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
         // open_git_repo has side effect building up the segments
-        let dag = GitDag::open_git_repo(&git_repo, dag_dir, "refs/remotes/origin/master")?;
+        let dag = GitDag::open_git_repo(&git_repo, dag_dir, opts)?;
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         Ok(Self {
