@@ -50,3 +50,6 @@
 
 /// Utilities about repo initialization.
 pub mod init;
+
+/// Run git commands.
+pub mod rungit;
