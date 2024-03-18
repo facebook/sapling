@@ -11,9 +11,14 @@
 //!   Unix.
 //! - `spawn_detached` is a quicker way to spawn and forget.
 
+use std::error::Error;
+use std::ffi::OsStr;
+use std::fmt;
 use std::io;
 use std::process::Child;
 use std::process::Command;
+use std::process::ExitStatus;
+use std::process::Output;
 use std::process::Stdio;
 
 /// Extensions to `std::process::Command`.
@@ -30,11 +35,112 @@ pub trait CommandExt {
     /// Return the process id.
     fn spawn_detached(&mut self) -> io::Result<Child>;
 
+    /// Similar to `Output` but reports as an error for non-zero exit code.
+    fn checked_output(&mut self) -> io::Result<Output>;
+
+    /// Similar to `status` but reports an error for non-zero exits.
+    fn checked_run(&mut self) -> io::Result<ExitStatus>;
+
     /// Create a `Command` to run `shell_cmd` through system's shell. This uses "cmd.exe"
     /// on Windows and "/bin/sh" otherwise. Do not add more args to the returned
     /// `Command`. On Windows, you do not need to use the shell to run batch files (the
     /// Rust stdlib detects batch files and uses "cmd.exe" automatically).
     fn new_shell(shell_cmd: impl AsRef<str>) -> Command;
+}
+
+#[derive(Debug)]
+struct CommandError {
+    title: String,
+    command: String,
+    output: String,
+    source: Option<io::Error>,
+}
+
+impl fmt::Display for CommandError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // title
+        //   command
+        //     output
+        let title = if self.title.is_empty() {
+            "CommandError:"
+        } else {
+            self.title.as_str()
+        };
+        write!(f, "{}\n  {}\n", title, &self.command)?;
+        for line in self.output.lines() {
+            write!(f, "    {line}\n")?;
+        }
+        Ok(())
+    }
+}
+
+impl Error for CommandError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.source.as_ref().map(|s| s as &dyn Error)
+    }
+}
+
+fn os_str_to_naive_quoted_str(s: &OsStr) -> String {
+    let debug_format = format!("{:?}", s);
+    if debug_format.len() == s.len() + 2
+        && debug_format.split_ascii_whitespace().take(2).count() == 1
+    {
+        debug_format[1..debug_format.len() - 1].to_string()
+    } else {
+        debug_format
+    }
+}
+
+impl CommandError {
+    fn new(command: &Command, source: Option<io::Error>) -> Self {
+        let arg0 = os_str_to_naive_quoted_str(command.get_program());
+        let args = command
+            .get_args()
+            .map(os_str_to_naive_quoted_str)
+            .collect::<Vec<String>>()
+            .join(" ");
+        let command = format!("{arg0} {args}");
+        Self {
+            title: Default::default(),
+            output: Default::default(),
+            command,
+            source,
+        }
+    }
+
+    fn with_output(mut self, output: &Output) -> Self {
+        for out in [&output.stdout, &output.stderr] {
+            self.output.push_str(&String::from_utf8_lossy(out));
+        }
+        self.with_status(&output.status)
+    }
+
+    fn with_status(mut self, exit: &ExitStatus) -> Self {
+        match exit.code() {
+            None =>
+            {
+                #[cfg(unix)]
+                match std::os::unix::process::ExitStatusExt::signal(exit) {
+                    Some(sig) => self.title = format!("Command terminated by signal {}", sig),
+                    None => {}
+                }
+            }
+            Some(code) => {
+                if code != 0 {
+                    self.title = format!("Command exited with code {}", code);
+                }
+            }
+        }
+        self
+    }
+
+    fn into_io_error(self: CommandError) -> io::Error {
+        let kind = match self.source.as_ref() {
+            None => io::ErrorKind::Other,
+            Some(e) => e.kind(),
+        };
+        io::Error::new(kind, self)
+    }
 }
 
 impl CommandExt for Command {
@@ -65,6 +171,30 @@ impl CommandExt for Command {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
+    }
+
+    fn checked_output(&mut self) -> io::Result<Output> {
+        let out = self
+            .output()
+            .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
+        if !out.status.success() {
+            return Err(CommandError::new(self, None)
+                .with_output(&out)
+                .into_io_error());
+        }
+        Ok(out)
+    }
+
+    fn checked_run(&mut self) -> io::Result<ExitStatus> {
+        let status = self
+            .status()
+            .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
+        if !status.success() {
+            return Err(CommandError::new(self, None)
+                .with_status(&status)
+                .into_io_error());
+        }
+        Ok(status)
     }
 
     fn new_shell(shell_cmd: impl AsRef<str>) -> Command {
