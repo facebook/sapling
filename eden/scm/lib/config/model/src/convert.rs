@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -116,6 +117,12 @@ impl FromConfigValue for f64 {
 impl FromConfigValue for String {
     fn try_from_str(s: &str) -> Result<Self> {
         Ok(s.to_string())
+    }
+}
+
+impl FromConfigValue for Cow<'_, str> {
+    fn try_from_str(s: &str) -> Result<Self> {
+        Ok(Cow::Owned(s.to_string()))
     }
 }
 
