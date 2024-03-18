@@ -131,13 +131,7 @@ impl ScopedDirLock {
         };
 
         // Lock
-        match (opts.exclusive, opts.non_blocking) {
-            (true, false) => file.lock_exclusive(),
-            (true, true) => file.try_lock_exclusive(),
-            (false, false) => file.lock_shared(),
-            (false, true) => file.try_lock_shared(),
-        }
-        .context(&path, || {
+        lock_file(&file, opts.exclusive, opts.non_blocking).context(&path, || {
             format!(
                 "cannot lock (exclusive: {}, non_blocking: {})",
                 opts.exclusive, opts.non_blocking,
@@ -156,8 +150,68 @@ impl ScopedDirLock {
 
 impl Drop for ScopedDirLock {
     fn drop(&mut self) {
-        self.file.unlock().expect("unlock");
+        let _ = unlock_file(&self.file);
     }
+}
+
+fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()> {
+    #[cfg(windows)]
+    unsafe {
+        use std::os::windows::io::AsRawHandle;
+
+        use winapi::shared::minwindef::DWORD;
+        use winapi::um::fileapi::LockFileEx;
+        use winapi::um::minwinbase::LOCKFILE_EXCLUSIVE_LOCK;
+        use winapi::um::minwinbase::LOCKFILE_FAIL_IMMEDIATELY;
+        use winapi::um::minwinbase::OVERLAPPED;
+
+        let mut flags: DWORD = 0;
+        if exclusive {
+            flags |= LOCKFILE_EXCLUSIVE_LOCK;
+        }
+        if non_blocking {
+            flags |= LOCKFILE_FAIL_IMMEDIATELY;
+        }
+
+        // `overlapped` specifies the start position (u64) of locking.
+        let mut overlapped: OVERLAPPED = std::mem::zeroed();
+        overlapped.u.s_mut().Offset = u32::MAX - 1;
+        overlapped.u.s_mut().OffsetHigh = u32::MAX;
+
+        // Only lock 1 byte at the end of the u64 range, not the whole file.
+        let ret = LockFileEx(file.as_raw_handle(), flags, 0, 1, 0, &mut overlapped);
+        if ret == 0 {
+            return Err(io::Error::last_os_error());
+        }
+    }
+    #[cfg(not(windows))]
+    match (exclusive, non_blocking) {
+        (true, false) => file.lock_exclusive()?,
+        (true, true) => file.try_lock_exclusive()?,
+        (false, false) => file.lock_shared()?,
+        (false, true) => file.try_lock_shared()?,
+    }
+    Ok(())
+}
+
+fn unlock_file(file: &File) -> io::Result<()> {
+    #[cfg(windows)]
+    unsafe {
+        use std::os::windows::io::AsRawHandle;
+
+        use winapi::um::fileapi::UnlockFile;
+
+        // Only unlock the last 1 byte of the u64 range.
+        let ret = UnlockFile(file.as_raw_handle(), u32::MAX - 1, u32::MAX, 1, 0);
+        if ret == 0 {
+            return Err(io::Error::last_os_error());
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        file.unlock()?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
