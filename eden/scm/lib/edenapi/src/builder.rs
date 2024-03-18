@@ -117,6 +117,7 @@ pub struct HttpClientBuilder {
     max_location_to_hash: Option<usize>,
     max_commit_mutations: Option<usize>,
     max_commit_translate_id: Option<usize>,
+    min_batch_size: Option<usize>,
     timeout: Option<Duration>,
     debug: bool,
     http_version: Option<HttpVersion>,
@@ -171,6 +172,7 @@ impl HttpClientBuilder {
             get_config(config, "edenapi", "try-route-consistently")?.unwrap_or_default();
         let max_history = get_config(config, "edenapi", "maxhistory")?;
         let max_location_to_hash = get_config(config, "edenapi", "maxlocationtohash")?;
+        let min_batch_size = get_config(config, "edenapi", "min-batch-size")?;
         let max_commit_mutations = get_config(config, "edenapi", "maxcommitmutations")?;
         let max_commit_translate_id = get_config(config, "edenapi", "maxcommittranslateid")?;
         let timeout = get_config(config, "edenapi", "timeout")?.map(Duration::from_secs);
@@ -218,6 +220,7 @@ impl HttpClientBuilder {
             max_location_to_hash,
             max_commit_mutations,
             max_commit_translate_id,
+            min_batch_size,
             timeout,
             debug,
             http_version,
@@ -368,6 +371,7 @@ pub(crate) struct Config {
     pub(crate) max_location_to_hash: Option<usize>,
     pub(crate) max_commit_mutations: Option<usize>,
     pub(crate) max_commit_translate_id: Option<usize>,
+    pub(crate) min_batch_size: Option<usize>,
     pub(crate) timeout: Option<Duration>,
     #[allow(dead_code)]
     pub(crate) debug: bool,
@@ -394,6 +398,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_location_to_hash,
             max_commit_mutations,
             max_commit_translate_id,
+            min_batch_size,
             timeout,
             debug,
             http_version,
@@ -431,6 +436,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_location_to_hash,
             max_commit_mutations,
             max_commit_translate_id,
+            min_batch_size,
             timeout,
             debug,
             http_version,
