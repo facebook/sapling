@@ -213,6 +213,9 @@ struct CommitInfo {
 
   /// The date the commit was committed (if available - commit comes from Git).
   11: optional i64 committer_date;
+
+  /// The identity of the person who committed this commit, as opposed to authored it (if available - commit comes from Git).
+  12: optional string committer;
 }
 
 struct BookmarkInfo {
