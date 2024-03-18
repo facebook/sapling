@@ -15,6 +15,7 @@ use fs2::FileExt;
 use memmap2::MmapMut;
 use memmap2::MmapOptions;
 
+use crate::change_detect::SharedChangeDetector;
 use crate::errors::IoResultExt;
 use crate::utils;
 
@@ -186,6 +187,12 @@ impl ScopedDirLock {
         unsafe { MmapOptions::new().len(len).map_mut(&self.file) }
             .context(&self.path, "cannot mmap read-write")
     }
+
+    /// Provide the `SharedChangeDetector` based on mmap.
+    pub(crate) fn shared_change_detector(&self) -> crate::Result<SharedChangeDetector> {
+        let mmap = self.shared_mmap_mut(std::mem::size_of::<u64>())?;
+        Ok(SharedChangeDetector::new(mmap))
+    }
 }
 
 impl Drop for ScopedDirLock {
@@ -266,7 +273,6 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::change_detect::SharedChangeDetector;
 
     #[test]
     fn test_file_lock() {
@@ -461,8 +467,8 @@ mod tests {
         assert_eq!(v1, v2);
 
         // The mmap buffer can be used for SharedChangeDetector.
-        let d1 = SharedChangeDetector::new(l3.shared_mmap_mut(v1.len()).unwrap());
-        let d2 = SharedChangeDetector::new(l3.shared_mmap_mut(v1.len()).unwrap());
+        let d1 = l3.shared_change_detector().unwrap();
+        let d2 = l3.shared_change_detector().unwrap();
         let d3 = d2.clone();
 
         assert!(!d1.is_changed());
