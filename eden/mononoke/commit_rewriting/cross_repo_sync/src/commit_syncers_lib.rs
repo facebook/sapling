@@ -574,6 +574,24 @@ impl<R: Repo> CommitSyncRepos<R> {
         }
     }
 
+    // Builds the repos that can be used for opposite sync direction.
+    // Note: doesn't support large-to-small as input right now
+    pub fn reverse(&self) -> Result<Self> {
+        match self {
+            CommitSyncRepos::LargeToSmall { .. } => Err(anyhow!(
+                "reversing sync direction is only supported for small to large sync (because of submodule dependencies)"
+            )),
+            CommitSyncRepos::SmallToLarge {
+                large_repo,
+                small_repo,
+                ..
+            } => Ok(CommitSyncRepos::LargeToSmall {
+                large_repo: large_repo.clone(),
+                small_repo: small_repo.clone(),
+            }),
+        }
+    }
+
     pub fn get_submodule_deps(&self) -> &SubmoduleDeps<R> {
         match self {
             CommitSyncRepos::LargeToSmall { .. } => &SubmoduleDeps::NotNeeded,

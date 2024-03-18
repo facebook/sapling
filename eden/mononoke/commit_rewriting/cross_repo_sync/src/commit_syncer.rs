@@ -164,6 +164,18 @@ where
         }
     }
 
+    // Builds the syncer that can be used for opposite sync direction.
+    // Note: doesn't support large-to-small as input right now
+    pub fn reverse(&self) -> Result<CommitSyncer<M, R>, Error> {
+        Ok(Self {
+            mapping: self.mapping.clone(),
+            repos: self.repos.reverse()?,
+            live_commit_sync_config: self.live_commit_sync_config.clone(),
+            scuba_sample: self.scuba_sample.clone(),
+            x_repo_sync_lease: self.x_repo_sync_lease.clone(),
+        })
+    }
+
     // ------------------------------------------------------------------------
     // Sync methods
 
