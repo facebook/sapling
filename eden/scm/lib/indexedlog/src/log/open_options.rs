@@ -393,6 +393,7 @@ impl OpenOptions {
                 index_corrupted: false,
                 open_options: self.clone(),
                 reader_lock: None,
+                change_detector: None,
             })
         })();
 
@@ -416,9 +417,13 @@ impl OpenOptions {
         reuse_indexes: Option<&Vec<Index>>,
         lock: Option<&ScopedDirLock>,
     ) -> crate::Result<Log> {
-        let reader_lock = match dir.as_opt_path() {
-            Some(d) => Some(ScopedDirLock::new_with_options(d, &READER_LOCK_OPTS)?),
-            None => None,
+        let (reader_lock, change_detector) = match dir.as_opt_path() {
+            Some(d) => {
+                let lock = ScopedDirLock::new_with_options(d, &READER_LOCK_OPTS)?;
+                let detector = lock.shared_change_detector()?;
+                (Some(lock), Some(detector))
+            }
+            None => (None, None),
         };
         let create = self.create;
 
@@ -462,6 +467,7 @@ impl OpenOptions {
             index_corrupted: false,
             open_options: self.clone(),
             reader_lock,
+            change_detector,
         };
         log.update_indexes_for_on_disk_entries()?;
         log.update_and_flush_disk_folds()?;

@@ -57,6 +57,7 @@ use tracing::trace;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
+use crate::change_detect::SharedChangeDetector;
 use crate::config;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
@@ -146,6 +147,8 @@ pub struct Log {
     open_options: OpenOptions,
     // Indicate an active reader. Destrictive writes (repair) are unsafe.
     reader_lock: Option<ScopedDirLock>,
+    // Cross-process cheap change detector backed by mmap.
+    change_detector: Option<SharedChangeDetector>,
 }
 
 /// Iterator over all entries in a [`Log`].
@@ -424,6 +427,7 @@ impl Log {
             index_corrupted: false,
             open_options: self.open_options.clone(),
             reader_lock,
+            change_detector: self.change_detector.clone(),
         };
 
         if !copy_dirty {
@@ -506,6 +510,9 @@ impl Log {
                     // external process does a `rm -rf` and the current process
                     // does a `sync()` just for loading new data. Not erroring
                     // out and pretend that nothing happended.
+                }
+                if let Some(detector) = &self.change_detector {
+                    detector.reload();
                 }
                 return Ok(self.meta.primary_len);
             }
@@ -666,6 +673,11 @@ impl Log {
             // Step 5: Write the updated meta file.
             self.dir.write_meta(&self.meta, self.open_options.fsync)?;
 
+            // Bump the change detector to communicate the change.
+            if let Some(detector) = &self.change_detector {
+                detector.bump();
+            }
+
             Ok(self.meta.primary_len)
         })();
 
@@ -721,11 +733,19 @@ impl Log {
             .collect()
     }
 
-    /// Check if the log is changed on disk.
+    /// Returns `true` if `sync` will load more data on disk.
+    ///
+    /// This function is optimized to be called frequently. It does not access
+    /// the filesystem directly, but communicate using a shared mmap buffer.
+    ///
+    /// This is not about testing buffered pending changes. To access buffered
+    /// pending changes, use [`Log::iter_dirty`] instead.
+    ///
+    /// For an in-memory [`Log`], this always returns `false`.
     pub fn is_changed_on_disk(&self) -> bool {
-        match self.dir.read_meta() {
-            Ok(meta) => meta != self.meta,
-            Err(_) => true,
+        match &self.change_detector {
+            None => false,
+            Some(detector) => detector.is_changed(),
         }
     }
 
