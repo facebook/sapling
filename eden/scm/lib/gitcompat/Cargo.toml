@@ -9,3 +9,4 @@ edition = "2021"
 configmodel = { version = "0.1.0", path = "../config/model" }
 fs-err = { version = "2.6.0", features = ["tokio"] }
 identity = { version = "0.1.0", path = "../identity" }
+spawn-ext = { version = "0.1.0", path = "../spawn-ext" }

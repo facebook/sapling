@@ -10,5 +10,6 @@ rust_library(
         "fbsource//third-party/rust:fs-err",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
     ],
 )

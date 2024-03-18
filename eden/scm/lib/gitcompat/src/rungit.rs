@@ -5,11 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::ExitStatus;
+use std::process::Output;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
+use spawn_ext::CommandExt;
 
 /// Options used by `run_git`.
 #[derive(Default, Clone)]
@@ -56,6 +60,18 @@ impl RunGitOptions {
     pub fn git_cmd(&self, cmd_name: &str, args: &[impl ToString]) -> Command {
         let args = args.iter().map(ToString::to_string).collect();
         git_cmd_impl(cmd_name, args, self)
+    }
+
+    /// Call `git`. Check exit code. Capture output.
+    pub fn call(&self, cmd_name: &str, args: &[impl ToString]) -> io::Result<Output> {
+        let mut cmd = self.git_cmd(cmd_name, args);
+        cmd.checked_output()
+    }
+
+    /// Run `git`. Check exit code.
+    pub fn run(&self, cmd_name: &str, args: &[impl ToString]) -> io::Result<ExitStatus> {
+        let mut cmd = self.git_cmd(cmd_name, args);
+        cmd.checked_run()
     }
 }
 
