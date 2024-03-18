@@ -136,6 +136,7 @@ pub enum ClientEntryPoint {
     ScmDaemon,
     BookmarkService,
     BookmarkServiceClientCli,
+    MononokeGitServer,
 }
 
 impl ClientRequestInfo {
@@ -218,6 +219,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::ScmDaemon => "scm_daemon",
             ClientEntryPoint::BookmarkService => "bookmark_service",
             ClientEntryPoint::BookmarkServiceClientCli => "bookmark_service_client_cli",
+            ClientEntryPoint::MononokeGitServer => "mononoke_git_server",
         };
         write!(f, "{}", out)
     }
@@ -255,6 +257,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "scm_daemon" => Ok(ClientEntryPoint::ScmDaemon),
             "bookmark_service" => Ok(ClientEntryPoint::BookmarkService),
             "bookmark_service_client_clie" => Ok(ClientEntryPoint::BookmarkServiceClientCli),
+            "mononoke_git_server" => Ok(ClientEntryPoint::MononokeGitServer),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
@@ -407,6 +410,12 @@ mod tests {
         assert_eq!(
             Some(ClientEntryPoint::ScmDaemon),
             ClientEntryPoint::try_from(ClientEntryPoint::ScmDaemon.to_string().as_ref()).ok()
+        );
+
+        assert_eq!(
+            Some(ClientEntryPoint::MononokeGitServer),
+            ClientEntryPoint::try_from(ClientEntryPoint::MononokeGitServer.to_string().as_ref())
+                .ok()
         );
     }
 }
