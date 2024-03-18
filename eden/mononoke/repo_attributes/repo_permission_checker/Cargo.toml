@@ -17,4 +17,4 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mockall = "0.11.3"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

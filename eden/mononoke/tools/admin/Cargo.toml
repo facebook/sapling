@@ -106,7 +106,7 @@ source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }

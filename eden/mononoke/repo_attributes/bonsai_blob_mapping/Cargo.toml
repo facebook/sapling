@@ -22,4 +22,4 @@ vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

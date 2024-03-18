@@ -23,5 +23,5 @@ itertools = "0.11.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 vec1 = { version = "1", features = ["serde"] }

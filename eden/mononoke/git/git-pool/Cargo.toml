@@ -12,4 +12,4 @@ anyhow = "1.0.75"
 git2 = "0.14"
 num_cpus = "1.16"
 r2d2 = "0.8.8"
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

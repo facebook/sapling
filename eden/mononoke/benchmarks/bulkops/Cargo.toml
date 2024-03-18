@@ -24,4 +24,4 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 phases = { version = "0.1.0", path = "../../phases" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

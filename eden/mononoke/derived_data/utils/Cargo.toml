@@ -51,7 +51,7 @@ skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 test_manifest = { version = "0.1.0", path = "../test_manifest" }
 test_sharded_manifest = { version = "0.1.0", path = "../test_sharded_manifest" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 unodes = { version = "0.1.0", path = "../unodes" }
 

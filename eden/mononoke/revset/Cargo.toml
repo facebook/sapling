@@ -33,4 +33,4 @@ fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 revset_test_helper = { version = "0.1.0", path = "revset-test-helper" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

@@ -37,4 +37,4 @@ fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperiment
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../../../mononoke_types/mocks" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

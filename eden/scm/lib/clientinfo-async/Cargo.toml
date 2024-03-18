@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 clientinfo = { version = "0.1.0", path = "../clientinfo" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

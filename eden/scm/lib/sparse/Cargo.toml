@@ -18,7 +18,7 @@ tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 
 [features]
 async = ["futures"]

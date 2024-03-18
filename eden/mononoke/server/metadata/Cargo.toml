@@ -12,5 +12,5 @@ anyhow = "1.0.75"
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 session_id = { version = "0.1.0", path = "../session_id" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 trust-dns-resolver = "0.20"

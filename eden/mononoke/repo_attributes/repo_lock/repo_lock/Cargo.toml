@@ -21,4 +21,4 @@ sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../../common/rust/sql_ext" }
 
 [dev-dependencies]
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

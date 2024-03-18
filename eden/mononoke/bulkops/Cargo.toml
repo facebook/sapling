@@ -16,7 +16,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 phases = { version = "0.1.0", path = "../phases" }
 strum = { version = "0.24", features = ["derive"] }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }

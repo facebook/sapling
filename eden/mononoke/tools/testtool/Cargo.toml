@@ -39,6 +39,6 @@ skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_man
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
