@@ -85,6 +85,13 @@ impl MetadataMiddleware {
             TlsCertificateIdentities::Authenticated(idents) => Some(idents),
         }
     }
+
+    fn require_client_info(&self, state: &State) -> bool {
+        let is_health_check =
+            Uri::try_borrow_from(state).map_or(false, |uri| uri.path().ends_with("/health_check"));
+        let is_git_server = self.entry_point == ClientEntryPoint::MononokeGitServer;
+        !is_health_check && !is_git_server
+    }
 }
 
 fn request_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
@@ -174,9 +181,7 @@ impl Middleware for MetadataMiddleware {
                 .and_then(|h| h.to_str().ok())
                 .and_then(|ci| serde_json::from_str(ci).ok());
 
-            if client_info.is_none()
-                && matches!(Uri::try_borrow_from(state), Some(uri) if !uri.path().ends_with("/health_check"))
-            {
+            if client_info.is_none() && self.require_client_info(state) {
                 let msg = format!(
                     "Error: {} header not provided or wrong format (expected json).",
                     CLIENT_INFO_HEADER
