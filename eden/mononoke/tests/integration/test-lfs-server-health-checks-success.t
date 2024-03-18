@@ -30,6 +30,11 @@
   > EOF
   $ lfs_root="$(CACHE_ARGS=--cache-mode=disabled lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-dataset "file://$SCUBA")"
 
+# `lfs_server` sends a health check request (via `lfs_health`), which will emit
+# a (sampled) log entry. In most cases that's ok, and logs are sample anyway.
+# This test requires unsampled Scuba logs and cares about each one of them,
+# so we have to consume.
+  $ wait_for_json_record_count "$SCUBA" 1
 
 # Send a health check request
   $ truncate -s 0 "$SCUBA"
