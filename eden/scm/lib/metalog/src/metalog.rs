@@ -380,7 +380,7 @@ impl MetaLog {
         }
         // The lastest root id in the in-process log is the same, but the
         // in-process log is outdated.
-        if log.is_changed() {
+        if log.is_changed_on_disk() {
             return Ok(true);
         }
         Ok(false)

@@ -722,7 +722,7 @@ impl Log {
     }
 
     /// Check if the log is changed on disk.
-    pub fn is_changed(&self) -> bool {
+    pub fn is_changed_on_disk(&self) -> bool {
         match self.dir.read_meta() {
             Ok(meta) => meta != self.meta,
             Err(_) => true,
