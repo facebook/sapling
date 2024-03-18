@@ -109,11 +109,11 @@ impl EdenApiHandler for Files2Handler {
             move |FileSpec { key, attrs }| {
                 if attrs.content {
                     ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::EdenapiFiles, 1);
+                        .increment_counter(PerfCounterType::EdenapiFiles);
                 }
                 if attrs.aux_data {
                     ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::EdenapiFilesAuxData, 1);
+                        .increment_counter(PerfCounterType::EdenapiFilesAuxData);
                 }
                 fetch_file_response(repo.clone(), key, attrs)
             }
