@@ -36,6 +36,9 @@ GIT_STORE_REQUIREMENT = "git-store"
 # Should be set if git-store is set.
 GIT_FORMAT_REQUIREMENT = "git"
 
+# Whether to be compatibile with `.git/`.
+DOTGIT_REQUIREMENT = "dotgit"
+
 
 class GitCommandError(error.Abort):
     def __init__(self, git_command, git_exitcode, git_output, **kwargs):

@@ -34,6 +34,8 @@ pub static SUPPORTED_DEFAULT_REQUIREMENTS: Lazy<HashSet<String>> = Lazy::new(|| 
         "remotefilelog".to_owned(),
         // allows sparse eden (filteredfs) checkouts
         "edensparse".to_owned(),
+        // repo is also a .git/ repo
+        "dotgit".to_owned(),
     ])
 });
 pub static SUPPORTED_STORE_REQUIREMENTS: Lazy<HashSet<String>> = Lazy::new(|| {
@@ -68,5 +70,7 @@ pub static SUPPORTED_STORE_REQUIREMENTS: Lazy<HashSet<String>> = Lazy::new(|| {
         "eagerepo".to_owned(),
         // explicit requirement for a revlog repo using eager store (i.e. revlog2.py)
         "eagercompat".to_owned(),
+        // repo is also a .git/ repo
+        "dotgit".to_owned(),
     ])
 });

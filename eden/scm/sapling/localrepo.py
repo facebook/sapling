@@ -369,6 +369,8 @@ class localrepository:
         "windowssymlinks",
         # allows sparse eden (filteredfs) checkouts
         "edensparse",
+        # live inside a ".git"
+        git.DOTGIT_REQUIREMENT,
     }
     _basestoresupported = {
         "visibleheads",
@@ -389,6 +391,8 @@ class localrepository:
         git.GIT_FORMAT_REQUIREMENT,
         # backed by git bare repo
         git.GIT_STORE_REQUIREMENT,
+        # live inside a ".git"
+        git.DOTGIT_REQUIREMENT,
         # lazy commit message (full idmap, partial hgcommits) + edenapi
         "lazytextchangelog",
         # lazy commit message (sparse idmap, partial hgcommits) + edenapi
@@ -1398,7 +1402,10 @@ class localrepository:
         if edenfs.requirement in self.requirements:
             return self._eden_dirstate
 
-        if not "treestate" in self.requirements:
+        if (
+            not "treestate" in self.requirements
+            and git.DOTGIT_REQUIREMENT not in self.requirements
+        ):
             raise errormod.RequirementError(
                 "legacy dirstate implementations are no longer supported"
             )
