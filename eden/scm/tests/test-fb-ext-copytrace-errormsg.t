@@ -4,40 +4,28 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# TODO: Make this test compatibile with obsstore enabled.
+  $ configure modernclient
+  $ enable rebase copytrace
 
-  $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig 'experimental.evolution='
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C   # C/y = 1\n (renamed from x)
+  > |
+  > | B # B/x = 2\n
+  > | |
+  > |/
+  > A   # A/x = 1\n
+  > EOS
 
-  $ cat >> $HGRCPATH << 'EOF'
-  > [extensions]
-  > rebase=
-  > copytrace=
-  > [experimental]
-  > copytrace=off
-  > EOF
-
-  $ hg init repo
-  $ cd repo
-  $ echo 1 > 1
-  $ hg add 1
-  $ hg ci -m 1
-  $ echo 2 > 1
-  $ hg ci -m 2
-  $ hg up 0
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg mv 1 2
-  $ hg ci -m dest
-  $ hg rebase -s 1 -d .
-  rebasing 812796267395 "2"
-  other [source] changed 1 which local [dest] is missing
+  $ hg rebase -r $B -d $C --config copytrace.dagcopytrace=False
+  rebasing 98114c1b9d02 "B"
+  other [source] changed x which local [dest] is missing
   hint: if this is due to a renamed file, you can manually input the renamed path
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort
   rebase aborted
-  $ hg rebase -s 1 -d . --config=experimental.copytrace=on
-  rebasing 812796267395 "2"
-  merging 2 and 1 to 2
+  $ hg rebase -r $B -d $C --config copytrace.dagcopytrace=True
+  rebasing 98114c1b9d02 "B"
+  merging y and x to y
