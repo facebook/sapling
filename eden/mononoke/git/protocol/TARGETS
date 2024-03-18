@@ -8,7 +8,6 @@ rust_library(
     unittests = True,
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",

@@ -37,6 +37,7 @@ use protocol::types::RequestedRefs;
 use protocol::types::RequestedSymrefs;
 use protocol::types::TagInclusion;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 
@@ -302,6 +303,7 @@ pub async fn create_annotated_tag(
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
+    + RepoDerivedDataArc
     + BookmarksRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
@@ -362,7 +364,7 @@ pub async fn repo_stack_git_bundle(
         TagInclusion::AsIs,
         PackfileItemInclusion::Generate,
     );
-    let response = generate_pack_item_stream(ctx, repo, request)
+    let response = generate_pack_item_stream(ctx.clone(), repo, request)
         .await
         .map_err(|e| {
             GitError::PackfileError(format!(

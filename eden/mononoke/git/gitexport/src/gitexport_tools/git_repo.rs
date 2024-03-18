@@ -61,7 +61,7 @@ pub async fn create_git_repo_on_disk(
         TagInclusion::AsIs,
         PackfileItemInclusion::Generate,
     );
-    let response = generate_pack_item_stream(ctx, repo, request)
+    let response = generate_pack_item_stream(ctx.clone(), repo, request)
         .await
         .context("Error in generating pack item stream")?;
 

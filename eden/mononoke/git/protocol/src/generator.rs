@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use async_stream::try_stream;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
@@ -48,7 +47,10 @@ use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packfile::types::PackfileItem;
+use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::ArcRepoDerivedData;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use rustc_hash::FxHashMap;
@@ -73,6 +75,7 @@ const TAGS_PREFIX: &str = "tags/";
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
+    + RepoDerivedDataArc
     + BookmarksRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
@@ -525,10 +528,9 @@ impl ObjectIdentifierType {
 /// Fetch the raw content of the Git object based on the type of identifier provided
 async fn object_bytes(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    blobstore: ArcRepoBlobstore,
     id: ObjectIdentifierType,
 ) -> Result<Bytes> {
-    let blobstore = repo.repo_blobstore_arc();
     let bytes = match id {
         ObjectIdentifierType::AllObjects(sha) => {
             // The object identifier has been passed along with size and type information. This means
@@ -549,17 +551,16 @@ async fn object_bytes(
 /// Fetch (or generate and fetch) the packfile item for the base git object
 /// based on the packfile_item_inclusion setting
 async fn base_packfile_item(
-    ctx: &CoreContext,
-    repo: &impl Repo,
+    ctx: Arc<CoreContext>,
+    blobstore: ArcRepoBlobstore,
     id: ObjectIdentifierType,
     packfile_item_inclusion: PackfileItemInclusion,
 ) -> Result<PackfileItem> {
-    let blobstore = repo.repo_blobstore_arc();
     let git_objectid = id.to_object_id()?;
     match packfile_item_inclusion {
         // Generate the packfile item based on the raw commit object
         PackfileItemInclusion::Generate => {
-            let object_bytes = object_bytes(ctx, repo, id).await.with_context(|| {
+            let object_bytes = object_bytes(&ctx, blobstore.clone(), id).await.with_context(|| {
                 format!(
                     "Error in fetching raw git object bytes for object {:?} while generating packfile item",
                     &git_objectid
@@ -576,7 +577,7 @@ async fn base_packfile_item(
         // Return the stored packfile item if it exists, otherwise error out
         PackfileItemInclusion::FetchOnly => {
             let packfile_base_item =
-                fetch_packfile_base_item(ctx, &blobstore, git_objectid.as_ref())
+                fetch_packfile_base_item(&ctx, &blobstore, git_objectid.as_ref())
                     .await
                     .with_context(|| {
                         format!(
@@ -591,7 +592,7 @@ async fn base_packfile_item(
         // Return the stored packfile item if its exists, if it doesn't exist, generate it and store it
         PackfileItemInclusion::FetchAndStore => {
             let fetch_result = fetch_packfile_base_item_if_exists(
-                ctx,
+                &ctx,
                 &blobstore,
                 git_objectid.as_ref(),
             )
@@ -607,14 +608,14 @@ async fn base_packfile_item(
                     packfile_base_item.try_into()?,
                 )),
                 None => {
-                    let object_bytes = object_bytes(ctx, repo, id).await.with_context(|| {
+                    let object_bytes = object_bytes(&ctx, blobstore.clone(), id).await.with_context(|| {
                         format!(
                             "Error in fetching raw git object bytes for object {:?} while fetching-and-storing packfile item",
                             &git_objectid
                         )
                     })?;
                     let packfile_base_item = upload_packfile_base_item(
-                        ctx,
+                        &ctx,
                         &blobstore,
                         git_objectid.as_ref(),
                         object_bytes.to_vec(),
@@ -629,73 +630,15 @@ async fn base_packfile_item(
     }
 }
 
-/// Generate a PackfileEntry for the given changeset and its corresponding GitDeltaManifestEntry
-async fn packfile_entry(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    delta_inclusion: DeltaInclusion,
-    packfile_item_inclusion: PackfileItemInclusion,
+/// Fetch the stream of blob and tree objects as delta manifest entries for the given changeset
+async fn blob_and_tree_packfile_items(
+    ctx: Arc<CoreContext>,
+    blobstore: ArcRepoBlobstore,
+    derived_data: ArcRepoDerivedData,
     changeset_id: ChangesetId,
-    path: MPath,
-    mut entry: GitDeltaManifestEntry,
-) -> Result<PackfileItem> {
-    let blobstore = repo.repo_blobstore_arc();
-    // Determine if the delta variant should be used or the base variant
-    let delta = delta_base(&mut entry, delta_inclusion);
-    match delta {
-        Some(delta) => {
-            let chunk_id_prefix =
-                DeltaInstructionChunkIdPrefix::new(changeset_id, path.clone(), delta.origin, path);
-            let instruction_bytes = fetch_delta_instructions(
-                ctx,
-                &blobstore,
-                &chunk_id_prefix,
-                delta.instructions_chunk_count,
-            )
-            .try_fold(
-                BytesMut::with_capacity(delta.instructions_compressed_size as usize),
-                |mut acc, bytes| async move {
-                    acc.extend_from_slice(bytes.as_ref());
-                    anyhow::Ok(acc)
-                },
-            )
-            .await
-            .context("Error in fetching delta instruction bytes from byte stream")?
-            .freeze();
-
-            let packfile_item = PackfileItem::new_delta(
-                entry.full.oid,
-                delta.base.oid,
-                delta.instructions_uncompressed_size,
-                instruction_bytes,
-            );
-            anyhow::Ok(packfile_item)
-        }
-        None => {
-            // Use the full object instead
-            base_packfile_item(
-                ctx,
-                repo,
-                ObjectIdentifierType::AllObjects(entry.full.as_rich_git_sha1()?),
-                packfile_item_inclusion,
-            )
-            .await
-        }
-    }
-}
-
-/// Fetch the stream of blob and tree objects as packfile items for the given changeset
-async fn blob_and_tree_packfile_items<'a>(
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
-    delta_inclusion: DeltaInclusion,
-    packfile_item_inclusion: PackfileItemInclusion,
-    changeset_id: ChangesetId,
-) -> Result<BoxStream<'a, Result<PackfileItem>>> {
-    let blobstore = repo.repo_blobstore_arc();
-    let root_mf_id = repo
-        .repo_derived_data()
-        .derive::<RootGitDeltaManifestId>(ctx, changeset_id)
+) -> Result<BoxStream<'static, Result<(ChangesetId, MPath, GitDeltaManifestEntry)>>> {
+    let root_mf_id = derived_data
+        .derive::<RootGitDeltaManifestId>(&ctx, changeset_id)
         .await
         .with_context(|| {
             format!(
@@ -705,7 +648,7 @@ async fn blob_and_tree_packfile_items<'a>(
         })?;
     let delta_manifest = root_mf_id
         .manifest_id()
-        .load(ctx, &blobstore)
+        .load(&ctx, &blobstore)
         .await
         .with_context(|| {
             format!(
@@ -713,59 +656,112 @@ async fn blob_and_tree_packfile_items<'a>(
                 root_mf_id
             )
         })?;
-    let objects_stream = try_stream! {
-        let mut entries = Box::pin(delta_manifest.into_subentries(ctx, &blobstore).ready_chunks(1000));
-        // NOTE: The order of the entries needs to be maintained
-        while let Some(entries) = entries.next().await {
-            for entry in entries {
-                let (path, entry) = entry?;
-                let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry);
-                yield packfile_item
-            }
-        }
-    };
-    anyhow::Ok(objects_stream.try_buffered(1000).boxed())
+    // Most delta manifests would contain tens of entries. These entries are just metadata and
+    // not the actual object so its safe to load them all into memory instead of chaining streams
+    // which significantly slows down the entire process.
+    let entries = delta_manifest
+        .into_subentries(&ctx, &blobstore)
+        .map_ok(|(path, entry)| (changeset_id, path, entry))
+        .try_collect::<Vec<_>>()
+        .await?;
+    anyhow::Ok(stream::iter(entries.into_iter().map(anyhow::Ok)).boxed())
 }
 
 /// Create a stream of packfile items containing blob and tree objects that need to be included in the packfile/bundle.
 /// In case the packfile item can be represented as a delta, then use the detla variant instead of the raw object
 async fn blob_and_tree_packfile_stream<'a>(
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
+    ctx: Arc<CoreContext>,
+    blobstore: ArcRepoBlobstore,
+    derived_data: ArcRepoDerivedData,
     target_commits: BoxStream<'a, Result<ChangesetId>>,
     delta_inclusion: DeltaInclusion,
     packfile_item_inclusion: PackfileItemInclusion,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
     // efficiently in the packfile/bundle
+    let second_blobstore = blobstore.clone();
+    let second_ctx = ctx.clone();
     let packfile_item_stream = target_commits
         .map_ok(move |changeset_id| {
-            blob_and_tree_packfile_items(
-                ctx,
-                repo,
-                delta_inclusion,
-                packfile_item_inclusion,
-                changeset_id,
-            )
+            let blobstore = blobstore.clone();
+            let derived_data = derived_data.clone();
+            let ctx = ctx.clone();
+            blob_and_tree_packfile_items(ctx, blobstore, derived_data, changeset_id)
         })
-        .try_buffered(500)
+        .try_buffered(6000)
         .try_flatten()
+        .map_ok(move |(changeset_id, path, mut entry)| {
+            let ctx = second_ctx.clone();
+            let blobstore = second_blobstore.clone();
+            async move {
+                let delta = delta_base(&mut entry, delta_inclusion);
+                match delta {
+                    Some(delta) => {
+                        let chunk_id_prefix = DeltaInstructionChunkIdPrefix::new(
+                            changeset_id,
+                            path.clone(),
+                            delta.origin,
+                            path,
+                        );
+                        let instruction_bytes = fetch_delta_instructions(
+                            &ctx,
+                            &blobstore,
+                            &chunk_id_prefix,
+                            delta.instructions_chunk_count,
+                        )
+                        .try_fold(
+                            BytesMut::with_capacity(delta.instructions_compressed_size as usize),
+                            |mut acc, bytes| async move {
+                                acc.extend_from_slice(bytes.as_ref());
+                                anyhow::Ok(acc)
+                            },
+                        )
+                        .await
+                        .context("Error in fetching delta instruction bytes from byte stream")?
+                        .freeze();
+
+                        let packfile_item = PackfileItem::new_delta(
+                            entry.full.oid,
+                            delta.base.oid,
+                            delta.instructions_uncompressed_size,
+                            instruction_bytes,
+                        );
+                        anyhow::Ok(packfile_item)
+                    }
+                    None => {
+                        // Use the full object instead
+                        base_packfile_item(
+                            ctx.clone(),
+                            blobstore.clone(),
+                            ObjectIdentifierType::AllObjects(entry.full.as_rich_git_sha1()?),
+                            packfile_item_inclusion,
+                        )
+                        .await
+                    }
+                }
+            }
+        })
+        .try_buffered(18000)
         .boxed();
     Ok(packfile_item_stream)
 }
 
 /// Create a stream of packfile items containing commit objects that need to be included in the packfile/bundle
 async fn commit_packfile_stream<'a>(
-    ctx: &'a CoreContext,
+    ctx: Arc<CoreContext>,
     repo: &'a impl Repo,
     target_commits: BoxStream<'a, Result<ChangesetId>>,
     packfile_item_inclusion: PackfileItemInclusion,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
+    let blobstore = repo.repo_blobstore_arc();
     let commit_stream = target_commits
-        .map_ok(move |changeset_id| async move {
-            let maybe_git_sha1 = repo
+        .map_ok(move |changeset_id| {
+            let blobstore = blobstore.clone();
+            let ctx = ctx.clone();
+            async move {
+                let maybe_git_sha1 = repo
                 .bonsai_git_mapping()
-                .get_git_sha1_from_bonsai(ctx, changeset_id)
+                .get_git_sha1_from_bonsai(&ctx, changeset_id)
                 .await
                 .with_context(|| {
                     format!(
@@ -773,49 +769,55 @@ async fn commit_packfile_stream<'a>(
                         changeset_id
                     )
                 })?;
-            let git_sha1 = maybe_git_sha1.ok_or_else(|| {
-                anyhow::anyhow!("Git Sha1 not found for changeset {:?}", changeset_id)
-            })?;
-            let git_objectid = git_sha1.to_object_id()?;
-            base_packfile_item(
-                ctx,
-                repo,
-                ObjectIdentifierType::NonBlobObjects(git_objectid), // Since we know its not a blob
-                packfile_item_inclusion,
-            )
-            .await
+                let git_sha1 = maybe_git_sha1.ok_or_else(|| {
+                    anyhow::anyhow!("Git Sha1 not found for changeset {:?}", changeset_id)
+                })?;
+                let git_objectid = git_sha1.to_object_id()?;
+                base_packfile_item(
+                    ctx.clone(),
+                    blobstore,
+                    ObjectIdentifierType::NonBlobObjects(git_objectid), // Since we know its not a blob
+                    packfile_item_inclusion,
+                )
+                .await
+            }
         })
-        .try_buffered(1000)
+        .try_buffered(20000)
         .boxed();
     anyhow::Ok(commit_stream)
 }
 
 /// Convert the provided tag entries into a stream of packfile items
 fn tag_entries_to_stream<'a>(
-    ctx: &'a CoreContext,
+    ctx: Arc<CoreContext>,
     repo: &'a impl Repo,
     tag_entries: Vec<BonsaiTagMappingEntry>,
     packfile_item_inclusion: PackfileItemInclusion,
 ) -> BoxStream<'a, Result<PackfileItem>> {
+    let blobstore = repo.repo_blobstore_arc();
     stream::iter(tag_entries.into_iter().map(anyhow::Ok))
-        .map_ok(move |entry| async move {
-            let git_objectid = entry.tag_hash.to_object_id()?;
-            base_packfile_item(
-                ctx,
-                repo,
-                ObjectIdentifierType::NonBlobObjects(git_objectid), // Since we know its not a blob
-                packfile_item_inclusion,
-            )
-            .await
+        .map_ok(move |entry| {
+            let blobstore = blobstore.clone();
+            let ctx = ctx.clone();
+            async move {
+                let git_objectid = entry.tag_hash.to_object_id()?;
+                base_packfile_item(
+                    ctx,
+                    blobstore.clone(),
+                    ObjectIdentifierType::NonBlobObjects(git_objectid), // Since we know its not a blob
+                    packfile_item_inclusion,
+                )
+                .await
+            }
         })
-        .try_buffered(500)
+        .try_buffered(20000)
         .boxed()
 }
 
 /// Create a stream of packfile items containing tag objects that need to be included in the packfile/bundle while also
 /// returning the total number of tags included in the stream
 async fn tag_packfile_stream<'a>(
-    ctx: &'a CoreContext,
+    ctx: Arc<CoreContext>,
     repo: &'a impl Repo,
     bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     request: &PackItemStreamRequest,
@@ -853,7 +855,7 @@ async fn tag_packfile_stream<'a>(
 
 /// Create a stream of packfile items containing annotated tag objects that exist in the repo
 async fn all_tags_packfile_stream<'a>(
-    ctx: &'a CoreContext,
+    ctx: Arc<CoreContext>,
     repo: &'a impl Repo,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     // Fetch entries corresponding to annotated tags in the repo
@@ -871,12 +873,12 @@ async fn all_tags_packfile_stream<'a>(
 /// Based on the input request parameters, generate a stream of `PackfileItem`s that
 /// can be written into a pack file
 pub async fn generate_pack_item_stream<'a>(
-    ctx: &'a CoreContext,
+    ctx: CoreContext,
     repo: &'a impl Repo,
     request: PackItemStreamRequest,
 ) -> Result<PackItemStreamResponse<'a>> {
     // We need to include the bookmarks (i.e. branches, tags) in the pack based on the request parameters
-    let bookmarks = bookmarks(ctx, repo, &request.requested_refs)
+    let bookmarks = bookmarks(&ctx, repo, &request.requested_refs)
         .await
         .with_context(|| {
             format!(
@@ -884,11 +886,12 @@ pub async fn generate_pack_item_stream<'a>(
                 repo.repo_identity().name()
             )
         })?;
+    let ctx = Arc::new(ctx);
     // Get all the commits that are reachable from the bookmarks
     let mut target_commits = repo
         .commit_graph()
         .ancestors_difference_stream(
-            ctx,
+            &ctx,
             bookmarks.values().copied().collect(),
             request.have_heads.clone(),
         )
@@ -901,13 +904,13 @@ pub async fn generate_pack_item_stream<'a>(
     let commits_count = target_commits.len();
     // STEP 1: Get the count of distinct blob and tree objects to be included in the packfile/bundle.
     let trees_and_blobs_count =
-        trees_and_blobs_count(ctx, repo, to_commit_stream(target_commits.clone()))
+        trees_and_blobs_count(&ctx, repo, to_commit_stream(target_commits.clone()))
             .await
             .context("Error while calculating object count")?;
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
-    let mut refs_to_include = refs_to_include(ctx, repo, &bookmarks, request.tag_inclusion)
+    let mut refs_to_include = refs_to_include(&ctx, repo, &bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the pack")?;
 
@@ -919,8 +922,9 @@ pub async fn generate_pack_item_stream<'a>(
     // STEP 3: Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
     let blob_and_tree_stream = blob_and_tree_packfile_stream(
-        ctx,
-        repo,
+        ctx.clone(),
+        repo.repo_blobstore_arc(),
+        repo.repo_derived_data_arc(),
         to_commit_stream(target_commits.clone()),
         request.delta_inclusion,
         request.packfile_item_inclusion,
@@ -931,7 +935,7 @@ pub async fn generate_pack_item_stream<'a>(
     // STEP 4: Get the stream of commit packfile items to include in the pack/bundle. Note that we have already counted these items
     // as part of object count.
     let commit_stream = commit_packfile_stream(
-        ctx,
+        ctx.clone(),
         repo,
         to_commit_stream(target_commits.clone()),
         request.packfile_item_inclusion,
@@ -941,7 +945,7 @@ pub async fn generate_pack_item_stream<'a>(
 
     // STEP 5: Get the stream of tag packfile items to include in the pack/bundle. Note that we have not yet included the tag count in the
     // total object count so we will need the stream + count of elements in the stream
-    let (tag_stream, tags_count) = tag_packfile_stream(ctx, repo, &bookmarks, &request)
+    let (tag_stream, tags_count) = tag_packfile_stream(ctx.clone(), repo, &bookmarks, &request)
         .await
         .context("Error while generating tag packfile item stream")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
@@ -993,25 +997,24 @@ pub async fn ls_refs_response(
 /// Based on the input request parameters, generate the response to the
 /// fetch request command
 pub async fn fetch_response<'a>(
-    ctx: &'a CoreContext,
+    ctx: CoreContext,
     repo: &'a impl Repo,
     request: FetchRequest,
 ) -> Result<FetchResponse<'a>> {
     let delta_inclusion = DeltaInclusion::standard();
     let packfile_item_inclusion = PackfileItemInclusion::FetchAndStore;
+    let ctx = Arc::new(ctx);
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
-    let bases = git_shas_to_bonsais(ctx, repo, request.bases.iter())
+    let bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
         .await
         .context("Error converting base Git commits to Bonsai duing fetch")?;
-    let heads = git_shas_to_bonsais(ctx, repo, request.heads.iter())
+    let heads = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
         .await
         .context("Error converting head Git commits to Bonsai during fetch")?;
     // Get the stream of commits between the bases and heads
-    // TODO(rajshar): There is no strict need to sort and collect the commits in any
-    // particular order here. Investigate if it would be better to just get the stream of commits
     let mut target_commits = repo
         .commit_graph()
-        .ancestors_difference_stream(ctx, heads, bases)
+        .ancestors_difference_stream(&ctx, heads, bases)
         .await
         .context("Error in getting stream of commits between heads and bases during fetch")?
         .try_collect::<Vec<_>>()
@@ -1021,14 +1024,15 @@ pub async fn fetch_response<'a>(
     target_commits.reverse();
     // Get the count of unique blob and tree objects to be included in the packfile
     let trees_and_blobs_count =
-        trees_and_blobs_count(ctx, repo, to_commit_stream(target_commits.clone()))
+        trees_and_blobs_count(&ctx, repo, to_commit_stream(target_commits.clone()))
             .await
             .context("Error while calculating object count during fetch")?;
     // Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
     let blob_and_tree_stream = blob_and_tree_packfile_stream(
-        ctx,
-        repo,
+        ctx.clone(),
+        repo.repo_blobstore_arc(),
+        repo.repo_derived_data_arc(),
         to_commit_stream(target_commits.clone()),
         delta_inclusion,
         packfile_item_inclusion,
@@ -1038,7 +1042,7 @@ pub async fn fetch_response<'a>(
     // Get the stream of commit packfile items to include in the pack/bundle. Note that we have already counted these items
     // as part of object count.
     let commit_stream = commit_packfile_stream(
-        ctx,
+        ctx.clone(),
         repo,
         to_commit_stream(target_commits.clone()),
         packfile_item_inclusion,
@@ -1048,7 +1052,7 @@ pub async fn fetch_response<'a>(
     // Get the stream of all annotated tag items in the repo
     // NOTE: Ideally, we should filter it based on the requested refs but its much faster to just send all the tags.
     // Git ignores the unnecessary objects and the extra size overhead in the pack is just a few KBs
-    let (tag_stream, tags_count) = all_tags_packfile_stream(ctx, repo)
+    let (tag_stream, tags_count) = all_tags_packfile_stream(ctx.clone(), repo)
         .await
         .context("Error while generating tag packfile item stream during fetch")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count

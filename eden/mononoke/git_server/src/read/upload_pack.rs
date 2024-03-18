@@ -288,7 +288,7 @@ pub async fn fetch(
         FetchResponseHeaders::from_request(request_context.clone(), args.clone()).await?;
     let include_pack = fetch_response_headers.include_pack();
     let bytes_stream = ResponseStream::new(try_stream! {
-        let mut pack_reader = tokio_stream::wrappers::ReceiverStream::new(reader).ready_chunks(100_000);
+        let mut pack_reader = tokio_stream::wrappers::ReceiverStream::new(reader).ready_chunks(100_000_000);
         for header in fetch_response_headers {
             yield header;
         }
@@ -313,7 +313,7 @@ pub async fn fetch(
                 return Ok(());
             }
             let response_stream = fetch_response(
-                &request_context.ctx,
+                request_context.ctx.clone(),
                 &request_context.repo,
                 args.into_request(),
             )
