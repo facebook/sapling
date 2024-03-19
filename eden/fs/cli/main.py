@@ -1529,6 +1529,14 @@ class RemoveCmd(Subcmd):
         except Exception:
             return False
 
+    def optional_traceback(self, ex: Exception, debug: bool):
+        if debug:
+            traceback.print_exception(ex)
+        else:
+            print_stderr(
+                "Rerun with --debug to see full traceback (required to report issues; please do so if the error is unexpected or ambiguous)"
+            )
+
     def delete_file_with_confirmation(self, path: str) -> int:
         prompt = f"""\
 Warning: the following is a file, not a directory or an EdenFS mount: {path}
@@ -1704,8 +1712,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
                 exit_code = 1
-                if args.debug:
-                    traceback.print_exc()
+                self.optional_traceback(ex, args.debug)
             else:
                 try:
                     print(f"Cleaning up mount {mount}")
@@ -1715,8 +1722,8 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                 except Exception as ex:
                     print_stderr(f"error cleaning up mount {mount}: {ex}")
                     exit_code = 1
-                    if args.debug:
-                        traceback.print_exc()
+                    self.optional_traceback(ex, args.debug)
+
                 # Continue around the loop removing any other mount points
 
         if exit_code == 0:
