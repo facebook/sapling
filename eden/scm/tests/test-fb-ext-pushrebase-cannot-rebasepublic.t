@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 Demonstrates the "cannot rebase public commits" issue seen using hgsql and

@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 test rust clone

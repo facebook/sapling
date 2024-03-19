@@ -1,3 +1,4 @@
+#debugruntest-compatible
 TODO(debugruntest): this test fails on Mac
 #chg-compatible
   $ export SL_DEBUG_DISABLE_SYMLINKS=1

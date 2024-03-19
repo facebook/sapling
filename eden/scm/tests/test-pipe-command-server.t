@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #require no-windows
   $ configure modernclient
 

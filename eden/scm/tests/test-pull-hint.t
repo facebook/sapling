@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
   $ hg init test
   $ cd test

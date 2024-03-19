@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
   $ configure modern
   $ enable smartlog

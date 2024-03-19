@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #require fsmonitor
 
   $ configure modernclient

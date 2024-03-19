@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #require bash
 
   $ eagerepo

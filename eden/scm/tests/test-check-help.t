@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 #require test-repo normal-layout

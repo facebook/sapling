@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #require fsmonitor icasefs
 
 (Run this test using HGFSMONITOR_TESTS=1)
