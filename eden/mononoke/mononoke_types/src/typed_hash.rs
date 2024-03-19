@@ -177,9 +177,6 @@ pub struct SkeletonManifestId(Blake2);
 pub struct FastlogBatchId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub struct BlameId(Blake2);
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct RedactionKeyListId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]

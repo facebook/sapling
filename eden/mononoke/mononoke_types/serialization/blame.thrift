@@ -26,28 +26,6 @@ enum BlameRejected {
   Binary = 1,
 }
 
-// Blame V1
-
-struct BlameRange {
-  1: i32 length;
-  2: id.ChangesetId csid;
-  3: BlamePath path;
-  // offset of this range in the origin file (file that introduced this change)
-  4: i32 origin_offset;
-} (rust.exhaustive)
-
-struct Blame {
-  1: list<BlameRange> ranges;
-  2: list<path.NonRootMPath> paths;
-} (rust.exhaustive)
-
-union BlameMaybeRejected {
-  1: Blame Blame;
-  2: BlameRejected Rejected;
-}
-
-// Blame V2
-
 struct BlameRangeV2 {
   // Length (in lines) of this range.  The offset of a range is implicit from
   // the sum of the lengths of the prior ranges.
