@@ -508,6 +508,26 @@ impl Repo {
             tracing::trace!(target: "repo::tree_store", "disabling edenapi");
             tree_builder = tree_builder.override_edenapi(false);
         }
+
+        if self
+            .config
+            .get_or_default("scmstore", "fetch-tree-metadata")?
+        {
+            // Trigger construction of file store.
+            let _ = self.file_store();
+
+            // The presence of the file store on the tree store causes the tree store to
+            // request tree metadata (and write it back to file store aux cache).
+            if let Some(file_store) = self.file_scm_store() {
+                tracing::trace!(target: "repo::tree_store", "configuring filestore for aux fetching");
+                tree_builder = tree_builder.filestore(file_store);
+            } else {
+                tracing::trace!(target: "repo::tree_store", "no filestore for aux fetching");
+            }
+        } else {
+            tracing::trace!(target: "repo::tree_store", "aux fetching disabled");
+        }
+
         let ts = Arc::new(tree_builder.build()?);
         let _ = self.tree_scm_store.set(ts.clone());
         let _ = self.tree_store.set(ts.clone());

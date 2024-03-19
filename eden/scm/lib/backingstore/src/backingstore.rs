@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use configloader::hg::PinnedConfig;
+use configloader::Config;
 use log::warn;
 use repo::repo::Repo;
 use storemodel::BoxIterator;
@@ -105,6 +106,16 @@ impl BackingStore {
             config.set("lfs", "backofftimes", Some(""), &source);
             config.set("lfs", "throttlebackofftimes", Some(""), &source);
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
+        }
+
+        // Allow us to enable tree metadata fetching for eden only.
+        if let Some(value) = config.get_nonempty("eden", "fetch-tree-metadata") {
+            config.set(
+                "scmstore",
+                "fetch-tree-metadata",
+                Some(value),
+                &"backingstore".into(),
+            );
         }
 
         // Apply indexed log configs, which can affect edenfs behavior.

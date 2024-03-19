@@ -19,7 +19,7 @@ First, sanity that we don't have any data locally:
   $ hg prefetch -q -r $A
 
 Now we do have aux data locally:
-  $ hg debugscmstore -r $A A --local --mode=file --config scmstore.compute-aux-data=false
+  $ hg debugscmstore -r $A A --local --mode=file
   Successfully fetched file: StoreFile {
       content: Some(
           IndexedLog(
@@ -56,7 +56,7 @@ Now we do have aux data locally:
 
 
 Fetch only content first:
-  $ hg cat -q -r $B B
+  $ hg cat -q -r $B B --config scmstore.fetch-tree-metadata=false
   B (no-eol)
 
 Make sure we don't have aux data yet:
