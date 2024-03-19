@@ -39,12 +39,15 @@ use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
+use edenapi::types::EdenApiServerError;
 use edenapi::types::Extra;
 use edenapi::types::FileAuxData;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
+use edenapi::types::FileMetadata;
 use edenapi::types::FileResponse;
 use edenapi::types::FileSpec;
+use edenapi::types::FileType as EdenFileType;
 use edenapi::types::HgChangesetContent;
 use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
@@ -59,6 +62,8 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::SetBookmarkResponse;
 use edenapi::types::TreeAttributes;
+use edenapi::types::TreeChildEntry;
+use edenapi::types::TreeChildFileEntry;
 use edenapi::types::TreeEntry;
 use edenapi::types::UploadHgChangeset;
 use edenapi::types::UploadToken;
@@ -76,9 +81,12 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
+use manifest_tree::FileType as ManifestFileType;
+use manifest_tree::Flag;
 use minibytes::Bytes;
 use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
+use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::error;
 use tracing::trace;
@@ -209,7 +217,7 @@ impl EdenApi for EagerRepo {
                 path: key.path.clone(),
                 hgid: p2,
             };
-            if let Some(renamed_from) = extract_rename(extract_body(&data)) {
+            if let Some(renamed_from) = extract_rename(&extract_body(&data)) {
                 if p1.is_null() {
                     key1 = renamed_from;
                 } else {
@@ -238,31 +246,79 @@ impl EdenApi for EagerRepo {
         &self,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-    ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
-        debug!("trees {}", debug_key_list(&keys));
+    ) -> edenapi::Result<Response<Result<TreeEntry, EdenApiServerError>>> {
+        debug!("trees {} {:?}", debug_key_list(&keys), attributes);
         self.refresh_for_api();
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
-        if attributes.child_metadata {
-            return Err(self.not_implemented_error(
-                "EagerRepo does not support child_metadata for trees".to_string(),
-                "trees",
-            ));
-        }
         for key in keys {
             let data = self.get_sha1_blob_for_api(key.hgid, "trees")?;
-            let mut entry = TreeEntry::default();
-            entry.key = key;
+            let mut entry = TreeEntry {
+                key: key.clone(),
+                ..Default::default()
+            };
+
             if attributes.manifest_blob {
                 // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
                 entry.data = Some(extract_body(&data).to_vec().into());
             }
+
             if attributes.parents {
                 let (p1, p2) = extract_p1_p2(&data);
                 let parents = Parents::new(p1, p2);
                 entry.parents = Some(parents);
             }
-            assert!(!attributes.child_metadata, "checked above");
+
+            if attributes.child_metadata {
+                let mut children: Vec<Result<TreeChildEntry, EdenApiServerError>> = Vec::new();
+
+                let tree_entry =
+                    manifest_tree::TreeEntry(extract_body(&data), SerializationFormat::Hg);
+                for child in tree_entry.elements() {
+                    let child = match child {
+                        Ok(child) => child,
+                        Err(err) => {
+                            children.push(Err(EdenApiServerError::with_key(key.clone(), err)));
+                            continue;
+                        }
+                    };
+
+                    match child.flag {
+                        Flag::File(file_type) => {
+                            let file_with_parents =
+                                self.get_sha1_blob_for_api(child.hgid, "trees (aux)")?;
+                            let file_body = extract_body(&file_with_parents);
+
+                            // The client currently extracts only file aux data fields from the file metadata.
+                            let aux_data = FileAuxData::from_content(&file_body);
+                            children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
+                                key: Key::new(key.path.join(child.component.as_ref()), child.hgid),
+                                file_metadata: Some(FileMetadata {
+                                    content_id: Some(aux_data.content_id),
+                                    file_type: Some(match file_type {
+                                        ManifestFileType::Regular => EdenFileType::Regular,
+                                        ManifestFileType::Executable => EdenFileType::Executable,
+                                        ManifestFileType::Symlink => EdenFileType::Symlink,
+                                        ManifestFileType::GitSubmodule => {
+                                            panic!("git submodule when serving hg manifest?")
+                                        }
+                                    }),
+                                    size: Some(aux_data.total_size),
+                                    content_sha1: Some(aux_data.sha1),
+                                    content_sha256: Some(aux_data.sha256),
+                                    content_seeded_blake3: aux_data.seeded_blake3,
+                                    ..Default::default()
+                                }),
+                            })));
+                        }
+                        // The client currently ignores directory metadata, so don't bother.
+                        Flag::Directory => {}
+                    }
+                }
+
+                entry.children = Some(children);
+            }
+
             values.push(Ok(Ok(entry)));
         }
         Ok(convert_to_response(values))
@@ -1158,8 +1214,8 @@ fn default_response_meta() -> ResponseMeta {
     }
 }
 
-fn extract_body(data_with_p1p2_prefix: &[u8]) -> &[u8] {
-    &data_with_p1p2_prefix[HgId::len() * 2..]
+fn extract_body(data_with_p1p2_prefix: &minibytes::Bytes) -> minibytes::Bytes {
+    data_with_p1p2_prefix.slice(HgId::len() * 2..)
 }
 
 fn extract_p1_p2(data: &[u8]) -> (HgId, HgId) {

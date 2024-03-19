@@ -419,6 +419,13 @@ impl RepoPath {
             }
         }
     }
+
+    /// Create a new RepoPathBuf joining self with other.
+    pub fn join(&self, other: impl AsRef<RepoPath>) -> RepoPathBuf {
+        let mut buf = self.to_owned();
+        buf.push(other);
+        buf
+    }
 }
 
 impl Ord for RepoPath {
