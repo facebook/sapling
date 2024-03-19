@@ -970,7 +970,7 @@ struct RepoCreateStackParams {
 }
 
 struct RepoCreateBookmarkParams {
-  /// The name of the bookmark to move.
+  /// The name of the bookmark to create.
   1: string bookmark;
 
   /// The target commit for the bookmark.
@@ -979,7 +979,7 @@ struct RepoCreateBookmarkParams {
   /// The pushvars to use when creating the bookmark.
   4: optional map<string, binary> pushvars;
 
-  /// Service identity to use for this bookmark move.
+  /// Service identity to use for this bookmark creation.
   3: optional string service_identity;
 }
 
