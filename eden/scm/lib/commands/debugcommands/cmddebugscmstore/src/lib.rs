@@ -73,11 +73,6 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
         "must specify exactly one of --rev or --path"
     );
 
-    abort_if!(
-        ctx.opts.rev.is_some() && mode == FetchType::Tree,
-        "--rev doesn't support trees yet",
-    );
-
     let keys: Vec<Key> = if let Some(path) = ctx.opts.requests_file {
         block_on_stream(block_on(file_to_async_key_stream(path.into()))?).collect()
     } else {
@@ -91,8 +86,16 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
                 let path = RepoPathBuf::from_string(path)?;
                 match manifest.get(&path)? {
                     None => abort!("path {path} not in manifest"),
-                    Some(FsNodeMetadata::Directory(_)) => abort!("path {path} is a directory"),
+                    Some(FsNodeMetadata::Directory(hgid)) => {
+                        if mode == FetchType::File {
+                            abort!("path {path} is a directory");
+                        }
+                        Ok(Key::new(path, hgid.unwrap()))
+                    }
                     Some(FsNodeMetadata::File(FileMetadata { hgid, .. })) => {
+                        if mode == FetchType::Tree {
+                            abort!("path {path} is a file");
+                        }
                         Ok(Key::new(path, hgid))
                     }
                 }
