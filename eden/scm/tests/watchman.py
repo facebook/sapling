@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -84,15 +85,26 @@ class Watchman:
         ]
         deadline = time.time() + 30
         watchmanavailable = False
+        lastoutput = ""
         while not watchmanavailable and time.time() < deadline:
             try:
                 # The watchman CLI can wait for a short time if socket
                 # is not ready.
-                subprocess.check_output(argv, env=env, close_fds=self._close_fds)
+                subprocess.run(
+                    argv,
+                    env=env,
+                    close_fds=self._close_fds,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                )
                 watchmanavailable = True
-            except Exception:
+            except subprocess.CalledProcessError as ex:
                 time.sleep(0.1)
+                lastoutput = ex.output.decode(errors="replace")
         if not watchmanavailable:
+            sys.stderr.write(f"watchman CLI output: {lastoutput}\n")
+            sys.stderr.write("watchman log:\n%s\n" % open(clilogfile, "r").read())
             raise WatchmanTimeout()
 
     def stop(self) -> None:
