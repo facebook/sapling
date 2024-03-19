@@ -23,6 +23,7 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::ConfigInfo;
 use repos::RawRepoConfigs;
+use serde::Serialize;
 use sha2::Digest;
 use sha2::Sha256;
 use slog::error;
@@ -266,9 +267,20 @@ pub trait ConfigUpdateReceiver: Send + Sync {
     ) -> Result<()>;
 }
 
+fn serialize_to_value<T: Serialize, S: serde::Serializer>(
+    value: &T,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let value = serde_json::to_value(value).map_err(serde::ser::Error::custom)?;
+    value.serialize(serializer)
+}
+
+#[derive(Serialize)]
+struct SortKeys<T: Serialize>(#[serde(serialize_with = "serialize_to_value")] T);
+
 fn build_config_info(raw_repo_configs: Arc<RawRepoConfigs>) -> Result<ConfigInfo> {
     let content_hash = {
-        let serialized = serde_json::to_string(&raw_repo_configs).unwrap();
+        let serialized = serde_json::to_string(&SortKeys(raw_repo_configs)).unwrap();
         let mut hasher = Sha256::new();
         hasher.update(serialized);
         let hash = hasher.finalize();
@@ -286,4 +298,124 @@ fn build_config_info(raw_repo_configs: Arc<RawRepoConfigs>) -> Result<ConfigInfo
         content_hash,
         last_updated_at,
     })
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+
+    use repos::RawRepoConfig;
+    use repos::RawRepoConfigs;
+
+    use super::*;
+
+    #[test]
+    fn test_build_config_info_empty() {
+        let raw_repo_configs = RawRepoConfigs::default();
+        let res = build_config_info(Arc::new(raw_repo_configs));
+        assert!(res.is_ok());
+
+        let info = res.unwrap().to_owned();
+        assert_eq!(
+            info.content_hash,
+            "0ad329fb54d8aad37188ee294bfde21adae51e66fb48f6545af62e3e2a82264d"
+        );
+        assert!(info.last_updated_at > 0);
+    }
+
+    #[test]
+    fn test_build_config_info_one_repo() {
+        let mut raw_repo_configs = RawRepoConfigs::default();
+        raw_repo_configs
+            .repos
+            .insert("repo1".to_string(), RawRepoConfig::default());
+
+        let res = build_config_info(Arc::new(raw_repo_configs));
+        assert!(res.is_ok());
+
+        let info = res.unwrap().to_owned();
+        assert_eq!(
+            info.content_hash,
+            "4d9a0776775fd882ef42cbfee971cd0f85e973ceb392e1a9fa06dcecbdc6a7e4"
+        );
+        assert!(info.last_updated_at > 0);
+    }
+
+    #[test]
+    fn test_build_config_info_two_repos() {
+        let mut raw_repo_configs = RawRepoConfigs::default();
+        raw_repo_configs
+            .repos
+            .insert("repo1".to_string(), RawRepoConfig::default());
+        raw_repo_configs
+            .repos
+            .insert("repo2".to_string(), RawRepoConfig::default());
+
+        let res = build_config_info(Arc::new(raw_repo_configs));
+        assert!(res.is_ok());
+
+        let info = res.unwrap().to_owned();
+        assert_eq!(
+            info.content_hash,
+            "09f11d19b6cd09474edd7fd2abe22d1954ab6afac2482b77a042212678baacce"
+        );
+        assert!(info.last_updated_at > 0);
+
+        // Test that the hash is different if the order of the repos is different
+        let mut raw_repo_configs = RawRepoConfigs::default();
+        raw_repo_configs
+            .repos
+            .insert("repo2".to_string(), RawRepoConfig::default());
+        raw_repo_configs
+            .repos
+            .insert("repo1".to_string(), RawRepoConfig::default());
+
+        let res = build_config_info(Arc::new(raw_repo_configs));
+        assert!(res.is_ok());
+
+        let info = res.unwrap().to_owned();
+        assert_eq!(
+            info.content_hash,
+            "09f11d19b6cd09474edd7fd2abe22d1954ab6afac2482b77a042212678baacce"
+        );
+        assert!(info.last_updated_at > 0);
+    }
+
+    // The smallest fixture that did *not* demostrate non-deterministic behavior
+    // with the old implementation.
+    #[test]
+    fn test_build_config_info_minimal() {
+        let json = fixtures::json_config_minimal();
+        let raw_repo_configs =
+            serde_json::from_str::<RawRepoConfigs>(&json).expect("Unable to parse");
+
+        let res = build_config_info(Arc::new(raw_repo_configs));
+        assert!(res.is_ok());
+
+        let info = res.unwrap().to_owned();
+        assert_eq!(
+            info.content_hash,
+            "9b7e2df0eda8c83be1c7bd81cdd2ad2069d5d67d421c43faf84a418bacb858ee"
+        );
+        assert!(info.last_updated_at > 0);
+    }
+
+    // The smallest fixture that *did* demostrate non-deterministic behavior
+    // with the old implementation.
+    #[test]
+    fn test_build_config_info_small() {
+        let json = fixtures::json_config_small();
+        let raw_repo_configs =
+            serde_json::from_str::<RawRepoConfigs>(&json).expect("Unable to parse");
+
+        let res = build_config_info(Arc::new(raw_repo_configs));
+        assert!(res.is_ok());
+
+        let info = res.unwrap().to_owned();
+        assert_eq!(
+            info.content_hash,
+            "967431b13b42dec48a0616edfcea067d2860223dc6aa4f81bbee748bd8d4694f"
+        );
+        assert!(info.last_updated_at > 0);
+    }
 }

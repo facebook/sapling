@@ -917,6 +917,66 @@ impl TestRepoFixture for ManyDiamonds {
     }
 }
 
+pub fn json_config_minimal() -> String {
+    r#"
+    {
+        "commit_sync": {
+            "test": {
+                "large_repo_id": 2100,
+                "common_pushrebase_bookmarks": [
+
+                ],
+                "small_repos": [
+
+                ],
+                "version_name": "test_only"
+            }
+        }
+    }
+    "#
+    .to_string()
+}
+
+pub fn json_config_small() -> String {
+    r#"
+    {
+        "commit_sync": {
+            "test": {
+                "large_repo_id": 2100,
+                "common_pushrebase_bookmarks": [
+
+                ],
+                "small_repos": [
+
+                ],
+                "version_name": "test_only"
+            },
+            "xrepo_test_large": {
+                "large_repo_id": 504,
+                "common_pushrebase_bookmarks": [
+                    "master"
+                ],
+                "small_repos": [
+                    {
+                        "repoid": 503,
+                        "default_action": "prepend_prefix",
+                        "default_prefix": "mapping",
+                        "bookmark_prefix": "",
+                        "mapping": {
+                            "README": "README",
+                            "something": "mapped/dir1/something"
+                        },
+                        "direction": "large_to_small"
+                    }
+                ],
+                "version_name": "xrepo_test.v0"
+            }
+        }
+    }
+    "#
+    .to_string()
+}
+
 #[cfg(test)]
 mod test {
     use changesets::ChangesetsRef;

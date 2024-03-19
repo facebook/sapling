@@ -6,12 +6,16 @@ oncall("mononoke")
 rust_library(
     name = "mononoke_configs",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//eden/mononoke/tests/fixtures:fixtures",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:slog",

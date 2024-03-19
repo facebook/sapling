@@ -18,8 +18,12 @@ hex = "0.4.3"
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 repos = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/repos/repos" }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 sha2 = "0.10.6"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
+
+[dev-dependencies]
+fixtures = { version = "0.1.0", path = "../tests/fixtures" }
