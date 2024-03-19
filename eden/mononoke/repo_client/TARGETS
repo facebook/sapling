@@ -252,7 +252,6 @@ rust_library(
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",
         "//eden/mononoke/filestore:filestore",

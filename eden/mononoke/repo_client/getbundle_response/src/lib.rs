@@ -19,10 +19,10 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
-use changesets::ChangesetsRef;
 use cloned::cloned;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraphArc;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
 use derived_data::BonsaiDerived;
@@ -597,7 +597,7 @@ async fn find_phase_heads(
 /// `draft_callback` returns true.
 async fn traverse_draft_commits(
     ctx: &CoreContext,
-    repo: &(impl ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef + Send + Sync),
+    repo: &(impl CommitGraphRef + RepoDerivedDataRef + BonsaiHgMappingRef + Send + Sync),
     phases: &dyn Phases,
     heads: &[HgChangesetId],
     mut public_callback: impl FnMut(ChangesetId, HgChangesetId),
@@ -642,14 +642,7 @@ async fn traverse_draft_commits(
         // TODO(mbthomas): After blobrepo refactoring, change to use a method that calls `Changesets::get_many`.
         let parents: Vec<_> = stream::iter(traverse)
             .map(move |csid| async move {
-                let parents = repo
-                    .changesets()
-                    .get(ctx, csid)
-                    .await?
-                    .ok_or_else(|| {
-                        anyhow::format_err!("Commit {} does not exist in the repo", csid)
-                    })?
-                    .parents;
+                let parents = repo.commit_graph().changeset_parents(ctx, csid).await?;
 
                 Result::<_, Error>::Ok(parents)
             })
@@ -888,7 +881,7 @@ pub fn create_manifest_entries_stream(
 async fn diff_with_parents(
     ctx: &CoreContext,
     repo: &(
-         impl ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef + RepoBlobstoreRef + Send + Sync
+         impl CommitGraphRef + RepoDerivedDataRef + BonsaiHgMappingRef + RepoBlobstoreRef + Send + Sync
      ),
     hg_cs_id: HgChangesetId,
 ) -> Result<
@@ -1002,7 +995,7 @@ pub fn create_filenodes(
 pub async fn get_manifests_and_filenodes(
     ctx: &CoreContext,
     repo: &(
-         impl ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef + RepoBlobstoreRef + Send + Sync
+         impl CommitGraphRef + RepoDerivedDataRef + BonsaiHgMappingRef + RepoBlobstoreRef + Send + Sync
      ),
     commits: impl IntoIterator<Item = HgChangesetId>,
     lfs_params: &SessionLfsParams,

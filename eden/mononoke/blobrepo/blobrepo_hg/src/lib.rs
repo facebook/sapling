@@ -41,8 +41,8 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
-use changesets::ChangesetsRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
@@ -73,7 +73,7 @@ pub trait BlobRepoHg: Send + Sync {
         bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds> + 'a + Send,
     ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error>
     where
-        Self: ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef;
+        Self: CommitGraphRef + RepoDerivedDataRef + BonsaiHgMappingRef;
 
     fn get_hg_heads_maybe_stale(
         &self,
@@ -88,7 +88,7 @@ pub trait BlobRepoHg: Send + Sync {
         changesetid: HgChangesetId,
     ) -> Result<bool, Error>
     where
-        Self: BonsaiHgMappingRef + ChangesetsRef;
+        Self: BonsaiHgMappingRef + CommitGraphRef;
 
     async fn get_hg_changeset_and_parents_from_bonsai(
         &self,
@@ -96,7 +96,7 @@ pub trait BlobRepoHg: Send + Sync {
         csid: ChangesetId,
     ) -> Result<(HgChangesetId, Vec<HgChangesetId>), Error>
     where
-        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef;
+        Self: BonsaiHgMappingRef + CommitGraphRef + RepoDerivedDataRef;
 
     async fn get_hg_changeset_parents(
         &self,
@@ -104,7 +104,7 @@ pub trait BlobRepoHg: Send + Sync {
         changesetid: HgChangesetId,
     ) -> Result<Vec<HgChangesetId>, Error>
     where
-        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef;
+        Self: BonsaiHgMappingRef + CommitGraphRef + RepoDerivedDataRef;
 
     async fn get_bookmark_hg(
         &self,
@@ -119,7 +119,7 @@ pub trait BlobRepoHg: Send + Sync {
         ctx: CoreContext,
     ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
     where
-        Self: ChangesetsRef
+        Self: CommitGraphRef
             + BonsaiHgMappingRef
             + RepoDerivedDataRef
             + BookmarksRef
@@ -168,7 +168,7 @@ define_stats! {
 }
 
 #[async_trait]
-impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
+impl<T: CommitGraphRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     // Returns only the mapping for valid changests that are known to the server.
     // For Bonsai -> Hg conversion, missing Hg changesets will be derived (so all Bonsais will be
     // in the output).
@@ -180,7 +180,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds> + 'a + Send,
     ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error>
     where
-        Self: ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef,
+        Self: CommitGraphRef + RepoDerivedDataRef + BonsaiHgMappingRef,
     {
         STATS::get_hg_bonsai_mapping.add_value(1);
 
@@ -216,11 +216,10 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
                 }
 
                 let existing: HashSet<_> = self
-                    .changesets()
-                    .get_many(&ctx, notfound.clone())
+                    .commit_graph()
+                    .known_changesets(&ctx, notfound.clone())
                     .await?
                     .into_iter()
-                    .map(|entry| entry.cs_id)
                     .collect();
 
                 let mut newmapping: Vec<_> = stream::iter(
@@ -279,7 +278,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         changesetid: HgChangesetId,
     ) -> Result<bool, Error>
     where
-        Self: BonsaiHgMappingRef + ChangesetsRef,
+        Self: BonsaiHgMappingRef + CommitGraphRef,
     {
         STATS::hg_changeset_exists.add_value(1);
         let csid = self
@@ -287,10 +286,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             .get_bonsai_from_hg(&ctx, changesetid)
             .await?;
         match csid {
-            Some(bonsai) => {
-                let res = self.changesets().get(&ctx, bonsai).await?;
-                Ok(res.is_some())
-            }
+            Some(bonsai) => self.commit_graph().exists(&ctx, bonsai).await,
             None => Ok(false),
         }
     }
@@ -301,16 +297,14 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         csid: ChangesetId,
     ) -> Result<(HgChangesetId, Vec<HgChangesetId>), Error>
     where
-        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef,
+        Self: BonsaiHgMappingRef + CommitGraphRef + RepoDerivedDataRef,
     {
         STATS::get_hg_changeset_and_parents_from_bonsai.add_value(1);
 
         let parents = self
-            .changesets()
-            .get(&ctx, csid)
+            .commit_graph()
+            .changeset_parents(&ctx, csid)
             .await?
-            .ok_or(ErrorKind::BonsaiNotFound(csid))?
-            .parents
             .into_iter()
             .map(|parent| self.derive_hg_changeset(&ctx, parent));
 
@@ -329,7 +323,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         changesetid: HgChangesetId,
     ) -> Result<Vec<HgChangesetId>, Error>
     where
-        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef,
+        Self: BonsaiHgMappingRef + CommitGraphRef + RepoDerivedDataRef,
     {
         STATS::get_hg_changeset_parents.add_value(1);
 
@@ -340,11 +334,9 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             .ok_or(ErrorKind::BonsaiMappingNotFound(changesetid))?;
 
         let parents = self
-            .changesets()
-            .get(&ctx, csid)
+            .commit_graph()
+            .changeset_parents(&ctx, csid)
             .await?
-            .ok_or(ErrorKind::BonsaiNotFound(csid))?
-            .parents
             .into_iter()
             .map(|parent| self.derive_hg_changeset(&ctx, parent));
 
@@ -377,7 +369,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         ctx: CoreContext,
     ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
     where
-        Self: ChangesetsRef
+        Self: CommitGraphRef
             + BonsaiHgMappingRef
             + RepoDerivedDataRef
             + BlobRepoHg
@@ -448,7 +440,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
 
 pub fn to_hg_bookmark_stream<'repo, BookmarkType>(
     repo: &(
-         impl ChangesetsRef
+         impl CommitGraphRef
          + BonsaiHgMappingRef
          + RepoDerivedDataRef
          + BlobRepoHg

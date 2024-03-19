@@ -14,7 +14,6 @@ path = "../cmds/statistics_collector.rs"
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
@@ -22,6 +21,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
