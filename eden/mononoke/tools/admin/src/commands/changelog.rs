@@ -14,10 +14,10 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
+use commit_graph::CommitGraph;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -64,7 +64,7 @@ pub struct Repo {
     changesets: dyn Changesets,
 
     #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
+    commit_graph: CommitGraph,
 }
 
 #[derive(Subcommand)]

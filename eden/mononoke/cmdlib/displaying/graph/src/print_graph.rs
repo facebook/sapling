@@ -18,9 +18,9 @@ use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherArc;
 use cmdlib_displaying::display_file_change;
+use commit_graph::ArcCommitGraph;
+use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use dag::render::Ancestor;
 use dag::render::GraphRowRenderer;
@@ -33,7 +33,7 @@ use mononoke_types::Generation;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 
-pub trait Repo = ChangesetFetcherArc
+pub trait Repo = CommitGraphArc
     + RepoBlobstoreArc
     + BonsaiHgMappingRef
     + BonsaiGitMappingRef
@@ -124,7 +124,7 @@ pub async fn graph_changesets<W>(
     ctx: &CoreContext,
     repo: &impl Repo,
     opts: PrintGraphOptions,
-    changeset_fetcher: ArcChangesetFetcher,
+    commit_graph: ArcCommitGraph,
     changesets: Vec<ChangesetId>,
     mut writer: Box<W>,
 ) -> Result<()>
@@ -138,13 +138,8 @@ where
 
     let mut to_visit: BinaryHeap<(Generation, ChangesetId)> =
         join_all(changesets.into_iter().map(|head| {
-            let changeset_fetcher = &changeset_fetcher;
-            async move {
-                Ok((
-                    changeset_fetcher.get_generation_number(ctx, head).await?,
-                    head,
-                ))
-            }
+            let commit_graph = &commit_graph;
+            async move { Ok((commit_graph.changeset_generation(ctx, head).await?, head)) }
         }))
         .await
         .into_iter()
@@ -155,7 +150,7 @@ where
         .build_box_drawing();
 
     while let Some((_, hash)) = to_visit.pop() {
-        let parents = changeset_fetcher.get_parents(ctx, hash).await?;
+        let parents = commit_graph.changeset_parents(ctx, hash).await?;
         let current_distance = *minimum_distance.get(&hash).unwrap();
 
         if current_distance > opts.limit {
@@ -191,9 +186,7 @@ where
                     minimum_distance.insert(parent_id, current_distance + 1);
                 }
             } else {
-                let parent_generation = changeset_fetcher
-                    .get_generation_number(ctx, parent_id)
-                    .await?;
+                let parent_generation = commit_graph.changeset_generation(ctx, parent_id).await?;
 
                 minimum_distance.insert(parent_id, current_distance + 1);
                 to_visit.push((parent_generation, parent_id));
@@ -215,10 +208,10 @@ pub async fn print_graph<W>(
 where
     W: Write + Send,
 {
-    let changeset_fetcher = repo.changeset_fetcher_arc();
+    let commit_graph = repo.commit_graph_arc();
 
     changesets.sort();
     changesets.dedup();
 
-    graph_changesets(ctx, repo, opts, changeset_fetcher, changesets, writer).await
+    graph_changesets(ctx, repo, opts, commit_graph, changesets, writer).await
 }

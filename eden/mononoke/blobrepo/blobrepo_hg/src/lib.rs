@@ -8,7 +8,6 @@
 mod bonsai_generation;
 mod create_changeset;
 pub mod repo_commit;
-pub use changeset_fetcher::ChangesetFetcher;
 
 pub use crate::bonsai_generation::create_bonsai_changeset_object;
 pub use crate::bonsai_generation::save_bonsai_changeset_object;

@@ -248,7 +248,6 @@ rust_library(
         "//common/rust/shed/futures_stats:futures_stats",
         "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:blobrepo_hg",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",

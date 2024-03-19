@@ -16,8 +16,8 @@ blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../../bonsai_hg_mapping" }
-changeset_fetcher = { version = "0.1.0", path = "../../../blobrepo/changeset_fetcher" }
 cmdlib_displaying = { version = "0.1.0", path = ".." }
+commit_graph = { version = "0.1.0", path = "../../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../../server/context" }
 dag = { version = "0.1.0", path = "../../../../scm/lib/dag" }
 dag-types = { version = "0.1.0", path = "../../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }

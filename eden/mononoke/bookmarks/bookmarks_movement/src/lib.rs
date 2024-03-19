@@ -14,7 +14,6 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use bookmarks_types::BookmarkKey;
-use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use itertools::Itertools;
@@ -70,7 +69,6 @@ pub trait Repo = AsBlobRepo
     + BonsaiGitMappingArc
     + BonsaiGlobalrevMappingArc
     + BookmarksRef
-    + ChangesetFetcherArc
     + ChangesetsRef
     + PhasesRef
     + PushrebaseMutationMappingRef

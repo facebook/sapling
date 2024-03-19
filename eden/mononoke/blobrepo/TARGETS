@@ -136,7 +136,6 @@ rust_library(
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//common/rust/shed/stats:stats",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",

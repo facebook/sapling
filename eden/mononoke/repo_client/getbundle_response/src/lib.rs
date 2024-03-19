@@ -18,7 +18,6 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
-use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraphArc;
@@ -435,8 +434,8 @@ async fn hg_to_bonsai_stream(
                     .ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node))?;
 
                 let gen_num = repo
-                    .changeset_fetcher()
-                    .get_generation_number(ctx, bcs_id)
+                    .commit_graph()
+                    .changeset_generation(ctx, bcs_id)
                     .await?;
                 Ok((bcs_id, gen_num))
             }

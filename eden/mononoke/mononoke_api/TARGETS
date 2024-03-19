@@ -64,7 +64,6 @@ rust_library(
         "//eden/mononoke/acl_regions:acl_regions",
         "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:blobrepo_hg",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:blobstore_factory",

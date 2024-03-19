@@ -6,14 +6,12 @@
  */
 
 use anyhow::Result;
-use changeset_fetcher::ChangesetFetcherArc;
 use clap::Args;
+use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;
 use context::CoreContext;
-use futures::compat::Stream01CompatExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use revset::AncestorsNodeStream;
 
 use super::Repo;
 
@@ -35,8 +33,10 @@ pub async fn list_ancestors(
 ) -> Result<()> {
     let start = parse_commit_id(ctx, repo, &list_ancestors_args.changeset_id).await?;
 
-    let mut ancestors = AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), start)
-        .compat()
+    let mut ancestors = repo
+        .commit_graph()
+        .ancestors_difference_stream(ctx, vec![start], vec![])
+        .await?
         .take(list_ancestors_args.limit);
 
     while let Some(cs_id) = ancestors.try_next().await? {

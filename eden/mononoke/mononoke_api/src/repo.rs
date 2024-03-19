@@ -53,8 +53,6 @@ use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
-use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
@@ -218,7 +216,6 @@ pub struct Repo {
         dyn BonsaiHgMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
-        dyn ChangesetFetcher,
         dyn Changesets,
         dyn Phases,
         dyn PushrebaseMutationMapping,
@@ -717,11 +714,7 @@ impl Repo {
             }
 
             let cs_id = cs_id?;
-            let parents = self
-                .blob_repo()
-                .changeset_fetcher()
-                .get_parents(ctx, cs_id)
-                .await?;
+            let parents = self.commit_graph().changeset_parents(ctx, cs_id).await?;
 
             if parents.contains(&ancestor) {
                 return Ok(Some(cs_id));
@@ -741,10 +734,7 @@ impl Repo {
         ctx: &CoreContext,
         cs_id: &ChangesetId,
     ) -> Result<Generation, Error> {
-        self.blob_repo()
-            .changeset_fetcher()
-            .get_generation_number(ctx, *cs_id)
-            .await
+        self.commit_graph().changeset_generation(ctx, *cs_id).await
     }
 }
 
