@@ -37,6 +37,7 @@ pub(crate) struct CommitInfo {
     pub extra_hex: BTreeMap<String, String>,
     pub git_extra_headers: Option<BTreeMap<String, String>>,
     pub committer_date: Option<DateTime<FixedOffset>>,
+    pub committer: Option<String>,
 }
 
 fn timestamp_to_date(timezone: i32, timestamp: i64) -> DateTime<FixedOffset> {
@@ -58,6 +59,7 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
             .collect();
         let message = commit.message.clone();
         let author = commit.author.clone();
+        let committer = commit.committer.clone();
         // The commit date is recorded as a timestamp plus timezone pair, where
         // the timezone is seconds east of UTC.
         let timestamp = commit.date;
@@ -107,6 +109,7 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
             extra_hex,
             git_extra_headers,
             committer_date,
+            committer,
         })
     }
 }
@@ -147,6 +150,9 @@ pub(crate) fn render_commit_summary(
         render_date(w, committer_date, "Committer Date")?;
     }
     write!(w, "Author: {}\n", commit.author)?;
+    if let Some(committer) = &commit.committer {
+        write!(w, "Committer: {}\n", committer)?;
+    }
     write!(
         w,
         "Summary: {}\n",
@@ -191,6 +197,9 @@ pub(crate) fn render_commit_info(
         render_date(w, committer_date, "Committer Date")?;
     }
     write!(w, "Author: {}\n", commit.author)?;
+    if let Some(committer) = &commit.committer {
+        write!(w, "Committer: {}\n", committer)?;
+    }
     write!(w, "Generation: {}\n", commit.generation)?;
     if !commit.extra.is_empty() {
         write!(w, "Extra:\n")?;

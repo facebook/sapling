@@ -362,6 +362,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             git_extra_headers,
             generation,
             committer_date,
+            committer,
         ) = try_join!(
             map_commit_identity(&self, identity_schemes),
             self.message(),
@@ -372,6 +373,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             self.git_extra_headers(),
             self.generation(),
             self.committer_date(),
+            self.committer(),
         )?;
         Ok(thrift::CommitInfo {
             ids,
@@ -389,6 +391,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             }),
             generation: generation.value() as i64,
             committer_date: committer_date.map(|date| date.timestamp()),
+            committer,
             ..Default::default()
         })
     }
