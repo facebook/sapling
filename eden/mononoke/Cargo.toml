@@ -55,7 +55,6 @@ bytes = { version = "1.1", features = ["serde"] }
 bytesize = "1.1"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-changeset_fetcher = { version = "0.1.0", path = "blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "changesets" }
 check_git_wc = { version = "0.1.0", path = "git/check_git_wc" }
 clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
@@ -63,6 +62,7 @@ clap-old = { package = "clap", version = "2.34.0" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "cmdlib" }
 cmdlib_logging = { version = "0.1.0", path = "cmdlib/log" }
+commit_graph = { version = "0.1.0", path = "repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -85,7 +85,6 @@ repo_blobstore = { version = "0.1.0", path = "blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "repo_attributes/repo_identity" }
 retry = { version = "0.1.0", path = "common/retry" }
-revset = { version = "0.1.0", path = "revset" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "segmented_changelog" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

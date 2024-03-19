@@ -24,15 +24,14 @@ use blobrepo_utils::BonsaiMFVerify;
 use blobrepo_utils::BonsaiMFVerifyResult;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use changeset_fetcher::ChangesetFetcherArc;
 use clap::Parser;
 use clap::Subcommand;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
@@ -49,7 +48,6 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
-use revset::AncestorsNodeStream;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -319,8 +317,9 @@ fn subcommmand_hg_manifest_verify(
             .await?
             .ok_or_else(|| format_err!("failed to fetch bonsai changeset"))?;
 
-        AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), csid)
-            .compat()
+        repo.commit_graph()
+            .ancestors_difference_stream(ctx, vec![csid], vec![])
+            .await?
             .take(count)
             .map(|res| async move {
                 match res {

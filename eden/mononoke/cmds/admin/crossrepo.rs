@@ -1549,13 +1549,11 @@ mod test {
     use ascii::AsciiString;
     use bookmarks::BookmarkKey;
     use cacheblob::InProcessLease;
-    use changeset_fetcher::ChangesetFetcherArc;
+    use commit_graph::CommitGraphRef;
     use cross_repo_sync::find_bookmark_diff;
     use fixtures::set_bookmark;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use futures::compat::Stream01CompatExt;
-    use futures::TryStreamExt;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::hashmap;
     use maplit::hashset;
@@ -1565,7 +1563,6 @@ mod test {
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_types::RepositoryId;
-    use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use synced_commit_mapping::SyncedCommitSourceRepo;
@@ -1701,11 +1698,10 @@ mod test {
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
-        let changesets: Vec<_> =
-            AncestorsNodeStream::new(ctx.clone(), &small_repo.changeset_fetcher_arc(), master_val)
-                .compat()
-                .try_collect()
-                .await?;
+        let changesets = small_repo
+            .commit_graph()
+            .ancestors_difference(&ctx, vec![master_val], vec![])
+            .await?;
 
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
 
