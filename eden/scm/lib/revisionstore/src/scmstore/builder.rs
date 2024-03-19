@@ -43,7 +43,6 @@ pub struct FileStoreBuilder<'a> {
     config: &'a dyn Config,
     local_path: Option<PathBuf>,
     suffix: Option<PathBuf>,
-    store_aux_data: bool,
     override_edenapi: Option<bool>,
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -61,7 +60,6 @@ impl<'a> FileStoreBuilder<'a> {
             config,
             local_path: None,
             suffix: None,
-            store_aux_data: config.get_or("store", "aux", || true).unwrap_or(true),
             override_edenapi: None,
             indexedlog_local: None,
             indexedlog_cache: None,
@@ -79,11 +77,6 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
         self.suffix = Some(suffix.as_ref().to_path_buf());
-        self
-    }
-
-    pub fn store_aux_data(mut self) -> Self {
-        self.store_aux_data = true;
         self
     }
 
@@ -324,13 +317,8 @@ impl<'a> FileStoreBuilder<'a> {
         };
 
         tracing::trace!(target: "revisionstore::filestore", "processing aux data");
-        let (aux_local, aux_cache) = if self.store_aux_data {
-            let aux_local = self.build_aux_local()?;
-            let aux_cache = self.build_aux_cache()?;
-            (aux_local, aux_cache)
-        } else {
-            (None, None)
-        };
+        let aux_local = self.build_aux_local()?;
+        let aux_cache = self.build_aux_cache()?;
 
         tracing::trace!(target: "revisionstore::filestore", "processing lfs remote");
         let lfs_remote = if self.use_lfs()? {

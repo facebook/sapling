@@ -463,11 +463,6 @@ impl Repo {
             file_builder = file_builder.override_edenapi(false);
         }
 
-        tracing::trace!(target: "repo::file_store", "configuring aux data");
-        if self.config.get_or_default("scmstore", "auxindexedlog")? {
-            file_builder = file_builder.store_aux_data();
-        }
-
         tracing::trace!(target: "repo::file_store", "building file store");
         let file_store = file_builder.build().context("when building FileStore")?;
 

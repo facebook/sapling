@@ -1090,10 +1090,6 @@ fn make_filescmstore<'a>(
     let mut builder = ContentStoreBuilder::new(&config);
     let mut filestore_builder = FileStoreBuilder::new(&config);
 
-    if config.get_or_default::<bool>("scmstore", "auxindexedlog")? {
-        filestore_builder = filestore_builder.store_aux_data();
-    }
-
     builder = if let Some(path) = path {
         filestore_builder = filestore_builder.local_path(path);
         builder.local_path(path)
