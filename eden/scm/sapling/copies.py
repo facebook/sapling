@@ -35,7 +35,28 @@ def _findlimit(repo, a, b):
 
 
 def _chain(src, dst, a, b):
-    """chain two sets of copies a->b"""
+    """chain two sets of copies a->b
+
+    Assuming we have a commit graph like below::
+
+        dst src
+         | /
+         |/
+        base
+
+    then:
+
+    * `a` is a dict from `base` to `src`
+    * `b` is a dict from `dst` to `base`
+
+    This function returns a dict from `dst` to `src`.
+
+    For example:
+    * a is {"a": "x"}  # src rename a -> x
+    * b is {"y": "a"}  # dst rename a -> y
+
+    then the result will be {"y": "x"}
+    """
     t = a.copy()
     for k, v in pycompat.iteritems(b):
         if v in t:
