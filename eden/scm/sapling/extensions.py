@@ -341,6 +341,9 @@ def load(ui, name, path):
         shortname = name
     if shortname in _ignoreextensions:
         return None
+
+    _loaded_extensions.add(shortname)
+
     if shortname in _extensions:
         return _extensions[shortname]
     _extensions[shortname] = None
@@ -382,11 +385,31 @@ def _getattr(obj, name, default):
             raise
 
 
+_extension_being_loaded = None
+
+
+class _current_extension:
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        global _extension_being_loaded
+        self.prev_value = _extension_being_loaded
+        _extension_being_loaded = self.name
+        return None
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        global _extension_being_loaded
+        _extension_being_loaded = self.prev_value
+        return None
+
+
 def _runuisetup(name, ui):
     uisetup = getattr(_extensions[name], "uisetup", None)
     if uisetup:
         try:
-            uisetup(ui)
+            with _current_extension(name):
+                uisetup(ui)
         except Exception as inst:
             ui.traceback(force=True)
             msg = util.forcebytestr(inst)
@@ -395,6 +418,7 @@ def _runuisetup(name, ui):
                 notice=_("warning"),
             )
             return False
+
     return True
 
 
@@ -403,7 +427,8 @@ def _runextsetup(name, ui):
     if extsetup:
         try:
             try:
-                extsetup(ui)
+                with _current_extension(name):
+                    extsetup(ui)
             except TypeError:
                 # Try to use getfullargspec (Python 3) first, and fall
                 # back to getargspec only if it doesn't exist so as to
@@ -412,7 +437,8 @@ def _runextsetup(name, ui):
                     extsetup
                 ).args:
                     raise
-                extsetup()  # old extsetup with no ui argument
+                with _current_extension(name):
+                    extsetup()  # old extsetup with no ui argument
         except Exception as inst:
             ui.traceback(force=True)
             msg = util.forcebytestr(inst)
@@ -422,6 +448,17 @@ def _runextsetup(name, ui):
             )
             return False
     return True
+
+
+# Track which extensions are enabled for the current command invocation. This is for
+# debugruntest to disable extensions that were previously loaded in-process but are not
+# currently active.
+_loaded_extensions = set()
+
+
+def initialload(ui):
+    _loaded_extensions.clear()
+    loadall(ui)
 
 
 def loadall(ui, include_list=None):
@@ -647,6 +684,8 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
             key = alias
             break
 
+    wrapper = maybe_wrap_wrapper(wrapper)
+
     origfn = entry[0]
     wrap = functools.partial(util.checksignature(wrapper), util.checksignature(origfn))
     _updatewrapper(wrap, origfn, wrapper)
@@ -668,6 +707,8 @@ def wrapfilecache(cls, propname, wrapper):
     """
     propname = propname
     assert callable(wrapper)
+
+    wrapper = maybe_wrap_wrapper(wrapper)
     for currcls in cls.__mro__:
         if propname in currcls.__dict__:
             origfn = currcls.__dict__[propname].func
@@ -681,6 +722,22 @@ def wrapfilecache(cls, propname, wrapper):
 
     if currcls is object:
         raise AttributeError(r"type '%s' has no property '%s'" % (cls, propname))
+
+
+# For debugruntest, add an outer layer of wrapping so we can "disable" the inner wrapper
+# if the extension that installed the wrapper is not currently enabled.
+def maybe_wrap_wrapper(wrapper):
+    if not util.istest() or not _extension_being_loaded:
+        return wrapper
+
+    extname = _extension_being_loaded
+
+    def wrapperwrapper(origfn, *args, **kwargs):
+        if extname and not extname in _loaded_extensions:
+            return origfn(*args, **kwargs)
+        return wrapper(origfn, *args, **kwargs)
+
+    return wrapperwrapper
 
 
 class wrappedfunction:
@@ -733,6 +790,8 @@ def wrapfunction(container, funcname, wrapper):
     subclass trick.
     """
     assert callable(wrapper)
+
+    wrapper = maybe_wrap_wrapper(wrapper)
 
     origfn = getattr(container, funcname)
     assert callable(origfn)

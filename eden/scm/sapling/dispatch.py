@@ -908,7 +908,7 @@ def _dispatch(req):
         progress.init()
         # Configure extensions in phases: uisetup, extsetup, cmdtable, and
         # reposetup
-        extensions.loadall(lui)
+        extensions.initialload(lui)
         # Propagate any changes to lui.__class__ by extensions
         ui.__class__ = lui.__class__
 
