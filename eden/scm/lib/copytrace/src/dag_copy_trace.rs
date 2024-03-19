@@ -88,7 +88,7 @@ impl DagCopyTrace {
         Ok(rename_commit)
     }
 
-    async fn find_renames_in_direction(
+    async fn find_rename_in_direction(
         &self,
         commit: dag::Vertex,
         path: &RepoPath,
@@ -204,7 +204,7 @@ impl CopyTrace for DagCopyTrace {
                 return Ok(TraceResult::Renamed(curr_path));
             }
             let (next_path, next_commit) = self
-                .find_renames_in_direction(
+                .find_rename_in_direction(
                     rename_commit.clone(),
                     curr_path.as_repo_path(),
                     SearchDirection::Backward,
@@ -244,7 +244,7 @@ impl CopyTrace for DagCopyTrace {
                 return Ok(TraceResult::Renamed(curr_path));
             }
             let (next_path, next_commit) = self
-                .find_renames_in_direction(
+                .find_rename_in_direction(
                     rename_commit.clone(),
                     curr_path.as_repo_path(),
                     SearchDirection::Forward,
