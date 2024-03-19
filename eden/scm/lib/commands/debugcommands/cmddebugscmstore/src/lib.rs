@@ -15,7 +15,7 @@ use clidispatch::abort_if;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-use cmdutil::Config;
+use cmdutil::ConfigSet;
 use cmdutil::Error;
 use cmdutil::Result;
 use cmdutil::IO;
@@ -25,8 +25,6 @@ use manifest::Manifest;
 use repo::repo::Repo;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FileAttributes;
-use revisionstore::scmstore::FileStoreBuilder;
-use revisionstore::scmstore::TreeStoreBuilder;
 use types::fetch_mode::FetchMode;
 use types::Key;
 use types::RepoPathBuf;
@@ -103,31 +101,27 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
             .collect::<Result<_>>()?
     };
 
-    let config = repo.config();
+    // We downloaded trees above when handling args. Let's make a
+    // fresh repo to recreate the cache state before we were invoked.
+    let fresh_repo = Repo::load_with_config(repo.path(), ConfigSet::wrap(repo.config().clone()))?;
 
     match mode {
         FetchType::File => fetch_files(
             &ctx.core.io,
-            config,
+            &fresh_repo,
             keys,
             ctx.opts.local,
             ctx.opts.aux_only,
         )?,
-        FetchType::Tree => fetch_trees(&ctx.core.io, config, keys, ctx.opts.local)?,
+        FetchType::Tree => fetch_trees(&ctx.core.io, &fresh_repo, keys, ctx.opts.local)?,
     }
 
     Ok(0)
 }
 
-fn fetch_files(
-    io: &IO,
-    config: &dyn Config,
-    keys: Vec<Key>,
-    local: bool,
-    aux_only: bool,
-) -> Result<()> {
-    let file_builder = FileStoreBuilder::new(&config);
-    let store = file_builder.build()?;
+fn fetch_files(io: &IO, repo: &Repo, keys: Vec<Key>, local: bool, aux_only: bool) -> Result<()> {
+    repo.file_store()?;
+    let store = repo.file_scm_store().unwrap();
 
     let mut stdout = io.output();
 
@@ -186,10 +180,9 @@ fn fetch_files(
     Ok(())
 }
 
-fn fetch_trees(io: &IO, config: &dyn Config, keys: Vec<Key>, local: bool) -> Result<()> {
-    let mut tree_builder = TreeStoreBuilder::new(config);
-    tree_builder = tree_builder.suffix("manifests");
-    let store = tree_builder.build()?;
+fn fetch_trees(io: &IO, repo: &Repo, keys: Vec<Key>, local: bool) -> Result<()> {
+    repo.tree_store()?;
+    let store = repo.tree_scm_store().unwrap();
 
     let mut stdout = io.output();
 
