@@ -101,6 +101,17 @@ pub async fn test_storage_store_and_fetch(
     assert!(!graph.exists(&ctx, name_cs_id("nonexistent")).await?);
     assert_eq!(
         graph
+            .known_changesets(
+                &ctx,
+                vec![name_cs_id("A"), name_cs_id("B"), name_cs_id("nonexistent")]
+            )
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        hashset! {name_cs_id("A"), name_cs_id("B")}
+    );
+    assert_eq!(
+        graph
             .changeset_generation(&ctx, name_cs_id("G"))
             .await?
             .value(),

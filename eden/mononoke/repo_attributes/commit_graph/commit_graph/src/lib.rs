@@ -131,6 +131,19 @@ impl CommitGraph {
         Ok(edges.node.generation)
     }
 
+    /// Return only the changesets that are found in the commit graph.
+    pub async fn known_changesets(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        let edges = self
+            .storage
+            .maybe_fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .await?;
+        Ok(edges.into_keys().collect())
+    }
+
     /// Returns a frontier for the ancestors of heads
     /// that satisfy a given property.
     ///
