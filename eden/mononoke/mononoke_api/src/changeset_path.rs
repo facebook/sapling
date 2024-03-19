@@ -14,9 +14,9 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
-use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
@@ -703,7 +703,7 @@ impl ChangesetPathHistoryContext {
             self.repo().mutable_renames().clone(),
             TraversalOrder::new_gen_num_order(
                 self.changeset.ctx().clone(),
-                repo.changeset_fetcher_arc(),
+                repo.commit_graph_arc(),
             ),
         )
         .await

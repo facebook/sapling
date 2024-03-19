@@ -19,8 +19,8 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use blobstore::LoadableError;
-use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
+use commit_graph::ArcCommitGraph;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::PathState;
@@ -103,7 +103,7 @@ pub enum TraversalOrder {
     SimpleGenNumOrder {
         next: Option<NextChangeset>,
         ctx: CoreContext,
-        changeset_fetcher: ArcChangesetFetcher,
+        commit_graph: ArcCommitGraph,
     },
     GenNumOrder {
         front_queue: VecDeque<NextChangeset>,
@@ -111,16 +111,16 @@ pub enum TraversalOrder {
         // and won't work correctly in all cases.
         heap: BinaryHeap<(Generation, Reverse<ParentOrder>, CsAndPath)>,
         ctx: CoreContext,
-        changeset_fetcher: ArcChangesetFetcher,
+        commit_graph: ArcCommitGraph,
     },
 }
 
 impl TraversalOrder {
-    pub fn new_gen_num_order(ctx: CoreContext, changeset_fetcher: ArcChangesetFetcher) -> Self {
+    pub fn new_gen_num_order(ctx: CoreContext, commit_graph: ArcCommitGraph) -> Self {
         Self::SimpleGenNumOrder {
             next: None,
             ctx,
-            changeset_fetcher,
+            commit_graph,
         }
     }
 
@@ -151,7 +151,7 @@ impl TraversalOrder {
             SimpleGenNumOrder {
                 next,
                 ctx,
-                changeset_fetcher,
+                commit_graph,
             } => {
                 if cs_and_paths.len() <= 1 {
                     if cs_and_paths.len() == 1 {
@@ -163,12 +163,12 @@ impl TraversalOrder {
                     // convert it to full-blown gen num ordering
                     let mut heap = BinaryHeap::new();
                     let cs_and_paths =
-                        Self::convert_cs_ids(ctx, changeset_fetcher, cs_and_paths).await?;
+                        Self::convert_cs_ids(ctx, commit_graph, cs_and_paths).await?;
                     heap.extend(cs_and_paths);
                     Some(TraversalOrder::GenNumOrder {
                         heap,
                         ctx: ctx.clone(),
-                        changeset_fetcher: changeset_fetcher.clone(),
+                        commit_graph: commit_graph.clone(),
                         front_queue: VecDeque::new(),
                     })
                 }
@@ -176,11 +176,10 @@ impl TraversalOrder {
             GenNumOrder {
                 heap,
                 ctx,
-                changeset_fetcher,
+                commit_graph,
                 ..
             } => {
-                let cs_and_paths =
-                    Self::convert_cs_ids(ctx, changeset_fetcher, cs_and_paths).await?;
+                let cs_and_paths = Self::convert_cs_ids(ctx, commit_graph, cs_and_paths).await?;
                 heap.extend(cs_and_paths);
                 None
             }
@@ -223,12 +222,12 @@ impl TraversalOrder {
 
     async fn convert_cs_ids(
         ctx: &CoreContext,
-        changeset_fetcher: &ArcChangesetFetcher,
+        commit_graph: &ArcCommitGraph,
         cs_ids: &[CsAndPath],
     ) -> Result<Vec<(Generation, Reverse<ParentOrder>, CsAndPath)>, Error> {
         let cs_ids = try_join_all(cs_ids.iter().enumerate().map(
             |(num, (cs_id, path))| async move {
-                let gen_num = changeset_fetcher.get_generation_number(ctx, *cs_id).await?;
+                let gen_num = commit_graph.changeset_generation(ctx, *cs_id).await?;
                 Result::<_, Error>::Ok((gen_num, Reverse(ParentOrder(num)), (*cs_id, path.clone())))
             },
         ))
@@ -747,8 +746,8 @@ pub(crate) async fn _find_possible_mutable_ancestors(
                     // We also want to grab generation here, because we're going to sort
                     // by generation and consider "most recent" candidate first
                     let cs_gen = repo
-                        .changeset_fetcher()
-                        .get_generation_number(ctx, mutated_at)
+                        .commit_graph()
+                        .changeset_generation(ctx, mutated_at)
                         .await?;
                     Ok::<_, Error>((cs_gen, mutated_at))
                 }
@@ -949,10 +948,10 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
 ) -> Result<(CsAndPath, Option<(CsAndPath, Option<Vec<CsAndPath>>)>), FastlogError> {
     let (immutable_ancestor_cs_id, immutable_ancestor_path) = immutable_ancestor;
     let mutable_renames = repo.mutable_renames();
-    let changeset_fetcher = repo.changeset_fetcher();
+    let commit_graph = repo.commit_graph();
     let (current_gen, immutable_ancestor_gen) = try_join(
-        changeset_fetcher.get_generation_number(ctx, *cs_id),
-        changeset_fetcher.get_generation_number(ctx, *immutable_ancestor_cs_id),
+        commit_graph.changeset_generation(ctx, *cs_id),
+        commit_graph.changeset_generation(ctx, *immutable_ancestor_cs_id),
     )
     .await?;
     // For each possible mutable rename destination we have to check:
@@ -1049,8 +1048,8 @@ async fn find_where_file_was_deleted(
     path: &MPath,
 ) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
     let parents = repo
-        .changeset_fetcher()
-        .get_parents(ctx, commit_no_more_history)
+        .commit_graph()
+        .changeset_parents(ctx, commit_no_more_history)
         .await?;
 
     let resolved_path_states = try_join_all(
@@ -1194,18 +1193,14 @@ async fn prefetch_fastlog_by_changeset(
 
 #[cfg(test)]
 mod test {
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
-
     use blobrepo::AsBlobRepo;
     use blobrepo::BlobRepo;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
-    use changeset_fetcher::ChangesetFetcherArc;
     use changesets::Changesets;
     use changesets::ChangesetsRef;
     use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphArc;
     use context::CoreContext;
     use fastlog::RootFastlog;
     use fbinit::FacebookInit;
@@ -1236,7 +1231,6 @@ mod test {
             RepoDerivedData,
             dyn Bookmarks,
             dyn BonsaiHgMapping,
-            dyn ChangesetFetcher,
             dyn Changesets,
             CommitGraph,
         )]
@@ -1541,7 +1535,7 @@ mod test {
             HistoryAcrossDeletions::Track,
             FollowMutableRenames::No,
             mutable_renames,
-            TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.commit_graph_arc()),
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -2289,7 +2283,7 @@ mod test {
             HistoryAcrossDeletions::Track,
             FollowMutableRenames::No,
             mutable_renames.clone(),
-            TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.commit_graph_arc()),
         )
         .await?;
 
@@ -2343,12 +2337,6 @@ mod test {
         expected.push(bcs_id);
         expected.reverse();
 
-        let get_gen_number_count = Arc::new(AtomicUsize::new(0));
-        let cs_fetcher = CountingChangesetFetcher::new(
-            repo.changeset_fetcher_arc(),
-            get_gen_number_count.clone(),
-        );
-
         let history_stream = list_file_history(
             ctx,
             &repo,
@@ -2358,50 +2346,14 @@ mod test {
             HistoryAcrossDeletions::Track,
             FollowMutableRenames::No,
             mutable_renames.clone(),
-            TraversalOrder::new_gen_num_order(ctx.clone(), Arc::new(cs_fetcher)),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.commit_graph_arc()),
         )
         .await?;
 
         let actual = history_stream.try_collect::<Vec<_>>().await?;
         assert_eq!(actual, expected);
 
-        assert_eq!(get_gen_number_count.load(Ordering::Relaxed), 0);
-
         Ok(())
-    }
-
-    struct CountingChangesetFetcher {
-        cs_fetcher: ArcChangesetFetcher,
-        pub get_gen_number_count: Arc<AtomicUsize>,
-    }
-
-    impl CountingChangesetFetcher {
-        fn new(cs_fetcher: ArcChangesetFetcher, get_gen_number_count: Arc<AtomicUsize>) -> Self {
-            Self {
-                cs_fetcher,
-                get_gen_number_count,
-            }
-        }
-    }
-
-    #[async_trait]
-    impl ChangesetFetcher for CountingChangesetFetcher {
-        async fn get_generation_number(
-            &self,
-            ctx: &CoreContext,
-            cs_id: ChangesetId,
-        ) -> Result<Generation, Error> {
-            self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
-            self.cs_fetcher.get_generation_number(ctx, cs_id).await
-        }
-
-        async fn get_parents(
-            &self,
-            ctx: &CoreContext,
-            cs_id: ChangesetId,
-        ) -> Result<Vec<ChangesetId>, Error> {
-            self.cs_fetcher.get_parents(ctx, cs_id).await
-        }
     }
 
     type TestCommitGraph = HashMap<ChangesetId, Vec<ChangesetId>>;
@@ -2515,7 +2467,7 @@ mod test {
             history_across_deletions,
             follow_mutable_file_history,
             mutable_renames,
-            TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.commit_graph_arc()),
         )
         .await?
         .try_collect::<Vec<_>>()
@@ -2524,8 +2476,8 @@ mod test {
         let mut prev_gen_num = None;
         for cs_id in &history {
             let new_gen_num = repo
-                .changeset_fetcher_arc()
-                .get_generation_number(ctx, *cs_id)
+                .commit_graph_arc()
+                .changeset_generation(ctx, *cs_id)
                 .await?;
             if let Some(prev_gen_num) = prev_gen_num {
                 assert!(prev_gen_num >= new_gen_num);
