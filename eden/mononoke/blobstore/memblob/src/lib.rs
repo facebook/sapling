@@ -15,6 +15,7 @@ use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreEnumerationData;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreKeyParam;
@@ -27,7 +28,6 @@ use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
-use mononoke_types::BlobstoreBytes;
 
 // Implements hardlink-style links
 #[derive(Default, Debug)]
