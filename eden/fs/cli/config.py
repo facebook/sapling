@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -907,7 +908,9 @@ Do you want to run `eden mount %s` instead?"""
         shutil._rmtree_unsafe = old_rmtree_unsafe
         shutil._rmtree_safe_fd = old_rmtree_safe_fd
 
-    def cleanup_mount(self, path: Path, preserve_mount_point: bool = False) -> None:
+    def cleanup_mount(
+        self, path: Path, preserve_mount_point: bool = False, debug: bool = False
+    ) -> None:
         if sys.platform != "win32":
             # Delete the mount point
             # It should normally contain the readme file that we put there, but nothing
@@ -940,6 +943,25 @@ Do you want to run `eden mount %s` instead?"""
             time.sleep(0.5)
 
             errors = []
+
+            # On Windows, we cannot remove read-only files, so we need to make
+            # them writable before removing them. Let's give it a go if we are still here.
+            def chmod_readonly_files(func, path, ex):
+                try:
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+                except Exception as e:
+                    # We don't want to make things more confusing to the other by reporting errors on chmod
+                    if debug:
+                        print(f"  Failed to chmod {path}: {e}")
+
+            shutil.rmtree(
+                windows_prefix + os.fsencode(path), onerror=chmod_readonly_files
+            )
+
+            # See if this time (after chown) rmtree succeeded.
+            if not path.exists():
+                return
 
             def collect_errors(_f, path, ex):
                 errors.append((path, ex[1]))

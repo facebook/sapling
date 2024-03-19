@@ -1709,7 +1709,9 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
             else:
                 try:
                     print(f"Cleaning up mount {mount}")
-                    instance.cleanup_mount(Path(mount), args.preserve_mount_point)
+                    instance.cleanup_mount(
+                        Path(mount), args.preserve_mount_point, args.debug
+                    )
                 except Exception as ex:
                     print_stderr(f"error cleaning up mount {mount}: {ex}")
                     exit_code = 1
