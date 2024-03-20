@@ -71,6 +71,9 @@ function mockRepoAdded(): NonNullable<typeof activeRepo> {
     mockChangeHeadCommit(commit: CommitInfo) {
       savedOnChangeHeadCommit(commit);
     },
+    initialConnectionContext: {
+      cwd: '/path/to/repo',
+    },
   } as unknown as typeof activeRepo;
   activeReposCallback?.([nullthrows(activeRepo)]);
   return nullthrows(activeRepo);
@@ -111,7 +114,7 @@ describe('DiffContentProvider', () => {
 
     expect(content).toEqual(FILE1_CONTENT_HEAD);
     expect(repo.cat).toHaveBeenCalledTimes(1);
-    expect(repo.cat).toHaveBeenCalledWith(ctx, '/path/to/repo/file1.txt', '.');
+    expect(repo.cat).toHaveBeenCalledWith({cwd: '/path/to/repo'}, '/path/to/repo/file1.txt', '.');
     provider.dispose();
   });
 

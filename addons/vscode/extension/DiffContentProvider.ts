@@ -155,9 +155,12 @@ export class SaplingDiffContentProvider implements vscode.TextDocumentContentPro
 
     const revset = revsetForComparison(data.comparison);
 
+    // Ensure we use a ctx appropriate for this repo. `this.ctx` may be an unrelated cwd.
+    const ctx = repo?.initialConnectionContext;
+
     // fall back to fetching from the repo
     const fetchedFileContent = await repo
-      .cat(this.ctx, fsPath, revset)
+      .cat(ctx, fsPath, revset)
       // An error during `cat` usually means the right side of the comparison was added since the left,
       // so `cat` claims `no such file` at that revset.
       // TODO: it would be more accurate to check that the error is due to this, and return null if not.
