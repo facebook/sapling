@@ -41,6 +41,7 @@ use mononoke_api::RepoContext;
 use mononoke_api::SessionContainer;
 use mononoke_api::TreeContext;
 use mononoke_api::TreeId;
+use mononoke_configs::MononokeConfigs;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use once_cell::sync::Lazy;
@@ -102,6 +103,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) identity: Identity,
     pub(crate) scribe: Scribe,
+    pub(crate) configs: Arc<MononokeConfigs>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
 }
 
@@ -116,6 +118,7 @@ impl SourceControlServiceImpl {
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
         identity_proxy_checker: ConnectionSecurityChecker,
+        configs: Arc<MononokeConfigs>,
         common_config: &CommonConfig,
     ) -> Self {
         scuba_builder.add_common_server_data();
@@ -131,6 +134,7 @@ impl SourceControlServiceImpl {
                 common_config.internal_identity.id_data.as_str(),
             ),
             scribe,
+            configs,
             identity_proxy_checker: Arc::new(identity_proxy_checker),
         }
     }
@@ -180,6 +184,11 @@ impl SourceControlServiceImpl {
             if let Some(path) = specifier.scuba_path() {
                 scuba.add("path", path);
             }
+        }
+
+        if let Some(config_info) = self.configs.as_ref().config_info().as_ref() {
+            scuba.add("config_store_version", config_info.content_hash.clone());
+            scuba.add("config_store_last_updated_at", config_info.last_updated_at);
         }
 
         let sampling_rate = core::num::NonZeroU64::new(if POPULAR_METHODS.contains(name) {

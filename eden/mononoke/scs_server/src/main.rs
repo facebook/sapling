@@ -240,6 +240,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         scuba_builder,
         args.scribe_logging_args.get_scribe(fb)?,
         security_checker,
+        app.configs(),
         &app.repo_configs().common,
     );
     let service = {
