@@ -78,7 +78,7 @@
   * Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
-  * All repos initialized. It took: 0 seconds (glob)
+  * All repos initialized. It took: * seconds (glob)
   * Bookmark: "heads/branch1": ChangesetId(Blake2(*)) (created) (glob)
   * Bookmark: "heads/branch2": ChangesetId(Blake2(*)) (created) (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)

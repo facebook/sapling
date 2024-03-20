@@ -102,7 +102,7 @@
   * Ref: "refs/tags/tag_version": Some(ChangesetId(Blake2(*))) (glob)
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
-  * All repos initialized. It took: 0 seconds (glob)
+  * All repos initialized. It took: * seconds (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
   * Bookmark: "heads/dev_branch": ChangesetId(Blake2(*)) (created) (glob)
   * Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
