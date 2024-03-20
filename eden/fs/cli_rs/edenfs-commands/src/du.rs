@@ -98,7 +98,7 @@ pub struct DiskUsageCmd {
         conflicts_with = "deep-clean",
         conflicts_with = "clean",
         conflicts_with = "json",
-        conflicts_with = "clean_orphaned"
+        conflicts_with = "clean-orphaned"
     )]
     purgeable: bool,
 
