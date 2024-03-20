@@ -1,0 +1,54 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("mercurial_release")
+
+cpp_library(
+    name = "git_delta_c",
+    srcs = glob([
+        "original_sources/**/*.c",
+    ]),
+    headers = glob([
+        "original_sources/**/*.h",
+    ]),
+    compiler_flags = [
+        "-DNO_OPENSSL=1",
+        "-std=c99",
+    ],
+    exported_external_deps = [
+        ("zlib", None, "z"),
+    ],
+)
+
+cpp_library(
+    name = "bridge",
+    srcs = ["ffi/bridge.c"],
+    compiler_flags = [
+        "-DNO_OPENSSL=1",
+        "-std=c99",
+    ],
+    deps = [
+        ":git_delta_c",
+    ],
+    exported_external_deps = [
+        ("zlib", None, "z"),
+    ],
+)
+
+rust_library(
+    name = "git_delta",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "build-dependencies": ["fbsource//third-party/rust:cc"],
+                "dependencies": ["fbsource//third-party/rust:libz-sys"],
+            },
+        },
+    },
+    cpp_deps = [
+        ":bridge",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+    ],
+)

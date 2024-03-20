@@ -428,6 +428,7 @@ members = [
   "streaming_clone",
   "tests/fixtures",
   "tests/utils",
+  "third_party/git_delta",
   "time_window_counter",
   "tools/admin",
   "tools/example",
