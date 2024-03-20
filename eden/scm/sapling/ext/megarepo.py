@@ -67,8 +67,8 @@ def _megareponamespace(_repo) -> namespace:
     )
 
 
-@autopullpredicate("megarepo", priority=100)
-def _xrepopull(repo, name) -> deferredpullattempt:
+@autopullpredicate("megarepo", priority=100, rewritepullrev=True)
+def _xrepopull(repo, name, rewritepullrev=False) -> Optional[pullattempt]:
     """Autopull a commit from another repo.
 
     First the xrepo commit is translated to the coresponding commit of
@@ -86,7 +86,13 @@ def _xrepopull(repo, name) -> deferredpullattempt:
             return None
         return autopull.pullattempt(headnodes=[localnode])
 
-    return deferredpullattempt(generate=generateattempt)
+    if rewritepullrev:
+        if repo.ui.configbool("megarepo", "rewrite-pull-rev", True):
+            return generateattempt()
+        else:
+            return None
+    else:
+        return deferredpullattempt(generate=generateattempt)
 
 
 _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
