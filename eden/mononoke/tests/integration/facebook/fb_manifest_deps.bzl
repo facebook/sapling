@@ -99,7 +99,7 @@ def _generate_manifest_impl(ctx):
     out = ctx.actions.declare_output(ctx.attrs.filename)
     ctx.actions.run(
         [ctx.attrs.generator[native.RunInfo], out.as_output()] + list(ctx.attrs.env.keys()),
-        env = {k: native.cmd_args(v).ignore_artifacts() for (k, v) in ctx.attrs.env.items()},
+        env = {k: native.cmd_args(v, ignore_artifacts = True) for (k, v) in ctx.attrs.env.items()},
         category = "manifest",
         identifier = ctx.attrs.filename,
     )
