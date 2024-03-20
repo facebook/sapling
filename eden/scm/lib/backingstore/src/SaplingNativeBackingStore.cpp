@@ -78,7 +78,7 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
 }
 
 void SaplingNativeBackingStore::getTreeBatch(
-    NodeIdRange requests,
+    SaplingRequestRange requests,
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
         resolve) {
@@ -94,9 +94,10 @@ void SaplingNativeBackingStore::getTreeBatch(
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
-  for (auto& node : requests) {
+  for (auto& request : requests) {
     raw_requests.push_back(Request{
-        node.data(),
+        request.node.data(),
+        request.cause,
     });
   }
 
@@ -132,7 +133,7 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
 }
 
 void SaplingNativeBackingStore::getBlobBatch(
-    NodeIdRange requests,
+    SaplingRequestRange requests,
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
         resolve) {
@@ -147,9 +148,10 @@ void SaplingNativeBackingStore::getBlobBatch(
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
-  for (auto& node : requests) {
+  for (auto& request : requests) {
     raw_requests.push_back(Request{
-        node.data(),
+        request.node.data(),
+        request.cause,
     });
   }
 
@@ -181,7 +183,7 @@ SaplingNativeBackingStore::getBlobMetadata(NodeId node, bool local) {
 }
 
 void SaplingNativeBackingStore::getBlobMetadataBatch(
-    NodeIdRange requests,
+    SaplingRequestRange requests,
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
         resolve) {
@@ -196,9 +198,10 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
-  for (auto& node : requests) {
+  for (auto& request : requests) {
     raw_requests.push_back(Request{
-        node.data(),
+        request.node.data(),
+        request.cause,
     });
   }
 

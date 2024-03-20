@@ -455,7 +455,8 @@ class HgQueuedBackingStore final : public BackingStore {
       HgImportObject object) const;
 
   template <typename T>
-  std::pair<ImportRequestsMap, std::vector<sapling::NodeId>> prepareRequests(
+  std::pair<ImportRequestsMap, std::vector<sapling::SaplingRequest>>
+  prepareRequests(
       const ImportRequestsList& importRequests,
       const std::string& requestType);
 

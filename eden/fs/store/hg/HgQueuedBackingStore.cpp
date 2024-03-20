@@ -474,7 +474,7 @@ void HgQueuedBackingStore::getBlobBatch(
           XLOGF(
               DBG6,
               "Failed to import node={} from EdenAPI (batch {}/{}): {}",
-              folly::hexlify(requests[index]),
+              folly::hexlify(requests[index].node),
               index,
               requests.size(),
               content.exception().what().toStdString());
@@ -482,7 +482,7 @@ void HgQueuedBackingStore::getBlobBatch(
           XLOGF(
               DBG6,
               "Imported node={} from EdenAPI (batch: {}/{})",
-              folly::hexlify(requests[index]),
+              folly::hexlify(requests[index].node),
               index,
               requests.size());
         }
@@ -499,8 +499,8 @@ void HgQueuedBackingStore::getBlobBatch(
           return;
         }
 
-        XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(requests[index]));
-        const auto& nodeId = requests[index];
+        const auto& nodeId = requests[index].node;
+        XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(nodeId));
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         auto result = content.hasException()
             ? folly::Try<BlobPtr>{content.exception()}
@@ -615,7 +615,7 @@ void HgQueuedBackingStore::getTreeBatch(
           XLOGF(
               DBG6,
               "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
-              folly::hexlify(requests[index]),
+              folly::hexlify(requests[index].node),
               index,
               requests.size(),
               content.exception().what().toStdString());
@@ -623,7 +623,7 @@ void HgQueuedBackingStore::getTreeBatch(
           XLOGF(
               DBG6,
               "Imported node={} from EdenAPI (batch tree: {}/{})",
-              folly::hexlify(requests[index]),
+              folly::hexlify(requests[index].node),
               index,
               requests.size());
         }
@@ -640,8 +640,8 @@ void HgQueuedBackingStore::getTreeBatch(
           return;
         }
 
-        XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(requests[index]));
-        const auto& nodeId = requests[index];
+        const auto& nodeId = requests[index].node;
+        XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(nodeId));
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         for (auto& importRequest : importRequestList) {
           auto* treeRequest =
@@ -667,7 +667,9 @@ void HgQueuedBackingStore::getTreeBatch(
 }
 
 template <typename T>
-std::pair<HgQueuedBackingStore::ImportRequestsMap, std::vector<sapling::NodeId>>
+std::pair<
+    HgQueuedBackingStore::ImportRequestsMap,
+    std::vector<sapling::SaplingRequest>>
 HgQueuedBackingStore::prepareRequests(
     const ImportRequestsList& importRequests,
     const std::string& requestType) {
@@ -726,13 +728,27 @@ HgQueuedBackingStore::prepareRequests(
   }
 
   // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
-  std::vector<sapling::NodeId> requests;
-  requests.reserve(importRequestsMap.size());
-  std::transform(
-      importRequestsMap.begin(),
-      importRequestsMap.end(),
-      std::back_inserter(requests),
-      [](auto& pair) { return pair.first; });
+  // With the current implementation, we can't efficiently deduplicate the
+  // requests only based on nodeId since multiple requests for the same nodeId
+  // can have different FetchCauses, which might trigger different behaviors in
+  // the backingstore.
+  std::vector<sapling::SaplingRequest> requests;
+  for (const auto& importRequestsIdPair : importRequestsMap) {
+    // Deduplicate the requests for a given nodeId based on the FetchCause.
+    std::set<ObjectFetchContext::Cause> seenCausesForId;
+    const ImportRequestsList& importRequestsForId =
+        importRequestsIdPair.second.first;
+    for (const auto& request : importRequestsForId) {
+      if (request &&
+          (seenCausesForId.find(request->getCause()) ==
+           seenCausesForId.end())) {
+        requests.push_back(sapling::SaplingRequest{
+            importRequestsIdPair.first, request->getCause()});
+        // Mark this cause as seen
+        seenCausesForId.insert(request->getCause());
+      }
+    }
+  }
 
   return std::make_pair(std::move(importRequestsMap), std::move(requests));
 }
@@ -796,7 +812,7 @@ void HgQueuedBackingStore::getBlobMetadataBatch(
           XLOGF(
               DBG6,
               "Failed to import metadata node={} from EdenAPI (batch {}/{}): {}",
-              folly::hexlify(requests[index]),
+              folly::hexlify(requests[index].node),
               index,
               requests.size(),
               auxTry.exception().what().toStdString());
@@ -804,7 +820,7 @@ void HgQueuedBackingStore::getBlobMetadataBatch(
           XLOGF(
               DBG6,
               "Imported metadata node={} from EdenAPI (batch: {}/{})",
-              folly::hexlify(requests[index]),
+              folly::hexlify(requests[index].node),
               index,
               requests.size());
         }
@@ -821,9 +837,8 @@ void HgQueuedBackingStore::getBlobMetadataBatch(
           return;
         }
 
-        XLOGF(
-            DBG9, "Imported BlobMetadata={}", folly::hexlify(requests[index]));
-        const auto& nodeId = requests[index];
+        const auto& nodeId = requests[index].node;
+        XLOGF(DBG9, "Imported BlobMetadata={}", folly::hexlify(nodeId));
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         folly::Try<BlobMetadataPtr> result;
         if (auxTry.hasException()) {

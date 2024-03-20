@@ -61,7 +61,15 @@ class ObjectFetchContext : public RefCounted {
   /**
    * Why did EdenFS fetch these objects?
    */
-  enum Cause : uint8_t { Unknown, Fs, Thrift, Prefetch };
+  enum Cause : uint8_t {
+    Unknown,
+    /** The request originated from FUSE/NFS/PrjFS */
+    Fs,
+    /** The request originated from a Thrift endpoint */
+    Thrift,
+    /** The request originated from a Thrift prefetch endpoint */
+    Prefetch
+  };
 
   ObjectFetchContext() = default;
 
@@ -129,5 +137,8 @@ class ObjectFetchContext : public RefCounted {
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
 };
+
+// For fbcode/eden/scm/lib/backingstore/src/ffi.rs
+using FetchCause = ObjectFetchContext::Cause;
 
 } // namespace facebook::eden

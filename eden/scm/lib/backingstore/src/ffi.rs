@@ -21,6 +21,27 @@ use crate::backingstore::BackingStore;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
+    // see https://cxx.rs/shared.html#extern-enums
+    #[namespace = "facebook::eden"]
+    #[repr(u8)]
+    pub enum FetchCause {
+        Unknown,
+        // The request originated from FUSE/NFS/PrjFS
+        Fs,
+        // The request originated from a Thrift endpoint
+        Thrift,
+        // The request originated from a Thrift prefetch endpoint
+        Prefetch,
+    }
+
+    #[namespace = "facebook::eden"]
+    unsafe extern "C++" {
+        include!("eden/fs/store/ObjectFetchContext.h");
+
+        // The above enum
+        type FetchCause;
+    }
+
     pub struct SaplingNativeBackingStoreOptions {
         allow_retries: bool,
     }
@@ -61,6 +82,9 @@ pub(crate) mod ffi {
 
     pub struct Request {
         node: *const u8,
+        cause: FetchCause,
+        // TODO: mode: FetchMode
+        // TODO: cri: ClientRequestInfo
     }
 
     pub struct Blob {
@@ -215,6 +239,7 @@ pub fn sapling_backingstore_get_tree_batch(
     fetch_mode: ffi::FetchMode,
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
+    // TODO: pass FetchCause along with they keys to the backingstore
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
     store.get_tree_batch(keys, FetchMode::from(fetch_mode), |idx, result| {

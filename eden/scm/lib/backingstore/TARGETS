@@ -10,6 +10,7 @@ cpp_library(
     headers = glob(["include/**/*.h"]),
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
+        "//eden/fs/store:context",
         "//folly:function",
         "//folly:range",
         "//folly:try",
@@ -28,6 +29,7 @@ cpp_library(
         "fbsource//third-party/rust:cxx-core",
         ":backingstore_bridge@header",
         ":sapling_native_backingstore-include",
+        "//eden/fs/store:context",
         "//folly:range",
         "//folly:string",
         "//folly/io:iobuf",
@@ -38,7 +40,10 @@ cpp_library(
 rust_cxx_bridge(
     name = "backingstore_bridge",
     src = "src/ffi.rs",
-    deps = [":sapling_native_backingstore-include"],
+    deps = [
+        ":sapling_native_backingstore-include",
+        "//eden/fs/store:context",
+    ],
 )
 
 rust_library(
