@@ -141,6 +141,8 @@ impl ExpectedChangeset {
 /// large repo and all the commit syncer with a config that expands submodules.
 pub(crate) async fn build_submodule_sync_test_data(
     fb: FacebookInit,
+    // Add more small repo submodule dependencies for the test case
+    extra_submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<SubmoduleSyncTestData> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (small_repo, large_repo, mapping, live_commit_sync_config, test_sync_config_source) =
@@ -180,6 +182,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         mapping.clone(),
         live_commit_sync_config.clone(),
         test_sync_config_source,
+        extra_submodule_deps,
     )?;
 
     rebase_root_on_master(ctx.clone(), &commit_syncer, *repo_a_root).await?;
@@ -256,17 +259,37 @@ pub(crate) async fn build_repo_b(
       # bookmark: B_B master
   "#;
 
-    let repo = build_mononoke_git_mirror_repo(fb).await?;
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
     let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, DAG).await?;
 
     Ok((repo, cs_map))
 }
 
-async fn build_mononoke_git_mirror_repo(fb: FacebookInit) -> Result<TestRepo> {
+/// Builds repo C, which will be used as a submodule dependency of repo A.
+pub(crate) async fn build_repo_c(
+    fb: FacebookInit,
+) -> Result<(TestRepo, BTreeMap<String, ChangesetId>)> {
+    let ctx = CoreContext::test_mock(fb);
+
+    const DAG: &str = r#"
+    C_A-C_B
+
+    # message: C_A "[C] first commit in submodule C"
+    # message: C_B "[C] second commit in submodule C"
+    # bookmark: C_B master
+"#;
+
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_c").await?;
+    let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, DAG).await?;
+
+    Ok((repo, cs_map))
+}
+
+async fn build_mononoke_git_mirror_repo(fb: FacebookInit, repo_name: &str) -> Result<TestRepo> {
     let available_configs = derived_data_available_config();
 
     let repo = TestRepoFactory::new(fb)?
-        .with_name("repo_b")
+        .with_name(repo_name)
         .with_config_override(|cfg| {
             cfg.derived_data_config.available_configs = available_configs;
 
@@ -289,6 +312,7 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     test_sync_config_source: TestLiveCommitSyncConfigSource,
+    extra_submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
@@ -298,6 +322,7 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
         small_repo_id,
         repo_b.repo_identity().id(),
         prefix,
+        extra_submodule_deps.clone(),
     )?;
 
     let common_config = CommonCommitSyncConfig {
@@ -310,9 +335,12 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
         },
         large_repo_id: large_repo.repo_identity().id(),
     };
-    let submodule_deps = SubmoduleDeps::ForSync(
-        hashmap! {NonRootMPath::new("submodules/repo_b")? => repo_b.clone()},
-    );
+
+    let mut all_submodule_deps = extra_submodule_deps.into_iter().collect::<HashMap<_, _>>();
+
+    all_submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b.clone());
+    let submodule_deps = SubmoduleDeps::ForSync(all_submodule_deps);
+
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps, &common_config)?;
 
     test_sync_config_source.add_config(commit_sync_config);
@@ -335,10 +363,18 @@ pub(crate) fn create_base_commit_sync_config(
     repo_a_id: RepositoryId,
     repo_b_id: RepositoryId,
     prefix: &str,
+    extra_submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<CommitSyncConfig, Error> {
+    let mut submodule_deps = extra_submodule_deps
+        .into_iter()
+        .map(|(path, repo)| (path, repo.repo_identity().id()))
+        .collect::<HashMap<_, _>>();
+
+    submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b_id);
+
     let small_repo_submodule_config = SmallRepoGitSubmoduleConfig {
         git_submodules_action: GitSubmodulesChangesAction::Expand,
-        submodule_dependencies: hashmap! {NonRootMPath::new("submodules/repo_b")? => repo_b_id},
+        submodule_dependencies: submodule_deps,
         ..Default::default()
     };
     let small_repo_config = SmallRepoCommitSyncConfig {
@@ -364,6 +400,7 @@ pub(crate) fn create_base_commit_sync_config(
 
 /// Derived data types that should be enabled in all test repos
 pub(crate) fn derived_data_available_config() -> HashMap<String, DerivedDataTypesConfig> {
+    // TODO(T181473986): enable and derive all types in the large repo
     let derived_data_types_config = DerivedDataTypesConfig {
         types: hashset! {
             ChangesetInfo::VARIANT,

@@ -47,7 +47,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
         large_repo,
         commit_syncer,
         ..
-    } = build_submodule_sync_test_data(fb).await?;
+    } = build_submodule_sync_test_data(fb, vec![]).await?;
 
     // Check mappings from base commits
     check_mapping(
@@ -166,7 +166,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
         large_repo,
         commit_syncer,
         ..
-    } = build_submodule_sync_test_data(fb).await?;
+    } = build_submodule_sync_test_data(fb, vec![]).await?;
 
     const MESSAGE: &str = "Delete repo_b submodule in repo_a";
     let cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![*repo_a_cs_map.get("A_C").unwrap()])
@@ -234,7 +234,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
         large_repo,
         commit_syncer,
         ..
-    } = build_submodule_sync_test_data(fb).await?;
+    } = build_submodule_sync_test_data(fb, vec![]).await?;
 
     const MESSAGE: &str = "Implicitly delete repo_b submodule in repo_a";
 
@@ -292,7 +292,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         large_repo,
         commit_syncer,
         ..
-    } = build_submodule_sync_test_data(fb).await?;
+    } = build_submodule_sync_test_data(fb, vec![]).await?;
 
     // Create a directory with 2 files in repo B
     let add_directory_in_repo_b =
@@ -371,8 +371,106 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
     Ok(())
 }
 
-// TODO(T179534458): test implicitly deleting file by adding submodule in same
-// path
+/// Test adding a submodule dependency in the source repo in the path of an existing
+/// file. This should generate a deletion of the file in the large repo, along
+/// with the expansion of the submodule.
+#[fbinit::test]
+async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    // Create repo C, to be added as a submodule in repo A.
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        repo_b_info: (_repo_b, _repo_b_cs_map),
+        large_repo,
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        // Add it as a submdule in the path of an existing file.
+        vec![(NonRootMPath::new("A_A").unwrap(), repo_c.clone())],
+    )
+    .await?;
+
+    let repo_c_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+
+    let repo_c_git_commit_hash = *repo_c_mapped_git_commit.oid();
+
+    const MESSAGE: &str = "Add submodule on path of existing file";
+    let cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            "A_A",
+            repo_c_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    println!("Created commit in source repo");
+
+    // TODO(T174902563): fix bug where it looks for submodule file in previous
+    // revision assuming it was already a submodule file.
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    assert!(
+        sync_result.is_err_and(|e| {
+            e.to_string().contains(
+                "Failed to fetch content of submodule A_A file containing the submodule's git commit hash"
+            )
+        })
+    );
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+
+    let expected_cs_id =
+        ChangesetId::from_str("ea0c6e80fe940e97cc43fd5867ac4e72b51f028b43ccbf23bbb3ac28d26d5b75")
+            .unwrap();
+
+    // TODO(T174902563): fix bug where it looks for submodule file in previous
+    // revision assuming it was already a submodule file.
+    // check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, None).await;
+
+    compare_expected_changesets_from_basic_setup(
+        large_repo_changesets,
+        // TODO(T174902563): fix bug where it looks for submodule file in previous
+        // revision assuming it was already a submodule file.
+        vec![],
+        // vec![ExpectedChangeset::new_by_file_change(
+        //     MESSAGE,
+        //     vec![
+        //         "repo_a/.x-repo-submodule-A_A",
+        //         "repo_a/A_A/C_A",
+        //         "repo_a/A_A/C_B",
+        //     ],
+        //     vec![
+        //         // TODO(T174902563): file should be explicitly deleted
+        //         // "repo_a/A_A",
+        //     ],
+        // )],
+    )?;
+
+    // TODO(T174902563): generate deletion for file being replaced by submodule
+    let res = check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        expected_cs_id,
+        NonRootMPath::new("repo_a/.x-repo-submodule-A_A")?,
+        &repo_c_git_commit_hash,
+    )
+    .await;
+
+    assert!(res.is_err());
+    // TODO(T174902563): generate deletion for file being replaced by submodule
+    // assert!(res.is_err_and(|e| e.to_string().contains("failed to derive fsnodes batch")));
+
+    Ok(())
+}
 
 // TODO(T179534458): test implicitly deleting directory by adding submodule in same
 // path
