@@ -238,9 +238,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .iter()
                 .filter(|ty| match ty {
                     // If we discard submodules, we can't derive the git data types since they are inconsistent
-                    DerivableType::GitCommit
-                    | DerivableType::GitDeltaManifest
-                    | DerivableType::GitTree => false,
+                    DerivableType::GitCommits
+                    | DerivableType::GitDeltaManifests
+                    | DerivableType::GitTrees => false,
                     _ => true,
                 })
                 .cloned()

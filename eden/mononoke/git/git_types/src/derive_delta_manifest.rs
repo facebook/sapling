@@ -493,7 +493,7 @@ async fn derive_git_delta_manifest(
 
 #[async_trait]
 impl BonsaiDerivable for RootGitDeltaManifestId {
-    const VARIANT: DerivableType = DerivableType::GitDeltaManifest;
+    const VARIANT: DerivableType = DerivableType::GitDeltaManifests;
 
     type Dependencies = dependencies![TreeHandle, MappedGitCommitId, RootUnodeManifestId];
     type PredecessorDependencies = dependencies![];

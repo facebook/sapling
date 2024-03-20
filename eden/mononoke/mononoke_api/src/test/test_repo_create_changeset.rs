@@ -198,7 +198,7 @@ async fn validate_unnecessary_derived_data_is_not_derived(
         .active_config()
         .types
     {
-        if *ty == DerivableType::GitTree {
+        if *ty == DerivableType::GitTrees {
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;
         }

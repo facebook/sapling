@@ -1100,17 +1100,17 @@ pub async fn check_derived(
                 .map_ok(|res| res.is_some())
                 .await
         }
-        DerivableType::GitTree => {
+        DerivableType::GitTrees => {
             ddm.fetch_derived::<TreeHandle>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }
-        DerivableType::GitCommit => {
+        DerivableType::GitCommits => {
             ddm.fetch_derived::<MappedGitCommitId>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }
-        DerivableType::GitDeltaManifest => {
+        DerivableType::GitDeltaManifests => {
             ddm.fetch_derived::<RootGitDeltaManifestId>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
@@ -1120,12 +1120,12 @@ pub async fn check_derived(
                 .map_ok(|res| res.is_some())
                 .await
         }
-        DerivableType::TestManifest => {
+        DerivableType::TestManifests => {
             ddm.fetch_derived::<RootTestManifestDirectory>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }
-        DerivableType::TestShardedManifest => {
+        DerivableType::TestShardedManifests => {
             ddm.fetch_derived::<RootTestShardedManifestDirectory>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await

@@ -46,7 +46,7 @@ fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> 
 
 #[async_trait]
 impl BonsaiDerivable for TreeHandle {
-    const VARIANT: DerivableType = DerivableType::GitTree;
+    const VARIANT: DerivableType = DerivableType::GitTrees;
 
     type Dependencies = dependencies![];
     type PredecessorDependencies = dependencies![];

@@ -128,15 +128,15 @@ impl BulkDerivation for DerivedDataManager {
                             self.derive_exactly_batch::<ChangesetInfo>(ctx, csids, rederivation)
                                 .await
                         }
-                        DerivableType::GitTree => {
+                        DerivableType::GitTrees => {
                             self.derive_exactly_batch::<TreeHandle>(ctx, csids, rederivation)
                                 .await
                         }
-                        DerivableType::GitCommit => {
+                        DerivableType::GitCommits => {
                             self.derive_exactly_batch::<MappedGitCommitId>(ctx, csids, rederivation)
                                 .await
                         }
-                        DerivableType::GitDeltaManifest => {
+                        DerivableType::GitDeltaManifests => {
                             self.derive_exactly_batch::<RootGitDeltaManifestId>(
                                 ctx,
                                 csids,
@@ -152,7 +152,7 @@ impl BulkDerivation for DerivedDataManager {
                             )
                             .await
                         }
-                        DerivableType::TestManifest => {
+                        DerivableType::TestManifests => {
                             self.derive_exactly_batch::<RootTestManifestDirectory>(
                                 ctx,
                                 csids,
@@ -160,7 +160,7 @@ impl BulkDerivation for DerivedDataManager {
                             )
                             .await
                         }
-                        DerivableType::TestShardedManifest => {
+                        DerivableType::TestShardedManifests => {
                             self.derive_exactly_batch::<RootTestShardedManifestDirectory>(
                                 ctx,
                                 csids,

@@ -255,7 +255,7 @@ where
             .types(&config.types)
             .into_iter()
             .filter(|dt| match dt {
-                DerivableType::GitCommit | DerivableType::GitDeltaManifest => false,
+                DerivableType::GitCommits | DerivableType::GitDeltaManifests => false,
                 _ => true,
             })
             .collect::<Vec<_>>();
@@ -282,7 +282,7 @@ where
             .types(&config.types)
             .into_iter()
             .filter(|dt| match dt {
-                DerivableType::GitDeltaManifest => true,
+                DerivableType::GitDeltaManifests => true,
                 _ => false,
             })
             .collect::<Vec<_>>();

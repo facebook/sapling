@@ -61,7 +61,7 @@ fn get_name_and_email<'a>(input: &'a str) -> Result<(&'a str, &'a str)> {
 
 #[async_trait]
 impl BonsaiDerivable for MappedGitCommitId {
-    const VARIANT: DerivableType = DerivableType::GitCommit;
+    const VARIANT: DerivableType = DerivableType::GitCommits;
 
     type Dependencies = dependencies![TreeHandle];
     type PredecessorDependencies = dependencies![];

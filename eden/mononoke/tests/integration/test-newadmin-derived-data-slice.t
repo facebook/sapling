@@ -38,12 +38,12 @@ setup configuration
   L=e344c3733985ad4321993aba435251774ed2107b2f2f250a1acd32db374ec5c3
 
 slice all ancestors of all bookmarks
-  $ mononoke_newadmin derived-data -R repo slice -T testmanifest --slice-size 3 --all-bookmarks
+  $ mononoke_newadmin derived-data -R repo slice -T test_manifests --slice-size 3 --all-bookmarks
   [1, 4): a461eb57dda3f53be7fc7056af3637eb235280191fe002c4f6675201508011ff e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   [4, 7): 417bd860e802f264f4b5cbdcf0cf14baf9c8ae6d6a1beedafbf02d44c7e4063d e344c3733985ad4321993aba435251774ed2107b2f2f250a1acd32db374ec5c3
 
 write output to a json file
-  $ mononoke_newadmin derived-data -R repo slice -T testmanifest --slice-size 3 --all-bookmarks -o slices.json
+  $ mononoke_newadmin derived-data -R repo slice -T test_manifests --slice-size 3 --all-bookmarks -o slices.json
   $ cat slices.json | jq .
   [
     {
@@ -63,11 +63,11 @@ write output to a json file
   ]
 
 slice ancestors of only the first bookmark
-  $ mononoke_newadmin derived-data -R repo slice -T testmanifest --slice-size 3 -B first_bookmark
+  $ mononoke_newadmin derived-data -R repo slice -T test_manifests --slice-size 3 -B first_bookmark
   [1, 4): e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   [4, 7): 417bd860e802f264f4b5cbdcf0cf14baf9c8ae6d6a1beedafbf02d44c7e4063d
 
 slice ancestors of the first bookmark after deriving C and its ancestors
-  $ mononoke_newadmin derived-data -R repo derive -T testmanifest -i e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo slice -T testmanifest --slice-size 3 -B first_bookmark
+  $ mononoke_newadmin derived-data -R repo derive -T test_manifests -i e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  $ mononoke_newadmin derived-data -R repo slice -T test_manifests --slice-size 3 -B first_bookmark
   [4, 7): 417bd860e802f264f4b5cbdcf0cf14baf9c8ae6d6a1beedafbf02d44c7e4063d

@@ -65,7 +65,7 @@ impl From<RootTestShardedManifestDirectory> for BlobstoreBytes {
 
 #[async_trait]
 impl BonsaiDerivable for RootTestShardedManifestDirectory {
-    const VARIANT: DerivableType = DerivableType::TestShardedManifest;
+    const VARIANT: DerivableType = DerivableType::TestShardedManifests;
 
     type Dependencies = dependencies![];
     type PredecessorDependencies = dependencies![RootTestManifestDirectory];
