@@ -106,3 +106,8 @@
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
+
+List the delta histogram of the pack file - this way we'll see
+if we change whether we delta or not.
+  $ git verify-pack -sv ./.git/objects/pack/*.pack
+  non delta: 18 objects

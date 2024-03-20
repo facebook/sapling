@@ -150,3 +150,14 @@
 # before since the bundle creator would use deltas where appropriate which would skip base packfile items
   $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item" | wc -l
   26
+
+List the delta histogram of the pack file - this way we'll see
+if we change whether we delta or not.
+  $ git verify-pack -sv ./.git/objects/pack/*.pack
+  non delta: 26 objects
+  chain length = 1: 4 objects
+  chain length = 2: 3 objects
+  chain length = 3: 2 objects
+  chain length = 4: 2 objects
+  chain length = 5: 1 object
+  chain length = 6: 1 object
