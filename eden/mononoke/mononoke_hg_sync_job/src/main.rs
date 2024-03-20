@@ -405,6 +405,14 @@ impl HgSyncProcess {
                     ),
             )
             .arg(
+                Arg::with_name("skip-bookmark")
+                    .long("skip-bookmark")
+                    .takes_value(true)
+                    .required(false)
+                    .multiple(true)
+                    .help("skip entries about particular bookmark from bookmark update log")
+            )
+            .arg(
                 Arg::with_name("combine-bundles")
                     .long("combine-bundles")
                     .takes_value(true)
@@ -1373,6 +1381,9 @@ async fn run<'a>(
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let max_commits_per_combined_bundle =
                 args::get_u64_opt(&sub_m, "max-commits-per-combined-bundle").unwrap_or(100);
+            let skip_bookmarks = sub_m
+                .values_of("skip-bookmark")
+                .map_or(Vec::new(), |v| v.collect());
             let loop_forever = sub_m.is_present("loop-forever");
             let replayed_sync_counter = LatestReplayedSyncCounter::new(
                 &repo,
@@ -1437,6 +1448,12 @@ async fn run<'a>(
                 unlock_via,
             )
             .try_filter(|entries| future::ready(!entries.is_empty()))
+            .map_ok(|entries| {
+                entries
+                    .into_iter()
+                    .filter(|entry| !skip_bookmarks.contains(&entry.bookmark_name.as_str()))
+                    .collect::<Vec<_>>()
+            })
             .fuse()
             .try_next_step(|entries| async move {
                 bundle_preparer
