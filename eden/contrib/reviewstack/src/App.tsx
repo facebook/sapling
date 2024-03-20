@@ -23,6 +23,8 @@ import {BaseStyles, Box, Text, useTheme} from '@primer/react';
 import React, {useEffect} from 'react';
 import {useRecoilValue, useRecoilValueLoadable} from 'recoil';
 
+import './Yoke.css';
+
 type Page =
   | {type: 'home'}
   | {

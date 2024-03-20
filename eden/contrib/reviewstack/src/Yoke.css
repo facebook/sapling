@@ -1,0 +1,13 @@
+:root {
+  --tile: 64px;
+  --xs: 16px;
+  --xxs: 4px;
+  --margin: 24px;
+  --padding: 24px;
+  --border: 1px solid #d0d7de;
+  --border-radius: 4px;
+}
+
+body {
+  background-color: red;
+}
