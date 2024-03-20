@@ -413,6 +413,15 @@ impl HgSyncProcess {
                     .help("skip entries about particular bookmark from bookmark update log")
             )
             .arg(
+                Arg::with_name("replace-changeset")
+                    .long("replace-changeset")
+                    .takes_value(true)
+                    .required(false)
+                    .multiple(true)
+                    .help("replace particular changeset mentioned in bookmark update log with a new commit hash, \
+                           the arg should be formatted like bonsai_csid:replacement_bonsai_csid")
+            )
+            .arg(
                 Arg::with_name("combine-bundles")
                     .long("combine-bundles")
                     .takes_value(true)
@@ -1384,6 +1393,18 @@ async fn run<'a>(
             let skip_bookmarks = sub_m
                 .values_of("skip-bookmark")
                 .map_or(Vec::new(), |v| v.collect());
+            let replace_changesets: HashMap<Option<ChangesetId>, Option<ChangesetId>> = sub_m
+                .values_of("replace-changeset")
+                .map_or(HashMap::new(), |v| {
+                    v.map(|cs_pair| {
+                        let mut split = cs_pair.split(':');
+                        (
+                            Some(split.next().unwrap().parse().unwrap()),
+                            Some(split.next().unwrap().parse().unwrap()),
+                        )
+                    })
+                    .collect()
+                });
             let loop_forever = sub_m.is_present("loop-forever");
             let replayed_sync_counter = LatestReplayedSyncCounter::new(
                 &repo,
@@ -1452,6 +1473,21 @@ async fn run<'a>(
                 entries
                     .into_iter()
                     .filter(|entry| !skip_bookmarks.contains(&entry.bookmark_name.as_str()))
+                    .map(|entry| {
+                        let from_changeset_id = replace_changesets
+                            .get(&entry.from_changeset_id)
+                            .cloned()
+                            .unwrap_or(entry.from_changeset_id);
+                        let to_changeset_id = replace_changesets
+                            .get(&entry.to_changeset_id)
+                            .cloned()
+                            .unwrap_or(entry.to_changeset_id);
+                        BookmarkUpdateLogEntry {
+                            from_changeset_id,
+                            to_changeset_id,
+                            ..entry
+                        }
+                    })
                     .collect::<Vec<_>>()
             })
             .fuse()
