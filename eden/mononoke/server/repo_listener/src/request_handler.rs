@@ -30,6 +30,7 @@ use hgproto::HgProtoHandler;
 use maplit::hashmap;
 use maplit::hashset;
 use mononoke_api::Mononoke;
+use mononoke_configs::MononokeConfigs;
 use qps::Qps;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
@@ -65,6 +66,7 @@ pub async fn request_handler(
     fb: FacebookInit,
     reponame: String,
     mononoke: Arc<Mononoke>,
+    configs: Arc<MononokeConfigs>,
     _security_checker: &ConnectionSecurityChecker,
     stdio: Stdio,
     rate_limiter: Option<RateLimitEnvironment>,
@@ -108,6 +110,10 @@ pub async fn request_handler(
 
     scuba = scuba.with_seq("seq");
     scuba.add("repo", reponame);
+    if let Some(config_info) = configs.config_info().as_ref() {
+        scuba.add("config_store_version", config_info.content_hash.clone());
+        scuba.add("config_store_last_updated_at", config_info.last_updated_at);
+    }
     scuba.add_metadata(&metadata);
     scuba.sample_for_identities(metadata.identities());
 

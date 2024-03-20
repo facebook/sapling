@@ -49,6 +49,7 @@ rust_library(
         "//eden/mononoke/hgproto:hgproto",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_configs:mononoke_configs",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/quiet_stream:quiet_stream",

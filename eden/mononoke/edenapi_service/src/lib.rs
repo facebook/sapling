@@ -24,6 +24,7 @@ use clientinfo::ClientEntryPoint;
 use fbinit::FacebookInit;
 use gotham::router::Router;
 use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
 use gotham_ext::middleware::MetadataMiddleware;
@@ -35,6 +36,7 @@ use gotham_ext::middleware::TlsSessionDataMiddleware;
 use http::HeaderValue;
 use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
+use mononoke_configs::MononokeConfigs;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -57,6 +59,7 @@ pub fn build(
     test_friendly_loging: bool,
     tls_session_data_log_path: Option<&Path>,
     rate_limiter: Option<RateLimitEnvironment>,
+    configs: Arc<MononokeConfigs>,
     common_config: &CommonConfig,
     readonly: bool,
 ) -> Result<EdenApi, Error> {
@@ -76,6 +79,7 @@ pub fn build(
 
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log_path)?)
+        .add(ConfigInfoMiddleware::new(configs))
         .add(MetadataMiddleware::new(
             fb,
             logger.clone(),

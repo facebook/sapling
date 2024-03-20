@@ -371,6 +371,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             repo_listener::create_repo_listeners(
                 fb,
+                app.configs(),
                 common,
                 mononoke.clone(),
                 root_log,

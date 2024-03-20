@@ -29,6 +29,7 @@ use futures::channel::oneshot;
 use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
 use mononoke_app::fb303::ReadyFlagService;
+use mononoke_configs::MononokeConfigs;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
 use rate_limiting::RateLimitEnvironment;
@@ -44,6 +45,7 @@ const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/ratel
 
 pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
+    configs: Arc<MononokeConfigs>,
     common_config: CommonConfig,
     mononoke: Arc<Mononoke>,
     root_log: Logger,
@@ -86,6 +88,7 @@ pub async fn create_repo_listeners<'a>(
             false,
             None,
             rate_limiter.clone(),
+            configs.clone(),
             &common_config,
             readonly,
         )
@@ -94,6 +97,7 @@ pub async fn create_repo_listeners<'a>(
 
     connection_acceptor(
         fb,
+        configs,
         common_config,
         sockname,
         service,

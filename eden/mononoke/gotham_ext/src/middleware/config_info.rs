@@ -46,7 +46,7 @@ impl ConfigInfoMiddleware {
 impl Middleware for ConfigInfoMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let config = self.config.inner.lock().expect("poisoned lock");
-        if let Some(config_info) = config.config_info().as_ref().clone() {
+        if let Some(config_info) = config.config_info().as_ref() {
             state.put(ConfigInfo {
                 version: config_info.content_hash.clone(),
                 last_updated_at: config_info.last_updated_at,

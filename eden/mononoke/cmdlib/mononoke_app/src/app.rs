@@ -333,6 +333,10 @@ impl MononokeApp {
         &self.env.config_store
     }
 
+    pub fn configs(&self) -> Arc<MononokeConfigs> {
+        self.configs.clone()
+    }
+
     /// The repo configs for this app.
     pub fn repo_configs(&self) -> Arc<RepoConfigs> {
         self.configs.repo_configs()

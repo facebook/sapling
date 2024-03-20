@@ -45,6 +45,7 @@ use metaconfig_types::CommonConfig;
 use metadata::Metadata;
 use mononoke_api::Mononoke;
 use mononoke_app::fb303::ReadyFlagService;
+use mononoke_configs::MononokeConfigs;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
@@ -110,6 +111,7 @@ pub async fn wait_for_connections_closed(logger: &Logger) {
 
 pub async fn connection_acceptor(
     fb: FacebookInit,
+    configs: Arc<MononokeConfigs>,
     common_config: CommonConfig,
     sockname: String,
     service: ReadyFlagService,
@@ -175,6 +177,7 @@ pub async fn connection_acceptor(
         config_store: config_store.clone(),
         qps,
         wireproto_scuba,
+        configs,
         common_config,
         readonly,
     });
@@ -215,6 +218,7 @@ pub struct Acceptor {
     pub config_store: ConfigStore,
     pub qps: Option<Arc<Qps>>,
     pub wireproto_scuba: MononokeScubaSampleBuilder,
+    pub configs: Arc<MononokeConfigs>,
     pub common_config: CommonConfig,
     pub readonly: bool,
 }
@@ -354,6 +358,7 @@ where
         conn.pending.acceptor.fb,
         reponame,
         Arc::clone(&conn.pending.acceptor.mononoke),
+        conn.pending.acceptor.configs.clone(),
         &conn.pending.acceptor.security_checker,
         stdio,
         conn.pending.acceptor.rate_limiter.clone(),
