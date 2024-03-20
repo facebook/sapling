@@ -62,6 +62,7 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
         "//eden/mononoke/server/context:context",
+        "//eden/mononoke/third_party/git_delta:git_delta",
         "//thrift/lib/rust:fbthrift",
     ],
 )

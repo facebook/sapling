@@ -197,7 +197,6 @@ pub async fn fetch_git_object_bytes(
 
 /// Free function for fetching stored git objects. Applies to all git
 /// objects.
-#[allow(dead_code)]
 pub async fn fetch_git_object(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
@@ -306,7 +305,6 @@ pub struct StoredInstructionsMetadata {
 /// the written delta instructions stored as chunks in the blobstore. This method can partially fail
 /// and store a subset of the chunks. However, it is perfectly safe to retry until all the chunks are stored
 /// successfully
-#[allow(dead_code)]
 pub async fn store_delta_instructions<B>(
     ctx: &CoreContext,
     blobstore: &B,
@@ -322,6 +320,31 @@ where
         .write(&mut raw_instruction_bytes)
         .await
         .context("Error in converting DeltaInstructions to raw bytes")?;
+    store_raw_delta(
+        ctx,
+        blobstore,
+        raw_instruction_bytes,
+        chunk_prefix,
+        chunk_size,
+    )
+    .await
+}
+
+/// Store raw git delta in blobstore by chunking the incoming byte stream and returning the metadata
+/// of the written delta instructions stored as chunks in the blobstore. This method can partially
+/// fail and store a subset of the chunks. However, it is perfectly safe to retry until all the
+/// chunks are stored successfully
+pub async fn store_raw_delta<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    delta: Vec<u8>,
+    chunk_prefix: DeltaInstructionChunkIdPrefix,
+    chunk_size: Option<u64>,
+) -> anyhow::Result<StoredInstructionsMetadata>
+where
+    B: Blobstore + Clone,
+{
+    let raw_instruction_bytes = delta;
     let uncompressed_bytes = raw_instruction_bytes.len() as u64;
     // Zlib encode the instructions before writing to the store
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
@@ -384,7 +407,6 @@ where
 
 /// Fetch all the delta instruction chunks corresponding to the given prefix and return the result
 /// as a boxed stream of bytes in order
-#[allow(dead_code)]
 pub fn fetch_delta_instructions<'a, B>(
     ctx: &'a CoreContext,
     blobstore: &'a B,
