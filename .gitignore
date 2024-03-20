@@ -11,3 +11,6 @@
 # Rust libraries and extensions
 Cargo.lock
 target/
+
+# misc
+.DS_Store
