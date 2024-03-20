@@ -33,7 +33,7 @@ buck_filegroup(
 python_binary(
     name = "run_tests_py",
     srcs = RUN_TEST_PY_FILES,
-    main_module = "eden.scm.tests.run-tests",
+    main_function = "eden.scm.tests.run-tests.main",
     # The line below is necessary as we have some extensions (e.g., autodiff.py) in the tests directory
     # which include modules like sapling.*, and that makes the linter confused about it
     tags = ["noautodeps"],

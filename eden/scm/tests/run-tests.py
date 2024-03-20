@@ -4152,7 +4152,7 @@ def os_times():
     return times
 
 
-if __name__ == "__main__":
+def main() -> None:
     ensureenv()
     runner = TestRunner()
 
@@ -4166,3 +4166,7 @@ if __name__ == "__main__":
         pass
 
     sys.exit(runner.run(sys.argv[1:]))
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover
