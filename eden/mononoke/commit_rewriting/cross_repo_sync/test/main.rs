@@ -82,6 +82,10 @@ use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
+mod git_submodules_test_utils;
+#[cfg(test)]
+mod git_submodules_tests;
+
 fn mpath(p: &str) -> NonRootMPath {
     NonRootMPath::new(p).unwrap()
 }
@@ -162,7 +166,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     bcs_id
 }
 
-async fn get_version<M>(
+pub(crate) async fn get_version<M>(
     ctx: &CoreContext,
     config: &CommitSyncer<M, TestRepo>,
     source_bcs_id: ChangesetId,
@@ -182,7 +186,9 @@ where
     Ok(version)
 }
 
-async fn sync_to_master<M>(
+/// Syncs a commit from the source repo to the target repo **via pushrebase**.
+/// It **expects all of the commit's ancestors to be synced**.
+pub(crate) async fn sync_to_master<M>(
     ctx: CoreContext,
     config: &CommitSyncer<M, TestRepo>,
     source_bcs_id: ChangesetId,

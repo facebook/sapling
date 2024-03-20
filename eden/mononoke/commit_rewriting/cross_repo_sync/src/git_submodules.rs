@@ -128,6 +128,9 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
         })
         .collect::<Result<_>>()?;
 
+    // TODO(T179533620): validate that all changes are consistent with submodule
+    // metadata file.
+
     let new_cs = BonsaiChangesetMut {
         file_changes: expanded_fcs,
         ..cs
