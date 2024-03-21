@@ -27,6 +27,7 @@ use types::hgid::NULL_ID;
 use types::HgId;
 use vfs::VFS;
 
+use crate::client::WorkingCopyClient;
 use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
 
@@ -160,5 +161,9 @@ impl FileSystem for EdenFileSystem {
 
     fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>> {
         Ok(self.treestate.clone())
+    }
+
+    fn get_client(&self) -> Option<Arc<dyn WorkingCopyClient>> {
+        Some(self.client.clone())
     }
 }

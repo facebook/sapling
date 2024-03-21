@@ -22,6 +22,7 @@ use types::HgId;
 use types::RepoPathBuf;
 use vfs::VFS;
 
+use crate::client::WorkingCopyClient;
 use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
 
@@ -33,7 +34,7 @@ pub struct DotGitFileSystem {
     treestate: Arc<Mutex<TreeState>>,
     vfs: VFS,
     store: Arc<dyn FileStore>,
-    git: RunGitOptions,
+    git: Arc<RunGitOptions>,
 }
 
 impl DotGitFileSystem {
@@ -53,7 +54,7 @@ impl DotGitFileSystem {
             treestate,
             vfs,
             store,
-            git,
+            git: Arc::new(git),
         })
     }
 }
@@ -180,5 +181,9 @@ impl FileSystem for DotGitFileSystem {
 
     fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>> {
         Ok(self.treestate.clone())
+    }
+
+    fn get_client(&self) -> Option<Arc<dyn WorkingCopyClient>> {
+        Some(self.git.clone())
     }
 }

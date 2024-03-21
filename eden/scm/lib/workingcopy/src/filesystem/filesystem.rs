@@ -21,6 +21,8 @@ use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPathBuf;
 
+use crate::client::WorkingCopyClient;
+
 #[derive(Debug, Serialize)]
 pub enum PendingChange {
     Changed(RepoPathBuf),
@@ -87,4 +89,11 @@ pub trait FileSystem {
 
     /// Obtain the TreeState.
     fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>>;
+
+    /// Get `WorkingCopyClient` for low-level access to the external
+    /// working copy manager. Not all filesystem implementations
+    /// support this.
+    fn get_client(&self) -> Option<Arc<dyn WorkingCopyClient>> {
+        None
+    }
 }
