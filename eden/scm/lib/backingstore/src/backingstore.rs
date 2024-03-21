@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use configloader::hg::PinnedConfig;
+use edenapi::configmodel::ConfigExt;
 use log::warn;
 use repo::repo::Repo;
 use storemodel::BoxIterator;
@@ -51,7 +52,20 @@ struct Inner {
     // State used to track the touch file and determine if we need to reload ourself.
     create_time: Instant,
     touch_file_mtime: Option<SystemTime>,
+
+    // To prevent multiple threads reloading at the same time.
     already_reloading: AtomicBool,
+
+    // Last time we did a full reload of the Repo.
+    last_reload: Instant,
+
+    // Controlled by config "backingstore.reload-check-interval-secs".
+    // Sets the minimum delay before we check if we need to reload (defaults to 5s).
+    reload_check_interval: Duration,
+
+    // Controlled by config "backingstore.reload-interval-secs".
+    // Sets the maximum time since last reload until we force a reload (defaults to 5m).
+    reload_interval: Duration,
 }
 
 impl BackingStore {
@@ -123,6 +137,13 @@ impl BackingStore {
             create_time: Instant::now(),
             touch_file_mtime,
             already_reloading: AtomicBool::new(false),
+            last_reload: Instant::now(),
+            reload_check_interval: config
+                .get_opt("backingstore", "reload-check-interval-secs")?
+                .unwrap_or(Duration::from_secs(5)),
+            reload_interval: config
+                .get_opt("backingstore", "reload-interval-secs")?
+                .unwrap_or(Duration::from_secs(300)),
         })
     }
 
@@ -231,7 +252,7 @@ impl BackingStore {
     fn maybe_reload(&self) -> arc_swap::Guard<Arc<Inner>> {
         let inner = self.inner.load();
 
-        if inner.create_time.elapsed() < Duration::from_secs(5) {
+        if inner.create_time.elapsed() < inner.reload_check_interval {
             return inner;
         }
 
@@ -244,16 +265,17 @@ impl BackingStore {
         }
 
         let new_mtime = touch_file_mtime();
+        let since_last_reload = inner.last_reload.elapsed();
 
-        let needs_reload =
-            new_mtime
+        let needs_reload = since_last_reload >= inner.reload_interval
+            || new_mtime
                 .as_ref()
                 .is_some_and(|new_mtime| match &inner.touch_file_mtime {
                     Some(old_mtime) => new_mtime > old_mtime,
                     None => true,
                 });
 
-        tracing::debug!(old_mtime=?inner.touch_file_mtime, ?new_mtime, "checking touch file mtime");
+        tracing::debug!(last_reload=?since_last_reload, old_mtime=?inner.touch_file_mtime, ?new_mtime, "checking if we need to reload");
 
         let new_inner = if needs_reload {
             tracing::info!("reloading backing store");
@@ -269,13 +291,17 @@ impl BackingStore {
                 &inner.extra_configs,
                 new_mtime,
             ) {
-                Ok(new_inner) => new_inner,
+                Ok(mut new_inner) => {
+                    new_inner.last_reload = Instant::now();
+                    new_inner
+                }
                 Err(err) => {
                     tracing::warn!(?err, "error reloading backingstore");
                     inner.as_ref().soft_reload(new_mtime)
                 }
             }
         } else {
+            tracing::debug!("not reloading backing store");
             inner.as_ref().soft_reload(new_mtime)
         };
 
@@ -297,7 +323,10 @@ impl Inner {
 
             touch_file_mtime,
             create_time: Instant::now(),
+            last_reload: self.last_reload,
             already_reloading: AtomicBool::new(false),
+            reload_check_interval: self.reload_check_interval,
+            reload_interval: self.reload_interval,
         }
     }
 
