@@ -399,6 +399,12 @@ impl FileStore {
             aux_cache.flush().map_err(&mut handle_error);
         }
 
+        let mut metrics = self.metrics.write();
+        for (k, v) in metrics.metrics() {
+            hg_metrics::increment_counter(k, v);
+        }
+        *metrics = Default::default();
+
         result
     }
 
