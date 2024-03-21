@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import abc
 import errno
@@ -169,6 +170,7 @@ not seem to have finished.
         raise Exception(f"Unknown mount type {mount_type}")
 
     @abc.abstractmethod
+    # pyre-fixme[2]: Parameter must be annotated.
     def create_bind_mount(self, source_path, dest_path) -> bool:
         "Creates a bind mount from source_path to dest_path."
 
@@ -205,6 +207,7 @@ class LinuxMountTable(MountTable):
         # MNT_FORCE
         return 0 == subprocess.call(["sudo", "umount", "-f", mount_point])
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def create_bind_mount(self, source_path, dest_path) -> bool:
         return 0 == subprocess.check_call(
             ["sudo", "mount", "-o", "bind", source_path, dest_path]
@@ -235,6 +238,7 @@ class MacOSMountTable(MountTable):
     def unmount_force(self, mount_point: bytes) -> bool:
         return 0 == subprocess.call(["sudo", "umount", "-f", mount_point])
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def create_bind_mount(self, source_path, dest_path) -> bool:
         return False
 
@@ -249,6 +253,7 @@ class NopMountTable(MountTable):
     def unmount_force(self, mount_point: bytes) -> bool:
         return False
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def create_bind_mount(self, source_path, dest_path) -> bool:
         return False
 

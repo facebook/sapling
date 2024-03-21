@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import abc
 import enum
@@ -24,9 +25,13 @@ class Attribute(enum.IntFlag):
 
 
 class Output(abc.ABC):
+    # pyre-fixme[4]: Attribute must be annotated.
     RED = Color.RED
+    # pyre-fixme[4]: Attribute must be annotated.
     GREEN = Color.GREEN
+    # pyre-fixme[4]: Attribute must be annotated.
     YELLOW = Color.YELLOW
+    # pyre-fixme[4]: Attribute must be annotated.
     BOLD = Attribute.BOLD
 
     def writeln(

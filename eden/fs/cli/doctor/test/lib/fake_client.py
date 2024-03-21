@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import os
 from collections import defaultdict
@@ -51,6 +52,7 @@ class FakeClient:
     def __enter__(self) -> "FakeClient":
         return self
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         pass
 

@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import collections
 import typing
@@ -21,10 +22,12 @@ from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class DiskUsageTest(DoctorTestBase):
+    # pyre-fixme[2]: Parameter must be annotated.
     def __init__(self, *args, **kw) -> None:
         super().__init__(*args, **kw)
         self.fs_util = FakeFsUtil()
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def _mock_disk_usage(self, blocks, avail, frsize: int = 1024) -> None:
         """Mock test for disk usage."""
         self.fs_util.total = blocks * frsize

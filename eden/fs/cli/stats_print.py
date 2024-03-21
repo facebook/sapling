@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 """
 Helper function to print the heading of a Stat Call.
@@ -24,6 +25,7 @@ LATENCY_FORMAT_STR = "{:<12} {:^4} {:^10}  {:>10}  {:>15}  {:>10} {:>10}\n"
 
 
 # Prints a record of latencies with avg, 50'th,90'th and 99'th percentile.
+# pyre-fixme[2]: Parameter must be annotated.
 def write_latency_record(operation: str, matrix, out: TextIO) -> None:
     border = "-" * 80
     percentile = {0: "avg", 1: "p50", 2: "p90", 3: "p99"}
@@ -46,6 +48,7 @@ def write_latency_record(operation: str, matrix, out: TextIO) -> None:
     out.write(border + "\n")
 
 
+# pyre-fixme[2]: Parameter must be annotated.
 def write_latency_table(table, out: TextIO) -> None:
     out.write(
         LATENCY_FORMAT_STR.format(
@@ -64,6 +67,7 @@ def write_latency_table(table, out: TextIO) -> None:
         write_latency_record(key, table[key], out)
 
 
+# pyre-fixme[2]: Parameter must be annotated.
 def write_table(table, heading: str, out: TextIO) -> None:
     key_width = max([len(heading)] + list(map(len, table.keys()))) + 2
 

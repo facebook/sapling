@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import abc
 import argparse
@@ -31,6 +32,8 @@ class Subcmd(abc.ABC):
         # information about its sibling commands.
         self.parent_parser = parser
 
+    # pyre-fixme[24]: Generic type `argparse._SubParsersAction` expects 1 type
+    #  parameter.
     def add_parser(self, subparsers: argparse._SubParsersAction) -> None:
         # If get_help() returns None, do not pass in a help argument at all.
         # This will prevent the command from appearing in the help output at
@@ -80,7 +83,11 @@ class Subcmd(abc.ABC):
         pass
 
     def add_subcommands(
-        self, parser: argparse.ArgumentParser, cmds: List[Type["Subcmd"]]
+        self,
+        parser: argparse.ArgumentParser,
+        cmds: List[Type["Subcmd"]],
+        # pyre-fixme[24]: Generic type `argparse._SubParsersAction` expects 1 type
+        #  parameter.
     ) -> argparse._SubParsersAction:
         return add_subcommands(parser, cmds)
 
@@ -115,6 +122,7 @@ def subcmd(
 
     def wrapper(cls: Type[Subcmd]) -> Type[Subcmd]:
         # https://github.com/python/mypy/issues/2477
+        # pyre-fixme[33]: Given annotation cannot be `Any`.
         cls_mypy: Any = cls
 
         class SubclassedCmd(cls_mypy):
@@ -150,7 +158,9 @@ class Decorator:
 
 
 def add_subcommands(
-    parser: argparse.ArgumentParser, cmds: List[Type[Subcmd]]
+    parser: argparse.ArgumentParser,
+    cmds: List[Type[Subcmd]],
+    # pyre-fixme[24]: Generic type `argparse._SubParsersAction` expects 1 type parameter.
 ) -> argparse._SubParsersAction:
     # Sort the commands alphabetically.
     # The order they are added here is the order they will be displayed
@@ -169,7 +179,9 @@ def add_subcommands(
 
 def _get_subparsers(
     parser: argparse.ArgumentParser,
+    # pyre-fixme[24]: Generic type `argparse._SubParsersAction` expects 1 type parameter.
 ) -> Optional[argparse._SubParsersAction]:
+    # pyre-fixme[33]: Given annotation cannot be `Any`.
     subparsers = cast(Any, parser)
     if subparsers is None:
         return None
@@ -188,6 +200,7 @@ def _get_subparsers(
 def do_help(parser: argparse.ArgumentParser, help_args: List[str]) -> int:
     # Figure out what subcommand we have been asked to show the help for.
     for idx, arg in enumerate(help_args):
+        # pyre-fixme[33]: Given annotation cannot be `Any`.
         subcmds: Any = _get_subparsers(parser)
         if subcmds is None:
             cmd_so_far = " ".join(help_args[:idx])

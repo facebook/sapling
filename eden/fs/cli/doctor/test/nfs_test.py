@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import typing
 from unittest.mock import patch
@@ -34,6 +35,7 @@ class NfsTest(DoctorTestBase):
     maxDiff: typing.Optional[int] = None
 
     @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
+    # pyre-fixme[2]: Parameter must be annotated.
     def test_nfs_mounted(self, mock_is_nfs_mounted) -> None:
         mock_is_nfs_mounted.return_value = True
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -66,6 +68,7 @@ The Mercurial data directory for {checkout.path}/.hg/sharedpath is at {instance.
 
     @patch("pathlib.Path.read_text")
     @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
+    # pyre-fixme[2]: Parameter must be annotated.
     def test_no_nfs(self, mock_is_nfs_mounted, mock_path_read_text) -> None:
         mock_is_nfs_mounted.side_effect = [False, False]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -78,6 +81,7 @@ The Mercurial data directory for {checkout.path}/.hg/sharedpath is at {instance.
 
     @patch("pathlib.Path.read_text")
     @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
+    # pyre-fixme[2]: Parameter must be annotated.
     def test_nfs_on_client_path(self, mock_is_nfs_mounted, mock_path_read_text) -> None:
         mock_is_nfs_mounted.side_effect = [True, False]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -95,6 +99,7 @@ Checking {v.client_path}
 
     @patch("pathlib.Path.read_text")
     @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
+    # pyre-fixme[2]: Parameter must be annotated.
     def test_nfs_on_shared_path(self, mock_is_nfs_mounted, mock_path_read_text) -> None:
         mock_is_nfs_mounted.side_effect = [False, True]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -110,7 +115,11 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_
     @patch("pathlib.Path.read_text")
     @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
     def test_nfs_on_client_path_and_shared_path(
-        self, mock_is_nfs_mounted, mock_path_read_text
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_is_nfs_mounted,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_path_read_text,
     ) -> None:
         mock_is_nfs_mounted.side_effect = [True, True]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -128,6 +137,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_
         self.assertEqual(out, v.stdout)
         self.assertEqual(1, v.exit_code)
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def run_varying_nfs(self, mock_path_read_text) -> NfsDoctorResult:
         instance = FakeEdenInstance(self.make_temporary_directory())
         shared_path = "shared_path"

@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import errno
 import os
@@ -136,6 +137,7 @@ class FakeMountTable(mtab.MountTable):
             if mount_info.mount_point != mount_point
         ]
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def create_bind_mount(self, source_path: str, dest_path) -> bool:
         if (
             source_path in self.bind_mount_success_paths

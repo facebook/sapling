@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import collections
 import io
@@ -25,6 +26,8 @@ from eden.fs.cli.doctor.problem import (
 log: logging.Logger = logging.getLogger("eden.fs.cli.doctor.checks.watchman")
 
 
+# pyre-fixme[4]: Attribute annotation cannot be `Any`.
+# pyre-fixme[2]: Parameter annotation cannot be `Any`.
 WatchmanCheckInfo = collections.namedtuple("WatchmanCheckInfo", ["watchman_roots"])
 
 
@@ -40,6 +43,7 @@ def check_active_mount(
 
 
 class IncorrectWatchmanWatch(FixableProblem):
+    # pyre-fixme[2]: Parameter annotation cannot be `Any`.
     def __init__(self, path: str, watcher: Any) -> None:
         self._path = path
         self._watcher = watcher
@@ -93,6 +97,8 @@ def _get_watch_roots_for_watchman() -> Set[str]:
     return roots
 
 
+# pyre-fixme[24]: Generic type `dict` expects 2 type parameters, use
+#  `typing.Dict[<key type>, <value type>]` to avoid runtime subscripting errors.
 def _call_watchman(args: List[str]) -> Dict:
     full_args = ["watchman"]
     full_args.extend(args)
@@ -106,6 +112,7 @@ def _check_json_output(args: List[str]) -> Dict[str, Any]:
     """
     try:
         output = subprocess.check_output(args)
+        # pyre-fixme[33]: Given annotation cannot contain `Any`.
         return typing.cast(Dict[str, Any], json.loads(output))
     except FileNotFoundError as e:
         # Same as below, but we don't need to emit a warning if they don't have

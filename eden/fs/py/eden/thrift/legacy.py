@@ -3,7 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -74,7 +75,13 @@ class EdenClient(EdenService.Client):
         return self
 
     def __exit__(
-        self, exc_type: "Any", exc_value: "Any", exc_traceback: "Any"
+        self,
+        # pyre-fixme[2]: Parameter annotation cannot be `Any`.
+        exc_type: "Any",
+        # pyre-fixme[2]: Parameter annotation cannot be `Any`.
+        exc_value: "Any",
+        # pyre-fixme[2]: Parameter annotation cannot be `Any`.
+        exc_traceback: "Any",
     ) -> "Optional[bool]":
         self.close()
         return False

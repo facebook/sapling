@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 from typing import Dict, List, Optional
 
@@ -26,12 +27,14 @@ def tabulate(
     """
     col_widths = {}
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def label(name) -> str:
         label = (header_labels or {}).get(name, "")
         if label:
             return label
         return str(name.upper())
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def field(obj, name) -> str:
         return str(obj.get(name, ""))
 

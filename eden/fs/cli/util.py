@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import abc
 import binascii
@@ -223,6 +224,7 @@ def check_health(
 
 
 def wait_for_daemon_healthy(
+    # pyre-fixme[24]: Generic type `subprocess.Popen` expects 1 type parameter.
     proc: subprocess.Popen,
     config_dir: Path,
     get_client: Callable[..., EdenClient],
@@ -266,6 +268,7 @@ def wait_for_instance_healthy(instance: "EdenInstance", timeout: float) -> Healt
 
     proc_utils = proc_utils_mod.new()
 
+    # pyre-fixme[53]: Captured variable `proc_utils` is not annotated.
     def check_daemon_health() -> Optional[HealthStatus]:
         # Check the thrift status
         health_info = instance.check_health()
@@ -356,6 +359,7 @@ class HgRepo(Repo):
             source,
             source if working_dir is None else working_dir,
         )
+        # pyre-fixme[4]: Attribute must be annotated.
         self._env = os.environ.copy()
         self._env["HGPLAIN"] = "1"
 
@@ -368,11 +372,13 @@ class HgRepo(Repo):
         # The EDEN_HG_BINARY environment variable is normally set when running
         # Eden's integration tests.  Just find 'hg' from the path when it is
         # not set.
+        # pyre-fixme[4]: Attribute must be annotated.
         self._hg_binary = os.environ.get("EDEN_HG_BINARY", "hg")
 
     def __repr__(self) -> str:
         return f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def _run_hg(self, args: List[str], stderr_output=None) -> bytes:
         cmd = [self._hg_binary] + args
         out_bytes = subprocess.check_output(
@@ -382,6 +388,7 @@ class HgRepo(Repo):
         out = typing.cast(bytes, out_bytes)
         return out
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def get_commit_hash(self, commit: str, stderr_output=None) -> str:
         out = self._run_hg(["log", "-r", commit, "-T{node}"], stderr_output)
         return out.strip().decode("utf-8")
@@ -755,9 +762,11 @@ class Spinner:
 
     def __init__(self, header: str) -> None:
         self._header = header
+        # pyre-fixme[4]: Attribute must be annotated.
         self._cursor = self.cursor()
 
     @staticmethod
+    # pyre-fixme[3]: Return type must be annotated.
     def cursor():
         while True:
             for cursor in "|/-\\":
@@ -772,12 +781,15 @@ class Spinner:
     def __enter__(self) -> "Spinner":
         return self
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def __exit__(self, ex_type, ex_value, ex_traceback) -> bool:
         sys.stdout.write("\n")
         sys.stdout.flush()
         return False
 
 
+# pyre-fixme[3]: Return type must be annotated.
+# pyre-fixme[24]: Generic type `Callable` expects 2 type parameters.
 def hook_recursive_with_spinner(function: Callable, spinner: Spinner):
     """
     hook_recursive_with_spinner
@@ -788,6 +800,8 @@ def hook_recursive_with_spinner(function: Callable, spinner: Spinner):
     """
 
     @functools.wraps(function)
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def run(*args, **kwargs):
         spinner.spin(args[0])
         return function(*args, **kwargs)
@@ -804,6 +818,7 @@ if sys.platform == "win32":
         return Path(*parts)
 
 
+# pyre-fixme[3]: Return type must be annotated.
 def _varint_byte(b: int):
     return bytes((b,))
 
@@ -831,6 +846,7 @@ def decode_varint(buf: bytes) -> typing.Tuple[int, int]:
     result = 0
     bytes_read = 0
 
+    # pyre-fixme[3]: Return type must be annotated.
     def read_one_byte(stream: BytesIO):
         """Reads a byte from the file (as an integer)
 

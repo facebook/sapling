@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import argparse
 import io
@@ -59,6 +60,7 @@ def do_stats_general(instance: EdenInstance, options: StatsGeneralOptions) -> No
         print_stats(stat_info, out)
 
 
+# pyre-fixme[2]: Parameter must be annotated.
 def print_stats(stat_info, out: io.TextIOWrapper) -> None:
     private_bytes = (
         stats_print.format_size(stat_info.privateBytes)
@@ -457,6 +459,8 @@ class ObjectStoreCommand(Subcmd):
         return 0
 
 
+# pyre-fixme[24]: Generic type `list` expects 1 type parameter, use
+#  `typing.List[<element type>]` to avoid runtime subscripting errors.
 def get_counter_table(counters: DiagInfoCounters, prefix: List, suffix: List) -> Table:
     table: Table = {}
 

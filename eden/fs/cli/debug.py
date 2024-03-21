@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import argparse
 import binascii
@@ -73,6 +74,8 @@ try:
     from tqdm import tqdm
 except ModuleNotFoundError:
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def tqmd(x):
         return x
 
@@ -100,15 +103,24 @@ debug_cmd = subcmd_mod.Decorator()
 # TODO: Use argparse.BooleanOptionalAction when we
 # can expect Python 3.9 or later.
 class BooleanOptionalAction(argparse.Action):
+    # pyre-fixme[3]: Return type must be annotated.
     def __init__(
         self,
+        # pyre-fixme[2]: Parameter must be annotated.
         option_strings,
+        # pyre-fixme[2]: Parameter must be annotated.
         dest,
+        # pyre-fixme[2]: Parameter must be annotated.
         default=None,
+        # pyre-fixme[2]: Parameter must be annotated.
         type=None,
+        # pyre-fixme[2]: Parameter must be annotated.
         choices=None,
+        # pyre-fixme[2]: Parameter must be annotated.
         required=False,
+        # pyre-fixme[2]: Parameter must be annotated.
         help=None,
+        # pyre-fixme[2]: Parameter must be annotated.
         metavar=None,
     ):
 
@@ -132,10 +144,13 @@ class BooleanOptionalAction(argparse.Action):
             metavar=metavar,
         )
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string in self.option_strings:
             setattr(namespace, self.dest, not option_string.startswith("--no-"))
 
+    # pyre-fixme[3]: Return type must be annotated.
     def format_usage(self):
         return " | ".join(self.option_strings)
 
@@ -258,10 +273,14 @@ class TreeCmd(Subcmd):
 
 
 class Process:
+    # pyre-fixme[2]: Parameter must be annotated.
     def __init__(self, pid, cmd, mount) -> None:
+        # pyre-fixme[4]: Attribute must be annotated.
         self.pid = pid
+        # pyre-fixme[4]: Attribute must be annotated.
         self.cmd = format_cmd(cmd)
         self.fetch_count = 0
+        # pyre-fixme[4]: Attribute must be annotated.
         self.mount = format_mount(mount)
 
     def set_fetchs(self, fetch_counts: int) -> None:
@@ -436,10 +455,15 @@ def print_blob_metadata(id: str, metadata: ScmBlobMetadata) -> None:
 
 
 def print_all_objects(
+    # pyre-fixme[24]: Generic type `list` expects 1 type parameter, use
+    #  `typing.List[<element type>]` to avoid runtime subscripting errors.
     objects: List,
     object_type: str,
+    # pyre-fixme[24]: Generic type `Callable` expects 2 type parameters.
     is_error: Callable,
+    # pyre-fixme[24]: Generic type `Callable` expects 2 type parameters.
     equal: Callable,
+    # pyre-fixme[24]: Generic type `Callable` expects 2 type parameters.
     print_data: Callable,
 ) -> None:
     non_error_objects = []
@@ -828,7 +852,10 @@ class HgDirstateCmd(Subcmd):
 
 
 def _print_hg_nonnormal_file(
-    rel_path: Path, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
+    rel_path: Path,
+    # pyre-fixme[2]: Parameter annotation cannot contain `Any`.
+    dirstate_tuple: Tuple[str, Any, int],
+    out: ui_mod.Output,
 ) -> None:
     status = _dirstate_char_to_name(dirstate_tuple[0])
     merge_state = _dirstate_merge_state_to_name(dirstate_tuple[2])
@@ -865,6 +892,7 @@ def _dirstate_merge_state_to_name(merge_state: int) -> str:
         raise Exception(f"Unrecognized merge_state value: {merge_state}")
 
 
+# pyre-fixme[3]: Return annotation cannot contain `Any`.
 def _get_dirstate_data(
     checkout: EdenCheckout,
 ) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]]:
@@ -946,6 +974,9 @@ class MaterializedCmd(Subcmd):
         for result in results:
             by_inode[result.inodeNumber] = result
 
+        # pyre-fixme[53]: Captured variable `by_inode` is not annotated.
+        # pyre-fixme[3]: Return type must be annotated.
+        # pyre-fixme[2]: Parameter must be annotated.
         def walk(ino, path):
             print(os.fsdecode(path if path else b"/"))
             try:
@@ -1299,6 +1330,7 @@ class LogCmd(Subcmd):
         # For ease of use, just use the same rage reporter
         rage_processor = instance.get_config_value("rage.reporter", default="")
 
+        # pyre-fixme[24]: Generic type `subprocess.Popen` expects 1 type parameter.
         proc: Optional[subprocess.Popen] = None
         if rage_processor and not args.stdout:
             proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
@@ -1576,6 +1608,9 @@ class DebugJournalCmd(Subcmd):
         instance, checkout, _ = cmd_util.require_checkout(args, args.path)
         mount = bytes(checkout.path)
 
+        # pyre-fixme[53]: Captured variable `instance` is not annotated.
+        # pyre-fixme[3]: Return type must be annotated.
+        # pyre-fixme[2]: Parameter must be annotated.
         def refresh(params):
             with instance.get_thrift_client_legacy() as client:
                 journal = client.debugGetRawJournal(params)
@@ -1617,7 +1652,10 @@ def _print_raw_journal_deltas(
     deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern[bytes]]
 ) -> None:
     matcher: Callable[[bytes], bool] = (
-        (lambda x: True) if pattern is None else cast(Any, pattern.match)
+        (lambda x: True)
+        if pattern is None
+        # pyre-fixme[33]: Given annotation cannot be `Any`.
+        else cast(Any, pattern.match)
     )
 
     labels = {
@@ -1733,6 +1771,8 @@ class DebugThriftCmd(Subcmd):
             args.args, fn_info, eval_strings=args.eval_all_args
         )
 
+        # pyre-fixme[3]: Return type must be annotated.
+        # pyre-fixme[2]: Parameter must be annotated.
         def lookup_module_member(modules, name):
             for module in modules:
                 try:

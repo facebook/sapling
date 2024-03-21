@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import abc
 import binascii
@@ -83,6 +84,7 @@ class HgFileChecker(HgChecker):
 
 
 class DirstateChecker(HgFileChecker):
+    # pyre-fixme[4]: Attribute must be annotated.
     _null_commit_id = 20 * b"\x00"
 
     _old_snapshot: Optional[bytes] = None
@@ -319,6 +321,7 @@ class BranchChecker(HgFileChecker):
 class AbandonedTransactionChecker(HgChecker):
     def __init__(self, checkout: EdenCheckout) -> None:
         super().__init__(checkout)
+        # pyre-fixme[4]: Attribute must be annotated.
         self.backing_repo = self.checkout.get_backing_repo()
 
     def check_for_error(self) -> List[str]:

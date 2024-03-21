@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import collections
 import configparser
@@ -44,6 +45,7 @@ else:
 ConfigValue = Union[bool, str, Strs]
 ConfigSectionName = str
 ConfigOptionName = str
+# pyre-fixme[33]: Aliased annotation cannot be `Any`.
 _UnsupportedValue = Any
 
 _TConfigValue = TypeVar("_TConfigValue", bound=ConfigValue)
@@ -81,7 +83,10 @@ class EdenConfigParser:
     # Convert the passed EdenConfigParser to a raw dictionary (without
     # interpolation)
     # Useful for updating configuration files in different formats.
+    # pyre-fixme[24]: Generic type `collections.OrderedDict` expects 2 type parameters.
     def to_raw_dict(self) -> collections.OrderedDict:
+        # pyre-fixme[24]: Generic type `collections.OrderedDict` expects 2 type
+        #  parameters.
         rslt: "collections.OrderedDict" = collections.OrderedDict()
         for section, options in self._sections.items():
             rslt[section] = collections.OrderedDict(options)
@@ -224,7 +229,11 @@ class EdenConfigParser:
             return value
 
     def _make_storable_value(
-        self, section: ConfigSectionName, option: ConfigOptionName, value: Any
+        self,
+        section: ConfigSectionName,
+        option: ConfigOptionName,
+        # pyre-fixme[2]: Parameter annotation cannot be `Any`.
+        value: Any,
     ) -> Union[ConfigValue, _UnsupportedValue]:
         if isinstance(value, (bool, str)):
             return value
@@ -238,6 +247,7 @@ class EdenConfigParser:
 class UnexpectedType(Exception):
     section: ConfigSectionName
     option: ConfigOptionName
+    # pyre-fixme[4]: Attribute annotation cannot be `Any`.
     value: Any
     expected_type: Optional[Type[ConfigValue]]
 
@@ -245,6 +255,7 @@ class UnexpectedType(Exception):
         self,
         section: ConfigSectionName,
         option: ConfigOptionName,
+        # pyre-fixme[2]: Parameter annotation cannot be `Any`.
         value: Any,
         expected_type: Optional[Type[ConfigValue]],
     ) -> None:
@@ -281,6 +292,8 @@ class UnexpectedType(Exception):
         return _toml_value(self.value)
 
 
+# pyre-fixme[24]: Generic type `type` expects 1 type parameter, use
+#  `typing.Type[<base type>]` to avoid runtime subscripting errors.
 def _toml_type_name(type: Type) -> str:
     if type is Strs:
         return "array of strings"
@@ -294,6 +307,8 @@ def _toml_type_name(type: Type) -> str:
 
 
 def _toml_value(value: Union[bool, str]) -> str:
+    # pyre-fixme[24]: Generic type `type` expects 1 type parameter, use
+    #  `typing.Type[<base type>]` to avoid runtime subscripting errors.
     TomlEncoder: Type = toml.TomlEncoder
     value_toml: str = TomlEncoder().dump_inline_table(value)
     return value_toml.rstrip()

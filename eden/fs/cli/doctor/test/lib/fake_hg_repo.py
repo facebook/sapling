@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import subprocess
 from typing import Callable, List, Optional
@@ -17,6 +18,7 @@ class FakeHgRepo:
     def __init__(self, source: str) -> None:
         self.source = source
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def get_commit_hash(self, commit: str, stderr_output=None) -> str:
         commit_checker = self.commit_checker
 
@@ -29,5 +31,6 @@ class FakeHgRepo:
             returncode=255, cmd=cmd, output=str.encode(output)
         )
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def _run_hg(self, args: List[str], stderr_output=None) -> None:
         pass

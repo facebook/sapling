@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import errno
 from typing import List, Tuple
@@ -17,6 +18,7 @@ from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class StaleMountsCheckTest(DoctorTestBase):
+    # pyre-fixme[4]: Attribute must be annotated.
     maxDiff = None
 
     def setUp(self) -> None:

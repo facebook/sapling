@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import argparse
 import collections
@@ -35,6 +36,8 @@ HELP_SECTION_WHY = "why "
 HELP_SECTION_CONCERN = "concern? "
 
 
+# pyre-fixme[4]: Attribute annotation cannot be `Any`.
+# pyre-fixme[2]: Parameter annotation cannot be `Any`.
 Row = collections.namedtuple(
     "Row",
     "top_pid mount fuse_reads fuse_writes fuse_total fuse_fetch fuse_memory_cache_imports fuse_disk_cache_imports fuse_backing_store_imports fuse_duration fuse_last_access command",
@@ -100,6 +103,7 @@ COLUMN_REVERSE_SORT = Row(
 COUNTER_REGEX = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*)|(object_store\..*))"
 
 
+# pyre-fixme[2]: Parameter must be annotated.
 def format_duration(duration) -> str:
     modulos = (1000, 1000, 1000, 60, 60, 24)
     suffixes = ("ns", "us", "ms", "s", "m", "h", "d")
@@ -114,6 +118,7 @@ def format_last_access(last_access: float) -> str:
     return format_time(elapsed, modulos, suffixes)
 
 
+# pyre-fixme[2]: Parameter must be annotated.
 def format_time(elapsed, modulos, suffixes) -> str:
     for modulo, suffix in zip(modulos, suffixes):
         if elapsed < modulo:
@@ -195,12 +200,16 @@ class Window:
       ```
     """
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def __init__(self, stdscr, refresh_rate: int) -> None:
+        # pyre-fixme[4]: Attribute must be annotated.
         self.stdscr = stdscr
         self.refresh_rate = refresh_rate
         self.stdscr.timeout(self.refresh_rate * 1000)
 
+        # pyre-fixme[4]: Attribute must be annotated.
         self.height = 0
+        # pyre-fixme[4]: Attribute must be annotated.
         self.width = 0
         self._update_screen_size()
 
@@ -288,6 +297,7 @@ class Window:
         self._write(self.current_line, x, line, max_width, attr)
         self.write_new_line()
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def write_labeled_rows(self, rows) -> None:
         longest_row_name = max(len(row_name) for row_name in rows)
         for row_name in rows:
@@ -412,20 +422,27 @@ class Top:
     def __init__(self) -> None:
         import curses
 
+        # pyre-fixme[4]: Attribute must be annotated.
         self.curses = curses
 
         os.environ.setdefault("ESCDELAY", str(ESC_DELAY_MS))
 
+        # pyre-fixme[4]: Attribute must be annotated.
         self.state = State.INIT
         self.ephemeral = False
         self.refresh_rate = 1
 
         # Processes are stored by PID
         self.processes: Dict[int, Process] = {}
+        # pyre-fixme[24]: Generic type `list` expects 1 type parameter, use
+        #  `typing.List[<element type>]` to avoid runtime subscripting errors.
         self.rows: List = []
+        # pyre-fixme[4]: Attribute must be annotated.
         self.selected_column = COLUMN_TITLES.index("FUSE LAST")
 
+        # pyre-fixme[4]: Attribute must be annotated.
         self.pending_imports = {}
+        # pyre-fixme[4]: Attribute must be annotated.
         self.fuse_requests_summary = {}
 
     def start(self, args: argparse.Namespace) -> int:
@@ -441,7 +458,12 @@ class Top:
                 pass
         return 0
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def run(self, client):
+        # pyre-fixme[53]: Captured variable `client` is not annotated.
+        # pyre-fixme[3]: Return type must be annotated.
+        # pyre-fixme[2]: Parameter must be annotated.
         def mainloop(stdscr):
             window = Window(stdscr, self.refresh_rate)
 
@@ -470,9 +492,11 @@ class Top:
 
         return mainloop
 
+    # pyre-fixme[3]: Return type must be annotated.
     def running(self):
         return self.state == State.MAIN or self.state == State.HELP
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def update(self, client) -> None:
         if self.ephemeral:
             self.processes.clear()
@@ -502,6 +526,7 @@ class Top:
         for pid in self.processes.keys():
             self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def _update_summary_stats(self, client) -> None:
         client.flushStatsNow()
         counters = client.getRegexCounters(COUNTER_REGEX)
@@ -509,6 +534,8 @@ class Top:
         self.pending_imports = self._update_import_stats(counters)
         self.fuse_requests_summary = self._update_fuse_request_stats(counters)
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def _update_import_stats(self, counters):
         import_stats = {}
         for import_stage in RequestStage:
@@ -537,6 +564,8 @@ class Top:
                 ] = longest_outstanding_request
         return import_stats
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def _update_fuse_request_stats(self, counters):
         # collect all the counters for each stage and metric -- this is
         # needed since the mount name is part of the counter name
@@ -644,6 +673,7 @@ class Top:
         window.write_line(imports_header, window.get_width(), self.curses.A_UNDERLINE)
         self.render_import_section(window, len_longest_stage)
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_fuse_request_section(self, window, len_longest_stage) -> None:
         section_size = window.get_width() // 2
         separator = ""
@@ -657,7 +687,14 @@ class Top:
         window.write_new_line()
 
     def render_fuse_request_part(
-        self, window, import_stage: RequestStage, len_longest_stage, section_size
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        window,
+        import_stage: RequestStage,
+        # pyre-fixme[2]: Parameter must be annotated.
+        len_longest_stage,
+        # pyre-fixme[2]: Parameter must be annotated.
+        section_size,
     ) -> None:
         stage_display = self.get_display_name_for_import_stage(import_stage)
         header = f"{stage_display:<{len_longest_stage}} -- "
@@ -696,6 +733,7 @@ class Top:
             separator = " | "
         window.write_new_line()
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_request_metrics(self, window, metrics, section_size) -> None:
         # split the section between the number of imports and
         # the duration of the longest import
@@ -780,6 +818,7 @@ class Top:
             #  `Generator[typing.Any, None, None]`.
             self.render_row(window, row, style)
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_row(self, window: Window, row: Row, style) -> None:
 
         row_data = zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)
@@ -826,6 +865,7 @@ class Top:
 
         window.refresh()
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_fuse_help(self, window) -> None:
         fuse_req_header = "Outstanding FUSE request:"
         fuse_what = (
@@ -858,6 +898,7 @@ class Top:
             }
         )
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_fuse_fetch_help(self, window) -> None:
         fuse_fetch_header = "FUSE FETCH:"
         fuse_what = (
@@ -886,6 +927,7 @@ class Top:
             }
         )
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_import_help(self, window) -> None:
         object_imports_header = "Outstanding object imports:"
         import_what = (
@@ -920,6 +962,7 @@ class Top:
             }
         )
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def render_process_table_help(self, window) -> None:
         process_table_header = "Process table:"
         process_what = (
@@ -956,6 +999,7 @@ class Top:
             }
         )
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def get_keypress(self, window) -> None:
         key = window.get_keypress()
         if key == self.curses.KEY_RESIZE:

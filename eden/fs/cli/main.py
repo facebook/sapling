@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import argparse
 import asyncio
@@ -92,6 +93,7 @@ except ImportError:
 
     migration_restart_help = "This migrates ALL your mounts to a new mount protocol."
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def get_migration_success_message(migrate_to) -> str:
         return f"Successfully migrated all your mounts to {migrate_to}."
 
@@ -192,6 +194,7 @@ class InfoCmd(Subcmd):
 @subcmd("du", "Show disk space usage for a checkout")
 class DiskUsageCmd(Subcmd):
 
+    # pyre-fixme[4]: Attribute must be annotated.
     isatty = sys.stdout and sys.stdout.isatty()
     # Escape sequence to move the cursor left to the start of the line
     # and then clear to the end of that line.
@@ -205,6 +208,7 @@ class DiskUsageCmd(Subcmd):
         "fsck": 0,
         "legacy": 0,
     }
+    # pyre-fixme[4]: Attribute must be annotated.
     color_out = ui.get_output()
     hasLFS = False
     hasWorkingCopyBacked = False
@@ -371,6 +375,7 @@ space by running:
 
         return 0
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def make_summary(self, clean, deep_clean) -> None:
         self.write_ui(util.underlined("Summary"))
         type_labels = {
@@ -418,9 +423,12 @@ space by running:
         if not clean:
             self.writeln_ui("To perform automated cleanup, run `eden du --clean`\n")
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def du(self, path) -> int:
         dev = os.stat(path).st_dev
 
+        # pyre-fixme[53]: Captured variable `dev` is not annotated.
+        # pyre-fixme[2]: Parameter must be annotated.
         def get_size(path) -> int:
             total = 0
             failed_to_check_files = []
@@ -460,15 +468,21 @@ space by running:
 
         return get_size(path)
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def write_ui(self, message, fg=None) -> None:
         if not self.json_mode:
             self.color_out.write(message, fg=fg)
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def writeln_ui(self, message, fg=None) -> None:
         self.write_ui(f"{message}\n")
 
     def usage_for_dir(
-        self, path, usage_type: str, print_label: Optional[str] = None
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        path,
+        usage_type: str,
+        print_label: Optional[str] = None,
     ) -> None:
         usage = self.du(path)
         if usage_type in self.aggregated_usage_counts.keys():
@@ -820,6 +834,8 @@ class CloneCmd(Subcmd):
                 )
                 return 1
 
+        # pyre-fixme[53]: Captured variable `instance` is not annotated.
+        # pyre-fixme[3]: Return type must be annotated.
         def is_nfs_default():
             default_protocol = "PrjFS" if sys.platform == "win32" else "FUSE"
             return (
@@ -1529,6 +1545,7 @@ class RemoveCmd(Subcmd):
         except Exception:
             return False
 
+    # pyre-fixme[3]: Return type must be annotated.
     def optional_traceback(self, ex: Exception, debug: bool):
         if debug:
             traceback.print_exception(ex)
@@ -2323,6 +2340,7 @@ class RageCmd(Subcmd):
             if args.dry_run:
                 rage_processor = None
 
+            # pyre-fixme[24]: Generic type `subprocess.Popen` expects 1 type parameter.
             proc: Optional[subprocess.Popen] = None
             sink: typing.IO[bytes]
             # potential "deadlock" here. This works because rage reporters are not expected
@@ -2624,6 +2642,7 @@ async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) 
 
 # TODO: Remove when we can rely on Python 3.7 everywhere.
 try:
+    # pyre-fixme[5]: Global expression must be annotated.
     asyncio_run = asyncio.run
 except AttributeError:
     asyncio_run = asyncio.get_event_loop().run_until_complete

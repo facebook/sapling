@@ -3,7 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -65,6 +66,7 @@ def write(
     #     remaining 32 bytes are used for the hash.
     sha = hashlib.sha256()
 
+    # pyre-fixme[53]: Captured variable `sha` is not annotated.
     def hashing_write(data: bytes) -> None:
         sha.update(data)
         file.write(data)
@@ -104,6 +106,9 @@ def read(
 
     sha = hashlib.sha256()
 
+    # pyre-fixme[53]: Captured variable `sha` is not annotated.
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def hashing_read(num):
         data = fp.read(num)
         sha.update(data)

@@ -4,7 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
+
 
 import os
 import shutil
@@ -23,6 +24,7 @@ from eden.fs.cli.test.lib.output import TestOutput
 
 
 class CorruptHgTest(DoctorTestBase):
+    # pyre-fixme[4]: Attribute must be annotated.
     maxDiff = None
 
     def setUp(self) -> None:
