@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-#[derive(Debug, Copy, Clone)]
+use serde::Deserialize;
+
+#[derive(Debug, Copy, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FetchMode {
     /// The fetch may hit remote servers.
     AllowRemote,

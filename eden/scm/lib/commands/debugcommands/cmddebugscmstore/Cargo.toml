@@ -12,4 +12,5 @@ cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 manifest = { version = "0.1.0", path = "../../../manifest" }
 repo = { version = "0.1.0", path = "../../../repo" }
 revisionstore = { version = "0.1.0", path = "../../../revisionstore" }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 types = { version = "0.1.0", path = "../../../types" }

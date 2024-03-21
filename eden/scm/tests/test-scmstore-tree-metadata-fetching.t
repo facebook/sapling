@@ -119,7 +119,7 @@ Fetch a tree:
   )
 
 We should also have aux data for the files available as a side effect of tree fetching:
-  $ hg debugscmstore -r $A dir/file1 --mode=file --local
+  $ hg debugscmstore -r $A dir/file1 --mode=file --fetch-mode=local_only
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(

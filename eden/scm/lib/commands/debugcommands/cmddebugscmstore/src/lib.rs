@@ -25,6 +25,9 @@ use manifest::Manifest;
 use repo::repo::Repo;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FileAttributes;
+use serde::de::value;
+use serde::de::value::StringDeserializer;
+use serde::de::Deserialize;
 use types::fetch_mode::FetchMode;
 use types::Key;
 use types::RepoPathBuf;
@@ -37,8 +40,8 @@ define_flags! {
         /// Input file containing keys to fetch (hgid,path separated by newlines)
         requests_file: Option<String>,
 
-        /// Only check for the entity locally, don't make a remote request
-        local: bool,
+        /// Choose fetch mode (e.g. local_only or allow_remote)
+        fetch_mode: Option<String>,
 
         /// Only fetch AUX data (don't request file content).
         aux_only: bool,
@@ -105,31 +108,37 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     // fresh repo to recreate the cache state before we were invoked.
     let fresh_repo = Repo::load_with_config(repo.path(), ConfigSet::wrap(repo.config().clone()))?;
 
+    let fetch_mode = FetchMode::deserialize(StringDeserializer::<value::Error>::new(
+        ctx.opts
+            .fetch_mode
+            .unwrap_or_else(|| "allow_remote".to_string()),
+    ))?;
+
     match mode {
         FetchType::File => fetch_files(
             &ctx.core.io,
             &fresh_repo,
             keys,
-            ctx.opts.local,
+            fetch_mode,
             ctx.opts.aux_only,
         )?,
-        FetchType::Tree => fetch_trees(&ctx.core.io, &fresh_repo, keys, ctx.opts.local)?,
+        FetchType::Tree => fetch_trees(&ctx.core.io, &fresh_repo, keys, fetch_mode)?,
     }
 
     Ok(0)
 }
 
-fn fetch_files(io: &IO, repo: &Repo, keys: Vec<Key>, local: bool, aux_only: bool) -> Result<()> {
+fn fetch_files(
+    io: &IO,
+    repo: &Repo,
+    keys: Vec<Key>,
+    fetch_mode: FetchMode,
+    aux_only: bool,
+) -> Result<()> {
     repo.file_store()?;
     let store = repo.file_scm_store().unwrap();
 
     let mut stdout = io.output();
-
-    let fetch_mode = if local {
-        FetchMode::LocalOnly
-    } else {
-        FetchMode::AllowRemote
-    };
 
     let mut fetch_and_display_successes =
         |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Vec<Error>> {
@@ -180,17 +189,11 @@ fn fetch_files(io: &IO, repo: &Repo, keys: Vec<Key>, local: bool, aux_only: bool
     Ok(())
 }
 
-fn fetch_trees(io: &IO, repo: &Repo, keys: Vec<Key>, local: bool) -> Result<()> {
+fn fetch_trees(io: &IO, repo: &Repo, keys: Vec<Key>, fetch_mode: FetchMode) -> Result<()> {
     repo.tree_store()?;
     let store = repo.tree_scm_store().unwrap();
 
     let mut stdout = io.output();
-
-    let fetch_mode = if local {
-        FetchMode::LocalOnly
-    } else {
-        FetchMode::AllowRemote
-    };
 
     let fetch_result = store.fetch_batch(keys.into_iter(), fetch_mode);
 
