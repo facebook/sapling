@@ -54,6 +54,10 @@ pub(crate) mod ffi {
         LocalOnly,
         /// The fetch is only hits remote servers.
         RemoteOnly,
+        /// The fetch may hit remote servers and should prefetch optional data. For trees,
+        /// this means request optional child metadata. This will not trigger a remote child
+        /// metadata fetch if the tree is already available locally.
+        AllowRemotePrefetch,
     }
 
     #[repr(u8)]

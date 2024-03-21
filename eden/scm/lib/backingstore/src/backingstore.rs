@@ -350,6 +350,7 @@ where
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
+        fetch_mode: FetchMode,
     ) -> Result<BoxIterator<Result<(Key, IntermediateType)>>>;
 
     // The following methods are "derived" from the above.
@@ -390,7 +391,7 @@ where
             let mut key_to_index = indexed_keys(&keys);
             let mut remaining = keys.len();
             let mut errors = Vec::new();
-            match self.get_batch_iter(keys) {
+            match self.get_batch_iter(keys, fetch_mode) {
                 Err(e) => errors.push(e),
                 Ok(iter) => {
                     for entry in iter {
@@ -434,8 +435,12 @@ impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
     fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
         self.get_content(path, id, fetch_mode)
     }
-    fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.get_content_iter(keys, FetchMode::AllowRemote)
+    fn get_batch_iter(
+        &self,
+        keys: Vec<Key>,
+        fetch_mode: FetchMode,
+    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
+        self.get_content_iter(keys, fetch_mode)
     }
 }
 
@@ -447,8 +452,12 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
     fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<FileAuxData> {
         self.get_aux(path, id, fetch_mode)
     }
-    fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, FileAuxData)>>> {
-        self.get_aux_iter(keys, FetchMode::AllowRemote)
+    fn get_batch_iter(
+        &self,
+        keys: Vec<Key>,
+        fetch_mode: FetchMode,
+    ) -> Result<BoxIterator<Result<(Key, FileAuxData)>>> {
+        self.get_aux_iter(keys, fetch_mode)
     }
 }
 
@@ -475,8 +484,9 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
+        fetch_mode: FetchMode,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
-        self.get_tree_iter(keys, FetchMode::AllowRemote)
+        self.get_tree_iter(keys, fetch_mode)
     }
 }
 

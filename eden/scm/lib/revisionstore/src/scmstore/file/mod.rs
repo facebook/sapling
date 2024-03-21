@@ -181,7 +181,7 @@ impl FileStore {
         let activity_logger = self.activity_logger.clone();
 
         let (fetch_local, fetch_remote) = match fetch_mode {
-            FetchMode::AllowRemote => (true, true),
+            FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => (true, true),
             FetchMode::RemoteOnly => (false, true),
             FetchMode::LocalOnly => (true, false),
         };

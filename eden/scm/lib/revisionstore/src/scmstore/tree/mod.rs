@@ -126,7 +126,7 @@ impl TreeStore {
         };
         let fetch_children = self.fetch_tree_metadata;
         let (fetch_local, fetch_remote) = match fetch_mode {
-            FetchMode::AllowRemote => (true, true),
+            FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => (true, true),
             FetchMode::RemoteOnly => (false, true),
             FetchMode::LocalOnly => (true, false),
         };
@@ -185,7 +185,8 @@ impl TreeStore {
                         let attributes = edenapi_types::TreeAttributes {
                             manifest_blob: true,
                             parents: true,
-                            child_metadata: fetch_children,
+                            child_metadata: fetch_children
+                                || fetch_mode == FetchMode::AllowRemotePrefetch,
                         };
                         let response = edenapi
                             .trees_blocking(pending, Some(attributes))

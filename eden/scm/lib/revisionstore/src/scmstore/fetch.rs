@@ -116,7 +116,9 @@ impl<T: StoreValue> CommonFetchState<T> {
                     // This should really never happen. If a key fails to fetch, it should've been
                     // associated with a keyed error and put in incomplete already.
                     FetchMode::RemoteOnly => "server did not provide content",
-                    FetchMode::AllowRemote => "server did not provide content",
+                    FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => {
+                        "server did not provide content"
+                    }
                 };
                 vec![anyhow!("{}", msg)]
             });
