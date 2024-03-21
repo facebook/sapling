@@ -29,6 +29,8 @@ use crate::types::CheckoutConflict;
 use crate::types::CheckoutMode;
 use crate::types::EdenError;
 use crate::types::FileStatus;
+use crate::types::LocalFrom;
+use crate::types::LocalTryFrom;
 
 /// EdenFS client for Sapling CLI integration.
 pub struct EdenFsClient {
@@ -119,7 +121,7 @@ impl EdenFsClient {
                 }
                 Ok(path) => path,
             };
-            let status = status.into();
+            let status = FileStatus::local_from(status);
             result.insert(path, status);
         }
         Ok(result)
@@ -185,7 +187,7 @@ impl EdenFsClient {
         };
         let root_vec = self.root_vec();
         let node_vec = node.into_byte_array().into();
-        let thrift_mode: edenfs::CheckoutMode = mode.into();
+        let thrift_mode = edenfs::CheckoutMode::local_from(mode);
         let thrift_result = extract_error(block_on(thrift_client.checkOutRevision(
             &root_vec,
             &node_vec,
@@ -194,7 +196,7 @@ impl EdenFsClient {
         )))?;
         let result = thrift_result
             .into_iter()
-            .filter_map(|c| CheckoutConflict::try_from(c).ok())
+            .filter_map(|c| CheckoutConflict::local_try_from(c).ok())
             .collect();
         Ok(result)
     }
@@ -208,7 +210,7 @@ pub(crate) fn extract_error<V, E: std::error::Error + Send + Sync + 'static>(
     match result {
         Err(err) => {
             if let Some(source) = err.source() {
-                if let Ok(err) = EdenError::try_from(source) {
+                if let Ok(err) = EdenError::local_try_from(source) {
                     return Err(err.into());
                 }
             }

@@ -21,6 +21,7 @@ pub mod repo;
 pub mod serde_with;
 pub mod sha;
 pub mod tree;
+pub mod workingcopy_client;
 
 pub use crate::hgid::HgId;
 pub use crate::key::Key;
