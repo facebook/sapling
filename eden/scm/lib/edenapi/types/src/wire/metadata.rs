@@ -8,7 +8,6 @@
 pub use crate::metadata::WireAnyFileContentId;
 pub use crate::metadata::WireDirectoryMetadata;
 pub use crate::metadata::WireFileMetadata;
-pub use crate::metadata::WireFileMetadataRequest;
 pub use crate::metadata::WireFileType;
 use crate::Blake3;
 use crate::ContentId;
@@ -55,7 +54,6 @@ mod tests {
 
     auto_wire_tests!(
         WireFileMetadata,
-        WireFileMetadataRequest,
         WireDirectoryMetadata,
         WireAnyFileContentId
     );

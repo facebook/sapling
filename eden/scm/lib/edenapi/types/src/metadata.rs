@@ -60,26 +60,6 @@ pub struct FileMetadata {
     pub content_seeded_blake3: Option<Blake3>,
 }
 
-#[auto_wire]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
-pub struct FileMetadataRequest {
-    #[id(0)]
-    pub with_revisionstore_flags: bool,
-    #[id(1)]
-    pub with_content_id: bool,
-    #[id(2)]
-    pub with_file_type: bool,
-    #[id(3)]
-    pub with_size: bool,
-    #[id(4)]
-    pub with_content_sha1: bool,
-    #[id(5)]
-    pub with_content_sha256: bool,
-    #[id(6)]
-    pub with_content_seeded_blake3: bool,
-}
-
 sized_hash!(Sha1, 20);
 sized_hash!(Sha256, 32);
 sized_hash!(Blake3, 32);
