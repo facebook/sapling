@@ -20,8 +20,8 @@ use ascii::AsciiString;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
+use bulk_derivation::BulkDerivation;
 use cacheblob::InProcessLease;
-use changeset_info::ChangesetInfo;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncRepos;
@@ -29,21 +29,17 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
-use derived_data_manager::derivable::BonsaiDerivable;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use git_types::MappedGitCommitId;
-use git_types::RootGitDeltaManifestId;
-use git_types::TreeHandle;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use manifest::ManifestOps;
 use maplit::btreemap;
 use maplit::hashmap;
-use maplit::hashset;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
@@ -56,6 +52,7 @@ use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -64,12 +61,12 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
+use strum::IntoEnumIterator;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 use tests_utils::CreateCommitContext;
-use unodes::RootUnodeManifestId;
 
 use crate::prepare_repos_mapping_and_config;
 use crate::sync_to_master;
@@ -400,16 +397,8 @@ pub(crate) fn create_base_commit_sync_config(
 
 /// Derived data types that should be enabled in all test repos
 pub(crate) fn derived_data_available_config() -> HashMap<String, DerivedDataTypesConfig> {
-    // TODO(T181473986): enable and derive all types in the large repo
     let derived_data_types_config = DerivedDataTypesConfig {
-        types: hashset! {
-            ChangesetInfo::VARIANT,
-            MappedGitCommitId::VARIANT,
-            TreeHandle::VARIANT,
-            RootGitDeltaManifestId::VARIANT,
-            RootUnodeManifestId::VARIANT,
-            RootFsnodeId::VARIANT
-        },
+        types: DerivableType::iter().collect(),
         ..Default::default()
     };
 
@@ -514,22 +503,23 @@ pub(crate) async fn get_all_changeset_data_from_repo(
 /// Helper to quickly check the changesets of a specific repo considering
 /// the commits from the basic setup (i.e. included in all tests)
 pub(crate) fn compare_expected_changesets_from_basic_setup(
-    actual_changesets: Vec<ChangesetData>,
-    expected_changesets: Vec<ExpectedChangeset>,
+    actual_changesets: &[ChangesetData],
+    expected_changesets: &[ExpectedChangeset],
 ) -> Result<()> {
     compare_expected_changesets(
         actual_changesets,
-        vec![expected_changesets_from_basic_setup(), expected_changesets]
+        expected_changesets_from_basic_setup()
             .into_iter()
-            .flatten()
-            .collect(),
+            .chain(expected_changesets.iter().cloned())
+            .collect::<Vec<_>>()
+            .as_slice(),
     )
 }
 
 /// Helper to quickly check the changesets of a specific repo.
 pub(crate) fn compare_expected_changesets(
-    actual_changesets: Vec<ChangesetData>,
-    expected_changesets: Vec<ExpectedChangeset>,
+    actual_changesets: &[ChangesetData],
+    expected_changesets: &[ExpectedChangeset],
 ) -> Result<()> {
     // Print the actual changesets to debug test failures
     println!("actual_changesets: {:#?}\n\n", &actual_changesets);
@@ -587,6 +577,28 @@ pub(crate) async fn check_submodule_metadata_file_in_large_repo<'a>(
     let file_string = std::str::from_utf8(file_bytes.as_ref())?;
 
     assert_eq!(file_string, expected_git_hash.to_string());
+
+    Ok(())
+}
+
+/// Derive all the derived data types for all changesets in a repo.
+/// This should be used in all tests with the large repo, to make sure that
+/// commits synced to the large repo won't break the derivation of any type.
+pub(crate) async fn derive_all_data_types_for_repo(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    all_changesets: &[ChangesetData],
+) -> Result<()> {
+    let _ = repo
+        .repo_derived_data()
+        .manager()
+        .derive_bulk(
+            ctx,
+            all_changesets.iter().map(|cs_data| cs_data.cs_id).collect(),
+            None,
+            DerivableType::iter().collect::<Vec<_>>().as_slice(),
+        )
+        .await?;
 
     Ok(())
 }

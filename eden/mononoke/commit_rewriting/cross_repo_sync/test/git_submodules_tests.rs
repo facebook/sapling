@@ -113,6 +113,8 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
     let expected_cs_id =
         ChangesetId::from_str("eb139e09af89e542b3d0d272857e7400ba721e814e3a06d94c85dfcea8e0c124")
             .unwrap();
@@ -126,8 +128,8 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     .await;
 
     compare_expected_changesets_from_basic_setup(
-        large_repo_changesets,
-        vec![ExpectedChangeset::new_by_file_change(
+        &large_repo_changesets,
+        &[ExpectedChangeset::new_by_file_change(
             MESSAGE,
             // File changes only contain exact delta and change to submodule
             // metadata file
@@ -181,6 +183,10 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     println!("large_repo_cs_id: {}", large_repo_cs_id);
 
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
     check_mapping(
         ctx.clone(),
         &commit_syncer,
@@ -190,11 +196,9 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
     )
     .await;
 
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-
     compare_expected_changesets_from_basic_setup(
-        large_repo_changesets,
-        vec![ExpectedChangeset::new_by_file_change(
+        &large_repo_changesets,
+        &[ExpectedChangeset::new_by_file_change(
             MESSAGE,
             // No regular file changes
             vec![],
@@ -251,6 +255,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     println!("large_repo_cs_id: {}", large_repo_cs_id);
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("b0db847efd159d8c84d9227c6ae2ac74caee7ff0c07543c034472b596f1af52c")
@@ -259,8 +264,8 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
 
     compare_expected_changesets_from_basic_setup(
-        large_repo_changesets,
-        vec![ExpectedChangeset::new_by_file_change(
+        &large_repo_changesets,
+        &[ExpectedChangeset::new_by_file_change(
             MESSAGE,
             // Add a regular file in the same path as the submodule expansion
             vec!["repo_a/submodules/repo_b"],
@@ -334,6 +339,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         .ok_or(anyhow!("Failed to sync commit"))?;
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("7fc76cfa1906ccc74f86322cf529c5508867b5cfef8b80fb65a425e835f4b92b")
@@ -342,8 +348,8 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
 
     compare_expected_changesets_from_basic_setup(
-        large_repo_changesets,
-        vec![ExpectedChangeset::new_by_file_change(
+        &large_repo_changesets,
+        &[ExpectedChangeset::new_by_file_change(
             MESSAGE,
             // Submodule metadata file is updated
             vec![
@@ -416,6 +422,8 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
+    derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+
     let expected_cs_id =
         ChangesetId::from_str("a586b2e4b85ef2ab37aa37a78711d82a10733098975c2ea352f3d80729d5cd6f")
             .unwrap();
@@ -423,8 +431,8 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
 
     compare_expected_changesets_from_basic_setup(
-        large_repo_changesets,
-        vec![ExpectedChangeset::new_by_file_change(
+        &large_repo_changesets,
+        &[ExpectedChangeset::new_by_file_change(
             MESSAGE,
             vec![
                 "repo_a/.x-repo-submodule-A_A",
