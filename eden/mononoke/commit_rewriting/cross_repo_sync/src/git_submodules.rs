@@ -571,11 +571,26 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
 
             async move {
                 let fsnode_id = id_to_fsnode_manifest_id(&ctx, source_repo, cs_id).await?;
+                // Get the manifest entry in the submodule path
                 let entry = fsnode_id
                     .find_entry(ctx.clone(), source_repo_blobstore, submodule_path.0.clone().into())
                     .await?;
+
+                // Check what kind of manifest entry the submodule path is on
+                // that revision
                 match entry {
+                    // If it's a file, the submodule is likely being updated
                     Some(Leaf(fsnode_file)) => {
+                        if *fsnode_file.file_type() != FileType::GitSubmodule {
+                            // If the entry is a file of type other than GitSubmodule,
+                            // it means that a submodule is being added in the place
+                            // of a regular file.
+                            // This means that this revision didn't have a dependency
+                            // on the submodule, so skip it.
+                            return Ok(None);
+                        };
+                        // File is a submodule, so get the git hash that it stored
+                        // which represents the pointer to that submodule.
                         let git_sha1 = get_git_hash_from_submodule_file(
                             &ctx,
                             source_repo,
@@ -584,6 +599,8 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
                         )
                         .await?;
 
+                        // From the git hash, get the bonsai changeset it in the
+                        // submodule Mononoke repo.
                         let sm_parent_cs_id = submodule_repo
                             .bonsai_git_mapping()
                             .get_bonsai_from_git_sha1(&ctx, git_sha1)
@@ -597,6 +614,9 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
                             })?;
                         Ok(Some(sm_parent_cs_id))
                     }
+                // If it doesn't exist, or is a directory, skip it because it's
+                // not a revision that can be used as a parent to generate delta
+                // for the submodule expansion.
                     Some(Tree(_)) | None => Ok(None),
                 }
             // Get content id of the file
