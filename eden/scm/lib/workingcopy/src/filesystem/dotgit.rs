@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -37,8 +38,8 @@ pub struct DotGitFileSystem {
 
 impl DotGitFileSystem {
     pub fn new(
-        treestate: Arc<Mutex<TreeState>>,
         vfs: VFS,
+        dot_dir: &Path,
         store: Arc<dyn FileStore>,
         config: &dyn Config,
     ) -> Result<Self> {
@@ -46,6 +47,8 @@ impl DotGitFileSystem {
             git_dir: Some(vfs.root().join(".git")),
             ..RunGitOptions::from_config(config)
         };
+        let treestate = create_treestate(dot_dir, vfs.case_sensitive())?;
+        let treestate = Arc::new(Mutex::new(treestate));
         Ok(DotGitFileSystem {
             treestate,
             vfs,
@@ -53,6 +56,12 @@ impl DotGitFileSystem {
             git,
         })
     }
+}
+
+fn create_treestate(dot_dir: &std::path::Path, case_sensitive: bool) -> Result<TreeState> {
+    let dirstate_path = dot_dir.join("dirstate");
+    tracing::trace!("loading dotgit dirstate");
+    TreeState::from_overlay_dirstate(&dirstate_path, case_sensitive)
 }
 
 impl FileSystem for DotGitFileSystem {
@@ -148,5 +157,9 @@ impl FileSystem for DotGitFileSystem {
         self.git.call("update-ref", &["HEAD", &p1_hex])?;
         // TODO: What to do with p2?
         Ok(())
+    }
+
+    fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>> {
+        Ok(self.treestate.clone())
     }
 }

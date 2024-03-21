@@ -42,10 +42,7 @@ use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
 use storemodel::FileStore;
-use treestate::dirstate::Dirstate;
-use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
-use treestate::serialization::Serializable;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
@@ -153,64 +150,6 @@ impl WorkingCopy {
             }
         };
 
-        let treestate = {
-            let case_sensitive = vfs.case_sensitive();
-            tracing::trace!("case sensitive: {case_sensitive}");
-            let dirstate_path = dot_dir.join("dirstate");
-            let treestate = match file_system_type {
-                FileSystemType::Eden | FileSystemType::DotGit => {
-                    tracing::trace!("loading edenfs-like dirstate");
-                    TreeState::from_overlay_dirstate(&dirstate_path, case_sensitive)?
-                }
-                _ => {
-                    let treestate_path = dot_dir.join("treestate");
-                    if util::file::exists(&dirstate_path)
-                        .map_err(anyhow::Error::from)?
-                        .is_some()
-                    {
-                        tracing::trace!("reading dirstate file");
-                        let mut buf =
-                            util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
-                        tracing::trace!("deserializing dirstate");
-                        let dirstate = Dirstate::deserialize(&mut buf)?;
-                        let fields = dirstate
-                            .tree_state
-                            .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
-
-                        let filename = fields.tree_filename;
-                        let root_id = fields.tree_root_id;
-                        tracing::trace!("loading treestate {filename} {root_id:?}");
-                        TreeState::open(&treestate_path.join(filename), root_id, case_sensitive)?
-                    } else {
-                        tracing::trace!("creating treestate");
-                        let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
-
-                        tracing::trace!("creating dirstate");
-                        let dirstate = Dirstate {
-                            p1: *HgId::null_id(),
-                            p2: *HgId::null_id(),
-                            tree_state: Some(TreeStateFields {
-                                tree_filename: treestate.file_name()?,
-                                tree_root_id: root_id,
-                                // TODO: set threshold
-                                repack_threshold: None,
-                            }),
-                        };
-
-                        tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
-                        let mut file =
-                            util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
-
-                        tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
-                        dirstate.serialize(&mut file)?;
-                        treestate
-                    }
-                }
-            };
-            tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
-            Arc::new(Mutex::new(treestate))
-        };
-
         let ignore_matcher = Arc::new(GitignoreMatcher::new(
             vfs.root(),
             WorkingCopy::global_ignore_paths(vfs.root(), config)
@@ -224,14 +163,16 @@ impl WorkingCopy {
 
         let (filesystem, eden_client) = Self::construct_file_system(
             vfs.clone(),
+            dot_dir,
             config,
             file_system_type,
-            treestate.clone(),
             tree_resolver.clone(),
             filestore.clone(),
             locker.clone(),
             watchman_client.clone(),
         )?;
+        let treestate = filesystem.get_treestate()?;
+        tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
         let filesystem = Mutex::new(filesystem);
 
         let root = vfs.root();
@@ -335,9 +276,9 @@ impl WorkingCopy {
 
     fn construct_file_system(
         vfs: VFS,
+        dot_dir: &Path,
         config: &dyn Config,
         file_system_type: FileSystemType,
-        treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         store: ArcFileStore,
         locker: Arc<RepoLocker>,
@@ -347,9 +288,9 @@ impl WorkingCopy {
             FileSystemType::Normal => (
                 Box::new(PhysicalFileSystem::new(
                     vfs.clone(),
+                    dot_dir,
                     tree_resolver,
                     store.clone(),
-                    treestate,
                     locker,
                 )?),
                 None,
@@ -357,9 +298,9 @@ impl WorkingCopy {
             FileSystemType::Watchman => (
                 Box::new(WatchmanFileSystem::new(
                     vfs.clone(),
+                    dot_dir,
                     tree_resolver,
                     store.clone(),
-                    treestate,
                     locker,
                     watchman_client,
                 )?),
@@ -373,9 +314,9 @@ impl WorkingCopy {
                     let client = Arc::new(EdenFsClient::from_wdir(vfs.root())?);
                     (
                         Box::new(EdenFileSystem::new(
-                            treestate,
                             client.clone(),
                             vfs.clone(),
+                            dot_dir,
                             store.clone(),
                         )?),
                         Some(client),
@@ -384,8 +325,8 @@ impl WorkingCopy {
             }
             FileSystemType::DotGit => (
                 Box::new(DotGitFileSystem::new(
-                    treestate,
                     vfs.clone(),
+                    dot_dir,
                     store.clone(),
                     config,
                 )?),

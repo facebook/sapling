@@ -6,6 +6,7 @@
  */
 
 use std::cell::Cell;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,12 +42,14 @@ pub struct EdenFileSystem {
 
 impl EdenFileSystem {
     pub fn new(
-        treestate: Arc<Mutex<TreeState>>,
         client: Arc<EdenFsClient>,
         vfs: VFS,
+        dot_dir: &Path,
         store: Arc<dyn FileStore>,
     ) -> Result<Self> {
         let journal_position = Cell::new(client.get_journal_position()?);
+        let treestate = create_treestate(dot_dir, vfs.case_sensitive())?;
+        let treestate = Arc::new(Mutex::new(treestate));
         Ok(EdenFileSystem {
             treestate,
             client,
@@ -55,6 +58,12 @@ impl EdenFileSystem {
             journal_position,
         })
     }
+}
+
+fn create_treestate(dot_dir: &std::path::Path, case_sensitive: bool) -> Result<TreeState> {
+    let dirstate_path = dot_dir.join("dirstate");
+    tracing::trace!("loading edenfs dirstate");
+    TreeState::from_overlay_dirstate(&dirstate_path, case_sensitive)
 }
 
 impl FileSystem for EdenFileSystem {
@@ -147,5 +156,9 @@ impl FileSystem for EdenFileSystem {
         let parent_tree_hash =
             parent_tree_hash.context("parent tree required for setting EdenFS parents")?;
         self.client.set_parents(p1, p2, parent_tree_hash)
+    }
+
+    fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>> {
+        Ok(self.treestate.clone())
     }
 }

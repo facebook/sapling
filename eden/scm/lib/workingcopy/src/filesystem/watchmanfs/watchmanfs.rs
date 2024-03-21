@@ -100,15 +100,15 @@ pub struct DebugRootStatusRequest(pub &'static str, pub PathBuf);
 impl WatchmanFileSystem {
     pub fn new(
         vfs: VFS,
+        dot_dir: &Path,
         tree_resolver: ArcReadTreeManifest,
         store: ArcFileStore,
-        treestate: Arc<Mutex<TreeState>>,
         locker: Arc<RepoLocker>,
         client: Arc<DeferredWatchmanClient>,
     ) -> Result<Self> {
         Ok(WatchmanFileSystem {
             client,
-            inner: PhysicalFileSystem::new(vfs, tree_resolver, store, treestate, locker)?,
+            inner: PhysicalFileSystem::new(vfs, dot_dir, tree_resolver, store, locker)?,
         })
     }
 
@@ -472,6 +472,10 @@ impl FileSystem for WatchmanFileSystem {
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
         self.inner.sparse_matcher(manifests, dot_dir)
+    }
+
+    fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>> {
+        self.inner.get_treestate()
     }
 }
 

@@ -6,9 +6,11 @@
  */
 
 use std::collections::HashSet;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::ConfigExt;
 use context::CoreContext;
@@ -19,9 +21,13 @@ use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use storemodel::FileStore;
+use treestate::dirstate::Dirstate;
+use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
+use treestate::serialization::Serializable;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::HgId;
 use types::RepoPathBuf;
 use vfs::VFS;
 
@@ -55,12 +61,14 @@ pub struct PhysicalFileSystem {
 impl PhysicalFileSystem {
     pub fn new(
         vfs: VFS,
+        dot_dir: &Path,
         tree_resolver: ArcReadTreeManifest,
         store: ArcFileStore,
-        treestate: Arc<Mutex<TreeState>>,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         let ident = identity::must_sniff_dir(vfs.root())?;
+        let treestate = create_treestate(dot_dir, vfs.case_sensitive())?;
+        let treestate = Arc::new(Mutex::new(treestate));
         Ok(PhysicalFileSystem {
             vfs,
             tree_resolver,
@@ -69,6 +77,51 @@ impl PhysicalFileSystem {
             locker,
             dot_dir: ident.dot_dir().to_string(),
         })
+    }
+}
+
+fn create_treestate(dot_dir: &Path, case_sensitive: bool) -> Result<TreeState> {
+    // Default implementation.
+    let dirstate_path = dot_dir.join("dirstate");
+    let treestate_path = dot_dir.join("treestate");
+    if util::file::exists(&dirstate_path)
+        .map_err(anyhow::Error::from)?
+        .is_some()
+    {
+        tracing::trace!("reading dirstate file");
+        let mut buf = util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
+        tracing::trace!("deserializing dirstate");
+        let dirstate = Dirstate::deserialize(&mut buf)?;
+        let fields = dirstate
+            .tree_state
+            .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
+
+        let filename = fields.tree_filename;
+        let root_id = fields.tree_root_id;
+        tracing::trace!("loading treestate {filename} {root_id:?}");
+        TreeState::open(&treestate_path.join(filename), root_id, case_sensitive)
+    } else {
+        tracing::trace!("creating treestate");
+        let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
+
+        tracing::trace!("creating dirstate");
+        let dirstate = Dirstate {
+            p1: *HgId::null_id(),
+            p2: *HgId::null_id(),
+            tree_state: Some(TreeStateFields {
+                tree_filename: treestate.file_name()?,
+                tree_root_id: root_id,
+                // TODO: set threshold
+                repack_threshold: None,
+            }),
+        };
+
+        tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
+        let mut file = util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
+
+        tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
+        dirstate.serialize(&mut file)?;
+        Ok(treestate)
     }
 }
 
@@ -126,6 +179,10 @@ impl FileSystem for PhysicalFileSystem {
             self.store.clone(),
             &self.vfs.root().join(dot_dir),
         )
+    }
+
+    fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>> {
+        Ok(self.treestate.clone())
     }
 }
 

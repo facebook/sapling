@@ -14,8 +14,10 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use context::CoreContext;
 use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
+use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -82,4 +84,7 @@ pub trait FileSystem {
     ) -> Result<()> {
         Ok(())
     }
+
+    /// Obtain the TreeState.
+    fn get_treestate(&self) -> Result<Arc<Mutex<TreeState>>>;
 }
