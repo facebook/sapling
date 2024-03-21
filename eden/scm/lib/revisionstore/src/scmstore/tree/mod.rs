@@ -61,6 +61,13 @@ use crate::RepackLocation;
 use crate::StoreKey;
 use crate::StoreResult;
 
+#[derive(Clone, Debug)]
+pub enum TreeMetadataMode {
+    Never,
+    Always,
+    OptIn,
+}
+
 #[derive(Clone)]
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.
@@ -85,9 +92,10 @@ pub struct TreeStore {
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
+
     /// Whether we should request extra children metadata from EdenAPI and write back to
     /// filestore's aux cache.
-    pub fetch_tree_metadata: bool,
+    pub tree_metadata_mode: TreeMetadataMode,
 
     pub flush_on_drop: bool,
 }
@@ -124,7 +132,13 @@ impl TreeStore {
         } else {
             (None, None)
         };
-        let fetch_children = self.fetch_tree_metadata;
+
+        let fetch_children_metadata = match self.tree_metadata_mode {
+            TreeMetadataMode::Always => true,
+            TreeMetadataMode::Never => false,
+            TreeMetadataMode::OptIn => fetch_mode == FetchMode::AllowRemotePrefetch,
+        };
+
         let (fetch_local, fetch_remote) = match fetch_mode {
             FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => (true, true),
             FetchMode::RemoteOnly => (false, true),
@@ -185,8 +199,7 @@ impl TreeStore {
                         let attributes = edenapi_types::TreeAttributes {
                             manifest_blob: true,
                             parents: true,
-                            child_metadata: fetch_children
-                                || fetch_mode == FetchMode::AllowRemotePrefetch,
+                            child_metadata: fetch_children_metadata,
                         };
                         let response = edenapi
                             .trees_blocking(pending, Some(attributes))
@@ -308,7 +321,7 @@ impl TreeStore {
             contentstore: None,
             filestore: None,
             flush_on_drop: true,
-            fetch_tree_metadata: false,
+            tree_metadata_mode: TreeMetadataMode::Never,
         }
     }
 
@@ -362,7 +375,7 @@ impl LegacyStore for TreeStore {
             contentstore: None,
             filestore: None,
             flush_on_drop: true,
-            fetch_tree_metadata: false,
+            tree_metadata_mode: TreeMetadataMode::Never,
         })
     }
 

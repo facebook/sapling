@@ -48,7 +48,7 @@ Sanity check that children metadata isn't fetched by default:
   $ setconfig remotefilelog.cachepath=$TESTTMP/cache2
 
 Fetch a tree with children metadata:
-  $ hg debugscmstore -r $A dir --mode=tree --config scmstore.fetch-tree-metadata=true
+  $ hg debugscmstore -r $A dir --mode=tree --config scmstore.tree-metadata-mode=always
   Successfully fetched tree: (
       Key {
           path: RepoPathBuf(

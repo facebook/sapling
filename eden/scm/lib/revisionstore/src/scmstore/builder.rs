@@ -29,6 +29,7 @@ use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::file::FileStoreMetrics;
+use crate::scmstore::tree::TreeMetadataMode;
 use crate::scmstore::FileStore;
 use crate::scmstore::TreeStore;
 use crate::util::get_indexedlogdatastore_aux_path;
@@ -627,6 +628,13 @@ impl<'a> TreeStoreBuilder<'a> {
             None
         };
 
+        let tree_metadata_mode = match self.config.get("scmstore", "tree-metadata-mode").as_deref()
+        {
+            Some("always") => TreeMetadataMode::Always,
+            None | Some("opt-in") => TreeMetadataMode::OptIn,
+            _ => TreeMetadataMode::Never,
+        };
+
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
@@ -635,9 +643,7 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi,
             contentstore,
             filestore: self.filestore,
-            fetch_tree_metadata: self
-                .config
-                .get_or_default("scmstore", "fetch-tree-metadata")?,
+            tree_metadata_mode,
             flush_on_drop: true,
         })
     }

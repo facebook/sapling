@@ -56,7 +56,7 @@ Now we do have aux data locally:
 
 
 Fetch only content first:
-  $ hg cat -q -r $B B --config scmstore.fetch-tree-metadata=false
+  $ hg cat -q -r $B B
   B (no-eol)
 
 Make sure we don't have aux data yet:
