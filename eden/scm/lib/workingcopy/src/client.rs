@@ -1,0 +1,78 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::any::Any;
+use std::collections::BTreeMap;
+
+use anyhow::Result;
+use types::workingcopy_client::CheckoutConflict;
+use types::workingcopy_client::CheckoutMode;
+use types::workingcopy_client::FileStatus;
+use types::HgId;
+use types::RepoPathBuf;
+
+/// The "client" that talks to an external program for working copy management.
+/// Practically, a "client" could be an "edenfs" client or a "git" client.
+///
+/// This trait is initially modeled after edenfs-client. It does not keep states
+/// about treestate or write to the filesystem. The treestate/dirstate related
+/// logic lives at a higher level.
+pub trait WorkingCopyClient: Send + Sync {
+    /// Get the "status". Note: those "status" are from the "external" client,
+    /// they are probably not the final "status" and needs furtuer processing.
+    fn get_status(
+        &self,
+        node: HgId,
+        list_ignored: bool,
+    ) -> Result<BTreeMap<RepoPathBuf, FileStatus>>;
+
+    /// Set parents (tracked by the external program) without changing the working copy content.
+    /// This is used by commands like `reset -k`.
+    fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> Result<()>;
+
+    /// Checkout. Set parents and update working copy content.
+    fn checkout(
+        &self,
+        node: HgId,
+        tree_node: HgId,
+        mode: CheckoutMode,
+    ) -> Result<Vec<CheckoutConflict>>;
+
+    /// For downcast.
+    fn as_any(&self) -> &dyn Any;
+}
+
+#[cfg(feature = "eden")]
+impl WorkingCopyClient for edenfs_client::EdenFsClient {
+    fn get_status(
+        &self,
+        node: HgId,
+        list_ignored: bool,
+    ) -> Result<BTreeMap<RepoPathBuf, FileStatus>> {
+        tracing::debug!(p1=?node, list_ignored=list_ignored, "get_status");
+        edenfs_client::EdenFsClient::get_status(self, node, list_ignored)
+    }
+
+    fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> Result<()> {
+        tracing::debug!(p1=?p1, p2=?p2, p1_tree=?p1_tree, "set_parents");
+        edenfs_client::EdenFsClient::set_parents(self, p1, p2, p1_tree)
+    }
+
+    fn checkout(
+        &self,
+        node: HgId,
+        tree_node: HgId,
+        mode: edenfs_client::CheckoutMode,
+    ) -> Result<Vec<CheckoutConflict>> {
+        tracing::debug!(p1=?node, p1_tree=?tree_node, mode=?mode, "checkout");
+        edenfs_client::EdenFsClient::checkout(self, node, tree_node, mode)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
+}

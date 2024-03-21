@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+pub mod client;
 mod errors;
 mod filechangedetector;
 pub mod filesystem;
