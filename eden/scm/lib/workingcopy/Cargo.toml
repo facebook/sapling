@@ -15,6 +15,7 @@ context = { version = "0.1.0", path = "../context" }
 crossbeam = "0.8"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fs-err = { version = "2.6.0", features = ["tokio"] }
+gitcompat = { version = "0.1.0", path = "../gitcompat" }
 hgtime = { version = "0.1.0", path = "../hgtime" }
 identity = { version = "0.1.0", path = "../identity" }
 journal = { version = "0.1.0", path = "../journal" }

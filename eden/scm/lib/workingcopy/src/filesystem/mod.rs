@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+mod dotgit;
 mod filesystem;
 
+pub use dotgit::DotGitFileSystem;
 pub use filesystem::FileSystem;
 pub use filesystem::PendingChange;
 
