@@ -132,7 +132,8 @@ impl TreeState {
         overlay_dirstate_path: &Path,
         case_sensitive: bool,
     ) -> Result<Self> {
-        let store = FileStore::in_memory()?;
+        let store =
+            FileStore::in_memory_with_lock_path(&overlay_dirstate_path.with_extension(".lock"))?;
         let root = TreeStateRoot::default();
         let tree = Tree::new();
 

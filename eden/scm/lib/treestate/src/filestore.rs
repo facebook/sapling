@@ -10,7 +10,6 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::io::BufWriter;
-use std::io::Cursor;
 use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -31,6 +30,7 @@ use fs_err::OpenOptions;
 use crate::errors::ErrorKind;
 use crate::filereadwrite::FileReadWrite;
 use crate::filereadwrite::FileReaderWriter;
+use crate::filereadwrite::MemReaderWriter;
 use crate::store::BlockId;
 use crate::store::ScopedLock;
 use crate::store::Store;
@@ -102,9 +102,8 @@ impl FileStore {
 
     /// Create a new FileStore in memory. This is used solely for providing
     /// EdenFS a TreeState that is backed by a legacy dirstate.
-    /// TODO: Remove once EdenFS has migrated to TreeState.
-    pub fn in_memory() -> Result<FileStore> {
-        let mut file = Cursor::new(Vec::new());
+    pub fn in_memory_with_lock_path(lock_path: &Path) -> Result<FileStore> {
+        let mut file = MemReaderWriter::new(lock_path)?;
         file.write_all(&MAGIC)?;
         file.write_u32::<BigEndian>(VERSION)?;
         let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
