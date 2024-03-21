@@ -39,7 +39,7 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     fs::write(store_dir.join("gitdir"), format!("..{SEP}.."))?;
 
     // Write an empty eden dirstate so it can be loaded.
-    treestate::legacy_eden_dirstate::write_eden_dirstate(
+    treestate::overlay_dirstate::write_overlay_dirstate(
         &dot_dir.join("dirstate"),
         std::iter::once(("p1".to_owned(), HgId::null_id().to_hex())).collect(),
         Default::default(),

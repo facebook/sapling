@@ -25,9 +25,9 @@ use util::path::create_dir;
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 use crate::filestore::FileStore;
-use crate::legacy_eden_dirstate::read_eden_dirstate;
-use crate::legacy_eden_dirstate::write_eden_dirstate;
 use crate::metadata::Metadata;
+use crate::overlay_dirstate::read_overlay_dirstate;
+use crate::overlay_dirstate::write_overlay_dirstate;
 use crate::root::TreeStateRoot;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
@@ -49,10 +49,9 @@ pub struct TreeState {
     tree: Tree<FileStateV2>,
     root: TreeStateRoot,
     original_root_id: BlockId,
-    // eden_dirstate_path is only used in the case the case that the treestate is
+    // overlay_dirstate_path is only used in the case the case that the treestate is
     // wrapping a legacy eden dirstate which is necessary for EdenFS compatility.
-    // TODO: Remove once EdenFS has migrated to treestate.
-    eden_dirstate_path: Option<PathBuf>,
+    overlay_dirstate_path: Option<PathBuf>,
     case_sensitive: bool,
     pending_change_count: u64,
 }
@@ -81,7 +80,7 @@ impl TreeState {
             tree,
             root,
             original_root_id: root_id,
-            eden_dirstate_path: None,
+            overlay_dirstate_path: None,
             case_sensitive,
             pending_change_count: 0,
         })
@@ -102,7 +101,7 @@ impl TreeState {
             tree,
             root,
             original_root_id: BlockId(0),
-            eden_dirstate_path: None,
+            overlay_dirstate_path: None,
             case_sensitive,
             pending_change_count: 0,
         };
@@ -129,20 +128,23 @@ impl TreeState {
     /// treestate.
     /// N.B: A legacy eden dirstate has a different binary format to a legacy
     /// dirstate.
-    pub fn from_eden_dirstate(eden_dirstate_path: &Path, case_sensitive: bool) -> Result<Self> {
+    pub fn from_overlay_dirstate(
+        overlay_dirstate_path: &Path,
+        case_sensitive: bool,
+    ) -> Result<Self> {
         let store = FileStore::in_memory()?;
         let root = TreeStateRoot::default();
         let tree = Tree::new();
 
-        let (metadata, entries) = read_eden_dirstate(eden_dirstate_path)?;
+        let (metadata, entries) = read_overlay_dirstate(overlay_dirstate_path)?;
 
-        let path = eden_dirstate_path.to_path_buf();
+        let path = overlay_dirstate_path.to_path_buf();
         let mut treestate = TreeState {
             store,
             tree,
             root,
             original_root_id: BlockId(0),
-            eden_dirstate_path: Some(path),
+            overlay_dirstate_path: Some(path),
             case_sensitive,
             pending_change_count: 0,
         };
@@ -213,12 +215,10 @@ impl TreeState {
         let result = self.store.append(&root_buf)?;
         self.store.flush()?;
 
-        // TODO: Clean up once we migrate EdenFS to TreeState and no longer
-        // need to write to legacy eden dirstate format.
-        if let Some(eden_dirstate_path) = self.eden_dirstate_path.clone() {
+        if let Some(overlay_dirstate_path) = self.overlay_dirstate_path.clone() {
             let metadata = self.metadata()?;
             let entries = self.flatten_tree()?;
-            write_eden_dirstate(&eden_dirstate_path, metadata, entries)?;
+            write_overlay_dirstate(&overlay_dirstate_path, metadata, entries)?;
         }
 
         self.original_root_id = result;

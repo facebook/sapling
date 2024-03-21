@@ -27,8 +27,20 @@ use util::file::atomic_write;
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 
-/// Reader and writer functions to a legacy Eden dirstate. Note carefully that
-/// a legacy Eden dirstate has a different binary format to a legacy dirstate
+/// Reader and writer functions to an _overlay_ dirstate.
+///
+/// An _overlay_ contains entries for changes on top of an existing "status" source of truth such
+/// as edenfs or "git status". For example, if the "git status" already reports "a.txt" as
+/// "modified", then it's unncessary for this overlay to duplicate the "M a.txt" state. The overlay
+/// can be used, for example, to overwrite "? b.txt" to "A b.txt".
+///
+/// Right now this is just a simple serialization format that is rewritten in full every time. It
+/// has checksum and does not need "repack" like the full treestate, and can convert to an
+/// in-memory-only treestate in O(N) time just fine, assuming the overlay is always small so the
+/// O(N) is affordable and maybe even desirable for the lack of repack complexitiy. If it becomes
+/// a scalability issue we can revisit.
+///
+/// Note carefully that a legacy Eden dirstate has a different binary format to a legacy dirstate
 /// in a non-Eden repo.
 
 const CURRENT_VERSION: u32 = 1;
@@ -41,14 +53,14 @@ const MERGE_NOT_APPLICABLE: i8 = 0;
 const MERGE_BOTH_PARENTS: i8 = -1;
 const MERGE_OTHER_PARENT: i8 = -2;
 
-pub fn read_eden_dirstate(
+pub fn read_overlay_dirstate(
     dirstate_path: &Path,
 ) -> Result<(BTreeMap<String, String>, HashMap<Box<[u8]>, FileStateV2>)> {
     let mut dirstate = File::open(dirstate_path)?;
     deserialize_dirstate(&mut dirstate)
 }
 
-pub fn write_eden_dirstate(
+pub fn write_overlay_dirstate(
     dirstate_path: &Path,
     metadata: BTreeMap<String, String>,
     entries: HashMap<Box<[u8]>, FileStateV2>,
