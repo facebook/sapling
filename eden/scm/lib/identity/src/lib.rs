@@ -475,15 +475,15 @@ fn compute_default() -> Identity {
         .file_name()
         .expect("file_name() on current_exe() should not fail");
     let file_name = file_name.to_string_lossy();
-    let (ident, reason) = (|| {
-        let env_override = all()
-            .iter()
-            .find_map(|id| id.env_var("IDENTITY"))
-            .and_then(|v| v.ok());
+    let (mut ident, reason) = (|| {
+        // Allow overriding identity selection via env var (e.g. "SL_IDENTITY=sl").
 
-        for ident in all() {
-            if Some(ident.user.cli_name) == env_override.as_deref() {
-                return (*ident, "env var");
+        if let Some(env_override) = env_var_any("IDENTITY").and_then(|v| v.ok()) {
+            for ident in all() {
+                if ident.user.cli_name == env_override {
+                    tracing::debug!(ident = env_override, "override ident from env");
+                    return (*ident, "env var");
+                }
             }
         }
 
@@ -496,6 +496,21 @@ fn compute_default() -> Identity {
         // Fallback to SL if current_exe does not provide information.
         (SL, "fallback")
     })();
+
+    // Allow overriding the repo identity when creating repo (i.e. choose flavor of dot dir).
+    // When repo already exists, repo identity will always be based on existing dot dir.
+    if let Some(env_repo_override) = env_var_any("REPO_IDENTITY").and_then(|v| v.ok()) {
+        if let Some(repo_ident) = all()
+            .iter()
+            .find(|id| id.user.cli_name == env_repo_override)
+        {
+            tracing::debug!(
+                repo_ident = repo_ident.dot_dir(),
+                "override repo ident from env"
+            );
+            ident.repo = repo_ident.repo;
+        }
+    }
 
     tracing::info!(
         identity = ident.user.cli_name,
@@ -597,12 +612,15 @@ pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
     }
 
     // Backwards compat for old env vars.
+    env_var_any(var_suffix)
+}
+
+fn env_var_any(var_suffix: &str) -> Option<Result<String, VarError>> {
     for id in all() {
         if let Some(res) = id.env_var(var_suffix) {
             return Some(res);
         }
     }
-
     None
 }
 
