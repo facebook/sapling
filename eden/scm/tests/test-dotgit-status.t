@@ -38,7 +38,8 @@ Status after changing filesystem (modify, create, remove)
   ?? d
 
   $ sl status
-  ? b
+  M b
+  ! c
   ? d
 
 Status update via add or remove commands
@@ -51,5 +52,6 @@ Status update via add or remove commands
   abort: working directory state appears damaged!
   [255]
   $ sl status
-  ? b
+  M b
+  ! c
   ? d

@@ -47,7 +47,7 @@ impl DotGitFileSystem {
             git_dir: Some(vfs.root().join(".git")),
             ..RunGitOptions::from_config(config)
         };
-        let treestate = create_treestate(dot_dir, vfs.case_sensitive())?;
+        let treestate = create_treestate(&git, dot_dir, vfs.case_sensitive())?;
         let treestate = Arc::new(Mutex::new(treestate));
         Ok(DotGitFileSystem {
             treestate,
@@ -58,10 +58,29 @@ impl DotGitFileSystem {
     }
 }
 
-fn create_treestate(dot_dir: &std::path::Path, case_sensitive: bool) -> Result<TreeState> {
+fn create_treestate(
+    git: &RunGitOptions,
+    dot_dir: &std::path::Path,
+    case_sensitive: bool,
+) -> Result<TreeState> {
     let dirstate_path = dot_dir.join("dirstate");
     tracing::trace!("loading dotgit dirstate");
-    TreeState::from_overlay_dirstate(&dirstate_path, case_sensitive)
+    TreeState::from_overlay_dirstate_with_locked_edit(
+        &dirstate_path,
+        case_sensitive,
+        &|treestate| {
+            let p1 = git.resolve_head()?;
+            let mut parents = treestate.parents().collect::<Result<Vec<HgId>>>()?;
+            // Update the overlay dirstate p1 to match Git HEAD (source of truth).
+            if !parents.is_empty() && parents[0] != p1 {
+                tracing::info!("updating treestate p1 to match git HEAD");
+                parents[0] = p1;
+                treestate.set_parents(&mut parents.iter())?;
+                treestate.flush()?;
+            }
+            Ok(())
+        },
+    )
 }
 
 impl FileSystem for DotGitFileSystem {
