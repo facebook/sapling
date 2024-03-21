@@ -53,3 +53,6 @@ pub mod init;
 
 /// Run git commands.
 pub mod rungit;
+
+/// Work with git references.
+mod refs;
