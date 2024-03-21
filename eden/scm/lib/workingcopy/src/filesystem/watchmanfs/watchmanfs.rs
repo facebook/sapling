@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::ffi::OsString;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -54,6 +53,7 @@ use crate::metadata::Metadata;
 use crate::util::dirstate_write_time_override;
 use crate::util::maybe_flush_treestate;
 use crate::util::walk_treestate;
+use crate::watchman_client::connect_watchman_async;
 use crate::watchman_client::DeferredWatchmanClient;
 use crate::workingcopy::WorkingCopy;
 
@@ -380,7 +380,9 @@ async fn crawl_progress(
         // query_files), this connect gets stuck indefinitely. Work around by
         // timing out and retrying until we get through.
         loop {
-            match tokio::time::timeout(Duration::from_secs(1), connect_watchman(&config)).await {
+            match tokio::time::timeout(Duration::from_secs(1), connect_watchman_async(&config))
+                .await
+            {
                 Ok(client) => break client?,
                 Err(_) => {}
             };
@@ -413,26 +415,6 @@ async fn crawl_progress(
 
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-}
-
-pub(crate) async fn connect_watchman(config: &dyn Config) -> Result<watchman_client::Client> {
-    let sockpath: Option<OsString> = std::env::var_os("WATCHMAN_SOCK").or_else(|| {
-        config
-            .get_nonempty("fsmonitor", "sockpath")
-            .map(|p| p.replace("%i", &whoami::username()).into())
-    });
-
-    let mut connector = watchman_client::Connector::new();
-
-    if let Some(sockpath) = sockpath {
-        let sockpath: &Path = sockpath.as_ref();
-        if sockpath.exists() {
-            tracing::debug!(?sockpath);
-            connector = connector.unix_domain_socket(sockpath);
-        }
-    }
-
-    Ok(connector.connect().await?)
 }
 
 impl FileSystem for WatchmanFileSystem {

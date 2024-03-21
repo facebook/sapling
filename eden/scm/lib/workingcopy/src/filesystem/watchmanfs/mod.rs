@@ -10,5 +10,4 @@ mod tests;
 mod treestate;
 mod watchmanfs;
 
-pub(crate) use watchmanfs::connect_watchman;
 pub use watchmanfs::WatchmanFileSystem;
