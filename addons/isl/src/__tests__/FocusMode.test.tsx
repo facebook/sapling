@@ -85,4 +85,38 @@ describe('focus mode', () => {
     expect(screen.queryByText('Commit X')).not.toBeInTheDocument();
     expect(screen.queryByText('Commit Y')).not.toBeInTheDocument();
   });
+
+  it('when on a public commit, hide stacks based on the same public commit', () => {
+    act(() => {
+      simulateCommits({
+        value: [
+          COMMIT('c', 'Commit C', '1'),
+          COMMIT('b', 'Commit B', '1'),
+          COMMIT('a', 'Commit A', '1'),
+          COMMIT('2', 'another public branch', '0', {
+            phase: 'public',
+            remoteBookmarks: ['remote/master'],
+          }),
+          COMMIT('1', 'some public base', '0', {
+            phase: 'public',
+            isDot: true,
+            remoteBookmarks: ['remote/stable'],
+          }),
+        ],
+      });
+    });
+    expect(screen.getByText('remote/master')).toBeInTheDocument();
+    expect(screen.getByText('remote/stable')).toBeInTheDocument();
+    expect(screen.getByText('Commit A')).toBeInTheDocument();
+    expect(screen.getByText('Commit B')).toBeInTheDocument();
+    expect(screen.getByText('Commit C')).toBeInTheDocument();
+
+    toggleFocusMode();
+
+    expect(screen.getByText('remote/master')).toBeInTheDocument();
+    expect(screen.getByText('remote/stable')).toBeInTheDocument();
+    expect(screen.queryByText('Commit A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Commit B')).not.toBeInTheDocument();
+    expect(screen.queryByText('Commit C')).not.toBeInTheDocument();
+  });
 });

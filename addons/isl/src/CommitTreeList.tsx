@@ -67,11 +67,17 @@ const renderSubsetUnionSelection = atom(get => {
   if (focus) {
     const current = dag.resolve('.');
     if (current) {
-      const currentStack = dag.descendants(dag.ancestors(current.hash, {within: dag.draft()}));
+      const currentStack = dag.descendants(
+        dag.ancestors(dag.draft(current.hash), {within: dag.draft()}),
+      );
       const related = dag.descendants(
         dag.successors(currentStack).union(dag.predecessors(currentStack)),
       );
-      set = dag.public_().union(currentStack).union(related);
+      set = dag
+        .public_()
+        .union(YOU_ARE_HERE_VIRTUAL_COMMIT.hash) // ensure we always show "You Are Here"
+        .union(currentStack)
+        .union(related);
     }
   }
   const subset = dag.subsetForRendering(set);
