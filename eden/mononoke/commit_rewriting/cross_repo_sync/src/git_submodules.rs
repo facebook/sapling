@@ -249,44 +249,17 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
         .try_collect()
         .await?;
 
-    // After expanding the submodule, we also need to generate the x-repo
-    // submodule metadata file, to keep track of the git hash that this expansion
-    // corresponds to.
-    let x_repo_sm_metadata_path = get_x_repo_submodule_metadata_file_path(
-        &submodule_path,
-        x_repo_submodule_metadata_file_prefix,
-    )?;
-
     // File changes generated for the expanded submodule and changes to its
     // x-repo submodule metadata file
-    let all_file_changes = {
-        let mut all_changes = expanded_file_changes;
-        let git_submodule_sha1 = get_git_hash_from_submodule_file(
-            ctx,
-            source_repo,
-            submodule_file_content_id,
-            &submodule_path,
-        )
-        .await?;
-        let metadata_file_content = FileContents::new_bytes(git_submodule_sha1.to_string());
-        let metadata_file_size = metadata_file_content.size();
-        let metadata_file_content_id = metadata_file_content
-            .into_blob()
-            .store(ctx, source_repo.repo_blobstore())
-            .await?;
-
-        // The metadata file will have the same content as the submodule file
-        // change in the source repo, but it will be a regular file, because in
-        // the large repo we can never have file changes of type `GitSubmodule`.
-        let x_repo_sm_metadata_fc = FileChange::tracked(
-            metadata_file_content_id,
-            FileType::Regular,
-            metadata_file_size,
-            None,
-        );
-        all_changes.push((x_repo_sm_metadata_path, x_repo_sm_metadata_fc));
-        all_changes
-    };
+    let all_file_changes = generate_additional_file_changes(
+        ctx,
+        source_repo,
+        submodule_path,
+        submodule_file_content_id,
+        x_repo_submodule_metadata_file_prefix,
+        expanded_file_changes,
+    )
+    .await?;
 
     anyhow::Ok(all_file_changes)
 }
@@ -816,4 +789,56 @@ fn get_x_repo_submodule_metadata_file_path(
         None => x_repo_sm_metadata_file,
     };
     Ok(x_repo_sm_metadata_path)
+}
+
+/**
+ After getting the file changes from the submodule repo, generate any additional
+ file changes needed to bring the bonsai into a healthy/consistent state.
+ - Submodule metadata file, which stores the pointer to the submodule revision
+ being expanded and is used to validate consistency between the revision and
+ its expansion.
+*/
+async fn generate_additional_file_changes<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    source_repo: &'a R,
+    submodule_path: SubmodulePath,
+    submodule_file_content_id: ContentId,
+    x_repo_submodule_metadata_file_prefix: &'a str,
+    expanded_file_changes: Vec<(NonRootMPath, FileChange)>,
+) -> Result<Vec<(NonRootMPath, FileChange)>> {
+    // After expanding the submodule, we also need to generate the x-repo
+    // submodule metadata file, to keep track of the git hash that this expansion
+    // corresponds to.
+    let x_repo_sm_metadata_path = get_x_repo_submodule_metadata_file_path(
+        &submodule_path,
+        x_repo_submodule_metadata_file_prefix,
+    )?;
+
+    let mut all_changes = expanded_file_changes;
+    let git_submodule_sha1 = get_git_hash_from_submodule_file(
+        ctx,
+        source_repo,
+        submodule_file_content_id,
+        &submodule_path,
+    )
+    .await?;
+    let metadata_file_content = FileContents::new_bytes(git_submodule_sha1.to_string());
+    let metadata_file_size = metadata_file_content.size();
+    let metadata_file_content_id = metadata_file_content
+        .into_blob()
+        .store(ctx, source_repo.repo_blobstore())
+        .await?;
+
+    // The metadata file will have the same content as the submodule file
+    // change in the source repo, but it will be a regular file, because in
+    // the large repo we can never have file changes of type `GitSubmodule`.
+    let x_repo_sm_metadata_fc = FileChange::tracked(
+        metadata_file_content_id,
+        FileType::Regular,
+        metadata_file_size,
+        None,
+    );
+    all_changes.push((x_repo_sm_metadata_path, x_repo_sm_metadata_fc));
+
+    Ok(all_changes)
 }
