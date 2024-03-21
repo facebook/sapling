@@ -195,6 +195,7 @@ impl From<ffi::FetchMode> for FetchMode {
     fn from(fetch_mode: ffi::FetchMode) -> Self {
         match fetch_mode {
             ffi::FetchMode::AllowRemote => FetchMode::AllowRemote,
+            ffi::FetchMode::AllowRemotePrefetch => FetchMode::AllowRemotePrefetch,
             ffi::FetchMode::RemoteOnly => FetchMode::RemoteOnly,
             ffi::FetchMode::LocalOnly => FetchMode::LocalOnly,
             _ => panic!("unknown fetch mode"),
@@ -239,23 +240,50 @@ pub fn sapling_backingstore_get_tree(
 
 pub fn sapling_backingstore_get_tree_batch(
     store: &BackingStore,
-    requests: &[ffi::Request],
+    reqs: &[ffi::Request],
     fetch_mode: ffi::FetchMode,
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
-    // TODO: pass FetchCause along with they keys to the backingstore
-    let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
+    let do_batch = |fetch_mode: ffi::FetchMode, reqs_with_orig_idx: Vec<(usize, &ffi::Request)>| {
+        if reqs_with_orig_idx.is_empty() {
+            return;
+        }
 
-    store.get_tree_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
-        let result: Result<Box<dyn storemodel::TreeEntry>> =
-            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
-        let resolver = resolver.clone();
-        let (error, tree) = match result.and_then(|list| list.try_into()) {
-            Ok(tree) => (String::default(), SharedPtr::new(tree)),
-            Err(error) => (format!("{:?}", error), SharedPtr::null()),
-        };
-        unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
+        let keys: Vec<_> = reqs_with_orig_idx
+            .iter()
+            .map(|(_, req)| req.key())
+            .collect();
+        store.get_tree_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
+            let result: Result<Box<dyn storemodel::TreeEntry>> =
+                result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
+            let resolver = resolver.clone();
+            let (error, tree) = match result.and_then(|list| list.try_into()) {
+                Ok(tree) => (String::default(), SharedPtr::new(tree)),
+                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+            };
+            unsafe {
+                ffi::sapling_backingstore_get_tree_batch_handler(
+                    resolver,
+                    // We split up the original batch into two batches. Map back to the index of the original batch.
+                    reqs_with_orig_idx[idx].0,
+                    error,
+                    tree,
+                )
+            };
+        });
+    };
+
+    // Split up batch into trees we want to prefetch children metadata, and trees we don't.
+    let (prefetch_reqs, reqs): (Vec<_>, _) = reqs.iter().enumerate().partition(|(_, req)| {
+        // Fetch children metadata if we are doing a normal local+remote fetch, and if the
+        // tree was requested from filesystem access or an explicit prefetch (these causes
+        // suggest the file aux data for directory contents will be needed).
+        fetch_mode == ffi::FetchMode::AllowRemote
+            && matches!(req.cause, ffi::FetchCause::Fs | ffi::FetchCause::Prefetch)
     });
+
+    do_batch(fetch_mode, reqs);
+    do_batch(ffi::FetchMode::AllowRemotePrefetch, prefetch_reqs);
 }
 
 pub fn sapling_backingstore_get_blob(

@@ -144,6 +144,15 @@ impl TreeStore {
             FetchMode::RemoteOnly => (false, true),
             FetchMode::LocalOnly => (true, false),
         };
+
+        tracing::debug!(
+            ?fetch_mode,
+            fetch_children_metadata,
+            fetch_local,
+            fetch_remote,
+            keys_len
+        );
+
         let process_func = move || -> Result<()> {
             if fetch_local {
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
@@ -213,6 +222,7 @@ impl TreeStore {
                                 let aux_data = entry.aux_data();
                                 for (hgid, aux) in aux_data.into_iter() {
                                     if let Some(ref aux_cache) = aux_cache {
+                                        tracing::trace!(?hgid, "writing to aux cache");
                                         aux_cache.put(hgid, &aux)?;
                                     } else {
                                         aux_local.put(hgid, &aux)?;
