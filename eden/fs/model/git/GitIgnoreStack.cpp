@@ -11,20 +11,21 @@ namespace facebook::eden {
 
 namespace {
 constexpr static PathComponentPiece kHgName{".hg"};
+constexpr static PathComponentPiece kSlName{".sl"};
 constexpr static PathComponentPiece kEdenName{".eden"};
 } // namespace
 
 GitIgnore::MatchResult GitIgnoreStack::match(
     RelativePathPiece path,
     GitIgnore::FileType fileType) const {
-  // Explicitly hide any entry named .hg or .eden
+  // Explicitly hide any entry named .hg or .sl or .eden
   //
   // We only check the very last component of the path.  Since these
   // directories are hidden the status code generally should not descend into
   // them and have to check ignore status for path names inside these
   // directories.
   const auto basename = path.basename();
-  if (basename == kHgName || basename == kEdenName) {
+  if (basename == kHgName || basename == kSlName || basename == kEdenName) {
     return GitIgnore::HIDDEN;
   }
 
