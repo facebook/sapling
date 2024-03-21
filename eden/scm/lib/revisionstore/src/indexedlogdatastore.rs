@@ -24,7 +24,6 @@ use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
 use tracing::warn;
 use types::hgid::ReadHgIdExt;
 use types::HgId;
@@ -53,7 +52,7 @@ pub struct IndexedLogHgIdDataStoreConfig {
 }
 
 pub struct IndexedLogHgIdDataStore {
-    store: RwLock<Store>,
+    store: Store,
     extstored_policy: ExtStoredPolicy,
     missing: MissingInjection,
 }
@@ -131,7 +130,7 @@ impl Entry {
     }
 
     /// Read an entry from the IndexedLog and deserialize it.
-    pub(crate) fn from_log(id: &[u8], log: &RwLock<Store>) -> Result<Option<Self>> {
+    pub(crate) fn from_log(id: &[u8], log: &Store) -> Result<Option<Self>> {
         let locked_log = log.read();
         let mut log_entry = locked_log.lookup(0, id)?;
         let buf = match log_entry.next() {
@@ -145,7 +144,7 @@ impl Entry {
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
-    pub fn write_to_log(self, log: &RwLock<Store>) -> Result<()> {
+    pub fn write_to_log(self, log: &Store) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(self.key.hgid.as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -218,7 +217,7 @@ impl IndexedLogHgIdDataStore {
         }?;
 
         Ok(IndexedLogHgIdDataStore {
-            store: RwLock::new(log),
+            store: log,
             extstored_policy,
             missing: MissingInjection::new_from_env("MISSING_FILES"),
         })
@@ -266,7 +265,6 @@ impl IndexedLogHgIdDataStore {
         Ok(self.get_raw_entry(&key.hgid)?.map(|e| e.with_key(key)))
     }
 
-    // TODO(meyer): Make IndexedLogHgIdDataStore "directly" lockable so we can lock and do a batch of operations (RwLock Guard pattern)
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
     pub(crate) fn get_raw_entry(&self, id: &HgId) -> Result<Option<Entry>> {
         Entry::from_log(id.as_ref(), &self.store)
@@ -407,7 +405,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
 
 impl ToKeys for IndexedLogHgIdDataStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        let log = &self.store.read();
+        let log = self.store.read();
         log.iter()
             .map(|entry| {
                 let bytes = log.slice_to_bytes(entry?);

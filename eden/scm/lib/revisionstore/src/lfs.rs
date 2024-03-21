@@ -74,7 +74,6 @@ use mincode::deserialize;
 use mincode::serialize;
 use minibytes::Bytes;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use rand::thread_rng;
 use rand::Rng;
 use serde_derive::Deserialize;
@@ -124,7 +123,7 @@ use crate::util::get_lfs_pointers_path;
 struct LfsPointersStore(Store);
 
 pub(crate) struct LfsIndexedLogBlobsStore {
-    inner: RwLock<Store>,
+    inner: Store,
     chunk_size: usize,
 }
 
@@ -181,7 +180,7 @@ pub struct LfsRemote {
 ///    "objects". Under that directory, the string representation of its content hash is used to
 ///    find the file storing the data: <2-digits hex>/<62-digits hex>
 pub struct LfsStore {
-    pointers: RwLock<LfsPointersStore>,
+    pointers: LfsPointersStore,
     blobs: LfsBlobsStore,
 }
 
@@ -282,10 +281,11 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `StoreKey`.
     fn entry(&self, key: &StoreKey) -> Result<Option<LfsPointersEntry>> {
+        let log = self.0.read();
         let mut iter = match key {
-            StoreKey::HgId(key) => self.0.lookup(Self::INDEX_NODE, key.hgid)?,
+            StoreKey::HgId(key) => log.lookup(Self::INDEX_NODE, key.hgid)?,
             StoreKey::Content(hash, _) => match hash {
-                ContentHash::Sha256(hash) => self.0.lookup(Self::INDEX_SHA256, hash)?,
+                ContentHash::Sha256(hash) => log.lookup(Self::INDEX_SHA256, hash)?,
             },
         };
 
@@ -304,7 +304,8 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `HgId`.
     fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
-        let mut iter = self.0.lookup(Self::INDEX_NODE, hgid)?;
+        let log = self.0.read();
+        let mut iter = log.lookup(Self::INDEX_NODE, hgid)?;
         let buf = match iter.next() {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -312,7 +313,7 @@ impl LfsPointersStore {
         Self::get_from_slice(buf).map(Some)
     }
 
-    fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
+    fn add(&self, entry: LfsPointersEntry) -> Result<()> {
         self.0.append(serialize(&entry)?)
     }
 }
@@ -364,14 +365,14 @@ impl LfsIndexedLogBlobsStore {
     pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_blobs_path(path)?;
         Ok(Self {
-            inner: RwLock::new(LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?),
+            inner: LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?,
             chunk_size: LfsIndexedLogBlobsStore::chunk_size(config)?,
         })
     }
 
     pub fn get(&self, hash: &Sha256, total_size: u64) -> Result<Option<Bytes>> {
-        let store = self.inner.read();
-        let chunks_iter = store
+        let log = self.inner.read();
+        let chunks_iter = log
             .lookup(0, hash)?
             .map(|data| Ok(deserialize::<LfsIndexedLogBlobsEntry>(data?)?));
 
@@ -382,7 +383,6 @@ impl LfsIndexedLogBlobsStore {
             .filter_map(|res: Result<_, Error>| res.ok())
             .enumerate()
             .collect();
-        drop(store);
 
         if chunks.is_empty() {
             return Ok(None);
@@ -473,14 +473,14 @@ impl LfsIndexedLogBlobsStore {
 
         for entry in chunks {
             let serialized = serialize(&entry)?;
-            self.inner.write().append(serialized)?;
+            self.inner.append(serialized)?;
         }
 
         Ok(())
     }
 
     pub fn flush(&self) -> Result<()> {
-        self.inner.write().flush()
+        self.inner.flush()
     }
 }
 
@@ -633,10 +633,7 @@ pub(crate) enum LfsStoreEntry {
 
 impl LfsStore {
     fn new(pointers: LfsPointersStore, blobs: LfsBlobsStore) -> Result<Self> {
-        Ok(Self {
-            pointers: RwLock::new(pointers),
-            blobs,
-        })
+        Ok(Self { pointers, blobs })
     }
 
     /// Create a new local `LfsStore`.
@@ -668,7 +665,7 @@ impl LfsStore {
     }
 
     fn blob_impl(&self, key: StoreKey) -> Result<StoreResult<(LfsPointersEntry, Bytes)>> {
-        let pointer = self.pointers.read().entry(&key)?;
+        let pointer = self.pointers.entry(&key)?;
 
         match pointer {
             None => Ok(StoreResult::NotFound(key)),
@@ -701,7 +698,7 @@ impl LfsStore {
     /// Fetch whatever content is available for the specified StoreKey. Like blob_impl above, but returns just
     /// the LfsPointersEntry when that's all that's found. Mostly copy-pasted from blob_impl above.
     pub(crate) fn fetch_available(&self, key: &StoreKey) -> Result<Option<LfsStoreEntry>> {
-        let pointer = self.pointers.read().entry(key)?;
+        let pointer = self.pointers.entry(key)?;
 
         match pointer {
             None => Ok(None),
@@ -725,7 +722,7 @@ impl LfsStore {
 
     /// Directly get the local content. Do not ask remote servers.
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
-        let pointer = match self.pointers.read().get_by_hgid(id)? {
+        let pointer = match self.pointers.get_by_hgid(id)? {
             None => return Ok(None),
             Some(v) => v,
         };
@@ -741,7 +738,7 @@ impl LfsStore {
     }
 
     pub(crate) fn add_pointer(&self, pointer_entry: LfsPointersEntry) -> Result<()> {
-        self.pointers.write().add(pointer_entry)
+        self.pointers.add(pointer_entry)
     }
 }
 
@@ -751,7 +748,7 @@ impl LocalStore for LfsStore {
             .iter()
             .filter_map(|k| match k {
                 StoreKey::HgId(key) => {
-                    let entry = self.pointers.read().get(&k.clone());
+                    let entry = self.pointers.get(&k.clone());
                     match entry {
                         Ok(None) | Err(_) => Some(k.clone()),
                         Ok(Some(entry)) => match entry.content_hashes.get(&ContentHashType::Sha256)
@@ -831,7 +828,7 @@ impl HgIdDataStore for LfsStore {
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        let entry = self.pointers.read().get(&key)?;
+        let entry = self.pointers.get(&key)?;
         if let Some(entry) = entry {
             Ok(StoreResult::Found(Metadata {
                 size: Some(entry.size),
@@ -852,12 +849,12 @@ impl HgIdMutableDeltaStore for LfsStore {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
         let (lfs_pointer_entry, blob) = lfs_from_hg_file_blob(delta.key.hgid, &delta.data)?;
         self.blobs.add(&lfs_pointer_entry.sha256(), blob)?;
-        self.pointers.write().add(lfs_pointer_entry)
+        self.pointers.add(lfs_pointer_entry)
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.blobs.flush()?;
-        self.pointers.write().0.flush()?;
+        self.pointers.0.flush()?;
         Ok(None)
     }
 }
@@ -883,7 +880,7 @@ impl ContentDataStore for LfsStore {
     }
 
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
-        let pointer = self.pointers.read().entry(&key)?;
+        let pointer = self.pointers.entry(&key)?;
 
         match pointer {
             None => Ok(StoreResult::NotFound(key)),
@@ -1064,7 +1061,7 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
         if metadata.is_lfs() {
             // This is an lfs pointer blob. Let's parse it and extract what matters.
             let pointer = LfsPointersEntry::from_bytes(&delta.data, delta.key.hgid.clone())?;
-            return self.lfs.pointers.write().add(pointer);
+            return self.lfs.pointers.add(pointer);
         }
 
         if delta.data.len() > self.threshold {
@@ -1750,8 +1747,8 @@ fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result
 
         (|| -> Result<()> {
             let key = StoreKey::from(ContentHash::Sha256(*hash));
-            if let Some(pointer) = from.pointers.read().entry(&key)? {
-                to.pointers.write().add(pointer)?
+            if let Some(pointer) = from.pointers.entry(&key)? {
+                to.pointers.add(pointer)?
             }
             Ok(())
         })()
@@ -1780,14 +1777,13 @@ impl RemoteDataStore for LfsRemoteStore {
             .iter()
             .map(|k| {
                 for store in &stores {
-                    let pointers = store.pointers.read();
-                    if let Some(pointer) = pointers.entry(k)? {
+                    if let Some(pointer) = store.pointers.entry(k)? {
                         if let Some(content_hash) =
                             pointer.content_hashes.get(&ContentHashType::Sha256)
                         {
                             obj_set.insert(
                                 content_hash.clone().unwrap_sha256(),
-                                (k.clone(), pointers.0.is_local()),
+                                (k.clone(), store.pointers.0.is_local()),
                             );
                             return Ok(Some((
                                 content_hash.clone().unwrap_sha256(),
@@ -1863,7 +1859,7 @@ impl RemoteDataStore for LfsRemoteStore {
         let objs = keys
             .iter()
             .map(|k| {
-                if let Some(pointer) = local_store.pointers.read().entry(k)? {
+                if let Some(pointer) = local_store.pointers.entry(k)? {
                     match pointer.content_hashes.get(&ContentHashType::Sha256) {
                         None => Ok(None),
                         Some(content_hash) => Ok(Some((
@@ -2253,22 +2249,16 @@ mod tests {
         let hash = ContentHash::sha256(&data).unwrap_sha256();
 
         // Insert some poisoned chunks under the same hash.
-        store
-            .inner
-            .write()
-            .append(serialize(&LfsIndexedLogBlobsEntry {
-                sha256: hash.clone(),
-                range: (0..2),
-                data: Bytes::from_static(b"oo"),
-            })?)?;
-        store
-            .inner
-            .write()
-            .append(serialize(&LfsIndexedLogBlobsEntry {
-                sha256: hash.clone(),
-                range: (2..4),
-                data: Bytes::from_static(b"ps"),
-            })?)?;
+        store.inner.append(serialize(&LfsIndexedLogBlobsEntry {
+            sha256: hash.clone(),
+            range: (0..2),
+            data: Bytes::from_static(b"oo"),
+        })?)?;
+        store.inner.append(serialize(&LfsIndexedLogBlobsEntry {
+            sha256: hash.clone(),
+            range: (2..4),
+            data: Bytes::from_static(b"ps"),
+        })?)?;
 
         // Insert the new, correct data.
         store.add(&hash, data.clone())?;
@@ -2326,7 +2316,7 @@ mod tests {
             data: partial,
         };
 
-        store.inner.write().append(serialize(&entry)?)?;
+        store.inner.append(serialize(&entry)?)?;
         store.flush()?;
 
         assert_eq!(store.get(&sha256, data.len() as u64)?, None);
@@ -2353,21 +2343,21 @@ mod tests {
             range: Range { start: 0, end: 1 },
             data: first,
         };
-        store.inner.write().append(serialize(&first_entry)?)?;
+        store.inner.append(serialize(&first_entry)?)?;
 
         let second_entry = LfsIndexedLogBlobsEntry {
             sha256: sha256.clone(),
             range: Range { start: 1, end: 4 },
             data: second,
         };
-        store.inner.write().append(serialize(&second_entry)?)?;
+        store.inner.append(serialize(&second_entry)?)?;
 
         let last_entry = LfsIndexedLogBlobsEntry {
             sha256: sha256.clone(),
             range: Range { start: 4, end: 7 },
             data: last,
         };
-        store.inner.write().append(serialize(&last_entry)?)?;
+        store.inner.append(serialize(&last_entry)?)?;
 
         store.flush()?;
 
@@ -2395,21 +2385,21 @@ mod tests {
             range: Range { start: 0, end: 4 },
             data: first,
         };
-        store.inner.write().append(serialize(&first_entry)?)?;
+        store.inner.append(serialize(&first_entry)?)?;
 
         let second_entry = LfsIndexedLogBlobsEntry {
             sha256: sha256.clone(),
             range: Range { start: 2, end: 3 },
             data: second,
         };
-        store.inner.write().append(serialize(&second_entry)?)?;
+        store.inner.append(serialize(&second_entry)?)?;
 
         let last_entry = LfsIndexedLogBlobsEntry {
             sha256: sha256.clone(),
             range: Range { start: 2, end: 7 },
             data: last,
         };
-        store.inner.write().append(serialize(&last_entry)?)?;
+        store.inner.append(serialize(&last_entry)?)?;
 
         store.flush()?;
 
@@ -2599,7 +2589,7 @@ mod tests {
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir, &config)?;
-        let entry = lfs.pointers.read().get(&k)?;
+        let entry = lfs.pointers.get(&k)?;
 
         assert!(entry.is_some());
 
@@ -2679,7 +2669,7 @@ mod tests {
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir, &config)?;
-        let entry = lfs.pointers.read().get(&k)?;
+        let entry = lfs.pointers.get(&k)?;
 
         assert!(entry.is_some());
 
@@ -3082,7 +3072,7 @@ mod tests {
             };
 
             // Populate the pointer store. Usually, this would be done via a previous remotestore call.
-            lfs.pointers.write().add(pointer)?;
+            lfs.pointers.add(pointer)?;
 
             let remotedatastore = remote.datastore(lfs);
 

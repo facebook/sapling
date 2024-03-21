@@ -21,12 +21,19 @@ use indexedlog::rotate::RotateLogLookupIter;
 use indexedlog::OpenWithRepair;
 use indexedlog::Result as IndexedlogResult;
 use minibytes::Bytes;
+use parking_lot::RwLock;
+use parking_lot::RwLockReadGuard;
+use parking_lot::RwLockWriteGuard;
 use tracing::debug;
 
 /// Simple wrapper around either an `IndexedLog` or a `RotateLog`. This abstracts whether a store
 /// is local (`IndexedLog`) or shared (`RotateLog`) so that higher level stores don't have to deal
 /// with the subtle differences.
-pub enum Store {
+pub struct Store {
+    inner: RwLock<Inner>,
+}
+
+pub enum Inner {
     Local(Log),
     Shared(RotateLog),
 }
@@ -38,9 +45,37 @@ pub enum StoreType {
 }
 
 impl Store {
+    pub fn read(&self) -> RwLockReadGuard<'_, Inner> {
+        self.inner.read()
+    }
+
+    pub fn write(&self) -> RwLockWriteGuard<'_, Inner> {
+        self.inner.write()
+    }
+
+    pub fn is_local(&self) -> bool {
+        self.read().is_local()
+    }
+
+    /// Add the buffer to the store.
+    pub fn append(&self, buf: impl AsRef<[u8]>) -> Result<()> {
+        self.write().append(buf)
+    }
+
+    /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
+    pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
+        self.read().slice_to_bytes(slice)
+    }
+
+    pub fn flush(&self) -> Result<()> {
+        self.write().flush()
+    }
+}
+
+impl Inner {
     pub fn is_local(&self) -> bool {
         match self {
-            Store::Local(_) => true,
+            Self::Local(_) => true,
             _ => false,
         }
     }
@@ -50,8 +85,8 @@ impl Store {
     pub fn lookup(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<LookupIter> {
         let key = key.as_ref();
         match self {
-            Store::Local(log) => Ok(LookupIter::Local(log.lookup(index_id, key)?)),
-            Store::Shared(log) => Ok(LookupIter::Shared(
+            Self::Local(log) => Ok(LookupIter::Local(log.lookup(index_id, key)?)),
+            Self::Shared(log) => Ok(LookupIter::Shared(
                 log.lookup(index_id, Bytes::copy_from_slice(key))?,
             )),
         }
@@ -60,32 +95,32 @@ impl Store {
     /// Add the buffer to the store.
     pub fn append(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
         match self {
-            Store::Local(log) => Ok(log.append(buf)?),
-            Store::Shared(log) => Ok(log.append(buf)?),
+            Self::Local(log) => Ok(log.append(buf)?),
+            Self::Shared(log) => Ok(log.append(buf)?),
         }
     }
 
     pub fn iter(&self) -> Box<dyn Iterator<Item = IndexedlogResult<&[u8]>> + '_> {
         match self {
-            Store::Local(log) => Box::new(log.iter()),
-            Store::Shared(log) => Box::new(log.iter()),
+            Self::Local(log) => Box::new(log.iter()),
+            Self::Shared(log) => Box::new(log.iter()),
         }
     }
 
     /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
     pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
         match self {
-            Store::Local(log) => log.slice_to_bytes(slice),
-            Store::Shared(log) => log.slice_to_bytes(slice),
+            Self::Local(log) => log.slice_to_bytes(slice),
+            Self::Shared(log) => log.slice_to_bytes(slice),
         }
     }
 
     pub fn flush(&mut self) -> Result<()> {
         match self {
-            Store::Local(log) => {
+            Self::Local(log) => {
                 log.flush()?;
             }
-            Store::Shared(log) => {
+            Self::Shared(log) => {
                 if let Err(err) = log.flush() {
                     if !err.is_corruption() && err.io_error_kind() == ErrorKind::NotFound {
                         // File-not-found errors can happen when the hg cache
@@ -103,7 +138,7 @@ impl Store {
     }
 }
 
-/// Iterator returned from `Store::lookup`.
+/// Iterator returned from `Self::lookup`.
 pub enum LookupIter<'a> {
     Local(LogLookupIter<'a>),
     Shared(RotateLogLookupIter<'a>),
@@ -181,10 +216,12 @@ impl StoreOpenOptions {
     /// Data added to a local store will never be rotated out, and `fsync(2)` is used to guarantee
     /// data consistency.
     pub fn local(self, path: impl AsRef<Path>) -> Result<Store> {
-        Ok(Store::Local(
-            self.into_local_open_options()
-                .open_with_repair(path.as_ref())?,
-        ))
+        Ok(Store {
+            inner: RwLock::new(Inner::Local(
+                self.into_local_open_options()
+                    .open_with_repair(path.as_ref())?,
+            )),
+        })
     }
 
     /// Convert a `StoreOpenOptions` to a `rotate::OpenOptions`.
@@ -220,7 +257,9 @@ impl StoreOpenOptions {
         if let Err(err) = res {
             debug!("Unable to remove old indexedlogutil logs: {:?}", err);
         }
-        Ok(Store::Shared(rotate_log))
+        Ok(Store {
+            inner: RwLock::new(Inner::Shared(rotate_log)),
+        })
     }
 
     /// Attempts to repair corruption in a local indexedlog store.
@@ -255,14 +294,14 @@ mod tests {
     fn test_local() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let mut store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new()
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .local(&dir)?;
 
         store.append(b"aabcd")?;
 
         assert_eq!(
-            store.lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
+            store.read().lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
         Ok(())
@@ -272,14 +311,14 @@ mod tests {
     fn test_shared() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let mut store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new()
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .shared(&dir)?;
 
         store.append(b"aabcd")?;
 
         assert_eq!(
-            store.lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
+            store.read().lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
         Ok(())
@@ -289,7 +328,7 @@ mod tests {
     fn test_local_no_rotate() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let mut store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new()
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .max_log_count(1)
             .max_bytes_per_log(10)
@@ -302,7 +341,7 @@ mod tests {
         store.append(b"adbcd")?;
         store.flush()?;
 
-        assert_eq!(store.lookup(0, b"aa")?.count(), 1);
+        assert_eq!(store.read().lookup(0, b"aa")?.count(), 1);
         Ok(())
     }
 
@@ -310,7 +349,7 @@ mod tests {
     fn test_shared_rotate() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let mut store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new()
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .max_log_count(1)
             .max_bytes_per_log(10)
@@ -323,7 +362,7 @@ mod tests {
         store.append(b"adbcd")?;
         store.flush()?;
 
-        assert_eq!(store.lookup(0, b"aa")?.count(), 0);
+        assert_eq!(store.read().lookup(0, b"aa")?.count(), 0);
         Ok(())
     }
 }

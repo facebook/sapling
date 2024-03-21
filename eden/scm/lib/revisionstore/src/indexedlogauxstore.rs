@@ -20,7 +20,6 @@ use configmodel::ConfigExt;
 use edenapi_types::FileAuxData;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
-use parking_lot::RwLock;
 use types::hgid::ReadHgIdExt;
 use types::HgId;
 use vlqencoding::VLQDecode;
@@ -104,7 +103,7 @@ fn deserialize(bytes: Bytes) -> Result<(HgId, FileAuxData)> {
     ))
 }
 
-pub struct AuxStore(RwLock<Store>);
+pub struct AuxStore(Store);
 
 impl AuxStore {
     pub fn new(path: impl AsRef<Path>, config: &dyn Config, store_type: StoreType) -> Result<Self> {
@@ -116,7 +115,7 @@ impl AuxStore {
             StoreType::Shared => open_options.shared(&path),
         }?;
 
-        Ok(AuxStore(RwLock::new(log)))
+        Ok(AuxStore(log))
     }
 
     fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
@@ -165,11 +164,11 @@ impl AuxStore {
 
     pub fn put(&self, hgid: HgId, entry: &Entry) -> Result<()> {
         let serialized = serialize(entry, hgid)?;
-        self.0.write().append(&serialized)
+        self.0.append(&serialized)
     }
 
     pub fn flush(&self) -> Result<()> {
-        self.0.write().flush()
+        self.0.flush()
     }
 
     #[cfg(test)]
