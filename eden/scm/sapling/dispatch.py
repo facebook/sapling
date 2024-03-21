@@ -355,7 +355,11 @@ def dispatch(req):
 
             if metrics:
                 # developer config: devel.print-metrics
-                if ui.configbool("devel", "print-metrics"):
+
+                # This used to be a bool, but I changed it to a prefix list. Keep previous
+                # behavior around by using empty prefix to mean print everything.
+                prefix = ui.config("devel", "print-metrics")
+                if prefix == "":
                     # Print it out.
                     msg = "%s\n" % pformat({"metrics": metrics}).replace("'", " ")
                     ui.flush()

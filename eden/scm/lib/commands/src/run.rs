@@ -37,6 +37,7 @@ use commandserver::ipc::Server;
 use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::Text;
 use fail::FailScenario;
 use parking_lot::Mutex;
 use progress_model::Registry;
@@ -331,6 +332,7 @@ fn dispatch_command(
     }
 
     let _ = log_perftrace(io, config, start_time);
+    let _ = print_metrics(io, config);
 
     exit_code
 }
@@ -860,6 +862,26 @@ fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<
 
             if config.get_or_default("tracing", "stderr")? {
                 let _ = write!(io.error(), "{}\n", output);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_metrics(io: &IO, config: &dyn Config) -> Result<()> {
+    let prefixes: Vec<Text> = config.must_get::<Vec<Text>>("devel", "print-metrics")?;
+    if prefixes.is_empty() {
+        return Ok(());
+    }
+
+    let metrics = hg_metrics::summarize();
+    let mut keys = metrics.keys().collect::<Vec<_>>();
+    keys.sort();
+    for key in keys {
+        for prefix in prefixes.iter() {
+            if key.starts_with(prefix.as_ref()) {
+                writeln!(io.error(), "{key}: {}", metrics.get(key).unwrap())?;
             }
         }
     }

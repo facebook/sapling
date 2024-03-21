@@ -201,6 +201,12 @@ impl<T: FromConfigValue> FromConfigValue for Vec<T> {
     }
 }
 
+impl FromConfigValue for Vec<Text> {
+    fn try_from_str(s: &str) -> Result<Self> {
+        Ok(parse_list(s))
+    }
+}
+
 impl<T: FromConfigValue> FromConfigValue for Option<T> {
     fn try_from_str(s: &str) -> Result<Self> {
         T::try_from_str(s).map(Option::Some)
