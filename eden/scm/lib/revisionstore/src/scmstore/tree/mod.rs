@@ -85,6 +85,9 @@ pub struct TreeStore {
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
+    /// Whether we should request extra children metadata from EdenAPI and write back to
+    /// filestore's aux cache.
+    pub fetch_tree_metadata: bool,
 
     pub flush_on_drop: bool,
 }
@@ -121,6 +124,7 @@ impl TreeStore {
         } else {
             (None, None)
         };
+        let fetch_children = self.fetch_tree_metadata;
         let (fetch_local, fetch_remote) = match fetch_mode {
             FetchMode::AllowRemote => (true, true),
             FetchMode::RemoteOnly => (false, true),
@@ -177,16 +181,14 @@ impl TreeStore {
                             pending.len(),
                             edenapi.url()
                         );
-                        let attributes = if aux_local.is_some() {
-                            Some(edenapi_types::TreeAttributes {
-                                child_metadata: true,
-                                ..edenapi_types::TreeAttributes::default()
-                            })
-                        } else {
-                            None
+
+                        let attributes = edenapi_types::TreeAttributes {
+                            manifest_blob: true,
+                            parents: true,
+                            child_metadata: fetch_children,
                         };
                         let response = edenapi
-                            .trees_blocking(pending, attributes)
+                            .trees_blocking(pending, Some(attributes))
                             .map_err(|e| e.tag_network())?;
                         for entry in response.entries {
                             let entry = entry?;
@@ -305,6 +307,7 @@ impl TreeStore {
             contentstore: None,
             filestore: None,
             flush_on_drop: true,
+            fetch_tree_metadata: false,
         }
     }
 
@@ -358,6 +361,7 @@ impl LegacyStore for TreeStore {
             contentstore: None,
             filestore: None,
             flush_on_drop: true,
+            fetch_tree_metadata: false,
         })
     }
 

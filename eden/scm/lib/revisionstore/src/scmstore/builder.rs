@@ -635,6 +635,9 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi,
             contentstore,
             filestore: self.filestore,
+            fetch_tree_metadata: self
+                .config
+                .get_or_default("scmstore", "fetch-tree-metadata")?,
             flush_on_drop: true,
         })
     }
