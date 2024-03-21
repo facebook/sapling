@@ -454,8 +454,7 @@ pub mod idents {
 
 static EXTRA_SNIFF_IDENTS: &'static [Identity] = &[SL_GIT];
 
-static INITIAL_DEFAULT: Lazy<Identity> = Lazy::new(compute_default);
-static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(*INITIAL_DEFAULT));
+static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
 
 pub use idents::all;
 
@@ -539,7 +538,7 @@ pub fn cli_name() -> &'static str {
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
     for id in all().iter().chain(EXTRA_SNIFF_IDENTS) {
         if let Some(cli_names) = id.repo.sniff_initial_cli_names {
-            if !cli_names.contains(INITIAL_DEFAULT.cli_name()) {
+            if !cli_names.contains(cli_name()) {
                 continue;
             }
         }
