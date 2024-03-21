@@ -75,8 +75,7 @@ pub struct FileStore {
 
 impl FileStore {
     /// Create a new FileStore, avoid overwriting any existing file.
-    pub fn create<P: AsRef<Path>>(path: P) -> Result<FileStore> {
-        let path = path.as_ref();
+    pub fn create(path: &Path) -> Result<FileStore> {
         tracing::trace!(target: "treestate::filestore::create", ?path);
         let writer = BufWriter::new(
             OpenOptions::new()
@@ -122,7 +121,7 @@ impl FileStore {
     /// Open an existing FileStore.  Attempts to open the file in read/write mode.  If write
     /// access is not permitted, falls back to opening the file in read-only mode.  When open
     /// in read-only mode, new blocks of data cannot be appended.
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<FileStore> {
+    pub fn open(path: &Path) -> Result<FileStore> {
         let path = path.as_ref();
         tracing::trace!(target: "treestate::filestore::open", ?path);
         let mut read_only = false;
@@ -321,7 +320,7 @@ mod tests {
             .expect("write block 3");
         s.flush().expect("flush");
         drop((s, lock));
-        let s = FileStore::open(p).expect("open store");
+        let s = FileStore::open(&p).expect("open store");
         assert_eq!(s.read(id3).expect("read 3"), "third data block".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());

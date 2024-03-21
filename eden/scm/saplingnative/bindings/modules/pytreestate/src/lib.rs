@@ -106,7 +106,7 @@ py_class!(pub class treestate |py| {
     def saveas(&self, directory: &PyPath) -> PyResult<u64> {
         // Save as a new file. Return `BlockId` that can be used in constructor.
         let mut state = self.state(py).lock();
-        let root_id = convert_result(py, state.write_new(directory))?;
+        let root_id = convert_result(py, state.write_new(directory.as_path()))?;
         Ok(root_id.0)
     }
 

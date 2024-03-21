@@ -160,7 +160,7 @@ impl WorkingCopy {
             let treestate = match file_system_type {
                 FileSystemType::Eden | FileSystemType::DotGit => {
                     tracing::trace!("loading edenfs-like dirstate");
-                    TreeState::from_eden_dirstate(dirstate_path, case_sensitive)?
+                    TreeState::from_eden_dirstate(&dirstate_path, case_sensitive)?
                 }
                 _ => {
                     let treestate_path = dot_dir.join("treestate");
@@ -180,7 +180,7 @@ impl WorkingCopy {
                         let filename = fields.tree_filename;
                         let root_id = fields.tree_root_id;
                         tracing::trace!("loading treestate {filename} {root_id:?}");
-                        TreeState::open(treestate_path.join(filename), root_id, case_sensitive)?
+                        TreeState::open(&treestate_path.join(filename), root_id, case_sensitive)?
                     } else {
                         tracing::trace!("creating treestate");
                         let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
