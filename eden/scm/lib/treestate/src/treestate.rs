@@ -159,6 +159,44 @@ impl TreeState {
         Ok(treestate)
     }
 
+    /// Similar to `from_overlay_dirstate` but read, edit, write within a lock.
+    /// This allows atomic updates of the overlay dirstate.
+    /// The `edit_func` can modify the treestate and optionally flush it to disk.
+    pub fn from_overlay_dirstate_with_locked_edit(
+        overlay_dirstate_path: &Path,
+        case_sensitive: bool,
+        edit_func: &dyn Fn(&mut Self) -> Result<()>,
+    ) -> Result<Self> {
+        let mut store =
+            FileStore::in_memory_with_lock_path(&overlay_dirstate_path.with_extension(".lock"))?;
+        let _locked = store.lock()?;
+
+        let root = TreeStateRoot::default();
+        let tree = Tree::new();
+
+        let (metadata, entries) = read_overlay_dirstate(overlay_dirstate_path)?;
+
+        let path = overlay_dirstate_path.to_path_buf();
+        let mut treestate = TreeState {
+            store,
+            tree,
+            root,
+            original_root_id: BlockId(0),
+            overlay_dirstate_path: Some(path),
+            case_sensitive,
+            pending_change_count: 0,
+        };
+
+        treestate.set_metadata(metadata)?;
+        for (key, state) in entries {
+            treestate.insert(key, &state)?;
+        }
+
+        edit_func(&mut treestate)?;
+
+        Ok(treestate)
+    }
+
     pub fn path(&self) -> Option<&Path> {
         self.store.path()
     }
