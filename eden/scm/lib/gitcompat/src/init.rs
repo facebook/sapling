@@ -5,18 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::io;
 use std::path::Path;
 use std::path::MAIN_SEPARATOR_STR as SEP;
 
+use anyhow::Result;
 use fs_err as fs;
 use identity::Identity;
+use types::HgId;
 
 /// Initialize Sapling's dotdir inside `.git/`. Write requirements.
 /// Skip if the directory already exists, or if `ident` is not using `.git/sl` dot dir.
 ///
 /// `dot_dir` is expected to be something like `<prefix>/.git/sl`.
-pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> io::Result<()> {
+pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()> {
     let dot_dir = ident.dot_dir();
     if !dot_dir.starts_with(".git") {
         return Ok(());
@@ -36,6 +37,13 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> io::Result
         "narrowheads\nvisibleheads\ngit\ngit-store\ndotgit\n",
     )?;
     fs::write(store_dir.join("gitdir"), format!("..{SEP}.."))?;
+
+    // Write an empty eden dirstate so it can be loaded.
+    treestate::legacy_eden_dirstate::write_eden_dirstate(
+        &dot_dir.join("dirstate"),
+        std::iter::once(("p1".to_owned(), HgId::null_id().to_hex())).collect(),
+        Default::default(),
+    )?;
 
     Ok(())
 }
