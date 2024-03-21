@@ -39,28 +39,6 @@ pub struct DirectoryMetadata {
     pub descendant_files_total_size: Option<u64>,
 }
 
-#[auto_wire]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
-pub struct DirectoryMetadataRequest {
-    #[id(0)]
-    pub with_fsnode_id: bool,
-    #[id(1)]
-    pub with_simple_format_sha1: bool,
-    #[id(2)]
-    pub with_simple_format_sha256: bool,
-    #[id(3)]
-    pub with_child_files_count: bool,
-    #[id(4)]
-    pub with_child_files_total_size: bool,
-    #[id(5)]
-    pub with_child_dirs_count: bool,
-    #[id(6)]
-    pub with_descendant_files_count: bool,
-    #[id(7)]
-    pub with_descendant_files_total_size: bool,
-}
-
 /// File entry metadata
 #[auto_wire]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

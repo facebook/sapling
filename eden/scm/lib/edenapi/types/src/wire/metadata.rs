@@ -7,7 +7,6 @@
 
 pub use crate::metadata::WireAnyFileContentId;
 pub use crate::metadata::WireDirectoryMetadata;
-pub use crate::metadata::WireDirectoryMetadataRequest;
 pub use crate::metadata::WireFileMetadata;
 pub use crate::metadata::WireFileMetadataRequest;
 pub use crate::metadata::WireFileType;
@@ -58,7 +57,6 @@ mod tests {
         WireFileMetadata,
         WireFileMetadataRequest,
         WireDirectoryMetadata,
-        WireDirectoryMetadataRequest,
         WireAnyFileContentId
     );
 }

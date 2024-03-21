@@ -136,7 +136,6 @@ pub use crate::metadata::AnyFileContentId;
 pub use crate::metadata::Blake3;
 pub use crate::metadata::ContentId;
 pub use crate::metadata::DirectoryMetadata;
-pub use crate::metadata::DirectoryMetadataRequest;
 pub use crate::metadata::FileMetadata;
 pub use crate::metadata::FileMetadataRequest;
 pub use crate::metadata::FileType;

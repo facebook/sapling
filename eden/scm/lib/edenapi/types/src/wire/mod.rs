@@ -130,7 +130,6 @@ pub use crate::wire::metadata::WireAnyFileContentId;
 pub use crate::wire::metadata::WireBlake3;
 pub use crate::wire::metadata::WireContentId;
 pub use crate::wire::metadata::WireDirectoryMetadata;
-pub use crate::wire::metadata::WireDirectoryMetadataRequest;
 pub use crate::wire::metadata::WireFileMetadata;
 pub use crate::wire::metadata::WireFileMetadataRequest;
 pub use crate::wire::metadata::WireFileType;
