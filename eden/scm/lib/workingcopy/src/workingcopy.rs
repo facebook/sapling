@@ -58,19 +58,19 @@ use util::file::read_to_string_if_exists;
 use util::file::unlink_if_exists;
 use vfs::VFS;
 
-#[cfg(feature = "eden")]
-use crate::edenfs::EdenFileSystem;
 use crate::errors;
 use crate::filesystem::DotGitFileSystem;
+#[cfg(feature = "eden")]
+use crate::filesystem::EdenFileSystem;
 use crate::filesystem::FileSystem;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChange;
+use crate::filesystem::PhysicalFileSystem;
+use crate::filesystem::WatchmanFileSystem;
 use crate::git::parse_submodules;
-use crate::physicalfs::PhysicalFileSystem;
 use crate::status::compute_status;
 use crate::util::walk_treestate;
 use crate::watchman_client::DeferredWatchmanClient;
-use crate::watchmanfs::WatchmanFileSystem;
 
 #[cfg(not(feature = "eden"))]
 pub struct EdenFsClient {}

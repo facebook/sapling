@@ -14,7 +14,7 @@
   $ echo foo >> foo
   $ LOG=warn,watchman_info=debug hg st --config fsmonitor.fallback-on-watchman-exception=true
   DEBUG watchman_info: watchmanfallback=1
-   WARN workingcopy::watchmanfs::watchmanfs: watchman error - falling back to slow crawl * (glob)
+   WARN workingcopy::filesystem::watchmanfs::watchmanfs: watchman error - falling back to slow crawl * (glob)
   ` (?)
   M foo
 

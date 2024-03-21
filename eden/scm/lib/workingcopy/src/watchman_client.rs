@@ -11,7 +11,7 @@ use anyhow::Result;
 use configmodel::Config;
 use once_cell::sync::OnceCell;
 
-use crate::watchmanfs;
+use crate::filesystem::watchmanfs;
 
 pub struct DeferredWatchmanClient {
     config: Arc<dyn Config>,

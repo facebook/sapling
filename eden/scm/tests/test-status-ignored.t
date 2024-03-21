@@ -40,6 +40,6 @@ We want the ignore files to be present in our treestate.
 
 #if fsmonitor
 We shouldn't need to check any files from treestate.
-  $ LOG=workingcopy::watchmanfs=debug hg status 2>&1 | grep treestate_needs_check
+  $ LOG=workingcopy::filesystem::watchmanfs=debug hg status 2>&1 | grep treestate_needs_check
   * treestate_needs_check=0 (glob)
 #endif
