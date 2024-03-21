@@ -30,7 +30,6 @@ pydoctor = { version = "0.1.0", path = "modules/pydoctor" }
 pydrawdag = { version = "0.1.0", path = "modules/pydrawdag" }
 pyeagerepo = { version = "0.1.0", path = "modules/pyeagerepo" }
 pyedenapi = { version = "0.1.0", path = "modules/pyedenapi" }
-pyedenclient = { version = "0.1.0", path = "modules/pyedenclient" }
 pyerror = { version = "0.1.0", path = "modules/pyerror" }
 pyexchange = { version = "0.1.0", path = "modules/pyexchange" }
 pyfail = { version = "0.1.0", path = "modules/pyfail" }
@@ -73,6 +72,7 @@ pyvlq = { version = "0.1.0", path = "modules/pyvlq" }
 pywebview = { version = "0.1.0", path = "modules/pywebview" }
 pyworker = { version = "0.1.0", path = "modules/pyworker" }
 pyworkingcopy = { version = "0.1.0", path = "modules/pyworkingcopy" }
+pyworkingcopyclient = { version = "0.1.0", path = "modules/pyworkingcopyclient" }
 pyxdiff = { version = "0.1.0", path = "modules/pyxdiff" }
 pyzstd = { version = "0.1.0", path = "modules/pyzstd" }
 pyzstore = { version = "0.1.0", path = "modules/pyzstore" }

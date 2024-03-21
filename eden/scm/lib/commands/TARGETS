@@ -22,7 +22,7 @@ rust_library(
             "extra_buck_dependencies": {
                 "dependencies": [
                     "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
-                    "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
+                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
                     "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
                     "//eden/scm/lib/revisionstore:revisionstore",
                 ],
@@ -32,7 +32,7 @@ rust_library(
                 "eden": [
                     "clidispatch/eden",
                     "pycheckout/eden",
-                    "pyedenclient/eden",
+                    "pyworkingcopyclient/eden",
                     "pyworkingcopy/eden",
                     "cmdgoto/eden",
                     "cmddebugwait/eden",

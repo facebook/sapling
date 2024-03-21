@@ -24,12 +24,12 @@ use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyPathBuf;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
-#[cfg(feature = "eden")]
-use pyedenclient::feature_eden::EdenFsClient as PyEdenClient;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pypathmatcher::treematcher;
 use pytreestate::treestate;
+#[cfg(feature = "eden")]
+use pyworkingcopyclient::feature_eden::EdenFsClient as PyEdenClient;
 use repostate::command_state::Operation;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
