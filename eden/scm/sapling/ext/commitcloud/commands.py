@@ -1608,7 +1608,7 @@ def isbackedup(ui, repo, **opts):
 
 
 @subcmd(
-    "upload||backup|pushbackup",
+    "upload||backup",
     [
         ("r", "rev", [], _("revisions to upload to Commit Cloud")),
         (
@@ -1655,6 +1655,28 @@ def cloudupload(ui, repo, *revs, **opts):
                 component="commitcloud",
             )
         return 2
+
+
+# Register main command name as _pushbackup so we don't conflict with hotfix extension
+# that adds back "pushbackup" command.
+@command(
+    "_pushbackup|pushbackup",
+    [
+        ("r", "rev", [], _("revisions to back up")),
+        ("", "background", None, "run backup in background"),
+    ],
+    _("[-r REV...]"),
+)
+def pushbackup(ui, repo, *revs, **opts):
+    """back up commits to commit cloud (DEPRECATED)
+
+    Commits that have already been backed up will be skipped.
+
+    If no revision is specified, backs up all visible commits.
+
+    '@prog@ pushbackup' is deprecated in favour of '@prog@ cloud backup'.
+    """
+    return cloudupload(ui, repo, *revs, **opts)
 
 
 @subcmd("tidyup", workspace.workspaceopts)

@@ -25,7 +25,7 @@ Backup empty repo
 
 Make commit and backup it.
   $ mkcommit commit
-  $ hg cloud backup
+  $ hg pushbackup
   commitcloud: head '7e6a6fd9c7c8' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
