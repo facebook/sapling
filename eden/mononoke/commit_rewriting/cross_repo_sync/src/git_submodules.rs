@@ -28,9 +28,11 @@ use futures::stream::TryStreamExt;
 use git_types::ObjectKind;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
+use manifest::Entry;
 use manifest::Entry::*;
 use manifest::ManifestOps;
 use maplit::hashmap;
+use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BlobstoreValue;
@@ -254,6 +256,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
     let all_file_changes = generate_additional_file_changes(
         ctx,
         source_repo,
+        parents,
         submodule_path,
         submodule_file_content_id,
         x_repo_submodule_metadata_file_prefix,
@@ -797,15 +800,20 @@ fn get_x_repo_submodule_metadata_file_path(
  - Submodule metadata file, which stores the pointer to the submodule revision
  being expanded and is used to validate consistency between the revision and
  its expansion.
+ - Deletions of files/directories that are being replaced by the creation of the
+ submodule expansion.
 */
 async fn generate_additional_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     source_repo: &'a R,
+    parents: &'a [ChangesetId],
     submodule_path: SubmodulePath,
     submodule_file_content_id: ContentId,
     x_repo_submodule_metadata_file_prefix: &'a str,
     expanded_file_changes: Vec<(NonRootMPath, FileChange)>,
 ) -> Result<Vec<(NonRootMPath, FileChange)>> {
+    // Step 1: Generate the submodule metadata file change
+
     // After expanding the submodule, we also need to generate the x-repo
     // submodule metadata file, to keep track of the git hash that this expansion
     // corresponds to.
@@ -839,6 +847,48 @@ async fn generate_additional_file_changes<'a, R: Repo>(
         None,
     );
     all_changes.push((x_repo_sm_metadata_path, x_repo_sm_metadata_fc));
+
+    // Step 2: Generate the deletions of files/directories that are being
+    // replaced by the creation of the submodule expansion.
+
+    // Get the fsnode entries for the submodule path in the parent commits
+    let fsnode_entries: Vec<Option<Entry<_, FsnodeFile>>> = stream::iter(parents)
+        .then(|cs_id| {
+            let blobstore = source_repo.repo_blobstore_arc();
+            // These are cheap to clone and we'll do it at most twice, so it
+            // should be fine.
+            cloned!(submodule_path, blobstore);
+            async move {
+                let fsnode_id = source_repo
+                    .repo_derived_data()
+                    .derive::<RootFsnodeId>(ctx, *cs_id)
+                    .await?
+                    .into_fsnode_id();
+                fsnode_id
+                    .find_entry(ctx.clone(), blobstore, submodule_path.0.into())
+                    .await
+            }
+        })
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    // If there are any entries for **non-GitSubmodule file types**, it means
+    // that in the large repo the file is being replaced by the submodule
+    // expansion, so we need to generate a deletion for it, because adding
+    // a directory in the path of a file doesn't implicitly delete it.
+    let other_file_type_in_submodule_path =
+        fsnode_entries
+            .into_iter()
+            .any(|mb_entry: Option<Entry<_, FsnodeFile>>| match mb_entry {
+                Some(Entry::Leaf(fsnode_file)) => {
+                    *fsnode_file.file_type() != FileType::GitSubmodule
+                }
+                Some(Entry::Tree(_)) | None => false,
+            });
+
+    if other_file_type_in_submodule_path {
+        all_changes.push((submodule_path.0, FileChange::Deletion));
+    };
 
     Ok(all_changes)
 }

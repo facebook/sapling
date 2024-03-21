@@ -417,7 +417,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
     let expected_cs_id =
-        ChangesetId::from_str("ea0c6e80fe940e97cc43fd5867ac4e72b51f028b43ccbf23bbb3ac28d26d5b75")
+        ChangesetId::from_str("a586b2e4b85ef2ab37aa37a78711d82a10733098975c2ea352f3d80729d5cd6f")
             .unwrap();
 
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
@@ -432,23 +432,20 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
                 "repo_a/A_A/C_B",
             ],
             vec![
-                // TODO(T174902563): file should be explicitly deleted
-                // "repo_a/A_A",
+                // The original file is deleted because of the submodule expansion
+                "repo_a/A_A",
             ],
         )],
     )?;
 
-    let res = check_submodule_metadata_file_in_large_repo(
+    check_submodule_metadata_file_in_large_repo(
         &ctx,
         &large_repo,
         expected_cs_id,
         NonRootMPath::new("repo_a/.x-repo-submodule-A_A")?,
         &repo_c_git_commit_hash,
     )
-    .await;
-
-    // TODO(T174902563): generate deletion for file being replaced by submodule
-    assert!(res.is_err_and(|e| e.to_string().contains("failed to derive fsnodes batch")));
+    .await?;
 
     Ok(())
 }
