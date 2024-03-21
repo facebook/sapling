@@ -28,6 +28,9 @@ pub struct FetchMetrics {
 
     // Total time spent completing the fetch
     time: usize,
+
+    // Number of times data was computed/derved (i.e. aux data based on content).
+    computed: usize,
 }
 
 impl AddAssign for FetchMetrics {
@@ -38,6 +41,7 @@ impl AddAssign for FetchMetrics {
         self.misses += rhs.misses;
         self.errors += rhs.errors;
         self.time += rhs.time;
+        self.computed += rhs.computed;
     }
 }
 
@@ -57,6 +61,10 @@ impl FetchMetrics {
 
     pub(crate) fn err(&mut self, keys: usize) {
         self.errors += keys;
+    }
+
+    pub(crate) fn computed(&mut self, keys: usize) {
+        self.computed += keys;
     }
 
     // Provide the time as microseconds
@@ -85,6 +93,7 @@ impl FetchMetrics {
             ("misses", self.misses),
             ("errors", self.errors),
             ("time", self.time),
+            ("computed", self.computed),
         ]
         .into_iter()
         .filter(|&(_, v)| v != 0)

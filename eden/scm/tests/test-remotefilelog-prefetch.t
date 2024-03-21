@@ -1,4 +1,5 @@
-#debugruntest-compatible
+FIXME(debugruntest) - "devel.print-metrics" stderr not working
+#chg-compatible
 
   $ eagerepo
 
@@ -86,7 +87,7 @@ Make sure we don't have aux data yet:
   }
 
 Fetching only aux data does not trigger a remote query:
-  $ LOG=eagerepo::api=debug hg debugscmstore -r $B B --aux-only --mode=file
+  $ LOG=eagerepo::api=debug hg debugscmstore -r $B B --aux-only --mode=file --config devel.print-metrics=scmstore.file.fetch.aux
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(
@@ -101,3 +102,12 @@ Fetching only aux data does not trigger a remote query:
           },
       ),
   }
+  scmstore.file.fetch.aux.cache.computed: 1
+  scmstore.file.fetch.aux.cache.keys: 1
+  scmstore.file.fetch.aux.cache.misses: 1
+  scmstore.file.fetch.aux.cache.requests: 1
+  scmstore.file.fetch.aux.cache.time: * (glob) (?)
+  scmstore.file.fetch.aux.local.keys: 1
+  scmstore.file.fetch.aux.local.misses: 1
+  scmstore.file.fetch.aux.local.requests: 1
+  scmstore.file.fetch.aux.local.time: * (glob) (?)

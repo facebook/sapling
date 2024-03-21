@@ -962,6 +962,8 @@ impl FetchState {
 
                             match self.key_origin.get(&key).unwrap_or(&StoreType::Shared) {
                                 StoreType::Shared => {
+                                    self.metrics.aux.store(StoreType::Shared).computed(1);
+
                                     if let Some(aux_cache) = aux_cache {
                                         if let Some(aux_data) = new.aux_data {
                                             let _ = aux_cache.put(key.hgid, &aux_data);
@@ -969,6 +971,8 @@ impl FetchState {
                                     }
                                 }
                                 StoreType::Local => {
+                                    self.metrics.aux.store(StoreType::Local).computed(1);
+
                                     if let Some(aux_local) = aux_local {
                                         if let Some(aux_data) = new.aux_data {
                                             let _ = aux_local.put(key.hgid, &aux_data);
