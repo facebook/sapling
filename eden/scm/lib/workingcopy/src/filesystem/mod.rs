@@ -17,4 +17,5 @@ pub enum FileSystemType {
     Normal,
     Watchman,
     Eden,
+    DotGit,
 }
