@@ -134,18 +134,25 @@ impl WorkingCopy {
             );
         }
 
-        let fsmonitor_ext = config.get("extensions", "fsmonitor");
-        let fsmonitor_mode = config.get_nonempty("fsmonitor", "mode");
-        let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
-            false
+        let file_system_type = if is_eden {
+            FileSystemType::Eden
+        } else if has_requirement("dotgit") {
+            FileSystemType::DotGit
         } else {
-            fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
+            let fsmonitor_ext = config.get("extensions", "fsmonitor");
+            let fsmonitor_mode = config.get_nonempty("fsmonitor", "mode");
+            let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
+                false
+            } else {
+                fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
+            };
+            if is_watchman {
+                FileSystemType::Watchman
+            } else {
+                FileSystemType::Normal
+            }
         };
-        let file_system_type = match (is_eden, is_watchman) {
-            (true, _) => FileSystemType::Eden,
-            (false, true) => FileSystemType::Watchman,
-            (false, false) => FileSystemType::Normal,
-        };
+
         let treestate = {
             let case_sensitive = vfs.case_sensitive();
             tracing::trace!("case sensitive: {case_sensitive}");
