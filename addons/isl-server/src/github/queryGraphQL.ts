@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Internal} from '../Internal';
 import {isExecaError} from '../utils';
 import execa from 'execa';
 
@@ -38,7 +39,13 @@ export default async function queryGraphQL<TData, TVariables>(
   args.push('-f', `query=${query}`);
 
   try {
-    const {stdout} = await execa('gh', args, {stdout: 'pipe', stderr: 'pipe'});
+    const {stdout} = await execa('gh', args, {
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: {
+        ...(Internal.additionalGhEnvVars ?? {}),
+      },
+    });
     const json = JSON.parse(stdout);
 
     if (Array.isArray(json.errors)) {
@@ -71,7 +78,13 @@ export async function isGithubEnterprise(hostname: string): Promise<boolean> {
   args.push('--hostname', hostname);
 
   try {
-    await execa('gh', args, {stdout: 'pipe', stderr: 'pipe'});
+    await execa('gh', args, {
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: {
+        ...(Internal.additionalGhEnvVars ?? {}),
+      },
+    });
     return true;
   } catch {
     return false;
