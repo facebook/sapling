@@ -3,9 +3,9 @@
 #testcases copytrace no-copytrace
 
 #if copytrace
-  $ setconfig experimental.copytrace=on
+  $ setconfig copytrace.dagcopytrace=True
 #else
-  $ setconfig experimental.copytrace=off
+  $ setconfig copytrace.dagcopytrace=False
 #endif
 
   $ configure modernclient

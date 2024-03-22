@@ -2,7 +2,7 @@
 
 #require no-fsmonitor
 
-  $ disable treemanifest
+  $ disable treemanifest copytrace
   $ hg debugextensions --excludedefault
 
   $ enable histedit rebase

@@ -43,6 +43,7 @@ use-rust=True
 
 [extensions]
 treemanifest=
+copytrace=
 
 [treemanifest]
 sendtrees=True
@@ -69,6 +70,7 @@ contentstorefallback=True
 [experimental]
 use-rust-changelog=True
 windows-symlinks=True
+copytrace=off
 
 [tweakdefaults]
 graftkeepdate=True
@@ -76,6 +78,9 @@ logdefaultfollow=False
 
 [checkout]
 use-rust=true
+
+[copytrace]
+dagcopytrace=True
 """
     if use_watchman:
         content += """

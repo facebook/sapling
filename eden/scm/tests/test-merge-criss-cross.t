@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
   $ setconfig commands.update.check=none
+  $ setconfig experimental.copytrace=on
 
 Criss cross merging
 

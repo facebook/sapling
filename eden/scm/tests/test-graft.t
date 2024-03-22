@@ -9,6 +9,7 @@
 
   $ configure modernclient
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig experimental.copytrace=on
 
   $ cat >> $HGRCPATH << 'EOF'
   > [extdiff]

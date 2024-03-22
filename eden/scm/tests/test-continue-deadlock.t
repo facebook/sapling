@@ -2,8 +2,6 @@
 
   $ configure modernclient
   $ enable rebase smartlog
-  $ setconfig experimental.copytrace=off
-  $ setconfig copytrace.maxmovescandidatestocheck=0
 
 Prepare repo
 
@@ -21,10 +19,11 @@ Prepare repo
   $ echo 2 >> x
   $ hg ci -m 'update x'
 
-  $ hg rebase -s . -d 'desc("mv x -> y")'
+  $ hg rebase -s . -d 'desc("mv x -> y")' --config copytrace.dagcopytrace=False
   rebasing d6e243dd00b2 "update x"
-  other [source] changed x which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed x which local [dest] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg st

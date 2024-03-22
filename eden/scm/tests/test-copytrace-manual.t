@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
-  $ enable rebase
+  $ enable rebase 
   $ newclientrepo
   $ drawdag << 'EOS'
   > D    # A/A=1\n
@@ -22,13 +22,14 @@
 # rename should support absolute path
 
   $ ROOT=$(hg root)
-  $ hg rebase -r $C -d $D '--config=ui.interactive=1' '--config=experimental.copytrace=off' << EOS
+  $ hg rebase -r $C -d $D --config=ui.interactive=1 --config copytrace.dagcopytrace=False << EOS
   > r
   > $ROOT/Renamed
   > EOS
   rebasing 85b47c0eb942 "C"
-  other [source] changed A which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? r
+  other [source] changed A which local [dest] is missing
+  hint: the missing file was probably deleted by commit c43198279945 in the branch rebasing onto
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? r
   path 'A' in commit 85b47c0eb942 was renamed to [what path relative to repo root] in commit ed4ad4ec6472 ? $TESTTMP/repo1/Renamed
   merging Renamed
 

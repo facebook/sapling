@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-  $ eagerepo
+  $ eagerepo 
 
   $ hg init repo
   $ cd repo
@@ -29,12 +29,6 @@ we get conflicts that shouldn't be there
   summary:     cp foo bar; change both
   
   $ hg merge --debug
-    searching for copies back to 484bf6903104
-    unmatched files in other:
-     bar
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'foo' -> dst: 'bar' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: e6dc8efe11cc, local: 6a0df1dad128+, remote: 484bf6903104

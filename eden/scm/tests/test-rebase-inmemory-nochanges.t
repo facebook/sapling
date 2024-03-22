@@ -7,7 +7,6 @@
   $ eagerepo
   $ enable amend rebase
   $ setconfig 'rebase.singletransaction=True'
-  $ setconfig 'experimental.copytrace=off'
   $ setconfig 'rebase.experimental.inmemory=1'
   $ setconfig 'rebase.experimental.inmemory.nomergedriver=False'
   $ setconfig 'rebase.experimental.inmemorywarning=rebasing in-memory!'

@@ -3,8 +3,9 @@
 
   $ configure modernclient
   $ configure mutation-norecord
-  $ enable conflictinfo rebase
+  $ enable conflictinfo rebase copytrace
   $ setconfig experimental.rebase-long-labels=True
+  $ setconfig copytrace.dagcopytrace=True
 
 1) Make the repo
   $ newclientrepo basic
@@ -525,8 +526,9 @@ Test case 2: Source changed, dest deleted
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
-  other [source (being rebased)] changed file which local [dest (rebasing onto)] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source (being rebased)] changed file which local [dest (rebasing onto)] is missing
+  hint: the missing file was probably deleted by commit 66a38a15024c in the branch rebasing onto
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --tool=internal:dumpjson --all | jq
@@ -629,7 +631,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config experimental.copytrace=off
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config extensions.copytrace=!
   rebasing ec87889f5f90 "source"
   other [source (being rebased)] changed file which local [dest (rebasing onto)] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
@@ -736,7 +738,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config experimental.copytrace=off
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config extensions.copytrace=!
   rebasing e6e7483a8950 "source"
   local [dest (rebasing onto)] changed file which other [source (being rebased)] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u

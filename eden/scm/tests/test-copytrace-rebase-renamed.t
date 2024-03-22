@@ -1,6 +1,5 @@
 #debugruntest-compatible
   $ enable amend copytrace rebase
-  $ setconfig experimental.copytrace=off
   $ newrepo
 
   $ touch base
@@ -34,6 +33,10 @@ Rebase with fastcopytrace hits conflicts as it doesn't detect the dir rename.
   $ hg rebase --abort
   rebase aborted
 
-Using full copytrace works.
-  $ hg rebase --restack --config experimental.copytrace=on
+# dagcopytrace does not support directory move
+  $ hg rebase --restack --config copytrace.dagcopytrace=True
   rebasing 75532295d2d9 "move directory"
+  local [dest] changed dir1/file2 which other [source] deleted (as dir1/file1)
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]

@@ -1,6 +1,7 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
   $ setconfig commands.update.check=none
+  $ setconfig experimental.copytrace=on
 
   $ HGMERGE=true; export HGMERGE
 

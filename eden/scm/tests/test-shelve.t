@@ -7,6 +7,7 @@
 
   $ configure modernclient
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig experimental.copytrace=on
   $ setconfig checkout.use-rust=true
 
   $ cat >> $HGRCPATH << 'EOF'

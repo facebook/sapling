@@ -5,11 +5,9 @@
 
   $ configure mutation-norecord
   $ enable copytrace rebase shelve remotenames
-  $ setconfig experimental.copytrace=off
+  $ setconfig copytrace.dagcopytrace=False
 
   $ initclient() {
-  >   setconfig copytrace.remote=false copytrace.enablefilldb=true
-  >   setconfig experimental.copytrace=off
   >   setconfig copytrace.dagcopytrace=True
   > }
 
@@ -676,7 +674,7 @@ changed in same move
   o  desc initial, phase: draft
 
 
-  $ hg rebase -s . -d 'desc(mv)' --config=experimental.copytrace=on
+  $ hg rebase -s . -d 'desc(mv)'
   rebasing * "mod a" (glob)
   merging dir2/b and dir1/a to dir2/b
   $ cat dir2/b
@@ -712,11 +710,10 @@ while adding file to original directory in other merge parent. File moved on reb
   ├─╯
   o  desc initial, phase: draft
 
-
-  $ hg rebase -s . -d 'desc(hg)' --config=experimental.copytrace=on
+# dagcopytrace does not track directory move
+  $ hg rebase -s . -d 'desc(hg)'
   rebasing * "mv dir1 dir2" (glob)
   $ ls dir2
-  a
   dummy
   $ rm -rf server
   $ rm -rf repo

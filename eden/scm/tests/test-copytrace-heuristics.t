@@ -8,19 +8,10 @@
 Test for the heuristic copytracing algorithm
 ============================================
 
-  $ initclient() {
-  >   setconfig experimental.copytrace=heuristics experimental.copytrace.sourcecommitlimit=-1
-  > }
-
-NOTE: calling initclient() set copytrace.sourcecommitlimit=-1 as we want to
-prevent the full copytrace algorithm to run and test the heuristic algorithm
-without complexing the test cases with public and draft commits.
-
 Check filename heuristics (same dirname and same basename)
 ----------------------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ mkdir dir
@@ -56,7 +47,6 @@ Make sure filename heuristics do not when they are not related
 --------------------------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo 'somecontent' > a
   $ hg add a
@@ -79,8 +69,9 @@ Make sure filename heuristics do not when they are not related
 
   $ hg rebase -s . -d 'desc(rm)'
   rebasing * "mode a" (glob)
-  other [source] changed a which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed a which local [dest] is missing
+  hint: the missing file was probably deleted by commit 46985f76c7e5 in the branch rebasing onto
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -91,7 +82,6 @@ Test when lca didn't modified the file that was moved
 -----------------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo 'somecontent' > a
   $ hg add a
@@ -125,7 +115,6 @@ Rebase "backwards"
 ------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo 'somecontent' > a
   $ hg add a
@@ -159,7 +148,6 @@ Check a few potential move candidates
 -------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ mkdir dir
   $ echo a > dir/a
@@ -195,7 +183,6 @@ Test the copytrace.movecandidateslimit with many move candidates
 ----------------------------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -228,11 +215,11 @@ Test the copytrace.movecandidateslimit with many move candidates
 
 With small limit
 
-  $ hg rebase -s 'desc(mod)' -d 'desc(mv)' --config experimental.copytrace.movecandidateslimit=0
+  $ hg rebase -s 'desc(mod)' -d 'desc(mv)' --config copytrace.max-rename-candidates=0
   rebasing * "mod a" (glob)
-  skipping copytracing for 'a', more candidates than the limit: 7
-  other [source] changed a which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed a which local [dest] is missing
+  hint: the missing file was probably deleted by commit 8329d5c6bf47 in the branch rebasing onto
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -252,7 +239,6 @@ Move file in one branch and delete it in another
 -----------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -283,7 +269,6 @@ Move a directory in draft branch
 --------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ mkdir dir
   $ echo a > dir/a
@@ -314,7 +299,6 @@ Move file twice and rebase mod on top of moves
 ----------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -347,7 +331,6 @@ Move file twice and rebase moves on top of mods
 -----------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -381,7 +364,6 @@ Move one file and add another file in the same folder in one branch, modify file
 --------------------------------------------------------------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -419,7 +401,6 @@ Merge test
 ----------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -453,7 +434,6 @@ Copy and move file
 ------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -476,14 +456,13 @@ Copy and move file
   $ hg rebase -s . -d 'desc(cp)'
   rebasing * "mod a" (glob)
   merging b and a to b
-  merging c and a to c
   $ ls
   b
   c
   $ cat b
   b
   $ cat c
-  b
+  a
   $ cd ..
   $ rm -rf repo
 
@@ -491,7 +470,6 @@ Do a merge commit with many consequent moves in one branch
 ----------------------------------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -539,7 +517,6 @@ Test shelve/unshelve
 -------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg add a
@@ -573,7 +550,6 @@ Test full copytrace ability on draft branch
 
 File directory and base name changed in same move
   $ hg init repo
-  $ initclient repo
   $ mkdir repo/dir1
   $ cd repo/dir1
   $ echo a > a
@@ -597,7 +573,7 @@ File directory and base name changed in same move
   o  desc initial, phase: draft
   
 
-  $ hg rebase -s . -d 'desc(mv)' --config experimental.copytrace.sourcecommitlimit=100
+  $ hg rebase -s . -d 'desc(mv)' --config copytrace.sourcecommitlimit=100
   rebasing * "mod a" (glob)
   merging dir2/b and dir1/a to dir2/b
   $ cat dir2/b
@@ -610,7 +586,6 @@ Move directory in one merge parent, while adding file to original directory
 in other merge parent. File moved on rebase.
 
   $ hg init repo
-  $ initclient repo
   $ mkdir repo/dir1
   $ cd repo/dir1
   $ echo dummy > dummy
@@ -634,10 +609,9 @@ in other merge parent. File moved on rebase.
   o  desc initial, phase: draft
   
 
-  $ hg rebase -s . -d 'desc(hg)' --config experimental.copytrace.sourcecommitlimit=100
+  $ hg rebase -s . -d 'desc(hg)' --config copytrace.sourcecommitlimit=100
   rebasing * "mv dir1 dir2" (glob)
   $ ls dir2
-  a
   dummy
   $ rm -rf repo
 
@@ -645,7 +619,6 @@ Testing the sourcecommitlimit config
 -----------------------------------
 
   $ hg init repo
-  $ initclient repo
   $ cd repo
   $ echo a > a
   $ hg ci -Aqm "added a"
@@ -670,10 +643,11 @@ Testing the sourcecommitlimit config
 
 When the sourcecommitlimit is small and we have more drafts, we use heuristics only
 
-  $ hg rebase -s 8b6e13696 -d .
+  $ hg rebase -s 8b6e13696 -d . --config copytrace.sourcecommitlimit=-1
   rebasing * "added more things to a" (glob)
-  other [source] changed a which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed a which local [dest] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -682,8 +656,8 @@ fullcopytracing
 
   $ hg rebase --abort
   rebase aborted
-  $ hg rebase -s 8b6e13696 -d . --config experimental.copytrace.sourcecommitlimit=100
-  rebasing * "added more things to a" (glob)
+  $ hg rebase -s 8b6e13696 -d . --config copytrace.sourcecommitlimit=100
+  rebasing 8b6e13696c38 "added more things to a"
   merging foo/bar and a to foo/bar
   $ cd ..
   $ rm -rf repo

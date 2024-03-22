@@ -4,6 +4,7 @@ Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.
 
   $ setconfig experimental.merge.checkpathconflicts=True
+  $ setconfig experimental.copytrace=on
 
   $ eagerepo
 

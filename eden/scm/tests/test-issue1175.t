@@ -3,6 +3,7 @@
 https://bz.mercurial-scm.org/1175
 
   $ setconfig commands.update.check=none
+  $ setconfig experimental.copytrace=on
 
   $ newrepo repo
   $ touch a
@@ -92,5 +93,3 @@ https://bz.mercurial-scm.org/show_bug.cgi?id=4476
   changeset:   3903775176ed
   summary:     a
   
-
-

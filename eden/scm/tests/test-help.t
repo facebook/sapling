@@ -273,6 +273,8 @@ Test extension help:
       Enabled extensions:
   
        conflictinfo
+       eden          accelerated hg functionality in Eden checkouts (eden !)
+       copytrace     extension that does copytracing fast
        debugshell    a python shell with repo, changelog & manifest objects
        errorredirect
                      redirect error message
@@ -281,7 +283,6 @@ Test extension help:
        progressfile  allows users to have JSON progress bar information written
                      to a path
        rebase        command to move sets of revisions to a different ancestor
-       eden          accelerated hg functionality in Eden checkouts (eden !)
        remotefilelog
                      minimize and speed up large repositories
        sampling      (no help text available)
@@ -303,7 +304,6 @@ Test extension help:
                      provide information about the client in server telemetry
        clonebundles  advertise pre-generated bundles to seed clones
        commitcloud   back up and sync changesets via the cloud
-       copytrace     extension that does copytracing fast
        crdump        (no help text available)
        debugnetwork  test network connections to the server
        dialect       replace terms with more widely used equivalents

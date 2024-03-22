@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
   $ eagerepo
+  $ setconfig experimental.copytrace=on
 https://bz.mercurial-scm.org/672
 
 # 0-2-4
@@ -98,4 +99,3 @@ https://bz.mercurial-scm.org/672
    premerge successful
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-

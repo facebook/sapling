@@ -105,8 +105,9 @@ Merge should not overwrite local file that is untracked after remove
 Those who use force will lose
 
   $ hg merge -f
-  other [merge rev] changed bar which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [merge rev] changed bar which local [working copy] is missing
+  hint: the missing file was probably deleted by commit d72d87f5f053 in the branch rebasing onto
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   merging foo1 and foo to foo1
   0 files updated, 1 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon

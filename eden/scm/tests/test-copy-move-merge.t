@@ -4,6 +4,7 @@ Test for the full copytracing algorithm
 =======================================
 
   $ eagerepo
+  $ enable rebase
   $ setconfig copytrace.skipduplicatecopies=True
 
   $ newclientrepo t
@@ -27,14 +28,6 @@ Test for the full copytracing algorithm
   $ hg ci -qAm "other"
 
   $ hg merge --debug
-    searching for copies back to 17c05bb7fcb6
-    unmatched files in other:
-     b
-     c
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-     src: 'a' -> dst: 'c' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
@@ -73,10 +66,9 @@ Test disabling copy tracing
 - first verify copy metadata was kept
 
   $ hg up -qC 'desc(other)'
-  $ hg rebase --keep -d 'desc(second)' -b 'desc(other)' --config extensions.rebase=
+  $ hg rebase --keep -d 'desc(second)' -b 'desc(other)'
   rebasing add3f11052fa "other"
   merging b and a to b
-  merging c and a to c
 
   $ cat b
   0
@@ -86,14 +78,15 @@ Test disabling copy tracing
 - next verify copy metadata is lost when disabled
 
   $ hg debugstrip -r .
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up -qC 'desc(other)'
-  $ hg rebase --keep -d 'desc(second)' -b 'desc(other)' --config extensions.rebase= --config experimental.copytrace=off --config ui.interactive=True << EOF
+  $ hg rebase --keep -d 'desc(second)' -b 'desc(other)' --config copytrace.dagcopytrace=False --config ui.interactive=True << EOF
   > c
   > EOF
   rebasing add3f11052fa "other"
-  other [source] changed a which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? c
+  other [source] changed a which local [dest] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? c
 
   $ cat b
   1
@@ -123,7 +116,7 @@ Verify disabling copy tracing still keeps copies from rebase source
   │
   o  add a
   
-  $ hg rebase -d . -b 'desc(copy)' --config extensions.rebase= --config experimental.copytrace=off
+  $ hg rebase -d . -b 'desc(copy)'
   rebasing 6adcf8c12e7d "copy b->x"
   $ hg up -q 'max(desc(copy))'
   $ hg log -f x -T '{desc}\n'
@@ -154,7 +147,7 @@ Verify we duplicate existing copies, instead of detecting them
   ├─╯
   o  add a
   
-  $ hg rebase -d 'desc(move)' -s 'max(desc(copy))' --config extensions.rebase= --config experimental.copytrace=off
+  $ hg rebase -d 'desc(move)' -s 'max(desc(copy))'
   rebasing 47e1a9e6273b "copy a->b (2)"
 
   $ hg log -G -f b

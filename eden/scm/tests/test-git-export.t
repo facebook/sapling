@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig experimental.copytrace=on
   $ hg init repo
   $ cd repo
   $ echo start > start

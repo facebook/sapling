@@ -2,6 +2,7 @@
 
   $ configure modernclient
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig experimental.copytrace=on
   $ cat <<EOF > merge
   > import sys, os
   > f = open(sys.argv[1], "wb")
@@ -796,8 +797,9 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   merge tool script: * ../merge (glob)
   picktool() forcemerge :prompt
   picked tool ':prompt' for path=a binary=False symlink=False changedelete=True
-  other [merge rev] changed a which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [merge rev] changed a which local [working copy] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
    b: both created -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)

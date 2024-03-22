@@ -23,8 +23,9 @@
   $ hg rebase -s $B -d $C
   rebasing c84328973e26 "B"
   rebasing 2f1af6263db7 "A1"
-  other [source] changed A which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed A which local [dest] is missing
+  hint: the missing file was probably added by commit 9cfaa5b6d3e1 in the branch being rebased
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -100,8 +101,9 @@ Rebase changes made on copied (forked) source code:
  (try normal rebase - fails)
   $ hg rebase -r $E -d $D
   rebasing 8c0ff6bd3515 "E"
-  other [source] changed C which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed C which local [dest] is missing
+  hint: the missing file was probably added by commit f3747f01deaa in the branch being rebased
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort
