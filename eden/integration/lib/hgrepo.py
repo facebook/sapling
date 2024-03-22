@@ -24,14 +24,14 @@ from .error import CommandError
 from .find_executables import FindExe
 
 
-# The standard test timeout is 10 minutes. So a 1 minute timeout is pretty
+# The standard test timeout is 10 minutes. So a 4 minute timeout is pretty
 # generous, most hg commands should really finish much faster than this.
 # Realistically a couple seconds. But we have had issues with tests hanging due
 # to hg hangs. For now so that we can run most of our tests we are adding a
 # timeout because this seems to unblock the tests. This is a temporary solution
 # until we can fix the underlying hg issues which are proving to be rather
 # difficult to debug: TODO(kmancini): T180667613.
-HG_COMMAND_TIMEOUT = 120
+HG_COMMAND_TIMEOUT = 240
 
 
 class HgError(CommandError):
