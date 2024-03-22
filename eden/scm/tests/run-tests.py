@@ -3600,6 +3600,16 @@ class TestRunner:
         If you wish to inject custom tests into the test harness, this would
         be a good function to monkeypatch or override in a derived class.
         """
+
+        def transform_test_basename(path):
+            """transform test_revert_t to test-revert.t"""
+            dirname, basename = os.path.split(path)
+            if basename.startswith("test_") and basename.endswith("_t"):
+                basename = basename[:-2].replace("_", "-") + ".t"
+                return os.path.join(dirname, basename)
+            else:
+                return path
+
         if not args:
             if self.options.changed:
                 proc = Popen4(
@@ -3622,6 +3632,7 @@ class TestRunner:
 
         tests = []
         for t in args:
+            t = transform_test_basename(t)
             if not (
                 os.path.basename(t).startswith("test-")
                 and (t.endswith(".py") or t.endswith(".t"))
