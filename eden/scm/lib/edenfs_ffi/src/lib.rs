@@ -209,7 +209,7 @@ fn profile_contents_from_repo(
             set_matcher_promise_result(promise, res);
         }
         Err(e) => {
-            set_matcher_promise_error(promise, format!("Failed to get filter: {}", e));
+            set_matcher_promise_error(promise, format!("Failed to get filter: {:?}", e));
         }
     }
 }

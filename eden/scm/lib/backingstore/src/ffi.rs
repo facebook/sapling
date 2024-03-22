@@ -10,6 +10,7 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
@@ -210,7 +211,8 @@ pub unsafe fn sapling_backingstore_new(
     super::init::backingstore_global_init();
 
     let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
-    let store = BackingStore::new(repo, options.allow_retries)?;
+    let store =
+        BackingStore::new(repo, options.allow_retries).map_err(|err| anyhow!("{:?}", err))?;
     Ok(Box::new(store))
 }
 
