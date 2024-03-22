@@ -283,26 +283,8 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
     let acc = RwLock::new(GitimportAccumulator::new());
     let backfill_derivation = prefs.backfill_derivation.clone();
 
-    // Create a channel for sending batches to the finalize_batch task
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<_>>(1);
-    // Spawn a separate task for running finalize_batch
-    let finalize_batch_task = async {
-        tokio::spawn({
-            cloned!(backfill_derivation, ctx, uploader);
-            async move {
-                while let Some(batch) = rx.recv().await {
-                    uploader
-                        .finalize_batch(&ctx, dry_run, backfill_derivation.clone(), batch)
-                        .await?;
-                }
-                Ok::<(), anyhow::Error>(())
-            }
-        })
-        .await?
-    };
-
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
-    let import_task = target
+    target
         .list_commits(&prefs.git_command_path, path)
         .await?
         .try_filter_map({
@@ -466,17 +448,12 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         .chunks(prefs.concurrency)
         // Go from Vec<Result<X,Y>> -> Result<Vec<X>,Y>
         .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
-        .try_fold(tx, |tx, v| {
-            async move {
-                tx.send(v).await?;
-                Ok(tx)
-            }
+        .try_for_each(|v| async {
+            cloned!(backfill_derivation, ctx, uploader);
+            task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, backfill_derivation, v).await }).await?
         })
-        .and_then(|tx| async move {
-            std::mem::drop(tx);
-            Ok(())
-        });
-    tokio::try_join!(import_task, finalize_batch_task)?;
+        .await?;
+
     debug!(ctx.logger(), "Completed git import for repo {}.", repo_name);
     Ok(acc.into_inner().expect("lock poisoned"))
 }
