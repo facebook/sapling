@@ -168,9 +168,6 @@ def _forwardcopies(a, b, match=None):
 
 
 def _backwardrenames(a, b):
-    if a._repo.ui.config("experimental", "copytrace") == "off":
-        return {}
-
     # Even though we're not taking copies into account, 1:n rename situations
     # can still exist (e.g. hg cp a b; hg mv a c). In those cases we
     # arbitrarily pick one of the renames.
