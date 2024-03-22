@@ -339,12 +339,13 @@ impl RenameFinderInner {
 
     async fn read_renamed_metadata_backward(&self, key: Key) -> Result<Option<RepoPathBuf>> {
         block_in_place(move || {
-            let renames = self.file_reader.get_rename_iter(vec![key])?;
-            for rename in renames {
+            let mut renames = self.file_reader.get_rename_iter(vec![key])?;
+            if let Some(rename) = renames.next() {
                 let (_, rename_from_key) = rename?;
-                return Ok(Some(rename_from_key.path));
+                Ok(Some(rename_from_key.path))
+            } else {
+                Ok(None)
             }
-            Ok(None)
         })
     }
 
