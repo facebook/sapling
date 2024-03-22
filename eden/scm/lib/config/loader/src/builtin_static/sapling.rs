@@ -108,7 +108,6 @@ loadsafter=tweakdefaults
 [experimental]
 bundle2-exp=True
 changegroup3=True
-copytrace=off
 crecord=True
 evolution=obsolete
 fsmonitor.transaction_notify=True
