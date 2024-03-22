@@ -67,6 +67,9 @@ struct PushrebaseOutcome {
 
   /// The old id where the bookmark was before the pushrebase operation.
   5: optional ChangesetId old_bookmark_value;
+
+  /// The id for the entry in the bookmark update log where the bookmark was written
+  6: optional i64 log_id;
 } (rust.exhaustive)
 
 struct LandChangesetsResponse {

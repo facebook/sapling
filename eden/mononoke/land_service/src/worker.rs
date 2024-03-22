@@ -254,6 +254,7 @@ async fn process_land_changesets_request(
             old_bookmark_value: outcome
                 .old_bookmark_value
                 .map(conversion_helpers::convert_changeset_id_to_vec_binary),
+            log_id: None,
         },
     })
 }
