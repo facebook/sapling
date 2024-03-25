@@ -246,7 +246,7 @@ class InodeTable {
 
  private:
   explicit InodeTable(MappedDiskVector<Entry>&& storage, EdenStatsPtr stats)
-      : state_{folly::in_place, std::move(storage)}, stats_{std::move(stats)} {}
+      : state_{std::in_place, std::move(storage)}, stats_{std::move(stats)} {}
 
   /**
    * Helper function that, in the common case that this inode number

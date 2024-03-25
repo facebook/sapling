@@ -18,7 +18,7 @@ namespace facebook::eden {
 
 struct ThreadLocalBucket {
   explicit ThreadLocalBucket(ProcessAccessLog* processAccessLog)
-      : state_{folly::in_place, processAccessLog} {}
+      : state_{std::in_place, processAccessLog} {}
 
   ~ThreadLocalBucket() {
     // This thread is going away, so merge our data into the parent.

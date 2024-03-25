@@ -71,7 +71,7 @@ OverlayFileAccess::State::State(size_t cacheSize) : entries{cacheSize} {
 }
 
 OverlayFileAccess::OverlayFileAccess(Overlay* overlay, size_t cacheSize)
-    : overlay_{overlay}, state_{folly::in_place, cacheSize} {}
+    : overlay_{overlay}, state_{std::in_place, cacheSize} {}
 
 OverlayFileAccess::~OverlayFileAccess() = default;
 

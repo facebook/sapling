@@ -170,7 +170,7 @@ TreeInode::TreeInode(
     DirContents&& dir,
     std::optional<ObjectId> treeHash)
     : Base(ino, initialMode, initialTimestamps, parent, name),
-      contents_(folly::in_place, std::move(dir), std::move(treeHash)) {
+      contents_(std::in_place, std::move(dir), std::move(treeHash)) {
   XDCHECK_NE(ino, kRootNodeId);
 }
 
@@ -184,7 +184,7 @@ TreeInode::TreeInode(
     EdenMount* mount,
     DirContents&& dir,
     std::optional<ObjectId> treeHash)
-    : Base(mount), contents_(folly::in_place, std::move(dir), treeHash) {}
+    : Base(mount), contents_(std::in_place, std::move(dir), treeHash) {}
 
 TreeInode::~TreeInode() = default;
 

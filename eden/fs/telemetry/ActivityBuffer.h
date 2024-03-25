@@ -55,7 +55,7 @@ class ActivityBuffer {
 
 template <typename TraceEvent>
 ActivityBuffer<TraceEvent>::ActivityBuffer(size_t maxEvents)
-    : events_{folly::in_place, maxEvents} {}
+    : events_{std::in_place, maxEvents} {}
 
 template <typename TraceEvent>
 template <typename T>

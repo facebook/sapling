@@ -581,7 +581,7 @@ FileInode::FileInode(
     const std::optional<InodeTimestamps>& initialTimestamps,
     const ObjectId* hash)
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
-      state_(folly::in_place, hash) {}
+      state_(std::in_place, hash) {}
 
 // The FileInode is in MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
@@ -591,7 +591,7 @@ FileInode::FileInode(
     mode_t initialMode,
     const InodeTimestamps& initialTimestamps)
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
-      state_(folly::in_place) {}
+      state_(std::in_place) {}
 
 ImmediateFuture<struct stat> FileInode::setattr(
     const DesiredMetadata& desired,

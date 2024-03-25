@@ -141,7 +141,7 @@ constexpr PathComponentPiece kNfsdSocketName{"nfsd.socket"_pc};
 class EdenMount::JournalDiffCallback : public DiffCallback {
  public:
   explicit JournalDiffCallback()
-      : data_{folly::in_place, std::unordered_set<RelativePath>()} {}
+      : data_{std::in_place, std::unordered_set<RelativePath>()} {}
 
   void ignoredPath(RelativePathPiece, dtype_t) override {}
 

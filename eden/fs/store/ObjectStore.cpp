@@ -69,7 +69,7 @@ ObjectStore::ObjectStore(
     std::shared_ptr<const EdenConfig> edenConfig,
     bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
-    : metadataCache_{folly::in_place, edenConfig->metadataCacheSize.getValue()},
+    : metadataCache_{std::in_place, edenConfig->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
