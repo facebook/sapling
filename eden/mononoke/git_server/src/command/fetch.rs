@@ -206,7 +206,7 @@ impl FetchArgs {
     }
 
     /// Convert the fetch command args into FetchRequest instance
-    pub fn into_request(self) -> FetchRequest {
+    pub fn into_request(self, concurrency: PackfileConcurrency) -> FetchRequest {
         FetchRequest {
             heads: self.wants,
             bases: self.haves,
@@ -219,7 +219,7 @@ impl FetchArgs {
             deepen_not: self.deepen_not,
             deepen_relative: self.deepen_relative,
             filter: self.filter,
-            concurrency: PackfileConcurrency::standard(),
+            concurrency,
         }
     }
 }

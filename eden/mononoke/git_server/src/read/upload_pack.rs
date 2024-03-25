@@ -38,6 +38,7 @@ use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
 use protocol::generator::fetch_response;
 use protocol::generator::ls_refs_response;
+use protocol::types::PackfileConcurrency;
 use tokio::io::ErrorKind;
 use tokio::sync::mpsc;
 use tokio_util::io::CopyToBytes;
@@ -78,6 +79,17 @@ async fn pack_header() -> Result<Bytes, Error> {
     let mut buf = Vec::with_capacity(PACKFILE_HEADER.len());
     write_text_packetline(PACKFILE_HEADER, &mut buf).await?;
     Ok(Bytes::from(buf))
+}
+
+fn concurrency(context: &RepositoryRequestContext) -> PackfileConcurrency {
+    match &context.repo.repo_config.git_concurrency {
+        Some(concurrency) => PackfileConcurrency::new(
+            concurrency.trees_and_blobs,
+            concurrency.commits,
+            concurrency.tags,
+        ),
+        None => PackfileConcurrency::standard(),
+    }
 }
 
 async fn acknowledgements(
@@ -315,7 +327,7 @@ pub async fn fetch(
             let response_stream = fetch_response(
                 request_context.ctx.clone(),
                 &request_context.repo,
-                args.into_request(),
+                args.into_request(concurrency(&request_context)),
             )
             .await?;
             let mut pack_writer = PackfileWriter::new(
