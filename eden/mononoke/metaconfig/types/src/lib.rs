@@ -274,6 +274,8 @@ pub enum ShardedService {
     AliasVerify,
     /// Draft Commit Deletion,
     DraftCommitDeletion,
+    /// Mononoke Git Server
+    MononokeGitServer,
 }
 
 /// Indicates types of commit hashes used in a repo context.

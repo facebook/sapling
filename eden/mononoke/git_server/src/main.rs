@@ -46,6 +46,7 @@ use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
 use http::HeaderValue;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::ShardedService;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::TLSArgs;
@@ -146,7 +147,9 @@ pub struct GitRepos {
 #[allow(dead_code)]
 impl GitRepos {
     pub(crate) async fn new(app: &MononokeApp) -> Result<Self> {
-        let repos_mgr = app.open_managed_repos(None).await?;
+        let repos_mgr = app
+            .open_managed_repos(Some(ShardedService::MononokeGitServer))
+            .await?;
         let repos = repos_mgr.repos().clone();
         Ok(Self { repos })
     }
