@@ -112,9 +112,7 @@ pub fn make_file_hook(
                 .build()?,
         )),
         "no_windows_filenames" => Some(Box::new(
-            no_windows_filenames::NoWindowsFilenames::builder()
-                .set_from_config(&params.config)
-                .build()?,
+            no_windows_filenames::NoWindowsFilenamesHook::legacy(&params.config)?,
         )),
         _ => None,
     })

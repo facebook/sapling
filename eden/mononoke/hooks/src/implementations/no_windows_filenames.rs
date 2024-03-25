@@ -14,6 +14,7 @@ use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
 use mononoke_types::NonRootMPath;
 use regex::bytes::Regex;
+use serde::Deserialize;
 
 use crate::CrossRepoPushSource;
 use crate::FileHook;
@@ -22,39 +23,28 @@ use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
 use crate::PushAuthoredBy;
 
-#[derive(Default)]
-pub struct NoWindowsFilenamesBuilder<'a> {
+const BAD_WINDOWS_PATH_ELEMENT_REGEX: &str =
+    r#"(^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$"#;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct NoWindowsFilenamesConfig {
     /// Paths on which bad Windows filenames are not disallowed.
-    allowed_paths: Option<&'a str>,
-}
-
-impl<'a> NoWindowsFilenamesBuilder<'a> {
-    pub fn set_from_config(mut self, config: &'a HookConfig) -> Self {
-        if let Some(v) = config.strings.get("allowed_paths") {
-            self = self.allowed_paths(v)
-        }
-
-        self
-    }
-
-    pub fn allowed_paths(mut self, regex: &'a str) -> Self {
-        self.allowed_paths = Some(regex);
-        self
-    }
-
-    pub fn build(self) -> Result<NoWindowsFilenames> {
-        Ok(NoWindowsFilenames {
-            allowed_paths: self
-                .allowed_paths
-                .map(Regex::new)
-                .transpose()
-                .context("Failed to create allowed_paths regex")?,
-        })
-    }
-}
-
-pub struct NoWindowsFilenames {
+    #[serde(default, with = "serde_regex")]
     allowed_paths: Option<Regex>,
+    /// Message to include in the hook rejection if the file path matches the illegal pattern,
+    /// with the following replacements
+    /// ${filename} => The path of the file along with the filename
+    /// ${illegal_pattern} => The illegal regex pattern that was matched
+    illegal_filename_message: String,
+}
+
+fn get_regex(config: &HookConfig, regex_name: &str) -> Result<Option<Regex>> {
+    config
+        .strings
+        .get(regex_name)
+        .map(|regex| Regex::new(regex))
+        .transpose()
+        .with_context(|| format!("Failed to create regex for {}", regex_name))
 }
 
 /// Hook to disallow bad Windows filenames from being pushed.
@@ -69,30 +59,48 @@ pub struct NoWindowsFilenames {
 ///  The filename shouldn't end with space or period. Windows shell and UX don't support such files.
 ///
 ///  More info: https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
-impl NoWindowsFilenames {
-    pub fn builder<'a>() -> NoWindowsFilenamesBuilder<'a> {
-        NoWindowsFilenamesBuilder::default()
-    }
+#[derive(Clone, Debug)]
+pub struct NoWindowsFilenamesHook {
+    config: NoWindowsFilenamesConfig,
 }
 
-const BAD_WINDOWS_PATH_ELEMENT_REGEX: &str =
-    r#"(^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$"#;
-
-fn check_path_for_bad_elements(path: &NonRootMPath) -> Result<HookExecution, Error> {
-    let bad_windows_path_element = Regex::new(BAD_WINDOWS_PATH_ELEMENT_REGEX)?;
-    for element in path {
-        if bad_windows_path_element.is_match(element.as_ref()) {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                "Illegal windows filename",
-                format!("ABORT: Illegal windows filename: {}", element),
-            )));
-        }
+impl NoWindowsFilenamesHook {
+    pub fn _new(config: &HookConfig) -> Result<Self> {
+        config.parse_options().map(Self::with_config)
     }
-    Ok(HookExecution::Accepted)
+
+    pub fn legacy(config: &HookConfig) -> Result<Self> {
+        let new_config = NoWindowsFilenamesConfig {
+            allowed_paths: get_regex(config, "allowed_paths")?,
+            illegal_filename_message: "ABORT: Illegal windows filename: ${filename}. Name and path of file in windows should not match regex ${illegal_pattern}".to_string(),
+        };
+        Ok(Self::with_config(new_config))
+    }
+
+    pub fn with_config(config: NoWindowsFilenamesConfig) -> Self {
+        Self { config }
+    }
+
+    fn check_path_for_bad_elements(&self, path: &NonRootMPath) -> Result<HookExecution, Error> {
+        let bad_windows_path_element = Regex::new(BAD_WINDOWS_PATH_ELEMENT_REGEX)
+            .context("Error while creating bad windows path element regex")?;
+        for element in path {
+            if bad_windows_path_element.is_match(element.as_ref()) {
+                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    "Illegal windows filename",
+                    self.config
+                        .illegal_filename_message
+                        .replace("${filename}", &path.to_string())
+                        .replace("${illegal_pattern}", &bad_windows_path_element.to_string()),
+                )));
+            }
+        }
+        Ok(HookExecution::Accepted)
+    }
 }
 
 #[async_trait]
-impl FileHook for NoWindowsFilenames {
+impl FileHook for NoWindowsFilenamesHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
@@ -115,13 +123,13 @@ impl FileHook for NoWindowsFilenames {
             return Ok(HookExecution::Accepted);
         }
 
-        if let Some(allowed_paths) = &self.allowed_paths {
+        if let Some(allowed_paths) = &self.config.allowed_paths {
             if allowed_paths.is_match(&path.to_vec()) {
                 return Ok(HookExecution::Accepted);
             }
         }
 
-        Ok(check_path_for_bad_elements(path)?)
+        self.check_path_for_bad_elements(path)
     }
 }
 
@@ -132,7 +140,14 @@ mod test {
     use super::*;
 
     fn check_path(path: &str) -> bool {
-        match check_path_for_bad_elements(&NonRootMPath::new(path).unwrap()).unwrap() {
+        let hook = NoWindowsFilenamesHook::with_config(NoWindowsFilenamesConfig {
+            allowed_paths: None,
+            illegal_filename_message: "hook failed".to_string(),
+        });
+        match hook
+            .check_path_for_bad_elements(&NonRootMPath::new(path).unwrap())
+            .unwrap()
+        {
             HookExecution::Accepted => true,
             HookExecution::Rejected(_) => false,
         }
