@@ -24,6 +24,7 @@ use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::GitConcurrencyParams;
 use metaconfig_types::GlobalrevConfig;
 use metaconfig_types::HgSyncConfig;
 use metaconfig_types::HookBypass;
@@ -66,6 +67,7 @@ use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
+use repos::RawGitConcurrencyParams;
 use repos::RawHgSyncConfig;
 use repos::RawHookConfig;
 use repos::RawHookManagerParams;
@@ -768,6 +770,18 @@ impl Convert for RawShardingModeConfig {
                 .into_iter()
                 .map(|(k, v)| anyhow::Ok((k.convert()?, v)))
                 .collect::<Result<_>>()?,
+        })
+    }
+}
+
+impl Convert for RawGitConcurrencyParams {
+    type Output = GitConcurrencyParams;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(GitConcurrencyParams {
+            trees_and_blobs: self.trees_and_blobs.try_into()?,
+            commits: self.commits.try_into()?,
+            tags: self.tags.try_into()?,
         })
     }
 }

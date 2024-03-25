@@ -232,6 +232,8 @@ pub struct RepoConfig {
     pub deep_sharding_config: Option<ShardingModeConfig>,
     /// Local directory to write files to instead of uploading to everstore
     pub everstore_local_path: Option<String>,
+    /// The concurrency setting to be used during git protocol for this repo
+    pub git_concurrency: Option<GitConcurrencyParams>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1867,4 +1869,15 @@ pub struct ConfigInfo {
     pub content_hash: String,
     /// The time when the config was last updated
     pub last_updated_at: u64,
+}
+
+/// The concurrency setting to be used during git protocol
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct GitConcurrencyParams {
+    /// The concurrency value for tree and blob fetches
+    pub trees_and_blobs: usize,
+    /// The concurrency value for commit fetches
+    pub commits: usize,
+    /// The concurrency value for tag fetches
+    pub tags: usize,
 }

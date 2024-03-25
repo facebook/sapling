@@ -224,6 +224,7 @@ fn parse_with_repo_definition(
         commit_graph_config,
         deep_sharding_config,
         everstore_local_path,
+        git_concurrency,
         ..
     } = named_repo_config;
 
@@ -339,6 +340,7 @@ fn parse_with_repo_definition(
 
     let commit_graph_config = commit_graph_config.convert()?.unwrap_or_default();
     let deep_sharding_config = deep_sharding_config.convert()?;
+    let git_concurrency = git_concurrency.convert()?;
 
     Ok(RepoConfig {
         enabled,
@@ -382,6 +384,7 @@ fn parse_with_repo_definition(
         default_commit_identity_scheme,
         deep_sharding_config,
         everstore_local_path,
+        git_concurrency,
     })
 }
 
@@ -511,6 +514,7 @@ mod test {
     use metaconfig_types::DerivedDataTypesConfig;
     use metaconfig_types::EphemeralBlobstoreConfig;
     use metaconfig_types::FilestoreParams;
+    use metaconfig_types::GitConcurrencyParams;
     use metaconfig_types::HgSyncConfig;
     use metaconfig_types::HookBypass;
     use metaconfig_types::HookConfig;
@@ -888,6 +892,11 @@ mod test {
             [walker_config]
             scrub_enabled = true
             validate_enabled = true
+            
+            [git_concurrency]
+            trees_and_blobs = 500
+            commits = 1000
+            tags = 1000
 
             [cross_repo_commit_validation_config]
             skip_bookmarks = ["weirdy"]
@@ -1301,6 +1310,11 @@ mod test {
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
                 everstore_local_path: None,
+                git_concurrency: Some(GitConcurrencyParams {
+                    trees_and_blobs: 500,
+                    commits: 1000,
+                    tags: 1000,
+                }),
             },
         );
 
@@ -1376,6 +1390,7 @@ mod test {
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,
                 everstore_local_path: None,
+                git_concurrency: None,
             },
         );
         assert_eq!(
