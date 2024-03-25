@@ -46,7 +46,18 @@ template.
 """
 from __future__ import absolute_import
 
-from sapling import error, extensions, localrepo, namespaces, registrar, revset
+import re
+from typing import Optional
+
+from sapling import (
+    autopull,
+    error,
+    extensions,
+    localrepo,
+    namespaces,
+    registrar,
+    revset,
+)
 from sapling.i18n import _
 from sapling.namespaces import namespace
 
@@ -67,6 +78,7 @@ configitem("globalrevs", "startrev", default=0)
 cmdtable = {}
 command = registrar.command(cmdtable)
 namespacepredicate = registrar.namespacepredicate()
+autopullpredicate = registrar.autopullpredicate()
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
@@ -286,6 +298,21 @@ def _getnamespace(_repo) -> namespace:
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_lookupname, nodemap=lambda repo, node: []
     )
+
+
+_globalrevre = re.compile(r"^r[A-Z]*(\d+)$")
+
+
+@autopullpredicate("globalrevs", priority=75, rewritepullrev=True)
+def _autopull(repo, name, _rewritepullrev=False) -> Optional[autopull.pullattempt]:
+    if not repo.ui.configbool("globalrevs", "autopull", True):
+        return None
+
+    if m := _globalrevre.match(name):
+        if resolved := _lookupglobalrev(repo, int(m.group(1))):
+            return autopull.pullattempt(headnodes=resolved)
+
+    return None
 
 
 @revsetpredicate("globalrev(number)", safe=True, weight=10)
