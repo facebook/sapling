@@ -22,6 +22,35 @@ use tokio::io::AsyncWrite;
 
 const SYMREF_HEAD: &str = "HEAD";
 
+/// Struct representing concurrency settings used during packfile generation
+#[derive(Debug, Clone, Copy)]
+pub struct PackfileConcurrency {
+    /// The concurrency to be used for fetching trees and blobs as part of packfile stream
+    pub trees_and_blobs: usize,
+    /// The concurrency to be used for fetching commits as part of packfile stream
+    pub commits: usize,
+    /// The concurrency to be used for fetching tags as part of packfile stream
+    pub tags: usize,
+}
+
+impl PackfileConcurrency {
+    pub fn new(trees_and_blobs: usize, commits: usize, tags: usize) -> Self {
+        Self {
+            trees_and_blobs,
+            commits,
+            tags,
+        }
+    }
+
+    pub fn standard() -> Self {
+        Self {
+            trees_and_blobs: 18_000,
+            commits: 20_000,
+            tags: 20_000,
+        }
+    }
+}
+
 /// Enum defining the type of data associated with a ref target
 pub enum RefTarget {
     /// The target is a plain Git object
@@ -192,6 +221,8 @@ pub struct PackItemStreamRequest {
     pub tag_inclusion: TagInclusion,
     /// How packfile items for raw git objects should be fetched
     pub packfile_item_inclusion: PackfileItemInclusion,
+    /// The concurrency setting to be used while generating the packfile
+    pub concurrency: PackfileConcurrency,
 }
 
 impl PackItemStreamRequest {
@@ -210,6 +241,7 @@ impl PackItemStreamRequest {
             delta_inclusion,
             tag_inclusion,
             packfile_item_inclusion,
+            concurrency: PackfileConcurrency::standard(),
         }
     }
 
@@ -225,6 +257,7 @@ impl PackItemStreamRequest {
             delta_inclusion,
             tag_inclusion,
             packfile_item_inclusion,
+            concurrency: PackfileConcurrency::standard(),
         }
     }
 }
@@ -296,6 +329,9 @@ pub struct FetchRequest {
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
     pub filter: Option<String>,
+    /// The concurrency setting to be used for generating the packfile items for the
+    /// fetch request
+    pub concurrency: PackfileConcurrency,
 }
 
 /// Struct representing the packfile item response generated for the

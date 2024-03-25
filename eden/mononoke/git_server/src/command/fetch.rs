@@ -11,6 +11,7 @@ use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
 use protocol::types::FetchRequest;
+use protocol::types::PackfileConcurrency;
 
 const DONE: &[u8] = b"done";
 const THIN_PACK: &[u8] = b"thin-pack";
@@ -218,6 +219,7 @@ impl FetchArgs {
             deepen_not: self.deepen_not,
             deepen_relative: self.deepen_relative,
             filter: self.filter,
+            concurrency: PackfileConcurrency::standard(),
         }
     }
 }

@@ -676,6 +676,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     target_commits: BoxStream<'a, Result<ChangesetId>>,
     delta_inclusion: DeltaInclusion,
     packfile_item_inclusion: PackfileItemInclusion,
+    concurrency: usize,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
     // efficiently in the packfile/bundle
@@ -688,7 +689,7 @@ async fn blob_and_tree_packfile_stream<'a>(
             let ctx = ctx.clone();
             blob_and_tree_packfile_items(ctx, blobstore, derived_data, changeset_id)
         })
-        .try_buffered(6000)
+        .try_buffered(concurrency / 3)
         .try_flatten()
         .map_ok(move |(changeset_id, path, mut entry)| {
             let ctx = second_ctx.clone();
@@ -741,7 +742,7 @@ async fn blob_and_tree_packfile_stream<'a>(
                 }
             }
         })
-        .try_buffered(18000)
+        .try_buffered(concurrency)
         .boxed();
     Ok(packfile_item_stream)
 }
@@ -752,6 +753,7 @@ async fn commit_packfile_stream<'a>(
     repo: &'a impl Repo,
     target_commits: BoxStream<'a, Result<ChangesetId>>,
     packfile_item_inclusion: PackfileItemInclusion,
+    concurrency: usize,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let blobstore = repo.repo_blobstore_arc();
     let commit_stream = target_commits
@@ -782,7 +784,7 @@ async fn commit_packfile_stream<'a>(
                 .await
             }
         })
-        .try_buffered(20000)
+        .try_buffered(concurrency)
         .boxed();
     anyhow::Ok(commit_stream)
 }
@@ -793,6 +795,7 @@ fn tag_entries_to_stream<'a>(
     repo: &'a impl Repo,
     tag_entries: Vec<BonsaiTagMappingEntry>,
     packfile_item_inclusion: PackfileItemInclusion,
+    concurrency: usize,
 ) -> BoxStream<'a, Result<PackfileItem>> {
     let blobstore = repo.repo_blobstore_arc();
     stream::iter(tag_entries.into_iter().map(anyhow::Ok))
@@ -810,7 +813,7 @@ fn tag_entries_to_stream<'a>(
                 .await
             }
         })
-        .try_buffered(20000)
+        .try_buffered(concurrency)
         .boxed()
 }
 
@@ -848,8 +851,13 @@ async fn tag_packfile_stream<'a>(
         .try_collect::<Vec<_>>()
         .await?;
     let tags_count = annotated_tags.len();
-    let packfile_item_inclusion = request.packfile_item_inclusion;
-    let tag_stream = tag_entries_to_stream(ctx, repo, annotated_tags, packfile_item_inclusion);
+    let tag_stream = tag_entries_to_stream(
+        ctx,
+        repo,
+        annotated_tags,
+        request.packfile_item_inclusion,
+        request.concurrency.tags,
+    );
     anyhow::Ok((tag_stream, tags_count))
 }
 
@@ -857,6 +865,8 @@ async fn tag_packfile_stream<'a>(
 async fn all_tags_packfile_stream<'a>(
     ctx: Arc<CoreContext>,
     repo: &'a impl Repo,
+    packfile_item_inclusion: PackfileItemInclusion,
+    concurrency: usize,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     // Fetch entries corresponding to annotated tags in the repo
     let tag_entries = repo
@@ -866,7 +876,7 @@ async fn all_tags_packfile_stream<'a>(
         .context("Error in getting tags during fetch")?;
     let tags_count = tag_entries.len();
     let tag_stream =
-        tag_entries_to_stream(ctx, repo, tag_entries, PackfileItemInclusion::FetchAndStore);
+        tag_entries_to_stream(ctx, repo, tag_entries, packfile_item_inclusion, concurrency);
     anyhow::Ok((tag_stream, tags_count))
 }
 
@@ -928,6 +938,7 @@ pub async fn generate_pack_item_stream<'a>(
         to_commit_stream(target_commits.clone()),
         request.delta_inclusion,
         request.packfile_item_inclusion,
+        request.concurrency.trees_and_blobs,
     )
     .await
     .context("Error while generating blob and tree packfile item stream")?;
@@ -939,6 +950,7 @@ pub async fn generate_pack_item_stream<'a>(
         repo,
         to_commit_stream(target_commits.clone()),
         request.packfile_item_inclusion,
+        request.concurrency.commits,
     )
     .await
     .context("Error while generating commit packfile item stream")?;
@@ -1036,6 +1048,7 @@ pub async fn fetch_response<'a>(
         to_commit_stream(target_commits.clone()),
         delta_inclusion,
         packfile_item_inclusion,
+        request.concurrency.trees_and_blobs,
     )
     .await
     .context("Error while generating blob and tree packfile item stream during fetch")?;
@@ -1046,15 +1059,21 @@ pub async fn fetch_response<'a>(
         repo,
         to_commit_stream(target_commits.clone()),
         packfile_item_inclusion,
+        request.concurrency.trees_and_blobs,
     )
     .await
     .context("Error while generating commit packfile item stream during fetch")?;
     // Get the stream of all annotated tag items in the repo
     // NOTE: Ideally, we should filter it based on the requested refs but its much faster to just send all the tags.
     // Git ignores the unnecessary objects and the extra size overhead in the pack is just a few KBs
-    let (tag_stream, tags_count) = all_tags_packfile_stream(ctx.clone(), repo)
-        .await
-        .context("Error while generating tag packfile item stream during fetch")?;
+    let (tag_stream, tags_count) = all_tags_packfile_stream(
+        ctx.clone(),
+        repo,
+        packfile_item_inclusion,
+        request.concurrency.tags,
+    )
+    .await
+    .context("Error while generating tag packfile item stream during fetch")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
     let object_count = commits_count + trees_and_blobs_count + tags_count;
     // Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
