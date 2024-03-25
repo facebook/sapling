@@ -29,6 +29,7 @@ use cloned::cloned;
 use cmdlib_caching::CachelibSettings;
 use commit_graph::CommitGraph;
 use connection_security_checker::ConnectionSecurityChecker;
+use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures::future::try_select;
@@ -54,7 +55,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_repos::MononokeRepos;
+use mononoke_app::MononokeReposManager;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
@@ -65,6 +66,7 @@ use crate::middleware::RequestContentEncodingMiddleware;
 use crate::middleware::ResponseContentTypeMiddleware;
 use crate::model::GitServerContext;
 use crate::service::build_router;
+use crate::sharding::MononokeGitServerProcess;
 mod command;
 
 mod errors;
@@ -72,9 +74,11 @@ mod middleware;
 mod model;
 mod read;
 mod service;
+mod sharding;
 mod util;
 
 const SERVICE_NAME: &str = "mononoke_git_server";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 // Used to determine how many entries are in cachelib's HashTable. A smaller
 // object size results in more entries and possibly higher idle memory usage.
@@ -137,25 +141,23 @@ struct GitServerArgs {
     /// Path for file in which to write the bound tcp address in rust std::net::SocketAddr format
     #[clap(long)]
     bound_address_file: Option<String>,
+    /// Args for sharding of repos on Mononoke Git Server
+    #[clap(flatten)]
+    sharded_executor_args: ShardedExecutorArgs,
 }
 
 #[derive(Clone)]
 pub struct GitRepos {
-    pub(crate) repos: Arc<MononokeRepos<Repo>>,
+    pub(crate) repo_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
-#[allow(dead_code)]
 impl GitRepos {
-    pub(crate) async fn new(app: &MononokeApp) -> Result<Self> {
-        let repos_mgr = app
-            .open_managed_repos(Some(ShardedService::MononokeGitServer))
-            .await?;
-        let repos = repos_mgr.repos().clone();
-        Ok(Self { repos })
+    pub(crate) async fn new(repo_mgr: Arc<MononokeReposManager<Repo>>) -> Result<Self> {
+        Ok(Self { repo_mgr })
     }
 
     pub(crate) fn get(&self, repo_name: &str) -> Option<Arc<Repo>> {
-        self.repos.get_by_name(repo_name)
+        self.repo_mgr.repos().get_by_name(repo_name)
     }
 }
 
@@ -197,15 +199,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let common = app.repo_configs().common.clone();
     let tls_session_data_log = args.tls_session_data_log_file.clone();
     let will_exit = Arc::new(AtomicBool::new(false));
-
+    let runtime = app.runtime().clone();
+    // Service name is used for shallow or deep sharding. If sharding itself is disabled, provide
+    // service name as None while opening repos.
+    let service_name = args
+        .sharded_executor_args
+        .sharded_service_name
+        .as_ref()
+        .map(|_| ShardedService::MononokeGitServer);
     app.start_monitoring(SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
-        cloned!(logger);
-        move |app| async move {
-            let repos = GitRepos::new(&app)
+        cloned!(logger, will_exit);
+        move |app: MononokeApp| async move {
+            let repos_mgr = Arc::new(app.open_managed_repos(service_name).await?);
+            let repos = GitRepos::new(repos_mgr.clone())
                 .await
                 .context(Error::msg("Error opening repos"))?;
 
@@ -253,6 +263,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 let mut writer = File::create(bound_addr_path)?;
                 writer.write_all(bound_addr.as_bytes())?;
                 writer.write_all(b"\n")?;
+            }
+
+            if let Some(mut executor) = args.sharded_executor_args.build_executor(
+                app.fb,
+                runtime.clone(),
+                &logger,
+                || Arc::new(MononokeGitServerProcess::new(repos_mgr)),
+                false, // disable shard (repo) level healing
+                SM_CLEANUP_TIMEOUT_SECS,
+            )? {
+                // The Sharded Process Executor needs to branch off and execute
+                // on its own dedicated task spawned off the common tokio runtime.
+                runtime.spawn({
+                    let logger = app.logger().clone();
+                    {
+                        cloned!(will_exit);
+                        async move { executor.block_and_execute(&logger, will_exit).await }
+                    }
+                });
             }
 
             let serve = async move {
