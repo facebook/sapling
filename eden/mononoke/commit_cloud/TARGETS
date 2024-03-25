@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "commit_cloud_service_lib",
+    srcs = ["src/lib.rs"],
+)
+
+rust_binary(
+    name = "commit_cloud_service",
+    srcs = ["src/main.rs"],
+    deps = [
+        ":commit_cloud_service_lib",
+    ],
+)
