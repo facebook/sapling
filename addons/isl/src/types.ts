@@ -529,6 +529,7 @@ export type ConfigName = (typeof allConfigNames)[number];
 /**
  * Not all configs should be set-able from the UI, for security.
  * Only configs which could not possibly allow code execution should be allowed.
+ * This also includes values allowed to be passed in the args for Operations.
  * Most ISL configs are OK.
  */
 export const settableConfigNames = [
@@ -547,6 +548,8 @@ export const settableConfigNames = [
   'isl.experimental-graph-renderer',
   'isl.generated-files-regex',
   'github.preferred_submit_command',
+  'ui.allowemptycommit',
+  'amend.autorestack',
 ] as const;
 
 /** sl configs written to by ISL */

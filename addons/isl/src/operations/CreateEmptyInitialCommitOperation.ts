@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommandArg} from '../types';
+
 import {Operation} from './Operation';
 
 export class CreateEmptyInitialCommitOperation extends Operation {
@@ -14,7 +16,12 @@ export class CreateEmptyInitialCommitOperation extends Operation {
     super('CreateEmptyInitialCommit');
   }
 
-  getArgs() {
-    return ['commit', '--config', 'ui.allowemptycommit=true', '--message', 'Initial Commit'];
+  getArgs(): Array<CommandArg> {
+    return [
+      'commit',
+      {type: 'config', key: 'ui.allowemptycommit', value: 'true'},
+      '--message',
+      'Initial Commit',
+    ];
   }
 }

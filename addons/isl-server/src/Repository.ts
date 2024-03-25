@@ -498,18 +498,29 @@ export class Repository {
 
   private normalizeOperationArgs(cwd: string, args: Array<CommandArg>): Array<string> {
     const repoRoot = nullthrows(this.info.repoRoot);
+    const illegalArgs = new Set(['--cwd', '--config', '--insecure', '--repository', '-R']);
     return args.flatMap(arg => {
       if (typeof arg === 'object') {
         switch (arg.type) {
           case 'config':
+            if (!(settableConfigNames as ReadonlyArray<string>).includes(arg.key)) {
+              throw new Error(`config ${arg.key} not allowed`);
+            }
             return ['--config', `${arg.key}=${arg.value}`];
           case 'repo-relative-file':
             return [path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)))];
           case 'exact-revset':
+            if (arg.revset.startsWith('-')) {
+              // don't allow revsets to be used as flags
+              throw new Error('invalid revset');
+            }
             return [arg.revset];
           case 'succeedable-revset':
             return [`max(successors(${arg.revset}))`];
         }
+      }
+      if (illegalArgs.has(arg)) {
+        throw new Error(`argument '${arg}' is not allowed`);
       }
       return arg;
     });
@@ -1108,7 +1119,7 @@ export class Repository {
   ): Promise<void> {
     if (!settableConfigNames.includes(configName)) {
       return Promise.reject(
-        new Error(`Config ${configName} not in allowlist for settable configs`),
+        new Error(`config ${configName} not in allowlist for settable configs`),
       );
     }
     // Attempt to avoid racy config read/write.
