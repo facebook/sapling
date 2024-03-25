@@ -8,12 +8,13 @@
 import type {ResolveCommandConflictOutput} from '../commands';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
-import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
+import type {RunnableOperation} from 'isl/src/types';
 
 import {absolutePathForFileInRepo, Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {extractRepoInfoFromUrl, setConfigOverrideForTests} from '../commands';
 import * as execa from 'execa';
+import {CommandRunner, type MergeConflicts, type ValidatedRepoInfo} from 'isl/src/types';
 import os from 'os';
 import path from 'path';
 import * as fsUtils from 'shared/fs';
@@ -28,6 +29,7 @@ jest.mock('execa', () => {
 jest.mock('../WatchForChanges', () => {
   class MockWatchForChanges {
     dispose = jest.fn();
+    poll = jest.fn();
   }
   return {WatchForChanges: MockWatchForChanges};
 });
@@ -242,6 +244,135 @@ describe('Repository', () => {
     await expect(repo.setConfig(ctx, 'user', 'some-random-config', 'hi')).rejects.toEqual(
       new Error('config some-random-config not in allowlist for settable configs'),
     );
+  });
+
+  describe('running operations', () => {
+    const repoInfo: ValidatedRepoInfo = {
+      type: 'success',
+      command: 'sl',
+      dotdir: '/path/to/repo/.sl',
+      repoRoot: '/path/to/repo',
+      codeReviewSystem: {type: 'unknown'},
+      pullRequestDomain: undefined,
+    };
+
+    let execaSpy: ReturnType<typeof mockExeca>;
+    beforeEach(() => {
+      execaSpy = mockExeca([]);
+    });
+
+    async function runOperation(op: Partial<RunnableOperation>) {
+      const repo = new Repository(repoInfo, ctx);
+      const progressSpy = jest.fn();
+
+      await repo.runOrQueueOperation(
+        ctx,
+        {
+          id: '1',
+          trackEventName: 'CommitOperation',
+          args: [],
+          runner: CommandRunner.Sapling,
+          ...op,
+        },
+        progressSpy,
+      );
+    }
+
+    it('runs operations', async () => {
+      runOperation({
+        args: ['commit', '--message', 'hi'],
+      });
+
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        ['commit', '--message', 'hi', '--noninteractive'],
+        expect.anything(),
+      );
+    });
+
+    it('handles succeedable revsets', async () => {
+      runOperation({
+        args: ['rebase', '--rev', {type: 'succeedable-revset', revset: 'aaa'}],
+      });
+
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        ['rebase', '--rev', 'max(successors(aaa))', '--noninteractive'],
+        expect.anything(),
+      );
+    });
+
+    it('handles exact revsets', async () => {
+      runOperation({
+        args: ['rebase', '--rev', {type: 'exact-revset', revset: 'aaa'}],
+      });
+
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        ['rebase', '--rev', 'aaa', '--noninteractive'],
+        expect.anything(),
+      );
+    });
+
+    it('handles repo-relative files', async () => {
+      runOperation({
+        args: ['add', {type: 'repo-relative-file', path: 'path/to/file.txt'}],
+      });
+
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        ['add', '../repo/path/to/file.txt', '--noninteractive'],
+        expect.anything(),
+      );
+    });
+
+    it('handles allowed configs', async () => {
+      runOperation({
+        args: ['commit', {type: 'config', key: 'ui.allowemptycommit', value: 'True'}],
+      });
+
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        ['commit', '--config', 'ui.allowemptycommit=True', '--noninteractive'],
+        expect.anything(),
+      );
+    });
+
+    it('disallows some commands', async () => {
+      runOperation({
+        args: ['debugsh'],
+      });
+
+      expect(execaSpy).not.toHaveBeenCalledWith(
+        'sl',
+        ['debugsh', '--noninteractive'],
+        expect.anything(),
+      );
+    });
+
+    it('disallows unknown configs', async () => {
+      runOperation({
+        args: ['commit', {type: 'config', key: 'foo.bar', value: '1'}],
+      });
+
+      expect(execaSpy).not.toHaveBeenCalledWith(
+        'sl',
+        expect.arrayContaining(['commit', '--config', 'foo.bar=1']),
+        expect.anything(),
+      );
+    });
+
+    it('disallows unstructured --config flag', async () => {
+      runOperation({
+        args: ['commit', '--config', 'foo.bar=1'],
+      });
+
+      expect(execaSpy).not.toHaveBeenCalledWith(
+        'sl',
+        expect.arrayContaining(['commit', '--config', 'foo.bar=1']),
+        expect.anything(),
+      );
+    });
   });
 
   describe('merge conflicts', () => {
