@@ -10,7 +10,7 @@ import type {OperationDescription} from './Operation';
 import {Operation} from './Operation';
 
 export class NopOperation extends Operation {
-  static opName = 'Pull';
+  static opName = 'Nop';
 
   constructor(private durationSeconds = 2) {
     super('NopOperation');
@@ -23,6 +23,13 @@ export class NopOperation extends Operation {
   }
 
   getArgs() {
-    return ['debugshell', '-c', `__import__('time').sleep(${this.durationSeconds})`];
+    return [
+      'debugprogress',
+      '3',
+      '--with-output',
+      '1',
+      '--sleep',
+      String(Math.floor((this.durationSeconds * 1000) / 3)),
+    ];
   }
 }

@@ -537,6 +537,11 @@ export class Repository {
 
     ctx.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
 
+    const commandBlocklist = new Set(['debugshell', 'dbsh', 'debugsh']);
+    if (args.some(arg => commandBlocklist.has(arg))) {
+      throw new Error(`command "${args.join(' ')}" is not allowed`);
+    }
+
     const execution = execa(command, args, {...options, stdout: 'pipe', stderr: 'pipe'});
     // It would be more appropriate to call this in reponse to execution.on('spawn'), but
     // this seems to be inconsistent about firing in all versions of node.
