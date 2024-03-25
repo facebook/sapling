@@ -50,19 +50,8 @@ pub async fn make_changeset_hook(
         )),
         "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new())),
         "limit_commit_message_length" => {
-            let hook = if let Some(_json_options) = &params.config.options {
-                limit_commit_message_length::LimitCommitMessageLengthHook::new(&params.config)?
-            } else {
-                // TODO(T163510846): delete legacy LimitCommitMessageLengthConfig code
-                let legacy_hook_config =
-                limit_commit_message_length::LimitCommitMessageLengthConfig::from_legacy_config(
-                    &params.config,
-                )?;
-
-                limit_commit_message_length::LimitCommitMessageLengthHook::with_config(
-                    legacy_hook_config,
-                )?
-            };
+            let hook =
+                limit_commit_message_length::LimitCommitMessageLengthHook::new(&params.config)?;
             Some(b(hook))
         }
 

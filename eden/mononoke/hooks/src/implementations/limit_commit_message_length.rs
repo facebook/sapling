@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -28,29 +27,6 @@ const DEFAULT_TITLE_LENGTH: usize = 80;
 pub struct LimitCommitMessageLengthConfig {
     display_title_length: Option<usize>,
     length_limit: usize,
-}
-
-impl LimitCommitMessageLengthConfig {
-    // TODO(T163510846): delete legacy LimitCommitMessageLengthConfig code
-    pub fn from_legacy_config(config: &HookConfig) -> Result<Self, Error> {
-        let display_title_length = config
-            .strings
-            .get("display_title_length")
-            .map(|l| l.parse().context("While parsing display_title_length"))
-            .transpose()?;
-
-        let length_limit = config
-            .strings
-            .get("length_limit")
-            .ok_or_else(|| Error::msg("Required config max_length is missing"))?;
-
-        let length_limit = length_limit.parse().context("While parsing length_limit")?;
-
-        Ok(Self {
-            display_title_length,
-            length_limit,
-        })
-    }
 }
 
 /// Hook to block commits with messages that exceed a length limit.
