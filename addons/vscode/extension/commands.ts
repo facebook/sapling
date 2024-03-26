@@ -64,11 +64,19 @@ export const vscodeCommands = {
   }),
 };
 
+type surveyMetaData = {
+  diffId: string | undefined;
+};
+
 /** Type definitions for built-in or third-party VS Code commands we want to execute programatically. */
 type ExternalVSCodeCommands = {
   'vscode.diff': (left: vscode.Uri, right: vscode.Uri, title: string) => Thenable<unknown>;
   'workbench.action.closeSidebar': () => Thenable<void>;
-  'fb.survey.initStateUIByNamespace': (surveyID: string) => Thenable<void>;
+  'fb.survey.initStateUIByNamespace': (
+    surveyID: string,
+    namespace: string,
+    metadata: surveyMetaData,
+  ) => Thenable<void>;
   'sapling.open-isl': () => Thenable<void>;
   'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;

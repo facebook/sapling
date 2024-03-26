@@ -34,7 +34,6 @@ export interface Platform {
   openExternalLink(url: string): void;
   clipboardCopy(text: string, html?: string): void;
   chooseFile?(title: string, multi: boolean): Promise<Array<File>>;
-  onCommitFormSubmit?: () => void;
   /**
    * Get stored data from local persistant cache (usually browser local storage).
    * Note: Some platforms may not support this (e.g. browser with localStorage disabled),

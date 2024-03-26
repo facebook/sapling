@@ -147,7 +147,6 @@ export const vscodeWebviewPlatform: Platform = {
   AdditionalDebugContent: Internal.AdditionalDebugContent,
   GettingStartedContent: Internal.GettingStartedContent,
   GettingStartedBugNuxContent: Internal.GettingStartedBugNuxContent,
-  onCommitFormSubmit: Internal.onCommitFormSubmit,
 };
 
 function getTheme(): ThemeColor {

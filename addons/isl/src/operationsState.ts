@@ -305,6 +305,16 @@ registerDisposable(
   import.meta.hot,
 );
 
+export function getLastestOperationInfo(operation: Operation): OperationInfo | undefined {
+  const list = readAtom(operationList);
+  const info =
+    list.currentOperation?.operation === operation
+      ? list.currentOperation
+      : list.operationHistory.find(op => op.operation === operation);
+
+  return info;
+}
+
 function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   // TODO: check for hashes in arguments that are known to be obsolete already,
   // and mark those to not be rewritten.
