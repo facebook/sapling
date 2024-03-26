@@ -6,7 +6,13 @@
  */
 
 import App from '../App';
-import {resetTestMessages, closeCommitInfoSidebar, simulateCommits, COMMIT} from '../testUtils';
+import {
+  resetTestMessages,
+  closeCommitInfoSidebar,
+  simulateCommits,
+  COMMIT,
+  dragAndDropCommits,
+} from '../testUtils';
 import {screen, act, render, fireEvent} from '@testing-library/react';
 
 describe('focus mode', () => {
@@ -118,5 +124,17 @@ describe('focus mode', () => {
     expect(screen.queryByText('Commit A')).not.toBeInTheDocument();
     expect(screen.queryByText('Commit B')).not.toBeInTheDocument();
     expect(screen.queryByText('Commit C')).not.toBeInTheDocument();
+  });
+
+  it('lets you drag and drop rebase commits outside the focus stack', () => {
+    jest.useFakeTimers();
+
+    toggleFocusMode();
+
+    dragAndDropCommits('f', '2');
+
+    expect(screen.getAllByText('Commit F')).toHaveLength(2);
+    expect(screen.getByText('Run Rebase')).toBeInTheDocument();
+    jest.useRealTimers();
   });
 });

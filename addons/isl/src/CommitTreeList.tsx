@@ -8,14 +8,12 @@
 import type {RenderGlyphResult} from './RenderDag';
 import type {DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
-import type {HashSet} from './dag/set';
 import type {Hash} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {Commit, InlineProgressSpan} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
-import {focusMode} from './FocusMode';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
@@ -62,25 +60,7 @@ const dagWithYouAreHere = atom(get => {
 
 const renderSubsetUnionSelection = atom(get => {
   const dag = get(dagWithYouAreHere);
-  const focus = get(focusMode);
-  let set: HashSet | undefined;
-  if (focus) {
-    const current = dag.resolve('.');
-    if (current) {
-      const currentStack = dag.descendants(
-        dag.ancestors(dag.draft(current.hash), {within: dag.draft()}),
-      );
-      const related = dag.descendants(
-        dag.successors(currentStack).union(dag.predecessors(currentStack)),
-      );
-      set = dag
-        .public_()
-        .union(YOU_ARE_HERE_VIRTUAL_COMMIT.hash) // ensure we always show "You Are Here"
-        .union(currentStack)
-        .union(related);
-    }
-  }
-  const subset = dag.subsetForRendering(set);
+  const subset = dag.subsetForRendering();
   // If selectedCommits includes commits unknown to dag (ex. in tests), ignore them to avoid errors.
   const selection = dag.present(get(selectedCommits));
   return subset.union(selection);

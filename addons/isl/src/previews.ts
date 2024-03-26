@@ -13,6 +13,8 @@ import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} 
 
 import {latestSuccessorsMapAtom} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
+import {focusMode} from './atoms/FocusModeState';
+import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {operationBeingPreviewed, queuedOperations, operationList} from './operationsState';
@@ -250,6 +252,25 @@ export const dagWithPreviews = atom(get => {
   const history = list.operationHistory;
   const currentPreview = get(operationBeingPreviewed);
   let dag = originalDag;
+
+  const focus = get(focusMode);
+  if (focus) {
+    const current = dag.resolve('.');
+    if (current) {
+      const currentStack = dag.descendants(
+        dag.ancestors(dag.draft(current.hash), {within: dag.draft()}),
+      );
+      const related = dag.descendants(
+        dag.successors(currentStack).union(dag.predecessors(currentStack)),
+      );
+      const toKeep = currentStack
+        .union(YOU_ARE_HERE_VIRTUAL_COMMIT.hash) // ensure we always show "You Are Here"
+        .union(related);
+      const toRemove = dag.draft().subtract(toKeep);
+      dag = dag.remove(toRemove);
+    }
+  }
+
   for (const op of optimisticOperations({history, queued, currentOperation})) {
     dag = op.optimisticDag(dag);
   }

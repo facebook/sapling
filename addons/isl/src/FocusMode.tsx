@@ -10,17 +10,14 @@ import {useCommand} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {tracker} from './analytics';
+import {focusMode} from './atoms/FocusModeState';
 import {Button} from './components/Button';
 import {T} from './i18n';
 import {colors} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {atom, useAtom} from 'jotai';
+import {useAtom} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
-
-// Note: we intentionally don't persist focus mode, so each time you open ISL,
-// you see all your commits and can choose to focus from that point onward.
-export const focusMode = atom(false);
 
 const styles = stylex.create({
   focused: {
