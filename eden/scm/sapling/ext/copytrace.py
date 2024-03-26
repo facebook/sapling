@@ -410,17 +410,25 @@ def _mergecopies(orig, repo, cdst, csrc, base):
 
     copies = {}
 
-    ctx = csrc
     changedfiles = set()
     sourcecommitnum = 0
     sourcecommitlimit = repo.ui.configint("copytrace", "sourcecommitlimit")
     mdst = cdst.manifest()
-    while ctx != base:
-        if len(ctx.parents()) == 2:
+
+    if repo.ui.cmdname == "backout":
+        # for `backout` operation, `base` is the commit we want to backout and
+        # `csrc` is the parent of the `base` commit.
+        curr, target = base, csrc
+    else:
+        # for normal cases, `base` is the parent of `csrc`
+        curr, target = csrc, base
+
+    while curr != target:
+        if len(curr.parents()) == 2:
             # To keep things simple let's not handle merges
             return orig(repo, cdst, csrc, base)
-        changedfiles.update(ctx.files())
-        ctx = ctx.p1()
+        changedfiles.update(curr.files())
+        curr = curr.p1()
         sourcecommitnum += 1
         if sourcecommitnum > sourcecommitlimit:
             return orig(repo, cdst, csrc, base)
