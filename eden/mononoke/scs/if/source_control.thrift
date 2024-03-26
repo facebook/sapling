@@ -1113,6 +1113,8 @@ struct CommitInfoParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitGenerationParams {}
+
 /// Parameters for the `commit_is_ancestor_of` method.
 ///
 /// This method takes a commit specifier (the target commit), and checks
@@ -2276,6 +2278,12 @@ service SourceControlService extends fb303_core.BaseService {
   CommitInfo commit_info(
     1: CommitSpecifier commit,
     2: CommitInfoParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Get commit generation.
+  i64 commit_generation(
+    1: CommitSpecifier commit,
+    2: CommitGenerationParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Check if this commit is an ancestor of some other commit.

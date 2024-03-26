@@ -296,6 +296,8 @@ impl AddScubaParams for thrift::CommitInfoParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitGenerationParams {}
+
 impl AddScubaParams for thrift::CommitIsAncestorOfParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_commit", self.descendant_commit_id.to_string());

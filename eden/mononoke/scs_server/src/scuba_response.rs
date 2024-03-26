@@ -20,6 +20,8 @@ pub(crate) trait AddScubaResponse: Send + Sync {
 
 impl AddScubaResponse for bool {}
 
+impl AddScubaResponse for i64 {}
+
 impl AddScubaResponse for Vec<thrift::Repo> {}
 
 impl AddScubaResponse for thrift::RepoInfo {}

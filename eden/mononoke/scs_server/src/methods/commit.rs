@@ -497,6 +497,17 @@ impl SourceControlServiceImpl {
         changeset.into_response_with(&params.identity_schemes).await
     }
 
+    /// Get commit generation.
+    pub(crate) async fn commit_generation(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        _params: thrift::CommitGenerationParams,
+    ) -> Result<i64, errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        Ok(changeset.generation().await?.value() as i64)
+    }
+
     /// Returns `true` if this commit is an ancestor of `other_commit`.
     pub(crate) async fn commit_is_ancestor_of(
         &self,

@@ -745,6 +745,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitInfoParams,
         ) -> Result<thrift::CommitInfo, service::CommitInfoExn>;
 
+        async fn commit_generation(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitGenerationParams,
+        ) -> Result<i64, service::CommitGenerationExn>;
+
         async fn commit_is_ancestor_of(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitIsAncestorOfParams,
