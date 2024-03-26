@@ -319,7 +319,13 @@ fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> anyhow::Result<Option<bool>> {
     let mut redirections = HashMap::new();
 
     let client = wc.working_copy_client()?;
-    let client: &edenfs_client::EdenFsClient = &client;
+    let client = match client
+        .as_any()
+        .downcast_ref::<edenfs_client::EdenFsClient>()
+    {
+        Some(v) => v,
+        None => anyhow::bail!("bug: edenfs_redirect called on non-eden working copy"),
+    };
 
     // Check edenfs-client/src/redirect.rs for the config paths and file format.
     let client_paths = vec![
