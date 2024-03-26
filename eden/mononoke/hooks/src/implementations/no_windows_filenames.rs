@@ -38,15 +38,6 @@ pub struct NoWindowsFilenamesConfig {
     illegal_filename_message: String,
 }
 
-fn get_regex(config: &HookConfig, regex_name: &str) -> Result<Option<Regex>> {
-    config
-        .strings
-        .get(regex_name)
-        .map(|regex| Regex::new(regex))
-        .transpose()
-        .with_context(|| format!("Failed to create regex for {}", regex_name))
-}
-
 /// Hook to disallow bad Windows filenames from being pushed.
 ///
 /// These bad filenames are described by Microsoft as:
@@ -65,16 +56,8 @@ pub struct NoWindowsFilenamesHook {
 }
 
 impl NoWindowsFilenamesHook {
-    pub fn _new(config: &HookConfig) -> Result<Self> {
+    pub fn new(config: &HookConfig) -> Result<Self> {
         config.parse_options().map(Self::with_config)
-    }
-
-    pub fn legacy(config: &HookConfig) -> Result<Self> {
-        let new_config = NoWindowsFilenamesConfig {
-            allowed_paths: get_regex(config, "allowed_paths")?,
-            illegal_filename_message: "ABORT: Illegal windows filename: ${filename}. Name and path of file in windows should not match regex ${illegal_pattern}".to_string(),
-        };
-        Ok(Self::with_config(new_config))
     }
 
     pub fn with_config(config: NoWindowsFilenamesConfig) -> Self {

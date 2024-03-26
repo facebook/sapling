@@ -7,10 +7,13 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8
 
-  $ hook_test_setup no_windows_filenames <(
+  $ hook_test_setup no_windows_filenames <( \
   >   cat <<CONF
   > bypass_pushvar="ALLOW_BAD_WINDOWS_FILENAMES=true"
-  > config_strings={"bad_windows_path_element"='''(^(?i)((((com|lpt)\\d)|con|prn|aux|nul))($|\\.))|<|>|:|"|/|\\\\|\\||\\?|\\*|[\\x00-\\x1F]|(\\.| )$'''}
+  > config_json='''{
+  >   "allowed_paths": "^fbcode/videoinfra|^fbcode/transient_analysis|^fbcode/tupperware|^fbcode/realtime|^fbcode/npe|^fbcode/axon|^fbcode/ame|^third-party/rpms|^opsfiles/|^fbobjc/Libraries/Lexical/",
+  >   "illegal_filename_message": "ABORT: Illegal windows filename: \${filename}. Name and path of file in windows should not match regex \${illegal_pattern}"  
+  > }'''
   > CONF
   > ) 
 
