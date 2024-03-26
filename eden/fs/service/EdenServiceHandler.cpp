@@ -746,6 +746,23 @@ EdenServiceHandler::semifuture_resetParentCommits(
       .semi();
 }
 
+void EdenServiceHandler::getCurrentSnapshotInfo(
+    GetCurrentSnapshotInfoResponse& out,
+    std::unique_ptr<GetCurrentSnapshotInfoRequest> params) {
+  const auto& mountId = params->mountId();
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountId);
+  helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
+
+  auto mountHandle = lookupMount(*mountId);
+
+  auto filterId =
+      mountHandle.getEdenMount().getCheckoutConfig()->getLastActiveFilter();
+
+  if (filterId.has_value()) {
+    out.filterId_ref() = std::move(filterId.value());
+  }
+}
+
 namespace {
 int64_t getSyncTimeout(const SyncBehavior& sync) {
   return sync.syncTimeoutSeconds().value_or(60);

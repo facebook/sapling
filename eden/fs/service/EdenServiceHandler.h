@@ -125,6 +125,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<WorkingDirectoryParents> parents,
       std::unique_ptr<ResetParentCommitsParams> params) override;
 
+  void getCurrentSnapshotInfo(
+      GetCurrentSnapshotInfoResponse& out,
+      std::unique_ptr<GetCurrentSnapshotInfoRequest> params) override;
+
   folly::SemiFuture<folly::Unit> semifuture_synchronizeWorkingCopy(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<SynchronizeWorkingCopyParams> params) override;

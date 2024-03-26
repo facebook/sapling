@@ -162,6 +162,7 @@ python_unittest(
     supports_static_listing = False,
     runtime_deps = artifacts["deps"],
     deps = [
+        "//eden/fs/service:thrift-py",
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
     ],
