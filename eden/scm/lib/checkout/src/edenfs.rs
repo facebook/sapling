@@ -199,9 +199,11 @@ fn edenfs_noconflict_checkout(
     let target_mf = tree_resolver.get(&target_commit)?;
 
     // Do a dry run to check if there will be any conflicts before modifying any actual files
-    let conflicts =
-        wc.eden_client()?
-            .checkout(target_commit, target_commit_tree_hash, CheckoutMode::DryRun)?;
+    let conflicts = wc.working_copy_client()?.checkout(
+        target_commit,
+        target_commit_tree_hash,
+        CheckoutMode::DryRun,
+    )?;
     let (plan, status) = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
     check_conflicts(repo, wc, &plan, &target_mf, &status)?;
@@ -213,9 +215,11 @@ fn edenfs_noconflict_checkout(
     })?;
 
     // Do the actual checkout
-    let actual_conflicts =
-        wc.eden_client()?
-            .checkout(target_commit, target_commit_tree_hash, CheckoutMode::Normal)?;
+    let actual_conflicts = wc.working_copy_client()?.checkout(
+        target_commit,
+        target_commit_tree_hash,
+        CheckoutMode::Normal,
+    )?;
     abort_on_eden_conflict_error(repo.config(), actual_conflicts)?;
 
     // Execute the plan, applying changes to conflicting-ish files
@@ -235,9 +239,11 @@ fn edenfs_force_checkout(
     target_commit_tree_hash: HgId,
 ) -> anyhow::Result<()> {
     // Try to run checkout on EdenFS on force mode, then check for network errors
-    let conflicts =
-        wc.eden_client()?
-            .checkout(target_commit, target_commit_tree_hash, CheckoutMode::Force)?;
+    let conflicts = wc.working_copy_client()?.checkout(
+        target_commit,
+        target_commit_tree_hash,
+        CheckoutMode::Force,
+    )?;
     abort_on_eden_conflict_error(repo.config(), conflicts)?;
 
     wc.clear_merge_state()?;
@@ -312,7 +318,7 @@ fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> anyhow::Result<Option<bool>> {
     let vfs = wc.vfs();
     let mut redirections = HashMap::new();
 
-    let client = wc.eden_client()?;
+    let client = wc.working_copy_client()?;
     let client: &edenfs_client::EdenFsClient = &client;
 
     // Check edenfs-client/src/redirect.rs for the config paths and file format.

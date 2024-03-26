@@ -173,7 +173,7 @@ py_class!(pub class workingcopy |py| {
 
     def edenclient(&self) -> PyResult<PyWorkingCopyClient> {
         let wc = self.inner(py).read();
-        let client = wc.eden_client().map_pyerr(py)?;
+        let client = wc.working_copy_client().map_pyerr(py)?;
         #[cfg(feature = "eden")]
         {
             PyWorkingCopyClient::create_instance(py, client as Arc<dyn WorkingCopyClient>)

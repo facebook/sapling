@@ -606,7 +606,7 @@ impl WorkingCopy {
         Ok(copied)
     }
 
-    pub fn eden_client(&self) -> Result<Arc<EdenFsClient>> {
+    pub fn working_copy_client(&self) -> Result<Arc<EdenFsClient>> {
         self.eden_client
             .clone()
             .context("EdenFS client not available in current working copy")
