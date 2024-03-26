@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.43
+
+### Mar 26 2024
+
+- Fix VS Code diff views sometimes having an empty left side
+- Improved behavior of `goto` when downloading commits
+- Fixed focus mode not allowing drag and drop rebases outside your stack
+- Fixed focus mode showing more commits than intended
+
 ## 0.1.42
 
 ### Mar 13 2024
