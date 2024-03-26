@@ -24,7 +24,9 @@ use crate::hg::OptionsHgExt;
 
 mod core;
 mod merge_tools;
-pub(crate) mod sapling;
+mod open_source;
+mod production;
+mod sapling;
 
 /// Return static builtin system config.
 ///
@@ -37,18 +39,34 @@ pub(crate) fn builtin_system(opts: Options, ident: &Identity) -> UnionConfig {
     if ident.env_var("CONFIG").is_none() {
         configs.push(Arc::new(&merge_tools::CONFIG));
     }
+
     let is_test = std::env::var_os("TESTTMP").is_some();
     let force_prod = std::env::var_os("TEST_PROD_CONFIGS").is_some();
+
+    let mut need_static = false;
+    #[cfg(feature = "fb")]
+    {
+        let mode = crate::fb::FbConfigMode::from_identity(ident);
+        need_static = mode.need_static();
+    }
+
+    if !is_test || force_prod || need_static {
+        configs.push(Arc::new(&production::CONFIG));
+    }
+
     if ident.cli_name() == "sl" && (!is_test || force_prod) {
         configs.push(Arc::new(&sapling::CONFIG));
     }
 
     #[cfg(feature = "fb")]
     {
-        let mode = crate::fb::FbConfigMode::from_identity(ident);
-        if mode.need_static() {
+        if need_static {
             configs.push(Arc::new(&crate::fb::static_system::CONFIG));
         }
+    }
+
+    if !cfg!(feature = "fb") {
+        configs.push(Arc::new(&open_source::CONFIG));
     }
 
     // Include a test static config so it's easy for unit and

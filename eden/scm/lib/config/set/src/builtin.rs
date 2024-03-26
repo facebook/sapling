@@ -43,6 +43,9 @@ copytrace=off
 [tweakdefaults]
 defaultdest=
 
+[ghrevset]
+autopull=True
+
 %include /etc/mercurial/git_overrides.rc
 %include %PROGRAMDATA%/Facebook/Mercurial/git_overrides.rc
 
