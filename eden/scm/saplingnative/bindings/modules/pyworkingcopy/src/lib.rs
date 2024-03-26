@@ -28,18 +28,13 @@ use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pypathmatcher::treematcher;
 use pytreestate::treestate;
-#[cfg(feature = "eden")]
-use pyworkingcopyclient::feature_eden::EdenFsClient as PyEdenClient;
+use pyworkingcopyclient::WorkingCopyClient as PyWorkingCopyClient;
 use repostate::command_state::Operation;
+use rsworkingcopy::client::WorkingCopyClient;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
 use types::HgId;
-
-#[cfg(not(feature = "eden"))]
-py_class!(pub class PyEdenClient |py| {
-    data inner: Arc<rsworkingcopy::workingcopy::EdenFsClient>;
-});
 
 mod impl_into;
 
@@ -176,9 +171,17 @@ py_class!(pub class workingcopy |py| {
             .collect::<PyResult<Vec<_>>>()
     }
 
-    def edenclient(&self) -> PyResult<PyEdenClient> {
+    def edenclient(&self) -> PyResult<PyWorkingCopyClient> {
         let wc = self.inner(py).read();
-        PyEdenClient::create_instance(py, wc.eden_client().map_pyerr(py)?)
+        let client = wc.eden_client().map_pyerr(py)?;
+        #[cfg(feature = "eden")]
+        {
+            PyWorkingCopyClient::create_instance(py, client as Arc<dyn WorkingCopyClient>)
+        }
+        #[cfg(not(feature = "eden"))]
+        {
+            Err(PyErr::new::<exc::NotImplementedError, _>(py, "edenclient is not available"))
+        }
     }
 
     def mergestate(&self) -> PyResult<mergestate> {

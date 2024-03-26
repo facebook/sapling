@@ -16,7 +16,7 @@ pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
 pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }
 pystatus = { version = "0.1.0", path = "../pystatus" }
 pytreestate = { version = "0.1.0", path = "../pytreestate" }
-pyworkingcopyclient = { version = "0.1.0", path = "../pyworkingcopyclient", optional = true }
+pyworkingcopyclient = { version = "0.1.0", path = "../pyworkingcopyclient" }
 repostate = { version = "0.1.0", path = "../../../../lib/workingcopy/repostate" }
 sparse = { version = "0.1.0", path = "../../../../lib/sparse" }
 types = { version = "0.1.0", path = "../../../../lib/types" }

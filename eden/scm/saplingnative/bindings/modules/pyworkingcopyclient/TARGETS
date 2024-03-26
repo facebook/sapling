@@ -15,14 +15,12 @@ rust_python_library(
                         "rev": None,
                     },
                     "edenfs-client": {"optional": True},
-                    "types": {"optional": True},
                 },
             },
             "features": {
                 "default": [],
                 "eden": [
                     "edenfs-client",
-                    "types",
                 ],
             },
         },
@@ -33,5 +31,6 @@ rust_python_library(
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/workingcopy:workingcopy",
     ],
 )

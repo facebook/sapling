@@ -9,8 +9,9 @@ edition = "2021"
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 edenfs-client = { version = "0.1.0", path = "../../../../lib/edenfs-client", optional = true }
-types = { version = "0.1.0", path = "../../../../lib/types", optional = true }
+types = { version = "0.1.0", path = "../../../../lib/types" }
+workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
 
 [features]
 default = []
-eden = ["edenfs-client", "types"]
+eden = ["edenfs-client"]
