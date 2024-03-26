@@ -16,11 +16,14 @@ from . import (
     error as ccerror,
     subscription,
     syncstate,
+    util as ccutil,
     workspace,
 )
 
 
 def summary(repo):
+    if not ccutil.supported(repo):
+        return
     ui = repo.ui
     # commitcloud config should eventually replace the infinitepushbackup one
     if not ui.configbool("infinitepushbackup", "enablestatus") or not ui.configbool(

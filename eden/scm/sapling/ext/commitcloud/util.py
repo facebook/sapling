@@ -96,3 +96,11 @@ class scratchbranchmatcher:
 
     def match(self, bookmark):
         return self._matchfn(bookmark)
+
+def supported(repo):
+    """test if a repo support commit cloud"""
+    if "git" in repo.storerequirements:
+        return False
+    if not repo.ui.paths.get("default"):
+        return False
+    return True
