@@ -84,6 +84,9 @@ impl GitSegmentedCommits {
     /// Rewrite metalog bookmarks, remotenames to match git references.
     /// The reverse of `metalog_to_git_references`, used at the start of a transaction.
     pub fn git_references_to_metalog(&self, metalog: &mut MetaLog) -> Result<()> {
+        tracing::info!("updating metalog from git refs");
+        // Note: dag.git_references only have a subset of all refs. Filtering was
+        // done by GitDag without the knowledge of metalog.
         let refs = self.dag.git_references();
 
         let mut bookmarks = BTreeMap::new();
@@ -122,6 +125,13 @@ impl GitSegmentedCommits {
                 }
                 _ => {}
             }
+        }
+        if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace!(remotenames=?remotenames, bookmarks=?bookmarks, visibleheads=?visibleheads, "metalog (old)");
+            let remotenames = metalog.get_remotenames()?;
+            let bookmarks = metalog.get_bookmarks()?;
+            let visibleheads = metalog.get_visibleheads()?;
+            tracing::trace!(remotenames=?remotenames, bookmarks=?bookmarks, visibleheads=?visibleheads, "metalog (new, from git refs)");
         }
 
         let encoded_bookmarks = refencode::encode_bookmarks(&bookmarks);
@@ -169,6 +179,13 @@ impl GitSegmentedCommits {
             }
             refs
         };
+        tracing::info!("updating git refs from metalog");
+        if tracing::enabled!(tracing::Level::TRACE) {
+            let remotenames = metalog.get_remotenames()?;
+            let bookmarks = metalog.get_bookmarks()?;
+            let visibleheads = metalog.get_visibleheads()?;
+            tracing::trace!(remotenames=?remotenames, bookmarks=?bookmarks, visibleheads=?visibleheads, "metalog (to sync to git)");
+        }
 
         {
             let reflog_message = format!(
