@@ -797,6 +797,12 @@ TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
     return;
   }
 
+  // These two trees have different filters, but the filters evaluate to the
+  // same filtering results. These two trees are also different objects
+  // altogether (i.e. they have different underlying ObjectIDs).
+  //
+  // These two trees should resolve to different objects, but a previous bug in
+  // comparison logic caused them to evaluate as identical.
   auto substringFilter = std::make_unique<FakePrefixFilter>();
   auto treeFOID =
       FilteredObjectId{RelativePath{"bar"}, "foooo", makeTestHash("0000")};
@@ -820,8 +826,8 @@ TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
   };
 
   // We expect a tree with the same filter coverage but different underlying
-  // objects to be identical (due to a bug).
-  EXPECT_EQ(
+  // objects to not be identical.
+  EXPECT_NE(
       filteredStore_->compareObjectsById(
           ObjectId{treeFOID.getValue()}, ObjectId{similarFOID.getValue()}),
       ObjectComparison::Identical);

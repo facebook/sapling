@@ -136,7 +136,19 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
         filteredOne.filter(),
         filteredTwo.filter());
     if (pathAffected.isReady()) {
-      return std::move(pathAffected).get();
+      auto filterComparison = std::move(pathAffected).get();
+
+      // If the filters are identical, we need to check whether the underlying
+      // Objects are identical. In other words, the filters being identical is
+      // not enough to confirm that the objects are identical.
+      if (filterComparison == ObjectComparison::Identical) {
+        return backingStore_->compareObjectsById(
+            filteredOne.object(), filteredTwo.object());
+      } else {
+        // If the filter coverage is different, the objects must be filtered
+        // differently (or we can't confirm they're filtered the same way).
+        return filterComparison;
+      }
     } else {
       // We can't immediately tell if the path is affected by the filter
       // change. Instead of chaining the future and queueing up a bunch of
