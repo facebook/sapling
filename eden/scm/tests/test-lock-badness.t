@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #chg-compatible
 
 #require unix-permissions no-root no-windows
