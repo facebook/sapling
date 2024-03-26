@@ -171,7 +171,7 @@ py_class!(pub class workingcopy |py| {
             .collect::<PyResult<Vec<_>>>()
     }
 
-    def edenclient(&self) -> PyResult<PyWorkingCopyClient> {
+    def working_copy_client(&self) -> PyResult<PyWorkingCopyClient> {
         let wc = self.inner(py).read();
         let client = wc.working_copy_client().map_pyerr(py)?;
         #[cfg(feature = "eden")]

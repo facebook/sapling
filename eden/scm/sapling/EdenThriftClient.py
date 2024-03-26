@@ -23,7 +23,7 @@ class EdenThriftClient:
         self._ui = repo.ui
         # EdenFsClient will recreate the unix domain socket connection per
         # API call. No need to recreate the client every time.
-        self._client = repo._rsrepo.workingcopy().edenclient()
+        self._client = repo._rsrepo.workingcopy().working_copy_client()
 
     def setHgParents(self, p1, p2):
         if p2 == nullid:
