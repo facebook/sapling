@@ -1399,7 +1399,10 @@ class localrepository:
 
     @repofilecache(localpaths=["dirstate"])
     def dirstate(self) -> "dirstatemod.dirstate":
-        if edenfs.requirement in self.requirements:
+        if (
+            edenfs.requirement in self.requirements
+            or git.DOTGIT_REQUIREMENT in self.requirements
+        ):
             return self._eden_dirstate
 
         if (
@@ -2240,7 +2243,10 @@ class localrepository:
         explicitly read the dirstate again (i.e. restoring it to a previous
         known good state)."""
         # eden_dirstate has its own invalidation logic.
-        if edenfs.requirement in self.requirements:
+        if (
+            edenfs.requirement in self.requirements
+            or git.DOTGIT_REQUIREMENT in self.requirements
+        ):
             self.dirstate.invalidate()
             return
 

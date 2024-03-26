@@ -46,10 +46,10 @@ Status update via add or remove commands
 
   $ sl rm c
   warning: failed to inspect working copy parent
-  abort: working directory state appears damaged!
+  abort: 00changelog.i@94cd19ab7136: no node!
   [255]
   $ sl add d
-  abort: working directory state appears damaged!
+  abort: 00changelog.i@94cd19ab7136: no node!
   [255]
   $ sl status
   M b
