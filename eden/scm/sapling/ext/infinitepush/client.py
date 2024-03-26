@@ -73,7 +73,7 @@ def extsetup(ui) -> None:
 
 def _push(orig, ui, repo, dest=None, *args, **opts):
     # use the original push logic to handle "no default path" case.
-    if "default" not in repo.ui.paths:
+    if "default" not in repo.ui.paths or "git" in repo.storerequirements:
         return orig(ui, repo, dest, *args, **opts)
 
     bookmark = opts.get("to") or ""
