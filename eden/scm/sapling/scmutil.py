@@ -758,6 +758,8 @@ def origpath(ui, repo, filepath):
     if not origbackuppath:
         return filepath + ".orig"
 
+    origbackuppath = origbackuppath.replace("@DOTDIR@", ui.identity.dotdir())
+
     # Convert filepath from an absolute path into a path inside the repo.
     filepathfromroot = util.normpath(os.path.relpath(filepath, start=repo.root))
 

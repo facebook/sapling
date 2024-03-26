@@ -959,7 +959,7 @@
   $ echo '' > root
   $ hg shelve -q
   $ echo contADDent > root
-  $ hg unshelve -q --config 'ui.origbackuppath=.hg/origbackups'
+  $ hg unshelve -q --config 'ui.origbackuppath=@DOTDIR@/origbackups'
   warning: 1 conflicts while merging root! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]

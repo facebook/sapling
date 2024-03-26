@@ -490,6 +490,7 @@ rollback=False
 suggesthgprev=True
 threaded=False
 merge=internal:merge
+origbackuppath = @DOTDIR@/origbackups
 
 [progress]
 renderer=simple

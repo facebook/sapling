@@ -16,10 +16,6 @@ pub static CONFIG: StaticConfig = static_config!("builtin:sapling" => r###"
 # Internally this will be overriden by dynamic config to be ~/.hgcache.
 cachepath=~/.sl_cache
 
-[ui]
-# FIXME: this is wrong when using "sl" in a ".hg" repo.
-origbackuppath=.sl/origbackups
-
 [committemplate]
 changeset={if(desc, desc, emptymsg)}\n
  SL: Enter commit message.  Lines beginning with 'SL:' are removed.
