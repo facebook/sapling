@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io;
 use std::path::Path;
@@ -147,38 +148,11 @@ impl GitSegmentedCommits {
         Ok(())
     }
 
-    /// Rewrite git references to match bookmarks, remotenames in metalog.
+    /// Update git references to match metalog changes.
+    /// - remotenames, bookmarks: changes will be applied to Git references.
+    /// - visibleheads: current state will replace refs/visibleheads/ namespace.
     /// The reverse of `git_references_to_metalog`, used at the end of a transaction.
     pub fn metalog_to_git_references(&self, metalog: &MetaLog) -> Result<()> {
-        let expected_refs = {
-            let mut refs: BTreeMap<String, git2::Oid> = Default::default();
-            if let Some(encoded) = metalog.get("bookmarks")? {
-                let decoded = refencode::decode_bookmarks(&encoded)?;
-                for (name, hgid) in decoded {
-                    let name = format!("refs/heads/{}", name);
-                    refs.insert(name, hgid_to_git_oid(hgid));
-                }
-            }
-            if let Some(encoded) = metalog.get("remotenames")? {
-                let decoded = refencode::decode_remotenames(&encoded)?;
-                for (name, hgid) in decoded {
-                    let name = if let Some(tag) = name.strip_prefix("tags/") {
-                        format!("refs/tags/{}", tag)
-                    } else {
-                        format!("refs/remotes/{}", name)
-                    };
-                    refs.insert(name, hgid_to_git_oid(hgid));
-                }
-            }
-            if let Some(encoded) = metalog.get("visibleheads")? {
-                let decoded = refencode::decode_visibleheads(&encoded)?;
-                for hgid in decoded {
-                    let name = format!("refs/visibleheads/{}", hgid.to_hex());
-                    refs.insert(name, hgid_to_git_oid(hgid));
-                }
-            }
-            refs
-        };
         tracing::info!("updating git refs from metalog");
         if tracing::enabled!(tracing::Level::TRACE) {
             let remotenames = metalog.get_remotenames()?;
@@ -186,53 +160,98 @@ impl GitSegmentedCommits {
             let visibleheads = metalog.get_visibleheads()?;
             tracing::trace!(remotenames=?remotenames, bookmarks=?bookmarks, visibleheads=?visibleheads, "metalog (to sync to git)");
         }
+        let reflog_message = format!(
+            "Sync from Sapling: {}\nRootId: {}",
+            metalog.message(),
+            metalog.root_id().to_hex()
+        );
+        let repo = self.git_repo.lock();
+        let mut ref_to_change = HashMap::<String, Option<git2::Oid>>::new();
 
+        // Update visibleheads in refs/visibleheads/.
         {
-            let reflog_message = format!(
-                "{}\nRootId: {}",
-                metalog.message(),
-                metalog.root_id().to_hex()
-            );
-            let repo = self.git_repo.lock();
-            let mut handled_ref_names = HashSet::with_capacity(expected_refs.len());
+            let visibleheads = metalog.get_visibleheads()?;
+            let visibleheads: HashSet<HgId> = visibleheads.into_iter().collect();
+            let mut git_visibleheads = HashSet::with_capacity(visibleheads.len());
+            // Delete non-existed visibleheads.
             for reference in repo.references()? {
                 let mut reference = reference?;
-                let name = match reference.name() {
+                let ref_name = match reference.name() {
                     Some(n) => n,
                     None => continue,
                 };
-                handled_ref_names.insert(name.to_string());
-                // Only care about managed ref names. Skip HEAD or FETCH_HEAD
-                // or refs/something_else/*. See git_references_to_metalog
-                // for managed refs.
-                let names: Vec<&str> = name.splitn(3, '/').collect();
-                let managed: bool = match &names[..] {
-                    ["refs", "remotes", _] => true,
-                    ["refs", "heads", _] => true,
-                    ["refs", "tags", _] => true,
-                    ["refs", "visibleheads", _] => true,
-                    _ => false,
-                };
-                if !managed {
-                    continue;
-                }
-                let expected_oid = expected_refs.get(name);
-                match expected_oid {
-                    None => reference.delete()?,
-                    Some(&oid) => {
-                        if let Ok(obj) = reference.peel(git2::ObjectType::Commit) {
-                            if obj.id() != oid {
-                                repo.reference(name, oid, true, &reflog_message)?;
-                            }
+                if let Some(hex) = ref_name.strip_prefix("refs/visibleheads/") {
+                    let should_delete = match HgId::from_hex(hex.as_bytes()) {
+                        Ok(id) => {
+                            git_visibleheads.insert(id);
+                            !visibleheads.contains(&id)
                         }
+                        _ => true,
+                    };
+                    if should_delete {
+                        tracing::debug!(ref_name = &ref_name, "deleting visiblehead ref");
+                        reference.delete()?;
                     }
                 }
             }
-            for (name, oid) in expected_refs {
-                if handled_ref_names.contains(name.as_str()) {
-                    continue;
+            // Insert new visibleheads.
+            for id in visibleheads.difference(&git_visibleheads) {
+                let ref_name = format!("refs/visibleheads/{}", id.to_hex());
+                let oid = hgid_to_git_oid(*id);
+                tracing::debug!(ref_name = &ref_name, "adding visiblehead ref");
+                repo.reference(&ref_name, oid, true, &reflog_message)?;
+            }
+        }
+
+        // Incrementally update changed bookmarks, remotenames.
+        'update_changes: {
+            let parent = match metalog.parent()? {
+                None => {
+                    tracing::debug!("metalog parent is missing - skip updating changes");
+                    break 'update_changes; // skip - no parent
                 }
-                repo.reference(&name, oid, true, &reflog_message)?;
+                Some(v) => v,
+            };
+            let old_bookmarks = parent.get_bookmarks()?;
+            let old_remotenames = parent.get_remotenames()?;
+            let new_bookmarks = metalog.get_bookmarks()?;
+            let new_remotenames = metalog.get_remotenames()?;
+
+            for (name, optional_id) in find_changes(&old_remotenames, &new_remotenames) {
+                let ref_name = if let Some(tag) = name.strip_prefix("tags/") {
+                    format!("refs/tags/{}", tag)
+                } else {
+                    format!("refs/remotes/{}", name)
+                };
+                tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating remotename ref");
+                ref_to_change.insert(ref_name, optional_id.map(hgid_to_git_oid));
+            }
+            for (name, optional_id) in find_changes(&old_bookmarks, &new_bookmarks) {
+                let ref_name = format!("refs/heads/{}", name);
+                tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating bookmark ref");
+                ref_to_change.insert(ref_name, optional_id.map(hgid_to_git_oid));
+            }
+
+            if !ref_to_change.is_empty() {
+                for reference in repo.references()? {
+                    let mut reference = reference?;
+                    let ref_name = match reference.name() {
+                        Some(n) => n,
+                        None => continue,
+                    };
+                    match ref_to_change.remove(ref_name) {
+                        None => continue,
+                        Some(None) => reference.delete()?,
+                        Some(Some(oid)) => {
+                            repo.reference(ref_name, oid, true, &reflog_message)?;
+                        }
+                    }
+                }
+                for (ref_name, optional_oid) in ref_to_change {
+                    if let Some(oid) = optional_oid {
+                        repo.reference(&ref_name, oid, true, &reflog_message)?;
+                    }
+                }
             }
         }
 
@@ -496,6 +515,26 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
     write(utf8(commit.message_bytes()).as_bytes());
 
     result.into()
+}
+
+/// Find "deleted" and "changed" references.
+fn find_changes<'a>(
+    old: &'a BTreeMap<String, HgId>,
+    new: &'a BTreeMap<String, HgId>,
+) -> impl Iterator<Item = (&'a String, Option<HgId>)> + 'a {
+    let deleted = old
+        .keys()
+        .filter(|name| !new.contains_key(name.as_str()))
+        .map(|name| (name, None));
+    let changed = new.iter().filter_map(|(name, value)| {
+        let old_value = old.get(name.as_str());
+        if old_value != Some(value) {
+            Some((name, Some(*value)))
+        } else {
+            None
+        }
+    });
+    deleted.chain(changed)
 }
 
 fn hgid_to_git_oid(id: HgId) -> git2::Oid {
