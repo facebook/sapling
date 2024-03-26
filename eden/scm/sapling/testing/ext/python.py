@@ -35,6 +35,8 @@ def python(
     if not args:
         # python << EOF ... EOF
         code = stdin.read()
+    elif args[0] == "-c":
+        code = args[1]
     else:
         # python a.py arg1 arg2 ...
         with env.fs.open(args[0], "rb") as f:

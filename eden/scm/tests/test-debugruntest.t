@@ -254,3 +254,10 @@ Test the "test" builtin:
   $ [ -f foo ]
   $ [ -f foo -o -f bar ]
   $ [ -f bar -o -f foo ]
+
+Python -c works:
+
+  $ python -c 'print("hello")'
+  hello
+  $ hg debugpython -- -c 'print("hello")'
+  hello
