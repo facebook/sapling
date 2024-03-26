@@ -538,7 +538,14 @@ pub fn cli_name() -> &'static str {
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
     for id in all().iter().chain(EXTRA_SNIFF_IDENTS) {
         if let Some(cli_names) = id.repo.sniff_initial_cli_names {
-            if !cli_names.contains(cli_name()) {
+            // Support bypassing the check via PLAINEXCEPT=sniff. This can be useful for ISL.
+            let mut bypass_check = false;
+            if let Ok(except) = try_env_var("PLAINEXCEPT") {
+                if except.contains("sniff") {
+                    bypass_check = true;
+                }
+            }
+            if !bypass_check && !cli_names.contains(cli_name()) {
                 continue;
             }
         }
