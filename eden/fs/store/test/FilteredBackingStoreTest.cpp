@@ -96,6 +96,23 @@ class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
   std::shared_ptr<FilteredBackingStore> filteredStore_;
 };
 
+class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    wrappedStore_ = std::make_shared<FakeBackingStore>();
+    auto fakeFilter = std::make_unique<FakePrefixFilter>();
+    filteredStore_ = std::make_shared<FilteredBackingStore>(
+        wrappedStore_, std::move(fakeFilter));
+  }
+
+  void TearDown() override {
+    filteredStore_.reset();
+  }
+
+  std::shared_ptr<FakeBackingStore> wrappedStore_;
+  std::shared_ptr<FilteredBackingStore> filteredStore_;
+};
+
 struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
   HgFilteredBackingStoreTest() = default;
 
@@ -767,6 +784,47 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   EXPECT_TRUE(
       filteredStore_->compareObjectsById(grandchildOID, grandchildOID2) ==
       ObjectComparison::Unknown);
+}
+
+TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
+  // The code that this test is testing only works when the
+  // getFilterCoverageForPath check is immediately ready. See:
+  // https://fburl.com/code/0xze5u4c
+  //
+  // Therefore this test will not work if we are running in debug mode because
+  // we set detail::kImmediateFutureAlwaysDefer in debug mode.
+  if (detail::kImmediateFutureAlwaysDefer) {
+    return;
+  }
+
+  auto substringFilter = std::make_unique<FakePrefixFilter>();
+  auto treeFOID =
+      FilteredObjectId{RelativePath{"bar"}, "foooo", makeTestHash("0000")};
+  auto treeFOIDFilter = treeFOID.filter();
+  auto similarFilter = treeFOIDFilter.subpiece(0, treeFOIDFilter.size() - 2);
+  // Ensure the two filters have the same coverage
+  EXPECT_EQ(
+      substringFilter->getFilterCoverageForPath(treeFOID.path(), similarFilter)
+          .get(),
+      substringFilter->getFilterCoverageForPath(treeFOID.path(), treeFOIDFilter)
+          .get());
+  // Ensure that the two objects are not identical
+  auto similarObject = makeTestHash("e1e10");
+  EXPECT_NE(
+      wrappedStore_->compareObjectsById(similarObject, treeFOID.object()),
+      ObjectComparison::Identical);
+  auto similarFOID = FilteredObjectId{
+      treeFOID.path(),
+      similarFilter,
+      similarObject,
+  };
+
+  // We expect a tree with the same filter coverage but different underlying
+  // objects to be identical (due to a bug).
+  EXPECT_EQ(
+      filteredStore_->compareObjectsById(
+          ObjectId{treeFOID.getValue()}, ObjectId{similarFOID.getValue()}),
+      ObjectComparison::Identical);
 }
 
 const auto kTestTimeout = 10s;
