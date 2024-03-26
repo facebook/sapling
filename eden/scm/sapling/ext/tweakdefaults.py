@@ -307,6 +307,8 @@ def pull(orig, ui, repo, *args, **opts):
 
     if (isrebase or update) and not dest:
         dest = ui.config("tweakdefaults", "defaultdest")
+        if dest not in repo:
+            dest = None
 
     if isrebase and not dest:
         # Not using main bookmark for non-rebase pull. See D38066104 and D38066103.
