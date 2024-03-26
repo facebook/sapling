@@ -325,7 +325,9 @@ def initgitbare(ui, destpath):
 @cached
 def readgitdir(repo):
     """Return the path of the GIT_DIR, if the repo is backed by git"""
-    if isgitstore(repo):
+    if DOTGIT_REQUIREMENT in repo.requirements:
+        return repo.wvfs.join(".git")
+    elif isgitstore(repo):
         path = repo.svfs.readutf8(GIT_DIR_FILE)
         if os.path.isabs(path):
             return path
