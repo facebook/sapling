@@ -9,6 +9,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use edenapi::EdenApi;
+use metalog::MetaLog;
+use parking_lot::RwLock;
 use storemodel::StoreInfo;
 
 use crate::repo::Repo;
@@ -31,5 +33,9 @@ impl StoreInfo for Repo {
 
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn EdenApi>>> {
         Ok(self.optional_eden_api()?)
+    }
+
+    fn metalog(&self) -> anyhow::Result<Arc<RwLock<MetaLog>>> {
+        Repo::metalog(self)
     }
 }

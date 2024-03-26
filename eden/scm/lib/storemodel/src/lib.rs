@@ -28,9 +28,11 @@ use async_trait::async_trait;
 use edenapi_trait::EdenApi;
 pub use edenapi_types::FileAuxData;
 pub use futures;
+use metalog::MetaLog;
 pub use minibytes;
 pub use minibytes::Bytes;
 use once_cell::sync::OnceCell;
+use parking_lot::RwLock;
 use serde::Deserialize;
 use serde::Serialize;
 pub use types;
@@ -419,7 +421,7 @@ pub enum Kind {
     Tree,
 }
 
-/// Provide information about how to build a file and tree store.
+/// Provide information about how to build a file, tree or commit graph backend.
 pub trait StoreInfo: 'static {
     /// Check requirement. Return `true` if the requirement is present.
     fn has_requirement(&self, requirement: &str) -> bool;
@@ -429,6 +431,8 @@ pub trait StoreInfo: 'static {
     fn store_path(&self) -> &Path;
     /// Provide the remote peer.
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn EdenApi>>>;
+    // Provide the metalog, useful to sync refs from git.
+    fn metalog(&self) -> anyhow::Result<Arc<RwLock<MetaLog>>>;
 }
 
 /// Provide ways to obtain file and tree stores.

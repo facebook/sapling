@@ -13,7 +13,6 @@ use std::path::PathBuf;
 use commits_trait::DagCommits;
 use fs_err as fs;
 use gitdag::GitDagOptions;
-use metalog::MetaLog;
 use storemodel::StoreInfo;
 
 use crate::git::GitSegmentedCommits;
@@ -48,28 +47,25 @@ fn maybe_construct_commits(
             import_all_references: !info.has_requirement(DOTGIT_REQUIREMENT),
         };
         tracing::info!(target: "changelog_info", changelog_backend="git");
-        Ok(Some(open_git(info.store_path(), opts)?))
+        Ok(Some(open_git(info, opts)?))
     } else {
         Ok(None)
     }
 }
 
 fn open_git(
-    store_path: &Path,
+    info: &dyn StoreInfo,
     opts: GitDagOptions,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+    let store_path = info.store_path();
+    let metalog = info.metalog()?;
+    let mut metalog = metalog.write();
     // This is a hacky way to sync back from git references to metalog so we
     // pick up effects after git commands like `push` or `fetch`, or if the
     // user manually run git commands in the repo.
     //
     // Ideally we do this after running the git commands, or just use our own
     // store without needing to sync with git references.
-    //
-    // Since this is considered as a temporary hack, the metalog requirement
-    // does not justify a `StoreInfo::get_metalog` API. So we construct a
-    // metalog directly here.
-    let metalog_path = store_path.join("metalog");
-    let mut metalog = MetaLog::open_from_env(&metalog_path)?;
     let git_path = calculate_git_path(store_path)?;
     let segments_path = calculate_segments_path(store_path);
     let git_segmented_commits = GitSegmentedCommits::new(&git_path, &segments_path, opts)?;
