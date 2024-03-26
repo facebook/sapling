@@ -23,7 +23,7 @@ from .transform import transform
 
 @dataclass
 class TestId:
-    """infomration about a test identity"""
+    """information about a test identity"""
 
     name: str
     path: str
