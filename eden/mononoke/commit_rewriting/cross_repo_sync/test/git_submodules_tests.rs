@@ -472,5 +472,62 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 // TODO(T179533620): test that deleting submodule metadata file manually
 // fails the sync
 
-// TODO(T181473986): test that sync fails when submodule action is expand
-// and submodule dependency repo is not available
+/// Test that sync fails if submodule dependency repo is not available.
+#[fbinit::test]
+async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    // Create repo C, to be added as a submodule in repo A.
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        repo_b_info: (_repo_b, _repo_b_cs_map),
+        large_repo,
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        // Don't pass repo C as a submodule dependency of repo A
+        vec![],
+    )
+    .await?;
+
+    // Get a git commit from repo C
+    let repo_c_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+
+    let repo_c_git_commit_hash = *repo_c_mapped_git_commit.oid();
+
+    // Create a commit in repo A that adds repo C as a submodule.
+    const MESSAGE: &str = "Add submodule on path of existing file";
+    let cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            "submodules/repo_c",
+            repo_c_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+
+    assert!(sync_result.is_err_and(|e| {
+        e.to_string()
+            .contains("Mononoke repo from submodule submodules/repo_c not available")
+    }));
+
+    // Get all the changesets in the large repo
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+
+    derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+
+    // And confirm that nothing was synced, i.e. all changesets are from the basic
+    // setup.
+    compare_expected_changesets_from_basic_setup(&large_repo_changesets, &[])?;
+
+    Ok(())
+}
