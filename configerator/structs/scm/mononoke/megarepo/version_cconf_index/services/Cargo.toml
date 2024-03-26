@@ -23,7 +23,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 megarepo_configs = { version = "0.1.0", path = "../.." }
 megarepo_configs_services = { version = "0.1.0", path = "../../services" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 version_cconf_index__types = { package = "version_cconf_index", version = "0.1.0", path = ".." }
 
 [build-dependencies]

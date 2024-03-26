@@ -15,6 +15,6 @@ serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_de
 base64 = "0.13"
 open = "4"
 tinyfiledialogs = "3.9.1"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 version = { version = "0.1.0", path = "../version" }
 webview-sys = { version = "0.6.2", path = "../third-party/webview-sys" }

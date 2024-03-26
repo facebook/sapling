@@ -7,7 +7,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"

@@ -10,7 +10,7 @@ anyhow = "1.0.75"
 lazy_static = "1.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]

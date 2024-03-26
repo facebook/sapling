@@ -12,7 +12,7 @@ configmodel = { version = "0.1.0", path = "../config/model" }
 context = { version = "0.1.0", path = "../context" }
 repo = { version = "0.1.0", path = "../repo" }
 thiserror = "1.0.49"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
 

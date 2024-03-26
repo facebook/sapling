@@ -33,7 +33,7 @@ thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_str
 tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "0.8.4"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 util = { version = "0.1.0", path = "../../../scm/lib/util" }
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 

@@ -16,7 +16,7 @@ pathmatcher = { version = "0.1.0", path = "../../../pathmatcher" }
 repo = { version = "0.1.0", path = "../../../repo" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 status = { version = "0.1.0", path = "../../../status" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../../../types" }
 util = { version = "0.1.0", path = "../../../util" }
 workingcopy = { version = "0.1.0", path = "../../../workingcopy" }

@@ -11,8 +11,8 @@ libc = "0.2.139"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["ansi", "chrono", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
+tracing = { version = "0.1.40", features = ["attributes"] }
+tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything"] }

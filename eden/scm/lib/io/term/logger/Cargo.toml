@@ -10,4 +10,4 @@ edition = "2021"
 identity = { version = "0.1.0", path = "../../../identity" }
 io = { version = "0.1.0", path = "../.." }
 lazystr = { version = "0.1.0", path = "../../../lazystr" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }

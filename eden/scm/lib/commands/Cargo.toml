@@ -71,11 +71,11 @@ repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
 tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
-tracing-subscriber = { version = "0.3.18", features = ["ansi", "chrono", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }

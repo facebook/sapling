@@ -16,7 +16,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 thrift-types = { version = "0.1.0", path = "../thrift-types" }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "0.8.4"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../types" }
 
 [features]

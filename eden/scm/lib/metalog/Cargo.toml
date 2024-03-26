@@ -16,7 +16,7 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../refencode" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../types" }
 zstore = { version = "0.1.0", path = "../zstore" }
 

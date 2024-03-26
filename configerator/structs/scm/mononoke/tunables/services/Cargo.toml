@@ -23,7 +23,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 tunables_structs__types = { package = "tunables_structs", version = "0.1.0", path = ".." }
 
 [build-dependencies]

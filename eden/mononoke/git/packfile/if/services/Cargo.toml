@@ -22,7 +22,7 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 packfile_thrift__types = { package = "packfile_thrift", version = "0.1.0", path = ".." }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

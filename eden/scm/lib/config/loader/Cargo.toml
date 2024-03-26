@@ -34,7 +34,7 @@ sha2 = { version = "0.10.6", optional = true }
 spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }
 staticconfig = { version = "0.1.0", path = "../static" }
 tempfile = { version = "3.8", optional = true }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../../types", optional = true }
 unionconfig = { version = "0.1.0", path = "../union" }
 url = "2.2.2"

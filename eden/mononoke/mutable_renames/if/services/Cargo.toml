@@ -24,7 +24,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 mononoke_types_serialization_services = { version = "0.1.0", path = "../../../mononoke_types/serialization/services" }
 mutable_rename_thrift__types = { package = "mutable_rename_thrift", version = "0.1.0", path = ".." }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

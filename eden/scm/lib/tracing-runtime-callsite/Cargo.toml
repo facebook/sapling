@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 
 [dev-dependencies]
 regex = "1.9.2"

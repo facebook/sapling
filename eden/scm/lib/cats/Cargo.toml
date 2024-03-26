@@ -12,5 +12,5 @@ indexmap = { version = "2.1.0", features = ["arbitrary", "rayon", "serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.49"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 util = { version = "0.1.0", path = "../util" }

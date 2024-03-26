@@ -30,7 +30,7 @@ megarepo_configs_services = { version = "0.1.0", path = "../../../../../configer
 source_control__types = { package = "source_control", version = "0.1.0", path = ".." }
 thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 thrift_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

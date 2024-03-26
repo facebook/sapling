@@ -16,7 +16,7 @@ nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
 once_cell = "1.12"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 udsipc = { version = "0.1.0", path = "../util/udsipc" }
 version = { version = "0.1.0", path = "../version" }
 

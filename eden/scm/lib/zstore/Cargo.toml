@@ -14,7 +14,7 @@ minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"]
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sha1 = "0.10.5"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../types" }
 zstdelta = { version = "0.1.0", path = "../zstdelta" }
 

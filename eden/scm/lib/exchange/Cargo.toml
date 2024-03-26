@@ -13,5 +13,5 @@ dag = { version = "0.1.0", path = "../dag" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../types" }

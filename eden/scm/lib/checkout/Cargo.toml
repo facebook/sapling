@@ -31,7 +31,7 @@ storemodel = { version = "0.1.0", path = "../storemodel" }
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
 thiserror = "1.0.49"
 toml = { version = "0.8.4", optional = true }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }

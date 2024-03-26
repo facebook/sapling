@@ -10,4 +10,4 @@ cpython = { version = "0.7.1", features = ["python3-sys"], default-features = fa
 minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 pybytes = { version = "0.1.0", path = "../pybytes" }
 python-modules = { version = "0.1.0", path = "../../../../lib/python-modules" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }

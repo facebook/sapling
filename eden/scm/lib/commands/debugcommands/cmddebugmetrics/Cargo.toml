@@ -10,4 +10,4 @@ clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 hg-metrics = { version = "0.1.0", path = "../../../hg-metrics" }
 repo = { version = "0.1.0", path = "../../../repo" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }

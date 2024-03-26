@@ -23,7 +23,7 @@ metalog = { version = "0.1.0", path = "../../../metalog" }
 migration = { version = "0.1.0", path = "../../../migration" }
 repo = { version = "0.1.0", path = "../../../repo" }
 repo_name = { version = "0.1.0", path = "../../../repo_name" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../../../types" }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../../../util" }

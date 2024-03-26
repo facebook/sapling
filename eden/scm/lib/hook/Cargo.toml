@@ -13,4 +13,4 @@ identity = { version = "0.1.0", path = "../identity" }
 io = { version = "0.1.0", path = "../io" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }

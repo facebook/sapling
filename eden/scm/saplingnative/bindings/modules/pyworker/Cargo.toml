@@ -12,7 +12,7 @@ cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 crossbeam = "0.8"
 pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }
 revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../../../../lib/types" }
 vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
 

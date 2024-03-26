@@ -29,7 +29,7 @@ revisionstore = { version = "0.1.0", path = "../revisionstore" }
 revsets = { version = "0.1.0", path = "../revsets" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.49"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
