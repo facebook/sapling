@@ -199,7 +199,7 @@ class MultiLineMatcher:
         return self._matchandnormalizecached(actual)[0]
 
     def normalize(self, actual: str) -> Tuple[str, str]:
-        """Normalzie (actual, expected) for plain text diff.
+        """Normalize (actual, expected) for plain text diff.
 
         Return (actual, expected) pair, which is more friendly for a plain
         text diff algorithm.
