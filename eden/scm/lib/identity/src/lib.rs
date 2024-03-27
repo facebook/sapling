@@ -425,7 +425,7 @@ const TEST: Identity = Identity {
     },
 };
 
-#[cfg(all(not(feature = "sl_only"), not(test)))]
+#[cfg(all(not(feature = "sl_oss"), not(test)))]
 mod idents {
     use super::*;
 
@@ -434,7 +434,7 @@ mod idents {
     }
 }
 
-#[cfg(feature = "sl_only")]
+#[cfg(feature = "sl_oss")]
 mod idents {
     use super::*;
 

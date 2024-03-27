@@ -18,8 +18,8 @@ rust_library(
                     "workingcopy/eden",
                     "thrift-types",
                 ],
-                "sl_only": [
-                    "identity/sl_only",
+                "sl_oss": [
+                    "identity/sl_oss",
                 ],
             },
             "package": {

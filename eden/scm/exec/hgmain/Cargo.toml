@@ -36,7 +36,7 @@ buildinfo = []
 default = []
 eden = ["clidispatch/eden", "commands/eden"]
 fb = ["commands/fb"]
-sl_only = ["clidispatch/sl_only"]
+sl_oss = ["clidispatch/sl_oss"]
 with_chg = ["dirs", "identity"]
 
 [profile.release]

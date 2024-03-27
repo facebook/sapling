@@ -10,7 +10,7 @@ rust_library(
             "features": {
                 "default": [],
                 "fb": [],
-                "sl_only": [],
+                "sl_oss": [],
             },
         },
     },
