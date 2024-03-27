@@ -15,7 +15,7 @@ html .vscode-high-contrast {
 }
 
 .webview-view .isl-root {
-  --background: var(--vscode-sidebar-background);
+  --background: var(--vscode-sideBar-background);
   outline: 1px solid var(--vscode-panel-border);
   outline-offset: -1px;
 }
