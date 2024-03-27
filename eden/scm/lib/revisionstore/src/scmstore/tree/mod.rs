@@ -8,6 +8,7 @@
 use std::borrow::Borrow;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use ::types::fetch_mode::FetchMode;
 use ::types::tree::TreeItemFlag;
@@ -25,9 +26,11 @@ use edenapi_types::FileAuxData;
 use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
+use parking_lot::RwLock;
 use storemodel::SerializationFormat;
 use tracing::field;
 
+mod metrics;
 pub mod types;
 
 use clientinfo::get_client_request_info_thread_local;
@@ -35,6 +38,8 @@ use clientinfo::set_client_request_info_thread_local;
 use storemodel::BoxIterator;
 use storemodel::TreeEntry;
 
+use self::metrics::TreeStoreFetchMetrics;
+pub use self::metrics::TreeStoreMetrics;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
@@ -60,6 +65,7 @@ use crate::Metadata;
 use crate::RepackLocation;
 use crate::StoreKey;
 use crate::StoreResult;
+use crate::StoreType;
 
 #[derive(Clone, Debug)]
 pub enum TreeMetadataMode {
@@ -98,6 +104,8 @@ pub struct TreeStore {
     pub tree_metadata_mode: TreeMetadataMode,
 
     pub flush_on_drop: bool,
+
+    pub(crate) metrics: Arc<RwLock<TreeStoreMetrics>>,
 }
 
 impl Drop for TreeStore {
@@ -153,31 +161,42 @@ impl TreeStore {
             keys_len
         );
 
-        let process_func = move || -> Result<()> {
-            if fetch_local {
-                if let Some(ref indexedlog_cache) = indexedlog_cache {
-                    let pending: Vec<_> = common
-                        .pending(TreeAttributes::CONTENT, false)
-                        .map(|(key, _attrs)| key.clone())
-                        .collect();
-                    for key in pending.into_iter() {
-                        if let Some(entry) = indexedlog_cache.get_entry(key)? {
-                            tracing::trace!("{:?} found in cache", &entry.key());
-                            common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                        }
-                    }
-                }
+        let store_metrics = self.metrics.clone();
 
-                if let Some(ref indexedlog_local) = indexedlog_local {
-                    let pending: Vec<_> = common
-                        .pending(TreeAttributes::CONTENT, false)
-                        .map(|(key, _attrs)| key.clone())
-                        .collect();
-                    for key in pending.into_iter() {
-                        if let Some(entry) = indexedlog_local.get_entry(key)? {
-                            tracing::trace!("{:?} found in local", &entry.key());
-                            common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+        let process_func = move || -> Result<()> {
+            let mut metrics = TreeStoreFetchMetrics::default();
+
+            if fetch_local {
+                for (log, store_type) in [
+                    (&indexedlog_cache, StoreType::Shared),
+                    (&indexedlog_local, StoreType::Local),
+                ] {
+                    if let Some(log) = log {
+                        let start_time = Instant::now();
+
+                        let pending: Vec<_> = common
+                            .pending(TreeAttributes::CONTENT, false)
+                            .map(|(key, _attrs)| key.clone())
+                            .collect();
+
+                        let store_metrics = metrics.indexedlog.store(store_type);
+                        let fetch_count = pending.len();
+
+                        store_metrics.fetch(fetch_count);
+
+                        let mut found_count: usize = 0;
+                        for key in pending.into_iter() {
+                            if let Some(entry) = log.get_entry(key)? {
+                                tracing::trace!("{:?} found in {:?}", &entry.key(), store_type);
+                                common
+                                    .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                                found_count += 1;
+                            }
                         }
+
+                        store_metrics.hit(found_count);
+                        store_metrics.miss(fetch_count - found_count);
+                        let _ = store_metrics.time_from_duration(start_time.elapsed());
                     }
                 }
             }
@@ -189,6 +208,10 @@ impl TreeStore {
                         .map(|(key, _attrs)| key.clone())
                         .collect();
                     if !pending.is_empty() {
+                        let start_time = Instant::now();
+
+                        metrics.edenapi.fetch(pending.len());
+
                         let span = tracing::info_span!(
                             "fetch_edenapi",
                             downloaded = field::Empty,
@@ -237,6 +260,7 @@ impl TreeStore {
                             common.found(key, entry.into());
                         }
                         util::record_edenapi_stats(&span, &response.stats);
+                        let _ = metrics.edenapi.time_from_duration(start_time.elapsed());
                     }
                 } else {
                     tracing::debug!("no EdenApi associated with TreeStore");
@@ -289,6 +313,13 @@ impl TreeStore {
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
             common.results(FetchErrors::new());
+
+            if let Err(err) = metrics.update_ods() {
+                tracing::error!(?err, "error udpating tree ods counters");
+            }
+
+            store_metrics.write().fetch += metrics;
+
             Ok(())
         };
         let process_func_errors = move || {
@@ -332,6 +363,7 @@ impl TreeStore {
             filestore: None,
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
+            metrics: Default::default(),
         }
     }
 
@@ -350,6 +382,12 @@ impl TreeStore {
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             indexedlog_cache.flush_log().map_err(&mut handle_error);
         }
+
+        let mut metrics = self.metrics.write();
+        for (k, v) in metrics.metrics() {
+            hg_metrics::increment_counter(k, v);
+        }
+        *metrics = Default::default();
 
         result
     }
@@ -386,6 +424,7 @@ impl LegacyStore for TreeStore {
             filestore: None,
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
+            metrics: self.metrics.clone(),
         })
     }
 

@@ -645,6 +645,7 @@ impl<'a> TreeStoreBuilder<'a> {
             filestore: self.filestore,
             tree_metadata_mode,
             flush_on_drop: true,
+            metrics: Default::default(),
         })
     }
 }

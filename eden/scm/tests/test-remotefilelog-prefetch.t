@@ -41,6 +41,18 @@ Prefetch (and also check we get counters):
   scmstore.file.fetch.indexedlog.local.misses: 1
   scmstore.file.fetch.indexedlog.local.requests: 1
   scmstore.file.fetch.indexedlog.local.time: * (glob) (?)
+  scmstore.tree.fetch.edenapi.keys: 1
+  scmstore.tree.fetch.edenapi.requests: 1
+  scmstore.tree.fetch.edenapi.time: * (glob) (?)
+  scmstore.tree.fetch.indexedlog.cache.hits: 2
+  scmstore.tree.fetch.indexedlog.cache.keys: 3
+  scmstore.tree.fetch.indexedlog.cache.misses: 1
+  scmstore.tree.fetch.indexedlog.cache.requests: 4
+  scmstore.tree.fetch.indexedlog.cache.time: * (glob) (?)
+  scmstore.tree.fetch.indexedlog.local.keys: 1
+  scmstore.tree.fetch.indexedlog.local.misses: 1
+  scmstore.tree.fetch.indexedlog.local.requests: 4
+  scmstore.tree.fetch.indexedlog.local.time: * (glob) (?)
 
 Now we do have aux data locally:
   $ hg debugscmstore -r $A A --fetch-mode=local_only --mode=file
