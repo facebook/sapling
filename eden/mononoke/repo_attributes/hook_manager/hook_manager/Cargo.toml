@@ -20,7 +20,7 @@ changeset_info = { version = "0.1.0", path = "../../../derived_data/changeset_in
 context = { version = "0.1.0", path = "../../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.11.0"
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }

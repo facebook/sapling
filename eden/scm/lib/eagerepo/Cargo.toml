@@ -13,7 +13,7 @@ dag = { version = "0.1.0", path = "../dag" }
 edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 factory = { version = "0.1.0", path = "../util/factory" }
 fail = { version = "0.4", features = ["failpoints"] }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hgstore = { version = "0.1.0", path = "../storemodel/hgstore" }
 http = "0.2"
 identity = { version = "0.1.0", path = "../identity" }

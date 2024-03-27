@@ -25,7 +25,7 @@ fb303_core_services = { version = "0.0.0", git = "https://github.com/facebook/fb
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes_if = { version = "0.1.0", path = "../../../../filenodes/if" }
 filenodes_if_services = { version = "0.1.0", path = "../../../../filenodes/if/services" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_types_thrift = { version = "0.1.0", path = "../../../../git/git_types/if" }
 git_types_thrift_services = { version = "0.1.0", path = "../../../../git/git_types/if/services" }
 mercurial_thrift = { version = "0.1.0", path = "../../../../mercurial/types/if" }

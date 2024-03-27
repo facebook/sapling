@@ -45,7 +45,7 @@ filenodes_derivation = { version = "0.1.0", path = "../derived_data/filenodes_de
 filestore = { version = "0.1.0", path = "../filestore" }
 filetime = "0.2.9"
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hash_memo = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hex = "0.4.3"
 internment = { version = "0.7", features = ["arc", "serde"] }

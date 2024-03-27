@@ -21,7 +21,7 @@ derived_data_manager = { version = "0.1.0", path = "../manager" }
 fastlog = { version = "0.1.0", path = "../fastlog" }
 filenodes_derivation = { version = "0.1.0", path = "../filenodes_derivation" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

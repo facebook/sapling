@@ -22,8 +22,8 @@ digest = "0.10"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
-futures-util = "0.3.7"
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures-util = "0.3.30"
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 git_types_thrift = { version = "0.1.0", path = "if" }
 gix-actor = "0.24"

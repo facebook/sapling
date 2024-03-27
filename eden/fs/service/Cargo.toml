@@ -20,7 +20,7 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 config_thrift = { version = "0.1.0", path = "../config" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 once_cell = "1.12"
 ref-cast = "1.0.18"
 serde = { version = "1.0.185", features = ["derive", "rc"] }

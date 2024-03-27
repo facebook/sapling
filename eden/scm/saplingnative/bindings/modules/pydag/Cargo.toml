@@ -12,7 +12,7 @@ commits = { version = "0.1.0", path = "../../../../lib/commits" }
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 dag = { version = "0.1.0", path = "../../../../lib/dag" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }

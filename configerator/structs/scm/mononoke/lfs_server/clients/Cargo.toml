@@ -20,7 +20,7 @@ async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 lfs_server_config__types = { package = "lfs_server_config", version = "0.1.0", path = ".." }
 rate_limiting_config = { version = "0.1.0", path = "../../ratelimiting" }
 rate_limiting_config_clients = { version = "0.1.0", path = "../../ratelimiting/clients" }

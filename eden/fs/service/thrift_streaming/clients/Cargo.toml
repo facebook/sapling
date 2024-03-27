@@ -20,7 +20,7 @@ async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 thrift = { version = "0.1.0", path = "../.." }
 thrift_clients = { version = "0.1.0", path = "../../clients" }
 thrift_streaming__types = { package = "thrift_streaming", version = "0.1.0", path = ".." }

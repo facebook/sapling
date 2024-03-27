@@ -14,7 +14,7 @@ cmdlib = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures-util = "0.3.7"
+futures-util = "0.3.30"
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }

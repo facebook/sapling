@@ -11,6 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }

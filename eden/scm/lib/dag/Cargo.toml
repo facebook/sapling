@@ -15,7 +15,7 @@ dag-types = { version = "0.1.0", path = "dag-types", default-features = false }
 drawdag = { version = "0.1.0", path = "../drawdag" }
 fail = { version = "0.4", features = ["failpoints"] }
 fs2 = { version = "0.4", optional = true }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 indexedlog = { version = "0.1.0", path = "../indexedlog", optional = true }
 indexmap = { version = "2.1.0", features = ["arbitrary", "rayon", "serde"] }
 mincode = { version = "0.1.0", path = "../mincode" }

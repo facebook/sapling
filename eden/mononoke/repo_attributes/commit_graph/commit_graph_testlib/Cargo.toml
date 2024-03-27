@@ -14,7 +14,7 @@ commit_graph = { version = "0.1.0", path = "../commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
 context = { version = "0.1.0", path = "../../../server/context" }
 drawdag = { version = "0.1.0", path = "../../../../scm/lib/drawdag" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 in_memory_commit_graph_storage = { version = "0.1.0", path = "../in_memory_commit_graph_storage" }
 itertools = "0.11.0"
 maplit = "1.0"

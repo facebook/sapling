@@ -15,7 +15,7 @@ clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "w
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 lfs_import_lib = { version = "0.1.0", path = "../../lfs_import_lib" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

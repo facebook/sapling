@@ -14,7 +14,7 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 commit_graph_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../../../server/context" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

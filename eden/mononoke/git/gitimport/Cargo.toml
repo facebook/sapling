@@ -21,7 +21,7 @@ clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "w
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 gix-hash = "0.11"
 import_direct = { version = "0.1.0", path = "../import_direct" }
 import_tools = { version = "0.1.0", path = "../import_tools" }

@@ -17,7 +17,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 gix-features = { version = "0.32", features = ["parallel", "rustsha1"] }
 gix-hash = "0.11"
 gix-object = "0.33"

@@ -18,7 +18,7 @@ clientinfo = { version = "0.1.0", path = "../clientinfo" }
 curl = { version = "0.4.41", features = ["http2"] }
 curl-sys = "0.4.68"
 env_logger = "0.10"
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 http = "0.2"
 lru-cache = "0.1.2"
 maplit = "1.0"

@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 dag = { version = "0.1.0", path = "../../dag" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 metalog = { version = "0.1.0", path = "../../metalog" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
