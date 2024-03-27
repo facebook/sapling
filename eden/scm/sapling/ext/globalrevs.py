@@ -304,7 +304,7 @@ _globalrevre = re.compile(r"^r[A-Z]*(\d+)$")
 
 
 @autopullpredicate("globalrevs", priority=75, rewritepullrev=True)
-def _autopull(repo, name, _rewritepullrev=False) -> Optional[autopull.pullattempt]:
+def _autopull(repo, name, rewritepullrev=False) -> Optional[autopull.pullattempt]:
     if not repo.ui.configbool("globalrevs", "autopull", True):
         return None
 
