@@ -84,3 +84,4 @@ zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 default = []
 eden = ["clidispatch/eden", "cmddebugwait/eden", "cmdgoto/eden", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden"]
 fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "configloader/fb", "identity/fb"]
+sl_oss = ["configloader/sl_oss"]

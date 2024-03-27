@@ -45,6 +45,9 @@ rust_library(
                     "cmddebugdumpinternalconfig/fb",
                     "cmddebugrefreshconfig/fb",
                 ],
+                "sl_oss": [
+                    "configloader/sl_oss",
+                ],
             },
         },
     },

@@ -155,7 +155,10 @@ rust_binary(
                     "commands/eden",
                 ],
                 "fb": ["commands/fb"],
-                "sl_oss": ["clidispatch/sl_oss"],
+                "sl_oss": [
+                    "clidispatch/sl_oss",
+                    "commands/sl_oss",
+                ],
                 "with_chg": [
                     "dirs",
                     "identity",

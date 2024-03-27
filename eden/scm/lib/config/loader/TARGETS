@@ -49,11 +49,14 @@ rust_library(
                     "serde_urlencoded",
                     "sha2",
                 ],
+                "sl_oss": [],
             },
         },
     },
     crate_root = "src/lib.rs",
-    features = ["fb"],
+    features = [
+        "fb",
+    ],
     test_deps = [
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:tempfile",

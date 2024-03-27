@@ -65,7 +65,7 @@ pub(crate) fn builtin_system(opts: Options, ident: &Identity) -> UnionConfig {
         }
     }
 
-    if !cfg!(feature = "fb") {
+    if cfg!(feature = "sl_oss") {
         configs.push(Arc::new(&open_source::CONFIG));
     }
 
