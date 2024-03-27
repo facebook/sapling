@@ -17,7 +17,30 @@ First, sanity that we don't have any data locally:
   abort: unknown revision '426bada5c67598ca65036d57d9e4b64b0c1ce7a0'
   [255]
 
-  $ hg prefetch -q -r $A
+Prefetch (and also check we get counters):
+  $ hg prefetch -q -r $A --config devel.print-metrics=scmstore
+  scmstore.file.api.hg_prefetch.calls: 1
+  scmstore.file.api.hg_prefetch.keys: 1
+  scmstore.file.api.hg_prefetch.singles: 1
+  scmstore.file.fetch.aux.cache.keys: 1
+  scmstore.file.fetch.aux.cache.misses: 1
+  scmstore.file.fetch.aux.cache.requests: 1
+  scmstore.file.fetch.aux.cache.time: * (glob) (?)
+  scmstore.file.fetch.aux.local.keys: 1
+  scmstore.file.fetch.aux.local.misses: 1
+  scmstore.file.fetch.aux.local.requests: 1
+  scmstore.file.fetch.aux.local.time: * (glob) (?)
+  scmstore.file.fetch.edenapi.hits: 1
+  scmstore.file.fetch.edenapi.keys: 1
+  scmstore.file.fetch.edenapi.requests: 1
+  scmstore.file.fetch.indexedlog.cache.keys: 1
+  scmstore.file.fetch.indexedlog.cache.misses: 1
+  scmstore.file.fetch.indexedlog.cache.requests: 1
+  scmstore.file.fetch.indexedlog.cache.time: * (glob) (?)
+  scmstore.file.fetch.indexedlog.local.keys: 1
+  scmstore.file.fetch.indexedlog.local.misses: 1
+  scmstore.file.fetch.indexedlog.local.requests: 1
+  scmstore.file.fetch.indexedlog.local.time: * (glob) (?)
 
 Now we do have aux data locally:
   $ hg debugscmstore -r $A A --fetch-mode=local_only --mode=file
