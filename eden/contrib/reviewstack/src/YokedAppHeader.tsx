@@ -10,7 +10,7 @@ import type {GitHubOrgAndRepo} from './recoil';
 import Link from './Link';
 import URLFor from './URLFor';
 import Username from './Username';
-import {APP_HEADER_HEIGHT} from './constants';
+import {YOKE_APP_HEADER_HEIGHT} from './constants';
 import {primerColorMode} from './themeState';
 import {HomeIcon} from '@primer/octicons-react';
 import {Box, Header, Text, ToggleSwitch} from '@primer/react';

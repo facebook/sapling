@@ -13,7 +13,7 @@ import YokedPullRequest from './YokedPullRequest';
 import YokedPullRequestHeader from './YokedPullRequestHeader';
 import YokedPullRequestTimeline from './YokedPullRequestTimeline';
 import YokedPullRequestTimelineCommentInput from './YokedPullRequestTimelineCommentInput';
-import {APP_HEADER_HEIGHT} from './constants';
+import {YOKE_APP_HEADER_HEIGHT} from './constants';
 import {gitHubOrgAndRepo, gitHubPullRequestID} from './recoil';
 import {Box, Text} from '@primer/react';
 import React, {Component, Suspense, useEffect, useRef, RefObject} from 'react';
@@ -27,7 +27,7 @@ import {HomeIcon, CommentDiscussionIcon} from '@primer/octicons-react';
 import {StyledOcticon} from '@primer/react';
 
 const HEADER_HEIGHT = 121;
-const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + APP_HEADER_HEIGHT;
+const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + YOKE_APP_HEADER_HEIGHT;
 const COMMENT_INPUT_HEIGHT = 148;
 
 const drawerState = atom<AllDrawersState>({
