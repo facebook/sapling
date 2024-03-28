@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+
 import {Bookmark} from './Bookmark';
 import {bookmarksDataStorage, remoteBookmarks} from './BookmarksData';
 import {Column, ScrollY} from './ComponentUtils';
@@ -23,6 +25,10 @@ import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 const styles = stylex.create({
   bookmarkGroup: {
+    alignItems: 'flex-start',
+    marginInline: spacing.pad,
+  },
+  fields: {
     alignItems: 'flex-start',
     marginInline: spacing.pad,
   },
@@ -56,18 +62,36 @@ export function BookmarksManagerMenu() {
 
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
-  const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   return (
     <DropdownFields
       title={<T>Bookmarks Manager</T>}
       icon="bookmark"
       data-testid="bookmarks-manager-dropdown">
-      <strong>
-        <T>Remote Bookmarks</T>
-      </strong>
+      <BookmarksList title={<T>Remote Bookmarks</T>} names={bookmarks} />
+    </DropdownFields>
+  );
+}
+
+function BookmarksList({
+  names,
+  title,
+  special,
+}: {
+  names: Array<string>;
+  title: ReactNode;
+  special?: boolean;
+}) {
+  const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
+  if (names.length == 0) {
+    return null;
+  }
+
+  return (
+    <Column xstyle={styles.bookmarkGroup}>
+      <strong>{title}</strong>
       <ScrollY maxSize={300}>
         <Column xstyle={styles.bookmarkGroup}>
-          {bookmarks.map(bookmark => (
+          {names.map(bookmark => (
             <Checkbox
               key={bookmark}
               checked={!bookmarksData.hiddenRemoteBookmarks.includes(bookmark)}
@@ -81,13 +105,13 @@ function BookmarksManager(_props: {dismiss: () => void}) {
                 }
                 setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
               }}>
-              <Bookmark fullLength key={bookmark}>
+              <Bookmark fullLength key={bookmark} special={special}>
                 {bookmark}
               </Bookmark>
             </Checkbox>
           ))}
         </Column>
       </ScrollY>
-    </DropdownFields>
+    </Column>
   );
 }
