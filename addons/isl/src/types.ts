@@ -168,6 +168,12 @@ export type StableCommitMetadata = {
   description: string;
 };
 
+export type StableInfo = {
+  hash: string;
+  name: string;
+  info: string;
+};
+
 export type CommitInfo = {
   title: string;
   hash: Hash;

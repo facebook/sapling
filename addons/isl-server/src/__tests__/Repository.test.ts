@@ -375,6 +375,73 @@ describe('Repository', () => {
     });
   });
 
+  describe('fetchSmartlogCommits', () => {
+    const repoInfo: ValidatedRepoInfo = {
+      type: 'success',
+      command: 'sl',
+      dotdir: '/path/to/repo/.sl',
+      repoRoot: '/path/to/repo',
+      codeReviewSystem: {type: 'unknown'},
+      pullRequestDomain: undefined,
+    };
+
+    const expectCalledWithRevset = (spy: jest.SpyInstance<unknown>, revset: string) => {
+      expect(spy).toHaveBeenCalledWith(
+        'sl',
+        expect.arrayContaining(['log', '--rev', revset]),
+        expect.anything(),
+      );
+    };
+
+    it('uses correct revset in normal case', async () => {
+      const repo = new Repository(repoInfo, ctx);
+
+      const execaSpy = mockExeca([]);
+
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        execaSpy,
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + .)',
+      );
+    });
+
+    it('updates revset when changing date range', async () => {
+      const execaSpy = mockExeca([]);
+      const repo = new Repository(repoInfo, ctx);
+
+      repo.nextVisibleCommitRangeInDays();
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        execaSpy,
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-60)) + .)',
+      );
+
+      repo.nextVisibleCommitRangeInDays();
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(execaSpy, 'smartlog((interestingbookmarks() + heads(draft())) + .)');
+    });
+
+    it('fetches additional revsets', async () => {
+      const execaSpy = mockExeca([]);
+      const repo = new Repository(repoInfo, ctx);
+
+      repo.stableLocations = [{name: 'mystable', hash: 'aaa', info: 'this is the stable for aaa'}];
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        execaSpy,
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + aaa)',
+      );
+
+      repo.nextVisibleCommitRangeInDays();
+      repo.nextVisibleCommitRangeInDays();
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        execaSpy,
+        'smartlog((interestingbookmarks() + heads(draft())) + . + aaa)',
+      );
+    });
+  });
+
   describe('merge conflicts', () => {
     const repoInfo: ValidatedRepoInfo = {
       type: 'success',

@@ -37,6 +37,7 @@ import type {
   Alert,
   RepoRelativePath,
   SettableConfigName,
+  StableInfo,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -144,6 +145,13 @@ export class Repository {
     60,
     undefined,
   ];
+
+  /**
+   * Additional commits to include in batched `log` fetch,
+   * used for additional remote bookmarks / known stable commit hashes.
+   * After fetching commits, stable names will be added to commits in "stableCommitMetadata"
+   */
+  public stableLocations: Array<StableInfo> = [];
 
   /**
    * The context used when the repository was created.
@@ -678,10 +686,23 @@ export class Repository {
     try {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
       const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
-      const revset = !visibleCommitDayRange
-        ? 'smartlog()'
-        : // filter default smartlog query by date range
-          `smartlog(((interestingbookmarks() + heads(draft())) & date(-${visibleCommitDayRange})) + .)`;
+
+      const primaryRevset = '(interestingbookmarks() + heads(draft()))';
+      // Revset to fetch for commits, e.g.:
+      // smartlog(interestingbookmarks() + heads(draft()) + .)
+      // smartlog((interestingbookmarks() + heads(draft()) & date(-14)) + .)
+      // smartlog((interestingbookmarks() + heads(draft()) & date(-14)) + . + a1b2c3d4)
+      const revset = `smartlog(${[
+        !visibleCommitDayRange
+          ? primaryRevset
+          : // filter default smartlog query by date range
+            `(${primaryRevset} & date(-${visibleCommitDayRange}))`,
+        '.', // always include wdir parent
+        ...this.stableLocations.map(location => location.hash),
+      ]
+        .filter(notEmpty)
+        .join(' + ')})`;
+
       const proc = await this.runCommand(
         ['log', '--template', FETCH_TEMPLATE, '--rev', revset],
         'LogCommand',
