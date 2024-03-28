@@ -26,6 +26,7 @@ export type TrackEventName =
   | 'AmendFileSubsetOperation'
   | 'AmendToOperation'
   | 'ArcPullOperation'
+  | 'ArcStableForCommand'
   | 'BulkRebaseOperation'
   | 'CommitOperation'
   | 'CommitFileSubsetOperation'

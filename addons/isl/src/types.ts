@@ -168,6 +168,14 @@ export type StableCommitMetadata = {
   description: string;
 };
 
+export type StableLocationData = {
+  /** Stables found automatically from recent builds */
+  stables: Array<Result<StableInfo>>;
+  /** Stables that enabled automatically for certain users */
+  special: Array<Result<StableInfo>>;
+  /** Stables entered in the UI */
+  manual: Array<Result<StableInfo>>;
+};
 export type StableInfo = {
   hash: string;
   name: string;
@@ -601,6 +609,7 @@ export type ClientToServerMessage =
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchDiffComments'; diffId: DiffId}
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
+  | {type: 'fetchAndSetStables'}
   | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
@@ -673,6 +682,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
+  | {type: 'fetchedStables'; stables: StableLocationData}
   | {type: 'renderedMarkup'; html: string; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}

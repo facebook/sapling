@@ -26,6 +26,8 @@ import type {
   FetchedUncommittedChanges,
   LandInfo,
   CodeReviewProviderSpecificClientToServerMessages,
+  StableInfo,
+  StableLocationData,
 } from 'isl/src/types';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
@@ -36,7 +38,7 @@ import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetForComparison} from 'shared/Comparison';
-import {randomId, nullthrows} from 'shared/utils';
+import {randomId, nullthrows, notEmpty} from 'shared/utils';
 import {Readable} from 'stream';
 
 export type IncomingMessage = ClientToServerMessage;
@@ -822,6 +824,20 @@ export default class ServerToClientAPI {
         Internal.fetchUserInfo?.(repo.initialConnectionContext).then((info: Serializable) => {
           this.logger.info('user info:', info);
           this.postMessage({type: 'fetchedInternalUserInfo', info});
+        });
+        break;
+      }
+      case 'fetchAndSetStables': {
+        Internal.fetchStableLocations?.(ctx).then((stables: StableLocationData | undefined) => {
+          this.logger.info('fetched stable locations', stables);
+          if (stables == null) {
+            return;
+          }
+          this.postMessage({type: 'fetchedStables', stables});
+          repo.stableLocations = [...stables.stables, ...stables.special, ...stables.manual]
+            .map(stable => stable.value)
+            .filter(notEmpty);
+          repo.fetchSmartlogCommits();
         });
         break;
       }
