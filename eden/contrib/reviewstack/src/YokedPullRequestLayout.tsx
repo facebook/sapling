@@ -9,7 +9,7 @@ import type {AllDrawersState} from 'shared/Drawers';
 
 import CenteredSpinner from './CenteredSpinner';
 import {useCommand} from './KeyboardShortcuts';
-import PullRequest from './PullRequest';
+import YokedPullRequest from './YokedPullRequest';
 import YokedPullRequestHeader from './YokedPullRequestHeader';
 import YokedPullRequestTimeline from './YokedPullRequestTimeline';
 import YokedPullRequestTimelineCommentInput from './YokedPullRequestTimelineCommentInput';
@@ -137,7 +137,7 @@ export default function PullRequestLayout({
                 right={<TimelineDrawer />}>
                 <Box display="flex" flexDirection="row">
                   <Box height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`}>
-                    <PullRequest />
+                    <YokedPullRequest />
                   </Box>
                 </Box>
               </Drawers>
