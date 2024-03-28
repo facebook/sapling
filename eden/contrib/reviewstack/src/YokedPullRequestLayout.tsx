@@ -10,7 +10,7 @@ import type {AllDrawersState} from 'shared/Drawers';
 import CenteredSpinner from './CenteredSpinner';
 import {useCommand} from './KeyboardShortcuts';
 import PullRequest from './PullRequest';
-import PullRequestHeader from './PullRequestHeader';
+import YokedPullRequestHeader from './YokedPullRequestHeader';
 import YokedPullRequestTimeline from './YokedPullRequestTimeline';
 import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
 import {APP_HEADER_HEIGHT} from './constants';
@@ -127,7 +127,7 @@ export default function PullRequestLayout({
       </div>
       <div className="yoke-main">
         <div className="yoke-main-inner">
-          <PullRequestHeader prHeaderElement={prHeaderElement} />
+          <YokedPullRequestHeader prHeaderElement={prHeaderElement} />
           <div className="yoke-body">
             <Suspense fallback={<CenteredSpinner message="Loading pull request..." />}>
               <Drawers
