@@ -4075,7 +4075,7 @@ class TestRunner:
                 vlog("# Found prerequisite", p, "at", found)
             else:
                 print(
-                    "WARNING: Did not find prerequisite tool: %s " % p.decode("utf-8")
+                    "WARNING: Did not find prerequisite tool: %s " % p
                 )
 
 
