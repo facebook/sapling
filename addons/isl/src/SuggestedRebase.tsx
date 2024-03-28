@@ -8,6 +8,7 @@
 import type {Operation} from './operations/Operation';
 import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
+import {bookmarksDataStorage} from './BookmarksData';
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {findCurrentPublicBase} from './getCommitTree';
@@ -21,7 +22,6 @@ import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestCommits} from './serverAPIState';
 import {succeedableRevset} from './types';
-import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -68,18 +68,22 @@ export const showSuggestedRebaseForStack = atomFamilyWeak((hash: Hash) =>
 export const suggestedRebaseDestinations = atom(get => {
   const commits = get(latestCommits);
   const publicBase = findCurrentPublicBase(get(dagWithPreviews));
+  const hiddenBookmarks = new Set(get(bookmarksDataStorage)?.hiddenRemoteBookmarks ?? []);
   const destinations = commits
     .filter(
       commit => commit.remoteBookmarks.length > 0 || (commit.stableCommitMetadata?.length ?? 0) > 0,
     )
     .map((commit): [CommitInfo, string] => [
       commit,
-      firstNonEmptySublist(
-        commit.remoteBookmarks,
-        commit.stableCommitMetadata?.map(s => s.value),
-        commit.bookmarks,
-      ) || short(commit.hash),
-    ]);
+      [
+        ...commit.remoteBookmarks,
+        ...(commit.stableCommitMetadata?.map(s => s.value) ?? []),
+        ...commit.bookmarks,
+      ]
+        .filter(value => !hiddenBookmarks.has(value))
+        .join(', '),
+    ])
+    .filter(([_commit, label]) => label.length > 0);
   if (publicBase) {
     const publicBaseLabel = t('Current Stack Base');
     const existing = destinations.find(dest => dest[0].hash === publicBase.hash);
@@ -150,14 +154,6 @@ export function SuggestedRebaseButton({
       )}
     </VSCodeButton>
   );
-}
-
-function firstNonEmptySublist(...lists: Array<ReadonlyArray<string> | undefined>) {
-  for (const list of lists) {
-    if (list != null && list.length > 0) {
-      return list.join(', ');
-    }
-  }
 }
 
 /**

@@ -55,7 +55,7 @@ export function BookmarksManagerMenu() {
         </T>
       }
       additionalToggles={additionalToggles}>
-      <VSCodeButton appearance="icon" data-testid="bulk-actions-button">
+      <VSCodeButton appearance="icon" data-testid="bookmarks-manager-button">
         <Icon icon="bookmark" />
       </VSCodeButton>
     </Tooltip>
