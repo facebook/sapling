@@ -20,7 +20,7 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
-import {commitsShownRange, latestCommits} from './serverAPIState';
+import {commitsShownRange, latestCommits, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom} from 'jotai';
@@ -66,10 +66,10 @@ export const showSuggestedRebaseForStack = atomFamilyWeak((hash: Hash) =>
 );
 
 export const suggestedRebaseDestinations = atom(get => {
-  const commits = get(latestCommits);
+  const dag = get(latestDag);
   const publicBase = findCurrentPublicBase(get(dagWithPreviews));
-  const hiddenBookmarks = new Set(get(bookmarksDataStorage)?.hiddenRemoteBookmarks ?? []);
-  const destinations = commits
+  const destinations = dag
+    .getBatch(dag.public_().toArray())
     .filter(
       commit => commit.remoteBookmarks.length > 0 || (commit.stableCommitMetadata?.length ?? 0) > 0,
     )
@@ -79,9 +79,7 @@ export const suggestedRebaseDestinations = atom(get => {
         ...commit.remoteBookmarks,
         ...(commit.stableCommitMetadata?.map(s => s.value) ?? []),
         ...commit.bookmarks,
-      ]
-        .filter(value => !hiddenBookmarks.has(value))
-        .join(', '),
+      ].join(', '),
     ])
     .filter(([_commit, label]) => label.length > 0);
   if (publicBase) {
