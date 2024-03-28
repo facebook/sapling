@@ -530,9 +530,8 @@ pub(crate) fn compare_expected_changesets(
         "Number of expected changesets does not match actual changesets"
     );
 
-    for (actual_changeset, expected_changeset) in actual_changesets
-        .into_iter()
-        .zip(expected_changesets.into_iter())
+    for (actual_changeset, expected_changeset) in
+        actual_changesets.iter().zip(expected_changesets.iter())
     {
         assert_eq!(
             actual_changeset.message, expected_changeset.message,

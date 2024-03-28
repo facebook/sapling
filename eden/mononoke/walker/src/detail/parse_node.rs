@@ -86,7 +86,7 @@ where
 {
     type Err = <T as FromStr>::Err;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (inner, filenode_known_derived) = if let Some(s) = s.strip_suffix("+") {
+        let (inner, filenode_known_derived) = if let Some(s) = s.strip_suffix('+') {
             (T::from_str(s)?, true)
         } else {
             (T::from_str(s)?, false)
