@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import AppHeader from './AppHeader';
+import YokedAppHeader from './YokedAppHeader';
 import CenteredSpinner from './CenteredSpinner';
-import CommitView from './CommitView';
+import YokedCommitView from './YokedCommitView';
 import {ErrorBoundary} from './ErrorBoundary';
 import GitHubProjectPage from './GitHubProjectPage';
 import {ShortcutCommandContext} from './KeyboardShortcuts';
 import LoginDialog from './LoginDialog';
 import PrimerStyles from './PrimerStyles';
-import PullRequestLayout from './PullRequestLayout';
+import YokedPullRequestLayout from './YokedPullRequestLayout';
 import PullsView from './PullsView';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import UserHomePage from './UserHomePage';
@@ -23,7 +23,7 @@ import {BaseStyles, Box, Text, useTheme} from '@primer/react';
 import React, {useEffect} from 'react';
 import {useRecoilValue, useRecoilValueLoadable} from 'recoil';
 
-import './Yoke.css';
+import './styles/app.css';
 
 type Page =
   | {type: 'home'}
@@ -79,7 +79,7 @@ function ContentOrLoginDialog({page}: {page: Page}): React.ReactElement {
       const {contents: token} = tokenLoadable;
       return token != null ? (
         <>
-          <AppHeader orgAndRepo={orgAndRepo} />
+          <YokedAppHeader orgAndRepo={orgAndRepo} />
           <ErrorBoundary>
             <AppContent page={page} />
           </ErrorBoundary>
@@ -136,8 +136,8 @@ const AppContent = React.memo(({page}: {page: Page}): React.ReactElement => {
     case 'pulls':
       return <PullsView {...page} />;
     case 'pr':
-      return <PullRequestLayout {...page} />;
+      return <YokedPullRequestLayout {...page} />;
     case 'commit':
-      return <CommitView {...page} />;
+      return <YokedCommitView {...page} />;
   }
 });
