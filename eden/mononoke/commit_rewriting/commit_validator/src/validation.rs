@@ -776,7 +776,7 @@ pub async fn unfold_bookmarks_update_log_entry(
                     bookmarks_update_log_entry_id,
                     to_cs_id
                 );
-                // This might be slow. If too many bookmakrs are being created, it can be optimised
+                // This might be slow. If too many bookmarks are being created, it can be optimised
                 // or we could just check to_cs_id as a best effort.
                 validation_helpers
                     .large_repo
@@ -801,7 +801,7 @@ pub async fn unfold_bookmarks_update_log_entry(
                     from_cs_id,
                     to_cs_id
                 );
-                // This might be slow. If too many bookmakrs are being non-FF moved, it can be optimised
+                // This might be slow. If too many bookmarks are being non-FF moved, it can be optimised
                 // or we could just check to_cs_id as a best effort.
                 validation_helpers
                     .large_repo
