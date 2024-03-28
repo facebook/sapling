@@ -267,7 +267,8 @@ impl BackingStore {
         let new_mtime = touch_file_mtime();
         let since_last_reload = inner.last_reload.elapsed();
 
-        let needs_reload = since_last_reload >= inner.reload_interval
+        let needs_reload = (!inner.reload_interval.is_zero()
+            && since_last_reload >= inner.reload_interval)
             || new_mtime
                 .as_ref()
                 .is_some_and(|new_mtime| match &inner.touch_file_mtime {
