@@ -41,5 +41,3 @@ Verify smartlog shows only the configured data
   │
   o  cb9a9f31
      stable
-  
-  note: background backup is currently disabled so your commits are not being backed up.
