@@ -232,6 +232,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         i.phase === 'public' &&
         i.remoteBookmarks.length === 0 &&
         i.bookmarks.length === 0 &&
+        (i.stableCommitMetadata == null || i.stableCommitMetadata.length === 0) &&
         !i.isDot,
       all,
     );

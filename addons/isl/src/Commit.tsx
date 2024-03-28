@@ -398,15 +398,7 @@ export const Commit = memo(
             <Bookmarks bookmarks={commit.bookmarks} />
             <Bookmarks bookmarks={commit.remoteBookmarks} />
             {commit?.stableCommitMetadata != null ? (
-              <>
-                {commit.stableCommitMetadata.map(stable => (
-                  <Tooltip title={stable.description} key={stable.value}>
-                    <div className="stable-commit-metadata">
-                      <Bookmark special>{stable.value}</Bookmark>
-                    </div>
-                  </Tooltip>
-                ))}
-              </>
+              <Bookmarks bookmarks={commit.stableCommitMetadata} special />
             ) : null}
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {isNarrow ? commitActions : null}
