@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use configloader::hg::PinnedConfig;
+use configloader::Config;
 use edenapi::configmodel::ConfigExt;
 use log::warn;
 use repo::repo::Repo;
@@ -114,11 +115,20 @@ impl BackingStore {
         let mut config = configloader::hg::load(Some(root), extra_configs)?;
 
         let source = "backingstore".into();
-        config.set("store", "aux", Some("true"), &source);
         if !allow_retries {
             config.set("lfs", "backofftimes", Some(""), &source);
             config.set("lfs", "throttlebackofftimes", Some(""), &source);
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
+        }
+
+        // Allow overrideing scmstore.tree-metadata-mode for eden only.
+        if let Some(mode) = config.get_nonempty("eden", "tree-metadata-mode") {
+            config.set(
+                "scmstore",
+                "tree-metadata-mode",
+                Some(mode),
+                &"backingstore".into(),
+            );
         }
 
         // Apply indexed log configs, which can affect edenfs behavior.
