@@ -6,6 +6,7 @@
  */
 
 import type {BookmarkKind} from './Bookmark';
+import type {StableInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Bookmark} from './Bookmark';
@@ -14,6 +15,7 @@ import {Column, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {Checkbox} from './components/Checkbox';
 import {T} from './i18n';
@@ -29,10 +31,10 @@ const styles = stylex.create({
   bookmarkGroup: {
     alignItems: 'flex-start',
     marginInline: spacing.pad,
+    gap: spacing.half,
   },
-  fields: {
-    alignItems: 'flex-start',
-    marginInline: spacing.pad,
+  description: {
+    marginBottom: spacing.half,
   },
 });
 
@@ -70,10 +72,21 @@ function BookmarksManager(_props: {dismiss: () => void}) {
       title={<T>Bookmarks Manager</T>}
       icon="bookmark"
       data-testid="bookmarks-manager-dropdown">
-      <BookmarksList title={<T>Remote Bookmarks</T>} names={bookmarks} kind="remote" />
+      <BookmarksList
+        title={<T>Remote Bookmarks</T>}
+        description={<T>Uncheck remote bookmarks you don't use to hide them</T>}
+        bookmarks={bookmarks}
+        kind="remote"
+      />
       <BookmarksList
         title={<T>Stable Locations</T>}
-        names={stableLocations?.special?.map(info => info.value?.name).filter(notEmpty) ?? []}
+        description={
+          <T>
+            Commits that have had successful builds and warmed up caches for a particular build
+            target
+          </T>
+        }
+        bookmarks={stableLocations?.special?.map(info => info.value).filter(notEmpty) ?? []}
         kind="stable"
       />
     </DropdownFields>
@@ -81,43 +94,50 @@ function BookmarksManager(_props: {dismiss: () => void}) {
 }
 
 function BookmarksList({
-  names,
+  bookmarks,
   title,
+  description,
   kind,
 }: {
-  names: Array<string>;
+  bookmarks: Array<string | StableInfo>;
   title: ReactNode;
+  description?: ReactNode;
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
-  if (names.length == 0) {
+  if (bookmarks.length == 0) {
     return null;
   }
 
   return (
     <Column xstyle={styles.bookmarkGroup}>
       <strong>{title}</strong>
+      {description && <Subtle {...stylex.props(styles.description)}>{description}</Subtle>}
       <ScrollY maxSize={300}>
         <Column xstyle={styles.bookmarkGroup}>
-          {names.map(bookmark => (
-            <Checkbox
-              key={bookmark}
-              checked={!bookmarksData.hiddenRemoteBookmarks.includes(bookmark)}
-              onChange={checked => {
-                const shouldBeDeselected = !checked;
-                let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
-                if (shouldBeDeselected) {
-                  hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, bookmark];
-                } else {
-                  hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== bookmark);
-                }
-                setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
-              }}>
-              <Bookmark fullLength key={bookmark} kind={kind}>
-                {bookmark}
-              </Bookmark>
-            </Checkbox>
-          ))}
+          {bookmarks.map(bookmark => {
+            const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
+            const tooltip = typeof bookmark === 'string' ? undefined : bookmark.info;
+            return (
+              <Checkbox
+                key={name}
+                checked={!bookmarksData.hiddenRemoteBookmarks.includes(name)}
+                onChange={checked => {
+                  const shouldBeDeselected = !checked;
+                  let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
+                  if (shouldBeDeselected) {
+                    hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, name];
+                  } else {
+                    hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== name);
+                  }
+                  setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
+                }}>
+                <Bookmark fullLength key={name} kind={kind} tooltip={tooltip}>
+                  {name}
+                </Bookmark>
+              </Checkbox>
+            );
+          })}
         </Column>
       </ScrollY>
     </Column>
