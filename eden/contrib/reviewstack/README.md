@@ -7,7 +7,7 @@
 A hosted instance of ReviewStack is publicly available at https://reviewstack.dev/.
 Note that it has _no server component_ (though it does leverage [Netlify's OAuth signing to authenticate with GitHub](https://docs.netlify.com/visitor-access/oauth-provider-tokens/)).
 
-## Local Development (Updated)
+## Local Development
 
 - Run `yarn` in the `eden/contrib` folder to install all the dependencies.
 - Run `yarn codegen` in the `eden/contrib/reviewstack` to build the generated code.
