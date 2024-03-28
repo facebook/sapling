@@ -9,7 +9,7 @@ import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
-import {Bookmark} from './Bookmark';
+import {Bookmark, Bookmarks} from './Bookmark';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
@@ -395,12 +395,8 @@ export const Commit = memo(
               </span>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
-            {commit.bookmarks.map(bookmark => (
-              <Bookmark key={bookmark}>{bookmark}</Bookmark>
-            ))}
-            {commit.remoteBookmarks.map(remoteBookmarks => (
-              <Bookmark key={remoteBookmarks}>{remoteBookmarks}</Bookmark>
-            ))}
+            <Bookmarks bookmarks={commit.bookmarks} />
+            <Bookmarks bookmarks={commit.remoteBookmarks} />
             {commit?.stableCommitMetadata != null ? (
               <>
                 {commit.stableCommitMetadata.map(stable => (

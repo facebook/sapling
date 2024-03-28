@@ -7,8 +7,10 @@
 
 import type {ReactNode} from 'react';
 
+import {bookmarksDataStorage} from './BookmarksData';
 import {Tag} from './components/Tag';
 import * as stylex from '@stylexjs/stylex';
+import {useAtomValue} from 'jotai';
 
 const styles = stylex.create({
   special: {
@@ -24,5 +26,18 @@ export function Bookmark({children, special}: {children: ReactNode; special?: bo
       title={typeof children === 'string' ? children : undefined}>
       {children}
     </Tag>
+  );
+}
+
+export function Bookmarks({bookmarks}: {bookmarks: ReadonlyArray<string>}) {
+  const bookmarksData = useAtomValue(bookmarksDataStorage);
+  return (
+    <>
+      {bookmarks
+        .filter(bookmark => !bookmarksData.hiddenRemoteBookmarks.includes(bookmark))
+        .map(bookmark => (
+          <Bookmark key={bookmark}>{bookmark}</Bookmark>
+        ))}
+    </>
   );
 }
