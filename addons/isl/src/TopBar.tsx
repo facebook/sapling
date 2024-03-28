@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {BookmarksManagerMenu} from './BookmarksManager';
 import {BugButton} from './BugButton';
 import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
@@ -41,6 +42,7 @@ export function TopBar() {
         <DownloadCommitsTooltipButton />
         <ShelvedChangesMenu />
         <BulkActionsMenu />
+        <BookmarksManagerMenu />
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
