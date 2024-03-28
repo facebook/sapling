@@ -1,9 +1,15 @@
 #debugruntest-compatible
 
+  $ setconfig ui.allowemptycommit=1 \
+  > remotenames.selectivepulldefault=main \
+  > remotenames.hoist=remote \
+  > remotenames.rename.default=remote
+
+  $ enable remotenames
+
 Prepare a repo
 
   $ newrepo
-  $ setconfig ui.allowemptycommit=1
   $ hg ci -m 'A: foo bar'
   $ hg ci -m 'B: bar-baz'
   $ hg go -q 'desc("A: foo")'
@@ -92,3 +98,23 @@ Can be disabled
   $ log foo --config experimental.titles-namespace=false
   abort: unknown revision 'foo'!
   [255]
+
+Does not conflict with autopull
+
+  $ hg bookmark -r 'desc(D)' main
+  $ hg clone -q "$PWD" "$TESTTMP/client1"
+
+  $ cd "$TESTTMP/client1"
+  $ hg go -q remote/main
+  $ hg commit -m 'E: remote/foo'
+
+  $ log 'remote/foo'
+  pulling 'foo' from '$TESTTMP/repo1'
+  abort: unknown revision 'remote/foo'!
+  [255]
+
+Disable autopull by disabling remote, then the titles namespace works again
+
+  $ log 'remote/foo' --config paths.default=
+  E: remote/foo
+

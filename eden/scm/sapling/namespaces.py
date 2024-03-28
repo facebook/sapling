@@ -12,7 +12,7 @@ from __future__ import absolute_import
 
 import contextlib
 
-from . import error, hintutil, pycompat, registrar, templatekw, util
+from . import autopull, error, hintutil, pycompat, registrar, templatekw, util
 from .i18n import _
 
 
@@ -137,6 +137,9 @@ def titles(repo):
                 continue
             end = start + len(name)
             if end < len(title) and title[end].isalnum():
+                continue
+            # skip if conflict with autopull
+            if autopull.calculate_attempts(repo, [name]):
                 continue
             # matched - show a hint
             hintutil.trigger("match-title", name)
