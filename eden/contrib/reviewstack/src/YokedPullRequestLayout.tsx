@@ -12,7 +12,7 @@ import {useCommand} from './KeyboardShortcuts';
 import PullRequest from './PullRequest';
 import YokedPullRequestHeader from './YokedPullRequestHeader';
 import YokedPullRequestTimeline from './YokedPullRequestTimeline';
-import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
+import YokedPullRequestTimelineCommentInput from './YokedPullRequestTimelineCommentInput';
 import {APP_HEADER_HEIGHT} from './constants';
 import {gitHubOrgAndRepo, gitHubPullRequestID} from './recoil';
 import {Box, Text} from '@primer/react';
@@ -159,7 +159,7 @@ function TimelineDrawer() {
         <YokedPullRequestTimeline />
       </Box>
       <Box display="flex" height={COMMENT_INPUT_HEIGHT}>
-        <PullRequestTimelineCommentInput />
+        <YokedPullRequestTimelineCommentInput />
       </Box>
     </Box>
   );

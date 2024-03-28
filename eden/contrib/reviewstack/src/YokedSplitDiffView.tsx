@@ -19,7 +19,7 @@ import type {Hunk, ParsedDiff} from 'diff';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
 import {FileHeader} from './SplitDiffFileHeader';
-import SplitDiffRow from './SplitDiffRow';
+import YokedSplitDiffRow from './YokedSplitDiffRow';
 import {diffAndTokenize, lineRange} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
@@ -332,7 +332,7 @@ function addRowsForHunk(
         }
         const [before, after] = beforeAndAfter;
         rows.push(
-          <SplitDiffRow
+          <YokedSplitDiffRow
             key={`${beforeLineNumber}/${afterLineNumber}`}
             beforeLineNumber={beforeLineNumber}
             before={before}
@@ -347,7 +347,7 @@ function addRowsForHunk(
         ++afterLineNumber;
       } else if (removedLine != null) {
         rows.push(
-          <SplitDiffRow
+          <YokedSplitDiffRow
             key={`${beforeLineNumber}/`}
             beforeLineNumber={beforeLineNumber}
             before={
@@ -365,7 +365,7 @@ function addRowsForHunk(
         ++beforeLineNumber;
       } else {
         rows.push(
-          <SplitDiffRow
+          <YokedSplitDiffRow
             key={`/${afterLineNumber}`}
             beforeLineNumber={null}
             before={null}
@@ -407,7 +407,7 @@ function addUnmodifiedRows(
   const {before: tokenizationBefore, after: tokenizationAfter} = tokenization;
   lines.forEach(lineContent => {
     rows.push(
-      <SplitDiffRow
+      <YokedSplitDiffRow
         key={`${beforeLineNumber}/${afterLineNumber}`}
         beforeLineNumber={beforeLineNumber}
         before={
