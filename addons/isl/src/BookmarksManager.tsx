@@ -7,7 +7,7 @@
 
 import {Bookmark} from './Bookmark';
 import {bookmarksDataStorage, remoteBookmarks} from './BookmarksData';
-import {Column} from './ComponentUtils';
+import {Column, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
@@ -65,27 +65,29 @@ function BookmarksManager(_props: {dismiss: () => void}) {
       <strong>
         <T>Remote Bookmarks</T>
       </strong>
-      <Column xstyle={styles.bookmarkGroup}>
-        {bookmarks.map(bookmark => (
-          <Checkbox
-            key={bookmark}
-            checked={!bookmarksData.hiddenRemoteBookmarks.includes(bookmark)}
-            onChange={checked => {
-              const shouldBeDeselected = !checked;
-              let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
-              if (shouldBeDeselected) {
-                hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, bookmark];
-              } else {
-                hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== bookmark);
-              }
-              setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
-            }}>
-            <Bookmark fullLength key={bookmark}>
-              {bookmark}
-            </Bookmark>
-          </Checkbox>
-        ))}
-      </Column>
+      <ScrollY maxSize={300}>
+        <Column xstyle={styles.bookmarkGroup}>
+          {bookmarks.map(bookmark => (
+            <Checkbox
+              key={bookmark}
+              checked={!bookmarksData.hiddenRemoteBookmarks.includes(bookmark)}
+              onChange={checked => {
+                const shouldBeDeselected = !checked;
+                let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
+                if (shouldBeDeselected) {
+                  hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, bookmark];
+                } else {
+                  hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== bookmark);
+                }
+                setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
+              }}>
+              <Bookmark fullLength key={bookmark}>
+                {bookmark}
+              </Bookmark>
+            </Checkbox>
+          ))}
+        </Column>
+      </ScrollY>
     </DropdownFields>
   );
 }

@@ -19,5 +19,7 @@ export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.b
 
 export const remoteBookmarks = atom(get => {
   const dag = get(dagWithPreviews);
-  return dag.getBatch(dag.public_().toArray()).flatMap(commit => commit.remoteBookmarks);
+  const commits = dag.getBatch(dag.public_().toArray());
+  commits.sort((a, b) => b.date.valueOf() - a.date.valueOf());
+  return commits.flatMap(commit => commit.remoteBookmarks);
 });
