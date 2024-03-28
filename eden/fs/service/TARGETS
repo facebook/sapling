@@ -51,7 +51,6 @@ cpp_library(
         "//folly/logging:logging",
         "//folly/portability:gflags",
         "//folly/portability:unistd",
-        "//folly/ssl:init",
         "//thrift/lib/cpp2:flags",
         "//thrift/lib/cpp2:server",
     ],
