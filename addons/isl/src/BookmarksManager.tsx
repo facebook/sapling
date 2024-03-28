@@ -6,7 +6,7 @@
  */
 
 import {Bookmark} from './Bookmark';
-import {bookmarksDataStorage} from './BookmarksData';
+import {bookmarksDataStorage, remoteBookmarks} from './BookmarksData';
 import {Column} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
@@ -14,11 +14,10 @@ import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {Checkbox} from './components/Checkbox';
 import {T} from './i18n';
-import {dagWithPreviews} from './previews';
 import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atom, useAtom, useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
@@ -31,6 +30,11 @@ const styles = stylex.create({
 
 export function BookmarksManagerMenu() {
   const additionalToggles = useCommandEvent('ToggleBookmarksManagerDropdown');
+  const bookmarks = useAtomValue(remoteBookmarks);
+  if (bookmarks.length < 2) {
+    // No use showing bookmarks menu if there's only one remote bookmark
+    return;
+  }
   return (
     <Tooltip
       component={dismiss => <BookmarksManager dismiss={dismiss} />}
@@ -49,11 +53,6 @@ export function BookmarksManagerMenu() {
     </Tooltip>
   );
 }
-
-const remoteBookmarks = atom(get => {
-  const dag = get(dagWithPreviews);
-  return dag.getBatch(dag.public_().toArray()).flatMap(commit => commit.remoteBookmarks);
-});
 
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
