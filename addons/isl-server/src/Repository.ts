@@ -68,6 +68,7 @@ import {
   COMMIT_END_MARK,
   FETCH_TEMPLATE,
   SHELVE_FETCH_TEMPLATE,
+  attachStableLocations,
   parseCommitInfoOutput,
   parseShelvedCommitsOutput,
 } from './templates';
@@ -715,6 +716,7 @@ export class Repository {
       if (commits.length === 0) {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
       }
+      attachStableLocations(commits, this.stableLocations);
       this.smartlogCommits = {
         fetchStartTimestamp,
         fetchCompletedTimestamp: Date.now(),

@@ -10,8 +10,10 @@ import type {
   ChangedFile,
   CommitInfo,
   CommitPhaseType,
+  Hash,
   ShelvedChange,
   SmartlogCommits,
+  StableInfo,
   SuccessorInfo,
 } from 'isl/src/types';
 
@@ -110,6 +112,30 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
     }
   }
   return commitInfos;
+}
+
+/**
+ * Additional stable locations in the commit fetch will not automatically
+ * include "stableCommitMetadata". Insert this data onto the commits.
+ */
+export function attachStableLocations(commits: Array<CommitInfo>, locations: Array<StableInfo>) {
+  const map: Record<Hash, Array<StableInfo>> = {};
+  for (const location of locations) {
+    const existing = map[location.hash] ?? [];
+    map[location.hash] = [...existing, location];
+  }
+
+  for (const commit of commits) {
+    if (commit.hash in map) {
+      commit.stableCommitMetadata = [
+        ...(commit.stableCommitMetadata ?? []),
+        ...map[commit.hash].map(location => ({
+          value: location.name,
+          description: location.info,
+        })),
+      ];
+    }
+  }
 }
 
 ///// Shelve /////
