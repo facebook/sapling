@@ -3,12 +3,8 @@
 name: Mononoke Mac
 
 on:
-  push:
-    branches:
-    - main
-  pull_request:
-    branches:
-    - main
+  schedule:
+    - cron: '0 2 * * MON'
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
