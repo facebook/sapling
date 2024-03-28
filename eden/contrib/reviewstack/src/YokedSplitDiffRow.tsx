@@ -7,7 +7,7 @@
 
 import type {GitHubPullRequestReviewThreadsByLine} from './github/pullRequestTimelineTypes';
 
-import InlineCommentThread from './InlineCommentThread';
+import YokedInlineCommentThread from './YokedInlineCommentThread';
 import YokedPullRequestNewCommentInput from './YokedPullRequestNewCommentInput';
 import {DiffSide} from './generated/graphql';
 import {gitHubPullRequestCanAddComment, gitHubPullRequestNewCommentInputShown} from './recoil';
@@ -195,7 +195,7 @@ function SplitDiffRowCommentThreads({
         // Add a prefix to keys for this component to ensure they are distinct
         // from the integer keys returned by createTokenizedIntralineDiff().
         const key = `c-${index}`;
-        return <InlineCommentThread key={key} comments={comments} />;
+        return <YokedInlineCommentThread key={key} comments={comments} />;
       })}
     </>
   );
