@@ -92,6 +92,7 @@ export type TrackEventName =
   | 'UnshelveOperation'
   | 'RunCommand'
   | 'StatusCommand'
+  | 'SawStableLocation'
   | 'LogCommand'
   | 'LookupCommitsCommand'
   | 'LookupAllCommitChangedFilesCommand'

@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactNode} from 'react';
-
 import {bookmarksDataStorage} from './BookmarksData';
 import {Tooltip} from './Tooltip';
+import {tracker} from './analytics';
 import {Tag} from './components/Tag';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
@@ -25,21 +24,33 @@ const styles = stylex.create({
 
 export type BookmarkKind = 'remote' | 'local' | 'stable';
 
+const logged = new Set<string>();
+function logExposureOncePerSession(location: string) {
+  if (logged.has(location)) {
+    return;
+  }
+  tracker.track('SawStableLocation', {extras: {location}});
+  logged.add(location);
+}
+
 export function Bookmark({
   children,
   kind,
   fullLength,
   tooltip,
 }: {
-  children: ReactNode;
+  children: string;
   kind: BookmarkKind;
   fullLength?: boolean;
   tooltip?: string;
 }) {
+  if (kind === 'stable') {
+    logExposureOncePerSession(children);
+  }
   const inner = (
     <Tag
       xstyle={[kind === 'stable' && styles.stable, fullLength === true && styles.fullLength]}
-      title={tooltip == null && typeof children === 'string' ? children : undefined}>
+      title={tooltip == null ? children : undefined}>
       {children}
     </Tag>
   );
