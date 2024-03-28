@@ -689,17 +689,19 @@ export class Repository {
       const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
 
       const primaryRevset = '(interestingbookmarks() + heads(draft()))';
+
       // Revset to fetch for commits, e.g.:
       // smartlog(interestingbookmarks() + heads(draft()) + .)
       // smartlog((interestingbookmarks() + heads(draft()) & date(-14)) + .)
-      // smartlog((interestingbookmarks() + heads(draft()) & date(-14)) + . + a1b2c3d4)
+      // smartlog((interestingbookmarks() + heads(draft()) & date(-14)) + . + present(a1b2c3d4))
       const revset = `smartlog(${[
         !visibleCommitDayRange
           ? primaryRevset
           : // filter default smartlog query by date range
             `(${primaryRevset} & date(-${visibleCommitDayRange}))`,
         '.', // always include wdir parent
-        ...this.stableLocations.map(location => location.hash),
+        // stable locations hashes may be newer than the repo has, wrap in `present()` to only include if available.
+        ...this.stableLocations.map(location => `present(${location.hash})`),
       ]
         .filter(notEmpty)
         .join(' + ')})`;

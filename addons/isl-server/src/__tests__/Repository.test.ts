@@ -429,7 +429,17 @@ describe('Repository', () => {
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
         execaSpy,
-        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + aaa)',
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(aaa))',
+      );
+
+      repo.stableLocations = [
+        {name: 'mystable', hash: 'aaa', info: 'this is the stable for aaa'},
+        {name: '2', hash: 'bbb', info: '2'},
+      ];
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        execaSpy,
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(aaa) + present(bbb))',
       );
 
       repo.nextVisibleCommitRangeInDays();
@@ -437,7 +447,7 @@ describe('Repository', () => {
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
         execaSpy,
-        'smartlog((interestingbookmarks() + heads(draft())) + . + aaa)',
+        'smartlog((interestingbookmarks() + heads(draft())) + . + present(aaa) + present(bbb))',
       );
     });
   });
