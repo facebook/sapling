@@ -8,7 +8,7 @@
 import type {UserFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
-import RepoAssignableUsersInput from './RepoAssignableUsersInput';
+import YokedRepoAssignableUsersInput from './YokedRepoAssignableUsersInput';
 import {gitHubUsername} from './github/gitHubCredentials';
 import {
   gitHubClient,
@@ -117,7 +117,7 @@ export default function PullRequestReviewers(): React.ReactElement {
   //       <Button trailingIcon={GearIcon}>Reviewers</Button>
   //     </ActionMenu.Anchor>
   //     <ActionMenu.Overlay width="medium">
-  //       <RepoAssignableUsersInput
+  //       <YokedRepoAssignableUsersInput
   //         existingUserIDs={pullRequestReviewers.reviewerIDs}
   //         onSelect={updateReviewers}
   //       />
