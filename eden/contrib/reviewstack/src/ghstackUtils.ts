@@ -8,7 +8,7 @@
 import {notEmpty} from 'shared/utils';
 
 export function pullRequestNumbersFromBody(body: string): number[] | null {
-  if (!body.startsWith('Stack from [Modelcode](https://modelcode.ai/):')) {
+  if (!body.startsWith('Stack from [Modelcode]')) {
     return null;
   }
 
