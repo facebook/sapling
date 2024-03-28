@@ -31,6 +31,24 @@ export function formatISODate(iso: string, withTime = true): string {
   return date.toLocaleString(undefined, options);
 }
 
+export function formatISODateShort(iso: string, withTime = true): string {
+  const date = new Date(iso);
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: undefined,
+    month: 'short',
+    day: 'numeric',
+  };
+
+  if (withTime) {
+    Object.assign(options, {
+      hour: 'numeric',
+      minute: 'numeric',
+    });
+  }
+
+  return date.toLocaleString(undefined, options);
+}
+
 export function shortOid(oid: string): string {
   return oid.slice(0, 8);
 }
