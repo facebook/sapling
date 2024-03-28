@@ -1,0 +1,6 @@
+publish(
+    wiki_root_path = "Source_Control/Mononoke/Mononoke_Storage/Caching",
+    folder = "docs",
+    oncall = "scm_server_infra",
+    readme_as_root = True,
+)
