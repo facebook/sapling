@@ -9,7 +9,7 @@ import type {CommitChange, Diff, ModifyChange} from './github/diffTypes';
 import type {GitObjectID} from './github/types';
 
 import {FileHeader} from './SplitDiffFileHeader';
-import SplitDiffView from './SplitDiffView';
+import YokedSplitDiffView from './YokedSplitDiffView';
 import joinPath from './joinPath';
 import {fileContentsDelta, gitHubBlob} from './recoil';
 import {Box, Text} from '@primer/react';
@@ -70,7 +70,7 @@ function AddedFile({
       const {isBinary, text} = blob ?? {};
       if (text != null && !isBinary) {
         return (
-          <SplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />
+          <YokedSplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />
         );
       } else {
         return <BinaryFile path={path} />;
@@ -137,7 +137,7 @@ function ModifiedFile({modify, isPullRequest}: {modify: ModifyChange; isPullRequ
         return null;
       } else {
         return (
-          <SplitDiffView
+          <YokedSplitDiffView
             path={path}
             before={before.oid}
             after={after.oid}
