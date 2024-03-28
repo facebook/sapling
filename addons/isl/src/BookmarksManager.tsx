@@ -8,7 +8,7 @@
 import type {ReactNode} from 'react';
 
 import {Bookmark} from './Bookmark';
-import {bookmarksDataStorage, remoteBookmarks} from './BookmarksData';
+import {bookmarksDataStorage, fetchedStablesAtom, remoteBookmarks} from './BookmarksData';
 import {Column, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
@@ -22,6 +22,7 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
+import {notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
   bookmarkGroup: {
@@ -62,12 +63,18 @@ export function BookmarksManagerMenu() {
 
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
+  const stableLocations = useAtomValue(fetchedStablesAtom);
   return (
     <DropdownFields
       title={<T>Bookmarks Manager</T>}
       icon="bookmark"
       data-testid="bookmarks-manager-dropdown">
       <BookmarksList title={<T>Remote Bookmarks</T>} names={bookmarks} />
+      <BookmarksList
+        title={<T>Stable Locations</T>}
+        names={stableLocations?.special?.map(info => info.value?.name).filter(notEmpty) ?? []}
+        special
+      />
     </DropdownFields>
   );
 }

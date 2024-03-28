@@ -5,8 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {localStorageBackedAtom} from './jotaiUtils';
+import type {StableLocationData} from './types';
+
+import serverAPI from './ClientToServerAPI';
+import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
 import {dagWithPreviews} from './previews';
+import {registerDisposable} from './utils';
 import {atom} from 'jotai';
 
 type BookmarksData = {
@@ -16,6 +20,22 @@ type BookmarksData = {
 export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.bookmarks', {
   hiddenRemoteBookmarks: [],
 });
+
+/** Result of fetch from the server. Stables are automatically included in list of commits */
+export const fetchedStablesAtom = atom<StableLocationData | undefined>(undefined);
+
+registerDisposable(
+  serverAPI,
+  serverAPI.onMessageOfType('fetchedStables', data => {
+    writeAtom(fetchedStablesAtom, data.stables);
+  }),
+  import.meta.hot,
+);
+fetchStableLocations(); // fetch on startup
+
+export function fetchStableLocations() {
+  serverAPI.postMessage({type: 'fetchAndSetStables'});
+}
 
 export const remoteBookmarks = atom(get => {
   const dag = get(dagWithPreviews);
