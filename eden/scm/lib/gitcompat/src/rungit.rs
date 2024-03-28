@@ -104,7 +104,7 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
     let quiet =
         opts.quiet && ["fetch", "init", "checkout", "push", "bundle create"].contains(&cmd_name);
     if quiet {
-        cmd.arg("--verbose");
+        cmd.arg("--quiet");
     }
     cmd.args(args);
 

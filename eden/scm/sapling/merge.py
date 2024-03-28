@@ -1935,7 +1935,10 @@ def goto(
             updatecheck = "none"
         assert updatecheck in ("none", "noconflict")
 
-    if edenfs.requirement in repo.requirements:
+    if (
+        edenfs.requirement in repo.requirements
+        or git.DOTGIT_REQUIREMENT in repo.requirements
+    ):
         from . import eden_update
 
         return eden_update.update(

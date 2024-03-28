@@ -19,17 +19,9 @@ Go forward
   $ sl go -q $B
 
 Status should be clean
-BUG: status is not clean
 
   $ sl status
-  M A
-  M B
 
 Go backward
-BUG: cannot go back
 
   $ sl go -q $A
-  abort: 1 conflicting file changes:
-   B
-  (commit, shelve, goto --clean to discard all your changes, or update --merge to merge them)
-  [255]
