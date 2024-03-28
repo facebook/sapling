@@ -8,7 +8,6 @@
 import type {LabelFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
-import RepoLabelsInput from './RepoLabelsInput';
 import {
   gitHubClient,
   gitHubPullRequest,
@@ -80,19 +79,6 @@ export default function PullRequestLabels(): React.ReactElement {
       },
     [pullRequestLabels, setPullRequestLabels],
   );
-
-  // const label = !viewerDidAuthor ? (
-  //   <FieldLabel label="Labels" />
-  // ) : (
-  //   <ActionMenu>
-  //     <ActionMenu.Anchor>
-  //       <Button trailingIcon={GearIcon}>Labels</Button>
-  //     </ActionMenu.Anchor>
-  //     <ActionMenu.Overlay width="medium">
-  //       <RepoLabelsInput existingLabelIDs={existingLabelIDs} onSelect={updateLabels} />
-  //     </ActionMenu.Overlay>
-  //   </ActionMenu>
-  // );
 
   return (
     <>
