@@ -127,18 +127,8 @@ class deferredpullattempt(pullattempt):
         return None
 
 
-def trypull(repo, xs):
-    """Pull the list of given names xs.
-
-    Return true if pull succeeded for all names. Does not raise.
-    """
-    # Do not attempt to pull the same name twice, or names in the repo.
-    repo._autopulled = getattr(repo, "_autopulled", set())
-    xs = [x for x in xs if x not in repo._autopulled and x not in repo]
-    if not xs:
-        return False
-    repo._autopulled.update(xs)
-
+def calculate_attempts(repo, xs):
+    """Calculate the "pullattempt"s for the given names."""
     # If paths.default is not set. Do not attempt to pull.
     if repo.ui.paths.get("default") is None:
         return False
@@ -163,6 +153,19 @@ def trypull(repo, xs):
             if attempt:
                 assert isinstance(attempt, pullattempt)
                 attempts.append(attempt)
+
+    return attempts
+
+
+def trypull(repo, xs):
+    # Do not attempt to pull the same name twice, or names in the repo.
+    repo._autopulled = getattr(repo, "_autopulled", set())
+    xs = [x for x in xs if x not in repo._autopulled and x not in repo]
+    if not xs:
+        return False
+    repo._autopulled.update(xs)
+
+    attempts = calculate_attempts(repo, xs)
 
     # Merge all pullattempts and execute it.
     if attempts:
