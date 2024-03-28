@@ -146,7 +146,7 @@ LocalStoreCachedBackingStore::getBlobMetadata(
                         -> ImmediateFuture<GetBlobMetaResult> {
                       if (result.blobMeta &&
                           result.blobMeta->sha1 !=
-                              kEmptySha1) { // from eden/fs/model/Hash.cpp
+                              kZeroHash) { // from eden/fs/model/Hash.cpp
                         if (result.origin ==
                             ObjectFetchContext::Origin::FromDiskCache) {
                           self->stats_->increment(
