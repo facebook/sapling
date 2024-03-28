@@ -32,7 +32,5 @@ Status should be clean
   $ sl status
 
 Git status should be clean too
-BUG: Not the case
 
   $ git status --porcelain
-  AD A

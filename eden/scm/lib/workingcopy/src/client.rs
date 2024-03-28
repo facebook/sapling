@@ -132,9 +132,13 @@ impl WorkingCopyClient for RunGitOptions {
 
     fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> Result<()> {
         tracing::debug!(?p1, ?p2, ?p1_tree, "set_parents");
-        let p1_hex = p1.to_hex();
-        // TODO: What to do with p2 and p1 tree?
-        self.call("update-ref", &["HEAD", &p1_hex])?;
+        // TODO: What to do with p2?
+        if self.resolve_head()? != p1 {
+            let p1_hex = p1.to_hex();
+            self.call("update-ref", &["HEAD", &p1_hex])?;
+            let p1_tree_hex = p1_tree.to_hex();
+            self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;
+        }
         Ok(())
     }
 
