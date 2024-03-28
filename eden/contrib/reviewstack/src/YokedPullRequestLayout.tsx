@@ -80,7 +80,7 @@ export default function PullRequestLayout({
   const prHeaderHeight = prHeaderElement?.current
     ? prHeaderElement.current.getBoundingClientRect().height
     : 0;
-  const totalHeaderHeight = APP_HEADER_HEIGHT + prHeaderHeight;
+  const totalHeaderHeight = YOKE_APP_HEADER_HEIGHT + prHeaderHeight;
 
   // console.log('prHeaderHeight', prHeaderHeight);
   // console.log('HEADER_HEIGHT', HEADER_HEIGHT);
