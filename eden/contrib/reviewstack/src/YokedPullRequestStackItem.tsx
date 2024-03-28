@@ -8,11 +8,17 @@
 import type {StackPullRequestFragment} from './generated/graphql';
 
 import BulletItems from './BulletItems';
-import CommentCount from './CommentCount';
-import PullRequestStateLabel from './PullRequestStateLabel';
+import YokedCommentCount from './YokedCommentCount';
+import YokedPullRequestStateLabel from './YokedPullRequestStateLabel';
 import useNavigateToPullRequest from './useNavigateToPullRequest';
-import {formatISODate} from './utils';
+import {formatISODateShort} from './utils';
 import {ActionList, Box, Text} from '@primer/react';
+import {
+  CommentIcon,
+  CommentDiscussionIcon,
+  GitPullRequestIcon,
+  CalendarIcon,
+} from '@primer/octicons-react';
 import React from 'react';
 import cn from 'classnames';
 
@@ -41,33 +47,6 @@ export default React.memo(function PullRequestStackItem({
   const navigateToPullRequest = useNavigateToPullRequest();
 
   return (
-    // <Box fontSize={0}>
-    //   <Box overflow="hidden" sx={{textOverflow: 'ellipsis'}}>
-    //     <Text fontWeight="bold" fontSize={1} whiteSpace="nowrap">
-    //       {title}
-    //     </Text>
-    //   </Box>
-    //   <PullRequestStateLabel
-    //     reviewDecision={reviewDecision ?? null}
-    //     state={state}
-    //     variant="small"
-    //   />
-    //   <Text>#{number}</Text>
-    //   {formatISODate(updatedAt, false)}
-    //   <CommentCount count={comments.totalCount} />
-    // </Box>
-
-    // <div className="stack-item">
-    //   <div className="stack-item-order">{stackIndex + 1}</div>
-    //   <div className="stack-item-info">
-    //     <div className="stack-item-title">
-    //       <span>{title}</span>
-    //     </div>
-    //     <div className="stack-item-id">{`#${number}`}</div>
-    //   </div>
-    //   <button className="stack-item-handle" />
-    // </div>
-
     <div className={cn('stack-item', {active: isSelected})}>
       <div className="stack-item-order">{pad(stackIndex + 1, 2)}</div>
       <div className="stack-item-info">
@@ -75,9 +54,40 @@ export default React.memo(function PullRequestStackItem({
           <span className="stack-item-name">{title}</span>
           <span className="stack-item-id">{`#${number}`}</span>
         </div>
-        <div className="stack-item-description">test</div>
+        <div className="stack-item-description">
+          <YokedPullRequestStateLabel
+            plaintext={true}
+            reviewDecision={reviewDecision ?? null}
+            state={state}
+          />
+          <span>{'\u30FB'}</span>
+          <CalendarIcon size={12} />
+          <span>{formatISODateShort(updatedAt, false)}</span>
+          <span>{'\u30FB'}</span>
+          <CommentIcon size={12} />
+          {/* TODO(dk): comments.totalCount is broken for some reason (even in original Sapling app) */}
+          <span>{comments.totalCount}</span>
+        </div>
       </div>
       <button className="stack-item-handle" onClick={() => navigateToPullRequest(number)} />
     </div>
   );
+
+  // return (
+  //   <Box fontSize={0}>
+  //     <Box overflow="hidden" sx={{textOverflow: 'ellipsis'}}>
+  //       <Text fontWeight="bold" fontSize={1} whiteSpace="nowrap">
+  //         {title}
+  //       </Text>
+  //     </Box>
+  //     <PullRequestStateLabel
+  //       reviewDecision={reviewDecision ?? null}
+  //       state={state}
+  //       variant="small"
+  //     />
+  //     <Text>#{number}</Text>
+  //     {formatISODate(updatedAt, false)}
+  //     <CommentCount count={comments.totalCount} />
+  //   </Box>
+  // );
 });
