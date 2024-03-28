@@ -7,6 +7,7 @@
 
 import type {Operation} from './operations/Operation';
 
+import {fetchStableLocations} from './BookmarksData';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
@@ -80,7 +81,10 @@ export function PullButton() {
             appearance="secondary"
             buttonDisabled={!!isRunningPull || disabledFromUncommittedChanges}
             options={pullButtonOptions}
-            onClick={() => runOperation(currentChoice.getOperation())}
+            onClick={() => {
+              runOperation(currentChoice.getOperation());
+              fetchStableLocations();
+            }}
             onChangeSelected={choice => setDropdownChoiceKey(choice.id)}
             selected={currentChoice}
             icon={<Icon slot="start" icon={isRunningPull ? 'loading' : 'repo'} />}
@@ -91,6 +95,7 @@ export function PullButton() {
             disabled={!!isRunningPull}
             onClick={() => {
               runOperation(new PullOperation());
+              fetchStableLocations();
             }}>
             <Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />
             <T>Pull</T>
