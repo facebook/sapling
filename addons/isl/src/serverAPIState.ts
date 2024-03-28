@@ -18,6 +18,7 @@ import type {
   UncommittedChanges,
 } from './types';
 
+import {hiddenRemoteBookmarksAtom} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
@@ -250,12 +251,29 @@ export const latestCommits = atom(get => {
 export const latestDag = atom(get => {
   const commits = get(latestCommits);
   const successorMap = get(latestSuccessorsMapAtom);
+  const hiddenRemoteBookmarks = get(hiddenRemoteBookmarksAtom);
   const commitDag = undefined; // will be populated from `commits`
   const dag = Dag.fromDag(commitDag, successorMap)
-    .add(commits.map(c => DagCommitInfo.fromCommitInfo(c)))
+    .add(
+      commits.map(c => {
+        return DagCommitInfo.fromCommitInfo(removeHiddenBookmarks(hiddenRemoteBookmarks, c));
+      }),
+    )
     .forceConnectPublic();
   return dag;
 });
+
+function removeHiddenBookmarks(hiddenBookmarks: Set<string>, commit: CommitInfo): CommitInfo {
+  if (commit.phase !== 'public') {
+    return commit;
+  }
+  return {
+    ...commit,
+    remoteBookmarks: commit.remoteBookmarks.filter(b => !hiddenBookmarks.has(b)),
+    bookmarks: commit.bookmarks.filter(b => !hiddenBookmarks.has(b)),
+    stableCommitMetadata: commit.stableCommitMetadata?.filter(b => !hiddenBookmarks.has(b.value)),
+  };
+}
 
 export const commitFetchError = atom(get => {
   return get(latestCommitsData).error;

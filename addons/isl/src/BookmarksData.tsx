@@ -9,7 +9,7 @@ import type {StableLocationData} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
-import {dagWithPreviews} from './previews';
+import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 import {atom} from 'jotai';
 
@@ -19,6 +19,9 @@ type BookmarksData = {
 };
 export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.bookmarks', {
   hiddenRemoteBookmarks: [],
+});
+export const hiddenRemoteBookmarksAtom = atom(get => {
+  return new Set(get(bookmarksDataStorage).hiddenRemoteBookmarks);
 });
 
 /** Result of fetch from the server. Stables are automatically included in list of commits */
@@ -38,8 +41,9 @@ export function fetchStableLocations() {
 }
 
 export const remoteBookmarks = atom(get => {
-  const dag = get(dagWithPreviews);
-  const commits = dag.getBatch(dag.public_().toArray());
+  // Note: `latestDag` will have already filtered out hidden bookmarks,
+  // so we need to use latestCommits, which is not filtered.
+  const commits = get(latestCommits).filter(commit => commit.phase === 'public');
   commits.sort((a, b) => b.date.valueOf() - a.date.valueOf());
   return commits.flatMap(commit => commit.remoteBookmarks);
 });
