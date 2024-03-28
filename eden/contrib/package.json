@@ -20,5 +20,8 @@
     "prettier-check": "prettier --check .",
     "prettier-fix": "prettier --write ."
   },
-  "dependencies": {}
+  "dependencies": {
+    "geist": "^1.2.2",
+    "non.geist": "^1.0.2"
+  }
 }

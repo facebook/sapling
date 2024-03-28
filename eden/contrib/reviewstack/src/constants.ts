@@ -6,6 +6,7 @@
  */
 
 export const APP_HEADER_HEIGHT = 60;
+export const YOKE_APP_HEADER_HEIGHT = 80;
 
 export const CURSOR_POINTER = {cursor: 'pointer'};
 
