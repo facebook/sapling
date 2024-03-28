@@ -26,13 +26,15 @@ body {
 
 .yoke-main {
   flex: 1;
+  width: calc(100vw - 384px);
+  height: calc(100vh - var(--header-size));
   border-top-left-radius: calc(var(--border-radius) * 4);
   border-bottom-left-radius: calc(var(--border-radius) * 4);
-  height: calc(100vh - var(--header-size));
   /* overflow-y: scroll; */
   /* overflow: hidden; */
   background-color: var(--white);
   /* background: red; */
+  overflow: hidden;
 
   .pr-header {
     padding: var(--xs) var(--padding) var(--padding);
@@ -221,6 +223,10 @@ body {
     stroke-linecap: round;
     transform-origin: center;
   }
+}
+
+.pr-info {
+  white-space: nowrap;
 }
 
 .pr-title {

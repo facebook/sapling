@@ -127,7 +127,7 @@ export default function PullRequestLayout({
       </div>
       <div className="yoke-main">
         <div className="yoke-main-inner">
-          <YokedPullRequestHeader prHeaderElement={prHeaderElement} />
+          <YokedPullRequestHeader height={HEADER_HEIGHT} prHeaderElement={prHeaderElement} />
           <div className="yoke-body">
             <Suspense fallback={<CenteredSpinner message="Loading pull request..." />}>
               <Drawers

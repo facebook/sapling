@@ -18,10 +18,14 @@ import {Suspense, useRef, RefObject} from 'react';
 import {useRecoilValue} from 'recoil';
 
 type Props = {
+  height: number;
   prHeaderElement: RefObject<HTMLDivElement>;
 };
 
-export default function PullRequestHeader({prHeaderElement}: Props): React.ReactElement | null {
+export default function PullRequestHeader({
+  height,
+  prHeaderElement,
+}: Props): React.ReactElement | null {
   const pullRequest = useRecoilValue(gitHubPullRequest);
 
   if (pullRequest == null) {
@@ -33,6 +37,7 @@ export default function PullRequestHeader({prHeaderElement}: Props): React.React
   return (
     <Box
       className="pr-header"
+      height={height}
       borderBottomWidth={1}
       borderBottomStyle="solid"
       borderBottomColor="border.default"
@@ -42,7 +47,7 @@ export default function PullRequestHeader({prHeaderElement}: Props): React.React
       ref={prHeaderElement}
       // ref={prHeaderRef}
     >
-      <Box>
+      <Box className="pr-info">
         <TrustedRenderedMarkdown trustedHTML={titleHTML} inline={true} className="pr-title" />{' '}
         <Link className="pr-number" href={url} target="_blank">
           <Text fontWeight="normal">{`#${number}`}</Text>
