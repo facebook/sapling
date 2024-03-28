@@ -169,7 +169,7 @@ export function getSuggestedRebaseOperation(
   const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
   const isBulk = source != null && Array.isArray(source);
   tracker.track('ClickSuggestedRebase', {
-    extras: {destination, isBulk},
+    extras: {destination, isBulk, locations: dest.stableCommitMetadata?.map(s => s.value)},
   });
 
   const operation =
