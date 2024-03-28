@@ -9,7 +9,7 @@ import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
-import {Bookmark, Bookmarks} from './Bookmark';
+import {Bookmarks} from './Bookmark';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
@@ -46,11 +46,11 @@ import {
   useRunPreviewedOperation,
   inlineProgressByHash,
 } from './operationsState';
-import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
+import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitSelection} from './selection';
-import {isFetchingUncommittedChanges, latestDag} from './serverAPIState';
+import {latestDag} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
@@ -282,7 +282,20 @@ export const Commit = memo(
           </VSCodeButton>
           <VSCodeButton
             appearance="primary"
-            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
+            onClick={() => {
+              handlePreviewedOperation(/* cancel */ false);
+
+              const dag = readAtom(dagWithPreviews);
+              const onto = dag.get(commit.parents[0]);
+              if (onto) {
+                tracker.track('ConfirmDragAndDropRebase', {
+                  extras: {
+                    remoteBookmarks: onto.remoteBookmarks,
+                    locations: onto.stableCommitMetadata?.map(s => s.value),
+                  },
+                });
+              }
+            }}>
             <T>Run Rebase</T>
           </VSCodeButton>
         </React.Fragment>,

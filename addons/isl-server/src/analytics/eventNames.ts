@@ -84,6 +84,7 @@ export type TrackEventName =
   | 'RebaseKeepOperation'
   | 'RebaseAllDraftCommitsOperation'
   | 'RebaseOperation'
+  | 'ConfirmDragAndDropRebase'
   | 'ResolveOperation'
   | 'RevertOperation'
   | 'SetConfigOperation'

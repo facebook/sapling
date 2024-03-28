@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {tracker} from '../analytics';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
@@ -365,6 +366,7 @@ describe('operations', () => {
     });
 
     it('force clears optimistic state after fetching after an operation has finished', () => {
+      jest.spyOn(tracker, 'track').mockImplementation(() => null);
       const commitsBeforeOperations = {
         value: [
           COMMIT('e', 'Commit E', 'd', {isDot: true}),
