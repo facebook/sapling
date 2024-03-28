@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {BookmarkKind} from './Bookmark';
 import type {ReactNode} from 'react';
 
 import {Bookmark} from './Bookmark';
@@ -40,7 +41,7 @@ export function BookmarksManagerMenu() {
   const bookmarks = useAtomValue(remoteBookmarks);
   if (bookmarks.length < 2) {
     // No use showing bookmarks menu if there's only one remote bookmark
-    return;
+    return null;
   }
   return (
     <Tooltip
@@ -69,11 +70,11 @@ function BookmarksManager(_props: {dismiss: () => void}) {
       title={<T>Bookmarks Manager</T>}
       icon="bookmark"
       data-testid="bookmarks-manager-dropdown">
-      <BookmarksList title={<T>Remote Bookmarks</T>} names={bookmarks} />
+      <BookmarksList title={<T>Remote Bookmarks</T>} names={bookmarks} kind="remote" />
       <BookmarksList
         title={<T>Stable Locations</T>}
         names={stableLocations?.special?.map(info => info.value?.name).filter(notEmpty) ?? []}
-        special
+        kind="stable"
       />
     </DropdownFields>
   );
@@ -82,11 +83,11 @@ function BookmarksManager(_props: {dismiss: () => void}) {
 function BookmarksList({
   names,
   title,
-  special,
+  kind,
 }: {
   names: Array<string>;
   title: ReactNode;
-  special?: boolean;
+  kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   if (names.length == 0) {
@@ -112,7 +113,7 @@ function BookmarksList({
                 }
                 setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
               }}>
-              <Bookmark fullLength key={bookmark} special={special}>
+              <Bookmark fullLength key={bookmark} kind={kind}>
                 {bookmark}
               </Bookmark>
             </Checkbox>

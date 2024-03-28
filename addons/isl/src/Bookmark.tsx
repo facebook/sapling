@@ -14,7 +14,7 @@ import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 
 const styles = stylex.create({
-  special: {
+  stable: {
     backgroundColor: 'var(--list-hover-background)',
     color: 'var(--list-hover-foreground)',
   },
@@ -23,20 +23,22 @@ const styles = stylex.create({
   },
 });
 
+export type BookmarkKind = 'remote' | 'local' | 'stable';
+
 export function Bookmark({
   children,
-  special,
+  kind,
   fullLength,
   tooltip,
 }: {
   children: ReactNode;
-  special?: boolean;
+  kind: BookmarkKind;
   fullLength?: boolean;
   tooltip?: string;
 }) {
   const inner = (
     <Tag
-      xstyle={[special === true && styles.special, fullLength === true && styles.fullLength]}
+      xstyle={[kind === 'stable' && styles.stable, fullLength === true && styles.fullLength]}
       title={tooltip == null && typeof children === 'string' ? children : undefined}>
       {children}
     </Tag>
@@ -46,10 +48,10 @@ export function Bookmark({
 
 export function Bookmarks({
   bookmarks,
-  special,
+  kind,
 }: {
   bookmarks: ReadonlyArray<string | {value: string; description: string}>;
-  special?: boolean;
+  kind: BookmarkKind;
 }) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   return (
@@ -65,7 +67,7 @@ export function Bookmarks({
           const value = typeof bookmark === 'string' ? bookmark : bookmark.value;
           const tooltip = typeof bookmark === 'string' ? undefined : bookmark.description;
           return (
-            <Bookmark key={value} special={special} tooltip={tooltip}>
+            <Bookmark key={value} kind={kind} tooltip={tooltip}>
               {value}
             </Bookmark>
           );

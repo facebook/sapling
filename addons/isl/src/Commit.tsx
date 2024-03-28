@@ -395,10 +395,10 @@ export const Commit = memo(
               </span>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
-            <Bookmarks bookmarks={commit.bookmarks} />
-            <Bookmarks bookmarks={commit.remoteBookmarks} />
+            <Bookmarks bookmarks={commit.bookmarks} kind="local" />
+            <Bookmarks bookmarks={commit.remoteBookmarks} kind="remote" />
             {commit?.stableCommitMetadata != null ? (
-              <Bookmarks bookmarks={commit.stableCommitMetadata} special />
+              <Bookmarks bookmarks={commit.stableCommitMetadata} kind="stable" />
             ) : null}
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {isNarrow ? commitActions : null}
