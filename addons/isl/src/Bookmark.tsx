@@ -17,12 +17,23 @@ const styles = stylex.create({
     backgroundColor: 'var(--list-hover-background)',
     color: 'var(--list-hover-foreground)',
   },
+  fullLength: {
+    maxWidth: 'unset',
+  },
 });
 
-export function Bookmark({children, special}: {children: ReactNode; special?: boolean}) {
+export function Bookmark({
+  children,
+  special,
+  fullLength,
+}: {
+  children: ReactNode;
+  special?: boolean;
+  fullLength?: boolean;
+}) {
   return (
     <Tag
-      xstyle={special !== true ? undefined : styles.special}
+      xstyle={[special === true && styles.special, fullLength === true && styles.fullLength]}
       title={typeof children === 'string' ? children : undefined}>
       {children}
     </Tag>

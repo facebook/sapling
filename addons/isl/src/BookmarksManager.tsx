@@ -80,7 +80,9 @@ function BookmarksManager(_props: {dismiss: () => void}) {
               }
               setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
             }}>
-            <Bookmark key={bookmark}>{bookmark}</Bookmark>
+            <Bookmark fullLength key={bookmark}>
+              {bookmark}
+            </Bookmark>
           </Checkbox>
         ))}
       </Column>
