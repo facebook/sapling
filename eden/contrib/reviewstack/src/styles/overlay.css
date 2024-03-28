@@ -1,0 +1,226 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *                                  Overlay                                  *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+.overlaying {
+  .app {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+.overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: var(--z-index-up);
+}
+
+.overlay-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgb(0 0 0 / 75%);
+}
+
+.overlay-foreground {
+  color: var(--gray-800);
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+}
+
+.overlay-action {
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  right: var(--xs);
+  padding: 0 var(--padding);
+  cursor: pointer;
+  animation: var(--run) var(--soon) var(--bounce) backwards grow-in;
+  &:hover {
+    color: var(--focus);
+  }
+  .icon {
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+}
+
+.overlay-action-title {
+  /*  */
+}
+
+.overlay-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--tile);
+  padding-left: var(--xxs);
+}
+
+.gallery-overlay {
+  /*  */
+}
+
+.gallery-padding {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: var(--tile) var(--padding) var(--padding) var(--padding);
+  @media (--xxs) {
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.gallery-wrapper {
+  position: relative;
+  height: 100%;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.gallery {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: var(--background);
+}
+
+.gallery-head {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: calc(var(--xl) / 2);
+  padding: var(--padding);
+}
+
+.gallery-body {
+  height: calc(100% - calc(var(--xl) / 2));
+  padding: var(--padding);
+  overflow: hidden scroll;
+}
+
+.gallery-body-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin-top: calc(var(--xl) / 2);
+  box-shadow: 0 8px 21px rgb(0 0 0 / 13%) inset;
+  pointer-events: none;
+}
+
+.gallery-images {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: var(--margin);
+  @media (--l) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (--s) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (--xs) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (--xxs) {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+.gallery-image {
+  position: relative;
+  height: 0;
+  padding-top: 100%;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.gallery-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  min-width: 100%;
+  object-fit: cover;
+}
+
+.lightbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--black);
+  @media (--s) {
+    flex-direction: column;
+  }
+}
+
+.lightbox-media {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 100%;
+}
+
+.lightbox-thumbnail {
+  /* border-radius: var(--border-radius); */
+}
+
+.lightbox-controls {
+  /*  */
+}
+
+.lightbox-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: var(--margin);
+  @media (--s) {
+    display: none;
+  }
+}
+
+.lightbox-back-alt {
+  display: none;
+  @media (--s) {
+    display: block;
+  }
+}
+
+.lightbox-aside {
+  width: calc(var(--xl) * 2);
+  height: 100%;
+  padding: var(--padding);
+  background-color: var(--background);
+  hr {
+    margin: var(--margin) 0;
+  }
+  @media (--s) {
+    width: 100%;
+  }
+}
