@@ -11,22 +11,24 @@ import CenteredSpinner from './CenteredSpinner';
 import {useCommand} from './KeyboardShortcuts';
 import PullRequest from './PullRequest';
 import PullRequestHeader from './PullRequestHeader';
-import PullRequestTimeline from './PullRequestTimeline';
+import YokedPullRequestTimeline from './YokedPullRequestTimeline';
 import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
 import {APP_HEADER_HEIGHT} from './constants';
 import {gitHubOrgAndRepo, gitHubPullRequestID} from './recoil';
 import {Box, Text} from '@primer/react';
-import React, {Component, Suspense, useEffect} from 'react';
+import React, {Component, Suspense, useEffect, useRef, RefObject} from 'react';
 import {atom, useSetRecoilState} from 'recoil';
 import {Drawers} from 'shared/Drawers';
 
 import './PullRequestLayout.css';
 
 import YokedPullRequestStack from './YokedPullRequestStack';
+import {HomeIcon, CommentDiscussionIcon} from '@primer/octicons-react';
+import {StyledOcticon} from '@primer/react';
 
-const HEADER_HEIGHT = 100;
+const HEADER_HEIGHT = 121;
 const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + APP_HEADER_HEIGHT;
-const COMMENT_INPUT_HEIGHT = 125;
+const COMMENT_INPUT_HEIGHT = 148;
 
 const drawerState = atom<AllDrawersState>({
   key: 'drawerState',
@@ -65,6 +67,23 @@ export default function PullRequestLayout({
       right: {...state.right, collapsed: !state.right.collapsed},
     }));
   });
+
+  const onToggleDrawer = () => {
+    console.log('test');
+    setDrawerState(state => ({
+      ...state,
+      right: {...state.right, collapsed: !state.right.collapsed},
+    }));
+  };
+
+  const prHeaderElement: RefObject<HTMLDivElement> = useRef(null);
+  const prHeaderHeight = prHeaderElement?.current
+    ? prHeaderElement.current.getBoundingClientRect().height
+    : 0;
+  const totalHeaderHeight = APP_HEADER_HEIGHT + prHeaderHeight;
+
+  // console.log('prHeaderHeight', prHeaderHeight);
+  // console.log('HEADER_HEIGHT', HEADER_HEIGHT);
 
   return (
     <div className="yoke">
@@ -107,22 +126,27 @@ export default function PullRequestLayout({
         </div> */}
       </div>
       <div className="yoke-main">
-        <Box>
-          <PullRequestHeader height={HEADER_HEIGHT} />
-          <Suspense fallback={<CenteredSpinner message="Loading pull request..." />}>
-            <Drawers
-              drawerState={drawerState}
-              errorBoundary={ErrorBoundary}
-              rightLabel={<Text className="drawer-label-text">...</Text>}
-              right={<TimelineDrawer />}>
-              <Box display="flex" flexDirection="row">
-                <Box height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`} overflow="auto">
-                  <PullRequest />
+        <div className="yoke-main-inner">
+          <PullRequestHeader prHeaderElement={prHeaderElement} />
+          <div className="yoke-body">
+            <Suspense fallback={<CenteredSpinner message="Loading pull request..." />}>
+              <Drawers
+                drawerState={drawerState}
+                errorBoundary={ErrorBoundary}
+                rightLabel={<StyledOcticon icon={CommentDiscussionIcon} />}
+                right={<TimelineDrawer />}>
+                <Box display="flex" flexDirection="row">
+                  <Box height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`}>
+                    <PullRequest />
+                  </Box>
                 </Box>
-              </Box>
-            </Drawers>
-          </Suspense>
-        </Box>
+              </Drawers>
+            </Suspense>
+            <button className="yoke-drawer-toggle" onClick={onToggleDrawer}>
+              <StyledOcticon icon={CommentDiscussionIcon} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -131,8 +155,8 @@ export default function PullRequestLayout({
 function TimelineDrawer() {
   return (
     <Box display="flex" flexDirection="column" height={`calc(100vh - ${TOTAL_HEADER_HEIGHT}px)`}>
-      <Box height={`calc(100% - ${COMMENT_INPUT_HEIGHT}px)`} overflow="auto">
-        <PullRequestTimeline />
+      <Box overflow="auto" flex={1}>
+        <YokedPullRequestTimeline />
       </Box>
       <Box display="flex" height={COMMENT_INPUT_HEIGHT}>
         <PullRequestTimelineCommentInput />
