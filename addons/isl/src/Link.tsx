@@ -31,12 +31,30 @@ export function Link({
 }: React.DetailedHTMLProps<React.AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement> & {
   xstyle?: stylex.StyleXStyles;
 }) {
+  const handleClick = (
+    event: React.MouseEvent<HTMLAnchorElement> | React.KeyboardEvent<HTMLAnchorElement>,
+  ) => {
+    // allow pressing Enter when focused to simulate clicking for accessability
+    if (event.type === 'keyup') {
+      if ((event as React.KeyboardEvent<HTMLAnchorElement>).key !== 'Enter') {
+        return;
+      }
+    }
+    if (href) {
+      platform.openExternalLink(href);
+    }
+    onClick?.(event as React.MouseEvent<HTMLAnchorElement>);
+    event.preventDefault();
+    event.stopPropagation();
+  };
   return (
     <a
+      href={href}
       tabIndex={0}
+      onKeyUp={handleClick}
+      onClick={handleClick}
       {...stylex.props(styles.a, xstyle)}
-      {...rest}
-      onClick={href != null ? () => platform.openExternalLink(href) : onClick}>
+      {...rest}>
       {children}
     </a>
   );
