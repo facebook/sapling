@@ -99,7 +99,7 @@ impl Repo {
     where
         P: Into<PathBuf>,
     {
-        Self::build(path, pinned_config, None)
+        Self::build(path.into(), pinned_config, None)
     }
 
     /// Loads the repo at given path, eschewing any config loading in
@@ -110,14 +110,14 @@ impl Repo {
     where
         P: Into<PathBuf>,
     {
-        Self::build(path, &[], Some(config))
+        Self::build(path.into(), &[], Some(config))
     }
 
-    fn build<P>(path: P, pinned_config: &[PinnedConfig], config: Option<ConfigSet>) -> Result<Self>
-    where
-        P: Into<PathBuf>,
-    {
-        let path = path.into();
+    fn build(
+        path: PathBuf,
+        pinned_config: &[PinnedConfig],
+        config: Option<ConfigSet>,
+    ) -> Result<Self> {
         assert!(path.is_absolute());
 
         constructors::init();
