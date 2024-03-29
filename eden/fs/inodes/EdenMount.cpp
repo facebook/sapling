@@ -78,7 +78,6 @@ using folly::Unit;
 using std::make_unique;
 using std::shared_ptr;
 
-DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 DEFINE_string(
     edenfsctlPath,
     "edenfsctl",
@@ -1915,7 +1914,9 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       std::move(fuseFd),
       mount->getPath(),
       mount->getServerState()->getFsChannelThreadPool(),
-      FLAGS_fuseNumThreads,
+      mount->getServerState()
+          ->getEdenConfig()
+          ->fuseNumDispatcherThreads.getValue(),
       EdenDispatcherFactory::makeFuseDispatcher(mount),
       &mount->getStraceLogger(),
       mount->getServerState()->getProcessInfoCache(),
