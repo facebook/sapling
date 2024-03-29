@@ -28,6 +28,10 @@ const styles = stylex.create({
     },
     outlineOffset: '-1px',
   },
+  disabled: {
+    opacity: 0.4,
+    cursor: 'not-allowed',
+  },
 });
 
 export function Dropdown<T extends string | {value: string; name: string; disabled?: boolean}>({
@@ -35,16 +39,22 @@ export function Dropdown<T extends string | {value: string; name: string; disabl
   children,
   xstyle,
   value,
+  disabled,
   ...rest
 }: {
   options: Array<T>;
   children?: ReactNode;
   value?: T extends string ? T : T extends {value: string; name: string} ? T['value'] : never;
+  disabled?: boolean;
   xstyle?: stylex.StyleXStyles;
 } & ReactProps<HTMLSelectElement>) {
   const id = useId();
   return (
-    <select {...stylex.props(styles.select, xstyle)} {...rest} value={value}>
+    <select
+      {...stylex.props(styles.select, xstyle, disabled && styles.disabled)}
+      {...rest}
+      disabled={disabled}
+      value={value}>
       {children && (
         <label htmlFor={id} {...stylex.props(styles.label)}>
           {children}

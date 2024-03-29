@@ -123,8 +123,9 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
             onChange={e => console.log(e.currentTarget.value)}
           />
           <Dropdown
+            disabled
             options={[
-              {value: 'none', name: 'Disabled', disabled: true},
+              {value: 'none', name: 'Disabled Option', disabled: true},
               {value: 'drop', name: 'Dropdown'},
               {value: 'opt', name: 'Option'},
             ]}
