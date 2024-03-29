@@ -4074,9 +4074,7 @@ class TestRunner:
             if found:
                 vlog("# Found prerequisite", p, "at", found)
             else:
-                print(
-                    "WARNING: Did not find prerequisite tool: %s " % p.decode("utf-8")
-                )
+                print("WARNING: Did not find prerequisite tool: %s " % p)
 
 
 def aggregateexceptions(path):
