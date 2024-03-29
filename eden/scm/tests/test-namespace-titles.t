@@ -109,7 +109,8 @@ Does not conflict with autopull
   $ hg commit -m 'E: remote/foo'
 
   $ log 'remote/foo'
-  pulling 'foo' from '$TESTTMP/repo1'
+  pulling 'foo' from '$TESTTMP/repo1' (no-windows !)
+  pulling 'foo' from '*\repo1' (glob) (windows !)
   abort: unknown revision 'remote/foo'!
   [255]
 
