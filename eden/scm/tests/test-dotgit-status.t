@@ -45,13 +45,8 @@ Status after changing filesystem (modify, create, remove)
 Status update via add or remove commands
 
   $ sl rm c
-  warning: failed to inspect working copy parent
-  abort: 00changelog.i@94cd19ab7136: no node!
-  [255]
   $ sl add d
-  abort: 00changelog.i@94cd19ab7136: no node!
-  [255]
   $ sl status
   M b
-  ! c
-  ? d
+  A d
+  R c

@@ -51,7 +51,8 @@ pub struct GitDagOptions {
     ///
     /// When set to `false`:
     /// - In `refs/remotes/`, only a hardcoded list of "main" references will be imported.
-    /// - Local branches will be imported as bookmarks, except for "main", "master" bookmarks.
+    /// - Local branches will be imported. Whether they are treated as bookmarks or visibleheads
+    ///   is up to the upper layer that deals with metalog.
     /// - Tags will be skipped.
     pub import_all_references: bool,
 }
@@ -111,11 +112,6 @@ const MAIN_REFS: phf::Set<&str> = phf_set! {
     "refs/remotes/remote/master",
 };
 
-const DISALLOWED_REFS: phf::Set<&str> = phf_set! {
-    "refs/heads/main",
-    "refs/heads/master",
-};
-
 /// Read references from git, build segments for new heads.
 ///
 /// Useful when the git repo is changed by other processes or threads.
@@ -143,7 +139,7 @@ fn sync_from_git(
             if master_heads.is_empty() && name.starts_with("refs/remotes/") {
                 is_main = MAIN_REFS.contains(name);
                 should_import = is_main;
-            } else if name.starts_with("refs/heads/") && !DISALLOWED_REFS.contains(name) {
+            } else if name.starts_with("refs/heads/") {
                 should_import = true;
             } else if name.starts_with("refs/visibleheads/") {
                 should_import = true;

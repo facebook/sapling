@@ -90,6 +90,12 @@ impl GitSegmentedCommits {
         // done by GitDag without the knowledge of metalog.
         let refs = self.dag.git_references();
 
+        // If `import_all_references` is true, it means the references is fully matintained by us
+        // (ex. "sl clone"-ed). If false, it means the references are from Git (ex. "git clone"),
+        // and it is a "dotgit" repo.
+        let opts = &self.dag.opts;
+        let is_dotgit = !opts.import_all_references;
+
         let mut bookmarks = BTreeMap::new();
         let mut remotenames = BTreeMap::new();
         let mut visibleheads = Vec::new();
@@ -109,8 +115,21 @@ impl GitSegmentedCommits {
                     }
                 }
                 ["refs", "heads", name] => {
-                    // Treat as a local bookmark.
-                    if name != &"HEAD" {
+                    // Turn bookmarks like "master" to visible heads for dotgit support, for
+                    // "git clone/init" repos (is_dotgit is true).
+                    //
+                    // Those "master" bookmarks are created by "git clone" by default, out of our
+                    // control, and our desired UX is that "master" always refers to
+                    // "remote/master", and there is no (confusing) local "master".
+                    //
+                    // For non-dotgit repos cloned by "sl clone", references are fully maintained
+                    // by us, there is no default "master" local bookmark and the extra filtering
+                    // should be skipped.
+                    if is_dotgit && DISALLOW_BOOKMARK_NAMES.contains(name) {
+                        // Treat as a visible head.
+                        visibleheads.push(id);
+                    } else {
+                        // Treat as a local bookmark.
                         bookmarks.insert(name.to_string(), id);
                     }
                 }
@@ -550,3 +569,6 @@ fn get_hard_coded_commit_text(vertex: &Vertex) -> Option<Bytes> {
         None
     }
 }
+
+// Disallow local bookmarks with these names. Turn them into visibleheads.
+const DISALLOW_BOOKMARK_NAMES: &[&str] = &["main", "master", "HEAD"];
