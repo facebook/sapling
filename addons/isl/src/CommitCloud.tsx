@@ -14,6 +14,7 @@ import {EducationInfoTip} from './Education';
 import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
+import {Dropdown} from './components/Dropdown';
 import {T, t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
@@ -24,12 +25,7 @@ import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './p
 import {RelativeDate} from './relativeDate';
 import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
-import {
-  VSCodeButton,
-  VSCodeDropdown,
-  VSCodeOption,
-  VSCodeTextField,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -167,14 +163,14 @@ export function CommitCloudInfo() {
               <T>Commit Cloud Workspace</T>
             </label>
             <div className="commit-cloud-workspace-actions">
-              <VSCodeDropdown
+              <Dropdown
                 value={cloudSyncState?.value.currentWorkspace}
                 disabled={
                   pendingOperation?.trackEventName === 'CommitCloudChangeWorkspaceOperation' ||
                   pendingOperation?.trackEventName === 'CommitCloudCreateWorkspaceOperation'
                 }
                 onChange={event => {
-                  const newChoice = (event.target as HTMLOptionElement).value;
+                  const newChoice = event.currentTarget.value;
                   runOperation(new CommitCloudChangeWorkspaceOperation(newChoice)).then(() => {
                     refreshCommitCloudStatus();
                   });
@@ -184,13 +180,9 @@ export function CommitCloudInfo() {
                       value: {...cloudSyncState?.value, currentWorkspace: newChoice},
                     });
                   }
-                }}>
-                {cloudSyncState?.value.workspaceChoices?.map(name => (
-                  <VSCodeOption key={name} value={name}>
-                    {name}
-                  </VSCodeOption>
-                ))}
-              </VSCodeDropdown>
+                }}
+                options={cloudSyncState?.value.workspaceChoices ?? []}
+              />
               {enteredWorkspaceName == null ? (
                 <VSCodeButton
                   appearance="icon"

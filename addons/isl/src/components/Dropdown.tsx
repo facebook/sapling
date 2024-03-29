@@ -53,7 +53,7 @@ export function Dropdown<T extends string | {value: string; name: string; disabl
     <select
       {...stylex.props(styles.select, xstyle, disabled && styles.disabled)}
       {...rest}
-      disabled={disabled}
+      disabled={disabled || options.length === 0}
       value={value}>
       {children && (
         <label htmlFor={id} {...stylex.props(styles.label)}>
