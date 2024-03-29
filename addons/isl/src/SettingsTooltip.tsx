@@ -21,6 +21,7 @@ import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {Button} from './components/Button';
+import {Dropdown} from './components/Dropdown';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
@@ -30,18 +31,12 @@ import platform from './platform';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
-import {
-  VSCodeCheckbox,
-  VSCodeDropdown,
-  VSCodeLink,
-  VSCodeOption,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeCheckbox, VSCodeLink} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {tryJsonParse, nullthrows} from 'shared/utils';
 
-import './VSCodeDropdown.css';
 import './SettingsTooltip.css';
 
 export function SettingsGearButton() {
@@ -92,20 +87,16 @@ function SettingsDropdown({
       </Button>
       {platform.theme != null ? null : (
         <Setting title={<T>Theme</T>}>
-          <VSCodeDropdown
+          <Dropdown
+            options={
+              [
+                {value: 'light', name: 'Light'},
+                {value: 'dark', name: 'Dark'},
+              ] as Array<{value: ThemeColor; name: string}>
+            }
             value={theme}
-            onChange={event =>
-              setTheme(
-                (event as React.FormEvent<HTMLSelectElement>).currentTarget.value as ThemeColor,
-              )
-            }>
-            <VSCodeOption value="dark">
-              <T>Dark</T>
-            </VSCodeOption>
-            <VSCodeOption value="light">
-              <T>Light</T>
-            </VSCodeOption>
-          </VSCodeDropdown>
+            onChange={event => setTheme(event.currentTarget.value as ThemeColor)}
+          />
           <div style={{marginTop: 'var(--pad)'}}>
             <Subtle>
               <T>Toggle: </T>
@@ -128,9 +119,7 @@ function SettingsDropdown({
       {/* <Setting
         title={<T>Language</T>}
         description={<T>Locale for translations used in the UI. Currently only en supported.</T>}>
-        <VSCodeDropdown value="en" disabled>
-          <VSCodeOption value="en">en</VSCodeOption>
-        </VSCodeDropdown>
+        <Dropdown value="en" options=['en'] />
       </Setting> */}
       {repoInfo?.type !== 'success' ? (
         <Icon icon="loading" />
@@ -147,8 +136,15 @@ function SettingsDropdown({
               </VSCodeLink>
             </>
           }>
-          <VSCodeDropdown
+          <Dropdown
             value={repoInfo.preferredSubmitCommand ?? 'not set'}
+            options={(repoInfo.preferredSubmitCommand == null
+              ? [{value: 'not set', name: '(not set)'}]
+              : []
+            ).concat([
+              {value: 'ghstack', name: 'sl ghstack'},
+              {value: 'pr', name: 'sl pr'},
+            ])}
             onChange={event => {
               const value = (event as React.FormEvent<HTMLSelectElement>).currentTarget.value as
                 | PreferredSubmitCommand
@@ -161,13 +157,8 @@ function SettingsDropdown({
                 new SetConfigOperation('local', 'github.preferred_submit_command', value),
               );
               setRepoInfo(info => ({...nullthrows(info), preferredSubmitCommand: value}));
-            }}>
-            {repoInfo.preferredSubmitCommand == null ? (
-              <VSCodeOption value={'not set'}>(not set)</VSCodeOption>
-            ) : null}
-            <VSCodeOption value="ghstack">sl ghstack</VSCodeOption>
-            <VSCodeOption value="pr">sl pr</VSCodeOption>
-          </VSCodeDropdown>
+            }}
+          />
         </Setting>
       ) : null}
       <Setting title={<T>Code Review</T>}>

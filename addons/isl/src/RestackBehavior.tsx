@@ -6,9 +6,9 @@
  */
 
 import {Tooltip} from './Tooltip';
+import {Dropdown} from './components/Dropdown';
 import {t, T} from './i18n';
 import {localStorageBackedAtom} from './jotaiUtils';
-import {VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {useAtom} from 'jotai';
 
 export enum AmendRestackBehavior {
@@ -40,25 +40,17 @@ export function RestackBehaviorSetting() {
         <label htmlFor="restack-setting">
           <T>Restack on Amend</T>
         </label>
-        <VSCodeDropdown
+        <Dropdown
           value={value}
-          id="restack-setting"
-          onChange={event =>
-            setValue(
-              (event as React.FormEvent<HTMLSelectElement>).currentTarget
-                .value as AmendRestackBehavior,
-            )
-          }>
-          <VSCodeOption value={AmendRestackBehavior.NO_CONFLICT}>
-            <T>No Conflict</T>
-          </VSCodeOption>
-          <VSCodeOption value={AmendRestackBehavior.ALWAYS}>
-            <T>Always</T>
-          </VSCodeOption>
-          <VSCodeOption value={AmendRestackBehavior.NEVER}>
-            <T>Never</T>
-          </VSCodeOption>
-        </VSCodeDropdown>
+          onChange={event => setValue(event.currentTarget.value as AmendRestackBehavior)}
+          options={
+            [
+              {value: AmendRestackBehavior.NO_CONFLICT, name: t('No Conflict')},
+              {value: AmendRestackBehavior.ALWAYS, name: t('Always')},
+              {value: AmendRestackBehavior.NEVER, name: t('Never')},
+            ] as Array<{value: AmendRestackBehavior; name: string}>
+          }
+        />
       </div>
     </Tooltip>
   );
