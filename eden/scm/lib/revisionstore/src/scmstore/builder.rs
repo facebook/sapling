@@ -175,6 +175,7 @@ impl<'a> FileStoreBuilder<'a> {
                 max_bytes: None,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
+                self.config,
                 get_indexedlogdatastore_path(local_path)?,
                 self.get_extstored_policy()?,
                 &config,
@@ -207,6 +208,7 @@ impl<'a> FileStoreBuilder<'a> {
             max_bytes,
         };
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
+            self.config,
             get_indexedlogdatastore_path(cache_path)?,
             self.get_extstored_policy()?,
             &config,
@@ -542,6 +544,7 @@ impl<'a> TreeStoreBuilder<'a> {
                 max_bytes: None,
             };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
+                self.config,
                 get_indexedlogdatastore_path(local_path)?,
                 ExtStoredPolicy::Use,
                 &config,
@@ -575,6 +578,7 @@ impl<'a> TreeStoreBuilder<'a> {
         };
 
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
+            self.config,
             get_indexedlogdatastore_path(cache_path)?,
             ExtStoredPolicy::Use,
             &config,

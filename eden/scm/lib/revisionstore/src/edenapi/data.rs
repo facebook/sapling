@@ -209,6 +209,7 @@ impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::str::FromStr;
 
     use edenapi_types::Blake3;
@@ -254,6 +255,7 @@ mod tests {
             max_bytes: None,
         };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
@@ -300,6 +302,7 @@ mod tests {
             max_bytes: None,
         };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
@@ -346,6 +349,7 @@ mod tests {
             max_bytes: None,
         };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
@@ -391,6 +395,7 @@ mod tests {
             max_bytes: None,
         };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
@@ -463,6 +468,7 @@ mod tests {
             max_bytes: None,
         };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,

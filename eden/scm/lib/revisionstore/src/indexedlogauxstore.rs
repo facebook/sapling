@@ -122,7 +122,7 @@ impl AuxStore {
         // If you update defaults/logic here, please update the "cache" help topic
         // calculations in help.py.
 
-        let mut open_options = StoreOpenOptions::new()
+        let mut open_options = StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(250 * 1000 * 1000 / 4)
             .auto_sync_threshold(10 * 1024 * 1024)
@@ -185,6 +185,7 @@ impl AuxStore {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::str::FromStr;
     use std::sync::Arc;
 
@@ -350,6 +351,7 @@ mod tests {
             max_bytes: None,
         };
         let content = Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,

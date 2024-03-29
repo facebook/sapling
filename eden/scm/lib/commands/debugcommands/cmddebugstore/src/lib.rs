@@ -66,6 +66,7 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &mut Repo) -> Result<u8> {
 
     let indexedstore = Box::new(
         IndexedLogHgIdDataStore::new(
+            config,
             datastore_path,
             ExtStoredPolicy::Use,
             &indexedlog_config,

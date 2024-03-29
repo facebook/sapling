@@ -6,6 +6,7 @@
  */
 
 use std::cmp::min;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::ErrorKind;
@@ -228,7 +229,7 @@ pub(crate) struct LfsPointersEntry {
 
 impl DefaultOpenOptions<rotate::OpenOptions> for LfsPointersStore {
     fn default_open_options() -> rotate::OpenOptions {
-        Self::default_store_open_options().into_shared_open_options()
+        Self::default_store_open_options(&BTreeMap::<&str, &str>::new()).into_shared_open_options()
     }
 }
 
@@ -236,8 +237,8 @@ impl LfsPointersStore {
     const INDEX_NODE: usize = 0;
     const INDEX_SHA256: usize = 1;
 
-    fn default_store_open_options() -> StoreOpenOptions {
-        StoreOpenOptions::new()
+    fn default_store_open_options(config: &dyn Config) -> StoreOpenOptions {
+        StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(40_000_000 / 4)
             .index("node", |_| {
@@ -255,7 +256,7 @@ impl LfsPointersStore {
     }
 
     fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
-        let mut open_options = Self::default_store_open_options();
+        let mut open_options = Self::default_store_open_options(config);
         if let Some(log_size) = config.get_opt::<ByteCount>("lfs", "pointersstoresize")? {
             open_options = open_options.max_bytes_per_log(log_size.value() / 4);
         }
@@ -328,7 +329,7 @@ struct LfsIndexedLogBlobsEntry {
 
 impl DefaultOpenOptions<rotate::OpenOptions> for LfsIndexedLogBlobsStore {
     fn default_open_options() -> rotate::OpenOptions {
-        Self::default_store_open_options().into_shared_open_options()
+        Self::default_store_open_options(&BTreeMap::<&str, &str>::new()).into_shared_open_options()
     }
 }
 
@@ -339,8 +340,8 @@ impl LfsIndexedLogBlobsStore {
             .value() as usize)
     }
 
-    fn default_store_open_options() -> StoreOpenOptions {
-        StoreOpenOptions::new()
+    fn default_store_open_options(config: &dyn Config) -> StoreOpenOptions {
+        StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(20_000_000_000 / 4)
             .auto_sync_threshold(50 * 1024 * 1024)
@@ -350,7 +351,7 @@ impl LfsIndexedLogBlobsStore {
     }
 
     fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
-        let mut open_options = Self::default_store_open_options();
+        let mut open_options = Self::default_store_open_options(config);
         if let Some(log_size) = config.get_opt::<ByteCount>("lfs", "blobsstoresize")? {
             open_options = open_options.max_bytes_per_log(log_size.value() / 4);
         }
@@ -2469,6 +2470,7 @@ mod tests {
             max_bytes: None,
         };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+            &config,
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
@@ -2506,6 +2508,7 @@ mod tests {
             max_bytes: None,
         };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+            &config,
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
@@ -2543,6 +2546,7 @@ mod tests {
             max_bytes: None,
         };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+            &config,
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
@@ -2620,6 +2624,7 @@ mod tests {
             max_bytes: None,
         };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+            &config,
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
@@ -2700,6 +2705,7 @@ mod tests {
             max_bytes: None,
         };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+            &config,
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,

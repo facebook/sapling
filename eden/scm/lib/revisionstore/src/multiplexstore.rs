@@ -176,6 +176,8 @@ impl<T: HgIdMutableHistoryStore> LocalStore for MultiplexHgIdHistoryStore<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use minibytes::Bytes;
     use tempfile::TempDir;
     use types::testutil::*;
@@ -201,6 +203,7 @@ mod tests {
             max_bytes: None,
         };
         let mut log = IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tempdir,
             ExtStoredPolicy::Ignore,
             &config,
@@ -233,6 +236,7 @@ mod tests {
             max_bytes: None,
         };
         let mut log = IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             &tempdir,
             ExtStoredPolicy::Ignore,
             &config,

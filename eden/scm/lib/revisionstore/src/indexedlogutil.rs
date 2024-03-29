@@ -12,6 +12,8 @@ use std::sync::atomic;
 use std::sync::atomic::AtomicU64;
 
 use anyhow::Result;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use indexedlog::log;
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
@@ -35,6 +37,8 @@ use tracing::debug;
 pub struct Store {
     inner: RwLock<Inner>,
     auto_sync_count: AtomicU64,
+    // Configured by scmstore.sync-logs-if-changed-on-disk (defaults to disabled if not configured).
+    sync_if_changed_on_disk: bool,
 }
 
 pub enum Inner {
@@ -77,6 +81,10 @@ impl Store {
 
     fn sync_if_changed_on_disk(&self) -> RwLockReadGuard<'_, Inner> {
         let log = self.inner.read();
+
+        if !self.sync_if_changed_on_disk {
+            return log;
+        }
 
         if log.is_changed_on_disk() {
             drop(log);
@@ -191,6 +199,7 @@ impl<'a> Iterator for LookupIter<'a> {
 
 pub struct StoreOpenOptions {
     auto_sync_threshold: Option<u64>,
+    sync_if_changed_on_disk: bool,
     pub max_log_count: Option<u8>,
     pub max_bytes_per_log: Option<u64>,
     indexes: Vec<IndexDef>,
@@ -198,13 +207,16 @@ pub struct StoreOpenOptions {
 }
 
 impl StoreOpenOptions {
-    pub fn new() -> Self {
+    pub fn new(config: &dyn Config) -> Self {
         Self {
             auto_sync_threshold: None,
             max_log_count: None,
             max_bytes_per_log: None,
             indexes: Vec::new(),
             create: true,
+            sync_if_changed_on_disk: config
+                .must_get("scmstore", "sync-logs-if-changed-on-disk")
+                .unwrap_or_default(),
         }
     }
 
@@ -250,12 +262,14 @@ impl StoreOpenOptions {
     /// Data added to a local store will never be rotated out, and `fsync(2)` is used to guarantee
     /// data consistency.
     pub fn local(self, path: impl AsRef<Path>) -> Result<Store> {
+        let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
         Ok(Store {
             inner: RwLock::new(Inner::Local(
                 self.into_local_open_options()
                     .open_with_repair(path.as_ref())?,
             )),
             auto_sync_count: AtomicU64::new(0),
+            sync_if_changed_on_disk,
         })
     }
 
@@ -284,6 +298,7 @@ impl StoreOpenOptions {
     /// Data added to a shared store will be rotated out depending on the values of `max_log_count`
     /// and `max_bytes_per_log`.
     pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
+        let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
         let opts = self.into_shared_open_options();
         let mut rotate_log = opts.open_with_repair(path.as_ref())?;
         // Attempt to clean up old logs that might be left around. On Windows, other
@@ -295,6 +310,7 @@ impl StoreOpenOptions {
         Ok(Store {
             inner: RwLock::new(Inner::Shared(rotate_log)),
             auto_sync_count: AtomicU64::new(0),
+            sync_if_changed_on_disk,
         })
     }
 
@@ -322,6 +338,8 @@ impl StoreOpenOptions {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use tempfile::TempDir;
 
     use super::*;
@@ -330,7 +348,7 @@ mod tests {
     fn test_local() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .local(&dir)?;
 
@@ -347,7 +365,7 @@ mod tests {
     fn test_shared() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .shared(&dir)?;
 
@@ -364,7 +382,7 @@ mod tests {
     fn test_local_no_rotate() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .max_log_count(1)
             .max_bytes_per_log(10)
@@ -385,7 +403,7 @@ mod tests {
     fn test_shared_rotate() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let store = StoreOpenOptions::new()
+        let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .max_log_count(1)
             .max_bytes_per_log(10)
@@ -406,11 +424,14 @@ mod tests {
     fn test_transparent_sync() -> Result<()> {
         let dir = TempDir::new()?;
 
-        let store1 = StoreOpenOptions::new()
+        let mut config = BTreeMap::<&str, &str>::new();
+        config.insert("scmstore.sync-logs-if-changed-on-disk", "true");
+
+        let store1 = StoreOpenOptions::new(&config)
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .local(&dir)?;
 
-        let store2 = StoreOpenOptions::new()
+        let store2 = StoreOpenOptions::new(&config)
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .local(&dir)?;
 
@@ -437,6 +458,33 @@ mod tests {
 
         // Make sure we only synced once:
         assert_eq!(store2.auto_sync_count.load(atomic::Ordering::Relaxed), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_transparent_sync_disabled() -> Result<()> {
+        let dir = TempDir::new()?;
+
+        let store1 = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
+            .index("hex", |_| vec![IndexOutput::Reference(0..2)])
+            .local(&dir)?;
+
+        let store2 = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
+            .index("hex", |_| vec![IndexOutput::Reference(0..2)])
+            .local(&dir)?;
+
+        store1.append(b"aabcd")?;
+        store1.flush()?;
+
+        // store2 doesn't see the write.
+        assert!(
+            store2
+                .read()
+                .lookup(0, b"aa")?
+                .collect::<Result<Vec<_>>>()?
+                .is_empty()
+        );
 
         Ok(())
     }

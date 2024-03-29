@@ -203,7 +203,7 @@ impl IndexedLogHgIdHistoryStore {
     }
 
     fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
-        let mut open_options = StoreOpenOptions::new()
+        let mut open_options = StoreOpenOptions::new(config)
             .max_log_count(4)
             .max_bytes_per_log(500 * 1000 * 1000)
             .auto_sync_threshold(10 * 1024 * 1024)

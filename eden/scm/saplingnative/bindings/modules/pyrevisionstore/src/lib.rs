@@ -9,6 +9,7 @@
 
 #![allow(non_camel_case_types)]
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -386,7 +387,13 @@ py_class!(class indexedlogdatastore |py| {
         let config = IndexedLogHgIdDataStoreConfig { max_log_count: None, max_bytes_per_log: None, max_bytes: None };
         indexedlogdatastore::create_instance(
             py,
-            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config, StoreType::Local).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdDataStore::new(
+                &BTreeMap::<&str, &str>::new(),
+                path.as_path(),
+                ExtStoredPolicy::Ignore,
+                &config,
+                StoreType::Local,
+            ).map_pyerr(py)?),
         )
     }
 
@@ -471,6 +478,7 @@ fn make_mutabledeltastore(
             max_bytes: None,
         };
         Arc::new(IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
             indexedlogpath.as_path(),
             ExtStoredPolicy::Ignore,
             &config,

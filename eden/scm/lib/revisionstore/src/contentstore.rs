@@ -99,21 +99,23 @@ impl ContentStore {
         let max_bytes_per_log =
             config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
         let max_bytes = config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?;
-        let config = IndexedLogHgIdDataStoreConfig {
+        let log_config = IndexedLogHgIdDataStoreConfig {
             max_log_count,
             max_bytes_per_log,
             max_bytes,
         };
 
         repair_str += &IndexedLogHgIdDataStore::repair(
+            config,
             get_indexedlogdatastore_path(&shared_path)?,
-            &config,
+            &log_config,
             StoreType::Shared,
         )?;
         if let Some(local_path) = local_path {
             repair_str += &IndexedLogHgIdDataStore::repair(
+                config,
                 get_indexedlogdatastore_path(local_path)?,
-                &config,
+                &log_config,
                 StoreType::Local,
             )?;
         }
@@ -401,6 +403,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     max_bytes,
                 };
                 Arc::new(IndexedLogHgIdDataStore::new(
+                    self.config,
                     get_indexedlogdatastore_path(&cache_path)?,
                     extstored_policy,
                     &config,
@@ -472,6 +475,7 @@ impl<'a> ContentStoreBuilder<'a> {
                             max_bytes: None,
                         };
                         Arc::new(IndexedLogHgIdDataStore::new(
+                            self.config,
                             get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
                             extstored_policy,
                             &config,
@@ -863,6 +867,7 @@ mod tests {
             max_bytes: None,
         };
         let store = IndexedLogHgIdDataStore::new(
+            &config,
             get_indexedlogdatastore_path(&localdir)?,
             ExtStoredPolicy::Use,
             &indexed_log_config,
