@@ -152,11 +152,38 @@ def _line_has_stack_list_marker(line: str) -> bool:
     )
 
 
+_SAPLING_FOOTER_WITH_HRULE = re.compile(
+    re.escape(_HORIZONTAL_RULE) + r'\r?\n' + re.escape(_SAPLING_FOOTER_MARKER),
+    re.MULTILINE,
+)
+
+
 def _strip_stack_information(body: str) -> str:
-    marker = "\n".join([_HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER])
-    if marker in body:
-        body = body.rsplit(marker, maxsplit=1)[0]
-    return body
+    r"""
+    Footer marker joined with \n
+    >>> body = (
+    ...     'The original commit message.\n' +
+    ...     'Second line of message.\n' +
+    ...     '---\n' +
+    ...     '[//]: # (BEGIN SAPLING FOOTER)\n' +
+    ...     '* #1\n' +
+    ...     '* #2 (2 commits)\n' +
+    ...     '* __->__ #42\n' +
+    ...     '* #4\n')
+    >>> _strip_stack_information(body)
+    'The original commit message.\nSecond line of message.\n'
+
+    Footer marker joined with \r\n. If the user edits the pull request body
+    on github.com, GitHub will rewrite the line endings to \r\n.
+    >>> _strip_stack_information(body.replace('\n', '\r\n'))
+    'The original commit message.\r\nSecond line of message.\r\n'
+
+    If the footer marker appears multiple times in the body, everything will
+    be stripped after the first occurrence.
+    >>> _strip_stack_information(body + body)
+    'The original commit message.\nSecond line of message.\n'
+    """
+    return re.split(_SAPLING_FOOTER_WITH_HRULE, body, maxsplit=1)[0]
 
 
 def _format_stack_entry(
