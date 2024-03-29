@@ -78,7 +78,7 @@ class Client:
 
             self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
                 phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(
-                    unix_socket_proxy=unix_socket_path,
+                    unix_socket_proxy=unix_socket_path, ui=ui
                 ),
                 app_id if unix_socket_path else None,
                 self._oauth,
