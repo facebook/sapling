@@ -97,7 +97,7 @@ export const Button = forwardRef(
       children?: ReactNode;
       disabled?: boolean;
       xstyle?: stylex.StyleXStyles;
-    } & ReactProps<HTMLButtonElement> &
+    } & Omit<ReactProps<HTMLButtonElement>, 'className'> &
       ExclusiveOr<{primary?: boolean}, {icon?: boolean}>,
     ref: ForwardedRef<HTMLButtonElement>,
   ) => {
