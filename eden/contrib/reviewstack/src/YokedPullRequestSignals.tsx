@@ -65,38 +65,40 @@ export default function PullRequestSignals(): React.ReactElement | null {
   }
 
   return (
-    <Link style={{lineHeight: '1'}} href={`${pullRequest.url}/checks`} target="_blank">
-      {/* <Label variant={checkRuns.length === successful ? 'success' : 'danger'} size={'large'}>
-        <>
-          <ConclusionIcon
-            conclusion={
-              checkRuns.length === successful
-                ? CheckConclusionState.Success
-                : CheckConclusionState.Failure
-            }
-          />
-          <Text
-            style={{marginLeft: '6px'}}
-            title={`${successful} out of ${checkRuns.length} checks successful. View details on GitHub.`}>
-            {`${successful} / ${checks(checkRuns.length)}`}
-          </Text>
-        </>
-      </Label> */}
-      <Token
-        size="large"
-        text={`${successful} / ${checks(checkRuns.length)}`}
-        title={`${successful} out of ${checkRuns.length} checks successful. View details on GitHub.`}
-        leadingVisual={() => <StyledOcticon icon={tagIcon} size={16} />}
-        sx={{
-          color: '#fff',
-          backgroundColor: tagColor,
-          borderColor: tagColor,
-          cursor: 'pointer',
-          paddingLeft: '4px',
-          paddingRight: '8px',
-        }}
-      />
-    </Link>
+    <Box marginRight={'auto'}>
+      <Link style={{lineHeight: '1'}} href={`${pullRequest.url}/checks`} target="_blank">
+        {/* <Label variant={checkRuns.length === successful ? 'success' : 'danger'} size={'large'}>
+          <>
+            <ConclusionIcon
+              conclusion={
+                checkRuns.length === successful
+                  ? CheckConclusionState.Success
+                  : CheckConclusionState.Failure
+              }
+            />
+            <Text
+              style={{marginLeft: '6px'}}
+              title={`${successful} out of ${checkRuns.length} checks successful. View details on GitHub.`}>
+              {`${successful} / ${checks(checkRuns.length)}`}
+            </Text>
+          </>
+        </Label> */}
+        <Token
+          size="large"
+          text={`${successful} / ${checks(checkRuns.length)}`}
+          title={`${successful} out of ${checkRuns.length} checks successful. View details on GitHub.`}
+          leadingVisual={() => <StyledOcticon icon={tagIcon} size={16} />}
+          sx={{
+            color: '#fff',
+            backgroundColor: tagColor,
+            borderColor: tagColor,
+            cursor: 'pointer',
+            paddingLeft: '4px',
+            paddingRight: '8px',
+          }}
+        />
+      </Link>
+    </Box>
   );
 
   return (
