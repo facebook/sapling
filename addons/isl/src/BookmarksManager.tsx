@@ -28,9 +28,13 @@ import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
+  container: {
+    alignItems: 'flex-start',
+    gap: spacing.double,
+  },
   bookmarkGroup: {
     alignItems: 'flex-start',
-    marginInline: spacing.pad,
+    marginInline: spacing.half,
     gap: spacing.half,
   },
   description: {
@@ -72,36 +76,55 @@ function BookmarksManager(_props: {dismiss: () => void}) {
       title={<T>Bookmarks Manager</T>}
       icon="bookmark"
       data-testid="bookmarks-manager-dropdown">
-      <BookmarksList
-        title={<T>Remote Bookmarks</T>}
-        description={<T>Uncheck remote bookmarks you don't use to hide them</T>}
-        bookmarks={bookmarks}
-        kind="remote"
-      />
-      <BookmarksList
-        title={<T>Stable Locations</T>}
-        description={
-          <T>
-            Commits that have had successful builds and warmed up caches for a particular build
-            target
-          </T>
-        }
-        bookmarks={stableLocations?.special?.map(info => info.value).filter(notEmpty) ?? []}
-        kind="stable"
-      />
+      <Column xstyle={styles.container}>
+        <Section
+          title={<T>Remote Bookmarks</T>}
+          description={<T>Uncheck remote bookmarks you don't use to hide them</T>}>
+          <BookmarksList bookmarks={bookmarks} kind="remote" />
+        </Section>
+        {stableLocations?.special && (
+          <Section
+            title={<T>Stable Locations</T>}
+            description={
+              <T>
+                Commits that have had successful builds and warmed up caches for a particular build
+                target
+              </T>
+            }>
+            <BookmarksList
+              bookmarks={stableLocations?.special?.map(info => info.value).filter(notEmpty) ?? []}
+              kind="stable"
+            />
+          </Section>
+        )}
+      </Column>
     </DropdownFields>
+  );
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Column xstyle={styles.bookmarkGroup}>
+      <strong>{title}</strong>
+      {description && <Subtle {...stylex.props(styles.description)}>{description}</Subtle>}
+      {children}
+    </Column>
   );
 }
 
 function BookmarksList({
   bookmarks,
-  title,
-  description,
   kind,
 }: {
   bookmarks: Array<string | StableInfo>;
-  title: ReactNode;
-  description?: ReactNode;
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
@@ -111,8 +134,6 @@ function BookmarksList({
 
   return (
     <Column xstyle={styles.bookmarkGroup}>
-      <strong>{title}</strong>
-      {description && <Subtle {...stylex.props(styles.description)}>{description}</Subtle>}
       <ScrollY maxSize={300}>
         <Column xstyle={styles.bookmarkGroup}>
           {bookmarks.map(bookmark => {
