@@ -23,11 +23,15 @@ use eagerepo::EagerRepoStore;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
-use fs_err as fs;
 use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
+use repo_minimal_info::constants::SUPPORTED_DEFAULT_REQUIREMENTS;
+use repo_minimal_info::constants::SUPPORTED_STORE_REQUIREMENTS;
+pub use repo_minimal_info::read_sharedpath;
+use repo_minimal_info::RepoMinimalInfo;
+use repo_minimal_info::Requirements;
 use repolock::RepoLocker;
 use revisionstore::scmstore;
 use revisionstore::scmstore::FileStoreBuilder;
@@ -48,11 +52,8 @@ use util::path::absolute;
 #[cfg(feature = "wdir")]
 use workingcopy::workingcopy::WorkingCopy;
 
-use crate::constants::SUPPORTED_DEFAULT_REQUIREMENTS;
-use crate::constants::SUPPORTED_STORE_REQUIREMENTS;
 use crate::errors;
 use crate::init;
-use crate::requirements::Requirements;
 use crate::trees::TreeManifestResolver;
 
 pub struct Repo {
@@ -118,8 +119,15 @@ impl Repo {
         pinned_config: &[PinnedConfig],
         config: Option<ConfigSet>,
     ) -> Result<Self> {
-        assert!(path.is_absolute());
+        let info = RepoMinimalInfo::from_repo_root(path)?;
+        Self::build_with_info(info, pinned_config, config)
+    }
 
+    fn build_with_info(
+        info: RepoMinimalInfo,
+        pinned_config: &[PinnedConfig],
+        config: Option<ConfigSet>,
+    ) -> Result<Self> {
         constructors::init();
 
         assert!(
@@ -127,26 +135,22 @@ impl Repo {
             "Don't pass a config and CLI overrides to Repo::build"
         );
 
-        let ident = match identity::sniff_dir(&path)? {
-            Some(ident) => ident,
-            None => {
-                return Err(errors::RepoNotFound(path.to_string_lossy().to_string()).into());
-            }
-        };
+        let RepoMinimalInfo {
+            path,
+            ident,
+            shared_path,
+            shared_ident,
+            store_path,
+            dot_hg_path,
+            shared_dot_hg_path,
+            requirements,
+            store_requirements,
+        } = info;
 
         let config = match config {
             Some(config) => config,
             None => configloader::hg::load(Some(&path), pinned_config)?,
         };
-
-        let dot_hg_path = path.join(ident.dot_dir());
-
-        let (shared_path, shared_ident) = match read_sharedpath(&dot_hg_path)? {
-            Some((path, ident)) => (path, ident),
-            None => (path.clone(), ident.clone()),
-        };
-        let shared_dot_hg_path = shared_path.join(shared_ident.dot_dir());
-        let store_path = shared_dot_hg_path.join("store");
 
         let repo_name = configloader::hg::read_repo_name_from_disk(&shared_dot_hg_path)
             .ok()
@@ -155,13 +159,6 @@ impl Repo {
                     .get("remotefilelog", "reponame")
                     .map(|v| v.to_string())
             });
-
-        let requirements = Requirements::open(
-            &dot_hg_path.join("requires"),
-            &SUPPORTED_DEFAULT_REQUIREMENTS,
-        )?;
-        let store_requirements =
-            Requirements::open(&store_path.join("requires"), &SUPPORTED_STORE_REQUIREMENTS)?;
 
         let locker = Arc::new(RepoLocker::new(&config, store_path.clone())?);
 
@@ -633,33 +630,6 @@ impl Repo {
             }
         }
     }
-}
-
-pub fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
-    let sharedpath = fs::read_to_string(dot_path.join("sharedpath"))
-        .ok()
-        .map(PathBuf::from)
-        .and_then(|p| Some(PathBuf::from(p.parent()?)));
-
-    if let Some(mut possible_path) = sharedpath {
-        // sharedpath can be relative to our dot dir.
-        possible_path = dot_path.join(possible_path);
-
-        if !possible_path.is_dir() {
-            return Err(
-                errors::InvalidSharedPath(possible_path.to_string_lossy().to_string()).into(),
-            );
-        }
-
-        return match identity::sniff_dir(&possible_path)? {
-            Some(ident) => Ok(Some((possible_path, ident))),
-            None => {
-                Err(errors::InvalidSharedPath(possible_path.to_string_lossy().to_string()).into())
-            }
-        };
-    }
-
-    Ok(None)
 }
 
 impl std::fmt::Debug for Repo {
