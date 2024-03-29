@@ -20,6 +20,7 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {Button} from './components/Button';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
@@ -30,7 +31,6 @@ import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsiv
 import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
 import {
-  VSCodeButton,
   VSCodeCheckbox,
   VSCodeDropdown,
   VSCodeLink,
@@ -56,9 +56,9 @@ export function SettingsGearButton() {
       )}
       group="topbar"
       placement="bottom">
-      <VSCodeButton appearance="icon" data-testid="settings-gear-button">
+      <Button icon data-testid="settings-gear-button">
         <Icon icon="gear" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -76,8 +76,9 @@ function SettingsDropdown({
   const [showDiffNumber, setShowDiffNumber] = useAtom(showDiffNumberConfig);
   return (
     <DropdownFields title={<T>Settings</T>} icon="gear" data-testid="settings-dropdown">
-      <VSCodeButton
-        appearance="icon"
+      <Button
+        style={{justifyContent: 'center', gap: 0}}
+        icon
         onClick={() => {
           dismiss();
           showShortcutsHelp();
@@ -88,7 +89,7 @@ function SettingsDropdown({
           }}>
           View Keyboard Shortcuts - $shortcut
         </T>
-      </VSCodeButton>
+      </Button>
       {platform.theme != null ? null : (
         <Setting title={<T>Theme</T>}>
           <VSCodeDropdown
@@ -284,54 +285,51 @@ function ZoomUISetting() {
   return (
     <div className="zoom-setting">
       <Tooltip title={t('Decrease UI Zoom')}>
-        <VSCodeButton
-          className="zoom-out"
-          appearance="icon"
+        <Button
+          icon
           onClick={() => {
             setZoom(roundToPercent(zoom - 0.1));
           }}>
           <Icon icon="zoom-out" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <span>{`${Math.round(100 * zoom)}%`}</span>
       <Tooltip title={t('Increase UI Zoom')}>
-        <VSCodeButton
-          className="zoom-in"
-          appearance="icon"
+        <Button
+          icon
           onClick={() => {
             setZoom(roundToPercent(zoom + 0.1));
           }}>
           <Icon icon="zoom-in" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <div style={{width: '20px'}} />
       <label>
         <T>Presets:</T>
       </label>
-      <VSCodeButton
-        className="zoom-80"
-        appearance="icon"
+      <Button
+        style={{fontSize: '80%'}}
+        icon
         onClick={() => {
           setZoom(0.8);
         }}>
         <T>Small</T>
-      </VSCodeButton>
-      <VSCodeButton
-        className="zoom-100"
-        appearance="icon"
+      </Button>
+      <Button
+        icon
         onClick={() => {
           setZoom(1.0);
         }}>
         <T>Normal</T>
-      </VSCodeButton>
-      <VSCodeButton
-        className="zoom-120"
-        appearance="icon"
+      </Button>
+      <Button
+        style={{fontSize: '120%'}}
+        icon
         onClick={() => {
           setZoom(1.2);
         }}>
         <T>Large</T>
-      </VSCodeButton>
+      </Button>
     </div>
   );
 }

@@ -38,13 +38,3 @@
 .zoom-setting label {
   font-size: 80%;
 }
-
-.zoom-120::part(content) {
-  font-size: 120%;
-}
-vscode-button.zoom-100::part(content) {
-  font-size: 100%;
-}
-vscode-button.zoom-80::part(content) {
-  font-size: 80%;
-}
