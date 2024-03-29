@@ -16,6 +16,7 @@ import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
+import {TextField} from '../components/TextField';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
@@ -26,10 +27,11 @@ import {
   VSCodeDropdown,
   VSCodeOption,
   VSCodeTextArea,
-  VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
+
+/* eslint-disable no-console */
 
 const basicBgs = ['bg', 'subtleHoverDarken', 'hoverDarken'] as const;
 const pureColors = ['red', 'yellow', 'orange', 'green', 'blue', 'purple', 'grey'] as const;
@@ -176,7 +178,9 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         <VSCodeDivider />
         <Row>
           <VSCodeTextArea placeholder="placeholder">Text area</VSCodeTextArea>
-          <VSCodeTextField placeholder="placeholder">Text Field</VSCodeTextField>
+          <TextField placeholder="placeholder" onChange={e => console.log(e.currentTarget.value)}>
+            Text Field
+          </TextField>
           <Tooltip trigger="manual" shouldShow={true} title="Tooltip" placement="bottom">
             Thing
           </Tooltip>
