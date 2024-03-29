@@ -41,9 +41,9 @@
   font-size: 70%;
   white-space: nowrap;
 }
-.github-diff-badge .codicon {
-  font-size: 90%;
-  margin-right: 5px;
+.github-diff-badge-icon.codicon {
+  font-size: 100%;
+  margin-right: var(--halfpad);
   font-weight: bold;
   text-decoration: none;
 }

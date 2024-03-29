@@ -53,7 +53,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
             'github-diff-status' + (diff?.state ? ` github-diff-status-${diff.state}` : '')
           }>
           <Tooltip title={t('Click to open Pull Request in GitHub')} delayMs={500}>
-            {diff && <Icon icon={iconForPRState(diff.state)} />}
+            {diff && <Icon className="github-diff-badge-icon" icon={iconForPRState(diff.state)} />}
             {diff?.state && <PRStateLabel state={diff.state} />}
             {children}
           </Tooltip>

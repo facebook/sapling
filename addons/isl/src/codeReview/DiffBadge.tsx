@@ -10,8 +10,8 @@ import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
-import {ExternalLink} from '../ExternalLink';
 import {Internal} from '../Internal';
+import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
 import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
 import {T, t} from '../i18n';
@@ -25,6 +25,7 @@ import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {DiffCommentsDetails} from './DiffComments';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
+import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Component, Suspense, useState} from 'react';
@@ -59,6 +60,17 @@ export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions
   );
 }
 
+const styles = stylex.create({
+  diffBadge: {
+    color: 'white',
+    cursor: 'pointer',
+    textDecoration: {
+      default: 'none',
+      ':hover': 'underline',
+    },
+  },
+});
+
 export function DiffBadge({
   diff,
   children,
@@ -75,9 +87,9 @@ export function DiffBadge({
   const openerUrl = useAtomValue(openerUrlForDiffUrl(url));
 
   return (
-    <ExternalLink href={openerUrl} className={`diff-badge ${provider.name}-diff-badge`}>
+    <Link href={openerUrl} xstyle={styles.diffBadge}>
       <provider.DiffBadgeContent diff={diff} children={children} syncStatus={syncStatus} />
-    </ExternalLink>
+    </Link>
   );
 }
 
