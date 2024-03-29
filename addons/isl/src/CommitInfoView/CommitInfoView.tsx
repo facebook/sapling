@@ -16,6 +16,7 @@ import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
 import {numPendingImageUploads} from '../ImageUpload';
+import {Link} from '../Link';
 import {OperationDisabledButton} from '../OperationDisabledButton';
 import {SubmitSelectionButton} from '../SubmitSelectionButton';
 import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
@@ -77,7 +78,6 @@ import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from 
 import {
   VSCodeButton,
   VSCodeDivider,
-  VSCodeLink,
   VSCodeRadio,
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
@@ -755,11 +755,9 @@ function ActionsBar({
                         <div>
                           <T>To continue, select a command to use to submit.</T>
                         </div>
-                        <VSCodeLink
-                          href="https://sapling-scm.com/docs/git/intro#pull-requests"
-                          target="_blank">
+                        <Link href="https://sapling-scm.com/docs/git/intro#pull-requests">
                           <T>Learn More</T>
-                        </VSCodeLink>
+                        </Link>
                       </div>
                     ),
                     buttons,

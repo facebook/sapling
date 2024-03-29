@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Link as LinkEl} from '../Link';
 import {T} from '../i18n';
 import platform from '../platform';
 import {themeState} from '../theme';
 import {Ribbon} from './Ribbon';
-import {VSCodeLink, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 
@@ -35,14 +36,14 @@ export function Link({
   onNavigate?: () => unknown;
 }) {
   return (
-    <VSCodeLink
+    <LinkEl
       className={className}
       onClick={() => {
         onNavigate?.();
         platform.openExternalLink(href);
       }}>
       {children}
-    </VSCodeLink>
+    </LinkEl>
   );
 }
 
