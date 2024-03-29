@@ -815,6 +815,14 @@ FuseChannel::FuseChannel(
       traceBus_(TraceBus<FuseTraceEvent>::create(
           "FuseTrace" + mountPath.asString(),
           fuseTraceBusCapacity)) {
+  XLOGF(
+      INFO,
+      "Creating FuseChannel: mountPath={}, numThreads={}, requireUtf8={}, maximumBackgroundRequests={}, useWriteBackCache={}",
+      mountPath,
+      numThreads,
+      requireUtf8Path,
+      maximumBackgroundRequests,
+      useWriteBackCache);
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 
