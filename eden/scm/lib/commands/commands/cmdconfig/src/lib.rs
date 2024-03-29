@@ -6,7 +6,6 @@
  */
 
 use std::borrow::Cow;
-use std::collections::BTreeSet;
 
 use anyhow::bail;
 use clidispatch::abort_if;

@@ -66,14 +66,18 @@ pub trait ConfigSetHgExt {
     /// Returns errors parsing, generating, or fetching the configs.
     fn load_dynamic(
         &mut self,
-        repo_path: Option<&Path>,
+        info: Option<&RepoMinimalInfo>,
         opts: Options,
         identity: &Identity,
         proxy_sock_path: Option<String>,
     ) -> Result<Vec<Error>>;
 
     /// Optionally refresh the dynamic config in the background.
-    fn maybe_refresh_dynamic(&self, repo_path: Option<&Path>, identity: &Identity) -> Result<()>;
+    fn maybe_refresh_dynamic(
+        &self,
+        info: Option<&RepoMinimalInfo>,
+        identity: &Identity,
+    ) -> Result<()>;
 
     /// Load user config files (and environment variables).  If config environment variable is
     /// set, load files listed in that environment variable instead.
@@ -304,9 +308,9 @@ impl ConfigSetHgExt for ConfigSet {
 
         self.clear_unpinned();
 
-        let (ident, repo_path) = match info {
-            None => (identity::default(), None),
-            Some(i) => (i.ident, Some(i.dot_hg_path.as_path())),
+        let ident = match info {
+            None => identity::default(),
+            Some(i) => i.ident,
         };
 
         let mut errors = vec![];
@@ -339,7 +343,7 @@ impl ConfigSetHgExt for ConfigSet {
         errors.append(
             &mut dynamic
                 .load_dynamic(
-                    repo_path,
+                    info,
                     opts.clone(),
                     &ident,
                     self.get_opt("auth_proxy", "unix_socket_path")
@@ -362,7 +366,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Wait until config is fully loaded so maybe_refresh_dynamic() itself sees
         // correct config values.
-        self.maybe_refresh_dynamic(repo_path.as_deref(), &ident)
+        self.maybe_refresh_dynamic(info, &ident)
             .map_err(|e| Errors(vec![Error::Other(e)]))?;
 
         if !errors.is_empty() {
@@ -388,7 +392,7 @@ impl ConfigSetHgExt for ConfigSet {
     #[cfg(feature = "fb")]
     fn load_dynamic(
         &mut self,
-        repo_path: Option<&Path>,
+        info: Option<&RepoMinimalInfo>,
         opts: Options,
         identity: &Identity,
         proxy_sock_path: Option<String>,
@@ -405,7 +409,7 @@ impl ConfigSetHgExt for ConfigSet {
         }
 
         // Compute path
-        let dynamic_path = get_config_dir(repo_path)?.join("hgrc.dynamic");
+        let dynamic_path = get_config_dir(info)?.join("hgrc.dynamic");
 
         // Check version
         let content = read_to_string(&dynamic_path).ok();
@@ -433,17 +437,17 @@ impl ConfigSetHgExt for ConfigSet {
                     bail!("unable to read user config to get user name");
                 }
 
-                let repo_name = match repo_path {
-                    Some(repo_path) => {
+                let repo_name = match info {
+                    Some(info) => {
                         let opts = opts.clone().source("temp").process_hgplain();
                         // We need to know the repo name, but that's stored in the repository configs at
                         // the moment. In the long term we need to move that, but for now let's load the
                         // repo config ahead of time to read the name.
-                        let repo_hgrc_path = repo_path.join("hgrc");
+                        let repo_hgrc_path = info.dot_hg_path.join("hgrc");
                         if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
                             bail!("unable to read repo config to get repo name");
                         }
-                        Some(read_set_repo_name(&mut temp_config, repo_path)?)
+                        Some(read_set_repo_name(&mut temp_config, &info.dot_hg_path)?)
                     }
                     None => None,
                 };
@@ -452,14 +456,8 @@ impl ConfigSetHgExt for ConfigSet {
             };
 
             // Regen inline
-            let res = generate_internalconfig(
-                mode,
-                repo_path,
-                repo_name,
-                None,
-                user_name,
-                proxy_sock_path,
-            );
+            let res =
+                generate_internalconfig(mode, info, repo_name, None, user_name, proxy_sock_path);
             if let Err(e) = res {
                 let is_perm_error = e
                     .chain()
@@ -494,7 +492,11 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(feature = "fb")]
-    fn maybe_refresh_dynamic(&self, repo_path: Option<&Path>, identity: &Identity) -> Result<()> {
+    fn maybe_refresh_dynamic(
+        &self,
+        info: Option<&RepoMinimalInfo>,
+        identity: &Identity,
+    ) -> Result<()> {
         use std::process::Command;
         use std::time::Duration;
         use std::time::SystemTime;
@@ -506,7 +508,7 @@ impl ConfigSetHgExt for ConfigSet {
             return Ok(());
         }
 
-        let dynamic_path = get_config_dir(repo_path)?.join("hgrc.dynamic");
+        let dynamic_path = get_config_dir(info)?.join("hgrc.dynamic");
 
         // Regenerate if mtime is old.
         let generation_time: Option<u64> = self.get_opt("configs", "generationtime")?;
@@ -543,8 +545,8 @@ impl ConfigSetHgExt for ConfigSet {
                             .args(&config_regen_command[1..])
                             .env("HG_INTERNALCONFIG_IS_REFRESHING", "1");
 
-                        if let Some(repo_path) = repo_path {
-                            command.current_dir(repo_path);
+                        if let Some(info) = info {
+                            command.current_dir(&info.dot_hg_path);
                         }
 
                         let _ = command.spawn_detached();
@@ -566,14 +568,18 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(not(feature = "fb"))]
-    fn maybe_refresh_dynamic(&self, _repo_path: Option<&Path>, _identity: &Identity) -> Result<()> {
+    fn maybe_refresh_dynamic(
+        &self,
+        _info: Option<&RepoMinimalInfo>,
+        _identity: &Identity,
+    ) -> Result<()> {
         Ok(())
     }
 
     #[cfg(not(feature = "fb"))]
     fn load_dynamic(
         &mut self,
-        _repo_path: Option<&Path>,
+        _info: Option<&RepoMinimalInfo>,
         _opts: Options,
         _identity: &Identity,
         _proxy_sock_path: Option<String>,
@@ -832,19 +838,9 @@ pub fn repo_name_from_url(config: &dyn Config, s: &str) -> Option<String> {
 }
 
 #[cfg(feature = "fb")]
-fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf, Error> {
-    Ok(match repo_path {
-        Some(repo_path) => {
-            let shared_path = repo_path.join("sharedpath");
-            if shared_path.exists() {
-                let raw = read_to_string(&shared_path).map_err(|e| Error::Io(shared_path, e))?;
-                let trimmed = raw.trim_end_matches('\n');
-                // sharedpath can be relative, so join it with repo_path.
-                repo_path.join(trimmed)
-            } else {
-                repo_path.to_path_buf()
-            }
-        }
+fn get_config_dir(info: Option<&RepoMinimalInfo>) -> Result<PathBuf, Error> {
+    Ok(match info {
+        Some(info) => info.shared_dot_hg_path.clone(),
         None => {
             let dirs = vec![
                 std::env::var("TESTTMP")
@@ -892,7 +888,7 @@ pub fn calculate_internalconfig(
 #[cfg(feature = "fb")]
 pub fn generate_internalconfig(
     mode: FbConfigMode,
-    repo_path: Option<&Path>,
+    info: Option<&RepoMinimalInfo>,
     repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
     user_name: String,
@@ -905,13 +901,13 @@ pub fn generate_internalconfig(
     use tempfile::tempfile_in;
 
     tracing::debug!(
-        repo_path = ?repo_path,
+        repo_path = ?info.map(|i| &i.path),
         canary = ?canary,
         "generate_internalconfig",
     );
 
     // Resolve sharedpath
-    let config_dir = get_config_dir(repo_path)?;
+    let config_dir = get_config_dir(info)?;
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.

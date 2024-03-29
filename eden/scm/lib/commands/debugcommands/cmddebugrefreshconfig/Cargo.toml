@@ -9,6 +9,7 @@ edition = "2021"
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 configloader = { version = "0.1.0", path = "../../../config/loader" }
+repo-minimal-info = { version = "0.1.0", path = "../../../repo/repo-minimal-info" }
 
 [features]
 default = []

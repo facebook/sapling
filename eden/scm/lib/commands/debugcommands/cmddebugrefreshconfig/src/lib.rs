@@ -27,8 +27,14 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&mut Repo>) -> Resu
     #[cfg(feature = "fb")]
     {
         use configloader::fb::FbConfigMode;
-        let (dot_hg_path, repo_name) = match repo {
-            Some(repo) => (Some(repo.shared_dot_hg_path()), repo.repo_name()),
+        use repo_minimal_info::RepoMinimalInfo;
+        let (info, repo_name) = match repo {
+            Some(repo) => (
+                Some(RepoMinimalInfo::from_repo_root(
+                    repo.shared_path().to_path_buf(),
+                )?),
+                repo.repo_name(),
+            ),
             None => (None, None),
         };
 
@@ -41,7 +47,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&mut Repo>) -> Resu
 
         generate_internalconfig(
             mode,
-            dot_hg_path,
+            info.as_ref(),
             repo_name,
             ctx.opts.canary,
             username,

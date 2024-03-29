@@ -23,5 +23,6 @@ rust_library(
         "//eden/scm/lib/commands/cmdutil:cmdutil",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
     ]),
 )
