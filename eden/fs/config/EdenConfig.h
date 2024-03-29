@@ -458,6 +458,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * The number of FUSE dispatcher threads to spawn.
+   */
+  ConfigSetting<int32_t> fuseNumDispatcherThreads{
+      "fuse:num-dispatcher-threads",
+      16,
+      this};
+
+  /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
    * this amount of time, an ETIMEDOUT error will be returned to the kernel to
    * avoid blocking forever.
