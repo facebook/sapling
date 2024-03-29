@@ -14,6 +14,7 @@ import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
 import {Kbd} from './Kbd';
+import {Link} from './Link';
 import {RestackBehaviorSetting} from './RestackBehavior';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
@@ -32,7 +33,6 @@ import platform from './platform';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
-import {VSCodeLink} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
@@ -130,11 +130,9 @@ function SettingsDropdown({
           description={
             <>
               <T>Which command to use to submit code for code review on GitHub.</T>{' '}
-              <VSCodeLink
-                href="https://sapling-scm.com/docs/git/intro#pull-requests"
-                target="_blank">
-                <T>Learn More.</T>
-              </VSCodeLink>
+              <Link href="https://sapling-scm.com/docs/git/intro#pull-requests">
+                <T>Learn More</T>
+              </Link>
             </>
           }>
           <Dropdown
