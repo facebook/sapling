@@ -24,7 +24,6 @@ import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -96,30 +95,6 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           </span>
         </Row>
         <GroupName>Components</GroupName>
-        <Row>
-          <VSCodeButton appearance="primary">Primary</VSCodeButton>
-          <VSCodeButton disabled appearance="primary">
-            Primary
-          </VSCodeButton>
-          <VSCodeButton appearance="secondary">Secondary</VSCodeButton>
-          <VSCodeButton appearance="secondary" disabled>
-            Secondary
-          </VSCodeButton>
-          <VSCodeButton appearance="icon">Icon</VSCodeButton>
-          <VSCodeButton appearance="icon">
-            <Icon icon="rocket" slot="start" />
-            Icon
-          </VSCodeButton>
-          <VSCodeButton appearance="icon">
-            <Icon icon="rocket" />
-          </VSCodeButton>
-          <VSCodeButton appearance="icon" disabled>
-            <Icon icon="rocket" slot="start" /> Icon
-          </VSCodeButton>
-          <VSCodeButton appearance="secondary">
-            <Icon icon="rocket" slot="start" /> Secondary With Icon
-          </VSCodeButton>
-        </Row>
         <Row>
           <Button primary>Primary</Button>
           <Button disabled primary>
