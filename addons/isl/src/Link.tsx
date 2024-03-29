@@ -5,19 +5,39 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExclusiveOr} from 'shared/typeUtils';
-
 import platform from './platform';
-import {VSCodeLink} from '@vscode/webview-ui-toolkit/react';
+import * as stylex from '@stylexjs/stylex';
 
-export function Link(
-  props: React.ComponentProps<typeof VSCodeLink> &
-    ExclusiveOr<{href: string}, {onClick: () => unknown}>,
-) {
-  const {children, href, onClick, ...rest} = props;
+const styles = stylex.create({
+  a: {
+    color: 'var(--link-foreground)',
+    cursor: 'pointer',
+    textDecoration: {
+      ':hover': 'underline',
+    },
+    outline: {
+      default: 'none',
+      ':focus-visible': '1px solid var(--focus-border)',
+    },
+  },
+});
+
+export function Link({
+  children,
+  href,
+  onClick,
+  xstyle,
+  ...rest
+}: React.DetailedHTMLProps<React.AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement> & {
+  xstyle?: stylex.StyleXStyles;
+}) {
   return (
-    <VSCodeLink {...rest} onClick={href != null ? () => platform.openExternalLink(href) : onClick}>
+    <a
+      tabIndex={0}
+      {...stylex.props(styles.a, xstyle)}
+      {...rest}
+      onClick={href != null ? () => platform.openExternalLink(href) : onClick}>
       {children}
-    </VSCodeLink>
+    </a>
   );
 }
