@@ -22,6 +22,7 @@ use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
+use repo_minimal_info::RepoMinimalInfo;
 
 mod impl_into;
 
@@ -140,9 +141,9 @@ py_class!(pub class config |py| {
 
     @staticmethod
     def load(repopath: Option<PyPathBuf>) -> PyResult<Self> {
-        let repopath = repopath.as_ref().map(|p| p.as_path());
+        let info = path_to_info(py, repopath)?;
         let mut cfg = ConfigSet::new();
-        cfg.load(repopath).map_pyerr(py)?;
+        cfg.load(info.as_ref()).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(cfg))
     }
 
@@ -150,9 +151,9 @@ py_class!(pub class config |py| {
         &self,
         repopath: Option<PyPathBuf>,
     ) -> PyResult<PyNone> {
-        let repopath = repopath.as_ref().map(|p| p.as_path());
+        let info = path_to_info(py, repopath)?;
         let mut cfg = self.cfg(py).borrow_mut();
-        cfg.load(repopath).map_pyerr(py)?;
+        cfg.load(info.as_ref()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -160,6 +161,15 @@ py_class!(pub class config |py| {
         self.cfg(py).borrow().files().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
 });
+
+fn path_to_info(py: Python, path: Option<PyPathBuf>) -> PyResult<Option<RepoMinimalInfo>> {
+    // Ideally the callsite can provide `info` directly.
+    let info = match path {
+        None => None,
+        Some(p) => Some(RepoMinimalInfo::from_repo_root(p.to_path_buf()).map_pyerr(py)?),
+    };
+    Ok(info)
+}
 
 impl config {
     pub fn get_cfg(&self, py: Python) -> ConfigSet {

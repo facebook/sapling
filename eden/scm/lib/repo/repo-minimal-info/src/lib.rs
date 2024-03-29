@@ -12,7 +12,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Result;
 use constants::SUPPORTED_DEFAULT_REQUIREMENTS;
 use constants::SUPPORTED_STORE_REQUIREMENTS;
@@ -43,11 +42,10 @@ impl RepoMinimalInfo {
     ///
     /// If there is no supported repo at the given path, return `None`.
     /// Does not look at ancestor directories.
-    pub fn from_repo_root(path: PathBuf) -> Result<Self> {
-        ensure!(
-            path.is_absolute(),
-            "bug: from_repo_root path should be absolute"
-        );
+    pub fn from_repo_root(mut path: PathBuf) -> Result<Self> {
+        if !path.is_absolute() {
+            path = fs::canonicalize(path)?;
+        }
         let ident = match identity::sniff_dir(&path)? {
             Some(ident) => ident,
             None => bail!("repository {} not found!", path.display()),

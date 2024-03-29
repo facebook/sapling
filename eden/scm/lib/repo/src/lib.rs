@@ -16,3 +16,4 @@ pub mod trees;
 
 pub use commits_trait::DagCommits;
 pub use repo::Repo;
+pub use repo_minimal_info::RepoMinimalInfo;

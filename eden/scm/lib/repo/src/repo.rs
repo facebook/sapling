@@ -135,6 +135,11 @@ impl Repo {
             "Don't pass a config and CLI overrides to Repo::build"
         );
 
+        let config = match config {
+            Some(config) => config,
+            None => configloader::hg::load(Some(&info), pinned_config)?,
+        };
+
         let RepoMinimalInfo {
             path,
             ident,
@@ -146,11 +151,6 @@ impl Repo {
             requirements,
             store_requirements,
         } = info;
-
-        let config = match config {
-            Some(config) => config,
-            None => configloader::hg::load(Some(&path), pinned_config)?,
-        };
 
         let repo_name = configloader::hg::read_repo_name_from_disk(&shared_dot_hg_path)
             .ok()

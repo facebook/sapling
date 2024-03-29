@@ -74,6 +74,7 @@ rust_library(
         "//eden/scm/lib/config/union:unionconfig",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         "//eden/scm/lib/util/hgplain:hgplain",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:base64",
@@ -105,5 +106,6 @@ rust_binary(
         "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/minibench:minibench",
+        "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
     ],
 )

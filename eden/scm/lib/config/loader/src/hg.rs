@@ -29,6 +29,7 @@ use configmodel::ConfigExt;
 use hgplain;
 use identity::Identity;
 use minibytes::Text;
+use repo_minimal_info::RepoMinimalInfo;
 use url::Url;
 
 use crate::config::ConfigSet;
@@ -55,7 +56,7 @@ pub trait OptionsHgExt {
 }
 
 pub trait ConfigSetHgExt {
-    fn load(&mut self, repo_path: Option<&Path>) -> Result<(), Errors>;
+    fn load(&mut self, info: Option<&RepoMinimalInfo>) -> Result<(), Errors>;
 
     /// Load system config files if config environment variable is not set.
     /// Return errors parsing files.
@@ -80,7 +81,7 @@ pub trait ConfigSetHgExt {
     fn load_user(&mut self, opts: Options, identity: &Identity) -> Vec<Error>;
 
     /// Load repo config files.
-    fn load_repo(&mut self, repo_path: &Path, opts: Options, identity: &Identity) -> Vec<Error>;
+    fn load_repo(&mut self, info: &RepoMinimalInfo, opts: Options) -> Vec<Error>;
 
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
@@ -89,21 +90,21 @@ pub trait ConfigSetHgExt {
     fn validate_dynamic(&mut self) -> Result<(), Error>;
 }
 
-/// Load config from specified repo root path, or global config if no path specified.
+/// Load config from specified "minimal repo", or global config if no path specified.
 /// `extra_values` contains config overrides (i.e. "--config" CLI values).
 /// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
-pub fn load(repo_path: Option<&Path>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
+pub fn load(info: Option<&RepoMinimalInfo>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new();
     let mut errors = Vec::new();
 
-    tracing::debug!(?pinned, ?repo_path);
+    tracing::debug!(?pinned, repo_path=?info.map(|i| &i.path));
 
     // "--configfile" and "--config" values are loaded as "pinned". This lets us load them
     // first so they can inform further config loading, but also make sure they still take
     // precedence over "regular" configs.
     set_pinned_with_errors(&mut cfg, pinned, &mut errors);
 
-    match cfg.load(repo_path) {
+    match cfg.load(info) {
         Ok(_) => {
             if !errors.is_empty() {
                 return Err(Errors(errors).into());
@@ -298,20 +299,15 @@ fn set_override(config: &mut ConfigSet, raw: &Text, opts: Options) -> crate::Res
 
 impl ConfigSetHgExt for ConfigSet {
     /// Load system, user config files.
-    fn load(&mut self, repo_path: Option<&Path>) -> Result<(), Errors> {
-        tracing::info!(
-            repo_path = %repo_path.and_then(|p| p.to_str()).unwrap_or("<none>"),
-            "loading config"
-        );
+    fn load(&mut self, info: Option<&RepoMinimalInfo>) -> Result<(), Errors> {
+        tracing::info!(repo_path=?info.map(|i| &i.path), "loading config");
 
         self.clear_unpinned();
 
-        let ident = repo_path
-            .map(|p| identity::must_sniff_dir(p).map_err(|e| Errors(vec![Error::Other(e)])))
-            .transpose()?;
-        let ident = ident.unwrap_or_else(identity::default);
-
-        let repo_path = repo_path.map(|p| p.join(ident.dot_dir()));
+        let (ident, repo_path) = match info {
+            None => (identity::default(), None),
+            Some(i) => (i.ident, Some(i.dot_hg_path.as_path())),
+        };
 
         let mut errors = vec![];
 
@@ -343,7 +339,7 @@ impl ConfigSetHgExt for ConfigSet {
         errors.append(
             &mut dynamic
                 .load_dynamic(
-                    repo_path.as_deref(),
+                    repo_path,
                     opts.clone(),
                     &ident,
                     self.get_opt("auth_proxy", "unix_socket_path")
@@ -356,9 +352,9 @@ impl ConfigSetHgExt for ConfigSet {
         low_prio_configs.push(Arc::new(dynamic));
         self.secondary(Arc::new(low_prio_configs));
 
-        if let Some(repo_path) = repo_path.as_deref() {
-            errors.append(&mut self.load_repo(repo_path, opts, &ident));
-            if let Err(e) = read_set_repo_name(self, repo_path) {
+        if let Some(info) = info {
+            errors.append(&mut self.load_repo(info, opts));
+            if let Err(e) = read_set_repo_name(self, &info.dot_hg_path) {
                 errors.push(e);
             }
         }
@@ -589,12 +585,12 @@ impl ConfigSetHgExt for ConfigSet {
         self.load_user_internal(path.as_ref(), opts)
     }
 
-    fn load_repo(&mut self, repo_path: &Path, opts: Options, identity: &Identity) -> Vec<Error> {
+    fn load_repo(&mut self, info: &RepoMinimalInfo, opts: Options) -> Vec<Error> {
         let mut errors = Vec::new();
 
         let opts = opts.source("repo").process_hgplain();
 
-        let repo_config_path = repo_path.join(identity.config_repo_file());
+        let repo_config_path = info.dot_hg_path.join(info.ident.config_repo_file());
         errors.append(&mut self.load_path(repo_config_path, &opts));
 
         errors
@@ -1289,8 +1285,10 @@ mod tests {
         let other_rc = dir.path().join("other.rc");
         write_file(other_rc.clone(), "[s]\na=other\nb=other");
 
+        let repo = RepoMinimalInfo::from_repo_root(dir.path().to_path_buf()).unwrap();
+
         let cfg = load(
-            Some(dir.path()),
+            Some(&repo),
             &[
                 PinnedConfig::File(
                     format!("{}", other_rc.display()).into(),

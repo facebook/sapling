@@ -60,7 +60,7 @@ Clone can create a ".sl" repo.
   $ cd cloned
 Status works in ".sl" repo
   $ LOG=configloader::hg=info hg status -A
-   INFO configloader::hg: loading config repo_path=$TESTTMP/cloned
+   INFO configloader::hg: loading config repo_path=* (glob)
   C foo
   $ cd ..
 

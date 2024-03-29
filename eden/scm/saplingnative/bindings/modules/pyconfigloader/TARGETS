@@ -22,6 +22,7 @@ rust_python_library(
     deps = [
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         "//eden/scm/lib/util:util",
     ],
 )

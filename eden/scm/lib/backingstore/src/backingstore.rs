@@ -24,6 +24,7 @@ use configloader::Config;
 use edenapi::configmodel::ConfigExt;
 use log::warn;
 use repo::repo::Repo;
+use repo::RepoMinimalInfo;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::FileAuxData;
@@ -112,7 +113,8 @@ impl BackingStore {
     ) -> Result<Inner> {
         constructors::init();
 
-        let mut config = configloader::hg::load(Some(root), extra_configs)?;
+        let info = RepoMinimalInfo::from_repo_root(root.to_path_buf())?;
+        let mut config = configloader::hg::load(Some(&info), extra_configs)?;
 
         let source = "backingstore".into();
         if !allow_retries {
