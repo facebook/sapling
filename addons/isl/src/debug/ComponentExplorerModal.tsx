@@ -16,6 +16,7 @@ import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
+import {TextArea} from '../components/TextArea';
 import {TextField} from '../components/TextField';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
@@ -26,7 +27,6 @@ import {
   VSCodeDivider,
   VSCodeDropdown,
   VSCodeOption,
-  VSCodeTextArea,
 } from '@vscode/webview-ui-toolkit/react';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
@@ -177,7 +177,9 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
         </Row>
         <VSCodeDivider />
         <Row>
-          <VSCodeTextArea placeholder="placeholder">Text area</VSCodeTextArea>
+          <TextArea placeholder="placeholder" onChange={e => console.log(e.currentTarget.value)}>
+            Text area
+          </TextArea>
           <TextField placeholder="placeholder" onChange={e => console.log(e.currentTarget.value)}>
             Text Field
           </TextField>
