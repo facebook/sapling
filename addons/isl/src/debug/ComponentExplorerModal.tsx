@@ -14,6 +14,7 @@ import {Tooltip} from '../Tooltip';
 import {Badge} from '../components/Badge';
 import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
+import {Dropdown} from '../components/Dropdown';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
 import {TextArea} from '../components/TextArea';
@@ -22,12 +23,7 @@ import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {
-  VSCodeButton,
-  VSCodeDivider,
-  VSCodeDropdown,
-  VSCodeOption,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -44,6 +40,7 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
   const [radioChoice, setRadioChoice] = useState('radio');
   const [checkbox1, setCheckbox1] = useState(false);
   const [checkbox2, setCheckbox2] = useState(true);
+  const [dropdownChoice, setDropdownChoice] = useState('B');
   return (
     <div {...stylex.props(styles.container)}>
       <h2>
@@ -145,10 +142,23 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           </Button>
         </Row>
         <Row>
-          <VSCodeDropdown>
-            <VSCodeOption>Dropdown</VSCodeOption>
-            <VSCodeOption>Option</VSCodeOption>
-          </VSCodeDropdown>
+          <Dropdown
+            options={['Dropdown', 'Option']}
+            onChange={e => console.log(e.currentTarget.value)}
+          />
+          <Dropdown
+            options={[
+              {value: 'none', name: 'Disabled', disabled: true},
+              {value: 'drop', name: 'Dropdown'},
+              {value: 'opt', name: 'Option'},
+            ]}
+            onChange={e => console.log(e.currentTarget.value)}
+          />
+          <Dropdown
+            value={dropdownChoice}
+            onChange={e => setDropdownChoice(e.currentTarget.value)}
+            options={['A', 'B', 'C']}
+          />
         </Row>
         <Row>
           <Checkbox checked={checkbox1} onChange={setCheckbox1}>
