@@ -10,12 +10,14 @@
 //! Use `staticconfig::static_config!` to define static configs so they do not
 //! have runtime parsing or hashmap insertion overhead.
 
+use std::path::Path;
 use std::sync::Arc;
 
 use configmodel::Config;
 use configset::config::ConfigSet;
 use configset::config::Options;
 use identity::Identity;
+use repo_minimal_info::RepoMinimalInfo;
 use staticconfig::static_config;
 use staticconfig::StaticConfig;
 use unionconfig::UnionConfig;
@@ -23,6 +25,7 @@ use unionconfig::UnionConfig;
 use crate::hg::OptionsHgExt;
 
 mod core;
+pub mod git;
 mod merge_tools;
 mod open_source;
 mod production;
@@ -34,7 +37,11 @@ mod sapling;
 ///
 /// This config is intended to have the lowest priority and can be overridden
 /// by system config files.
-pub(crate) fn builtin_system(opts: Options, ident: &Identity) -> UnionConfig {
+pub(crate) fn builtin_system(
+    opts: Options,
+    ident: &Identity,
+    info: Option<&RepoMinimalInfo>,
+) -> UnionConfig {
     let mut configs: Vec<Arc<dyn Config>> = vec![Arc::new(&core::CONFIG)];
     if ident.env_var("CONFIG").is_none() {
         configs.push(Arc::new(&merge_tools::CONFIG));
@@ -73,6 +80,15 @@ pub(crate) fn builtin_system(opts: Options, ident: &Identity) -> UnionConfig {
     // integration tests to cover static config.
     if is_test {
         configs.push(Arc::new(&TEST_CONFIG));
+    }
+
+    if let Some(info) = info {
+        if info.store_requirements.contains("git") {
+            configs.push(Arc::new(&git::GIT_CONFIG));
+        }
+        if info.store_requirements.contains("dotgit") {
+            configs.push(Arc::new(&git::DOTGIT_OVERRIDE_CONFIG));
+        }
     }
 
     apply_filters(UnionConfig::from_configs(configs), opts)

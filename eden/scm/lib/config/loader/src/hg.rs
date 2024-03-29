@@ -348,7 +348,8 @@ impl ConfigSetHgExt for ConfigSet {
                 .map_err(|e| Errors(vec![Error::Other(e)]))?,
         );
 
-        let mut low_prio_configs = crate::builtin_static::builtin_system(opts.clone(), &ident);
+        let mut low_prio_configs =
+            crate::builtin_static::builtin_system(opts.clone(), &ident, info);
         low_prio_configs.push(Arc::new(dynamic));
         self.secondary(Arc::new(low_prio_configs));
 
