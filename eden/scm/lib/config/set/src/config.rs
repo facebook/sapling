@@ -514,9 +514,11 @@ impl ConfigSet {
                 } => {
                     if !skip_include {
                         if let Some(content) = crate::builtin::get(include_path) {
-                            let text = Text::from(content);
-                            let path = Path::new(include_path);
-                            self.load_file_content(path, text, opts, visited, errors);
+                            if !content.is_empty() {
+                                let text = Text::from(content);
+                                let path = Path::new(include_path);
+                                self.load_file_content(path, text, opts, visited, errors);
+                            }
                         } else {
                             let full_include_path =
                                 path.parent().unwrap().join(expand_path(include_path));
@@ -1065,8 +1067,6 @@ pub(crate) mod tests {
             &"test_parse_include_builtin".into(),
         );
         assert!(errors.is_empty());
-
-        assert_eq!(cfg.get("remotenames", "hoist"), Some(Text::from("remote")));
     }
 
     #[test]

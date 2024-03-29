@@ -86,7 +86,7 @@ def isgitpeer(repo):
 def createrepo(ui, url, destpath):
     from . import hg
 
-    repo_config = "%include builtin:git.rc\n"
+    repo_config = ""
     if url:
         repo_config += "\n[paths]\ndefault = %s\n" % url
 
@@ -135,7 +135,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
             ret = initgitbare(ui, repo.svfs.join("git"))
             if ret != 0:
                 raise error.Abort(_("git clone was not successful"))
-            initgit(repo, "git", url)
+            repo = initgit(repo, "git", url)
             if url:
                 if pullnames is None:
                     ls_remote_args = ["ls-remote", "--symref", url, "HEAD"]
@@ -260,8 +260,12 @@ def initgit(repo, gitdir, giturl=None):
         repo.storerequirements.add(GIT_FORMAT_REQUIREMENT)
         repo.storerequirements.add(GIT_STORE_REQUIREMENT)
         repo._writestorerequirements()
-        repo.invalidatechangelog()
-        visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
+    # recreate the repo to pick up key changes
+    from . import hg
+
+    repo = hg.repository(repo.baseui, repo.root).local()
+    visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
+    return repo
 
 
 def maybegiturl(url):
