@@ -1,9 +1,9 @@
 # Eden's Threading Strategy
 
-There are `fuseNumThreads` (defaults to 16 as of Dec 2017) that block on reading
+There are `fuse:NumDispatcherThreads` (defaults to 16 as of Mar 2024) that block on reading
 the FUSE socket.  The reason we do blocking reads is to avoid two syscalls on an
 incoming event: an epoll wakeup plus a read.  Note that there is a FUSE socket
-per mount.  So if you have 3 mounts, there will be `3*fuseNumThreads` threads.
+per mount.  So if you have 3 mounts, there will be `3*fuse:NumDispatcherThreads` threads.
 
 The FUSE threads generally do any filesystem work directly rather than putting
 work on another thread.
