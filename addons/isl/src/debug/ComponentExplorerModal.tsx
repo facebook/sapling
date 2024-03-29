@@ -14,6 +14,7 @@ import {Tooltip} from '../Tooltip';
 import {Badge} from '../components/Badge';
 import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
+import {Divider} from '../components/Divider';
 import {Dropdown} from '../components/Dropdown';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
@@ -23,7 +24,7 @@ import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -185,7 +186,7 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           <Icon icon="loading" />
           Loading
         </Row>
-        <VSCodeDivider />
+        <Divider />
         <Row>
           <TextArea placeholder="placeholder" onChange={e => console.log(e.currentTarget.value)}>
             Text area
