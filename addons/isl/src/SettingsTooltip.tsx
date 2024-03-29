@@ -21,6 +21,7 @@ import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {Button} from './components/Button';
+import {Checkbox} from './components/Checkbox';
 import {Dropdown} from './components/Dropdown';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
@@ -31,7 +32,7 @@ import platform from './platform';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
-import {VSCodeCheckbox, VSCodeLink} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeLink} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
@@ -163,13 +164,13 @@ function SettingsDropdown({
       ) : null}
       <Setting title={<T>Code Review</T>}>
         <div className="multiple-settings">
-          <VSCodeCheckbox
+          <Checkbox
             checked={showDiffNumber}
-            onChange={e => {
-              setShowDiffNumber((e.target as HTMLInputElement).checked);
+            onChange={checked => {
+              setShowDiffNumber(checked);
             }}>
             <T>Show copyable Diff / Pull Request numbers inline for each commit</T>
-          </VSCodeCheckbox>
+          </Checkbox>
           <ConfirmSubmitStackSetting />
           <SubmitAsDraftCheckbox forceShow />
         </div>
@@ -197,13 +198,13 @@ function ConfirmSubmitStackSetting() {
           'If false, no confirmation is shown and it will submit as draft if you previously ' +
           'checked the submit as draft checkbox.',
       )}>
-      <VSCodeCheckbox
+      <Checkbox
         checked={value}
-        onChange={e => {
-          setValue((e.target as HTMLInputElement).checked);
+        onChange={checked => {
+          setValue(checked);
         }}>
         <T>Show confirmation when submitting a stack</T>
-      </VSCodeCheckbox>
+      </Checkbox>
     </Tooltip>
   );
 }
@@ -216,13 +217,13 @@ function RenderCompactSetting() {
         'Render commits in the tree more compactly, by reducing spacing and not wrapping Diff info to multiple lines. ' +
           'May require more horizontal scrolling.',
       )}>
-      <VSCodeCheckbox
+      <Checkbox
         checked={value}
-        onChange={e => {
-          setValue((e.target as HTMLInputElement).checked);
+        onChange={checked => {
+          setValue(checked);
         }}>
         <T>Compact Mode</T>
-      </VSCodeCheckbox>
+      </Checkbox>
     </Tooltip>
   );
 }
@@ -330,13 +331,13 @@ function DebugToolsField() {
 
   return (
     <DropdownField title={t('Debug Tools')}>
-      <VSCodeCheckbox
+      <Checkbox
         checked={isDebug}
-        onChange={e => {
-          setIsDebug((e.target as HTMLInputElement).checked);
+        onChange={checked => {
+          setIsDebug(checked);
         }}>
         <T>Enable Debug Tools</T>
-      </VSCodeCheckbox>
+      </Checkbox>
     </DropdownField>
   );
 }
