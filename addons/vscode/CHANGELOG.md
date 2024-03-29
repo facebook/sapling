@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.44
+
+### Mar 29 2024
+
+- Added Bookmarks manager
+  - If you have multiple remote bookmarks, you can control which remote bookmarks are visible
+
 ## 0.1.43
 
 ### Mar 26 2024
