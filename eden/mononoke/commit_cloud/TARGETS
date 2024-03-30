@@ -5,7 +5,14 @@ oncall("mononoke")
 
 rust_library(
     name = "commit_cloud_service_lib",
-    srcs = ["src/lib.rs"],
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/*.sql",
+    ]),
+    deps = [
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+    ],
 )
 
 rust_binary(
