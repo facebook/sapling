@@ -6,8 +6,8 @@
  */
 
 CREATE TABLE IF NOT EXISTS `sparse_profiles_sizes` (
-  `cs_id` varbinary(32) NOT NULL,
-  `profile_name` varchar(512) NOT NULL,
-  `size` bigint unsigned NOT NULL,
+  `cs_id` VARBINARY(32) NOT NULL,
+  `profile_name` VARCHAR(512) NOT NULL,
+  `size` BIGINT unsigned NOT NULL,
   PRIMARY KEY (`cs_id`, `profile_name`)
 )

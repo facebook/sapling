@@ -14,13 +14,13 @@
 -- small or from large repo).
 CREATE TABLE IF NOT EXISTS `synced_commit_mapping` (
   `mapping_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `small_repo_id` int(11) NOT NULL,
-  `small_bcs_id` binary(32) NOT NULL,
-  `large_repo_id` int(11) NOT NULL,
-  `large_bcs_id` binary(32) NOT NULL,
-  `sync_map_version_name` varchar(255),
+  `small_repo_id` INT(11) NOT NULL,
+  `small_bcs_id` BINARY(32) NOT NULL,
+  `large_repo_id` INT(11) NOT NULL,
+  `large_bcs_id` BINARY(32) NOT NULL,
+  `sync_map_version_name` VARCHAR(255),
   -- There is no enum type in SQLite
-  `source_repo` varchar(255), -- enum('small','large') DEFAULT NULL,
+  `source_repo` VARCHAR(255), -- enum('small','large') DEFAULT NULL,
   UNIQUE (`small_repo_id`,`large_repo_id`,`large_bcs_id`)
 );
 
@@ -61,11 +61,11 @@ CREATE TABLE IF NOT EXISTS `synced_commit_mapping` (
 -- `sync_map_version_name` field in `synced_working_copy_equivalence` table is redundant and could be deleted.
 CREATE TABLE IF NOT EXISTS `synced_working_copy_equivalence` (
   `mapping_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `small_repo_id` int(11) NOT NULL,
-  `small_bcs_id` binary(32),
-  `large_repo_id` int(11) NOT NULL,
-  `large_bcs_id` binary(32) NOT NULL,
-  `sync_map_version_name` varchar(255),
+  `small_repo_id` INT(11) NOT NULL,
+  `small_bcs_id` BINARY(32),
+  `large_repo_id` INT(11) NOT NULL,
+  `large_bcs_id` BINARY(32) NOT NULL,
+  `sync_map_version_name` VARCHAR(255),
    UNIQUE (`large_repo_id`,`small_repo_id`,`large_bcs_id`)
 );
 
@@ -80,8 +80,8 @@ CREATE TABLE IF NOT EXISTS `synced_working_copy_equivalence` (
 -- mapping then this large commit shouldn't be rewritten to a given small repo).
 CREATE TABLE IF NOT EXISTS `version_for_large_repo_commit` (
   `mapping_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL ,
-  `large_repo_id` int(11) NOT NULL,
-  `large_bcs_id` binary(32) NOT NULL,
-  `sync_map_version_name` varchar(255) NOT NULL,
+  `large_repo_id` INT(11) NOT NULL,
+  `large_bcs_id` BINARY(32) NOT NULL,
+  `sync_map_version_name` VARCHAR(255) NOT NULL,
   UNIQUE (`large_repo_id`,`large_bcs_id`)
 );

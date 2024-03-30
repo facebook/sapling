@@ -6,12 +6,12 @@
  */
 
 CREATE TABLE IF NOT EXISTS `deletion_plan` (
-  `repo_id` int NOT NULL,
-  `cs_id` varbinary(32) NOT NULL,
-  `blob_key` varchar(255) NOT NULL,
-  `reason` varchar(64) NOT NULL,
-  `stage` varchar(10) NOT NULL, -- mysql table has enum type here
-  `timestamp` bigint NOT NULL,
+  `repo_id` INT NOT NULL,
+  `cs_id` VARBINARY(32) NOT NULL,
+  `blob_key` VARCHAR(255) NOT NULL,
+  `reason` VARCHAR(64) NOT NULL,
+  `stage` VARCHAR(10) NOT NULL, -- mysql table has enum type here
+  `timestamp` BIGINT NOT NULL,
   PRIMARY KEY (`repo_id`, `cs_id`, `blob_key`, `reason`)
 );
 

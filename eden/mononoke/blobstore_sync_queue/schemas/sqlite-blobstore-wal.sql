@@ -7,7 +7,7 @@
 
 CREATE TABLE IF NOT EXISTS `blobstore_write_ahead_log` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `blobstore_key` varchar NOT NULL,
+  `blobstore_key` VARCHAR NOT NULL,
   `timestamp` BIGINT NOT NULL, /* time the blob was added to the queue */
   `multiplex_id` INTEGER NOT NULL,
   `blob_size` BIGINT NOT NULL,
