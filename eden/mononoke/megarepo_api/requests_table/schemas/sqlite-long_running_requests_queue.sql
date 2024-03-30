@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
- CREATE TABLE IF NOT EXISTS long_running_request_queue (
+ CREATE TABLE IF NOT EXISTS `long_running_request_queue` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER NOT NULL,
   `bookmark` VARCHAR(512) NOT NULL,
@@ -21,7 +21,7 @@
   `claimed_by` VARCHAR(255) NULL
 );
 
-CREATE INDEX IF NOT EXISTS `request_status` ON long_running_request_queue (`status`, `request_type`);
-CREATE INDEX IF NOT EXISTS `request_creation` ON long_running_request_queue (`created_at`);
-CREATE INDEX IF NOT EXISTS `request_dequeue` ON long_running_request_queue (`status`, `repo_id`, `created_at`);
-CREATE INDEX IF NOT EXISTS `abandoned_request_index` ON long_running_request_queue (`repo_id`, `status`, `inprogress_last_updated_at`);
+CREATE INDEX IF NOT EXISTS `request_status` ON `long_running_request_queue` (`status`, `request_type`);
+CREATE INDEX IF NOT EXISTS `request_creation` ON `long_running_request_queue` (`created_at`);
+CREATE INDEX IF NOT EXISTS `request_dequeue` ON `long_running_request_queue` (`status`, `repo_id`, `created_at`);
+CREATE INDEX IF NOT EXISTS `abandoned_request_index` ON `long_running_request_queue` (`repo_id`, `status`, `inprogress_last_updated_at`);

@@ -7,15 +7,15 @@
 
 -- Table for maintaining mapping between git annotated tags
 -- and the bonsai changeset stored in Mononoke representing the metadata
--- associated with the tag 
-CREATE TABLE IF NOT EXISTS bonsai_tag_mapping (
-  repo_id INT UNSIGNED NOT NULL, -- The ID of the repo for which this tag exists
-  tag_name VARCHAR(512) NOT NULL, -- The name of the tag
-  changeset_id VARBINARY(32) NOT NULL, -- The Id of the mapped changeset
-  tag_hash VARBINARY(20) DEFAULT 0x0000000000000000000000000000000000000000, -- The Git hash of the tag object
-  target_is_tag BOOLEAN DEFAULT FALSE, -- Flag determining if the target of the tag is another tag instead of a commit
-  PRIMARY KEY (repo_id, tag_name)
+-- associated with the tag
+CREATE TABLE IF NOT EXISTS `bonsai_tag_mapping` (
+  `repo_id` INT UNSIGNED NOT NULL, -- The ID of the repo for which this tag exists
+  `tag_name` VARCHAR(512) NOT NULL, -- The name of the tag
+  `changeset_id` VARBINARY(32) NOT NULL, -- The Id of the mapped changeset
+  `tag_hash` VARBINARY(20) DEFAULT 0x0000000000000000000000000000000000000000, -- The Git hash of the tag object
+  `target_is_tag` BOOLEAN DEFAULT FALSE, -- Flag determining if the target of the tag is another tag instead of a commit
+  PRIMARY KEY (`repo_id`, `tag_name`)
 );
 
-CREATE INDEX IF NOT EXISTS bonsai_tag_mapping_hashes
-  ON bonsai_tag_mapping (tag_hash, repo_id);
+CREATE INDEX IF NOT EXISTS `bonsai_tag_mapping_hashes`
+  ON `bonsai_tag_mapping` (`tag_hash`, `repo_id`);

@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS  `snapshots` (
   `seq` INTEGER PRIMARY KEY AUTOINCREMENT,
   UNIQUE(`reponame`, `workspace`, `commit`)
 );
-CREATE INDEX `seq` ON snapshots(`seq`);
+CREATE INDEX `seq` ON `snapshots`(`seq`);
 
 
 -- versions

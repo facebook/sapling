@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE IF NOT EXISTS commit_graph_backfiller_checkpoints (
-  repo_id INTEGER PRIMARY KEY NOT NULL,
-  last_finished_id BIGINT NULL
+CREATE TABLE IF NOT EXISTS `commit_graph_backfiller_checkpoints` (
+  `repo_id` INTEGER PRIMARY KEY NOT NULL,
+  `last_finished_id` BIGINT NULL
 );

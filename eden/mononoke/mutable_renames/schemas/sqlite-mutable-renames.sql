@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE IF NOT EXISTS mutable_renames(
+CREATE TABLE IF NOT EXISTS `mutable_renames`(
    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
    `repo_id` INT UNSIGNED NOT NULL,
    `dst_cs_id` VARBINARY(32) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS mutable_renames(
    UNIQUE (`repo_id`, `dst_path_hash`, `dst_cs_id`)
 );
 
-CREATE TABLE IF NOT EXISTS mutable_renames_paths(
+CREATE TABLE IF NOT EXISTS `mutable_renames_paths`(
    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
    `path_hash` VARBINARY(32) NOT NULL,
    `path` VARBINARY(4096) NOT NULL,
