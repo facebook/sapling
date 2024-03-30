@@ -8,6 +8,7 @@
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 
+use crate::SqlCommitCloud;
 pub struct SqlCommitCloudBuilder {
     #[allow(unused)]
     pub(crate) connections: SqlConnections,
@@ -20,5 +21,11 @@ impl SqlConstruct for SqlCommitCloudBuilder {
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }
+    }
+}
+
+impl SqlCommitCloudBuilder {
+    pub fn new(self) -> SqlCommitCloud {
+        SqlCommitCloud::new(self.connections)
     }
 }

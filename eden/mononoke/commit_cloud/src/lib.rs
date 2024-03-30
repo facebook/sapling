@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use sql_ext::SqlConnections;
+
 use crate::heads::WorkspaceHead;
 use crate::history::WorkspaceHistory;
 use crate::local_bookmarks::WorkspaceLocalBookmark;
@@ -18,10 +20,6 @@ pub(crate) mod local_bookmarks;
 pub(crate) mod remote_bookmarks;
 pub(crate) mod snapshots;
 pub(crate) mod versions;
-#[allow(unused)]
-pub fn dummy_fn() {
-    println!("Welcome to the commit cloud service!");
-}
 
 #[allow(unused)]
 pub(crate) struct WorkspaceContents {
@@ -29,4 +27,15 @@ pub(crate) struct WorkspaceContents {
     local_bookmarks: Vec<WorkspaceLocalBookmark>,
     remote_bookmarks: Vec<WorkspaceRemoteBookmark>,
     history: WorkspaceHistory,
+}
+
+pub struct SqlCommitCloud {
+    #[allow(unused)]
+    pub(crate) connections: SqlConnections,
+}
+
+impl SqlCommitCloud {
+    pub fn new(connections: SqlConnections) -> Self {
+        Self { connections }
+    }
 }
