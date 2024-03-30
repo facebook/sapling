@@ -12,5 +12,7 @@ name = "commit_cloud_service"
 path = "src/main.rs"
 
 [dependencies]
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+sha1 = "0.10.5"
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
