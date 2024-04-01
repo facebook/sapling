@@ -121,6 +121,10 @@ export class WatchForChanges {
       return;
     }
     const relativeDotdir = path.relative(repoRoot, dotdir);
+    // if working from a git clone, the dotdir lives in .git/sl,
+    // but we need to ignore changes in .git in our watchman subscriptions
+    const outerDotDir =
+      relativeDotdir.indexOf(path.sep) >= 0 ? path.dirname(relativeDotdir) : relativeDotdir;
 
     const FILE_CHANGE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-file-change';
     const DIRSTATE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-dirstate-change';
@@ -181,10 +185,10 @@ export class WatchForChanges {
             // statuses.
             // This line restricts this subscription to only return files.
             ['type', 'f'],
-            ['not', ['dirname', relativeDotdir]],
+            ['not', ['dirname', outerDotDir]],
             // Even though we tell it not to match .sl, modifying a file inside .sl
             // will emit an event for the folder itself, which we want to ignore.
-            ['not', ['match', relativeDotdir, 'basename']],
+            ['not', ['match', outerDotDir, 'basename']],
           ],
           defer: [WatchForChanges.WATCHMAN_DEFER],
           empty_on_fresh_instance: true,
