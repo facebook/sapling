@@ -33,6 +33,7 @@ import {
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {Badge} from '../components/Badge';
+import {Divider} from '../components/Divider';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -75,12 +76,7 @@ import {
 } from './CommitMessageFields';
 import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
-import {
-  VSCodeButton,
-  VSCodeDivider,
-  VSCodeRadio,
-  VSCodeRadioGroup,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect} from 'react';
@@ -120,7 +116,7 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         <Icon icon="layers" size="M" />
         <T replace={{$num: selectedCommits.length}}>$num Commits Selected</T>
       </strong>
-      <VSCodeDivider />
+      <Divider />
       <div className="commit-list">
         {selectedCommits.map(commit => (
           <Commit
@@ -295,7 +291,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               />
             );
           })}
-        <VSCodeDivider />
+        <Divider />
         {commit.isDot && !isAmendDisabled ? (
           <Section data-testid="changes-to-amend">
             <SmallCapsTitle>

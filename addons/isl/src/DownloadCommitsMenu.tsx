@@ -12,6 +12,7 @@ import {Internal} from './Internal';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {Checkbox} from './components/Checkbox';
+import {Divider} from './components/Divider';
 import {findCurrentPublicBase} from './getCommitTree';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
@@ -24,7 +25,7 @@ import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {forceFetchCommit} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
-import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -212,7 +213,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       </div>
       {Internal.supportsCommitCloud && (
         <>
-          <VSCodeDivider />
+          <Divider />
           <CommitCloudInfo />
         </>
       )}

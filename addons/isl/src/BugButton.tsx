@@ -12,11 +12,12 @@ import {DropdownFields} from './DropdownFields';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
+import {Divider} from './components/Divider';
 import {DEFAULT_HEARTBEAT_TIMEOUT_MS, useHeartbeat} from './heartbeat';
 import {t, T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
-import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {Icon} from 'shared/Icon';
@@ -53,7 +54,7 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
         <FileABug dismissBugDropdown={dismiss} heartbeat={heartbeat} />
         {AdditionalDebugContent && (
           <div className="additional-debug-content">
-            <VSCodeDivider />
+            <Divider />
             <ErrorBoundary>
               <Suspense>
                 <AdditionalDebugContent />

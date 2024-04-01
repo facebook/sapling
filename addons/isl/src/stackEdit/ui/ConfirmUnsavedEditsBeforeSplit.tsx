@@ -17,11 +17,12 @@ import {
 } from '../../CommitInfoView/CommitInfoState';
 import {commitMessageFieldsSchema} from '../../CommitInfoView/CommitMessageFields';
 import {FlexSpacer} from '../../ComponentUtils';
+import {Divider} from '../../components/Divider';
 import {T, t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
-import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
@@ -133,7 +134,7 @@ function PreSplitUnsavedEditsConfirmationModal({
             </div>
           ))}
         </div>
-        <VSCodeDivider />
+        <Divider />
         <div className="use-modal-buttons">
           <FlexSpacer />
           <VSCodeButton appearance="secondary" onClick={() => returnResultAndDismiss(false)}>

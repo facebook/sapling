@@ -14,11 +14,12 @@ import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {Divider} from './components/Divider';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
 import {CommitPreview} from './previews';
 import {useModal} from './useModal';
-import {VSCodeDivider, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useAutofocusRef} from 'shared/hooks';
@@ -127,7 +128,7 @@ function ConfirmModalContent({
         )}
         <SubmitAsDraftCheckbox commitsToBeSubmit={stack} />
       </div>
-      <VSCodeDivider />
+      <Divider />
       <div className="use-modal-buttons">
         <Tooltip
           placement="bottom"

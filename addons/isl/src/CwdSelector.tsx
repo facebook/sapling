@@ -14,17 +14,13 @@ import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
+import {Divider} from './components/Divider';
 import {T} from './i18n';
 import {lazyAtom, writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
-import {
-  VSCodeButton,
-  VSCodeDivider,
-  VSCodeRadio,
-  VSCodeRadioGroup,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
@@ -147,7 +143,7 @@ export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divid
           );
         })}
       </VSCodeRadioGroup>
-      {divider && <VSCodeDivider />}
+      {divider && <Divider />}
     </DropdownField>
   );
 }
