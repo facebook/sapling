@@ -30,12 +30,12 @@ py_class!(pub class PyRustIO |py| {
         };
         let mut buf = Vec::<u8>::new();
         if n < 0 {
-            io.read_to_end(&mut buf).map_pyerr(py)?;
+            py.allow_threads(|| io.read_to_end(&mut buf)).map_pyerr(py)?;
         } else if n == 0 {
             // Avoid BufReader::read(), which can block filling its buffer.
         } else {
             buf.resize(n as usize, 0u8);
-            let read_bytes = io.read(&mut buf).map_pyerr(py)?;
+            let read_bytes = py.allow_threads(|| io.read(&mut buf)).map_pyerr(py)?;
             buf.truncate(read_bytes);
         }
         Ok(PyBytes::new(py, &buf))
@@ -48,7 +48,7 @@ py_class!(pub class PyRustIO |py| {
             None => return Err(not_readable(py)),
         };
         let mut buf = Vec::<u8>::new();
-        io.read_until(b'\n', &mut buf).map_pyerr(py)?;
+        py.allow_threads(|| io.read_until(b'\n', &mut buf)).map_pyerr(py)?;
         Ok(PyBytes::new(py, &buf))
     }
 
@@ -59,7 +59,7 @@ py_class!(pub class PyRustIO |py| {
             None => return Err(not_writable(py)),
         };
         let bytes = bytes.data(py);
-        io.write_all(bytes).map_pyerr(py)?;
+        py.allow_threads(|| io.write_all(bytes)).map_pyerr(py)?;
         Ok(bytes.len())
     }
 
@@ -69,7 +69,7 @@ py_class!(pub class PyRustIO |py| {
             Some(io) => io,
             None => return Ok(PyNone),
         };
-        io.flush().map_pyerr(py)?;
+        py.allow_threads(|| io.flush()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
