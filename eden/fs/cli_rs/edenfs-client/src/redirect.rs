@@ -223,6 +223,9 @@ pub enum RedirectionState {
     #[serde(rename = "symlink-incorrect")]
     /// The Symlink Is Present but points to the wrong place
     SymlinkIncorrect,
+    #[serde(rename = "real-dir-with-data")]
+    /// There's a directory and it contains data,
+    RealDirWithData,
 }
 
 impl fmt::Display for RedirectionState {
@@ -236,6 +239,7 @@ impl fmt::Display for RedirectionState {
                 Self::NotMounted => "not-mounted",
                 Self::SymlinkMissing => "symlink-missing",
                 Self::SymlinkIncorrect => "symlink-incorrect",
+                Self::RealDirWithData => "real-dir-with-data",
             }
         )
     }
@@ -1158,6 +1162,10 @@ fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<
     }
 }
 
+fn is_dir_with_data(path: &Path) -> Result<bool> {
+    Ok(path.is_dir() && !is_empty_dir(path)?)
+}
+
 /// Computes the complete set of redirections that are currently in effect.
 /// This is based on the explicitly configured settings but also factors in
 /// effective configuration by reading the mount table.
@@ -1240,7 +1248,11 @@ pub fn get_effective_redirections(
                 // that the symlink is effectively missing, even if it
                 // isn't literally missing.  eg: EPERM means we can't
                 // resolve it, so it is effectively no good.
-                redir.state = Some(RedirectionState::SymlinkMissing);
+                redir.state = if is_dir_with_data(&checkout.path().join(&redir.repo_path))? {
+                    Some(RedirectionState::RealDirWithData)
+                } else {
+                    Some(RedirectionState::SymlinkMissing)
+                };
             }
         }
         redirs.insert(rel_path, redir);
