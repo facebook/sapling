@@ -16,6 +16,7 @@ import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {Dropdown} from '../components/Dropdown';
 import {RadioGroup} from '../components/Radio';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
@@ -24,7 +25,7 @@ import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
-import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useEffect, useMemo, useState} from 'react';
@@ -224,7 +225,7 @@ function ComparisonViewHeader({
     <>
       <div className="comparison-view-header">
         <span className="comparison-view-header-group">
-          <VSCodeDropdown
+          <Dropdown
             data-testid="comparison-view-picker"
             value={comparison.type}
             onChange={event =>
@@ -235,18 +236,18 @@ function ComparisonViewHeader({
                     .value as (typeof defaultComparisons)[0],
                 },
               }))
-            }>
-            {defaultComparisons.map(comparison => (
-              <VSCodeOption value={comparison} key={comparison}>
-                <T>{labelForComparison({type: comparison})}</T>
-              </VSCodeOption>
-            ))}
-            {!defaultComparisons.includes(comparison.type as (typeof defaultComparisons)[0]) ? (
-              <VSCodeOption value={comparison.type} key={comparison.type}>
-                <T>{labelForComparison(comparison)}</T>
-              </VSCodeOption>
-            ) : null}
-          </VSCodeDropdown>
+            }
+            options={[
+              ...defaultComparisons.map(comparison => ({
+                value: comparison,
+                name: labelForComparison({type: comparison}),
+              })),
+
+              !defaultComparisons.includes(comparison.type as (typeof defaultComparisons)[0])
+                ? {value: comparison.type, name: labelForComparison(comparison)}
+                : undefined,
+            ].filter(notEmpty)}
+          />
           <Tooltip
             delayMs={1000}
             title={t('Reload this comparison. Comparisons do not refresh automatically.')}>
