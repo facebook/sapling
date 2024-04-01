@@ -829,7 +829,7 @@ export class Repository {
     const lastChecked = new Date();
 
     const [extension, backupStatuses, cloudStatus] = await Promise.allSettled([
-      this.forceGetConfig(ctx, 'extensions.commitcloud'),
+      this.getConfig(ctx, 'extensions.commitcloud'),
       this.fetchCommitCloudBackupStatuses(ctx),
       this.fetchCommitCloudStatus(ctx),
     ]);
