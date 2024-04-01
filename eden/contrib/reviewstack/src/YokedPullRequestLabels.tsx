@@ -81,7 +81,7 @@ export default function PullRequestLabels(): React.ReactElement {
     [pullRequestLabels, setPullRequestLabels],
   );
 
-  const label = !viewerDidAuthor ? null : (
+  const label = viewerDidAuthor && (
     <ActionMenu>
       <ActionMenu.Anchor>
         <button className="pr-label-button">

@@ -109,7 +109,7 @@ export default function PullRequestReviewers(): React.ReactElement {
     [pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
   );
 
-  const label = !viewerDidAuthor ? null : (
+  const label = viewerDidAuthor && (
     <ActionMenu>
       <ActionMenu.Anchor>
         <button className="pr-label-button">
