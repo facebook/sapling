@@ -13,6 +13,7 @@ import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {Checkbox} from './components/Checkbox';
 import {Divider} from './components/Divider';
+import {TextField} from './components/TextField';
 import {findCurrentPublicBase} from './getCommitTree';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
@@ -25,7 +26,7 @@ import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {forceFetchCommit} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -155,7 +156,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       data-testid="download-commits-dropdown">
       <div className="download-commits-content">
         <div className="download-commits-input-row">
-          <VSCodeTextField
+          <TextField
             placeholder={
               supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')
             }

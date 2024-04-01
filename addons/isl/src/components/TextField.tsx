@@ -44,8 +44,13 @@ export const TextField = forwardRef(
     {
       children,
       xstyle,
+      value,
       ...rest
-    }: {children?: ReactNode; xstyle?: stylex.StyleXStyles} & ReactProps<HTMLInputElement>,
+    }: {
+      children?: ReactNode;
+      xstyle?: stylex.StyleXStyles;
+      value?: string;
+    } & ReactProps<HTMLInputElement>,
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
     const id = useId();
@@ -56,7 +61,14 @@ export const TextField = forwardRef(
             {children}
           </label>
         )}
-        <input {...stylex.props(styles.input, xstyle)} type="text" id={id} {...rest} ref={ref} />
+        <input
+          {...stylex.props(styles.input, xstyle)}
+          type="text"
+          id={id}
+          value={value}
+          {...rest}
+          ref={ref}
+        />
       </Column>
     );
   },
