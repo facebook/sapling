@@ -11,21 +11,14 @@ import type {Mode} from './FileStackEditorLines';
 import {Row} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
 import {VSCodeCheckbox} from '../../VSCodeCheckbox';
+import {Dropdown} from '../../components/Dropdown';
 import {t, T} from '../../i18n';
 import {FileStackEditorRow} from './FileStackEditor';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
-import {
-  VSCodeDivider,
-  VSCodeDropdown,
-  VSCodeOption,
-  VSCodeRadio,
-  VSCodeRadioGroup,
-} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom} from 'jotai';
 import {useState} from 'react';
 import {nullthrows} from 'shared/utils';
-
-import './VSCodeDropdown.css';
 
 const editModeAtom = atom<Mode>('unified-diff');
 
@@ -60,25 +53,21 @@ export default function FileStackEditPanel() {
         zIndex: 3,
       }}>
       <label htmlFor="stack-file-dropdown">File to edit</label>
-      <VSCodeDropdown
+      <Dropdown
         id="stack-file-dropdown"
-        value={fileIdx == null ? 'none' : fileIdx.toString()}
+        value={fileIdx == null ? 'none' : String(fileIdx)}
         style={{width: '100%', zIndex: 3}}
         onChange={e => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const idx = (e.target as any).value;
+          const idx = e.currentTarget.value;
           setFileIdx(idx === 'none' ? null : parseInt(idx));
-        }}>
-        <VSCodeOption value="none">
-          <T>Select a file to edit</T>
-        </VSCodeOption>
-        <VSCodeDivider />
-        {pathFileIdxList.map(([path, idx]) => (
-          <VSCodeOption key={idx} value={idx.toString()}>
-            {path}
-          </VSCodeOption>
-        ))}
-      </VSCodeDropdown>
+        }}
+        options={
+          [
+            {value: 'none', name: t('Select a file to edit')},
+            ...pathFileIdxList.map(([path, idx]) => ({value: String(idx), name: path})),
+          ] as Array<{value: string; name: string}>
+        }
+      />
     </div>
   );
 
