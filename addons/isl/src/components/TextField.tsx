@@ -6,15 +6,16 @@
  */
 
 import type {ReactProps} from '../ComponentUtils';
-import type {ReactNode} from 'react';
+import type {ForwardedRef, ReactNode} from 'react';
 
 import {Column} from '../ComponentUtils';
 import * as stylex from '@stylexjs/stylex';
-import {useId} from 'react';
+import {forwardRef, useId} from 'react';
 
 const styles = stylex.create({
   root: {
     alignItems: 'flex-start',
+    width: '100%',
     gap: 0,
   },
   label: {
@@ -24,7 +25,7 @@ const styles = stylex.create({
     boxSizing: 'border-box',
     height: '26px',
     padding: '0 9px',
-    marginBlock: '2px',
+    marginBlock: 0,
     minWidth: '100px',
     width: '100%',
     background: 'var(--input-background)',
@@ -38,20 +39,25 @@ const styles = stylex.create({
   },
 });
 
-export function TextField({
-  children,
-  xstyle,
-  ...rest
-}: {children?: ReactNode; xstyle?: stylex.StyleXStyles} & ReactProps<HTMLInputElement>) {
-  const id = useId();
-  return (
-    <Column xstyle={styles.root}>
-      {children && (
-        <label htmlFor={id} {...stylex.props(styles.label)}>
-          {children}
-        </label>
-      )}
-      <input {...stylex.props(styles.input, xstyle)} type="text" id={id} {...rest} />
-    </Column>
-  );
-}
+export const TextField = forwardRef(
+  (
+    {
+      children,
+      xstyle,
+      ...rest
+    }: {children?: ReactNode; xstyle?: stylex.StyleXStyles} & ReactProps<HTMLInputElement>,
+    ref: ForwardedRef<HTMLInputElement>,
+  ) => {
+    const id = useId();
+    return (
+      <Column xstyle={styles.root}>
+        {children && (
+          <label htmlFor={id} {...stylex.props(styles.label)}>
+            {children}
+          </label>
+        )}
+        <input {...stylex.props(styles.input, xstyle)} type="text" id={id} {...rest} ref={ref} />
+      </Column>
+    );
+  },
+);
