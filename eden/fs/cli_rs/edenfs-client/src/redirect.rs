@@ -751,9 +751,10 @@ impl Redirection {
             // in the parent directory of the repository, and then move it
             // inside, which is atomic.
             let repo_and_symlink_path = checkout_path.join(&self.repo_path);
-            if let Some(temp_symlink_path) = checkout_path.parent().and_then(|co_parent| {
-                Some(co_parent.join(zzencode(&repo_and_symlink_path.to_string_lossy())))
-            }) {
+            if let Some(temp_symlink_path) = checkout_path
+                .parent()
+                .map(|co_parent| co_parent.join(zzencode(&repo_and_symlink_path.to_string_lossy())))
+            {
                 // These files should be created by EdenFS only, let's just remove
                 // it if it's there.
                 if temp_symlink_path.exists() {
