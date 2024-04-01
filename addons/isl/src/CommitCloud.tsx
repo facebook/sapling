@@ -15,6 +15,7 @@ import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {Dropdown} from './components/Dropdown';
+import {TextField} from './components/TextField';
 import {T, t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
@@ -25,7 +26,7 @@ import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './p
 import {RelativeDate} from './relativeDate';
 import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -196,11 +197,11 @@ export function CommitCloudInfo() {
                 </VSCodeButton>
               ) : (
                 <div className="commit-cloud-new-workspace-input">
-                  <VSCodeTextField
+                  <TextField
                     ref={newWorkspaceNameRef as React.MutableRefObject<null>}
                     onInput={e => setEnteredWorkspaceName((e.target as HTMLInputElement).value)}>
                     <T>New Workspace Name</T>
-                  </VSCodeTextField>
+                  </TextField>
                   <VSCodeButton
                     appearance="secondary"
                     onClick={e => {
