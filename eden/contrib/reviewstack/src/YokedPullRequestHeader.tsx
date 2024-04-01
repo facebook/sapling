@@ -53,7 +53,7 @@ export default function PullRequestHeader({
           <Text fontWeight="normal">{`#${number}`}</Text>
         </Link>
       </Box>
-      <Box display="flex" flexWrap={'wrap'} gridGap={2}>
+      <Box display="flex" alignItems="center" gridGap={2}>
         <YokedPullRequestStateLabel reviewDecision={reviewDecision ?? null} state={state} />
         <YokedPullRequestSignals />
         <YokedPullRequestReviewers />

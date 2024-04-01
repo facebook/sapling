@@ -17,8 +17,8 @@ import {
   gitHubPullRequestViewerDidAuthor,
 } from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
-import {GearIcon} from '@primer/octicons-react';
-import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
+import {GearIcon, PeopleIcon} from '@primer/octicons-react';
+import {ActionMenu, AvatarToken, Box, Button, StyledOcticon, IssueLabelToken} from '@primer/react';
 import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
@@ -109,34 +109,60 @@ export default function PullRequestReviewers(): React.ReactElement {
     [pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
   );
 
-  // const label = !viewerDidAuthor ? (
-  //   <FieldLabel label="Reviewers" />
-  // ) : (
-  //   <ActionMenu>
-  //     <ActionMenu.Anchor>
-  //       <Button trailingIcon={GearIcon}>Reviewers</Button>
-  //     </ActionMenu.Anchor>
-  //     <ActionMenu.Overlay width="medium">
-  //       <YokedRepoAssignableUsersInput
-  //         existingUserIDs={pullRequestReviewers.reviewerIDs}
-  //         onSelect={updateReviewers}
-  //       />
-  //     </ActionMenu.Overlay>
-  //   </ActionMenu>
-  // );
+  const label = viewerDidAuthor && (
+    <ActionMenu>
+      <ActionMenu.Anchor>
+        <button className="pr-label-button">
+          <StyledOcticon icon={PeopleIcon} size={'small'} />
+        </button>
+      </ActionMenu.Anchor>
+      <ActionMenu.Overlay width="medium">
+        <YokedRepoAssignableUsersInput
+          existingUserIDs={pullRequestReviewers.reviewerIDs}
+          onSelect={updateReviewers}
+        />
+      </ActionMenu.Overlay>
+    </ActionMenu>
+  );
 
   return (
-    <>
-      {pullRequestReviewers.reviewers.map(user => (
-        <AvatarToken
-          key={user.id}
-          avatarSrc={user.avatarUrl}
-          text={user.login}
-          size="large"
-          onRemove={!viewerDidAuthor ? undefined : () => updateReviewers(user, true)}
-          hideRemoveButton={!viewerDidAuthor}
-        />
-      ))}
-    </>
+    <Box display="flex" alignItems="center" gridGap={2} paddingLeft={3}>
+      {label}
+      <Box display="flex" flexWrap="wrap" gridGap={1}>
+        {pullRequestReviewers.reviewers.map(user => (
+          <IssueLabelToken
+            style={{
+              color: '#57606a',
+              background: 'none',
+              borderColor: 'rgba(27,31,36,0.15)',
+            }}
+            key={user.id}
+            text={user.login}
+            fillColor={`rgba(234,238,242,0.5)`}
+            size="large"
+            onRemove={!viewerDidAuthor ? undefined : () => updateReviewers(user, true)}
+            hideRemoveButton={!viewerDidAuthor}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box display="flex" alignItems="center" gridGap={2} paddingLeft={3}>
+      {label}
+      <Box display="flex" flexWrap="wrap" gridGap={1}>
+        {pullRequestReviewers.reviewers.map(user => (
+          <AvatarToken
+            key={user.id}
+            avatarSrc={user.avatarUrl}
+            text={user.login}
+            size="large"
+            onRemove={!viewerDidAuthor ? undefined : () => updateReviewers(user, true)}
+            style={{background: 'none'}}
+          />
+        ))}
+      </Box>
+    </Box>
   );
 }

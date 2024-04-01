@@ -241,6 +241,13 @@ body {
   max-width: calc(var(--xl) * 3.125);
 }
 
+.pr-label-button {
+  line-height: 1;
+  &:hover {
+    color: var(--blue);
+  }
+}
+
 .diff {
   .split-diff-view-file-header {
     background: none;

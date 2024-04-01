@@ -8,14 +8,15 @@
 import type {LabelFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
+import YokedRepoLabelsInput from './YokedRepoLabelsInput';
 import {
   gitHubClient,
   gitHubPullRequest,
   gitHubPullRequestLabels,
   gitHubPullRequestViewerDidAuthor,
 } from './recoil';
-import {GearIcon} from '@primer/octicons-react';
-import {ActionMenu, Box, Button, IssueLabelToken} from '@primer/react';
+import {GearIcon, TagIcon} from '@primer/octicons-react';
+import {ActionMenu, Box, Button, IssueLabelToken, StyledOcticon} from '@primer/react';
 import {useEffect, useMemo} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
@@ -78,6 +79,42 @@ export default function PullRequestLabels(): React.ReactElement {
         }
       },
     [pullRequestLabels, setPullRequestLabels],
+  );
+
+  const label = viewerDidAuthor && (
+    <ActionMenu>
+      <ActionMenu.Anchor>
+        <button className="pr-label-button">
+          <StyledOcticon icon={TagIcon} />
+        </button>
+      </ActionMenu.Anchor>
+      <ActionMenu.Overlay width="medium">
+        <YokedRepoLabelsInput existingLabelIDs={existingLabelIDs} onSelect={updateLabels} />
+      </ActionMenu.Overlay>
+    </ActionMenu>
+  );
+
+  return (
+    <Box display="flex" alignItems="center" gridGap={2} paddingLeft={3}>
+      {label}
+      <Box display="flex" gridGap={1}>
+        {pullRequestLabels.map(({id, name, color}) => (
+          <IssueLabelToken
+            style={{
+              color: '#57606a',
+              background: 'none',
+              borderColor: 'rgba(27,31,36,0.15)',
+            }}
+            key={id}
+            text={name}
+            fillColor={`rgba(234,238,242,0.5)`}
+            size="large"
+            onRemove={!viewerDidAuthor ? undefined : () => updateLabels({id, name, color}, true)}
+            hideRemoveButton={!viewerDidAuthor}
+          />
+        ))}
+      </Box>
+    </Box>
   );
 
   return (
