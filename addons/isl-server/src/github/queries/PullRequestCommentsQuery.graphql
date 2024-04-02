@@ -1,0 +1,26 @@
+query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
+  resource(url: $url) {
+    __typename
+    ... on PullRequest {
+      comments(first: $numToFetch) {
+        totalCount
+        nodes {
+          bodyHTML
+          author {
+            login
+            avatarUrl
+          }
+          createdAt
+          reactions(first: 100) {
+            nodes {
+              content
+              user {
+                login
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

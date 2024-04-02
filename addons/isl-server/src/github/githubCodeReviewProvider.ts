@@ -8,16 +8,32 @@
 import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
+  PullRequestCommentsQueryData,
+  PullRequestCommentsQueryVariables,
   PullRequestReviewDecision,
+  ReactionContent,
   YourPullRequestsQueryData,
   YourPullRequestsQueryVariables,
 } from './generated/graphql';
-import type {CodeReviewSystem, DiffSignalSummary, DiffId, Disposable, Result} from 'isl/src/types';
+import type {
+  CodeReviewSystem,
+  DiffSignalSummary,
+  DiffId,
+  Disposable,
+  Result,
+  DiffComment,
+} from 'isl/src/types';
 
-import {PullRequestState, StatusState, YourPullRequestsQuery} from './generated/graphql';
+import {
+  PullRequestCommentsQuery,
+  PullRequestState,
+  StatusState,
+  YourPullRequestsQuery,
+} from './generated/graphql';
 import queryGraphQL from './queryGraphQL';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {debounce} from 'shared/debounce';
+import {notEmpty} from 'shared/utils';
 
 export type GitHubDiffSummary = {
   type: 'github';
@@ -111,6 +127,48 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     /* leading */ true,
   );
 
+  public async fetchComments(diffId: string): Promise<DiffComment[]> {
+    const response = await this.query<
+      PullRequestCommentsQueryData,
+      PullRequestCommentsQueryVariables
+    >(PullRequestCommentsQuery, {
+      url: this.getPrUrl(diffId),
+      numToFetch: 50,
+    });
+
+    const comments = (
+      response?.resource as
+        | (PullRequestCommentsQueryData['resource'] & {__typename: 'PullRequest'})
+        | undefined
+    )?.comments.nodes?.filter(notEmpty);
+
+    this.logger.info(`fetching ${comments?.length} comments for github PR ${diffId}}`);
+
+    if (comments == null) {
+      throw new Error(`Failed to fetch comments for ${diffId}`);
+    }
+
+    return (
+      comments?.map(comment => ({
+        author: comment.author?.login ?? '',
+        authorAvatarUri: comment.author?.avatarUrl,
+        html: comment.bodyHTML,
+        created: new Date(comment.createdAt),
+        reactions:
+          comment.reactions?.nodes
+            ?.filter(
+              (reaction): reaction is {user: {login: string}; content: ReactionContent} =>
+                reaction?.user?.login != null,
+            )
+            .map(reaction => ({
+              name: reaction.user.login,
+              reaction: reaction.content,
+            })) ?? [],
+        replies: [], // PR top level doesn't have nested replies, you just reply to their name
+      })) ?? []
+    );
+  }
+
   private query<D, V>(query: string, variables: V): Promise<D | undefined> {
     return queryGraphQL<D, V>(query, variables, this.codeReviewSystem.hostname);
   }
@@ -124,8 +182,12 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     return `github:${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
   }
 
+  public getPrUrl(diffId: DiffId): string {
+    return `https://${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pull/${diffId}`;
+  }
+
   public getDiffUrlMarkdown(diffId: DiffId): string {
-    return `[#${diffId}](https://${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}/pull/${diffId})`;
+    return `[#${diffId}](${this.getPrUrl(diffId)})`;
   }
 
   public getCommitHashUrlMarkdown(hash: string): string {

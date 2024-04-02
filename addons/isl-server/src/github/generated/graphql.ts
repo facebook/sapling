@@ -29334,6 +29334,14 @@ export enum WorkflowState {
   DisabledManually = 'DISABLED_MANUALLY'
 }
 
+export type PullRequestCommentsQueryVariables = Exact<{
+  url: Scalars['URI'];
+  numToFetch: Scalars['Int'];
+}>;
+
+
+export type PullRequestCommentsQueryData = { __typename?: 'Query', resource?: { __typename: 'Bot' } | { __typename: 'CheckRun' } | { __typename: 'ClosedEvent' } | { __typename: 'Commit' } | { __typename: 'ConvertToDraftEvent' } | { __typename: 'CrossReferencedEvent' } | { __typename: 'Gist' } | { __typename: 'Issue' } | { __typename: 'Mannequin' } | { __typename: 'MergedEvent' } | { __typename: 'Milestone' } | { __typename: 'Organization' } | { __typename: 'PullRequest', comments: { __typename?: 'IssueCommentConnection', totalCount: number, nodes?: Array<{ __typename?: 'IssueComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null } } | { __typename: 'PullRequestCommit' } | { __typename: 'ReadyForReviewEvent' } | { __typename: 'Release' } | { __typename: 'Repository' } | { __typename: 'RepositoryTopic' } | { __typename: 'ReviewDismissedEvent' } | { __typename: 'TeamDiscussion' } | { __typename: 'TeamDiscussionComment' } | { __typename: 'User' } | { __typename: 'Workflow' } | { __typename: 'WorkflowRun' } | { __typename: 'WorkflowRunFile' } | null };
+
 export type YourPullRequestsQueryVariables = Exact<{
   searchQuery: Scalars['String'];
   numToFetch: Scalars['Int'];
@@ -29343,6 +29351,34 @@ export type YourPullRequestsQueryVariables = Exact<{
 export type YourPullRequestsQueryData = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, body: string, state: PullRequestState, isDraft: boolean, url: string, reviewDecision?: PullRequestReviewDecision | null, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, mergeQueueEntry?: { __typename?: 'MergeQueueEntry', estimatedTimeToMerge?: number | null } | null, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
 
 
+export const PullRequestCommentsQuery = `
+    query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
+  resource(url: $url) {
+    __typename
+    ... on PullRequest {
+      comments(first: $numToFetch) {
+        totalCount
+        nodes {
+          bodyHTML
+          author {
+            login
+            avatarUrl
+          }
+          createdAt
+          reactions(first: 100) {
+            nodes {
+              content
+              user {
+                login
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+    `;
 export const YourPullRequestsQuery = `
     query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
   search(query: $searchQuery, type: ISSUE, first: $numToFetch) {

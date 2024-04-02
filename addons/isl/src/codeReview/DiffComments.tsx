@@ -168,6 +168,15 @@ const emoji: Record<DiffCommentReaction['reaction'], string> = {
   HAHA: '😆',
   ANGER: '😡',
   SAD: '😢',
+  // GitHub reactions
+  CONFUSED: '😕',
+  EYES: '👀',
+  HEART: '❤️',
+  HOORAY: '🎉',
+  LAUGH: '😄',
+  ROCKET: '🚀',
+  THUMBS_DOWN: '👎',
+  THUMBS_UP: '👍',
 };
 
 function Reactions({reactions}: {reactions: Array<DiffCommentReaction>}) {

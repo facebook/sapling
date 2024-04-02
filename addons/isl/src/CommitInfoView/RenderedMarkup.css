@@ -28,6 +28,13 @@
   margin-block: calc(2 * var(--pad));
 }
 
+.rendered-markup > p {
+  margin: 0;
+}
+.rendered-markup > h1 {
+  margin: 0;
+}
+
 .rendered-markup table {
   border: 1px solid var(--table-border);
   background: var(--table-border);
@@ -76,6 +83,10 @@
   padding-left: 10px;
   padding-block: 5px;
   font-style: italic;
+  margin: 0;
+  display: flex;
+}
+.rendered-markup blockquote > p {
   margin: 0;
 }
 
