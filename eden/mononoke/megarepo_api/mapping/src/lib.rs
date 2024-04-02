@@ -209,6 +209,10 @@ impl CommitRemappingState {
         Ok(())
     }
 
+    pub fn set_bookmark(&mut self, bookmark: String) {
+        self.bookmark = Some(bookmark);
+    }
+
     pub fn set_source_changeset(&mut self, source: SourceName, cs_id: ChangesetId) {
         self.latest_synced_changesets.insert(source, cs_id);
     }
@@ -414,7 +418,7 @@ impl MegarepoMapping {
                     || &entry.sync_config_version != version
                 {
                     return Err(anyhow!(
-                        "trying to insert mapping whille one already exists and it's different!"
+                        "trying to insert mapping while one already exists and it's different!"
                     ));
                 }
             } else {

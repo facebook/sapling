@@ -571,6 +571,7 @@ async fn sync_changeset_to_target(
     }?;
 
     state.set_source_changeset(source.clone(), source_cs_id);
+    state.set_bookmark(target.bookmark.clone());
     state
         .save_in_changeset(ctx, target_repo, &mut rewritten_commit)
         .await?;
