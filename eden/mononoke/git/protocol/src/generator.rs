@@ -72,6 +72,7 @@ use crate::types::TagInclusion;
 
 const HEAD_REF: &str = "HEAD";
 const TAGS_PREFIX: &str = "tags/";
+const REF_PREFIX: &str = "refs/";
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -114,7 +115,7 @@ async fn bookmarks(
                         Some((bookmark.into_key(), cs_id))
                     }
                     RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
-                        let ref_name = format!("refs/{}", name);
+                        let ref_name = format!("{}{}", REF_PREFIX, name);
                         if ref_prefixes
                             .iter()
                             .any(|ref_prefix| ref_name.starts_with(ref_prefix))
@@ -148,6 +149,42 @@ async fn bookmarks(
         }
     }
     Ok(bookmarks)
+}
+
+/// Get the refs (branches, tags) and their corresponding object ids
+/// The input refs should be of the form `refs/<ref_name>`
+pub async fn ref_oid_mapping(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    requested_refs: impl IntoIterator<Item = String>,
+) -> Result<impl Iterator<Item = (String, ObjectId)>> {
+    let requested_refs = RequestedRefs::Included(
+        requested_refs
+            .into_iter()
+            .map(|want_ref| want_ref.trim_start_matches(REF_PREFIX).to_owned())
+            .collect(),
+    );
+    let wanted_refs = bookmarks(ctx, repo, &requested_refs)
+        .await
+        .context("Error while fetching bookmarks for ref_oid_mapping")?;
+    let bonsai_git_mappings =
+        bonsai_git_mappings_by_bonsai(ctx, repo, wanted_refs.values().copied().collect())
+            .await
+            .context("Error while fetching bonsai_git_mapping for ref_oid_mapping")?;
+    let wanted_refs_with_oid = wanted_refs
+        .into_iter()
+        .map(|(bookmark, cs_id)| {
+            let oid = bonsai_git_mappings.get(&cs_id).with_context(|| {
+                format!(
+                    "Error while fetching git sha1 for bonsai commit {} in ref_oid_mapping",
+                    cs_id
+                )
+            })?;
+            let ref_name = format!("{}{}", REF_PREFIX, bookmark.name().to_string());
+            anyhow::Ok((ref_name, oid.clone()))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    anyhow::Ok(wanted_refs_with_oid.into_iter())
 }
 
 /// Get the count of distinct blob and tree items to be included in the packfile
@@ -372,7 +409,7 @@ async fn refs_to_include(
             match tag_inclusion {
                 TagInclusion::AsIs => {
                     if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
-                        let ref_name = format!("refs/{}", bookmark);
+                        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
                         return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
                     }
                 }
@@ -380,7 +417,7 @@ async fn refs_to_include(
                     let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
                         anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
                     })?;
-                    let ref_name = format!("refs/{}", bookmark);
+                    let ref_name = format!("{}{}", REF_PREFIX, bookmark);
                     return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
                 }
                 TagInclusion::WithTarget => {
@@ -388,7 +425,7 @@ async fn refs_to_include(
                         let commit_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
                             anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
                         })?;
-                        let ref_name = format!("refs/{}", bookmark);
+                        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
                         let metadata = format!("peeled:{}", commit_objectid.to_hex());
                         return anyhow::Ok((
                             ref_name,
@@ -403,7 +440,7 @@ async fn refs_to_include(
         let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
             anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
         })?;
-        let ref_name = format!("refs/{}", bookmark);
+        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
         anyhow::Ok((ref_name, RefTarget::Plain(git_objectid.clone())))
     })
     .collect::<Result<FxHashMap<_, _>>>()

@@ -24,6 +24,7 @@ const CORE_CAPABILITIES: &[&str] = &[
     "fetch=shallow",
     "wait-for-done",
     "filter",
+    "ref-in-want",
     "object-format=sha1",
 ];
 const VERSION: &str = "2";

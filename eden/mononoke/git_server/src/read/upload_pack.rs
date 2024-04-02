@@ -38,6 +38,7 @@ use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
 use protocol::generator::fetch_response;
 use protocol::generator::ls_refs_response;
+use protocol::generator::ref_oid_mapping;
 use protocol::types::PackfileConcurrency;
 use tokio::io::ErrorKind;
 use tokio::sync::mpsc;
@@ -59,6 +60,8 @@ use crate::GitServerContext;
 const PACKFILE_HEADER: &[u8] = b"packfile";
 /// The header for the acknowledgements section of the response
 const ACKNOWLEDGEMENTS_HEADER: &[u8] = b"acknowledgments";
+/// The header for the shallow info section of the response
+const WANTED_REFS_HEADER: &[u8] = b"wanted-refs";
 /// Acknowledgement that the object sent by the client exists on the server
 const ACK: &str = "ACK";
 /// Acknowledgement that the object sent by the client does not exist on the server
@@ -152,11 +155,29 @@ async fn shallow_info(
 }
 
 async fn wanted_refs(
-    _context: Arc<RepositoryRequestContext>,
-    _args: Arc<FetchArgs>,
+    context: Arc<RepositoryRequestContext>,
+    args: Arc<FetchArgs>,
 ) -> Result<Option<Bytes>, Error> {
-    // TODO(rajshar): Implement wanted-refs support
-    Ok(None)
+    // If there are no refs explictly requested, then we can return early
+    if args.want_refs.is_empty() {
+        return Ok(None);
+    }
+    let mut output_buffer = vec![];
+    write_text_packetline(WANTED_REFS_HEADER, &mut output_buffer).await?;
+    let refs = ref_oid_mapping(&context.ctx, &context.repo, args.want_refs.clone())
+        .await
+        .context("Failed to fetch ref_oid_mapping for wanted-refs")?;
+    for (ref_key, oid) in refs {
+        write_text_packetline(
+            format!("{} {}", ref_key, oid.to_hex()).as_bytes(),
+            &mut output_buffer,
+        )
+        .await?;
+    }
+    // Add a delim line to indicate the end of the wanted-refs section. Note that
+    // the delim line will not be followed by a newline character
+    delim_to_write(&mut output_buffer).await?;
+    Ok(Some(Bytes::from(output_buffer)))
 }
 
 async fn packfile_uris(
