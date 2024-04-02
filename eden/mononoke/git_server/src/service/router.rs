@@ -59,13 +59,13 @@ pub fn build_router(context: GitServerContext) -> Router {
 
     gotham_build_router(chain, pipelines, |route| {
         route
-            .get("/*repository/info/refs")
+            .get("/repos/git/:server_type/*repository/info/refs")
             .with_path_extractor::<RepositoryParams>()
             .with_query_string_extractor::<ServiceType>()
             .to(capability_advertisement_handler);
 
         route
-            .post("/*repository/git-upload-pack")
+            .post("/repos/git/:server_type/*repository/git-upload-pack")
             .with_path_extractor::<RepositoryParams>()
             .to(upload_pack_handler);
 

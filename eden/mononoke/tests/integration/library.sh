@@ -1651,7 +1651,7 @@ function mononoke_git_service {
     "${MONONOKE_GIT_SERVICE_START_TIMEOUT:-"$MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT"}" "$bound_addr_file"
 
   export MONONOKE_GIT_SERVICE_BASE_URL
-  MONONOKE_GIT_SERVICE_BASE_URL="https://localhost:$MONONOKE_GIT_SERVICE_PORT"
+  MONONOKE_GIT_SERVICE_BASE_URL="https://localhost:$MONONOKE_GIT_SERVICE_PORT/repos/git/ro"
 }
 
 # Run an hg binary configured with the settings required to talk to Mononoke
