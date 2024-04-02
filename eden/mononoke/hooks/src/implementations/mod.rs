@@ -11,6 +11,7 @@ mod always_fail_changeset;
 mod block_commit_message_pattern;
 mod block_content_pattern;
 mod block_empty_commit;
+mod block_files;
 pub(crate) mod deny_files;
 mod limit_commit_message_length;
 pub(crate) mod limit_commit_size;
@@ -73,6 +74,7 @@ pub fn make_file_hook(
         "block_content_pattern" => Some(Box::new(
             block_content_pattern::BlockContentPatternHook::new(&params.config)?,
         )),
+        "block_files" => Some(Box::new(block_files::BlockFilesHook::new(&params.config)?)),
         "deny_files" => Some(Box::new(
             deny_files::DenyFiles::builder()
                 .set_from_config(&params.config)
