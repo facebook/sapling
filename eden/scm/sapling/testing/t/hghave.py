@@ -521,11 +521,11 @@ def has_fsmonitor():
     return "HGFSMONITOR_TESTS" in os.environ
 
 
-@check("eden", "Eden HG extension")
+@check("eden", "Eden HG extension", exe=True)
 def has_eden():
-    return matchoutput(
-        "hg --debug --config extensions.eden= --version 2>&1",
-        re.compile(rb"^\s*eden\s+(in|ex)ternal\s*$", re.MULTILINE),
+    return os.environ.get("HGTEST_USE_EDEN", None) == "1" and matchoutput(
+        "eden version",
+        re.compile(rb"^Installed:\s.*\sRunning:\s.*", re.MULTILINE),
     )
 
 
