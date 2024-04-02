@@ -42,9 +42,10 @@ class Client:
             if repodir is None:
                 repodir = repo.root
             ui = ui or repo.ui
-        else:
-            if ui is None:
-                raise error.ProgrammingError("either repo or ui needs to be provided")
+
+        if ui is None:
+            raise error.ProgrammingError("either repo or ui needs to be provided")
+
         if not repodir:
             repodir = pycompat.getcwd()
         self._mock = "HG_ARC_CONDUIT_MOCK" in encoding.environ
