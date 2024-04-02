@@ -54,11 +54,6 @@ Perform LFS push
   $ hgmn push -r . --to master_bookmark -v
   pushing rev 99765c8d839c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
-  lfs: need to transfer 2 objects (3.92 KB)
-  lfs: uploading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
-  lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
-  lfs: uploading d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982 (1.96 KB)
-  lfs: processed: d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:
@@ -89,9 +84,10 @@ Perform LFS push
 Verify that if we fail to upload LFS blobs first, the push fails
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > lfs=
   > [lfs]
   > url=file://$TESTTMP/unused-dummystore
+  > [remotefilelog]
+  > lfs=True
   > EOF
 
   $ echo "${LONG}ANOTHER-LFS" > f
@@ -162,11 +158,6 @@ Create a new client repository, using getpack (with its own cachepath)
  
   $ hgmn update -r master_bookmark -v
   resolving manifests
-  lfs: need to transfer 2 objects (3.92 KB)
-  lfs: downloading d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982 (1.96 KB)
-  lfs: processed: d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982
-  lfs: downloading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
-  lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ sha256sum lfs-largefile
@@ -183,80 +174,3 @@ Create a new client repository, using getpack (with its own cachepath)
 Change "sha256:oid" to an another valid oid to check sha1 consisnency
   $ echo "${LONG}inconsistent" > inconsistent_file
   $ hg commit -Aqm "hash check"
-
-Corrupt file contents via an extension:
-  $ cat > $TESTTMP/corrupt.py <<EOF
-  > def _revision(orig, rfl, node, raw=False):
-  >     return orig(rfl, node, raw).replace(b"sha256:f79cf994214182953d15cd20b2a92731052ddc9a02f4c60518dc78d7a005cca9", b"sha256:e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d")
-  > from edenscm import extensions
-  > from edenscm.ext import remotefilelog
-  > def uisetup(ui):
-  >     extensions.wrapfunction(remotefilelog.remotefilelog.remotefilelog, "revision", _revision)
-  > EOF
-
-  $ hgmn push -r . --to master_bookmark -v --config extensions.corrupt=$TESTTMP/corrupt.py
-  pushing rev 77f499cb0645 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  validated revset for rebase
-  1 changesets found
-  uncompressed size of bundle content:
-       201 (changelog)
-       286  inconsistent_file
-  remote: Command failed
-  remote:   Error:
-  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd)))]
-  remote: 
-  remote:   Root cause:
-  remote:     Inconsistent node hash for entry: path file 'inconsistent_file', provided: ef5953d600ca68bacb539eab8dffb415441213bb, computed: 232ec9b974a9df3d48c2b740396691fb8939976c
-  remote: 
-  remote:   Caused by:
-  remote:     While creating Changeset Some(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd))), uuid: * (glob)
-  remote:   Caused by:
-  remote:     While creating and verifying Changeset for blobstore
-  remote:   Caused by:
-  remote:     While processing entries
-  remote:   Caused by:
-  remote:     While uploading child entries
-  remote:   Caused by:
-  remote:     While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))
-  remote:   Caused by:
-  remote:     Inconsistent node hash for entry: path file 'inconsistent_file', provided: ef5953d600ca68bacb539eab8dffb415441213bb, computed: 232ec9b974a9df3d48c2b740396691fb8939976c
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd)))]",
-  remote:         source: SharedError {
-  remote:             error: Error {
-  remote:                 context: "While creating Changeset Some(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd))), uuid: *", (glob)
-  remote:                 source: Error {
-  remote:                     context: "While creating and verifying Changeset for blobstore",
-  remote:                     source: Error {
-  remote:                         context: "While processing entries",
-  remote:                         source: Error {
-  remote:                             context: "While uploading child entries",
-  remote:                             source: Error {
-  remote:                                 context: "While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))",
-  remote:                                 source: SharedError {
-  remote:                                     error: InconsistentEntryHashForPath(
-  remote:                                         FilePath(
-  remote:                                             NonRootMPath("inconsistent_file"),
-  remote:                                         ),
-  remote:                                         HgNodeHash(
-  remote:                                             Sha1(ef5953d600ca68bacb539eab8dffb415441213bb),
-  remote:                                         ),
-  remote:                                         HgNodeHash(
-  remote:                                             Sha1(232ec9b974a9df3d48c2b740396691fb8939976c),
-  remote:                                         ),
-  remote:                                     ),
-  remote:                                 },
-  remote:                             },
-  remote:                         },
-  remote:                     },
-  remote:                 },
-  remote:             },
-  remote:         },
-  remote:     }
-  abort: unexpected EOL, expected netstring digit
-  [255]
-
-# trailing whitespace

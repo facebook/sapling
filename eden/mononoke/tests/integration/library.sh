@@ -1855,12 +1855,12 @@ EOF
 
 function setup_hg_lfs() {
   cat >> .hg/hgrc <<EOF
-[extensions]
-lfs=
 [lfs]
 url=$1
 threshold=$2
 usercache=$3
+[remotefilelog]
+lfs=True
 EOF
 }
 
