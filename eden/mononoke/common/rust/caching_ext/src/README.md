@@ -1,3 +1,5 @@
+# Implementing caching in Mononoke
+
 Mononoke has a utility module called caching_ext which is designed to handle the complexity of caching for you. However, there are quite a few moving parts that you have to get right in order to use it; this guide aims to explain how to implement caching, batching and parallel fetching using `caching_ext`.
 
 
