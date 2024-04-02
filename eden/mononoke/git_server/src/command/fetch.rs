@@ -82,9 +82,9 @@ pub struct FetchArgs {
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
     pub filter: Option<String>,
-    /// Indicates to the server that the client wants to retrieve a particular ref
-    /// by providing the full name of the ref on the server
-    pub want_ref: Option<String>,
+    /// Indicates to the server that the client wants to retrieve a particular set of
+    /// refs by providing the full name of the ref on the server
+    pub want_refs: Vec<String>,
     /// Instruct the server to send the whole response multiplexed, not just the
     /// packfile section
     pub sideband_all: bool,
@@ -169,7 +169,7 @@ impl FetchArgs {
                     fetch_args.filter = Some(filter_spec);
                 } else if let Some(want_ref) = data.strip_prefix(WANT_REF_PREFIX) {
                     let want_ref = bytes_to_str(want_ref, "want_ref", "want-ref")?.to_owned();
-                    fetch_args.want_ref = Some(want_ref);
+                    fetch_args.want_refs.push(want_ref);
                 } else if let Some(packfile_uris) = data.strip_prefix(PACKFILE_URIS_PREFIX) {
                     let packfile_uris =
                         bytes_to_str(packfile_uris, "packfile_uris", "packfile-uris")?;
@@ -245,6 +245,8 @@ mod tests {
         packetline_writer.write_all(b"sideband-all\n")?;
         packetline_writer.write_all(b"shallow 0000000000000000000000000000000000000000\n")?;
         packetline_writer.write_all(b"deepen 1\n")?;
+        packetline_writer.write_all(b"want-ref refs/heads/master\n")?;
+        packetline_writer.write_all(b"want-ref refs/heads/release\n")?;
         packetline_writer.write_all(b"have 0000000000000000000000000000000000000000\n")?;
         packetline_writer.write_all(b"want 0000000000000000000000000000000000000000\n")?;
         packetline_writer.write_all(b"have 1000000000000000000000000000000000000001\n")?;
