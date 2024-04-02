@@ -29334,13 +29334,61 @@ export enum WorkflowState {
   DisabledManually = 'DISABLED_MANUALLY'
 }
 
+export type CommentParts_CommitComment_ = { __typename?: 'CommitComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_Discussion_ = { __typename?: 'Discussion', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_DiscussionComment_ = { __typename?: 'DiscussionComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_GistComment_ = { __typename?: 'GistComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_Issue_ = { __typename?: 'Issue', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_IssueComment_ = { __typename?: 'IssueComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_PullRequest_ = { __typename?: 'PullRequest', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_PullRequestReview_ = { __typename?: 'PullRequestReview', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_PullRequestReviewComment_ = { __typename?: 'PullRequestReviewComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_TeamDiscussion_ = { __typename?: 'TeamDiscussion', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts_TeamDiscussionComment_ = { __typename?: 'TeamDiscussionComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null };
+
+export type CommentParts = CommentParts_CommitComment_ | CommentParts_Discussion_ | CommentParts_DiscussionComment_ | CommentParts_GistComment_ | CommentParts_Issue_ | CommentParts_IssueComment_ | CommentParts_PullRequest_ | CommentParts_PullRequestReview_ | CommentParts_PullRequestReviewComment_ | CommentParts_TeamDiscussion_ | CommentParts_TeamDiscussionComment_;
+
+export type ReactionParts_CommitComment_ = { __typename?: 'CommitComment', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_Discussion_ = { __typename?: 'Discussion', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_DiscussionComment_ = { __typename?: 'DiscussionComment', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_Issue_ = { __typename?: 'Issue', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_IssueComment_ = { __typename?: 'IssueComment', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_PullRequest_ = { __typename?: 'PullRequest', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_PullRequestReview_ = { __typename?: 'PullRequestReview', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_PullRequestReviewComment_ = { __typename?: 'PullRequestReviewComment', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_Release_ = { __typename?: 'Release', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_TeamDiscussion_ = { __typename?: 'TeamDiscussion', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts_TeamDiscussionComment_ = { __typename?: 'TeamDiscussionComment', reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } };
+
+export type ReactionParts = ReactionParts_CommitComment_ | ReactionParts_Discussion_ | ReactionParts_DiscussionComment_ | ReactionParts_Issue_ | ReactionParts_IssueComment_ | ReactionParts_PullRequest_ | ReactionParts_PullRequestReview_ | ReactionParts_PullRequestReviewComment_ | ReactionParts_Release_ | ReactionParts_TeamDiscussion_ | ReactionParts_TeamDiscussionComment_;
+
 export type PullRequestCommentsQueryVariables = Exact<{
   url: Scalars['URI'];
   numToFetch: Scalars['Int'];
 }>;
 
 
-export type PullRequestCommentsQueryData = { __typename?: 'Query', resource?: { __typename: 'Bot' } | { __typename: 'CheckRun' } | { __typename: 'ClosedEvent' } | { __typename: 'Commit' } | { __typename: 'ConvertToDraftEvent' } | { __typename: 'CrossReferencedEvent' } | { __typename: 'Gist' } | { __typename: 'Issue' } | { __typename: 'Mannequin' } | { __typename: 'MergedEvent' } | { __typename: 'Milestone' } | { __typename: 'Organization' } | { __typename: 'PullRequest', comments: { __typename?: 'IssueCommentConnection', totalCount: number, nodes?: Array<{ __typename?: 'IssueComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null } } | { __typename: 'PullRequestCommit' } | { __typename: 'ReadyForReviewEvent' } | { __typename: 'Release' } | { __typename: 'Repository' } | { __typename: 'RepositoryTopic' } | { __typename: 'ReviewDismissedEvent' } | { __typename: 'TeamDiscussion' } | { __typename: 'TeamDiscussionComment' } | { __typename: 'User' } | { __typename: 'Workflow' } | { __typename: 'WorkflowRun' } | { __typename: 'WorkflowRunFile' } | null };
+export type PullRequestCommentsQueryData = { __typename?: 'Query', resource?: { __typename: 'Bot' } | { __typename: 'CheckRun' } | { __typename: 'ClosedEvent' } | { __typename: 'Commit' } | { __typename: 'ConvertToDraftEvent' } | { __typename: 'CrossReferencedEvent' } | { __typename: 'Gist' } | { __typename: 'Issue' } | { __typename: 'Mannequin' } | { __typename: 'MergedEvent' } | { __typename: 'Milestone' } | { __typename: 'Organization' } | { __typename: 'PullRequest', comments: { __typename?: 'IssueCommentConnection', totalCount: number, nodes?: Array<{ __typename?: 'IssueComment', bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null }, reviews?: { __typename?: 'PullRequestReviewConnection', nodes?: Array<{ __typename?: 'PullRequestReview', comments: { __typename?: 'PullRequestReviewCommentConnection', nodes?: Array<{ __typename?: 'PullRequestReviewComment', line?: number | null, path: string, diffHunk: string, bodyHTML: string, createdAt: string, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, reactions: { __typename?: 'ReactionConnection', nodes?: Array<{ __typename?: 'Reaction', content: ReactionContent, user?: { __typename?: 'User', login: string } | null } | null> | null } } | null> | null } } | null> | null } | null } | { __typename: 'PullRequestCommit' } | { __typename: 'ReadyForReviewEvent' } | { __typename: 'Release' } | { __typename: 'Repository' } | { __typename: 'RepositoryTopic' } | { __typename: 'ReviewDismissedEvent' } | { __typename: 'TeamDiscussion' } | { __typename: 'TeamDiscussionComment' } | { __typename: 'User' } | { __typename: 'Workflow' } | { __typename: 'WorkflowRun' } | { __typename: 'WorkflowRunFile' } | null };
 
 export type YourPullRequestsQueryVariables = Exact<{
   searchQuery: Scalars['String'];
@@ -29350,7 +29398,28 @@ export type YourPullRequestsQueryVariables = Exact<{
 
 export type YourPullRequestsQueryData = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, body: string, state: PullRequestState, isDraft: boolean, url: string, reviewDecision?: PullRequestReviewDecision | null, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, mergeQueueEntry?: { __typename?: 'MergeQueueEntry', estimatedTimeToMerge?: number | null } | null, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
 
-
+export const CommentParts = `
+    fragment CommentParts on Comment {
+  bodyHTML
+  author {
+    login
+    avatarUrl
+  }
+  createdAt
+}
+    `;
+export const ReactionParts = `
+    fragment ReactionParts on Reactable {
+  reactions(first: 100) {
+    nodes {
+      content
+      user {
+        login
+      }
+    }
+  }
+}
+    `;
 export const PullRequestCommentsQuery = `
     query PullRequestCommentsQuery($url: URI!, $numToFetch: Int!) {
   resource(url: $url) {
@@ -29359,18 +29428,19 @@ export const PullRequestCommentsQuery = `
       comments(first: $numToFetch) {
         totalCount
         nodes {
-          bodyHTML
-          author {
-            login
-            avatarUrl
-          }
-          createdAt
-          reactions(first: 100) {
+          ...CommentParts
+          ...ReactionParts
+        }
+      }
+      reviews(first: $numToFetch) {
+        nodes {
+          comments(first: 50) {
             nodes {
-              content
-              user {
-                login
-              }
+              ...CommentParts
+              ...ReactionParts
+              line
+              path
+              diffHunk
             }
           }
         }
@@ -29378,7 +29448,8 @@ export const PullRequestCommentsQuery = `
     }
   }
 }
-    `;
+    ${CommentParts}
+${ReactionParts}`;
 export const YourPullRequestsQuery = `
     query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
   search(query: $searchQuery, type: ISSUE, first: $numToFetch) {

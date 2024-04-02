@@ -99,3 +99,48 @@
 .rendered-markup img {
   max-width: 100%;
 }
+
+/*
+ * GitHub Comment Suggested Changes come as a hardcoded <table> in the HTML,
+ * which we need to aggressively re-style to look OK.
+ * They intend for this to be used with tailwind classes,
+ * but let's not bring in all of tailwind just for this.
+ */
+
+.rendered-markup .js-suggested-changes-blob.diff-view,
+.rendered-markup .js-suggested-changes-blob.diff-view div {
+  white-space-collapse: collapse;
+}
+
+.rendered-markup .js-suggested-changes-blob.diff-view table {
+  margin-block: 5px;
+  border-radius: 2px;
+  width: 100%;
+  background-color: var(--background);
+  border-width: 0;
+  border-collapse: collapse;
+}
+
+.rendered-markup .js-suggested-changes-blob.diff-view td.blob-num::after {
+  content: attr(data-line-number);
+}
+
+.rendered-markup .js-suggested-changes-blob.diff-view td {
+  color: var(--diffEditor-foreground);
+  font-family: var(--monospace-fontFamily);
+}
+
+.rendered-markup .js-suggested-changes-blob.diff-view td.blob-num-deletion {
+  background-color: var(--diffEditor-removedLineHighlightBackground);
+  width: 2em;
+}
+.rendered-markup .js-suggested-changes-blob.diff-view td.blob-code-deletion {
+  background-color: var(--diffEditor-removedLineBackground);
+}
+.rendered-markup .js-suggested-changes-blob.diff-view td.blob-num-addition {
+  background-color: var(--diffEditor-insertedLineHighlightBackground);
+  width: 2em;
+}
+.rendered-markup .js-suggested-changes-blob.diff-view td.blob-code-addition {
+  background-color: var(--diffEditor-insertedLineBackground);
+}

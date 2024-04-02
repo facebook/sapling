@@ -10,6 +10,7 @@ import type {Logger} from '../logger';
 import type {
   PullRequestCommentsQueryData,
   PullRequestCommentsQueryVariables,
+  PullRequestReviewComment,
   PullRequestReviewDecision,
   ReactionContent,
   YourPullRequestsQueryData,
@@ -23,6 +24,7 @@ import type {
   Result,
   DiffComment,
 } from 'isl/src/types';
+import type {ParsedDiff} from 'shared/patch/parse';
 
 import {
   PullRequestCommentsQuery,
@@ -33,6 +35,7 @@ import {
 import queryGraphQL from './queryGraphQL';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {debounce} from 'shared/debounce';
+import {parsePatch} from 'shared/patch/parse';
 import {notEmpty} from 'shared/utils';
 
 export type GitHubDiffSummary = {
@@ -136,36 +139,43 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       numToFetch: 50,
     });
 
-    const comments = (
-      response?.resource as
-        | (PullRequestCommentsQueryData['resource'] & {__typename: 'PullRequest'})
-        | undefined
-    )?.comments.nodes?.filter(notEmpty);
-
-    this.logger.info(`fetching ${comments?.length} comments for github PR ${diffId}}`);
-
-    if (comments == null) {
+    if (response == null) {
       throw new Error(`Failed to fetch comments for ${diffId}`);
     }
 
+    const pr = response?.resource as
+      | (PullRequestCommentsQueryData['resource'] & {__typename: 'PullRequest'})
+      | undefined;
+
+    const comments = pr?.comments.nodes ?? [];
+
+    const inline =
+      pr?.reviews?.nodes?.filter(notEmpty).flatMap(review => review.comments.nodes) ?? [];
+
+    this.logger.info(`fetched ${comments?.length} comments for github PR ${diffId}}`);
+
     return (
-      comments?.map(comment => ({
-        author: comment.author?.login ?? '',
-        authorAvatarUri: comment.author?.avatarUrl,
-        html: comment.bodyHTML,
-        created: new Date(comment.createdAt),
-        reactions:
-          comment.reactions?.nodes
-            ?.filter(
-              (reaction): reaction is {user: {login: string}; content: ReactionContent} =>
-                reaction?.user?.login != null,
-            )
-            .map(reaction => ({
-              name: reaction.user.login,
-              reaction: reaction.content,
-            })) ?? [],
-        replies: [], // PR top level doesn't have nested replies, you just reply to their name
-      })) ?? []
+      [...comments, ...inline]?.filter(notEmpty).map(comment => {
+        return {
+          author: comment.author?.login ?? '',
+          authorAvatarUri: comment.author?.avatarUrl,
+          html: comment.bodyHTML,
+          created: new Date(comment.createdAt),
+          filename: (comment as PullRequestReviewComment).path ?? undefined,
+          line: (comment as PullRequestReviewComment).line ?? undefined,
+          reactions:
+            comment.reactions?.nodes
+              ?.filter(
+                (reaction): reaction is {user: {login: string}; content: ReactionContent} =>
+                  reaction?.user?.login != null,
+              )
+              .map(reaction => ({
+                name: reaction.user.login,
+                reaction: reaction.content,
+              })) ?? [],
+          replies: [], // PR top level doesn't have nested replies, you just reply to their name
+        };
+      }) ?? []
     );
   }
 

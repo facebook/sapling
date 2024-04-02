@@ -110,7 +110,7 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
         <div>
           {isTopLevel && comment.filename && (
             <Link
-              {...stylex.props(styles.inlineCommentFilename)}
+              xstyle={styles.inlineCommentFilename}
               onClick={() =>
                 comment.filename && foundPlatform.openFile(comment.filename, {line: comment.line})
               }>
