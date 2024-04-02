@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ setconfig treemanifest.flatcompat=False
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 

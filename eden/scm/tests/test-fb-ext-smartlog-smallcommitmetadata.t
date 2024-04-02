@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ configure modern
   $ enable smartlog
   $ newserver master

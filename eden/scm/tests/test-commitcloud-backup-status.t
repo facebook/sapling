@@ -1,7 +1,7 @@
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
 
-#require symlink
+#require symlink no-eden
 
   $ enable amend smartlog
   $ . "$TESTDIR/library.sh"

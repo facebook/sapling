@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require no-fsmonitor
+#require no-fsmonitor no-eden
 
   $ disable treemanifest copytrace
   $ hg debugextensions --excludedefault

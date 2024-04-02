@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require serve
+#require serve no-eden
 
   $ eagerepo
   $ setconfig format.use-segmented-changelog=true

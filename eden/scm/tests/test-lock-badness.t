@@ -1,6 +1,6 @@
 #chg-compatible
 
-#require unix-permissions no-root no-windows
+#require unix-permissions no-root no-windows no-eden
 
   $ configure modernclient
 

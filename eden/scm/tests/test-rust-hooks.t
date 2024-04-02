@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Note that Rust hook execution escapes the debugruntest execution environment.
 For now that is desirable since I also want to test the platform specific Rust spawn logic.
 

@@ -1,4 +1,4 @@
-#require tic
+#require tic no-eden
 #debugruntest-compatible
 
   $ eagerepo

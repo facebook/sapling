@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 #testcases pulllazy-python pulllazy-rust commitgraphsegments
 
   $ configure modern

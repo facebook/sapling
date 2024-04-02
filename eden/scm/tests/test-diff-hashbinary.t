@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ newrepo
   $ setconfig diff.git=1 diff.hashbinary=1

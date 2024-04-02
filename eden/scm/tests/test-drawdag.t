@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ setconfig format.use-segmented-changelog=true
   $ configure modern
 

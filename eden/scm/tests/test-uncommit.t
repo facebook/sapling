@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Test uncommit - set up the config
 
   $ eagerepo

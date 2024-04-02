@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require diff
+#require diff no-eden
 
 #testcases ruststatus scmstore
 

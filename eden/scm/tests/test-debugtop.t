@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ enable progress
   $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress_refresh=0

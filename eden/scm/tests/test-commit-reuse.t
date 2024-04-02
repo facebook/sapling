@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
 Test the flag to reuse another commit's message (-M):
 

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init t
   $ cd t

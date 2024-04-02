@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 This test checks the pull works when:
 
 1. Reassigning non-master group happens.

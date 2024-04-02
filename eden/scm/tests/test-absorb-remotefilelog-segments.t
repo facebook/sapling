@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ enable absorb remotefilelog
 
 Create repo

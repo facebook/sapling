@@ -1,6 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
-#require symlink
+#require symlink no-eden
 
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1

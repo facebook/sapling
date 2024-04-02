@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 #inprocess-hg-incompatible
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=noconflict

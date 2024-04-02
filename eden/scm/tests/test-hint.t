@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ eagerepo
 `
   $ newext showhint << EOF

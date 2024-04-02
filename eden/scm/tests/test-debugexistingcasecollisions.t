@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-#require no-icasefs
+#require no-icasefs no-eden
 
   $ newrepo
   $ mkdir -p dirA/SUBDIRA dirA/subdirA dirB dirA/mixed DIRB

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 #testcases rust python
 
   $ configure modernclient

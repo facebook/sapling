@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
 Tests rebasing with part of the rebase set already in the
 destination (issue5422)

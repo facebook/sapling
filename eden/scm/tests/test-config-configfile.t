@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ eagerepo
   $ configure dummyssh modernclient
   $ newclientrepo repo

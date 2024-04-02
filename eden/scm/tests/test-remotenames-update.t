@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
 Set up repo

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Test for the full copytracing algorithm
 =======================================
 

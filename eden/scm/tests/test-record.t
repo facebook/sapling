@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Set up a repo
 
   $ setconfig ui.interactive=true

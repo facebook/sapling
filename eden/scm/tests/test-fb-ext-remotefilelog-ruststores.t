@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True
 

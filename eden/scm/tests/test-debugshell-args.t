@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ cat >> foo.py << EOF
   > ui.write('argv = %r\n' % (sys.argv,))

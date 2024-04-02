@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 
   $ eagerepo
 Make sure that the internal merge tools (internal:fail, internal:local,

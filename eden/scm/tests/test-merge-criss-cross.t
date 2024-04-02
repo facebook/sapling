@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ setconfig commands.update.check=none
   $ setconfig experimental.copytrace=on
 

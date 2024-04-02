@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Pushrebase still needs filepeer.
 
   $ setconfig experimental.allowfilepeer=True

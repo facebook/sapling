@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Do not use usernames from env vars:
 
   $ unset HGUSER EMAIL

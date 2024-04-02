@@ -3,7 +3,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
-#require serve
+#require serve no-eden
 
   $ hg init test
   $ cd test

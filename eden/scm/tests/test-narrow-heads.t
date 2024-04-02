@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ eagerepo
 'narrow-heads' requires remotenames and visibility
 

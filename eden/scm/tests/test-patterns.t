@@ -1,4 +1,4 @@
-#require no-windows
+#require no-windows no-eden
 #debugruntest-compatible
 
   $ eagerepo

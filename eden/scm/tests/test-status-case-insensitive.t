@@ -1,6 +1,6 @@
 #debugruntest-compatible
-#require icasefs
-#require no-windows
+#require icasefs no-eden
+#require no-windows no-eden
 
   $ configure modernclient
 

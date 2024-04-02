@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ configure modern
 
   $ setconfig paths.default=test:e1

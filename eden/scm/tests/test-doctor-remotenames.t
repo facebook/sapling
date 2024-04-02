@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure modern
   $ newserver server1

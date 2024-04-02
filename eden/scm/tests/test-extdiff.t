@@ -1,7 +1,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-#require diff echo
+#require diff echo no-eden
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable extdiff

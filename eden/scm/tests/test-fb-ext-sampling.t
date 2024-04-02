@@ -1,5 +1,5 @@
 #chg-compatible
-#require no-fsmonitor
+#require no-fsmonitor no-eden
 
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may
 have it set.

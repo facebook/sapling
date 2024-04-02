@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Setup
   $ configure modern
   $ enable fbcodereview

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.
 

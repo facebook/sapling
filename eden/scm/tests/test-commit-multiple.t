@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 # reproduce issue2264, issue2516
 
   $ setconfig devel.segmented-changelog-rev-compat=true

@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require git no-windows
+#require git no-windows no-eden
 
   $ . $TESTDIR/git.sh
   $ export SL_TEST_GH_URL=https://github.com/facebook/test_github_repo.git

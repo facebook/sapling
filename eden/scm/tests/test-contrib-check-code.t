@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ run_check_code() {
   >   PYTHONPATH= python "$TESTDIR/../contrib/check-code.py" "$@"

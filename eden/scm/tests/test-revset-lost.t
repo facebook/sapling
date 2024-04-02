@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ configure modern
   $ setconfig ui.allowemptycommit=1
   $ enable histedit

@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 # coding=utf-8
 #inprocess-hg-incompatible
 

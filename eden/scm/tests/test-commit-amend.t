@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ configure mutation-norecord
   $ setconfig commands.update.check=none
 

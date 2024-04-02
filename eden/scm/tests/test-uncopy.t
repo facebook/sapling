@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 set up test repo
 
   $ configure modernclient

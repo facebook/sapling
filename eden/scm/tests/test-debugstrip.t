@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 #inprocess-hg-incompatible
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true

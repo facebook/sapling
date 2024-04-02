@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require diff
+#require diff no-eden
 
   $ configure modernclient
   $ setconfig ui.color=always color.mode=ansi

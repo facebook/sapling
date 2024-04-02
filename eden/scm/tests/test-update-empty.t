@@ -5,6 +5,9 @@
 
 #debugruntest-compatible
 
+#require no-eden
+
+
 # Empty update fails with a helpful error:
 
   $ setconfig devel.segmented-changelog-rev-compat=true

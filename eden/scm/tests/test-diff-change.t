@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ configure modernclient
 
 Testing diff --change

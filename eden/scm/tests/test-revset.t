@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #

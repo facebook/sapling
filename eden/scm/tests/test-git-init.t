@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require git no-windows
+#require git no-windows no-eden
 
   $ eagerepo
 Can init with --git in an existing directory

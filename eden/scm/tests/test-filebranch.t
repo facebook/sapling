@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
 
 This test makes sure that we don't mark a file as merged with its ancestor

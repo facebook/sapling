@@ -1,5 +1,7 @@
 #debugruntest-compatible
 
+#require no-eden
+
   $ setconfig ui.allowemptycommit=1 \
   > remotenames.selectivepulldefault=main \
   > remotenames.hoist=remote \

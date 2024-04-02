@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require execbit
+#require execbit no-eden
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=none
 

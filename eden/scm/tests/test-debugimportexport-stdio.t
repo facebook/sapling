@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 This test is about `debugimportexport` without using the node IPC channel.
 
 

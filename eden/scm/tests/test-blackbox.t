@@ -1,4 +1,4 @@
-#require no-fsmonitor
+#require no-fsmonitor no-eden
 #debugruntest-compatible
 
 setup

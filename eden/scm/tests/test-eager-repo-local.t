@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ configure modern
   $ setconfig format.use-eager-repo=True
 

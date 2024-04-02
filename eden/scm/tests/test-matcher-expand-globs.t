@@ -1,7 +1,7 @@
 #debugruntest-compatible
 
 We only expand globs on Windows.
-#require windows
+#require windows no-eden
 
   $ configure modernclient
   $ newclientrepo

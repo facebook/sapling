@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require symlink
+#require symlink no-eden
 
   $ eagerepo
 

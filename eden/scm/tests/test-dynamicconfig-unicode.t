@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ configure modern
 
   $ export HG_TEST_INTERNALCONFIG="$TESTTMP/test_hgrc"

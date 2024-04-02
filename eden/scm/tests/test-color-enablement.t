@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ setconfig alias.testcolor="debugtemplate '{label(\"green\", \"output\n\")}'"
 

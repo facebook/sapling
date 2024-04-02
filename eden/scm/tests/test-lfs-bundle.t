@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ disable treemanifest
 In this test, we want to test LFS bundle application. The test will cover all
 combinations: LFS on/off; remotefilelog on/off.

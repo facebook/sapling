@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ enable mergedriver
   $ setconfig commands.update.check=none

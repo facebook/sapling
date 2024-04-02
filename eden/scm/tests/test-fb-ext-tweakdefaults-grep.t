@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require xargs env python3.8
+#require xargs env python3.8 no-eden
 
   $ enable rebase
 

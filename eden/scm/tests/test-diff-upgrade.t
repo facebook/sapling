@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require execbit
+#require execbit no-eden
 
   $ eagerepo
   $ setconfig extensions.autodiff="$TESTDIR/autodiff.py" diff.nodates=1

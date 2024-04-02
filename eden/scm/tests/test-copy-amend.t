@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ newrepo
   $ drawdag << 'EOS'
   > C   # C/A = (removed)

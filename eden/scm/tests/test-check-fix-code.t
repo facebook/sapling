@@ -1,7 +1,7 @@
 #debugruntest-compatible
 #chg-compatible
 
-#require test-repo
+#require test-repo no-eden
 
   $ eagerepo
   $ . "$TESTDIR/helpers-testrepo.sh"

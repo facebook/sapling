@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require no-windows
+#require no-windows no-eden
 
   $ eagerepo
   $ newrepo

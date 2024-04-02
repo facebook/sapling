@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 # enable bundle2 in advance
   $ setconfig format.usegeneraldelta=yes
 

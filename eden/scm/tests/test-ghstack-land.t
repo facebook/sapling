@@ -1,6 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
-#require git no-windows
+#require git no-windows no-eden
 
   $ eagerepo
   $ setconfig ghstack.github_username=test clone.use-rust=false

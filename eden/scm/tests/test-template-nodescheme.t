@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require git
+#require git no-eden
 
   $ configure modernclient
 

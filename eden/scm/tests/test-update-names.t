@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Test update logic when there are renames or weird same-name cases between dirs
 and files
 

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 #  Linear tree case
 #
 #  9 <- known bad - - -

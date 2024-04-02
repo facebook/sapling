@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ enable rebase
   $ setconfig experimental.evolution.allowdivergence=1

@@ -1,6 +1,7 @@
 #debugruntest-compatible
 
-  $ enable copytrace
+#require no-eden
+
   $ setconfig copytrace.dagcopytrace=True
 
   $ configure modernclient

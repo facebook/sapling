@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 #inprocess-hg-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True

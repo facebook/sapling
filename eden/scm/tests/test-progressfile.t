@@ -1,6 +1,6 @@
 #debugruntest-compatible
 #chg-compatible
-#require bash
+#require bash no-eden
 
   $ eagerepo
   $ enable progress progressfile

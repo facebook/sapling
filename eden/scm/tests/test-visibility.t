@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true visibility.verbose=true

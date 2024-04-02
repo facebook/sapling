@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Test argument handling and various data parsing
 ==================================================
 

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ newrepo repo
   $ echo 0 > a

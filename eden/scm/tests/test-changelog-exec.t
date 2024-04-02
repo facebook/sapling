@@ -1,6 +1,6 @@
 #debugruntest-compatible
 
-#require execbit
+#require execbit no-eden
 
 b51a8138292a introduced a regression where we would mention in the
 changelog executable files added by the second parent of a merge. Test

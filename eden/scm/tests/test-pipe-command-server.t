@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require no-windows
+#require no-windows no-eden
   $ configure modernclient
 
   $ cat > make-request.py <<'EOF'

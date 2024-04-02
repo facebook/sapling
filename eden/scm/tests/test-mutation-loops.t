@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ eagerepo
   $ enable amend rebase remotenames
   $ setconfig experimental.evolution=obsolete

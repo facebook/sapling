@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Test avoiding calculating head changes during commit
 
   $ hg init branchatcommit

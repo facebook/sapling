@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 test clone with lazy pull
 
   $ configure modern

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ configure dummyssh
   $ enable amend rebase histedit fbhistedit fbcodereview absorb

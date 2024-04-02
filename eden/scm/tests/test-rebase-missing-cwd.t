@@ -1,7 +1,7 @@
 #debugruntest-compatible
 
   $ configure mutation-norecord
-#require rmcwd
+#require rmcwd no-eden
 
 Ensure that dirsync does not cause an abort when cwd goes missing
 

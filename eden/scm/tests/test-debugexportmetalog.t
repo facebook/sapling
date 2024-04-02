@@ -1,4 +1,4 @@
-#require git
+#require git no-eden
 #debugruntest-compatible
 
   $ configure modern

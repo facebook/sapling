@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ newrepo
   $ setconfig 'committemplate.changeset={foo}\n'
   $ setconfig 'committemplate.foo=foo'

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ newrepo
   $ setconfig ui.allowemptycommit=1

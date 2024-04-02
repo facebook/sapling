@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 
 # The tests in test-bisect are done on a linear history. Here the
 # following repository history is used for testing:

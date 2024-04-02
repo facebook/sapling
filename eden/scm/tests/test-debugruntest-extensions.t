@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ cat > ex1.py <<EOS
   > from sapling import commands, extensions
   > def uisetup(ui):

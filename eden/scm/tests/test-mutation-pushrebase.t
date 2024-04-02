@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh

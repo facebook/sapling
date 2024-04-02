@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 https://bz.mercurial-scm.org/1175
 
   $ setconfig commands.update.check=none

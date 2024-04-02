@@ -1,7 +1,7 @@
 #debugruntest-compatible
 
 
-#require symlink execbit
+#require symlink execbit no-eden
 
   $ eagerepo
   $ setconfig commands.update.check=none

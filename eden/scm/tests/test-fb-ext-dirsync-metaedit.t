@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ shorttraceback
   $ configure modern
   $ enable dirsync amend

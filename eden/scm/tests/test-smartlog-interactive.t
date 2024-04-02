@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require no-windows
+#require no-windows no-eden
   $ enable smartlog
   $ configure modernclient
   $ disable commitcloud

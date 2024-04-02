@@ -1,4 +1,7 @@
 #debugruntest-compatible
+
+#require no-eden
+
 Test namespace registration using registrar
 
   $ shorttraceback

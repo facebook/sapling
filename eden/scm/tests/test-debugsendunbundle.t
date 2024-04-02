@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ . "$TESTDIR/library.sh"
 
 Do some initial setup

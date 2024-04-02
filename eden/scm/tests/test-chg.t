@@ -1,6 +1,6 @@
 #debugruntest-compatible
 #chg-compatible
-#require chg linux
+#require chg linux no-eden
 
   $ configure modernclient
   $ newclientrepo

@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ enable amend absorb rebase
   $ setconfig extensions.extralog=$TESTDIR/extralog.py

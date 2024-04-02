@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 #testcases case1 case2
 
   >>> pydoc_var_for_both = "hello"

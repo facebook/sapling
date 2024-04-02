@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ log_fixture() {
   >   newrepo '' "$@"
   >   drawdag "$@" << 'EOS'

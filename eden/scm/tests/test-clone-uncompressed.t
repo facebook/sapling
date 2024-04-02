@@ -2,7 +2,7 @@
 #inprocess-hg-incompatible
 
   $ configure dummyssh
-#require serve
+#require serve no-eden
 
 Initialize repository
 the status call is to check for issue5130

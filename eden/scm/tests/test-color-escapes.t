@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ setconfig ui.color=always color.mode=ansi
   $ setconfig color.color.none=0

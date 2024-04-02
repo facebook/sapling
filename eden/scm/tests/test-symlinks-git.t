@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require git symlink
+#require git symlink no-eden
 
   $ configure modernclient
   $ . $TESTDIR/git.sh

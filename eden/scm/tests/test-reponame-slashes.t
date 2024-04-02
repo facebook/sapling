@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ eagerepo
   $ setconfig remotefilelog.reponame=dont/mess/up
   $ setconfig clone.use-rust=true

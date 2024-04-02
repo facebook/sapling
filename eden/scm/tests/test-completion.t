@@ -1,7 +1,7 @@
 #debugruntest-compatible
 
 
-#require no-fsmonitor
+#require no-fsmonitor no-eden
 
 Show all commands except debug commands
   $ hg debugcomplete | grep 'commit|diff|status|debugapi'

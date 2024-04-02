@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require symlink
+#require symlink no-eden
 
   $ eagerepo
   $ setconfig experimental.allowfilepeer=True

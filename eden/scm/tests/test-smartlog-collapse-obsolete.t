@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ configure modern
   $ enable smartlog rebase
   $ disable commitcloud

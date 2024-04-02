@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require icasefs
+#require icasefs no-eden
 
   $ configure modernclient
   $ setconfig checkout.use-rust=true

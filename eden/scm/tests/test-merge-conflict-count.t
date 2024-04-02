@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
   $ enable amend rebase
   $ setconfig merge.printcandidatecommmits=True
 

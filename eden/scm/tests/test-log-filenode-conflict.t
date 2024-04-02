@@ -1,5 +1,8 @@
 #debugruntest-compatible
 
+#require no-eden
+
+
 Test log FILE history handling with renames / file node collisions.
 
   $ . $TESTDIR/library.sh

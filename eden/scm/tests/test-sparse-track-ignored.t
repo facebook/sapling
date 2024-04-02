@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require fsmonitor
+#require fsmonitor no-eden
 
   $ configure modernclient
   $ enable sparse

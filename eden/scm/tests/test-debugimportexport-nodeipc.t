@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require node
+#require node no-eden
 
 This test is about `debugimportexport --node-ipc`.
 

@@ -1,6 +1,6 @@
 #debugruntest-compatible
 #chg-compatible
-#require bash
+#require bash no-eden
   $ setconfig experimental.allowfilepeer=True
 
   $ enable amend rebase histedit fbhistedit remotenames

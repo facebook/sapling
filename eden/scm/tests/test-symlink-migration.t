@@ -1,6 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
-#require symlink windows
+#require symlink windows no-eden
 
   $ configure modernclient
   $ eagerepo

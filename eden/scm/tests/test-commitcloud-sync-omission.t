@@ -3,7 +3,7 @@
   $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.segmented-changelog-rev-compat=true
 
-#require jq
+#require jq no-eden
   $ configure mutation-norecord dummyssh
   $ enable amend commitcloud infinitepush rebase remotenames share smartlog
 
