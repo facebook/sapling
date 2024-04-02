@@ -50,6 +50,17 @@ Go back to the master branch
 # Clone the Git repo from Mononoke
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --single-branch -b master
   Cloning into 'repo'...
-  fatal: did not receive expected object d9dc1768c477b85bd1d8bd2d238f234cfe8fbdc4
-  fatal: fetch-pack: invalid index-pack output
-  [128]
+  $ cd $REPONAME
+# Verify that we indeed did not fetch the tag
+  $ git show-ref | grep detached_tag
+  [1]
+# Verify that we only get the objects associated with the master branch without including any extra objects
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list | sed 's/>//g'
+  0a1,2
+   006b4ee2e3b26ddd88879444bccb3da30379ed5f tag detached_tag
+   20e385682f353d25987c7983b301e5413bbbb645 tree 
+  4a7
+   a309e46e332a0f166453c6137344852fab38d120 blob file3
+  5a9
+   d9dc1768c477b85bd1d8bd2d238f234cfe8fbdc4 commit 

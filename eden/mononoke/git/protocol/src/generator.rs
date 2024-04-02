@@ -862,18 +862,51 @@ async fn tag_packfile_stream<'a>(
 }
 
 /// Create a stream of packfile items containing annotated tag objects that exist in the repo
-async fn all_tags_packfile_stream<'a>(
-    ctx: Arc<CoreContext>,
+/// and point to a commit within the set of commits requested by the client
+async fn tags_packfile_stream<'a>(
+    ctx: CoreContext,
     repo: &'a impl Repo,
+    requested_commits: Vec<ChangesetId>,
     packfile_item_inclusion: PackfileItemInclusion,
     concurrency: usize,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
+    let requested_commits: Arc<FxHashSet<ChangesetId>> =
+        Arc::new(requested_commits.into_iter().collect());
+    // Fetch all the tags that point to some commit in the given set of commits
+    let required_tag_names = repo
+        .bookmarks()
+        .list(
+            ctx.clone(),
+            Freshness::MostRecent,
+            &BookmarkPrefix::new(TAGS_PREFIX)?,
+            BookmarkCategory::ALL,
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            u64::MAX,
+        )
+        .try_filter_map(|(bookmark, cs_id)| {
+            let requested_commits = requested_commits.clone();
+            async move {
+                if requested_commits.contains(&cs_id) {
+                    Ok(Some(bookmark.name().to_string()))
+                } else {
+                    Ok(None)
+                }
+            }
+        })
+        .try_collect::<FxHashSet<_>>()
+        .await
+        .context("Error in getting tags pointing to input set of commits")?;
+    let ctx = Arc::new(ctx);
     // Fetch entries corresponding to annotated tags in the repo
     let tag_entries = repo
         .bonsai_tag_mapping()
         .get_all_entries()
         .await
-        .context("Error in getting tags during fetch")?;
+        .context("Error in getting tags during fetch")?
+        .into_iter()
+        .filter(|entry| required_tag_names.contains(&entry.tag_name))
+        .collect::<Vec<_>>();
     let tags_count = tag_entries.len();
     let tag_stream =
         tag_entries_to_stream(ctx, repo, tag_entries, packfile_item_inclusion, concurrency);
@@ -1015,6 +1048,7 @@ pub async fn fetch_response<'a>(
 ) -> Result<FetchResponse<'a>> {
     let delta_inclusion = DeltaInclusion::standard();
     let packfile_item_inclusion = PackfileItemInclusion::FetchAndStore;
+    let original_context = ctx.clone();
     let ctx = Arc::new(ctx);
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
     let bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
@@ -1066,9 +1100,10 @@ pub async fn fetch_response<'a>(
     // Get the stream of all annotated tag items in the repo
     // NOTE: Ideally, we should filter it based on the requested refs but its much faster to just send all the tags.
     // Git ignores the unnecessary objects and the extra size overhead in the pack is just a few KBs
-    let (tag_stream, tags_count) = all_tags_packfile_stream(
-        ctx.clone(),
+    let (tag_stream, tags_count) = tags_packfile_stream(
+        original_context,
         repo,
+        target_commits,
         packfile_item_inclusion,
         request.concurrency.tags,
     )
