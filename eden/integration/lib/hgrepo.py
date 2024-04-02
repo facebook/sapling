@@ -167,9 +167,16 @@ class HgRepository(repobase.Repository):
         if hgeditor is not None:
             env["HGEDITOR"] = hgeditor
 
-        input_bytes = None
+        # Create a temporary file for the input as a more reliable way than the PIPE
+        # and Python threads.
+        input_file = None
+        stdin = subprocess.DEVNULL
         if input is not None:
             input_bytes = input.encode(encoding)
+            input_file = self.temp_mgr.make_temp_binary(prefix="hg_input.")
+            input_file.write(input_bytes)
+            input_file.seek(0)
+            stdin = input_file.fileno()
 
         if cwd is None:
             cwd = self.path
@@ -178,7 +185,7 @@ class HgRepository(repobase.Repository):
                 cmd,
                 stdout=stdout,
                 stderr=stderr,
-                input=input_bytes,
+                stdin=stdin,
                 check=check,
                 cwd=cwd,
                 env=env,
@@ -193,6 +200,9 @@ class HgRepository(repobase.Repository):
                 print("stderr: ", ex.stderr.decode())
             print("----------- Mercurial Crash Report End")
             raise HgError(ex) from ex
+        finally:
+            if input_file:
+                input_file.close()
 
     def hg(
         self,
