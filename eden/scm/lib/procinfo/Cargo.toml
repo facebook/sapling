@@ -9,7 +9,7 @@ edition = "2021"
 libc = "0.2.139"
 
 [target.'cfg(target_os = "macos")'.build-dependencies]
-cc = "1.0.83"
+cc = "1.0.90"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything"] }

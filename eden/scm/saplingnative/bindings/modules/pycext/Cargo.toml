@@ -10,4 +10,4 @@ cpython = { version = "0.7.1", features = ["python3-sys"], default-features = fa
 python3-sys = "0.7.1"
 
 [build-dependencies]
-cc = "1.0.83"
+cc = "1.0.90"
