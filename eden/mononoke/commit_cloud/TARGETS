@@ -9,9 +9,11 @@ rust_library(
         "schemas/*.sql",
     ]),
     deps = [
-        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
     ],
 )

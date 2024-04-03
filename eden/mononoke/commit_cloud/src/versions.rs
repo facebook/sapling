@@ -7,7 +7,7 @@
 
 use mononoke_types::DateTime as MononokeDateTime;
 
-use crate::WorkspaceContents;
+use crate::workspace::WorkspaceContents;
 #[allow(unused)]
 pub(crate) struct WorkspaceVersion {
     workspace: WorkspaceContents,

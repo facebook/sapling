@@ -8,7 +8,7 @@
 use std::path::PathBuf;
 
 #[allow(unused)]
-pub(crate) struct CheckoutLocation {
+pub(crate) struct WorkspaceCheckoutLocation {
     reponame: String,
     hostname: String,
     commit: String,

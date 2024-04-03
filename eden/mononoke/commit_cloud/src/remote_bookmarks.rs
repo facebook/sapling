@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use sha1::Sha1;
-
+use mercurial_types::HgChangesetId;
 #[allow(unused)]
 pub(crate) struct WorkspaceRemoteBookmark {
     name: String,
-    node: Sha1,
+    node: HgChangesetId,
     remote: String,
 }

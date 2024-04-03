@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use sha1::Sha1;
-
+use mercurial_types::HgChangesetId;
 /// User-defined bookmarks
 #[allow(unused)]
 pub(crate) struct WorkspaceLocalBookmark {
     name: String,
-    node: Sha1,
+    node: HgChangesetId,
 }

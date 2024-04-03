@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use sha1::Sha1;
+use mercurial_types::HgChangesetId;
 
 #[allow(unused)]
 pub(crate) struct WorkspaceHead {
-    node: Sha1,
+    node: HgChangesetId,
 }

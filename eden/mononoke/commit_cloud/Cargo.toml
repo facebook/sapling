@@ -8,7 +8,9 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0.75"
+async-trait = "0.1.71"
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-sha1 = "0.10.5"
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
