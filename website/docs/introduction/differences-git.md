@@ -35,7 +35,7 @@ In Git, when working with a stack of commits, you are generally required to use 
 In Sapling, when working with a stack of commits you can just checkout the commit you want to work on and run “amend”, “split”, “fold”, etc to modify the middle of the stack. The top of the stack is automatically kept track of and restacked for you so your stack remains together. Additionally, `absorb` allows automatically sucking pending changes down into the appropriate commit in your stack. `histedit` can be used to provide a `rebase -i` like experience if desired.
 
 #### Sapling generally does one thing per command.
-In Git, a command may do multiple seemingly unrelated things. `checkout` may be used to move to another commit, revert the contents of an individual file, and create a branch. `reset` may be used to move a branch and undo certain operations. `rebase` can be used to move commits or edit a stack.
+In Git, a command may do multiple seemingly unrelated things. `goto` may be used to move to another commit, revert the contents of an individual file, and create a branch. `reset` may be used to move a branch and undo certain operations. `rebase` can be used to move commits or edit a stack.
 
 In Sapling, each command generally does one thing. `pull` fetches remote commits without merging. `goto` moves you to another commit. `revert` adjusts the contents of files in the working copy. `bookmark` create a bookmark. `rebase` moves commits, etc.
 
