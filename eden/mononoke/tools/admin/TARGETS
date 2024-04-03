@@ -89,6 +89,7 @@ rust_binary(
         "//eden/mononoke/common/rust/caching_ext:caching_ext",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
         "//eden/mononoke/derived_data:derived_data",
