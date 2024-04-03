@@ -22,13 +22,13 @@ use context::CoreContext;
 use either::Either;
 use either::Either::*;
 use fsnodes::RootFsnodeId;
+use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use git_types::ObjectKind;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
-use manifest::Entry;
 use manifest::Entry::*;
 use manifest::ManifestOps;
 use maplit::hashmap;
@@ -822,7 +822,6 @@ async fn generate_additional_file_changes<'a, R: Repo>(
         x_repo_submodule_metadata_file_prefix,
     )?;
 
-    let mut all_changes = expanded_file_changes;
     let git_submodule_sha1 = get_git_hash_from_submodule_file(
         ctx,
         source_repo,
@@ -846,49 +845,59 @@ async fn generate_additional_file_changes<'a, R: Repo>(
         metadata_file_size,
         None,
     );
-    all_changes.push((x_repo_sm_metadata_path, x_repo_sm_metadata_fc));
+    let mut all_changes = vec![(x_repo_sm_metadata_path, x_repo_sm_metadata_fc)];
 
     // Step 2: Generate the deletions of files/directories that are being
     // replaced by the creation of the submodule expansion.
 
+    let blobstore = source_repo.repo_blobstore();
+    let derived_data = source_repo.repo_derived_data();
+
     // Get the fsnode entries for the submodule path in the parent commits
-    let fsnode_entries: Vec<Option<Entry<_, FsnodeFile>>> = stream::iter(parents)
+    let fsnode_entries: Vec<(NonRootMPath, FsnodeFile)> = stream::iter(parents)
         .then(|cs_id| {
-            let blobstore = source_repo.repo_blobstore_arc();
             // These are cheap to clone and we'll do it at most twice, so it
             // should be fine.
-            cloned!(submodule_path, blobstore);
+            cloned!(submodule_path, blobstore, derived_data, ctx);
             async move {
-                let fsnode_id = source_repo
-                    .repo_derived_data()
-                    .derive::<RootFsnodeId>(ctx, *cs_id)
+                let fsnode_id = derived_data
+                    .derive::<RootFsnodeId>(&ctx, *cs_id)
                     .await?
                     .into_fsnode_id();
-                fsnode_id
-                    .find_entry(ctx.clone(), blobstore, submodule_path.0.into())
-                    .await
+
+                // If there is an entry for a **non-GitSubmodule file type**, it
+                // means that in the large repo we're replacing a regular file or
+                // regular directory with the submodule expansion, so we need to
+                // generate deletions for it.
+                // The paths to be deleted, will be all the leaves under the
+                // submodule path.
+                let leaf_stream = fsnode_id
+                    .list_leaf_entries_under(ctx, blobstore, vec![submodule_path.0])
+                    .try_filter(|(_path, fsnode_file)| {
+                        future::ready(*fsnode_file.file_type() != FileType::GitSubmodule)
+                    });
+
+                anyhow::Ok(leaf_stream)
             }
         })
+        .boxed()
+        .try_flatten()
         .try_collect::<Vec<_>>()
         .await?;
 
-    // If there are any entries for **non-GitSubmodule file types**, it means
-    // that in the large repo the file is being replaced by the submodule
-    // expansion, so we need to generate a deletion for it, because adding
-    // a directory in the path of a file doesn't implicitly delete it.
-    let other_file_type_in_submodule_path =
+    // NOTE: Deletions must be added first, because the expanded changes take
+    // precedence over the deletions. i.e. if we generate a Deletion and a Change
+    // for the same path, it means that the submodule expansion is replacing
+    // a regular directory with a file in the same path.
+    // We don't want this file actually deleted.
+
+    all_changes.extend(
         fsnode_entries
             .into_iter()
-            .any(|mb_entry: Option<Entry<_, FsnodeFile>>| match mb_entry {
-                Some(Entry::Leaf(fsnode_file)) => {
-                    *fsnode_file.file_type() != FileType::GitSubmodule
-                }
-                Some(Entry::Tree(_)) | None => false,
-            });
+            .map(|(path, _)| (path, FileChange::Deletion)),
+    );
 
-    if other_file_type_in_submodule_path {
-        all_changes.push((submodule_path.0, FileChange::Deletion));
-    };
+    all_changes.extend(expanded_file_changes);
 
     Ok(all_changes)
 }

@@ -523,7 +523,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
     derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
 
     let expected_cs_id =
-        ChangesetId::from_str("e037988b889b5f11a1cd284ce616d0b2e90db7ee780917401e012a12db47fe49")
+        ChangesetId::from_str("349e55c3d49f9c4841e218c49fb3bee3e6ea29fa8a95774df22f7cd307a109ad")
             .unwrap();
 
     compare_expected_changesets_from_basic_setup(
@@ -547,14 +547,11 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
                     "repo_a/some_dir/subdir/C_B",
                 ],
                 vec![
-                    // TODO(T179534458): delete files in directory being
-                    // replaced by subdmoule expansion
-                    //
                     // All files from the directory should be deleted with
                     // the addition of a submodule expansion on the same path
-                    // "repo_a/some_dir/subdir/file_x",
-                    // "repo_a/some_dir/subdir/file_y",
-                    // "repo_a/some_dir/subdir/file_z",
+                    "repo_a/some_dir/subdir/file_x",
+                    "repo_a/some_dir/subdir/file_y",
+                    "repo_a/some_dir/subdir/file_z",
                     // NOTE: We DON'T actually want a deletion for C_A, because
                     // the submodule expansion has the file with the same path.
                     // I'm leaving this commented out to convey this clearly.
