@@ -14,7 +14,7 @@ use crate::local_bookmarks::WorkspaceLocalBookmark;
 use crate::remote_bookmarks::WorkspaceRemoteBookmark;
 pub mod builder;
 pub mod checkout_locations;
-pub(crate) mod heads;
+pub mod heads;
 pub(crate) mod history;
 pub(crate) mod local_bookmarks;
 pub(crate) mod remote_bookmarks;
