@@ -15,11 +15,15 @@ use anyhow::anyhow;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeId;
+use futures::TryStreamExt;
 use git_types::MappedGitCommitId;
+use manifest::ManifestOps;
 use maplit::btreemap;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
@@ -334,7 +338,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         .commit()
         .await?;
 
-    let _large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
+    let large_repo_master = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
         .await?
         .ok_or(anyhow!("Failed to sync commit"))?;
 
@@ -356,8 +360,8 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
                 "repo_a/submodules/.x-repo-submodule-repo_b",
                 "repo_a/submodules/repo_b/some_dir",
             ],
-            // Files being implicitly deleted
-            // TODO(T179534458): properly support submodule implicit deletion
+            // NOTE: no need to have explicit deletions for these files, because
+            // they're being deleted implicitly.
             vec![
                 // "repo_a/submodules/repo_b/some_dir/file_x",
                 // "repo_a/submodules/repo_b/some_dir/file_y"
@@ -373,6 +377,40 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         &repo_b_git_commit_hash,
     )
     .await?;
+
+    // Assert that `file_x` and `file_y` are not in the working copy
+    // by getting all leaves from the RootFsnode
+    let root_fsnode_id = large_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(&ctx, large_repo_master)
+        .await?
+        .into_fsnode_id();
+
+    let large_repo_blobstore = large_repo.repo_blobstore();
+    let all_files: Vec<String> = root_fsnode_id
+        .list_leaf_entries(ctx, large_repo_blobstore.clone())
+        .map_ok(|(path, _fsnode_file)| path.to_string())
+        .try_collect()
+        .await?;
+
+    let expected_files: Vec<String> = vec![
+        "large_repo_root",
+        "repo_a/A_A",
+        "repo_a/A_B",
+        "repo_a/A_C",
+        "repo_a/submodules/.x-repo-submodule-repo_b",
+        "repo_a/submodules/repo_b/B_A",
+        "repo_a/submodules/repo_b/B_B",
+        "repo_a/submodules/repo_b/some_dir",
+    ]
+    .into_iter()
+    .map(|s| s.to_string())
+    .collect();
+
+    assert_eq!(
+        all_files, expected_files,
+        "Working copy doesn't match expectation"
+    );
 
     Ok(())
 }
