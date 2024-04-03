@@ -37,6 +37,7 @@ use futures::pin_mut;
 use futures::TryFutureExt;
 use git_symbolic_refs::GitSymbolicRefs;
 use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
 use gotham_ext::middleware::MetadataMiddleware;
@@ -218,6 +219,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let repos = GitRepos::new(repos_mgr.clone())
                 .await
                 .context(Error::msg("Error opening repos"))?;
+            let configs = repos.repo_mgr.configs();
 
             let addr = addr
                 .to_socket_addrs()
@@ -255,6 +257,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(LoadMiddleware::new())
                 .add(LogMiddleware::slog(logger.clone()))
                 .add(TimerMiddleware::new())
+                .add(ConfigInfoMiddleware::new(configs))
                 .build(router);
 
             info!(&logger, "Listening on {}", bound_addr);
