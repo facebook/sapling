@@ -34,6 +34,7 @@ use gotham_derive::StateData;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::ErrorFormatter;
 use gotham_ext::middleware::load::RequestLoad;
+use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::HttpScubaKey;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::middleware::MetadataState;
@@ -52,7 +53,6 @@ use time_ext::DurationExt;
 
 use crate::context::ServerContext;
 use crate::middleware::request_dumper::RequestDumper;
-use crate::middleware::RequestContext;
 use crate::scuba::EdenApiScubaKey;
 use crate::utils::cbor_mime;
 use crate::utils::get_repo;

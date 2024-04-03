@@ -41,6 +41,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
 use mercurial_types::HgFileNodeId;
@@ -59,7 +60,6 @@ use super::HandlerInfo;
 use super::HandlerResult;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
-use crate::middleware::RequestContext;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::get_repo;
 

@@ -43,6 +43,7 @@ rust_library(
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/quiet_stream:quiet_stream",
         "//eden/mononoke/rate_limiting:rate_limiting",
+        "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],

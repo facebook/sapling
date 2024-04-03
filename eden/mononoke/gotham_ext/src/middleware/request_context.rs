@@ -13,9 +13,6 @@ use fbinit::FacebookInit;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::middleware::MetadataState;
-use gotham_ext::middleware::Middleware;
-use gotham_ext::state_ext::StateExt;
 use hyper::Body;
 use hyper::Response;
 use metadata::Metadata;
@@ -23,6 +20,10 @@ use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::o;
 use slog::Logger;
+
+use crate::middleware::MetadataState;
+use crate::middleware::Middleware;
+use crate::state_ext::StateExt;
 
 #[derive(StateData, Clone)]
 pub struct RequestContext {

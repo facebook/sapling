@@ -11,6 +11,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::BytesBody;
 use mononoke_api::MononokeError;
 use mononoke_api_hg::HgRepoContext;
@@ -20,7 +21,6 @@ use crate::context::ServerContext;
 use crate::errors::MononokeErrorExt;
 use crate::handlers::EdenApiMethod;
 use crate::handlers::HandlerInfo;
-use crate::middleware::RequestContext;
 use crate::utils::get_repo;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]

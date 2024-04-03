@@ -54,7 +54,6 @@ rust_library(
         "//eden/mononoke/rate_limiting:rate_limiting",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/server/metadata:metadata",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/types:types",

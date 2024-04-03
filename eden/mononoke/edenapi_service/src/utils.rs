@@ -11,6 +11,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::body_ext::BodyExt;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::request_context::RequestContext;
 use http::HeaderMap;
 use hyper::Body;
 use mononoke_api_hg::HgRepoContext;
@@ -21,7 +22,6 @@ use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::errors::MononokeErrorExt;
 use crate::middleware::request_dumper::RequestDumper;
-use crate::middleware::RequestContext;
 
 pub mod cbor;
 pub mod convert;

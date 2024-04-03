@@ -15,6 +15,7 @@ use fbinit::FacebookInit;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
+use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
 use gotham_ext::state_ext::StateExt;
@@ -25,8 +26,6 @@ use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::trace;
 use slog::warn;
-
-use crate::middleware::RequestContext;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
 static MAX_BODY_LEN_DEBUG: usize = 4 * 1024; // 4 KB

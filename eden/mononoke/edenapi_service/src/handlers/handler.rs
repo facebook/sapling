@@ -15,6 +15,7 @@ use gotham::extractor::QueryStringExtractor;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::request_context::RequestContext;
 use hyper::body::Body;
 use mononoke_api::MononokeError;
 use mononoke_api_hg::HgRepoContext;
@@ -23,7 +24,6 @@ use serde::Deserialize;
 
 use super::EdenApiMethod;
 use crate::context::ServerContext;
-use crate::middleware::RequestContext;
 use crate::utils::get_repo;
 
 pub trait PathExtractorWithRepo: PathExtractor<Body> + Send + Sync {

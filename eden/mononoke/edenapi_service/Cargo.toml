@@ -36,7 +36,6 @@ lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../mononoke_api_hg" }

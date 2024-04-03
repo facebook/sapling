@@ -29,6 +29,7 @@ use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
 use gotham_ext::middleware::MetadataMiddleware;
 use gotham_ext::middleware::PostResponseMiddleware;
+use gotham_ext::middleware::RequestContextMiddleware;
 use gotham_ext::middleware::ScubaMiddleware;
 use gotham_ext::middleware::ServerIdentityMiddleware;
 use gotham_ext::middleware::TimerMiddleware;
@@ -44,7 +45,6 @@ use slog::Logger;
 use crate::context::ServerContext;
 use crate::handlers::build_router;
 use crate::middleware::OdsMiddleware;
-use crate::middleware::RequestContextMiddleware;
 use crate::middleware::RequestDumperMiddleware;
 use crate::scuba::EdenApiScubaHandler;
 

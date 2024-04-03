@@ -6,6 +6,7 @@
  */
 
 use gotham::state::State;
+use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;
@@ -13,7 +14,6 @@ use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::handlers::HandlerInfo;
-use crate::middleware::RequestContext;
 
 #[derive(Copy, Clone, Debug)]
 pub enum EdenApiScubaKey {
