@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
 
 oncall("mononoke")
 
@@ -11,7 +12,22 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/sql:sql",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)
+
+rust_unittest(
+    name = "dbcommitcloud-test",
+    srcs = glob(["tests/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/commit_cloud:commit_cloud_service_lib",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",

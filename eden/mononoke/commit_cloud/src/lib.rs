@@ -13,7 +13,7 @@ use crate::history::WorkspaceHistory;
 use crate::local_bookmarks::WorkspaceLocalBookmark;
 use crate::remote_bookmarks::WorkspaceRemoteBookmark;
 pub mod builder;
-pub(crate) mod checkout_locations;
+pub mod checkout_locations;
 pub(crate) mod heads;
 pub(crate) mod history;
 pub(crate) mod local_bookmarks;

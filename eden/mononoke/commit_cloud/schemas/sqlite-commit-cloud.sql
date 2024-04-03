@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS  `checkoutlocations` (
   `reponame` VARCHAR(255) NOT NULL,
   `workspace` VARCHAR(255) NOT NULL,
   `hostname` VARCHAR(255) NOT NULL,
-  `commit` VARCHAR(255) NOT NULL,
+  `commit` VARBINARY(32) NOT NULL,
   `checkout_path` VARCHAR(255) NOT NULL,
   `shared_path` VARCHAR(255) NOT NULL,
-  `timestamp` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `timestamp` BIGINT NOT NULL,
   `unixname` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`reponame`,`workspace`,`hostname`,`checkout_path`)
 );
@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS `heads` (
   UNIQUE(`reponame`, `workspace`, `commit`)
 );
 CREATE INDEX `reponame_commit` ON `heads`(`reponame`, `commit`);
-CREATE INDEX `seq` ON `heads`(`seq`);
 
 
 -- history
@@ -82,7 +81,6 @@ CREATE TABLE IF NOT EXISTS  `snapshots` (
   `seq` INTEGER PRIMARY KEY AUTOINCREMENT,
   UNIQUE(`reponame`, `workspace`, `commit`)
 );
-CREATE INDEX `seq` ON `snapshots`(`seq`);
 
 
 -- versions
