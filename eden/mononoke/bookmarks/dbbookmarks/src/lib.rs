@@ -81,22 +81,22 @@ mod test {
         // Using 'create_scratch' to replace a non-scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
         txn.create_scratch(&publishing_name, ONES_CSID)?;
-        assert!(!txn.commit().await?);
+        assert!(txn.commit().await?.is_none());
 
         // Using 'create' to replace a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
         txn.create(&scratch_name, ONES_CSID, BookmarkUpdateReason::TestMove)?;
-        assert!(!txn.commit().await?);
+        assert!(txn.commit().await?.is_none());
 
         // Using 'update_scratch' to update a publishing bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
         txn.update_scratch(&publishing_name, TWOS_CSID, ONES_CSID)?;
-        assert!(!txn.commit().await?);
+        assert!(txn.commit().await?.is_none());
 
         // Using 'update_scratch' to update a pull-default bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
         txn.update_scratch(&pull_default_name, TWOS_CSID, ONES_CSID)?;
-        assert!(!txn.commit().await?);
+        assert!(txn.commit().await?.is_none());
 
         // Using 'update' to update a publishing bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone());
@@ -106,7 +106,7 @@ mod test {
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
         )?;
-        assert!(txn.commit().await?);
+        assert!(txn.commit().await?.is_some());
 
         // Using 'update' to update a pull-default bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone());
@@ -116,7 +116,7 @@ mod test {
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
         )?;
-        assert!(txn.commit().await?);
+        assert!(txn.commit().await?.is_some());
 
         // Using 'update' to update a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
@@ -126,12 +126,12 @@ mod test {
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
         )?;
-        assert!(!txn.commit().await?);
+        assert!(txn.commit().await?.is_none());
 
         // Using 'update_scratch' to update a scratch bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone());
         txn.update_scratch(&scratch_name, TWOS_CSID, ONES_CSID)?;
-        assert!(txn.commit().await?);
+        assert!(txn.commit().await?.is_some());
 
         Ok(())
     }

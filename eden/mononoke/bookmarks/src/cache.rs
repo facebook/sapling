@@ -439,7 +439,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.create_publishing(bookmark, new_cs, reason)
     }
 
-    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
+    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<Option<u64>>> {
         let CachedBookmarksTransaction {
             transaction,
             cache,
@@ -449,11 +449,11 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
 
         transaction
             .commit()
-            .map_ok(move |success| {
-                if success && dirty {
+            .map_ok(move |maybe_log_id| {
+                if maybe_log_id.is_some() && dirty {
                     cache.purge(ctx);
                 }
-                success
+                maybe_log_id
             })
             .boxed()
     }
@@ -461,7 +461,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
     fn commit_with_hook(
         self: Box<Self>,
         txn_hook: BookmarkTransactionHook,
-    ) -> BoxFuture<'static, Result<bool>> {
+    ) -> BoxFuture<'static, Result<Option<u64>>> {
         let CachedBookmarksTransaction {
             transaction,
             cache,
@@ -471,11 +471,11 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
 
         transaction
             .commit_with_hook(txn_hook)
-            .map_ok(move |success| {
-                if success && dirty {
+            .map_ok(move |maybe_log_id| {
+                if maybe_log_id.is_some() && dirty {
                     cache.purge(ctx);
                 }
-                success
+                maybe_log_id
             })
             .boxed()
     }
@@ -680,14 +680,14 @@ mod tests {
             Ok(())
         }
 
-        fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
-            future::ok(true).boxed()
+        fn commit(self: Box<Self>) -> BoxFuture<'static, Result<Option<u64>>> {
+            future::ok(Some(0)).boxed()
         }
 
         fn commit_with_hook(
             self: Box<Self>,
             _txn_hook: BookmarkTransactionHook,
-        ) -> BoxFuture<'static, Result<bool>> {
+        ) -> BoxFuture<'static, Result<Option<u64>>> {
             unimplemented!()
         }
     }

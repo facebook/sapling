@@ -158,8 +158,8 @@ pub fn upload_bookmarks(
                 if count > 0 {
                     transaction.commit()
                         .compat()
-                        .and_then(move |ok| {
-                            if ok {
+                        .and_then(move |maybe_log_id| {
+                            if maybe_log_id.is_some() {
                                 Ok(count)
                             } else {
                                 Err(format_err!("Bookmark transaction failed"))

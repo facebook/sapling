@@ -907,7 +907,11 @@ pub trait MegarepoOp {
 
         txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync)?;
 
-        let success = txn.commit().await.map_err(MegarepoError::internal)?;
+        let success = txn
+            .commit()
+            .await
+            .map_err(MegarepoError::internal)?
+            .is_some();
         if !success {
             return Err(MegarepoError::internal(anyhow!(
                 "failed to create a bookmark, possibly because of race condition"
@@ -956,7 +960,11 @@ pub trait MegarepoOp {
             BookmarkUpdateReason::XRepoSync,
         )?;
 
-        let success = txn.commit().await.map_err(MegarepoError::internal)?;
+        let success = txn
+            .commit()
+            .await
+            .map_err(MegarepoError::internal)?
+            .is_some();
         if !success {
             return Err(MegarepoError::internal(anyhow!(
                 "failed to move a bookmark, possibly because of race condition"
@@ -985,7 +993,11 @@ pub trait MegarepoOp {
             }
         }
 
-        let success = txn.commit().await.map_err(MegarepoError::internal)?;
+        let success = txn
+            .commit()
+            .await
+            .map_err(MegarepoError::internal)?
+            .is_some();
         if !success {
             return Err(MegarepoError::internal(anyhow!(
                 "failed to move a bookmark, possibly because of race condition"

@@ -145,7 +145,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let success = txn
         .commit()
         .await
-        .context("Failed to commit bookmark transaction")?;
+        .context("Failed to commit bookmark transaction")?
+        .is_some();
 
     if !success {
         bail!("Bookmark transaction failed");

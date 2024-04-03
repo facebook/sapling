@@ -133,7 +133,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             }
         }
 
-        let ok = txn.commit().await?;
+        let ok = txn.commit().await?.is_some();
         if !ok {
             return Err(BookmarkMovementError::TransactionFailed);
         }

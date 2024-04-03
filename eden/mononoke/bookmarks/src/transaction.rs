@@ -116,14 +116,14 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
 
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by
-    /// returning a successful `false` value; infrastructure failure is reported via an Error.
-    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>>;
+    /// returning a successful `None` value; infrastructure failure is reported via an Error.
+    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<Option<u64>>>;
 
     /// Commits the bookmarks update along with any changes injected by the BookmarkTransactionHook. The
-    /// future returns true if the bookmarks has moved, and false otherwise. Infrastructure errors
+    /// future returns Some(log_id) if the bookmarks has moved, and None otherwise. Infrastructure errors
     /// are reported via the Error.
     fn commit_with_hook(
         self: Box<Self>,
         txn_hook: BookmarkTransactionHook,
-    ) -> BoxFuture<'static, Result<bool>>;
+    ) -> BoxFuture<'static, Result<Option<u64>>>;
 }

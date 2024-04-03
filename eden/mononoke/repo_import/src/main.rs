@@ -446,7 +446,7 @@ async fn move_bookmark(
     let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
     if maybe_old_csid.is_none() {
         transaction.create(bookmark, old_csid.clone(), BookmarkUpdateReason::ManualMove)?;
-        if !transaction.commit().await? {
+        if transaction.commit().await?.is_none() {
             return Err(format_err!("Logical failure while creating {:?}", bookmark));
         }
         info!(
@@ -478,7 +478,7 @@ async fn move_bookmark(
             BookmarkUpdateReason::ManualMove,
         )?;
 
-        if !transaction.commit().await? {
+        if transaction.commit().await?.is_none() {
             return Err(format_err!("Logical failure while setting {:?}", bookmark));
         }
         info!(
@@ -1412,7 +1412,7 @@ async fn repo_import(
         BookmarkUpdateReason::ManualMove,
     )?;
 
-    if !transaction.commit().await? {
+    if transaction.commit().await?.is_none() {
         return Err(format_err!(
             "Logical failure while setting {:?} to the merge commit",
             &repo_import_setting.importing_bookmark,

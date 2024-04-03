@@ -334,7 +334,7 @@ where
         }
 
         let new_counter = entry.id;
-        let success = backsync_bookmark(
+        let maybe_log_id = backsync_bookmark(
             ctx.clone(),
             commit_syncer,
             target_repo_dbs.clone(),
@@ -347,10 +347,10 @@ where
             "backsync_duration_ms",
             u64::try_from(start_instant.elapsed().as_millis()).unwrap_or(u64::max_value()),
         );
-        scuba_sample.add("backsync_previously_done", !success);
+        scuba_sample.add("backsync_previously_done", maybe_log_id.is_none());
         scuba_sample.log_with_msg("Backsyncing", None);
 
-        if success {
+        if let Some(_log_id) = maybe_log_id {
             counter = new_counter;
         } else {
             debug!(
@@ -420,7 +420,7 @@ async fn backsync_bookmark<M, R>(
     target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<i64>,
     log_entry: BookmarkUpdateLogEntry,
-) -> Result<bool, Error>
+) -> Result<Option<i64>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
@@ -621,7 +621,7 @@ where
             )
             .await;
 
-            return Ok(res);
+            return Ok(res.map(|counter| counter as i64));
         } else {
             debug!(
                 ctx.logger(),
@@ -634,7 +634,7 @@ where
         debug!(ctx.logger(), "Renamed bookmark is None. No sync happening.");
     }
 
-    let updated = target_repo_dbs
+    let maybe_log_id = if target_repo_dbs
         .counters
         .set_counter(
             &ctx,
@@ -642,9 +642,14 @@ where
             new_counter,
             prev_counter,
         )
-        .await?;
+        .await?
+    {
+        Some(new_counter)
+    } else {
+        None
+    };
 
-    Ok(updated)
+    Ok(maybe_log_id)
 }
 
 pub async fn open_backsyncer_dbs(repo: &impl RepoLike) -> Result<TargetRepoDbs, Error> {

@@ -45,7 +45,7 @@ async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> 
             .unwrap();
     }
 
-    let ok = txn.commit().await?;
+    let ok = txn.commit().await?.is_some();
     if !ok {
         return Err(Error::msg("Deletion did not commit"));
     }
@@ -68,7 +68,7 @@ async fn set_bookmark(
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(book, head, BookmarkUpdateReason::TestMove)?;
 
-    let ok = txn.commit().await?;
+    let ok = txn.commit().await?.is_some();
     if !ok {
         return Err(Error::msg("Deletion did not commit"));
     }

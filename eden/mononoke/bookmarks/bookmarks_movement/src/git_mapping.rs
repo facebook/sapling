@@ -288,7 +288,8 @@ mod tests {
                 repo.bonsai_git_mapping_arc(),
                 entries,
             ))
-            .await?;
+            .await?
+            .is_some();
         assert!(ok);
         Ok(())
     }
@@ -336,7 +337,7 @@ mod tests {
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.create(&bookmark, z, BookmarkUpdateReason::TestMove)?;
-        let ok = txn.commit().await?;
+        let ok = txn.commit().await?.is_some();
         assert!(ok);
 
         // Initial create with two changesets.

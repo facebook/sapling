@@ -405,10 +405,12 @@ impl SqlBookmarksTransactionPayload {
         Ok(txn)
     }
 
+    /// Attempt to write a bookmark update log entry
+    /// Returns the db transaction and the id of this entry in the bookmark update log.
     async fn attempt_write(
         &self,
         txn: SqlTransaction,
-    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+    ) -> Result<(SqlTransaction, u64), BookmarkTransactionError> {
         let (mut txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
 
         let mut log = TransactionLogUpdates::new(next_id);
@@ -423,7 +425,7 @@ impl SqlBookmarksTransactionPayload {
             .await
             .map_err(BookmarkTransactionError::RetryableError)?;
 
-        Ok(txn)
+        Ok((txn, next_id))
     }
 }
 
@@ -589,7 +591,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
+    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<Option<u64>>> {
         self.commit_with_hook(Arc::new(|_ctx, txn| future::ok(txn).boxed()))
     }
 
@@ -598,7 +600,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
     fn commit_with_hook(
         self: Box<Self>,
         txn_hook: BookmarkTransactionHook,
-    ) -> BoxFuture<'static, Result<bool>> {
+    ) -> BoxFuture<'static, Result<Option<u64>>> {
         let Self {
             ctx,
             payload,
@@ -611,7 +613,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
         async move {
             let mut attempt = 0;
-            let result = loop {
+            let result: Result<(sql::Transaction, u64), _> = loop {
                 attempt += 1;
 
                 let mut txn = write_connection.start_transaction().await?;
@@ -623,7 +625,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     {
                         continue;
                     }
-                    err => break err,
+                    Err(err) => break Err(err),
                 };
 
                 match payload.attempt_write(txn).await {
@@ -639,12 +641,12 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
             // The number of `RetryableError`'s that were encountered
             let mut retryable_errors = attempt as i64 - 1;
             let result = match result {
-                Ok(txn) => {
+                Ok((txn, log_id)) => {
                     STATS::bookmarks_update_log_insert_success.add_value(1);
                     STATS::bookmarks_update_log_insert_success_attempt_count
                         .add_value(attempt as i64);
                     txn.commit().await?;
-                    Ok(true)
+                    Ok(Some(log_id))
                 }
                 Err(BookmarkTransactionError::LogicError) => {
                     // Logic error signifies that the transaction was rolled
@@ -654,7 +656,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     // we hit before seeing this.
                     STATS::bookmarks_insert_logic_error.add_value(1);
                     STATS::bookmarks_insert_logic_error_attempt_count.add_value(attempt as i64);
-                    Ok(false)
+                    Ok(None)
                 }
                 Err(BookmarkTransactionError::RetryableError(err)) => {
                     // Attempt count for `RetryableError` should always be equal

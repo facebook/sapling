@@ -223,7 +223,8 @@ impl<'op> CreateBookmarkOp<'op> {
         let ok = match txn_hook {
             Some(txn_hook) => txn.commit_with_hook(txn_hook).await?,
             None => txn.commit().await?,
-        };
+        }
+        .is_some();
         if !ok {
             return Err(BookmarkMovementError::TransactionFailed);
         }

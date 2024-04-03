@@ -817,7 +817,7 @@ async fn delete_bookmark(
     let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
     if let Some(bookmark_value) = maybe_bookmark_val {
         book_txn.delete(bookmark, bookmark_value, BookmarkUpdateReason::XRepoSync)?;
-        let res = book_txn.commit().await?;
+        let res = book_txn.commit().await?.is_some();
 
         if res {
             Ok(())
@@ -855,7 +855,7 @@ async fn move_or_create_bookmark(
             book_txn.create(bookmark, cs_id, BookmarkUpdateReason::XRepoSync)?;
         }
     }
-    let res = book_txn.commit().await?;
+    let res = book_txn.commit().await?.is_some();
 
     if res {
         Ok(())

@@ -2035,6 +2035,6 @@ async fn move_bookmark(
         }
     }
 
-    assert!(txn.commit().await?);
+    assert!(txn.commit().await?.is_some());
     Ok(())
 }

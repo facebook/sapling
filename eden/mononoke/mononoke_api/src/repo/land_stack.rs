@@ -82,6 +82,7 @@ impl RepoContext {
             retry_num,
             rebased_changesets,
             pushrebase_distance,
+            log_id,
         }) = outcome;
         redirector.backsync_latest(ctx).await?;
 
@@ -98,6 +99,7 @@ impl RepoContext {
             retry_num,
             rebased_changesets,
             pushrebase_distance,
+            log_id,
         }))
     }
 

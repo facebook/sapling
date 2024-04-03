@@ -232,6 +232,7 @@ pub struct PushrebaseOutcome {
     pub retry_num: PushrebaseRetryNum,
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
     pub pushrebase_distance: PushrebaseDistance,
+    pub log_id: u64,
 }
 
 pub trait Repo = BonsaiHgMappingRef
@@ -392,7 +393,7 @@ async fn rebase_in_loop(
             .as_nanos()
             .try_into()
             .unwrap_or(i64::MAX);
-        if let Some((head, rebased_changesets)) = rebase_outcome {
+        if let Some((head, log_id, rebased_changesets)) = rebase_outcome {
             if should_log {
                 STATS::critical_section_success_duration_us
                     .add_value(critical_section_duration_us, repo_args.clone());
@@ -407,6 +408,7 @@ async fn rebase_in_loop(
                 retry_num,
                 rebased_changesets,
                 pushrebase_distance,
+                log_id,
             };
             return Ok(res);
         } else if should_log {
@@ -437,7 +439,7 @@ async fn do_rebase(
     onto_bookmark: &BookmarkKey,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
     retry_num: PushrebaseRetryNum,
-) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+) -> Result<Option<(ChangesetId, u64, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let (new_head, rebased_changesets) = create_rebased_changesets(
         ctx,
         repo,
@@ -1185,7 +1187,7 @@ async fn try_move_bookmark(
     new_value: ChangesetId,
     rebased_changesets: RebasedChangesets,
     hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
-) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
+) -> Result<Option<(ChangesetId, u64, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let mut txn = repo.bookmarks().create_transaction(ctx);
 
     match old_value {
@@ -1215,15 +1217,15 @@ async fn try_move_bookmark(
         .boxed()
     };
 
-    let success = txn.commit_with_hook(Arc::new(sql_txn_hook)).await?;
+    let maybe_log_id = txn.commit_with_hook(Arc::new(sql_txn_hook)).await?;
 
-    let ret = if success {
-        Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
-    } else {
-        None
-    };
-
-    Ok(ret)
+    Ok(maybe_log_id.map(|log_id| {
+        (
+            new_value,
+            log_id,
+            rebased_changesets_into_pairs(rebased_changesets),
+        )
+    }))
 }
 
 #[cfg(test)]

@@ -951,7 +951,7 @@ async fn move_bookmark(
         BookmarkUpdateReason::ManualMove,
     )?;
 
-    let res = book_txn.commit().await?;
+    let res = book_txn.commit().await?.is_some();
 
     if res {
         Ok(())
