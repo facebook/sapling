@@ -6,7 +6,6 @@
  */
 
 use anyhow::anyhow;
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -30,20 +29,6 @@ const MAX_PATH_COMPONENT_LIMIT: usize = 255;
 #[derive(Clone, Debug, Deserialize)]
 pub struct LimitPathLengthConfig {
     length_limit: usize,
-}
-
-impl LimitPathLengthConfig {
-    // TODO(T163510936): delete legacy LimitPathLengthConfig code
-    pub fn from_legacy_config(config: &HookConfig) -> Result<Self, Error> {
-        let length_limit = config
-            .strings
-            .get("length_limit")
-            .ok_or_else(|| Error::msg("Required config length_limit is missing"))?;
-
-        let length_limit = length_limit.parse().context("While parsing length_limit")?;
-
-        Ok(Self { length_limit })
-    }
 }
 
 /// Hook to block commits changing file paths above a certain length.
