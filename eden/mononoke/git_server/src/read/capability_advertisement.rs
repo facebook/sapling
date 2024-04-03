@@ -17,6 +17,7 @@ use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 
 use crate::model::ResponseType;
+use crate::model::Service;
 use crate::model::ServiceType;
 
 const CORE_CAPABILITIES: &[&str] = &[
@@ -29,10 +30,10 @@ const CORE_CAPABILITIES: &[&str] = &[
 ];
 const VERSION: &str = "2";
 
-async fn advertise_capability(service_type: &ServiceType) -> Result<Vec<u8>, Error> {
+async fn advertise_capability(service_type: &Service) -> Result<Vec<u8>, Error> {
     let mut output = Vec::new();
     write_text_packetline(
-        format!("# service={}", service_type.service).as_bytes(),
+        format!("# service={}", service_type).as_bytes(),
         &mut output,
     )
     .await?;
@@ -48,10 +49,11 @@ async fn advertise_capability(service_type: &ServiceType) -> Result<Vec<u8>, Err
 pub async fn capability_advertisement(
     state: &mut State,
 ) -> Result<impl TryIntoResponse, HttpError> {
-    let service_type = ServiceType::borrow_from(state);
+    let service_type = &ServiceType::borrow_from(state).service;
     let output = advertise_capability(service_type)
         .await
         .map_err(HttpError::e500)?;
-    state.put(ResponseType::new("advertisement".to_string()));
+    state.put(Service::GitUploadPack);
+    state.put(ResponseType::Advertisement);
     Ok(BytesBody::new(Bytes::from(output), mime::TEXT_PLAIN))
 }

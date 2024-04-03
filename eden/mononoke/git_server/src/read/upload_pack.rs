@@ -53,7 +53,7 @@ use crate::command::RequestCommand;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::model::ResponseType;
-use crate::model::ServiceType;
+use crate::model::Service;
 use crate::GitServerContext;
 
 /// The header for the packfile section of the response
@@ -275,8 +275,8 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
     let context = GitServerContext::borrow_from(state);
     let request_context = context.request_context(&repo_name)?;
-    state.put(ServiceType::new("git-upload-pack".to_string()));
-    state.put(ResponseType::new("result".to_string()));
+    state.put(Service::GitUploadPack);
+    state.put(ResponseType::Result);
     match request_command.command {
         Command::LsRefs(ls_refs_args) => {
             let output = ls_refs(&request_context, ls_refs_args).await;

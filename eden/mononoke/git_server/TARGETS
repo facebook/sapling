@@ -24,6 +24,7 @@ rust_binary(
         "fbsource//third-party/rust:hyper",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",

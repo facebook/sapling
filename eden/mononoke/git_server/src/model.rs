@@ -15,24 +15,35 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct ServiceType {
-    pub service: String,
+    pub service: Service,
 }
 
-impl ServiceType {
-    pub fn new(service: String) -> Self {
-        Self { service }
-    }
+#[derive(
+    strum::EnumString,
+    strum::Display,
+    Debug,
+    Deserialize,
+    Clone,
+    StateData
+)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab_case")]
+/// The type of service that is being served by the server
+pub enum Service {
+    /// The service that handles git upload-pack requests
+    GitUploadPack,
+    /// The service that handles git receive-pack requests
+    GitReceivePack,
 }
 
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct ResponseType {
-    pub response: String,
-}
-
-impl ResponseType {
-    pub fn new(response: String) -> Self {
-        Self { response }
-    }
+/// The type of responses that can be returned by the server.
+#[derive(strum::EnumString, strum::Display, Debug, Deserialize, StateData)]
+#[strum(serialize_all = "kebab_case")]
+pub enum ResponseType {
+    /// The response corresponding to capability advertisement from the git server
+    Advertisement,
+    /// The response corresponding to a git upload-pack request
+    Result,
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]

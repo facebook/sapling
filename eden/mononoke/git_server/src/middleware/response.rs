@@ -13,7 +13,7 @@ use hyper::body::Body;
 use hyper::Response;
 
 use crate::model::ResponseType;
-use crate::model::ServiceType;
+use crate::model::Service;
 
 #[derive(Clone)]
 pub struct ResponseContentTypeMiddleware {}
@@ -22,13 +22,10 @@ pub struct ResponseContentTypeMiddleware {}
 impl Middleware for ResponseContentTypeMiddleware {
     async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         if let (Some(service_type), Some(response_type)) = (
-            state.try_borrow::<ServiceType>(),
+            state.try_borrow::<Service>(),
             state.try_borrow::<ResponseType>(),
         ) {
-            let content_type_header = format!(
-                "application/x-{}-{}",
-                service_type.service, response_type.response
-            );
+            let content_type_header = format!("application/x-{}-{}", service_type, response_type);
             response.headers_mut().insert(
                 CONTENT_TYPE,
                 HeaderValue::from_str(&content_type_header).unwrap(),
