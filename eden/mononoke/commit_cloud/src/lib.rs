@@ -18,7 +18,7 @@ pub(crate) mod heads;
 pub(crate) mod history;
 pub(crate) mod local_bookmarks;
 pub(crate) mod remote_bookmarks;
-pub(crate) mod snapshots;
+pub mod snapshots;
 pub(crate) mod versions;
 pub(crate) mod workspace;
 
