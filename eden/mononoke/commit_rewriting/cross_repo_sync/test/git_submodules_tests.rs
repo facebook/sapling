@@ -458,8 +458,125 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
     Ok(())
 }
 
-// TODO(T179534458): test implicitly deleting directory by adding submodule in same
-// path
+/// Test adding a submodule dependency in the source repo in the path of an
+/// existing **directory**. This should generate a deletion for all the files
+/// in the directory, along with the expansion of the submodule.
+#[fbinit::test]
+async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    // Create repo C, to be added as a submodule in repo A.
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+
+    let dir_path = NonRootMPath::new("some_dir/subdir")?;
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        repo_b_info: (_repo_b, _repo_b_cs_map),
+        large_repo,
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        // Add it as a submdule in the path of an existing directory.
+        vec![(dir_path.clone(), repo_c.clone())],
+    )
+    .await?;
+
+    const ADD_DIR_MSG: &str = "Create directory with a few files";
+    let add_dir_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(ADD_DIR_MSG)
+        .add_files(btreemap! {
+            dir_path.join(&NonRootMPath::new("file_x")?) => "File X",
+            dir_path.join(&NonRootMPath::new("file_y")?) => "File Y",
+            dir_path.join(&NonRootMPath::new("file_z")?) => "File Z",
+            // Adding a file that exists in the submodule and will be mapped
+            // to the same path here, so ensure that we deduplicate properly
+            dir_path.join(&NonRootMPath::new("C_A")?) => "Same path as file in submodule",
+        })
+        .commit()
+        .await?;
+    let _ = sync_to_master(ctx.clone(), &commit_syncer, add_dir_cs_id).await?;
+
+    let repo_c_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+
+    let repo_c_git_commit_hash = *repo_c_mapped_git_commit.oid();
+
+    const MESSAGE: &str = "Add submodule on path of existing directory";
+    let cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![add_dir_cs_id])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            dir_path,
+            repo_c_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let _large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await?;
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+
+    derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+
+    let expected_cs_id =
+        ChangesetId::from_str("e037988b889b5f11a1cd284ce616d0b2e90db7ee780917401e012a12db47fe49")
+            .unwrap();
+
+    compare_expected_changesets_from_basic_setup(
+        &large_repo_changesets,
+        &[
+            ExpectedChangeset::new_by_file_change(
+                ADD_DIR_MSG,
+                vec![
+                    "repo_a/some_dir/subdir/file_x",
+                    "repo_a/some_dir/subdir/file_y",
+                    "repo_a/some_dir/subdir/file_z",
+                    "repo_a/some_dir/subdir/C_A",
+                ],
+                vec![],
+            ),
+            ExpectedChangeset::new_by_file_change(
+                MESSAGE,
+                vec![
+                    "repo_a/some_dir/.x-repo-submodule-subdir",
+                    "repo_a/some_dir/subdir/C_A",
+                    "repo_a/some_dir/subdir/C_B",
+                ],
+                vec![
+                    // TODO(T179534458): delete files in directory being
+                    // replaced by subdmoule expansion
+                    //
+                    // All files from the directory should be deleted with
+                    // the addition of a submodule expansion on the same path
+                    // "repo_a/some_dir/subdir/file_x",
+                    // "repo_a/some_dir/subdir/file_y",
+                    // "repo_a/some_dir/subdir/file_z",
+                    // NOTE: We DON'T actually want a deletion for C_A, because
+                    // the submodule expansion has the file with the same path.
+                    // I'm leaving this commented out to convey this clearly.
+                    // "repo_a/some_dir/subdir/C_A",
+                ],
+            ),
+        ],
+    )?;
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        expected_cs_id,
+        NonRootMPath::new("repo_a/some_dir/.x-repo-submodule-subdir")?,
+        &repo_c_git_commit_hash,
+    )
+    .await?;
+
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
+
+    Ok(())
+}
 
 // ------------------ Unexpected state / Error handling ------------------
 
