@@ -282,7 +282,7 @@ github_sl_difflink="{
     hyperlink(github_pull_request_url, '#{github_pull_request_number}'),
     if(sapling_pr_follower, label('ssl.unpublished', 'follower'))
   )}"
-phab_sl_difflink="{hyperlink(separate('', 'https://our.intern.facebook.com/intern/diff/', phabdiff, '/'), phabdiff)}"
+phab_sl_difflink="{hyperlink(separate('', 'https://www.internalfb.com/diff/', phabdiff, '/'), phabdiff)}"
 sl_difflink="{if(github_repo, github_sl_difflink, phab_sl_difflink)}"
 
 github_sl_diffsignal="{case(github_pull_request_status_check_rollup, 'SUCCESS', sl_signal_okay, 'PENDING', sl_signal_in_progress, 'FAILURE', sl_signal_failed)}"
