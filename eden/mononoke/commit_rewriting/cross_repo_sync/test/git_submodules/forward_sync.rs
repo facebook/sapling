@@ -28,7 +28,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
 use crate::check_mapping;
-use crate::git_submodules_test_utils::*;
+use crate::git_submodules::git_submodules_test_utils::*;
 use crate::sync_to_master;
 
 /**!
@@ -614,15 +614,6 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
 }
 
 // ------------------ Unexpected state / Error handling ------------------
-
-// TODO(T181473986): modify expansion manually without updating metadata file
-// and assert that sync fails.
-
-// TODO(T179533620): test that modifying submodule metadata file manually without
-// the correct changes to the expansion will fail the sync.
-
-// TODO(T179533620): test that deleting submodule metadata file manually
-// fails the sync
 
 /// Test that sync fails if submodule dependency repo is not available.
 #[fbinit::test]

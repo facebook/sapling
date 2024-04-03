@@ -82,9 +82,8 @@ use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
-mod git_submodules_test_utils;
 #[cfg(test)]
-mod git_submodules_tests;
+mod git_submodules;
 
 fn mpath(p: &str) -> NonRootMPath {
     NonRootMPath::new(p).unwrap()
