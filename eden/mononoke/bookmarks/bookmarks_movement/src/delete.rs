@@ -23,6 +23,7 @@ use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkMovementError;
+use crate::BookmarkUpdateLogId;
 use crate::Repo;
 
 #[must_use = "DeleteBookmarkOp must be run to have an effect"]
@@ -76,7 +77,7 @@ impl<'op> DeleteBookmarkOp<'op> {
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
-    ) -> Result<(), BookmarkMovementError> {
+    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
@@ -133,18 +134,18 @@ impl<'op> DeleteBookmarkOp<'op> {
             }
         }
 
-        let ok = txn.commit().await?.is_some();
-        if !ok {
-            return Err(BookmarkMovementError::TransactionFailed);
+        let maybe_log_id = txn.commit().await?;
+        if let Some(log_id) = maybe_log_id {
+            let info = BookmarkInfo {
+                bookmark_name: self.bookmark.clone(),
+                bookmark_kind: kind,
+                operation: BookmarkOperation::Delete(self.old_target),
+                reason: self.reason,
+            };
+            log_bookmark_operation(ctx, repo, &info).await;
+            Ok(log_id.into())
+        } else {
+            Err(BookmarkMovementError::TransactionFailed)
         }
-
-        let info = BookmarkInfo {
-            bookmark_name: self.bookmark.clone(),
-            bookmark_kind: kind,
-            operation: BookmarkOperation::Delete(self.old_target),
-            reason: self.reason,
-        };
-        log_bookmark_operation(ctx, repo, &info).await;
-        Ok(())
     }
 }

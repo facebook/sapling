@@ -85,6 +85,15 @@ pub trait Repo = AsBlobRepo
     + Send
     + Sync;
 
+#[derive(Debug, Clone, Copy)]
+pub struct BookmarkUpdateLogId(u64);
+
+impl From<u64> for BookmarkUpdateLogId {
+    fn from(x: u64) -> Self {
+        Self(x)
+    }
+}
+
 /// An error encountered during an attempt to move a bookmark.
 #[derive(Debug, Error)]
 pub enum BookmarkMovementError {

@@ -31,6 +31,7 @@ use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkMovementError;
+use crate::BookmarkUpdateLogId;
 use crate::Repo;
 
 /// The old and new changeset during a bookmark update.
@@ -163,7 +164,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         hook_manager: &'op HookManager,
-    ) -> Result<(), BookmarkMovementError> {
+    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
@@ -285,26 +286,26 @@ impl<'op> UpdateBookmarkOp<'op> {
             }
         };
 
-        let ok = match txn_hook {
+        let maybe_log_id = match txn_hook {
             Some(txn_hook) => txn.commit_with_hook(txn_hook).await?,
             None => txn.commit().await?,
-        }
-        .is_some();
-        if !ok {
-            return Err(BookmarkMovementError::TransactionFailed);
-        }
-
-        if self.log_new_public_commits_to_scribe {
-            log_new_bonsai_changesets(ctx, repo, self.bookmark, kind, commits_to_log.clone()).await;
-        }
-        let info = BookmarkInfo {
-            bookmark_name: self.bookmark.clone(),
-            bookmark_kind: kind,
-            operation: BookmarkOperation::Update(self.targets.old, self.targets.new),
-            reason: self.reason,
         };
-        log_bookmark_operation(ctx, repo, &info).await;
+        if let Some(log_id) = maybe_log_id {
+            if self.log_new_public_commits_to_scribe {
+                log_new_bonsai_changesets(ctx, repo, self.bookmark, kind, commits_to_log.clone())
+                    .await;
+            }
+            let info = BookmarkInfo {
+                bookmark_name: self.bookmark.clone(),
+                bookmark_kind: kind,
+                operation: BookmarkOperation::Update(self.targets.old, self.targets.new),
+                reason: self.reason,
+            };
+            log_bookmark_operation(ctx, repo, &info).await;
 
-        Ok(())
+            Ok(log_id.into())
+        } else {
+            Err(BookmarkMovementError::TransactionFailed)
+        }
     }
 }

@@ -624,7 +624,7 @@ async fn plain_push_bookmark(
                     .run(ctx, &authz, repo, hook_manager)
                     .await;
             match res {
-                Ok(()) => {}
+                Ok(_log_id) => {}
                 Err(err) => match err {
                     BookmarkMovementError::HookFailure(rejections) => {
                         let rejections =
@@ -662,7 +662,7 @@ async fn plain_push_bookmark(
             .run(ctx, &authz, repo, hook_manager)
             .await;
             match res {
-                Ok(()) => {}
+                Ok(_log_id) => {}
                 Err(err) => match err {
                     BookmarkMovementError::HookFailure(rejections) => {
                         let rejections =
