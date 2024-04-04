@@ -862,6 +862,9 @@ class Submodule:
         if node not in repo:
             self._pullraw(repo, hex(node))
 
+    def pullhead(self, repo):
+        self._pullraw("HEAD")
+
     def _pullraw(self, repo, refspec_lhs):
         repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
         # Write a remote bookmark to mark node public
@@ -891,6 +894,19 @@ class Submodule:
         # Skip if the commit is already checked out, unless force is set.
         if not force and repo["."].node() == node:
             return
+
+        if node not in repo:
+            # `node` does not exist after pull. Try to pull "HEAD" as a mitigation.
+            # NOTE: See `man gitmodules`. If "branch" is specified, then this
+            # should probably pull the specified branch instead.
+            self.pullhead(repo)
+            # Track whether pullhead fixed the issue.
+            fixed = node in repo
+            repo.ui.log(
+                "features",
+                feature="submodule-pullhead",
+                message=f"fixed: {fixed} node: {hex(node)} submod: {repr(self)}",
+            )
 
         # Run checkout
         from . import hg
