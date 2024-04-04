@@ -14,6 +14,7 @@ import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';
 import {CommitTitle as StandaloneCommitTitle} from '../../CommitTitle';
 import {Row} from '../../ComponentUtils';
 import {DragHandle} from '../../DragHandle';
+import {DraggingOverlay} from '../../DraggingOverlay';
 import {Tooltip} from '../../Tooltip';
 import {t, T} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
@@ -25,7 +26,6 @@ import {is} from 'immutable';
 import {useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {nullthrows} from 'shared/utils';
-import {getZoomLevel} from 'shared/zoom';
 
 import './StackEditSubTree.css';
 
@@ -38,7 +38,7 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
   const stackEdit = useStackEditState();
   const [reorderState, setReorderState] = useState<ReorderState>(() => new ReorderState());
 
-  const draggingDivRef = useRef<HTMLDivElement | null>(null);
+  const onDragRef = useRef<DragHandler | null>(null);
   const commitListDivRef = useRef<HTMLDivElement | null>(null);
 
   const commitStack = stackEdit.commitStack;
@@ -62,21 +62,9 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
       setReorderState(state);
     };
 
-    const zoom = getZoomLevel();
-
     return (x, y, isDragging) => {
       // Visual update.
-      const draggingDiv = draggingDivRef.current;
-      if (draggingDiv != null) {
-        if (isDragging) {
-          Object.assign(draggingDiv.style, {
-            transform: `translate(${x / zoom}px, calc(-50% + ${y / zoom}px))`,
-            opacity: '1',
-          });
-        } else {
-          draggingDiv.style.opacity = '0';
-        }
-      }
+      onDragRef.current?.(x, y, isDragging);
       // State update.
       if (isDragging) {
         if (currentReorderState.isDragging()) {
@@ -131,7 +119,7 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
         </AnimatedReorderGroup>
       </div>
       {reorderState.isDragging() && (
-        <div className="stack-edit-dragging" ref={draggingDivRef}>
+        <DraggingOverlay onDragRef={onDragRef} className="stack-edit-dragging">
           <div className="stack-edit-dragging-commit-list">
             {reorderState.draggingRevs
               .toArray()
@@ -145,7 +133,7 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
               <span className="stack-edit-dragging-hint-text tooltip">{draggingHintText}</span>
             </div>
           )}
-        </div>
+        </DraggingOverlay>
       )}
     </>
   );
