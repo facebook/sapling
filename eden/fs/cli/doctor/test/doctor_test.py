@@ -25,6 +25,7 @@ from eden.fs.cli.doctor.check_filesystems import (
     check_loaded_content,
     check_materialized_are_accessible,
 )
+from eden.fs.cli.doctor.problem import ProblemSeverity
 from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
@@ -152,6 +153,7 @@ class DoctorTest(DoctorTestBase):
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -211,6 +213,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -242,6 +245,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -268,6 +272,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -306,6 +311,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -333,6 +339,38 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.
+    def test_edenfs_no_warnings(self, mock_watchman) -> None:
+        # Test that doctor will hide warnings this time (we know that this setup writes a warning from the previous test,
+        # but this time we expect an empty output since we raised the minimum level to get anything)
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(), status=fb303_status.STARTING
+        )
+        instance.create_test_mount("eden-mount")
+
+        out = TestOutput()
+        dry_run = False
+        doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            min_severity_to_report=ProblemSeverity.MELTDOWN,
+            mount_table=FakeMountTable(),
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            out=out,
+        )
+
+        self.assertRegex(
+            out.getvalue(),
+            r"""
+""",
+        )
+
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    # pyre-fixme[2]: Parameter must be annotated.
     def test_edenfs_stopping(self, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STOPPING
@@ -346,6 +384,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -850,6 +889,7 @@ Would remount {mounts[1]}
         exit_code = doctor.cure_what_ails_you(
             typing.cast(EdenInstance, instance),
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -875,6 +915,7 @@ Would remount {mounts[1]}
         exit_code = doctor.cure_what_ails_you(
             typing.cast(EdenInstance, instance),
             dry_run=False,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -951,6 +992,7 @@ Checking {mount}
             exit_code = doctor.cure_what_ails_you(
                 typing.cast(EdenInstance, instance),
                 dry_run=False,
+                min_severity_to_report=ProblemSeverity.ALL,
                 mount_table=instance.mount_table,
                 fs_util=FakeFsUtil(),
                 proc_utils=self.make_proc_utils(),
@@ -981,6 +1023,7 @@ Checking {mount}
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1495,6 +1538,7 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1535,6 +1579,7 @@ Starting background invalidation of not recently used files and directories in {
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1636,6 +1681,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1665,6 +1711,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1703,6 +1750,7 @@ Please consider the effects of this extension.
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1741,6 +1789,7 @@ Please uninstall this extension.
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
@@ -1768,6 +1817,7 @@ Please uninstall this extension.
             #  `FakeEdenInstance`.
             instance,
             dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),

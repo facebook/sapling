@@ -85,6 +85,7 @@ def cure_what_ails_you(
     *,
     debug: bool = False,
     fast: bool = False,
+    min_severity_to_report: ProblemSeverity = ProblemSeverity.ADVICE,
     mount_table: Optional[mtab.MountTable] = None,
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -97,6 +98,7 @@ def cure_what_ails_you(
         dry_run,
         debug,
         fast,
+        min_severity_to_report,
         mount_table,
         fs_util,
         proc_utils,
@@ -366,6 +368,7 @@ class EdenDoctorChecker:
 class EdenDoctor(EdenDoctorChecker):
     fixer: ProblemFixer
     dry_run: bool
+    min_severity_to_report: ProblemSeverity
 
     def __init__(
         self,
@@ -373,6 +376,7 @@ class EdenDoctor(EdenDoctorChecker):
         dry_run: bool,
         debug: bool,
         fast: bool,
+        min_severity_to_report: ProblemSeverity,
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -381,11 +385,22 @@ class EdenDoctor(EdenDoctorChecker):
         out: Optional[ui.Output] = None,
     ) -> None:
         self.dry_run = dry_run
+        self.min_severity_to_report = min_severity_to_report
         out = out if out is not None else ui.get_output()
         if dry_run:
-            self.fixer = DryRunFixer(instance, out, debug)
+            self.fixer = DryRunFixer(
+                instance,
+                out,
+                debug,
+                min_severity_to_report,
+            )
         else:
-            self.fixer = ProblemFixer(instance, out, debug)
+            self.fixer = ProblemFixer(
+                instance,
+                out,
+                debug,
+                min_severity_to_report,
+            )
 
         super().__init__(
             instance,

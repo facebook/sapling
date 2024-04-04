@@ -75,6 +75,7 @@ from .constants import (
     SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN,
     SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL,
 )
+from .doctor.problem import ProblemSeverity
 
 if sys.platform == "win32":
     from .file_handler_tools import WinFileHandlerReleaser
@@ -1193,10 +1194,25 @@ class DoctorCmd(Subcmd):
             "intended to be run by tools running doctor in a continuous manner "
             "such as IDEs.",
         )
+        parser.add_argument(
+            "--no-warnings",
+            action="store_true",
+            help="Don't show warnings (but still log them to scuba). ",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        doctor = doctor_mod.EdenDoctor(instance, args.dry_run, args.debug, args.fast)
+        doctor = doctor_mod.EdenDoctor(
+            instance,
+            args.dry_run,
+            args.debug,
+            args.fast,
+            (
+                ProblemSeverity.POTENTIALLY_SERIOUS
+                if args.no_warnings
+                else ProblemSeverity.ALL
+            ),
+        )
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()
