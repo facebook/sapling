@@ -80,6 +80,7 @@ export async function runCommand(
         throw new Error('Killed');
       }
     }
+    ctx.logger.error(`Error running ${command} ${args[0]}: ${err?.toString()}`);
     throw err;
   } finally {
     clearTimeout(timeoutId);
