@@ -12,7 +12,7 @@ use mercurial_types::HgChangesetId;
 use crate::BasicOps;
 use crate::SqlCommitCloud;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceSnapshot {
     pub commit: HgChangesetId,
 }

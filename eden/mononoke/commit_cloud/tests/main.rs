@@ -41,14 +41,8 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     );
 
     let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame, workspace, ()).await?;
-    assert!(res.len() == 1);
 
-    assert!(expected.hostname == res[0].hostname);
-    assert!(expected.commit == res[0].commit);
-    assert!(expected.checkout_path == res[0].checkout_path);
-    assert!(expected.shared_path == res[0].shared_path);
-    assert!(expected.unixname == res[0].unixname);
-
+    assert_eq!(vec![expected], res);
     Ok(())
 }
 
@@ -90,8 +84,8 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
         .await?
     );
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame, workspace.clone(), None).await?;
-    assert!(res.len() == 1);
-    assert!(res[0].commit == snapshot2.commit);
+
+    assert_eq!(res, vec![snapshot2]);
 
     Ok(())
 }
@@ -134,8 +128,8 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
         .await?
     );
     let res: Vec<WorkspaceHead> = sql.get(reponame, workspace.clone(), None).await?;
-    assert!(res.len() == 1);
-    assert!(res[0].commit == head2.commit);
+
+    assert_eq!(res, vec![head2]);
 
     Ok(())
 }

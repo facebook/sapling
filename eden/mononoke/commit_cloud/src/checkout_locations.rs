@@ -16,7 +16,7 @@ use sql::Connection;
 use crate::BasicOps;
 use crate::SqlCommitCloud;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceCheckoutLocation {
     pub hostname: String,
     pub commit: HgChangesetId,
