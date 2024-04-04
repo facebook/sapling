@@ -1,5 +1,6 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("mononoke")
 
@@ -28,4 +29,11 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
     ],
+)
+
+fbpkg.builder(
+    name = "mononoke.repo_metadata_logger",
+    path_actions = {
+        "repo_metadata_logger": ":repo_metadata_logger",
+    },
 )
