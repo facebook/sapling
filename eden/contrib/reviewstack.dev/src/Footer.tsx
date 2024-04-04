@@ -26,7 +26,7 @@ export default function Footer(): React.ReactElement {
   const projectLinks = [
     {
       text: 'GitHub Repository',
-      href: 'https://github.com/facebook/sapling/tree/main/addons/reviewstack',
+      href: 'https://github.com/facebook/sapling/tree/main/eden/contrib/reviewstack',
     },
     {
       text: 'Sapling SCM',

@@ -134,7 +134,7 @@ function EndUserInstructions(props: CustomLoginDialogProps): React.ReactElement 
       <H3>Building From Source</H3>
       <Box>
         Finally, if you want to run your own instance of ReviewStack,{' '}
-        <Link href="https://github.com/facebook/sapling/tree/main/addons/reviewstack">
+        <Link href="https://github.com/facebook/sapling/tree/main/eden/contrib/reviewstack">
           the source code is available on GitHub
         </Link>
         . For example, you may want to deploy your own instance of ReviewStack that is hardcoded to
