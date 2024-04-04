@@ -340,8 +340,14 @@ class TestTmp:
             for path in paths:
                 if path.startswith(str(self.path / "bin")):
                     continue
-                fullpath = os.path.join(path, f"{name}{ext}")
-                if os.path.isfile(fullpath):
+                exts = [".exe", ".bat"] if os.name == "nt" else [""]
+                found = False
+                for x in exts:
+                    fullpath = os.path.join(path, f"{name}{x}")
+                    if os.path.isfile(fullpath):
+                        found = True
+                        break
+                if found:
                     break
             if not fullpath:
                 raise unittest.SkipTest(f"missing exe: {name}")
