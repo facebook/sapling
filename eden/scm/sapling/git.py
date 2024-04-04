@@ -882,13 +882,12 @@ class Submodule:
         if not force and self.workingparentnode() == node:
             return
 
-        repo = self.backingrepo
+        repo = self.workingcopyrepo
+
         self.pullnode(repo, node)
         # Skip if the commit is already checked out, unless force is set.
         if not force and repo["."].node() == node:
             return
-
-        repo = self.workingcopyrepo
 
         # Run checkout
         from . import hg
