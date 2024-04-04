@@ -8,8 +8,8 @@
 import type {MouseEvent, ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
+import {ViewportOverlay} from './ViewportOverlay';
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
-import ReactDOM from 'react-dom';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {findParentWithClassName} from 'shared/utils';
 import {getZoomLevel} from 'shared/zoom';
@@ -321,50 +321,25 @@ function RenderTooltipOnto({
   // rather than as a descendant of the tooltip creator.
   // This allows us to use absolute coordinates for positioning, and for
   // tooltips to "escape" their containing elements, scroll, inherited styles, etc.
-  return ReactDOM.createPortal(
-    <div
-      ref={tooltipRef}
-      role="tooltip"
-      className={
-        `tooltip tooltip-${effectivePlacement}` +
-        (typeof children === 'string' ? ' simple-text-tooltip' : '')
-      }
-      style={style}>
-      <div
-        className={`tooltip-arrow tooltip-arrow-${effectivePlacement}`}
-        // If we had to push the tooltip back to prevent overflow,
-        // we also need to move the arrow the opposite direction so it still lines up.
-        style={{transform: `translate(${-viewportAdjust.left}px, ${-viewportAdjust.top}px)`}}
-      />
-      {children}
-    </div>,
-    getTooltipContainer(),
-  );
-}
-
-let cachedRoot: HTMLElement | undefined;
-const getTooltipContainer = (): HTMLElement => {
-  if (cachedRoot) {
-    // memoize since our root component won't change
-    return cachedRoot;
-  }
-  throw new Error(
-    'TooltipRootContainer not found. Make sure you render it at the root of the tree.',
-  );
-};
-
-export function TooltipRootContainer() {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (rootRef.current) {
-      cachedRoot = rootRef.current;
-    }
-    return () => {
-      cachedRoot = undefined;
-    };
-  }, []);
   return (
-    <div ref={rootRef} className="tooltip-root-container" data-testid="tooltip-root-container" />
+    <ViewportOverlay>
+      <div
+        ref={tooltipRef}
+        role="tooltip"
+        className={
+          `tooltip tooltip-${effectivePlacement}` +
+          (typeof children === 'string' ? ' simple-text-tooltip' : '')
+        }
+        style={style}>
+        <div
+          className={`tooltip-arrow tooltip-arrow-${effectivePlacement}`}
+          // If we had to push the tooltip back to prevent overflow,
+          // we also need to move the arrow the opposite direction so it still lines up.
+          style={{transform: `translate(${-viewportAdjust.left}px, ${-viewportAdjust.top}px)`}}
+        />
+        {children}
+      </div>
+    </ViewportOverlay>
   );
 }
 

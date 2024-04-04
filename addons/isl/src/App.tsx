@@ -20,11 +20,11 @@ import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {SuspenseBoundary} from './SuspenseBoundary';
-import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
 import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {TopLevelToast} from './TopLevelToast';
+import {ViewportOverlayRoot} from './ViewportOverlay';
 import {tracker} from './analytics';
 import {enableReactTools, enableReduxTools} from './atoms/debugToolAtoms';
 import {islDrawerState} from './drawerState';
@@ -60,7 +60,7 @@ export default function App() {
             <ISLCommandContext>
               <ErrorBoundary>
                 <NullStateOrDrawers />
-                <TooltipRootContainer />
+                <ViewportOverlayRoot />
                 <GettingStartedModal />
                 <ComparisonViewModal />
                 <ModalContainer />
