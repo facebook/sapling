@@ -376,7 +376,7 @@ export const Commit = memo(
               'commit-details' + (previewType != null ? ` commit-preview-${previewType}` : '')
             }
             commit={commit}
-            draggable={!isPublic && isDraggablePreview(previewType)}>
+            previewType={previewType}>
             {isPublic ? null : (
               <span className="commit-title">
                 <span>{title}</span>
@@ -533,21 +533,22 @@ function handleDragEnd(event: Event) {
 
 function DraggableCommit({
   commit,
+  previewType,
   children,
   className,
-  draggable,
   onClick,
   onDoubleClick,
   onContextMenu,
 }: {
   commit: CommitInfo;
+  previewType: CommitPreview | undefined;
   children: React.ReactNode;
   className: string;
-  draggable: boolean;
   onClick?: (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => unknown;
   onDoubleClick?: (e: React.MouseEvent<HTMLDivElement>) => unknown;
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
 }) {
+  const draggable = commit.phase !== 'public' && isDraggablePreview(previewType);
   const [dragDisabledMessage, setDragDisabledMessage] = useState<string | null>(null);
   const handleDragEnter = useCallback(() => {
     // Capture the environment.
