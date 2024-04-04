@@ -33,29 +33,3 @@
   padding: var(--button-icon-padding);
   touch-action: none;
 }
-
-.stack-edit-dragging {
-  width: fit-content;
-}
-
-.stack-edit-dragging-commit-list {
-  padding-right: var(--pad);
-  background: var(--background);
-  border: 1px solid var(--tooltip-border);
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.stack-edit-subtree .stack-edit-dragging-commit-list .commit {
-  margin-bottom: 0px;
-}
-
-.commit-reorder-preview {
-  opacity: 0.5;
-}
-
-.stack-edit-dragging-hint-container {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--pad);
-  user-select: none;
-}

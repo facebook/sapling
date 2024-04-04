@@ -119,20 +119,13 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
         </AnimatedReorderGroup>
       </div>
       {reorderState.isDragging() && (
-        <DraggingOverlay onDragRef={onDragRef} className="stack-edit-dragging">
-          <div className="stack-edit-dragging-commit-list">
-            {reorderState.draggingRevs
-              .toArray()
-              .reverse()
-              .map(rev => (
-                <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
-              ))}
-          </div>
-          {draggingHintText && (
-            <div className="stack-edit-dragging-hint-container">
-              <span className="stack-edit-dragging-hint-text tooltip">{draggingHintText}</span>
-            </div>
-          )}
+        <DraggingOverlay onDragRef={onDragRef} hint={draggingHintText}>
+          {reorderState.draggingRevs
+            .toArray()
+            .reverse()
+            .map(rev => (
+              <StackEditCommit key={rev} rev={rev} stackEdit={stackEdit} />
+            ))}
         </DraggingOverlay>
       )}
     </>

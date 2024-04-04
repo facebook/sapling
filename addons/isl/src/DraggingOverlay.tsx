@@ -8,8 +8,23 @@
 import type {DragHandler} from './DragHandle';
 
 import {ViewportOverlay} from './ViewportOverlay';
+import * as stylex from '@stylexjs/stylex';
 import React, {useEffect, useRef} from 'react';
 import {getZoomLevel} from 'shared/zoom';
+
+const styles = stylex.create({
+  draggingElement: {
+    paddingLeft: 'var(--pad)',
+    background: 'var(--background)',
+    border: '1px solid var(--tooltip-border)',
+    boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.2)',
+  },
+  hint: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: 'var(--pad)',
+  },
+});
 
 type DraggingOverlayProps = React.HTMLProps<HTMLDivElement> & {
   /**
@@ -26,6 +41,9 @@ type DraggingOverlayProps = React.HTMLProps<HTMLDivElement> & {
 
   /** Y offset. Default: `- 50%`. */
   dy?: string;
+
+  /** Extra "hint" message. Will be rendered as a tooltip. */
+  hint?: string | null;
 };
 
 /**
@@ -38,8 +56,7 @@ type DraggingOverlayProps = React.HTMLProps<HTMLDivElement> & {
  */
 export function DraggingOverlay(props: DraggingOverlayProps) {
   const draggingDivRef = useRef<HTMLDivElement | null>(null);
-  const {key, children, onDragRef, style, dx = '- var(--pad)', dy = '- 50%', ...rest} = props;
-  const newStyle = {...style, opacity: 0};
+  const {key, children, onDragRef, dx = '- var(--pad)', dy = '- 50%', hint, ...rest} = props;
 
   useEffect(() => {
     const zoom = getZoomLevel();
@@ -62,8 +79,15 @@ export function DraggingOverlay(props: DraggingOverlayProps) {
 
   return (
     <ViewportOverlay key={key}>
-      <div {...rest} style={newStyle} ref={draggingDivRef}>
-        {children}
+      <div style={{width: 'fit-content', opacity: 0}} ref={draggingDivRef}>
+        <div {...stylex.props(styles.draggingElement)} {...rest}>
+          {children}
+        </div>
+        {hint != null && (
+          <div {...stylex.props(styles.hint)}>
+            <span className="tooltip">{hint}</span>
+          </div>
+        )}
       </div>
     </ViewportOverlay>
   );
