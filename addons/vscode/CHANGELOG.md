@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.45
+
+### Apr 4 2024
+
+- Render comments from GitHub
+  - Click the comment icon next to the PR Badge to see comments
+  - includes inline comments and suggested changes
+
 ## 0.1.44
 
 ### Mar 29 2024
