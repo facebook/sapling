@@ -337,7 +337,7 @@ function htmlForISLWebview(
   logger: Logger,
 ) {
   if (IS_DEV_BUILD) {
-    if (!Internal?.supportsDevBuilds?.()) {
+    if (Internal?.supportsDevBuilds?.() === false) {
       throw new Error('Cannot use dev build with current VS Code version');
     }
     return devModeHtmlForISLWebview(kind, context, logger);
