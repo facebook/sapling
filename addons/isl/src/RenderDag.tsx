@@ -62,6 +62,14 @@ type RenderFunctionProps = {
    * the static function.
    */
   renderGlyph?: (info: DagCommitInfo) => RenderGlyphResult;
+
+  /**
+   * Get extra props for the DivRow for the given commit.
+   * This can be used to tweak styles like selection background, border.
+   * This should be a static-ish function to avoid re-rendering. Inside the function,
+   * it can use hooks to fetch extra state.
+   */
+  useExtraCommitRowProps?: (info: DagCommitInfo) => React.HTMLAttributes<HTMLDivElement> | void;
 };
 
 /**
@@ -113,6 +121,7 @@ export function RenderDag(props: RenderDagProps) {
     renderCommit,
     renderCommitExtras,
     renderGlyph = defaultRenderGlyph,
+    useExtraCommitRowProps,
     className,
     ...restProps
   } = props;
@@ -131,6 +140,7 @@ export function RenderDag(props: RenderDagProps) {
         renderCommit={renderCommit}
         renderCommitExtras={renderCommitExtras}
         renderGlyph={renderGlyph}
+        useExtraCommitRowProps={useExtraCommitRowProps}
       />
     );
   });
@@ -161,7 +171,17 @@ function DivRow(
 }
 
 function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & RenderFunctionProps) {
-  const {row, info, renderGlyph = defaultRenderGlyph, renderCommit, renderCommitExtras} = props;
+  const {
+    row,
+    info,
+    renderGlyph = defaultRenderGlyph,
+    renderCommit,
+    renderCommitExtras,
+    useExtraCommitRowProps,
+  } = props;
+
+  const {className = '', ...commitRowProps} = useExtraCommitRowProps?.(info) ?? {};
+
   // Layout per commit:
   //
   // Each (regular) commit is rendered in 2 rows:
@@ -330,7 +350,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   let row1: JSX.Element | null = null;
   let row2: JSX.Element | null = null;
   if (isIrregular) {
-    row0 = <DivRow left={nodeLinePart} />;
+    row0 = <DivRow className={className} {...commitRowProps} left={nodeLinePart} />;
     row1 = <DivRow left={postNodeLinePart} right={commitPart} />;
   } else {
     const left = (
@@ -342,9 +362,10 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
     );
     row1 = (
       <DivRow
+        className={`render-dag-row-commit ${className ?? ''}`}
+        {...commitRowProps}
         left={left}
         right={commitPart}
-        className="render-dag-row-commit"
         data-commit-hash={info.hash}
       />
     );
@@ -386,7 +407,8 @@ const DagRow = React.memo(DagRowInner, (prevProps, nextProps) => {
     prevProps.row.valueOf() === nextProps.row.valueOf() &&
     prevProps.renderCommit === nextProps.renderCommit &&
     prevProps.renderCommitExtras === nextProps.renderCommitExtras &&
-    prevProps.renderGlyph === nextProps.renderGlyph
+    prevProps.renderGlyph === nextProps.renderGlyph &&
+    prevProps.useExtraCommitRowProps == nextProps.useExtraCommitRowProps
   );
 });
 
