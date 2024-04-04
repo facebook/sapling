@@ -60,10 +60,8 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
 
-    let removed_commits = vec![snapshot1.commit.clone()];
-
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), snapshot1, None)
+        sql.insert(reponame.clone(), workspace.clone(), snapshot1.clone(), None)
             .await?
     );
     assert!(
@@ -74,6 +72,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone(), None).await?;
     assert!(res.len() == 2);
 
+    let removed_commits = vec![snapshot1.commit];
     assert!(
         BasicOps::<WorkspaceSnapshot>::delete(
             &sql,
@@ -104,10 +103,8 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
 
-    let removed_commits = vec![head1.commit.clone()];
-
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), head1, None)
+        sql.insert(reponame.clone(), workspace.clone(), head1.clone(), None)
             .await?
     );
     assert!(
@@ -117,7 +114,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone(), None).await?;
     assert!(res.len() == 2);
-
+    let removed_commits = vec![head1.commit];
     assert!(
         BasicOps::<WorkspaceHead>::delete(
             &sql,
