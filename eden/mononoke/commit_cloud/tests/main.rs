@@ -18,6 +18,7 @@ use commit_cloud_service_lib::remote_bookmarks::RemoteBookmarkExtraArgs;
 use commit_cloud_service_lib::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud_service_lib::snapshots::SnapshotExtraArgs;
 use commit_cloud_service_lib::snapshots::WorkspaceSnapshot;
+use commit_cloud_service_lib::versions::WorkspaceVersion;
 use commit_cloud_service_lib::BasicOps;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
@@ -230,6 +231,38 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame, workspace.clone(), None).await?;
 
     assert_eq!(res, vec![bookmark2]);
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let reponame = "test_repo".to_owned();
+    let workspace = "user_testuser_default".to_owned();
+
+    let args = WorkspaceVersion {
+        workspace: workspace.clone(),
+        version: 1,
+        timestamp: Timestamp::now(),
+        archived: false,
+    };
+
+    assert!(
+        sql.insert(reponame.clone(), workspace.clone(), args.clone(), ())
+            .await?
+    );
+
+    let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
+    assert_eq!(vec![args], res);
+
+    let delete_res =
+        BasicOps::<WorkspaceVersion>::delete(&sql, reponame.clone(), workspace.clone(), ()).await;
+
+    assert_eq!(
+        format!("{}", delete_res.unwrap_err()),
+        "Deleting workspace versions is not supported"
+    );
 
     Ok(())
 }

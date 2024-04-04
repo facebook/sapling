@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS  `versions` (
   `reponame` VARCHAR(255) NOT NULL,
   `workspace` VARCHAR(255) NOT NULL,
   `version` BIGINT(20) NOT NULL,
-  `timestamp` TIMESTAMP  NULL,
+  `timestamp` BIGINT NULL,
   `archived` BOOLEAN DEFAULT FALSE,
   PRIMARY KEY (`reponame`,`workspace`)
 );

@@ -19,7 +19,7 @@ pub(crate) mod history;
 pub mod local_bookmarks;
 pub mod remote_bookmarks;
 pub mod snapshots;
-pub(crate) mod versions;
+pub mod versions;
 pub(crate) mod workspace;
 
 #[allow(unused)]
