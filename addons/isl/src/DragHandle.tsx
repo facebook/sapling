@@ -24,6 +24,27 @@ export type DragHandler = (x: number, y: number, isDragging: boolean) => void;
  * element and move it using `transform: translate(x,y)` during dragging.
  */
 export function DragHandle(props: {onDrag?: DragHandler; children?: ReactElement}): ReactElement {
+  return (
+    <span className="drag-handle" {...dragHandleProps(props.onDrag)}>
+      {props.children ?? <Icon icon="gripper" />}
+    </span>
+  );
+}
+
+/**
+ * Return React properties to handle customized dragging.
+ *
+ * At the start of dragging, or during dragging, call `onDrag(x, y, true)`.
+ * At the end of dragging, call `onDrag(x, y, false)`.
+ * `x`, `y` are relative to viewport, comparable to `getBoundingClientRect()`.
+ */
+export function dragHandleProps(onDrag?: DragHandler): {
+  onDragStart?: React.DragEventHandler<unknown>;
+  onPointerDown?: PointerEventHandler<unknown>;
+} {
+  if (onDrag == null) {
+    return {};
+  }
   let pointerDown = false;
   const handlePointerDown: PointerEventHandler = e => {
     if (e.isPrimary && !pointerDown) {
@@ -31,7 +52,7 @@ export function DragHandle(props: {onDrag?: DragHandler; children?: ReactElement
       const body = (e.target as HTMLSpanElement).ownerDocument.body;
 
       const handlePointerMove = (e: PointerEvent) => {
-        props.onDrag?.(e.clientX, e.clientY, true);
+        onDrag(e.clientX, e.clientY, true);
       };
       const handlePointerUp = (e: PointerEvent) => {
         body.removeEventListener('pointermove', handlePointerMove as EventListener);
@@ -40,7 +61,7 @@ export function DragHandle(props: {onDrag?: DragHandler; children?: ReactElement
         body.releasePointerCapture(e.pointerId);
         body.style.removeProperty('cursor');
         pointerDown = false;
-        props.onDrag?.(e.clientX, e.clientY, false);
+        onDrag(e.clientX, e.clientY, false);
       };
 
       body.setPointerCapture(e.pointerId);
@@ -51,16 +72,12 @@ export function DragHandle(props: {onDrag?: DragHandler; children?: ReactElement
       body.style.cursor = 'grabbing';
       pointerDown = true;
 
-      props.onDrag?.(e.clientX, e.clientY, true);
+      onDrag(e.clientX, e.clientY, true);
     }
   };
 
-  return (
-    <span
-      className="drag-handle"
-      onDragStart={e => e.preventDefault()}
-      onPointerDown={handlePointerDown}>
-      {props.children ?? <Icon icon="gripper" />}
-    </span>
-  );
+  return {
+    onDragStart: e => e.preventDefault(),
+    onPointerDown: handlePointerDown,
+  };
 }
