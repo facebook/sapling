@@ -136,6 +136,9 @@
   position: relative;
   box-sizing: border-box;
   user-select: none;
+  /* Increase Draggable Commit size to overlap with avatar, without changing where the commit renders */
+  margin-left: -30px;
+  padding-left: 30px;
 }
 
 .commit-title {
