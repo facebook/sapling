@@ -64,6 +64,7 @@ import threading
 import time
 import unittest
 import xml.dom.minidom as minidom
+from pathlib import Path
 
 # If we're running in an embedded Python build, it won't add the test directory
 # to the path automatically, so let's add it manually.
@@ -103,6 +104,13 @@ except ImportError:
     buckpath = buckruletype = None
 
 from watchman import Watchman, WatchmanTimeout
+
+if os.environ.get("HGTEST_USE_EDEN", "0") == "1":
+    from edenfs import EdenFsManager
+
+    use_edenfs = True
+else:
+    use_edenfs = False
 
 if os.environ.get("RTUNICODEPEDANTRY", False):
     try:
@@ -1200,6 +1208,11 @@ class Test(unittest.TestCase):
                 self.tearDown()
                 raise RuntimeError("timed out waiting for watchman")
 
+        if use_edenfs:
+            shortname = hashlib.sha1(_bytespath("%s" % name)).hexdigest()[:6]
+            self._edenfsdir = Path(self._threadtmp) / f"{shortname}.edenfs"
+            self._edenfsmanager = EdenFsManager(self._edenfsdir)
+
     def run(self, result):
         """Run this test and report results against a TestResult instance."""
         # This function is extremely similar to unittest.TestCase.run(). Once
@@ -1363,6 +1376,17 @@ class Test(unittest.TestCase):
                     )
                 else:
                     shutil.rmtree(self._watchmandir, ignore_errors=True)
+            except Exception:
+                pass
+
+        if use_edenfs:
+            try:
+                self._edenfsmanager.eden.kill()
+                if self._keeptmpdir:
+                    log(f"Keeping edenfs dir: {self._edenfsmanager.test_dir}\n")
+                else:
+                    self._edenfsmanager.eden.cleanup()
+                    shutil.rmtree(self._edenfsmanager.test_dir, ignore_errors=True)
             except Exception:
                 pass
 

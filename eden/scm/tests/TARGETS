@@ -2,6 +2,7 @@ load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_run_tests_excluded", "get_hg_watchman_run_tests_excluded")
 
 oncall("mercurial_release")
@@ -37,6 +38,18 @@ python_binary(
     # The line below is necessary as we have some extensions (e.g., autodiff.py) in the tests directory
     # which include modules like sapling.*, and that makes the linter confused about it
     tags = ["noautodeps"],
+)
+
+python_binary(
+    name = "run_tests_py_eden",
+    srcs = [f for f in glob(["**/*"]) if not f.endswith("TARGETS") and f != "unittestify.py" and f not in TEST_FILES],
+    main_module = "eden/scm/tests/run-tests",
+    # The line below is necessary as we have some extensions (e.g., autodiff.py) in the tests directory
+    # which include modules like sapling.*, and that makes the linter confused about it
+    tags = ["noautodeps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
 )
 
 # @unsorted-dict-items
@@ -112,6 +125,33 @@ python_unittest(
         "//watchman:watchman": "watchman",
     },
     supports_static_listing = False,
+    deps = [
+        "//libfb/py:parutil",
+    ],
+)
+
+artifacts = get_integration_test_env_and_deps()
+
+E_ENV = artifacts["env"]
+
+E_ENV.update(ENV)
+
+E_ENV["HGTEST_RUN_TESTS_PY"] = "$(location :run_tests_py_eden)"
+
+E_ENV["HGTEST_USE_EDEN"] = "1"
+
+python_unittest(
+    # @autodeps-skip
+    name = "hg_edenfs_run_tests",
+    srcs = SRCS,
+    env = E_ENV,
+    resources = {
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg": "hg.sh",
+        "//eden/scm:hgpython": "hgpython.sh",
+    },
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
     deps = [
         "//libfb/py:parutil",
     ],
