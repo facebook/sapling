@@ -234,6 +234,8 @@ pub struct RepoConfig {
     pub everstore_local_path: Option<String>,
     /// The concurrency setting to be used during git protocol for this repo
     pub git_concurrency: Option<GitConcurrencyParams>,
+    /// Configuration for the repo metadata logger
+    pub metadata_logger_config: MetadataLoggerConfig,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1862,6 +1864,13 @@ pub struct CommitGraphConfig {
     pub scuba_table: Option<String>,
     /// Blobstore key for a preloaded commit graph
     pub preloaded_commit_graph_blobstore_key: Option<String>,
+}
+
+/// Configuration for the repo metadata logger
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct MetadataLoggerConfig {
+    /// Bookmarks to log repo metadata for
+    pub bookmarks: Vec<BookmarkKey>,
 }
 
 /// Information on a loaded config

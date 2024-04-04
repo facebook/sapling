@@ -35,6 +35,7 @@ use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
+use metaconfig_types::MetadataLoggerConfig;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
@@ -75,6 +76,7 @@ use repos::RawInfinitepushParams;
 use repos::RawLfsParams;
 use repos::RawLoggingDestination;
 use repos::RawLoggingDestinationScribe;
+use repos::RawMetadataLoggerConfig;
 use repos::RawPushParams;
 use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
@@ -731,6 +733,20 @@ impl Convert for RawCommitGraphConfig {
         Ok(CommitGraphConfig {
             scuba_table: self.scuba_table,
             preloaded_commit_graph_blobstore_key: self.preloaded_commit_graph_blobstore_key,
+        })
+    }
+}
+
+impl Convert for RawMetadataLoggerConfig {
+    type Output = MetadataLoggerConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(MetadataLoggerConfig {
+            bookmarks: self
+                .bookmarks
+                .into_iter()
+                .map(BookmarkKey::new)
+                .collect::<Result<_>>()?,
         })
     }
 }

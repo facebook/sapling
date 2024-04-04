@@ -225,6 +225,7 @@ fn parse_with_repo_definition(
         deep_sharding_config,
         everstore_local_path,
         git_concurrency,
+        metadata_logger_config,
         ..
     } = named_repo_config;
 
@@ -341,6 +342,7 @@ fn parse_with_repo_definition(
     let commit_graph_config = commit_graph_config.convert()?.unwrap_or_default();
     let deep_sharding_config = deep_sharding_config.convert()?;
     let git_concurrency = git_concurrency.convert()?;
+    let metadata_logger_config = metadata_logger_config.convert()?.unwrap_or_default();
 
     Ok(RepoConfig {
         enabled,
@@ -385,6 +387,7 @@ fn parse_with_repo_definition(
         deep_sharding_config,
         everstore_local_path,
         git_concurrency,
+        metadata_logger_config,
     })
 }
 
@@ -527,6 +530,7 @@ mod test {
     use metaconfig_types::LocalDatabaseConfig;
     use metaconfig_types::LoggingDestination;
     use metaconfig_types::MetadataDatabaseConfig;
+    use metaconfig_types::MetadataLoggerConfig;
     use metaconfig_types::MultiplexId;
     use metaconfig_types::MultiplexedStoreType;
     use metaconfig_types::PushParams;
@@ -1315,6 +1319,7 @@ mod test {
                     commits: 1000,
                     tags: 1000,
                 }),
+                metadata_logger_config: MetadataLoggerConfig::default(),
             },
         );
 
@@ -1391,6 +1396,7 @@ mod test {
                 deep_sharding_config: None,
                 everstore_local_path: None,
                 git_concurrency: None,
+                metadata_logger_config: MetadataLoggerConfig::default(),
             },
         );
         assert_eq!(
