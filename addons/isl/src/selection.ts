@@ -13,6 +13,7 @@ import {commitMode} from './CommitInfoView/CommitInfoState';
 import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
+import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {islDrawerState} from './drawerState';
 import {readAtom, useAtomHas, writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
@@ -90,8 +91,8 @@ export function useCommitSelection(hash: string): {
       // previews won't change a commit from draft -> public, so we don't need
       // to use previews here
       const dag = readAtom(latestDag);
-      if (dag.get(hash)?.phase === 'public') {
-        // don't bother selecting public commits
+      if (dag.get(hash)?.phase === 'public' || hash === YOU_ARE_HERE_VIRTUAL_COMMIT.hash) {
+        // don't bother selecting public commits / virtual commits
         return;
       }
       writeAtom(selectedCommits, last => {
@@ -188,7 +189,12 @@ export function useCommitCallbacks(commit: CommitInfo): {
   const onDoubleClickToShowDrawer = useCallback(() => {
     // Select the commit if it was deselected.
     if (!isSelected) {
-      overrideSelection([commit.hash]);
+      if (commit.hash === YOU_ARE_HERE_VIRTUAL_COMMIT.hash) {
+        // don't select virutal commit, replace selection instead
+        overrideSelection([]);
+      } else {
+        overrideSelection([commit.hash]);
+      }
     }
     // Show the drawer.
     writeAtom(islDrawerState, state => ({

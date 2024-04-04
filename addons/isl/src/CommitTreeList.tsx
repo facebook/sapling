@@ -116,8 +116,7 @@ function useExtraCommitRowProps(info: DagCommitInfo): React.HTMLAttributes<HTMLD
   return {
     onClick: onClickToSelect,
     onDoubleClick: onDoubleClickToShowDrawer,
-    className:
-      isSelected && info.hash !== YOU_ARE_HERE_VIRTUAL_COMMIT.hash ? 'commit-row-selected' : '',
+    className: isSelected ? 'commit-row-selected' : '',
   };
 }
 
