@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
@@ -18,6 +19,7 @@ pub enum MetadataItem {
     Directory(DirectoryMetadata),
     BinaryFile(FileMetadata),
     TextFile(TextFileMetadata),
+    Symlink(SymlinkMetadata),
 }
 
 #[derive(Debug)]
@@ -77,6 +79,13 @@ pub struct TextFileMetadata {
     pub is_partially_generated: bool,
 }
 
+#[derive(Debug)]
+pub struct SymlinkMetadata {
+    pub file_metadata: FileMetadata,
+    /// The target path
+    pub symlink_target: String,
+}
+
 impl FileMetadata {
     pub(crate) fn new(path: MPath, info: ChangesetInfo, fsnode_file: FsnodeFile) -> Self {
         Self {
@@ -87,6 +96,15 @@ impl FileMetadata {
             },
             file_size: fsnode_file.size(),
             is_executable: *fsnode_file.file_type() == FileType::Executable,
+        }
+    }
+}
+
+impl SymlinkMetadata {
+    pub(crate) fn new(file_metadata: FileMetadata, content: Bytes) -> Self {
+        Self {
+            file_metadata,
+            symlink_target: String::from_utf8_lossy(&content).to_string(),
         }
     }
 }

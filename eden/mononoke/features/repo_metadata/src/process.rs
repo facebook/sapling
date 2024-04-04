@@ -33,6 +33,7 @@ use crate::types::DirectoryMetadata;
 use crate::types::FileMetadata;
 use crate::types::ItemHistory;
 use crate::types::MetadataItem;
+use crate::types::SymlinkMetadata;
 use crate::types::TextFileMetadata;
 use crate::Repo;
 
@@ -154,7 +155,11 @@ async fn process_file(
     let file_metadata = FileMetadata::new(path, info, fsnode_file);
 
     if *fsnode_file.file_type() == FileType::Symlink {
-        return Ok(MetadataItem::Unknown);
+        let content = filestore::fetch_concat(repo.repo_blobstore(), ctx, filestore_key).await?;
+        return Ok(MetadataItem::Symlink(SymlinkMetadata::new(
+            file_metadata,
+            content,
+        )));
     }
 
     if content_metadata.is_binary {
