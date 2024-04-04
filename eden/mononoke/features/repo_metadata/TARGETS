@@ -15,6 +15,7 @@ rust_library(
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:fsnodes",
+        "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",

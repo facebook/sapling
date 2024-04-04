@@ -12,9 +12,11 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use filestore::FetchKey;
 use fsnodes::RootFsnodeId;
 use futures::try_join;
 use futures::Stream;
+use futures::TryFutureExt;
 use futures::TryStreamExt;
 use manifest::CombinedId;
 use manifest::Entry;
@@ -22,11 +24,13 @@ use manifest::ManifestOps;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
 
 use crate::types::DirectoryMetadata;
+use crate::types::FileMetadata;
 use crate::types::ItemHistory;
 use crate::types::MetadataItem;
 use crate::Repo;
@@ -122,11 +126,39 @@ async fn process_tree(
 }
 
 async fn process_file(
-    _ctx: &CoreContext,
-    _repo: &impl Repo,
-    _path: MPath,
-    _fsnode_file: FsnodeFile,
-    _file_unode_id: FileUnodeId,
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    path: MPath,
+    fsnode_file: FsnodeFile,
+    file_unode_id: FileUnodeId,
 ) -> Result<MetadataItem> {
+    let filestore_key = FetchKey::from(*fsnode_file.content_id());
+    let (file_unode, content_metadata) = try_join!(
+        file_unode_id
+            .load(ctx, repo.repo_blobstore())
+            .map_err(anyhow::Error::from),
+        filestore::get_metadata(repo.repo_blobstore(), ctx, &filestore_key),
+    )?;
+    let content_metadata = content_metadata.ok_or_else(|| {
+        anyhow!(
+            "Can't get content metadata for id: {:?}",
+            fsnode_file.content_id()
+        )
+    })?;
+    let info = repo
+        .repo_derived_data()
+        .derive::<ChangesetInfo>(ctx, *file_unode.linknode())
+        .await?;
+
+    let file_metadata = FileMetadata::new(path, info, fsnode_file);
+
+    if *fsnode_file.file_type() == FileType::Symlink {
+        return Ok(MetadataItem::Unknown);
+    }
+
+    if content_metadata.is_binary {
+        return Ok(MetadataItem::BinaryFile(file_metadata));
+    }
+
     Ok(MetadataItem::Unknown)
 }
