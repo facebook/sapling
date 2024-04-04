@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mononoke")
@@ -24,5 +25,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//dsi/logger/configs/SCMRepoMetadataLoggerConfig:s_c_m_repo_metadata_rust_logger",
+    ]),
 )

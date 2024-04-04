@@ -112,6 +112,17 @@ pub struct BlamedTextFileMetadata {
     pub modified_timestamps: Vec<DateTime>,
 }
 
+impl MetadataItem {
+    pub fn is_root(&self) -> bool {
+        if let MetadataItem::Directory(DirectoryMetadata { path, .. }) = self {
+            if path.is_root() {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 #[derive(Debug)]
 pub struct SymlinkMetadata {
     pub file_metadata: FileMetadata,

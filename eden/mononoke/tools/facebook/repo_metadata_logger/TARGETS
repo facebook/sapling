@@ -18,6 +18,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//dsi/logger/configs/SCMRepoMetadataLoggerConfig:s_c_m_repo_metadata_rust_logger",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",

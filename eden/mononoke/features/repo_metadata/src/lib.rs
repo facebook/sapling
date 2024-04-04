@@ -7,6 +7,8 @@
 
 #![feature(trait_alias)]
 
+#[cfg(fbcode_build)]
+mod log;
 mod process;
 mod types;
 
