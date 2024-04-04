@@ -285,6 +285,7 @@ members = [
   "edenapi_service",
   "features/history_traversal",
   "features/redaction",
+  "features/repo_metadata",
   "features/repo_update_logger",
   "filenodes",
   "filenodes/if",
