@@ -99,6 +99,7 @@ impl FileSystem for DotGitFileSystem {
         );
         // Run "git status".
         let args = [
+            "--no-optional-locks",
             "--porcelain=1",
             "--ignore-submodules=dirty",
             "--untracked-files=all",

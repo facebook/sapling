@@ -86,6 +86,7 @@ impl WorkingCopyClient for RunGitOptions {
     ) -> Result<BTreeMap<RepoPathBuf, FileStatus>> {
         tracing::debug!(node=?node, list_ignored=list_ignored, "get_status");
         let args = [
+            "--no-optional-locks",
             "--porcelain=1",
             "--ignore-submodules=dirty",
             "--untracked-files=all",

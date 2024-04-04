@@ -77,6 +77,12 @@ impl RunGitOptions {
 
 const GIT: &str = "git";
 
+/// Test if a flag is global or not. For cgit, global flags must be positioned
+/// before the command name.
+fn is_global_flag(arg: &str) -> bool {
+    arg == "--no-optional-locks"
+}
+
 fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Command {
     let mut cmd = Command::new(&opts.git_binary);
 
@@ -91,6 +97,11 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
         cmd.arg(format!("--git-dir={}", git_dir.display()));
     }
 
+    // global flags like --no-optional-locks
+    let global_arg_count = args.iter().take_while(|arg| is_global_flag(arg)).count();
+    cmd.args(&args[..global_arg_count]);
+
+    // command name, space-separated name like "bundle create" is split to multiple args.
     for arg in cmd_name.split_ascii_whitespace() {
         cmd.arg(arg);
     }
@@ -106,7 +117,7 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
     if quiet {
         cmd.arg("--quiet");
     }
-    cmd.args(args);
+    cmd.args(&args[global_arg_count..]);
 
     cmd
 }
