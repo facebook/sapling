@@ -31,7 +31,7 @@ import {
 import {atom} from 'jotai';
 import {firstLine} from 'shared/utils';
 
-export type EditedMessage = {fields: Partial<CommitMessageFields>};
+export type EditedMessage = Partial<CommitMessageFields>;
 
 export type CommitInfoMode = 'commit' | 'amend';
 
@@ -43,7 +43,7 @@ registerDisposable(
     const description = event.template.slice(title.length + 1);
     const schema = readAtom(commitMessageFieldsSchema);
     const fields = parseCommitMessageFields(schema, title, description);
-    writeAtom(commitMessageTemplate, {fields});
+    writeAtom(commitMessageTemplate, fields);
   }),
   import.meta.hot,
 );
@@ -63,7 +63,7 @@ registerCleanup(
  */
 export const diffUpdateMessagesState = atomFamilyWeak((_hash: Hash) => atom<string>(''));
 
-export const getDefaultEditedCommitMessage = (): EditedMessage => ({fields: {}});
+export const getDefaultEditedCommitMessage = (): EditedMessage => ({});
 
 /**
  * Map of hash -> latest edited commit message, representing any changes made to the commit's message fields.
@@ -140,13 +140,10 @@ registerDisposable(
     const schema = readAtom(commitMessageFieldsSchema);
     const fields = parseCommitMessageFields(schema, title, description);
     const currentMessage = readAtom(editedCommitMessages(headOrHash));
-    writeAtom(editedCommitMessages(headOrHash), {
-      fields: mergeCommitMessageFields(
-        schema,
-        currentMessage.fields as CommitMessageFields,
-        fields,
-      ),
-    });
+    writeAtom(
+      editedCommitMessages(headOrHash),
+      mergeCommitMessageFields(schema, currentMessage as CommitMessageFields, fields),
+    );
     writeAtom(commitMode, isCommit ? 'commit' : 'amend');
     if (!isCommit) {
       writeAtom(selectedCommits, new Set([headOrHash]));
@@ -159,7 +156,7 @@ export const latestCommitMessageFieldsWithEdits = atomFamilyWeak((hashOrHead: Ha
   return atom(get => {
     const edited = get(editedCommitMessages(hashOrHead));
     const latest = get(latestCommitMessageFields(hashOrHead));
-    return applyEditedFields(latest, edited.fields);
+    return applyEditedFields(latest, edited);
   });
 });
 
@@ -179,7 +176,7 @@ export const unsavedFieldsBeingEdited = atomFamilyWeak((hashOrHead: Hash | 'head
     if (hashOrHead === 'head') {
       return allFieldsBeingEdited(schema);
     }
-    return Object.fromEntries(schema.map(field => [field.key, field.key in edited.fields]));
+    return Object.fromEntries(schema.map(field => [field.key, field.key in edited]));
   });
 });
 
@@ -191,7 +188,7 @@ export const hasUnsavedEditedCommitMessage = atomFamilyWeak((hashOrHead: Hash | 
       const edited = get(editedCommitMessages(hashOrHead));
       const latest = get(latestCommitMessageFields(hashOrHead));
       const schema = get(commitMessageFieldsSchema);
-      return anyEditsMade(schema, latest, edited.fields);
+      return anyEditsMade(schema, latest, edited);
     }
     return false;
   });

@@ -127,7 +127,7 @@ export const latestCommitMessage = atomFamilyWeak((hash: Hash | 'head') =>
       const template = get(commitMessageTemplate);
       if (template) {
         const schema = get(commitMessageFieldsSchema);
-        const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
+        const result = applyEditedFields(emptyCommitMessageFields(schema), template);
         const templateString = commitMessageFieldsToString(
           schema,
           result,

@@ -440,7 +440,7 @@ export function UncommittedChanges({place}: {place: Place}) {
           const latestMessage = readAtom(latestCommitMessageFields(headCommit.hash));
           if (latestMessage) {
             writeAtom(editedCommitMessages(headCommit.hash), {
-              fields: {...latestMessage},
+              ...latestMessage,
             });
           }
         }
@@ -450,7 +450,7 @@ export function UncommittedChanges({place}: {place: Place}) {
       if (which === 'commit' && quickCommitTyped != null && quickCommitTyped != '') {
         writeAtom(editedCommitMessages('head'), value => ({
           ...value,
-          fields: {...value.fields, Title: quickCommitTyped},
+          Title: quickCommitTyped,
         }));
         // delete what was written in the quick commit form
         commitTitleRef.current != null && (commitTitleRef.current.value = '');
@@ -461,9 +461,9 @@ export function UncommittedChanges({place}: {place: Place}) {
 
   const onConfirmQuickCommit = () => {
     const titleEl = commitTitleRef.current as HTMLInputElement | null;
-    const title = titleEl?.value || template?.fields.Title || temporaryCommitTitle();
+    const title = titleEl?.value || template?.Title || temporaryCommitTitle();
     // use the template, unless a specific quick title is given
-    const fields: CommitMessageFields = {...template?.fields, Title: title};
+    const fields: CommitMessageFields = {...template, Title: title};
     const message = commitMessageFieldsToString(schema, fields);
     const hash = headCommit?.hash ?? '.';
     const allFiles = uncommittedChanges.map(file => file.path);

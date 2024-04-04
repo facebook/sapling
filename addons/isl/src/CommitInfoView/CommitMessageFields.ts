@@ -324,7 +324,7 @@ export function editedMessageSubset(
   const fields = Object.fromEntries(
     Object.entries(message).filter(([k]) => fieldsBeingEdited[k] ?? false),
   );
-  return {fields};
+  return fields;
 }
 
 export function applyEditedFields(

@@ -73,7 +73,7 @@ const fillCommitMessageMethods: Array<{
     ),
     getMessage: (_commit: CommitInfo, _mode: CommitInfoMode) => {
       const template = readAtom(commitMessageTemplate);
-      return template?.fields as CommitMessageFields | undefined;
+      return template as CommitMessageFields | undefined;
     },
   },
 ];
@@ -94,7 +94,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
         writeAtom(editedCommitMessages(hashOrHead), getDefaultEditedCommitMessage());
         return;
       }
-      const oldMessage = existing.fields as CommitMessageFields;
+      const oldMessage = existing as CommitMessageFields;
       const buttons = [
         {label: t('Cancel')},
         {label: t('Overwrite')},
@@ -120,10 +120,10 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
       if (answer === buttons[2]) {
         // TODO: T177275949 should we warn about conflicts instead of just merging?
         const merged = mergeCommitMessageFields(schema, oldMessage, newMessage);
-        writeAtom(editedCommitMessages(hashOrHead), {fields: merged});
+        writeAtom(editedCommitMessages(hashOrHead), merged);
         return;
       } else if (answer === buttons[1]) {
-        writeAtom(editedCommitMessages(hashOrHead), {fields: newMessage});
+        writeAtom(editedCommitMessages(hashOrHead), newMessage);
         return;
       }
     },

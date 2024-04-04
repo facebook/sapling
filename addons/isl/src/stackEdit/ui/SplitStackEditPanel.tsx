@@ -71,14 +71,14 @@ export function SplitStackEditPanel() {
 
   // Prepare a "dense" subStack with an extra empty commit to move right.
   const emptyTitle = getEmptyCommitTitle(commitStack.get(endRev)?.text ?? '');
-  const fields: CommitMessageFields = {...messageTemplate?.fields, Title: emptyTitle};
+  const fields: CommitMessageFields = {...messageTemplate, Title: emptyTitle};
   const message = commitMessageFieldsToString(schema, fields);
   const subStack = commitStack
     .insertEmpty(endRev + 1, message, endRev)
     .denseSubStack(Range(startRev, endRev + 2).toList());
 
   const insertBlankCommit = (rev: Rev) => {
-    const fields: CommitMessageFields = {...messageTemplate?.fields, Title: t('New Commit')};
+    const fields: CommitMessageFields = {...messageTemplate, Title: t('New Commit')};
     const message = commitMessageFieldsToString(schema, fields);
 
     const newStack = stackEdit.commitStack.insertEmpty(startRev + rev, message);

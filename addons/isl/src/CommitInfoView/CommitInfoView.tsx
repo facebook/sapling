@@ -190,10 +190,10 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     if (!forceEditAll) {
       // If the selected commit is changed, the fields being edited should slim down to only fields
       // that are meaningfully edited on the new commit.
-      if (Object.keys(editedMessage.fields).length > 0) {
-        const trimmedEdits = removeNoopEdits(schema, parsedFields, editedMessage.fields);
-        if (Object.keys(trimmedEdits).length !== Object.keys(editedMessage.fields).length) {
-          setEditedCommitMessage({fields: trimmedEdits});
+      if (Object.keys(editedMessage).length > 0) {
+        const trimmedEdits = removeNoopEdits(schema, parsedFields, editedMessage);
+        if (Object.keys(trimmedEdits).length !== Object.keys(editedMessage).length) {
+          setEditedCommitMessage(trimmedEdits);
         }
       }
     }
@@ -210,10 +210,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     // Set the latest message value for the edited message of this field.
     // fieldsBeingEdited is derived from this.
     setEditedCommitMessage(last => ({
-      fields: {
-        ...last.fields,
-        [field]: parsedFields[field],
-      },
+      ...last,
+      [field]: parsedFields[field],
     }));
   };
 
@@ -251,13 +249,11 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           .map(field => {
             const setField = (newVal: string) =>
               setEditedCommitMessage(val => ({
-                fields: {
-                  ...val.fields,
-                  [field.key]: field.type === 'field' ? [newVal] : newVal,
-                },
+                ...val,
+                [field.key]: field.type === 'field' ? [newVal] : newVal,
               }));
 
-            let editedFieldValue = editedMessage.fields?.[field.key];
+            let editedFieldValue = editedMessage?.[field.key];
             if (editedFieldValue == null && isCommitMode) {
               // If the field is supposed to edited but not in the editedMessage,
               // it means we're loading from a blank slate. This is when we can load from the commit template.
@@ -542,12 +538,12 @@ function ActionsBar({
         }
       }
 
-      writeAtom(editedCommitMessages(isCommitMode ? 'head' : commit.hash), {fields: {}});
+      writeAtom(editedCommitMessages(isCommitMode ? 'head' : commit.hash), {});
     },
     [commit.hash, isCommitMode],
   );
   const doAmendOrCommit = () => {
-    const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);
+    const updatedMessage = applyEditedFields(latestMessage, editedMessage);
     const message = commitMessageFieldsToString(schema, updatedMessage);
     const headHash = headCommit?.hash ?? '.';
     const allFiles = uncommittedChanges.map(file => file.path);
@@ -619,7 +615,7 @@ function ActionsBar({
               disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
               runOperation={async () => {
                 if (!isCommitMode) {
-                  const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);
+                  const updatedMessage = applyEditedFields(latestMessage, editedMessage);
                   const stringifiedMessage = commitMessageFieldsToString(schema, updatedMessage);
                   const diffId = findEditedDiffNumber(updatedMessage) ?? commit.diffId;
                   // if there's a diff attached, we should also update the remote message
@@ -662,7 +658,7 @@ function ActionsBar({
               data-testid="amend-message-button"
               disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
               runOperation={async () => {
-                const updatedMessage = applyEditedFields(latestMessage, editedMessage.fields);
+                const updatedMessage = applyEditedFields(latestMessage, editedMessage);
                 const stringifiedMessage = commitMessageFieldsToString(schema, updatedMessage);
                 const diffId = findEditedDiffNumber(updatedMessage) ?? commit.diffId;
                 // if there's a diff attached, we should also update the remote message
