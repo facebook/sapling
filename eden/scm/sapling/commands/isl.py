@@ -94,7 +94,7 @@ DEFAULT_PORT = 3011
         ),
     ],
 )
-def isl_cmd(ui, repo, *args, **opts):
+def isl_cmd(ui, repo, **opts):
     """launch Sapling Web GUI on localhost
 
     Sapling Web is a collection of web-based tools including Interactive Smartlog,
