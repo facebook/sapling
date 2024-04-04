@@ -860,19 +860,22 @@ class Submodule:
     def pullnode(self, repo, node):
         """fetch a commit on demand, prepare for checkout"""
         if node not in repo:
-            repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
-            # Write a remote bookmark to mark node public
-            quiet = repo.ui.configbool("experimental", "submodule-pull-quiet", True)
-            with repo.ui.configoverride({("ui", "quiet"): str(quiet)}):
-                refspec = "+%s:refs/remotes/parent/%s" % (
-                    hex(node),
-                    # Avoids conflicts like gflags/ and gflags/doc sharing a
-                    # same backing repo. (Git does not allow one reference
-                    # "gflags" to be a prefix of another reference
-                    # "gflags/doc").
-                    self.nestedpath.replace("_", "__").replace("/", "_"),
-                )
-                pullrefspecs(repo, self.url, [refspec])
+            self._pullraw(repo, hex(node))
+
+    def _pullraw(self, repo, refspec_lhs):
+        repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
+        # Write a remote bookmark to mark node public
+        quiet = repo.ui.configbool("experimental", "submodule-pull-quiet", True)
+        with repo.ui.configoverride({("ui", "quiet"): str(quiet)}):
+            refspec = "+%s:refs/remotes/parent/%s" % (
+                refspec_lhs,
+                # Avoids conflicts like gflags/ and gflags/doc sharing a
+                # same backing repo. (Git does not allow one reference
+                # "gflags" to be a prefix of another reference
+                # "gflags/doc").
+                self.nestedpath.replace("_", "__").replace("/", "_"),
+            )
+            pullrefspecs(repo, self.url, [refspec])
 
     def checkout(self, node, force=False):
         """checkout a commit in working copy"""
