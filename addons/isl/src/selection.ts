@@ -6,9 +6,10 @@
  */
 
 import type {ISLCommandName} from './ISLShortcuts';
-import type {Hash} from './types';
+import type {CommitInfo, Hash} from './types';
 import type React from 'react';
 
+import {commitMode} from './CommitInfoView/CommitInfoState';
 import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
@@ -173,6 +174,36 @@ export function useCommitSelection(hash: string): {
   );
 
   return {isSelected, onClickToSelect, overrideSelection};
+}
+
+/** A richer version of `useCommitSelection`, provides extra handlers like `onDoubleClickToShowDrawer`. */
+export function useCommitCallbacks(commit: CommitInfo): {
+  isSelected: boolean;
+  onClickToSelect: (
+    _e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
+  ) => unknown;
+  onDoubleClickToShowDrawer: () => void;
+} {
+  const {isSelected, onClickToSelect, overrideSelection} = useCommitSelection(commit.hash);
+  const onDoubleClickToShowDrawer = useCallback(() => {
+    // Select the commit if it was deselected.
+    if (!isSelected) {
+      overrideSelection([commit.hash]);
+    }
+    // Show the drawer.
+    writeAtom(islDrawerState, state => ({
+      ...state,
+      right: {
+        ...state.right,
+        collapsed: false,
+      },
+    }));
+    if (commit.isDot) {
+      // if we happened to be in commit mode, swap to amend mode so you see the details instead
+      writeAtom(commitMode, 'amend');
+    }
+  }, [overrideSelection, isSelected, commit.hash, commit.isDot]);
+  return {isSelected, onClickToSelect, onDoubleClickToShowDrawer};
 }
 
 export function useArrowKeysToChangeSelection() {

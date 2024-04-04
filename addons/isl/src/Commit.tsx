@@ -10,7 +10,7 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {Bookmarks} from './Bookmark';
-import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
+import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
 import {EducationInfoTip} from './Education';
@@ -31,7 +31,6 @@ import {
 } from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
-import {islDrawerState} from './drawerState';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
@@ -49,7 +48,7 @@ import {
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
-import {selectedCommits, useCommitSelection} from './selection';
+import {selectedCommits, useCommitCallbacks} from './selection';
 import {latestDag} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
@@ -129,7 +128,7 @@ export const Commit = memo(
 
     const inlineProgress = useAtomValue(inlineProgressByHash(commit.hash));
 
-    const {isSelected, onClickToSelect, overrideSelection} = useCommitSelection(commit.hash);
+    const {isSelected, onClickToSelect, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
     const actionsPrevented = previewPreventsActions(previewType);
 
     const isNarrow = useAtomValue(isNarrowCommitTree);
@@ -137,27 +136,9 @@ export const Commit = memo(
     const title = useAtomValue(latestCommitMessageTitle(commit.hash));
 
     const toast = useShowToast();
+
     const clipboardCopy = (text: string, url?: string) =>
       toast.copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));
-
-    const onDoubleClickToShowDrawer = useCallback(() => {
-      // Select the commit if it was deselected.
-      if (!isSelected) {
-        overrideSelection([commit.hash]);
-      }
-      // Show the drawer.
-      writeAtom(islDrawerState, state => ({
-        ...state,
-        right: {
-          ...state.right,
-          collapsed: false,
-        },
-      }));
-      if (commit.isDot) {
-        // if we happened to be in commit mode, swap to amend mode so you see the details instead
-        writeAtom(commitMode, 'amend');
-      }
-    }, [overrideSelection, isSelected, commit.hash, commit.isDot]);
 
     const viewChangesCallback = useAtomCallback((_get, set) => {
       set(currentComparisonMode, {
