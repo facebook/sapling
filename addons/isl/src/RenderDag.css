@@ -18,6 +18,7 @@
 
 .render-dag-row,
 .render-dag-row-left-side-line {
+  padding-left: var(--pad);
   display: flex;
   flex-direction: row;
   flex-grow: 0;

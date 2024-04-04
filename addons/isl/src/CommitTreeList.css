@@ -24,7 +24,6 @@
   gap: calc(var(--halfpad) / 2);
 }
 .commit-tree-root {
-  margin-left: calc(1.5 * var(--pad));
   margin-top: calc(2px + var(--halfpad));
 }
 .commit-tree-stack-actions {
