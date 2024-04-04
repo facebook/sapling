@@ -6,6 +6,7 @@ oncall("source_control")
 thrift_library(
     name = "megarepo_configs",
     languages = [
+        "hs2",
         "rust",
         "py3",
         "cpp2",

@@ -6,6 +6,7 @@ oncall("mononoke")
 thrift_library(
     name = "source_control",
     languages = [
+        "hs2",
         "rust",
         "py",
         "py3",

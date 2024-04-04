@@ -6,6 +6,7 @@ oncall("mononoke")
 thrift_library(
     name = "derived_data_type_if",
     languages = [
+        "hs2",
         "rust",
         "py",
         "py3",

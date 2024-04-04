@@ -2071,7 +2071,7 @@ transient server exception InternalError {
 }
 
 struct RequestErrorStruct {
-  1: source_control.RequestErrorKind kind;
+  1: RequestErrorKind kind;
   2: string reason;
 }
 
