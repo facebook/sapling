@@ -244,10 +244,8 @@ def _smartlogomittedcommitsmsg(repo):
 @hint("commitcloud-update-on-move")
 def hintupdateonmove():
     return _(
-        "if you would like to update to the moved version automatically add\n"
-        "[commitcloud]\n"
-        "updateonmove = true\n"
-        "to your .hgrc config file\n"
+        "if you would like to update to the moved version automatically, run:\n"
+        "`@prog@ config --user commitcloud.updateonmove=true`\n"
     )
 
 

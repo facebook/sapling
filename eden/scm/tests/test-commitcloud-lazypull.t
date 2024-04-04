@@ -164,10 +164,8 @@ Amend twice, unamend, then unhide
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision cb45bbd0ae75 has been moved remotely to 74b668b6b779
-  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
-  [commitcloud]
-  updateonmove = true
-  to your .hgrc config file
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically, run:
+  `hg config --user commitcloud.updateonmove=true`
   hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
 
 Now cloud sync in the other client.  The cycle means we can't reliably pick a destination.
@@ -181,8 +179,6 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision 1cf4a5a0e8fc has been moved remotely to 74b668b6b779
-  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
-  [commitcloud]
-  updateonmove = true
-  to your .hgrc config file
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically, run:
+  `hg config --user commitcloud.updateonmove=true`
   hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints

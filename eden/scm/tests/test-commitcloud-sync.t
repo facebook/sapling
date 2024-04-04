@@ -318,10 +318,8 @@ Sync the amended commit to the other client
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
-  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
-  [commitcloud]
-  updateonmove = true
-  to your .hgrc config file
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically, run:
+  `hg config --user commitcloud.updateonmove=true`
   hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ hg up -q tip
   $ tglog
@@ -365,10 +363,8 @@ Expected result: the message telling that revision has been moved to another rev
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
-  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
-  [commitcloud]
-  updateonmove = true
-  to your .hgrc config file
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically, run:
+  `hg config --user commitcloud.updateonmove=true`
   hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ tglog
   o  41f3b9359864 'commit2 amended' bookmark1
