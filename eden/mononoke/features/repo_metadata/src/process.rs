@@ -33,6 +33,7 @@ use crate::types::DirectoryMetadata;
 use crate::types::FileMetadata;
 use crate::types::ItemHistory;
 use crate::types::MetadataItem;
+use crate::types::TextFileMetadata;
 use crate::Repo;
 
 pub(crate) async fn process_bookmark<'a>(
@@ -160,5 +161,6 @@ async fn process_file(
         return Ok(MetadataItem::BinaryFile(file_metadata));
     }
 
-    Ok(MetadataItem::Unknown)
+    let text_file_metadata = TextFileMetadata::new(file_metadata, content_metadata);
+    Ok(MetadataItem::TextFile(text_file_metadata))
 }
