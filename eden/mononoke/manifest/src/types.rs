@@ -8,17 +8,20 @@
 use std::hash::Hash;
 use std::hash::Hasher;
 
+use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
+use blobstore::StoreLoadable;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::try_join;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::fsnode::Fsnode;
@@ -231,6 +234,137 @@ impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
         _blobstore: &Store,
     ) -> Result<Self::TrieMapType> {
         Ok(Manifest::list(&self).collect())
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CombinedId<M, N>(pub M, pub N);
+
+pub struct Combined<M, N>(pub M, pub N);
+
+#[async_trait]
+impl<S, M, N> StoreLoadable<S> for CombinedId<M, N>
+where
+    M: StoreLoadable<S> + Send + Sync + Clone + Eq,
+    M::Value: Send + Sync,
+    N: StoreLoadable<S> + Send + Sync + Clone + Eq,
+    N::Value: Send + Sync,
+    S: Send + Sync,
+{
+    type Value = Combined<M::Value, N::Value>;
+
+    async fn load<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        store: &'a S,
+    ) -> Result<Self::Value, LoadableError> {
+        let CombinedId(m_id, n_id) = self;
+        let (m, n) = try_join!(m_id.load(ctx, store), n_id.load(ctx, store))?;
+        Ok(Combined(m, n))
+    }
+}
+
+#[async_trait]
+impl<
+    M: AsyncManifest<Store> + Send + Sync,
+    N: AsyncManifest<Store> + Send + Sync,
+    Store: Send + Sync,
+> AsyncManifest<Store> for Combined<M, N>
+{
+    type TreeId =
+        CombinedId<<M as AsyncManifest<Store>>::TreeId, <N as AsyncManifest<Store>>::TreeId>;
+    type LeafId =
+        CombinedId<<M as AsyncManifest<Store>>::LeafId, <N as AsyncManifest<Store>>::LeafId>;
+    type TrieMapType = TrieMap<Entry<Self::TreeId, Self::LeafId>>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let Combined(m, n) = self;
+        Ok(m.list(ctx, blobstore)
+            .await?
+            .zip(n.list(ctx, blobstore).await?)
+            .map(|(m_result, n_result)| {
+                let (m_elem, m_entry) = m_result?;
+                let (n_elem, n_entry) = n_result?;
+
+                match (m_elem == n_elem, m_entry, n_entry) {
+                    (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
+                        Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
+                    }
+                    (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
+                        Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
+                    }
+                    _ => bail!(
+                        "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
+                        m_elem,
+                        n_elem,
+                    ),
+                }
+            }).boxed())
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let Combined(m, n) = self;
+        Ok(m.list_prefix(ctx, blobstore, prefix)
+            .await?
+            .zip(n.list_prefix(ctx, blobstore, prefix).await?)
+            .map(|(m_result, n_result)| {
+                let (m_elem, m_entry) = m_result?;
+                let (n_elem, n_entry) = n_result?;
+
+                match (m_elem == n_elem, m_entry, n_entry) {
+                    (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
+                        Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
+                    }
+                    (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
+                        Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
+                    }
+                    _ => bail!(
+                        "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
+                        m_elem,
+                        n_elem,
+                    ),
+                }
+            }).boxed())
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        let Combined(m, n) = self;
+        match (
+            m.lookup(ctx, blobstore, name).await?,
+            n.lookup(ctx, blobstore, name).await?,
+        ) {
+            (Some(Entry::Tree(m_tree)), Some(Entry::Tree(n_tree))) => {
+                Ok(Some(Entry::Tree(CombinedId(m_tree, n_tree))))
+            }
+            (Some(Entry::Leaf(m_leaf)), Some(Entry::Leaf(n_leaf))) => {
+                Ok(Some(Entry::Leaf(CombinedId(m_leaf, n_leaf))))
+            }
+            _ => bail!("Found non-matching entry types during lookup for {}", name),
+        }
+    }
+
+    async fn into_trie_map(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        self.list(ctx, blobstore).await?.try_collect().await
     }
 }
 
