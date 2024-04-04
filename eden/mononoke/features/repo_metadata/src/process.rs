@@ -21,14 +21,17 @@ use futures::TryStreamExt;
 use manifest::CombinedId;
 use manifest::Entry;
 use manifest::ManifestOps;
+use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
+use mononoke_types::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
 
+use crate::types::BlamedTextFileMetadata;
 use crate::types::DirectoryMetadata;
 use crate::types::FileMetadata;
 use crate::types::ItemHistory;
@@ -134,9 +137,13 @@ async fn process_file(
     fsnode_file: FsnodeFile,
     file_unode_id: FileUnodeId,
 ) -> Result<MetadataItem> {
+    let blame_id = BlameV2Id::from(file_unode_id);
     let filestore_key = FetchKey::from(*fsnode_file.content_id());
-    let (file_unode, content_metadata) = try_join!(
+    let (file_unode, blame, content_metadata) = try_join!(
         file_unode_id
+            .load(ctx, repo.repo_blobstore())
+            .map_err(anyhow::Error::from),
+        blame_id
             .load(ctx, repo.repo_blobstore())
             .map_err(anyhow::Error::from),
         filestore::get_metadata(repo.repo_blobstore(), ctx, &filestore_key),
@@ -167,5 +174,11 @@ async fn process_file(
     }
 
     let text_file_metadata = TextFileMetadata::new(file_metadata, content_metadata);
-    Ok(MetadataItem::TextFile(text_file_metadata))
+
+    match blame {
+        BlameV2::Rejected(_) => Ok(MetadataItem::TextFile(text_file_metadata)),
+        BlameV2::Blame(blame) => Ok(MetadataItem::BlamedTextFile(
+            BlamedTextFileMetadata::new(ctx, repo, text_file_metadata, blame).await?,
+        )),
+    }
 }

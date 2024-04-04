@@ -225,7 +225,7 @@ impl BlameV2 {
 
     pub fn lines(&self) -> Result<BlameLines<'_>, BlameRejected> {
         match self {
-            BlameV2::Blame(blame_data) => Ok(BlameLines::new(blame_data)),
+            BlameV2::Blame(blame_data) => Ok(blame_data.lines()),
             BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }
@@ -244,7 +244,7 @@ impl BlameV2 {
 
     pub fn changeset_count(&self) -> Result<u32, BlameRejected> {
         match self {
-            BlameV2::Blame(blame_data) => Ok(blame_data.max_csid_index + 1),
+            BlameV2::Blame(blame_data) => Ok(blame_data.changeset_count()),
             BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }
@@ -766,6 +766,14 @@ impl BlameData {
 
     pub fn paths(&self) -> &[NonRootMPath] {
         &self.paths
+    }
+
+    pub fn changeset_count(&self) -> u32 {
+        self.max_csid_index + 1
+    }
+
+    pub fn lines(&self) -> BlameLines<'_> {
+        BlameLines::new(self)
     }
 
     /// Generate a string containing content annotated with this blame data.
