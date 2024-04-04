@@ -17,7 +17,7 @@ pub mod checkout_locations;
 pub mod heads;
 pub(crate) mod history;
 pub mod local_bookmarks;
-pub(crate) mod remote_bookmarks;
+pub mod remote_bookmarks;
 pub mod snapshots;
 pub(crate) mod versions;
 pub(crate) mod workspace;

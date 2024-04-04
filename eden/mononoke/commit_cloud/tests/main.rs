@@ -14,6 +14,8 @@ use commit_cloud_service_lib::heads::HeadExtraArgs;
 use commit_cloud_service_lib::heads::WorkspaceHead;
 use commit_cloud_service_lib::local_bookmarks::LocalBookmarkExtraArgs;
 use commit_cloud_service_lib::local_bookmarks::WorkspaceLocalBookmark;
+use commit_cloud_service_lib::remote_bookmarks::RemoteBookmarkExtraArgs;
+use commit_cloud_service_lib::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud_service_lib::snapshots::SnapshotExtraArgs;
 use commit_cloud_service_lib::snapshots::WorkspaceSnapshot;
 use commit_cloud_service_lib::BasicOps;
@@ -173,6 +175,60 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         .await?
     );
     let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame, workspace.clone(), None).await?;
+    assert_eq!(res, vec![bookmark2]);
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let reponame = "test_repo".to_owned();
+    let workspace = "user_testuser_default".to_owned();
+
+    let bookmark1 = WorkspaceRemoteBookmark {
+        name: "my_bookmark1".to_owned(),
+        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        remote: "remote".to_owned(),
+    };
+
+    let bookmark2 = WorkspaceRemoteBookmark {
+        name: "my_bookmark2".to_owned(),
+        commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
+        remote: "remote".to_owned(),
+    };
+
+    assert!(
+        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone(), None)
+            .await?
+    );
+    assert!(
+        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone(), None)
+            .await?
+    );
+
+    let res: Vec<WorkspaceRemoteBookmark> =
+        sql.get(reponame.clone(), workspace.clone(), None).await?;
+
+    assert_eq!(res.len(), 2);
+
+    let removed_bookmarks = vec!["remote/my_bookmark1".to_owned()];
+
+    assert!(
+        BasicOps::<WorkspaceRemoteBookmark>::delete(
+            &sql,
+            reponame.clone(),
+            workspace.clone(),
+            Some(RemoteBookmarkExtraArgs {
+                removed_bookmarks,
+                remote: "remote".to_owned()
+            })
+        )
+        .await?
+    );
+
+    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame, workspace.clone(), None).await?;
+
     assert_eq!(res, vec![bookmark2]);
 
     Ok(())
