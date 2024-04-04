@@ -84,15 +84,6 @@
   background-color: var(--background);
   position: absolute;
 }
-.commit.topmost .selected-commit .commit-details:before {
-  /* Weird hack: we need to cover up the extra border so the line doesn't continue past the top.
-   * But the color we need it to be is the partially transparent selected bg on top of the background. If we use
-   * the selected background directly, it would be doubly dark. So we first apply a layer of background (e.g. pure white)
-   * and then reapply the selection color on top of that so it matches.
-   */
-  background: var(--background)
-    linear-gradient(0deg, var(--selected-commit-background), var(--selected-commit-background));
-}
 .commit.topmost.head-commit .commit-details:before {
   background-color: var(--button-primary-hover-background);
 }
@@ -119,6 +110,10 @@
   margin-left: var(--halfpad);
   position: relative;
   align-items: center;
+}
+
+.commit-row-selected {
+  background-color: var(--selected-commit-background);
 }
 
 .commit-tree-root {
@@ -172,15 +167,6 @@
   gap: var(--pad);
   align-items: center;
   flex-shrink: 0;
-}
-
-.commit-rows > *:not(.selected-commit-background) {
-  /*
-   * We need the commit selection background behind all other commit info.
-   * Giving the selection a negative index won't work here since then it moves behind its ancestors,
-   * so we instead increment the non-selection elements.
-   */
-  z-index: 1;
 }
 
 .commit-date {
@@ -261,16 +247,6 @@
 .goto-button:focus-within,
 .open-commit-info-button:focus-within {
   opacity: 1;
-}
-
-.selected-commit-background {
-  background-color: var(--selected-commit-background);
-  border: var(--selected-commit-border);
-  width: calc(100% + var(--halfpad));
-  position: absolute;
-  height: 100%;
-  left: calc(0px - var(--halfpad));
-  pointer-events: none;
 }
 
 .stable-commit-metadata {

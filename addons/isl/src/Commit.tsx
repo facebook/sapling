@@ -128,7 +128,7 @@ export const Commit = memo(
 
     const inlineProgress = useAtomValue(inlineProgressByHash(commit.hash));
 
-    const {isSelected, onClickToSelect, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
+    const {isSelected, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
     const actionsPrevented = previewPreventsActions(previewType);
 
     const isNarrow = useAtomValue(isNarrowCommitTree);
@@ -370,18 +370,13 @@ export const Commit = memo(
         }
         onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
-        <div className={'commit-rows' + (isSelected ? ' selected-commit' : '')}>
-          {isSelected ? (
-            <div className="selected-commit-background" data-testid="selected-commit" />
-          ) : null}
+        <div className={'commit-rows'} data-testid={isSelected ? 'selected-commit' : undefined}>
           <DraggableCommit
             className={
               'commit-details' + (previewType != null ? ` commit-preview-${previewType}` : '')
             }
             commit={commit}
-            draggable={!isPublic && isDraggablePreview(previewType)}
-            onClick={onClickToSelect}
-            onDoubleClick={onDoubleClickToShowDrawer}>
+            draggable={!isPublic && isDraggablePreview(previewType)}>
             {isPublic ? null : (
               <span className="commit-title">
                 <span>{title}</span>

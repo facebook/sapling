@@ -29,6 +29,7 @@ import {
   selectedCommits,
   useArrowKeysToChangeSelection,
   useBackspaceToHideSelected,
+  useCommitCallbacks,
 } from './selection';
 import {
   commitFetchError,
@@ -81,6 +82,7 @@ function DagCommitList(props: DagCommitListProps) {
       renderCommit={renderCommit}
       renderCommitExtras={renderCommitExtras}
       renderGlyph={renderGlyph}
+      useExtraCommitRowProps={useExtraCommitRowProps}
     />
   );
 }
@@ -106,6 +108,16 @@ function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
   } else {
     return ['inside-tile', <HighlightedGlyph info={info} />];
   }
+}
+
+function useExtraCommitRowProps(info: DagCommitInfo): React.HTMLAttributes<HTMLDivElement> | void {
+  const {isSelected, onClickToSelect, onDoubleClickToShowDrawer} = useCommitCallbacks(info);
+
+  return {
+    onClick: onClickToSelect,
+    onDoubleClick: onDoubleClickToShowDrawer,
+    className: isSelected ? 'commit-row-selected' : '',
+  };
 }
 
 function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {

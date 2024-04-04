@@ -24,9 +24,6 @@
   display: flex;
   flex-direction: column;
 }
-.commit-info-view-multi-commit .commit .selected-commit-background {
-  background-color: unset;
-}
 
 .commit-info-view-multi-commit .commit-list {
   display: flex;
