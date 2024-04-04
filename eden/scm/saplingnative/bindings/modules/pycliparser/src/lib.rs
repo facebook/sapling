@@ -9,7 +9,11 @@ use std::collections::HashMap;
 
 use clidispatch::global_flags::HgGlobalOpts;
 use cliparser::alias::expand_aliases;
-use cliparser::parser::*;
+use cliparser::parser::Flag;
+use cliparser::parser::ParseError;
+use cliparser::parser::ParseOptions;
+use cliparser::parser::StructFlags;
+use cliparser::parser::Value;
 use configmodel::Config;
 use cpython::*;
 use pyconfigloader::config;
