@@ -58,9 +58,13 @@ Clone the git repo with submodules
 
 Checking out commits triggers submodule updates
 
-  $ hg checkout '.^'
+  $ hg checkout '.^' --config experimental.submodule-pull-quiet=False
   pulling submodule mod/1
+  From * (glob)
+     73c8ee0..0de3093  0de30934572f96ff6d3cbfc70aa8b46ef95dbb42 -> parent/mod_1
   pulling submodule mod/2
+  From * (glob)
+     f4140cb..f02e91c  f02e91cd72c210709673488ad9224fdc72e49018 -> parent/mod_2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo mod/*/*
   mod/1/A mod/1/B mod/2/C mod/2/D

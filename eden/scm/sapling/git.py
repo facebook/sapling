@@ -862,7 +862,8 @@ class Submodule:
         if node not in repo:
             repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
             # Write a remote bookmark to mark node public
-            with repo.ui.configoverride({("ui", "quiet"): "true"}):
+            quiet = repo.ui.configbool("experimental", "submodule-pull-quiet", True)
+            with repo.ui.configoverride({("ui", "quiet"): str(quiet)}):
                 refspec = "+%s:refs/remotes/parent/%s" % (
                     hex(node),
                     # Avoids conflicts like gflags/ and gflags/doc sharing a
