@@ -7,11 +7,27 @@
 
 use anyhow::anyhow;
 use anyhow::Result;
+use blame::RootBlameV2;
+use blobstore::Loadable;
 use bookmarks::BookmarkKey;
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use fsnodes::RootFsnodeId;
+use futures::try_join;
 use futures::Stream;
+use futures::TryStreamExt;
+use manifest::CombinedId;
+use manifest::Entry;
+use manifest::ManifestOps;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::FsnodeId;
+use mononoke_types::ManifestUnodeId;
 
+use crate::types::DirectoryMetadata;
+use crate::types::ItemHistory;
 use crate::types::MetadataItem;
 use crate::Repo;
 
@@ -36,9 +52,81 @@ pub(crate) async fn process_bookmark<'a>(
 }
 
 async fn process_changeset<'a>(
-    _ctx: &'a CoreContext,
-    _repo: &'a impl Repo,
-    _cs_id: ChangesetId,
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+    cs_id: ChangesetId,
 ) -> Result<impl Stream<Item = Result<MetadataItem>> + 'a> {
-    Ok(futures::stream::once(async { Ok(MetadataItem::Unknown) }))
+    let (root_fsnode, root_blame) = try_join!(
+        repo.repo_derived_data().derive::<RootFsnodeId>(ctx, cs_id),
+        repo.repo_derived_data().derive::<RootBlameV2>(ctx, cs_id)
+    )?;
+
+    let root_unode = root_blame.root_manifest();
+
+    // Iterate over pairs of fsnodes and unodes for all files and directories. All
+    // the metadata we want is either stored directly in fsnodes and unodes, or can
+    // be fetched using the content id from fsnodes or the unode id.
+    Ok(
+        CombinedId(*root_fsnode.fsnode_id(), *root_unode.manifest_unode_id())
+            .list_all_entries(ctx.clone(), repo.repo_blobstore_arc())
+            .map_ok(|(path, entry)| process_entry(ctx, repo, path, entry))
+            .try_buffered(200),
+    )
+}
+
+async fn process_entry(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    path: MPath,
+    entry: Entry<CombinedId<FsnodeId, ManifestUnodeId>, CombinedId<FsnodeFile, FileUnodeId>>,
+) -> Result<MetadataItem> {
+    match entry {
+        Entry::Tree(CombinedId(fsnode_id, manifest_unode_id)) => {
+            process_tree(ctx, repo, path, fsnode_id, manifest_unode_id).await
+        }
+        Entry::Leaf(CombinedId(fsnode_file, file_unode_id)) => {
+            process_file(ctx, repo, path, fsnode_file, file_unode_id).await
+        }
+    }
+}
+
+async fn process_tree(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    path: MPath,
+    fsnode_id: FsnodeId,
+    manifest_unode_id: ManifestUnodeId,
+) -> Result<MetadataItem> {
+    let (fsnode, manifest_unode) = try_join!(
+        fsnode_id.load(ctx, repo.repo_blobstore()),
+        manifest_unode_id.load(ctx, repo.repo_blobstore())
+    )?;
+    let summary = fsnode.summary();
+    let info = repo
+        .repo_derived_data()
+        .derive::<ChangesetInfo>(ctx, *manifest_unode.linknode())
+        .await?;
+
+    Ok(MetadataItem::Directory(DirectoryMetadata {
+        path,
+        history: ItemHistory {
+            last_author: info.author().to_string(),
+            last_modified_timestamp: *info.author_date(),
+        },
+        child_files_count: summary.child_files_count,
+        child_files_total_size: summary.child_files_total_size,
+        child_dirs_count: summary.child_dirs_count,
+        descendant_files_count: summary.descendant_files_count,
+        descendant_files_total_size: summary.descendant_files_total_size,
+    }))
+}
+
+async fn process_file(
+    _ctx: &CoreContext,
+    _repo: &impl Repo,
+    _path: MPath,
+    _fsnode_file: FsnodeFile,
+    _file_unode_id: FileUnodeId,
+) -> Result<MetadataItem> {
+    Ok(MetadataItem::Unknown)
 }

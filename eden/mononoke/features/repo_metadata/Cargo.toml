@@ -9,9 +9,14 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
+blame = { version = "0.1.0", path = "../../derived_data/blame" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 context = { version = "0.1.0", path = "../../server/context" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
