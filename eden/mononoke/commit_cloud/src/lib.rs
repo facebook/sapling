@@ -16,7 +16,7 @@ pub mod builder;
 pub mod checkout_locations;
 pub mod heads;
 pub(crate) mod history;
-pub(crate) mod local_bookmarks;
+pub mod local_bookmarks;
 pub(crate) mod remote_bookmarks;
 pub mod snapshots;
 pub(crate) mod versions;

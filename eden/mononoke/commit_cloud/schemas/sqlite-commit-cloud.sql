@@ -7,7 +7,7 @@
 
 -- bookmarks
 -- Contains the set of bookmarks for each workspace
-CREATE TABLE IF NOT EXISTS  `workspace_bookmarks` (
+CREATE TABLE IF NOT EXISTS  `workspacebookmarks` (
   `reponame` VARCHAR(255) NOT NULL,
   `workspace` VARCHAR(255) NOT NULL,
   `name` VARCHAR(512) NOT NULL,
