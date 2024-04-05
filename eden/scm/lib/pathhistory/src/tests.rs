@@ -363,7 +363,7 @@ use FileType::Executable as E;
 use FileType::Regular as R;
 use FileType::Symlink as S;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_files() {
     let t = TestHistory::from_history(&[
         (0, "a", 1, R),
@@ -396,7 +396,7 @@ async fn test_log_files() {
     assert_eq!(h.next_n(10).await, [250, 200, 150, 100, 0]);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_dirs() {
     let t = TestHistory::from_history(&[
         (0, "a/b/c/d", 1, R),
@@ -455,7 +455,7 @@ async fn test_log_dirs() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_with_roots() {
     // Use a commit graph with a few roots.
     let t = TestHistory::from_history(&[(0, "a", 1, R)]);
@@ -473,7 +473,7 @@ async fn test_log_with_roots() {
     assert_eq!(h.next_n(5).await, &[] as &[u64]);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_merge_same_with_parent() {
     // b--------merge
     //     /
@@ -508,7 +508,7 @@ async fn test_log_merge_same_with_parent() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_muti_heads_in_testing_range() {
     // This test targets the plain "bisect" algorithm that was
     // tried before using segments. It is generally useful
@@ -555,7 +555,7 @@ async fn test_log_muti_heads_in_testing_range() {
     assert_eq!(h.next_n(9).await, [120, 48, 32, 0]);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_subset_misleading_parents() {
     // a: 0..80 (0), 80..90 (1), 90..100 (0)
     let t = TestHistory::from_history(&[
@@ -581,7 +581,7 @@ async fn test_log_subset_misleading_parents() {
     assert_eq!(h.next_n(9).await, &[90, 80]);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_with_mode_only_changes() {
     let t = TestHistory::from_history(&[(0, "a", 1, R), (100, "a", 1, E), (200, "a", 1, S)]);
     let mut h = t.paths_history(300, &["a"]).await;
@@ -592,7 +592,7 @@ async fn test_log_with_mode_only_changes() {
 mod rename_tracer_tests {
     use super::*;
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_trace_rename_files() {
         let t = TestHistory::from_history(&[
             (0, "a", 1, R),
@@ -613,7 +613,7 @@ mod rename_tracer_tests {
         assert_eq!(r.next_n(2).await, [0]);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_trace_nested_rename_files() {
         let t = TestHistory::from_history(&[
             (0, "a/b/1", 1, R),
@@ -634,7 +634,7 @@ mod rename_tracer_tests {
         assert_eq!(r.next_n(2).await, [0]);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_trace_commit_added_files() {
         let t = TestHistory::from_history(&[
             (0, "a", 1, R),
