@@ -14,65 +14,27 @@ import type {
 import type {ParsedDiff} from 'shared/patch/parse';
 
 import {themeState} from '../../theme';
-import {registerCleanup} from '../../utils';
+import {registerCleanup, registerDisposable} from '../../utils';
+import {SynchronousWorker, WorkerApi} from './workerApi';
 import {useAtomValue} from 'jotai';
 import {useEffect, useState} from 'react';
 import {CancellationToken} from 'shared/CancellationToken';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 
-class StubWorker {
-  public onmessage = (_e: MessageEvent) => null;
-  public postMessage = (_msg: unknown) => undefined;
-}
+// Syntax highlighting is done in a WebWorker. This file contains APIs
+// to be called from the main thread, which are delegated to the worker.
+// In some environemtns, WebWorker is not available. In that case,
+// we fall back to a synchronous worker.
 
-class WorkerApi<Request extends {type: string}, Response extends {type: string}> {
-  public worker: Worker;
-
-  private id = 0;
-  private requests = new Map<number, (response: Response) => void>();
-  private listeners = new Map<Response['type'], (msg: Response) => void>();
-
-  constructor(url: URL) {
-    this.worker = window.Worker ? new Worker(url, {type: 'module'}) : (new StubWorker() as Worker);
-    type ResponseWithId = Response & {id: number};
-    this.worker.onmessage = e => {
-      const msg = e.data as Response;
-      const id = (msg as ResponseWithId).id;
-      const callback = this.requests.get(id);
-      if (callback) {
-        callback(msg);
-        this.requests.delete(id);
-      }
-
-      const listener = this.listeners.get(msg.type);
-      if (listener) {
-        listener(msg);
-      }
-    };
-  }
-
-  /** Send a message, then wait for a reply */
-  request<T extends Request['type']>(msg: Request & {type: T}): Promise<Response & {type: T}> {
-    return new Promise<Response & {type: T}>(resolve => {
-      const id = this.id++;
-      this.worker.postMessage({...msg, id});
-      this.requests.set(id, resolve as (response: Response) => void);
-    });
-  }
-
-  /** listen for messages from the server of a given type */
-  listen<T extends Response['type']>(
-    type: T,
-    listener: (msg: Response & {type: T}) => void,
-  ): () => void {
-    this.listeners.set(type, listener as (msg: Response) => void);
-    return () => this.listeners.delete(type);
-  }
-}
+// Useful for testing the non-WebWorker implementation
+const forceDisableWorkers = false;
 
 const worker = new WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>(
-  new URL('./syntaxHighlightingWorker', import.meta.url),
+  window.Worker && !forceDisableWorkers
+    ? new Worker(new URL('./syntaxHighlightingWorker', import.meta.url), {type: 'module'})
+    : (new SynchronousWorker(() => import('./syntaxHighlightingWorker')) as unknown as Worker),
 );
+registerDisposable(worker, worker, import.meta.hot);
 registerCleanup(
   worker,
   worker.listen('cssColorMap', msg => {

@@ -386,8 +386,7 @@ describe('ComparisonView', () => {
     unmountNow();
   });
 
-  // TODO: reenable once we support synchronous highlights when web workers unavailable.
-  describe.skip('syntax highlighting', () => {
+  describe('syntax highlighting', () => {
     it('renders syntax highlighting', async () => {
       await openUncommittedChangesComparison(DIFF_WITH_SYNTAX);
       await waitForSyntaxHighlightingToAppear(screen.getByTestId('comparison-view'));

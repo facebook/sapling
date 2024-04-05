@@ -34,9 +34,9 @@ export type SyntaxWorkerResponse =
     }
   | {
       type: 'tokenizeContents';
-      result: TokenizedHunk;
+      result: TokenizedHunk | undefined;
     }
   | {
       type: 'tokenizeHunks';
-      result: TokenizedDiffHunks;
+      result: TokenizedDiffHunks | undefined;
     };

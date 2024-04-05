@@ -25,7 +25,11 @@ const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
 
 /* This file is intended to be executed in a WebWorker, without access to the DOM. */
 
-async function loadGrammar(theme: ThemeColor, path: string): Promise<IGrammar | undefined> {
+async function loadGrammar(
+  theme: ThemeColor,
+  path: string,
+  postMessage: (msg: SyntaxWorkerResponse) => void,
+): Promise<IGrammar | undefined> {
   await ensureOnigurumaIsLoaded();
 
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
@@ -42,25 +46,34 @@ async function loadGrammar(theme: ThemeColor, path: string): Promise<IGrammar | 
   return grammar ?? undefined;
 }
 
-onmessage = async (event: MessageEvent) => {
+export async function handleMessage(
+  postMessage: (msg: SyntaxWorkerResponse & {id?: number}) => unknown,
+  event: MessageEvent,
+) {
   const data = event.data as SyntaxWorkerRequest & {id: number};
 
   const token = new CancellationToken(); // TODO: remember this and accept "cancel" messages
   switch (data.type) {
     case 'tokenizeContents': {
-      const grammar = await loadGrammar(data.theme, data.path);
+      const grammar = await loadGrammar(data.theme, data.path, postMessage);
       const result = tokenizeContent(grammar, data.content, token);
-      postMessage({type: data.type, id: data.id, result} as SyntaxWorkerResponse);
+      postMessage({type: data.type, id: data.id, result});
       break;
     }
     case 'tokenizeHunks': {
-      const grammar = await loadGrammar(data.theme, data.path);
+      const grammar = await loadGrammar(data.theme, data.path, postMessage);
       const result = tokenizeHunks(grammar, data.hunks, token);
-      postMessage({type: data.type, id: data.id, result} as SyntaxWorkerResponse);
+      postMessage({type: data.type, id: data.id, result});
       break;
     }
   }
-};
+}
+
+if (typeof self.document === 'undefined') {
+  // inside WebWorker, use global onmessage and postMessage
+  onmessage = handleMessage.bind(undefined, postMessage);
+  // outside of a WebWorker, the exported `handleMessage` funciton should be used instead.
+}
 
 function tokenizeHunks(
   grammar: IGrammar | undefined,
