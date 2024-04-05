@@ -16,7 +16,7 @@ import os
 import subprocess
 import sys
 from functools import partial
-from typing import BinaryIO
+from typing import BinaryIO, Optional
 
 from ..sh import Env, Scope
 from ..sh.bufio import BufIO
@@ -33,8 +33,13 @@ def testsetup(t: TestTmp):
 
     # consider run-tests.py --watchman
     use_watchman = os.getenv("HGFSMONITOR_TESTS") == "1"
+    # similar to the one above, but considerably uglier
+    if os.getenv("HGTEST_USE_EDEN") == "1":
+        edenpath = str(t.path / "bin" / "eden")
+    else:
+        edenpath = None
 
-    hgrc = _get_hgrc(testdir, use_watchman)
+    hgrc = _get_hgrc(testdir, use_watchman, edenpath)
 
     hgrcpath = t.path / "hgrc"
     hgrcpath.write_bytes(hgrc.encode())
@@ -295,9 +300,9 @@ def _execpython(path):
     return env
 
 
-def _get_hgrc(testdir: str, use_watchman: bool) -> str:
+def _get_hgrc(testdir: str, use_watchman: bool, edenpath: Optional[str]) -> str:
     fpath = os.path.join(testdir, "default_hgrc.py")
     result = ""
     if os.path.exists(fpath):
-        result = _execpython(fpath).get("get_content")(use_watchman)
+        result = _execpython(fpath).get("get_content")(use_watchman, edenpath=edenpath)
     return result

@@ -12,8 +12,14 @@
 Default config file for testing
 """
 
+import os
 
-def get_content(use_watchman: bool = False, use_ipv6: bool = False) -> str:
+from typing import Optional
+
+
+def get_content(
+    use_watchman: bool = False, use_ipv6: bool = False, edenpath: Optional[str] = None
+) -> str:
     content = f"""
 [ui]
 slash=True
@@ -89,6 +95,12 @@ fsmonitor=
 
 [fsmonitor]
 fallback-on-watchman-exception=false
+"""
+
+    if edenpath:
+        content += f"""
+[edenfs]
+command={edenpath + ('.bat' if os.name == "nt" else '')}
 """
 
     return content
