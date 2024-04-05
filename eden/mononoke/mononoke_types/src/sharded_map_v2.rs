@@ -714,10 +714,10 @@ mod test {
         ("omungal", 4),
     ];
 
-    fn to_test_vec(entries: &[(&str, u32)]) -> Vec<(SmallBinary, TestValue)> {
+    fn to_test_vec(entries: &[(&str, u32)]) -> Vec<(String, u32)> {
         entries
             .iter()
-            .map(|(key, value)| (SmallBinary::from_slice(key.as_bytes()), TestValue(*value)))
+            .map(|(key, value)| (String::from(*key), *value))
             .collect()
     }
 
@@ -799,8 +799,11 @@ mod test {
         async fn into_entries(
             &self,
             map: ShardedMapV2Node<TestValue>,
-        ) -> Result<Vec<(SmallBinary, TestValue)>> {
+        ) -> Result<Vec<(String, u32)>> {
             map.into_entries(&self.0, &self.1)
+                .and_then(
+                    |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
+                )
                 .try_collect::<Vec<_>>()
                 .await
         }
@@ -809,8 +812,11 @@ mod test {
             &self,
             map: ShardedMapV2Node<TestValue>,
             prefix: impl AsRef<[u8]>,
-        ) -> Result<Vec<(SmallBinary, TestValue)>> {
+        ) -> Result<Vec<(String, u32)>> {
             map.into_prefix_entries(&self.0, &self.1, prefix.as_ref())
+                .and_then(
+                    |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
+                )
                 .try_collect::<Vec<_>>()
                 .await
         }
@@ -1321,7 +1327,6 @@ mod test {
                         .into_entries(map.clone())
                         .await?
                         .into_iter()
-                        .map(|(key, value)| (String::from_utf8(key.to_vec()).unwrap(), value.0))
                         .collect::<BTreeMap<_, _>>();
                     if roundtrip_map != values {
                         return Err(anyhow!(
