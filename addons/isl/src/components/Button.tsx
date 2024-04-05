@@ -117,6 +117,7 @@ export const Button = forwardRef(
           disabled && styles.disabled,
           xstyle,
         )}
+        disabled={disabled}
         {...rest}>
         {children}
       </button>

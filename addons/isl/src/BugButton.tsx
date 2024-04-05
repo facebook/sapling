@@ -12,17 +12,24 @@ import {DropdownFields} from './DropdownFields';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
+import {Button} from './components/Button';
 import {Divider} from './components/Divider';
 import {DEFAULT_HEARTBEAT_TIMEOUT_MS, useHeartbeat} from './heartbeat';
 import {t, T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {Icon} from 'shared/Icon';
 
 import './BugButton.css';
+
+const styles = stylex.create({
+  centered: {
+    justifyContent: 'center',
+  },
+});
 
 export function BugButton() {
   return (
@@ -31,9 +38,9 @@ export function BugButton() {
       component={dismiss => <BugDropdown dismiss={dismiss} />}
       group="topbar"
       placement="bottom">
-      <VSCodeButton appearance="icon" data-testid="bug-button">
+      <Button icon data-testid="bug-button">
         <Icon icon="bug" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -126,30 +133,30 @@ function FileABug({
 function OSSFileABug() {
   return (
     <>
-      <VSCodeButton
-        appearance="secondary"
+      <Button
+        xstyle={styles.centered}
         onClick={() => {
           platform.openExternalLink('https://sapling-scm.com/docs/addons/isl');
         }}>
         <Icon icon="book" slot="start" />
         <T>View Documentation</T>
-      </VSCodeButton>
-      <VSCodeButton
-        appearance="secondary"
+      </Button>
+      <Button
+        xstyle={styles.centered}
         onClick={() => {
           platform.openExternalLink('https://discord.gg/X6baZ94Vzh');
         }}>
         <Icon icon="comment-discussion" slot="start" />
         <T>Help and Feedback on Discord</T>
-      </VSCodeButton>
-      <VSCodeButton
-        appearance="secondary"
+      </Button>
+      <Button
+        xstyle={styles.centered}
         onClick={() => {
           platform.openExternalLink('https://github.com/facebook/sapling/issues');
         }}>
         <Icon icon="bug" slot="start" />
         <T>Report an Issue on GitHub</T>
-      </VSCodeButton>
+      </Button>
     </>
   );
 }
