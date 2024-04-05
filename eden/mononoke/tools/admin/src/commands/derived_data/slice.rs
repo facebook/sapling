@@ -12,28 +12,15 @@ use anyhow::Result;
 use clap::Args;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use futures::future;
-use futures::TryFutureExt;
+use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::ChangesetArgs;
-use mononoke_types::ChangesetId;
-use mononoke_types::Generation;
 use repo_derived_data::RepoDerivedDataArc;
-use serde::Deserialize;
-use serde::Serialize;
+use slog::debug;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
 use super::args::DerivedUtilsArgs;
 use super::Repo;
-
-/// A description of a slice of the commit graph. All commits that are ancestors of
-/// `slice_frontier` and have generation numbers higher than or equal to `slice_start`
-/// are considered part of the slice.
-#[derive(Serialize, Deserialize)]
-pub(super) struct SliceDescription {
-    pub slice_frontier: Vec<ChangesetId>,
-    pub slice_start: Generation,
-}
 
 #[derive(Args)]
 pub(super) struct SliceArgs {
@@ -62,63 +49,73 @@ pub(super) struct SliceArgs {
 pub(super) async fn slice(ctx: &CoreContext, repo: &Repo, args: SliceArgs) -> Result<()> {
     let derived_utils = args.derived_utils_args.derived_utils(ctx, repo)?;
 
-    let csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    let mut cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
 
-    let slices = if args.rederive {
-        repo.commit_graph()
-            .slice_ancestors(
-                ctx,
-                csids,
-                |csids| future::ok(csids.into_iter().collect()),
-                args.slice_size,
-            )
-            .await?
+    debug!(
+        ctx.logger(),
+        "slicing ancestors of {} changesets",
+        cs_ids.len(),
+    );
+
+    let excluded_ancestors = if args.rederive {
+        vec![]
     } else {
-        repo.commit_graph()
-            .slice_ancestors(
-                ctx,
-                csids,
-                |csids| {
-                    derived_utils
-                        .pending(ctx.clone(), repo.repo_derived_data_arc(), csids)
-                        .map_ok(|pending_csids| pending_csids.into_iter().collect())
-                },
-                args.slice_size,
-            )
-            .await?
+        cs_ids = derived_utils
+            .pending(ctx.clone(), repo.repo_derived_data_arc(), cs_ids)
+            .await?;
+
+        let (frontier_stats, frontier) = repo
+            .commit_graph()
+            .ancestors_frontier_with(ctx, cs_ids.clone(), |cs_id| {
+                derived_utils.is_derived(ctx, cs_id)
+            })
+            .try_timed()
+            .await?;
+        debug!(
+            ctx.logger(),
+            "calculated derived frontier ({} changesets) in {}ms",
+            frontier.len(),
+            frontier_stats.completion_time.as_millis(),
+        );
+        frontier
     };
+
+    let (slices_stats, (slices, boundary_changesets)) = repo
+        .commit_graph()
+        .segmented_slice_ancestors(ctx, cs_ids, excluded_ancestors, args.slice_size)
+        .try_timed()
+        .await?;
+    debug!(
+        ctx.logger(),
+        "calculated slices in {}ms",
+        slices_stats.completion_time.as_millis(),
+    );
 
     if let Some(output_json_file) = args.output_json_file {
         let mut file = File::create(output_json_file)
             .await
             .context("Failed to create output file")?;
-        file.write_all(
-            serde_json::to_string(
-                &slices
-                    .into_iter()
-                    .map(|(slice_start, slice_frontier)| SliceDescription {
-                        slice_frontier,
-                        slice_start,
-                    })
-                    .collect::<Vec<_>>(),
-            )?
-            .as_bytes(),
-        )
-        .await
-        .context("Failed to write slices to output file")?;
+        file.write_all(serde_json::to_string(&(slices, boundary_changesets))?.as_bytes())
+            .await
+            .context("Failed to write slices to output file")?;
         file.flush().await?;
     } else {
-        for (slice_start, slice_frontier) in slices {
-            let slice_frontier = slice_frontier
-                .into_iter()
-                .map(|cs_id| format!("{}", cs_id))
-                .collect::<Vec<_>>();
+        println!("Slices:");
+        for slice in slices {
             println!(
-                "[{}, {}): {}",
-                slice_start.value(),
-                slice_start.value() + args.slice_size,
-                slice_frontier.join(" ")
+                "{}",
+                slice
+                    .segments
+                    .into_iter()
+                    .map(|segment| format!("{}->{}", segment.head, segment.base))
+                    .collect::<Vec<_>>()
+                    .join(" ")
             );
+        }
+
+        println!("Boundary changesets:");
+        for cs_id in boundary_changesets {
+            println!("{}", cs_id);
         }
     }
 
