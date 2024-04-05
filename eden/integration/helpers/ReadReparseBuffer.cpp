@@ -33,10 +33,10 @@ int main(int argc, char* argv[]) {
       path.wide().c_str(),
       0,
       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-      NULL,
+      nullptr,
       OPEN_EXISTING,
       FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-      NULL)};
+      nullptr)};
   if (handle.get() == INVALID_HANDLE_VALUE) {
     fmt::print(
         "Unable to determine reparse point type for {}: {}",
