@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CancellationToken} from 'shared/CancellationToken';
+
 type WorkerModuleType<Request, Response> = {
   handleMessage: (callback: (msg: Response) => void, msg: MessageEvent<Request>) => void;
 };
@@ -68,11 +70,21 @@ export class WorkerApi<Request extends {type: string}, Response extends {type: s
   }
 
   /** Send a message, then wait for a reply */
-  request<T extends Request['type']>(msg: Request & {type: T}): Promise<Response & {type: T}> {
+  request<T extends Request['type']>(
+    msg: Request & {type: T},
+    cancellationToken?: CancellationToken,
+  ): Promise<Response & {type: T}> {
     return new Promise<Response & {type: T}>(resolve => {
       const id = this.id++;
       this.worker.postMessage({...msg, id});
-      this.requests.set(id, resolve as (response: Response) => void);
+
+      const disposeOnCancel = cancellationToken?.onCancel(() => {
+        this.worker.postMessage({type: 'cancel', idToCancel: id});
+      });
+      this.requests.set(id, result => {
+        (resolve as (response: Response) => void)(result);
+        disposeOnCancel?.();
+      });
     });
   }
 

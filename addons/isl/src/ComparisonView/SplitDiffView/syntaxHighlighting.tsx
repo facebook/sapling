@@ -65,7 +65,7 @@ export function useTokenizedHunks(
 
   useEffect(() => {
     const token = newTrackedCancellationToken();
-    worker.request({type: 'tokenizeHunks', theme, path, hunks}).then(result => {
+    worker.request({type: 'tokenizeHunks', theme, path, hunks}, token).then(result => {
       if (!token.isCancelled) {
         setTokenized(result.result);
       }
@@ -91,7 +91,7 @@ export function useTokenizedContents(
       return;
     }
     const token = newTrackedCancellationToken();
-    worker.request({type: 'tokenizeContents', theme, path, content}).then(result => {
+    worker.request({type: 'tokenizeContents', theme, path, content}, token).then(result => {
       if (!token.isCancelled) {
         setTokenized(result.result);
       }
@@ -143,8 +143,8 @@ export function useTokenizedContentsOnceVisible(
     const token = newTrackedCancellationToken();
 
     Promise.all([
-      worker.request({type: 'tokenizeContents', theme, path, content: contentBefore}),
-      worker.request({type: 'tokenizeContents', theme, path, content: contentAfter}),
+      worker.request({type: 'tokenizeContents', theme, path, content: contentBefore}, token),
+      worker.request({type: 'tokenizeContents', theme, path, content: contentAfter}, token),
     ]).then(([a, b]) => {
       if (a?.result == null || b?.result == null) {
         return;

@@ -46,25 +46,68 @@ async function loadGrammar(
   return grammar ?? undefined;
 }
 
-export async function handleMessage(
+const cancellationTokenForId = new Map<number, CancellationToken>();
+
+class WorkQueue {
+  private queue: Array<() => Promise<void>> = [];
+  private isProcessing = false;
+
+  public push(work: () => Promise<void>) {
+    this.queue.push(work);
+
+    if (!this.isProcessing) {
+      this.processNext();
+    }
+  }
+
+  private async processNext() {
+    if (this.queue.length > 0) {
+      const work = this.queue.shift();
+      this.isProcessing = true;
+      // Allow the task queue to be emptied before continuing,
+      // so we can process cancel messages
+      await new Promise(res => setTimeout(res, 0));
+      await work?.().catch(() => null);
+      this.isProcessing = false;
+      this.processNext();
+    }
+  }
+}
+
+const workQueue = new WorkQueue();
+
+export function handleMessage(
   postMessage: (msg: SyntaxWorkerResponse & {id?: number}) => unknown,
   event: MessageEvent,
 ) {
   const data = event.data as SyntaxWorkerRequest & {id: number};
 
-  const token = new CancellationToken(); // TODO: remember this and accept "cancel" messages
+  const token = new CancellationToken();
+  if (data.id != null) {
+    cancellationTokenForId.set(data.id, token);
+  }
   switch (data.type) {
     case 'tokenizeContents': {
-      const grammar = await loadGrammar(data.theme, data.path, postMessage);
-      const result = tokenizeContent(grammar, data.content, token);
-      postMessage({type: data.type, id: data.id, result});
+      workQueue.push(async () => {
+        const grammar = await loadGrammar(data.theme, data.path, postMessage);
+        const result = tokenizeContent(grammar, data.content, token);
+        postMessage({type: data.type, id: data.id, result});
+        cancellationTokenForId.delete(data.id);
+      });
       break;
     }
     case 'tokenizeHunks': {
-      const grammar = await loadGrammar(data.theme, data.path, postMessage);
-      const result = tokenizeHunks(grammar, data.hunks, token);
-      postMessage({type: data.type, id: data.id, result});
+      workQueue.push(async () => {
+        const grammar = await loadGrammar(data.theme, data.path, postMessage);
+        const result = tokenizeHunks(grammar, data.hunks, token);
+        postMessage({type: data.type, id: data.id, result});
+        cancellationTokenForId.delete(data.id);
+      });
       break;
+    }
+    case 'cancel': {
+      const token = cancellationTokenForId.get(data.idToCancel);
+      token?.cancel();
     }
   }
 }

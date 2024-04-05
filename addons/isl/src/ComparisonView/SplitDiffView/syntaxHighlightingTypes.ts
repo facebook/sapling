@@ -21,6 +21,10 @@ export type SyntaxWorkerRequest =
       content: Array<string>;
     }
   | {
+      type: 'cancel';
+      idToCancel: number;
+    }
+  | {
       type: 'tokenizeHunks';
       theme: ThemeColor;
       path: string;
