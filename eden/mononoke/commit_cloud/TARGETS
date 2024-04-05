@@ -4,7 +4,7 @@ load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
 oncall("mononoke")
 
 rust_library(
-    name = "commit_cloud_service_lib",
+    name = "commit_cloud",
     srcs = glob([
         "src/**/*.rs",
         "schemas/*.sql",
@@ -27,7 +27,7 @@ rust_unittest(
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/commit_cloud:commit_cloud_service_lib",
+        "//eden/mononoke/commit_cloud:commit_cloud",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
