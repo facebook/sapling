@@ -16,6 +16,9 @@ use cloned::cloned;
 use commit_graph::AncestorsStreamBuilder;
 use commit_graph::CommitGraph;
 use commit_graph_types::edges::ChangesetNode;
+use commit_graph_types::segments::BoundaryChangesets;
+use commit_graph_types::segments::SegmentDescription;
+use commit_graph_types::segments::SegmentedSliceDescription;
 use context::CoreContext;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -393,6 +396,45 @@ where
             ))
             .collect::<Vec<_>>(),
     );
+    Ok(())
+}
+
+pub async fn assert_segmented_slice_ancestors(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: Vec<&str>,
+    common: Vec<&str>,
+    slice_size: u64,
+    expected_slices: Vec<Vec<(&str, &str)>>,
+    expected_boundary_changesets: Vec<&str>,
+) -> Result<()> {
+    let heads = heads.into_iter().map(name_cs_id).collect();
+    let common = common.into_iter().map(name_cs_id).collect();
+
+    let expected_slices: Vec<_> = expected_slices
+        .into_iter()
+        .map(|segments| SegmentedSliceDescription {
+            segments: segments
+                .into_iter()
+                .map(|(head, base)| SegmentDescription {
+                    head: name_cs_id(head),
+                    base: name_cs_id(base),
+                })
+                .collect(),
+        })
+        .collect();
+    let expected_boundary_changesets = expected_boundary_changesets
+        .into_iter()
+        .map(name_cs_id)
+        .collect::<BoundaryChangesets>();
+
+    let (slices, boundary_changesets) = graph
+        .segmented_slice_ancestors(ctx, heads, common, slice_size)
+        .await?;
+
+    assert_eq!(slices, expected_slices);
+    assert_eq!(boundary_changesets, expected_boundary_changesets);
+
     Ok(())
 }
 

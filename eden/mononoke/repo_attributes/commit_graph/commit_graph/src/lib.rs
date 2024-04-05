@@ -9,16 +9,22 @@
 //!
 //! The graph of all commits in the repository.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
 pub use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
+use commit_graph_types::segments::BoundaryChangesets;
+use commit_graph_types::segments::ChangesetSegment;
+use commit_graph_types::segments::SegmentDescription;
+use commit_graph_types::segments::SegmentedSliceDescription;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchEdge;
@@ -38,6 +44,7 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
+use smallvec::smallvec;
 
 pub use crate::ancestors_stream::AncestorsStreamBuilder;
 
@@ -484,6 +491,143 @@ impl CommitGraph {
         }
 
         Ok(slices.into_iter().rev().collect())
+    }
+
+    /// Slices ancestors of `heads` excluding ancestors of `common` into a sequence
+    /// of topologically ordered segmented slices for processing.
+    ///
+    /// Returns a tuple of the slices and the boundary changesets between the slices.
+    /// A boundary changeset is any changeset that is a parent of another changeset in
+    /// another slice.
+    ///
+    /// Each slice consists of a sequence of topologically ordered segments, and every segment
+    /// is represented using the changeset ids of its head and its base. Each slice is guaranteed
+    /// to have size equal to `slice_size` except possibly the last one which may be smaller.
+    pub async fn segmented_slice_ancestors(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        common: Vec<ChangesetId>,
+        slice_size: u64,
+    ) -> Result<(Vec<SegmentedSliceDescription>, BoundaryChangesets)> {
+        let segments = self
+            .ancestors_difference_segments(ctx, heads, common)
+            .await?;
+
+        // Sort the segments in dfs order to try to minimize the number of boundary changesets.
+        let segments = Self::dfs_order_segments(ctx, segments);
+
+        // Go through the segments and try to add each to the current slice if the total
+        // number of changesets in the slice wouldn't exceed `slice_size`. Otherwise,
+        // split the current segment into two parts such that the first has `slice_size`
+        // - `current_slice_size` changesets and the second has the rest, then add the first
+        // part to the current slice and continue from the second part.
+
+        let mut slices = vec![];
+        let mut boundary_changesets: BoundaryChangesets = Default::default();
+
+        let mut current_segments = vec![];
+        let mut current_slice_heads: BTreeMap<ChangesetId, u64> = Default::default();
+        let mut current_slice_size = 0;
+
+        for mut segment in segments {
+            loop {
+                // Current slice is full. Add it to the list of slices and create a new one.
+                if current_slice_size == slice_size {
+                    slices.push(SegmentedSliceDescription {
+                        segments: std::mem::take(&mut current_segments),
+                    });
+                    current_slice_heads.clear();
+                    current_slice_size = 0;
+                }
+
+                // Go through all parents of the current segment and check if they are
+                // contained in another slice. If so, add them to boundary changesets.
+                for parent in segment.parents {
+                    // Check that the parent has a location. Otherwise it's part of
+                    // ancestors of `common` and shouldn't be added to boundary changesets.
+                    if let Some(location) = parent.location {
+                        // Parent is part of another slice if its location is either relative
+                        // to a head of a segment belonging to another slice or to a segment
+                        // belonging to the current slice but the distance is greater than
+                        // that segment length (which would mean that it belonged to the
+                        // first part of a segment that was split)
+                        match current_slice_heads.get(&location.head) {
+                            Some(length) if location.distance < *length => {}
+                            _ => {
+                                boundary_changesets.insert(parent.cs_id);
+                            }
+                        }
+                    }
+                }
+
+                if current_slice_size + segment.length <= slice_size {
+                    // Adding the current segment wouldn't cause the current slice to exceed
+                    // `slice_size`.
+                    current_segments.push(SegmentDescription {
+                        head: segment.head,
+                        base: segment.base,
+                    });
+                    current_slice_heads.insert(segment.head, segment.length);
+                    current_slice_size += segment.length;
+
+                    break;
+                } else {
+                    // Split the current segment into two parts.
+                    let split_cs_ids = self
+                        .locations_to_changeset_ids(
+                            ctx,
+                            segment.head,
+                            current_slice_size + segment.length - slice_size - 1,
+                            2,
+                        )
+                        .await?;
+
+                    let (split_base, split_head) = match split_cs_ids.as_slice() {
+                        [split_base, split_head] => (*split_base, *split_head),
+                        _ => {
+                            bail!(
+                                "Programmer error: split_cs_ids must have exactly two changeset ids"
+                            )
+                        }
+                    };
+
+                    // Add the first part to the current slice.
+                    current_segments.push(SegmentDescription {
+                        head: split_head,
+                        base: segment.base,
+                    });
+
+                    // The split head is a parent of the upcoming slice so
+                    // it's a boundary changeset.
+                    boundary_changesets.insert(split_head);
+
+                    // Continue loop using the second part of the segment.
+                    segment = ChangesetSegment {
+                        head: segment.head,
+                        base: split_base,
+                        length: current_slice_size + segment.length - slice_size,
+                        parents: smallvec![],
+                    };
+
+                    // Current slice is full. Add it to the list of slices and create a new one.
+                    slices.push(SegmentedSliceDescription {
+                        segments: std::mem::take(&mut current_segments),
+                    });
+                    current_slice_heads.clear();
+                    current_slice_size = 0;
+                }
+            }
+        }
+
+        // Make sure to add the last slice to the list of slices.
+        if current_slice_size > 0 {
+            slices.push(SegmentedSliceDescription {
+                segments: current_segments,
+            });
+        }
+
+        Ok((slices, boundary_changesets))
     }
 
     /// Runs the given `process` closure on all of the given changesets in local topological
