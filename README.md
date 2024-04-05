@@ -1,3 +1,6 @@
+# MCODE SETUP
+Go read the README in eden/contrib/reviewstack/README.md & follow the steps there.
+
 # Sapling SCM
 
 Sapling SCM is a cross-platform, highly scalable, Git-compatible source control system.
