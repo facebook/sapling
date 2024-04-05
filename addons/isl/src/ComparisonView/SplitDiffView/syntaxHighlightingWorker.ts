@@ -21,23 +21,29 @@ import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import {tokenizeLines} from 'shared/textmate-lib/tokenize';
 import {loadWASM} from 'vscode-oniguruma';
 
-const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
+const URL_TO_ONIG_WASM = './generated/textmate/onig.wasm';
 
 /* This file is intended to be executed in a WebWorker, without access to the DOM. */
+
+/**
+ * Fetch reqeusts inside the webworker must be made relative to the base URI.
+ * By executing the web worker via a blob: URL, we can't depend on the base being inherited.
+ */
+let globalBaseUri: string;
 
 async function loadGrammar(
   theme: ThemeColor,
   path: string,
   postMessage: (msg: SyntaxWorkerResponse) => void,
 ): Promise<IGrammar | undefined> {
-  await ensureOnigurumaIsLoaded();
+  await ensureOnigurumaIsLoaded(globalBaseUri);
 
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   if (!scopeName) {
     return undefined;
   }
 
-  const store = getGrammerStore(theme, colorMap => {
+  const store = getGrammerStore(theme, globalBaseUri, colorMap => {
     // tell client the newest colorMap
     postMessage({type: 'cssColorMap', colorMap} as SyntaxWorkerResponse);
   });
@@ -67,7 +73,11 @@ class WorkQueue {
       // Allow the task queue to be emptied before continuing,
       // so we can process cancel messages
       await new Promise(res => setTimeout(res, 0));
-      await work?.().catch(() => null);
+      await work?.().catch(err => {
+        // eslint-disable-next-line no-console
+        console.error(err);
+        return null;
+      });
       this.isProcessing = false;
       this.processNext();
     }
@@ -87,6 +97,10 @@ export function handleMessage(
     cancellationTokenForId.set(data.id, token);
   }
   switch (data.type) {
+    case 'setBaseUri': {
+      globalBaseUri = data.base;
+      break;
+    }
     case 'tokenizeContents': {
       workQueue.push(async () => {
         const grammar = await loadGrammar(data.theme, data.path, postMessage);
@@ -180,15 +194,16 @@ function recoverFileContentsFromPatchLines(
 }
 
 let onigurumaLoadingJob: Promise<void> | null = null;
-function ensureOnigurumaIsLoaded(): Promise<void> {
+function ensureOnigurumaIsLoaded(base: string): Promise<void> {
   if (onigurumaLoadingJob === null) {
-    onigurumaLoadingJob = loadOniguruma();
+    onigurumaLoadingJob = loadOniguruma(base);
   }
   return onigurumaLoadingJob;
 }
 
-async function loadOniguruma(): Promise<void> {
-  const onigurumaWASMRequest = fetch(URL_TO_ONIG_WASM);
+async function loadOniguruma(base: string): Promise<void> {
+  const url = new URL(URL_TO_ONIG_WASM, base);
+  const onigurumaWASMRequest = fetch(url);
   const response = await onigurumaWASMRequest;
 
   const contentType = response.headers.get('content-type');

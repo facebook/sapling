@@ -15,14 +15,18 @@ export type TokenizedDiffHunks = Array<TokenizedDiffHunk>;
 
 export type SyntaxWorkerRequest =
   | {
-      type: 'tokenizeContents';
-      theme: ThemeColor;
-      path: string;
-      content: Array<string>;
+      type: 'setBaseUri';
+      base: string;
     }
   | {
       type: 'cancel';
       idToCancel: number;
+    }
+  | {
+      type: 'tokenizeContents';
+      theme: ThemeColor;
+      path: string;
+      content: Array<string>;
     }
   | {
       type: 'tokenizeHunks';

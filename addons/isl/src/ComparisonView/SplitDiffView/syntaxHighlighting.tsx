@@ -13,8 +13,8 @@ import type {
 } from './syntaxHighlightingTypes';
 import type {ParsedDiff} from 'shared/patch/parse';
 
+import foundPlatform from '../../platform';
 import {themeState} from '../../theme';
-import {registerCleanup, registerDisposable} from '../../utils';
 import {SynchronousWorker, WorkerApi} from './workerApi';
 import {useAtomValue} from 'jotai';
 import {useEffect, useState} from 'react';
@@ -29,24 +29,59 @@ import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 // Useful for testing the non-WebWorker implementation
 const forceDisableWorkers = false;
 
-const worker = new WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>(
-  window.Worker && !forceDisableWorkers
-    ? new Worker(new URL('./syntaxHighlightingWorker', import.meta.url), {type: 'module'})
-    : (new SynchronousWorker(() => import('./syntaxHighlightingWorker')) as unknown as Worker),
-);
-registerDisposable(worker, worker, import.meta.hot);
-registerCleanup(
-  worker,
-  worker.listen('cssColorMap', msg => {
-    // During testing-library tear down (ex. syntax highlighting was canceled),
-    // `document` may be null. Abort here to avoid errors.
-    if (document == null) {
-      return undefined;
+let cachedWorkerPromise: Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>>;
+function getWorker(): Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>> {
+  if (cachedWorkerPromise) {
+    return cachedWorkerPromise;
+  }
+  cachedWorkerPromise = (async () => {
+    let worker: WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>;
+    if (foundPlatform.platformName === 'vscode') {
+      if (process.env.NODE_ENV === 'development') {
+        // NOTE: when using vscode in dev mode, because the web worker is not compiled to a single file,
+        // the webview can't use it properly.
+        // Fall back to a synchronous worker (note that this may have perf issues)
+        worker = new WorkerApi(
+          new SynchronousWorker(() => import('./syntaxHighlightingWorker')) as unknown as Worker,
+        );
+      } else {
+        // Production vscode build: webworkers in vscode webviews
+        // are very particular and can only be loaded via blob: URL.
+        // Vite will have built a special worker js asset due to the imports in this file.
+        const PATH_TO_WORKER = './worker/syntaxHighlightingWorker.js';
+        const blobUrl = await fetch(PATH_TO_WORKER)
+          .then(r => r.blob())
+          .then(b => URL.createObjectURL(b));
+
+        worker = new WorkerApi(new Worker(blobUrl));
+      }
+    } else if (window.Worker && !forceDisableWorkers) {
+      // Non-vscode environments: web workers should work normally
+      worker = new WorkerApi(
+        new Worker(new URL('./syntaxHighlightingWorker', import.meta.url), {type: 'module'}),
+      );
+    } else {
+      worker = new WorkerApi(
+        new SynchronousWorker(() => import('./syntaxHighlightingWorker')) as unknown as Worker,
+      );
     }
-    updateTextMateGrammarCSS(msg.colorMap);
-  }),
-  import.meta.hot,
-);
+
+    // Explicitly set the base URI so the worker can make fetch requests.
+    worker.worker.postMessage({type: 'setBaseUri', base: document.baseURI} as SyntaxWorkerRequest);
+
+    worker.listen('cssColorMap', msg => {
+      // During testing-library tear down (ex. syntax highlighting was canceled),
+      // `document` may be null. Abort here to avoid errors.
+      if (document == null) {
+        return undefined;
+      }
+      updateTextMateGrammarCSS(msg.colorMap);
+    });
+
+    return worker;
+  })();
+  return cachedWorkerPromise;
+}
 
 /**
  * Given a set of hunks from a diff view,
@@ -65,11 +100,13 @@ export function useTokenizedHunks(
 
   useEffect(() => {
     const token = newTrackedCancellationToken();
-    worker.request({type: 'tokenizeHunks', theme, path, hunks}, token).then(result => {
-      if (!token.isCancelled) {
-        setTokenized(result.result);
-      }
-    });
+    getWorker().then(worker =>
+      worker.request({type: 'tokenizeHunks', theme, path, hunks}, token).then(result => {
+        if (!token.isCancelled) {
+          setTokenized(result.result);
+        }
+      }),
+    );
     return () => token.cancel();
   }, [theme, path, hunks]);
   return tokenized;
@@ -91,11 +128,13 @@ export function useTokenizedContents(
       return;
     }
     const token = newTrackedCancellationToken();
-    worker.request({type: 'tokenizeContents', theme, path, content}, token).then(result => {
-      if (!token.isCancelled) {
-        setTokenized(result.result);
-      }
-    });
+    getWorker().then(worker =>
+      worker.request({type: 'tokenizeContents', theme, path, content}, token).then(result => {
+        if (!token.isCancelled) {
+          setTokenized(result.result);
+        }
+      }),
+    );
     return () => token.cancel();
   }, [theme, path, content]);
   return tokenized;
@@ -143,8 +182,12 @@ export function useTokenizedContentsOnceVisible(
     const token = newTrackedCancellationToken();
 
     Promise.all([
-      worker.request({type: 'tokenizeContents', theme, path, content: contentBefore}, token),
-      worker.request({type: 'tokenizeContents', theme, path, content: contentAfter}, token),
+      getWorker().then(worker =>
+        worker.request({type: 'tokenizeContents', theme, path, content: contentBefore}, token),
+      ),
+      getWorker().then(worker =>
+        worker.request({type: 'tokenizeContents', theme, path, content: contentAfter}, token),
+      ),
     ]).then(([a, b]) => {
       if (a?.result == null || b?.result == null) {
         return;

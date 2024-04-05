@@ -25,15 +25,23 @@ export function getGrammar(store: Registry, scopeName: string): Promise<IGrammar
   return grammarPromise;
 }
 
-async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {
-  const uri = `/generated/textmate/${moduleName}.${type}`;
+async function fetchGrammar(
+  moduleName: string,
+  type: 'json' | 'plist',
+  base: string,
+): Promise<TextMateGrammar> {
+  const uri = new URL(`./generated/textmate/${moduleName}.${type}`, base);
   const response = await fetch(uri);
   const grammar = await response.text();
   return {type, grammar};
 }
 
 let cachedGrammarStore: {value: Registry; theme: ThemeColor} | null = null;
-export function getGrammerStore(theme: ThemeColor, onNewColors?: (colorMap: string[]) => void) {
+export function getGrammerStore(
+  theme: ThemeColor,
+  base: string,
+  onNewColors?: (colorMap: string[]) => void,
+) {
   const found = cachedGrammarStore;
   if (found != null && found.theme === theme) {
     return found.value;
@@ -45,7 +53,7 @@ export function getGrammerStore(theme: ThemeColor, onNewColors?: (colorMap: stri
 
   const themeValues = theme === 'light' ? VSCodeLightPlusTheme : VSCodeDarkPlusTheme;
 
-  const registry = createTextMateRegistry(themeValues, grammars, fetchGrammar);
+  const registry = createTextMateRegistry(themeValues, grammars, fetchGrammar, base);
 
   onNewColors?.(registry.getColorMap());
 

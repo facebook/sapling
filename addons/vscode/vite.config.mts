@@ -97,6 +97,16 @@ export default defineConfig(({mode}) => ({
     // No need for source maps in production. We can always build them locally to understand a wild stack trace.
     sourcemap: mode === 'development',
   },
+  worker: {
+    rollupOptions: {
+      output: {
+        // Don't use hashed names, so ISL webview panel can pre-define what filename to load
+        entryFileNames: 'worker/[name].js',
+        chunkFileNames: 'worker/[name].js',
+        assetFileNames: 'worker/[name].[ext]',
+      },
+    },
+  },
   publicDir: '../isl/public',
   server: {
     // No need to open the browser, we run inside vscode and don't really connect to the server.

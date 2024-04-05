@@ -595,9 +595,9 @@ function waitForSyntaxHighlightingToAppear(inside: HTMLElement): Promise<void> {
 
 function mockFetchToSupportSyntaxHighlighting(): jest.SpyInstance {
   return jest.spyOn(global, 'fetch').mockImplementation(
-    jest.fn(async url => {
-      if (url.includes('generated/textmate')) {
-        const match = /.*generated\/textmate\/(.*)$/.exec(url);
+    jest.fn(async (url: URL) => {
+      if (url.pathname.includes('generated/textmate')) {
+        const match = /.*generated\/textmate\/(.*)$/.exec(url.pathname);
         const filename = nullthrows(match)[1];
         const toPublicDir = (filename: string) =>
           path.normalize(path.join(__dirname, '../../public/generated/textmate', filename));

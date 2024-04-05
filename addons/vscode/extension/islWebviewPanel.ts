@@ -302,7 +302,7 @@ function devModeHtmlForISLWebview(
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<base href="${baseUri}/">
+		<base href="${baseUri}">
 
     <!-- Hot reloading code from Vite. Normally, vite injects this into the HTML.
     But since we have to load this statically, we insert it manually here.
@@ -368,6 +368,7 @@ function htmlForISLWebview(
     `img-src ${webview.cspSource} https: data:`,
     `script-src ${webview.cspSource} 'nonce-${nonce}' 'wasm-unsafe-eval'`,
     `script-src-elem ${webview.cspSource} 'nonce-${nonce}'`,
+    `worker-src ${webview.cspSource} 'nonce-${nonce}' blob:`,
   ].join('; ');
 
   return `<!DOCTYPE html>
