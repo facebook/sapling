@@ -550,17 +550,23 @@ export default class ServerToClientAPI {
         // we just need the caller to ask with "after" line numbers instead of "before".
         // Note: we would still need to fall back to cat for comparisons that do not involve
         // the working copy.
-        const cat: Promise<string> = repo
-          .cat(ctx, relativePath, revsetForComparison(comparison))
-          .catch(() => '');
+        const cat: Promise<string> = repo.cat(ctx, relativePath, revsetForComparison(comparison));
 
-        cat.then(content =>
-          this.postMessage({
-            type: 'comparisonContextLines',
-            lines: content.split('\n').slice(start - 1, start - 1 + numLines),
-            path: relativePath,
-          }),
-        );
+        cat
+          .then(content =>
+            this.postMessage({
+              type: 'comparisonContextLines',
+              lines: {value: content.split('\n').slice(start - 1, start - 1 + numLines)},
+              path: relativePath,
+            }),
+          )
+          .catch((error: Error) =>
+            this.postMessage({
+              type: 'comparisonContextLines',
+              lines: {error},
+              path: relativePath,
+            }),
+          );
         break;
       }
       case 'requestMissedOperationProgress': {

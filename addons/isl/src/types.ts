@@ -706,7 +706,7 @@ export type ServerToClientMessage =
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
-  | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Array<string>}
+  | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Result<Array<string>>}
   | {type: 'beganLoadingMoreCommits'}
   | {type: 'commitsShownRange'; rangeInDays: number | undefined}
   | {type: 'additionalCommitAvailability'; moreAvailable: boolean}

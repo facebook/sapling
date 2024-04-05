@@ -214,7 +214,7 @@ describe('ComparisonView', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'comparisonContextLines',
-        lines: ['line 1', 'line 2', 'line 3', 'line 4', 'line 5', 'line 6'],
+        lines: {value: ['line 1', 'line 2', 'line 3', 'line 4', 'line 5', 'line 6']},
         path: 'someFile.txt',
       });
     });
@@ -258,7 +258,7 @@ describe('ComparisonView', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'comparisonContextLines',
-        lines: ['line 1', 'line 2', 'line 3', 'line 4', 'line 5', 'line 6'],
+        lines: {value: ['line 1', 'line 2', 'line 3', 'line 4', 'line 5', 'line 6']},
         path: 'someFile.txt',
       });
     });
@@ -302,14 +302,16 @@ describe('ComparisonView', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'comparisonContextLines',
-        lines: [
-          'different line 1',
-          'different line 2',
-          'different line 3',
-          'different line 4',
-          'different line 5',
-          'different line 6',
-        ],
+        lines: {
+          value: [
+            'different line 1',
+            'different line 2',
+            'different line 3',
+            'different line 4',
+            'different line 5',
+            'different line 6',
+          ],
+        },
         path: 'someFile.txt',
       });
     });
@@ -417,7 +419,7 @@ describe('ComparisonView', () => {
       unmountNow();
     });
 
-    it.skip('highlights expanded context lines', async () => {
+    it('highlights expanded context lines', async () => {
       await openUncommittedChangesComparison(DIFF_WITH_SYNTAX);
       await waitForSyntaxHighlightingToAppear(screen.getByTestId('comparison-view'));
 
@@ -437,7 +439,7 @@ describe('ComparisonView', () => {
       act(() => {
         simulateMessageFromServer({
           type: 'comparisonContextLines',
-          lines: ['const loaded_additional_context_variable = 5;'],
+          lines: {value: ['const loaded_additional_context_variable = 5;']},
           path: 'someFile.js',
         });
       });

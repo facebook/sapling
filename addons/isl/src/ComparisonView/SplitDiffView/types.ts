@@ -7,21 +7,10 @@
 
 import type {Comparison} from 'shared/Comparison';
 
-export type LineRangeParams<Id> = {
-  // 1-based line number.
-  start: number;
-  numLines: number;
-  id: Id;
-};
-
 /**
  * Context used to render SplitDiffView
  */
 export type Context = {
-  /**
-   * Arbitrary identifying information for a given SplitDiffView, usually
-   * information like a hash or revset + path.
-   */
   id: {path: string; comparison: Comparison};
   copy?: (s: string) => void;
   openFile?: () => unknown;

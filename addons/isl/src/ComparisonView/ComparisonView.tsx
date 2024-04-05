@@ -6,7 +6,7 @@
  */
 
 import type {Result} from '../types';
-import type {Context, LineRangeParams} from './SplitDiffView/types';
+import type {Context} from './SplitDiffView/types';
 import type {Comparison} from 'shared/Comparison';
 import type {ParsedDiff} from 'shared/patch/parse';
 
@@ -29,7 +29,12 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useEffect, useMemo, useState} from 'react';
-import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
+import {
+  comparisonIsAgainstHead,
+  labelForComparison,
+  ComparisonType,
+  comparisonStringKey,
+} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {parsePatch} from 'shared/patch/parse';
 import {group, notEmpty} from 'shared/utils';
@@ -63,30 +68,47 @@ const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
   }),
 );
 
-export const lineRange = atomFamilyWeak(
-  (params: LineRangeParams<{path: string; comparison: Comparison}>) =>
-    loadable(
-      atom(async (get): Promise<Array<string>> => {
-        // We must ensure this lineRange gets invalidated when the underlying file's context lines
-        // have changed.
-        // This depends on the comparison:
-        // for Committed: the commit hash is included in the Comparison, thus the cached data will always be accurate.
-        // for Uncommitted, Head, and Stack:
-        // by referencing the latest head commit atom, we ensure this selector reloads when the head commit changes.
-        // These comparisons are all against the working copy (not exactly head),
-        // but there's no change that could be made that would affect the context lines without
-        // also changing the head commit's hash.
-        // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
-        // AGAIN on the same data while waiting for some new operation to finish.
-        get(latestHeadCommit);
+type LineRangeKey = string;
+export function keyForLineRange(param: {path: string; comparison: Comparison}): LineRangeKey {
+  return `${param.path}:${comparisonStringKey(param.comparison)}`;
+}
 
-        serverAPI.postMessage({type: 'requestComparisonContextLines', ...params});
+/** Fetches context lines */
+export function useFetchLines(ctx: Context, numLines: number, start: number) {
+  const [fetchedLines, setFetchedLines] = useState<Result<Array<string>> | undefined>(undefined);
 
-        const result = await serverAPI.nextMessageMatching('comparisonContextLines', () => true);
-        return result.lines;
-      }),
-    ),
-);
+  // We must ensure this lineRange gets invalidated when the underlying file's context lines
+  // have changed.
+  // This depends on the comparison:
+  // for Committed: the commit hash is included in the Comparison, thus the cached data will always be accurate.
+  // for Uncommitted, Head, and Stack:
+  // by referencing the latest head commit atom, we ensure this selector reloads when the head commit changes.
+  // These comparisons are all against the working copy (not exactly head),
+  // but there's no change that could be made that would affect the context lines without
+  // also changing the head commit's hash.
+  // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
+  // AGAIN on the same data while waiting for some new operation to finish.
+  const dotCommit = useAtomValue(latestHeadCommit);
+
+  const comparisonKey = comparisonStringKey(ctx.id.comparison);
+  useEffect(() => {
+    serverAPI.postMessage({
+      type: 'requestComparisonContextLines',
+      numLines,
+      start,
+      id: ctx.id,
+    });
+
+    serverAPI
+      .nextMessageMatching('comparisonContextLines', msg => msg.path === ctx.id.path)
+      .then(result => {
+        setFetchedLines(result.lines);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dotCommit?.hash, ctx.id.path, comparisonKey, numLines, start]);
+
+  return fetchedLines;
+}
 
 type ComparisonDisplayMode = 'unified' | 'split';
 const comparisonDisplayMode = localStorageBackedAtom<ComparisonDisplayMode | 'responsive'>(

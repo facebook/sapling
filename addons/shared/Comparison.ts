@@ -46,6 +46,19 @@ export function comparisonIsAgainstHead(comparison: Comparison): boolean {
   }
 }
 
+/** Give a stable string key to uniquely represent a Comparison */
+export function comparisonStringKey(comparison: Comparison): string {
+  switch (comparison.type) {
+    case ComparisonType.UncommittedChanges:
+    case ComparisonType.HeadChanges:
+    case ComparisonType.StackChanges:
+      return comparison.type;
+    case ComparisonType.SinceLastCodeReviewSubmit:
+    case ComparisonType.Committed:
+      return `${comparison.type}:${comparison.hash}`;
+  }
+}
+
 /** Arguments for a comparison, compatible with `sl diff`. */
 export function revsetArgsForComparison(comparison: Comparison): Array<string> {
   switch (comparison.type) {

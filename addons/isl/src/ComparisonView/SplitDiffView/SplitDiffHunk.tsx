@@ -6,17 +6,17 @@
  */
 
 import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlightingTypes';
-import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
+import type {Context, OneIndexedLineNumber} from './types';
 import type {ReactNode} from 'react';
 import type {Hunk, ParsedDiff} from 'shared/patch/parse';
 
-import {t} from '../../i18n';
-import {lineRange} from '../ComparisonView';
+import {ErrorNotice} from '../../ErrorNotice';
+import {T, t} from '../../i18n';
+import {useFetchLines} from '../ComparisonView';
 import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
-import {useAtomValue} from 'jotai';
 import React, {useCallback, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
@@ -68,17 +68,13 @@ export const SplitDiffTable = React.memo(
           // TODO: test empty file that went from 644 to 755?
           const key = 's0';
           if (expandedSeparators.has(key)) {
-            const range = {
-              id: ctx.id,
-              start: 1,
-              numLines: hunk.oldStart - 1,
-            };
             rows.push(
               <ExpandingSeparator
                 key={key}
                 ctx={ctx}
-                range={range}
                 path={path}
+                start={1}
+                numLines={hunk.oldStart - 1}
                 beforeLineStart={1}
                 afterLineStart={1}
               />,
@@ -102,16 +98,12 @@ export const SplitDiffTable = React.memo(
             const start = hunk.oldStart + hunk.oldLines;
             const MAX_LINES_FETCH = 10000; // We don't know the total number of lines, so for the last hunk we just request a lot of lines.
             const numLines = isLast ? MAX_LINES_FETCH : nextHunk.oldStart - start;
-            const range = {
-              id: ctx.id,
-              start,
-              numLines,
-            };
             rows.push(
               <ExpandingSeparator
                 key={key}
                 ctx={ctx}
-                range={range}
+                start={start}
+                numLines={numLines}
                 path={path}
                 beforeLineStart={hunk.oldStart + hunk.oldLines}
                 afterLineStart={hunk.newStart + hunk.newLines}
@@ -497,69 +489,63 @@ function HunkSeparator({
   );
 }
 
-type ExpandingSeparatorProps = {
-  ctx: Context;
-  path: string;
-  range: LineRangeParams<Context['id']>;
-  beforeLineStart: number;
-  afterLineStart: number;
-};
-
 /**
  * This replaces a <HunkSeparator> when the user clicks on it to expand the
  * hidden file contents.
+ * By rendering this, additional lines are automatically fetched.
  */
 function ExpandingSeparator({
   ctx,
   path,
-  range,
+  start,
+  numLines,
   beforeLineStart,
   afterLineStart,
-}: ExpandingSeparatorProps): React.ReactElement {
-  const loadable = useAtomValue(lineRange(range));
+}: {
+  ctx: Context;
+  path: string;
+  numLines: number;
+  start: number;
+  beforeLineStart: number;
+  afterLineStart: number;
+}): React.ReactElement {
+  const result = useFetchLines(ctx, numLines, start);
 
-  const tokenization = useTokenizedContents(
-    path,
-    loadable.state === 'hasData' ? loadable.data : undefined,
-  );
-  switch (loadable.state) {
-    case 'hasData': {
-      const rows: React.ReactElement[] = [];
-      const lines = loadable.data;
-      addUnmodifiedRows(
-        ctx.display === 'unified',
-        lines,
-        path,
-        'expanded',
-        beforeLineStart,
-        afterLineStart,
-        rows,
-        tokenization,
-        tokenization,
-        ctx.openFileToLine,
-      );
-      return <>{rows}</>;
-    }
-    case 'loading': {
-      return (
-        <SeparatorRow>
-          <div className="split-diff-view-loading-row">
-            <Icon icon="loading" />
-            <span>{t('Loading...')}</span>
-          </div>
-        </SeparatorRow>
-      );
-    }
-    case 'hasError': {
-      return (
-        <SeparatorRow>
-          <div className="split-diff-view-error-row">
-            {t('Error:')} {(loadable.error as Error).message}
-          </div>
-        </SeparatorRow>
-      );
-    }
+  const tokenization = useTokenizedContents(path, result?.value);
+  if (result == null) {
+    return (
+      <SeparatorRow>
+        <div className="split-diff-view-loading-row">
+          <Icon icon="loading" />
+          <span>{t('Loading...')}</span>
+        </div>
+      </SeparatorRow>
+    );
   }
+  if (result.error) {
+    return (
+      <SeparatorRow>
+        <div className="split-diff-view-error-row">
+          <ErrorNotice error={result.error} title={<T>Unable to fetch additional lines</T>} />
+        </div>
+      </SeparatorRow>
+    );
+  }
+
+  const rows: React.ReactElement[] = [];
+  addUnmodifiedRows(
+    ctx.display === 'unified',
+    result.value,
+    path,
+    'expanded',
+    beforeLineStart,
+    afterLineStart,
+    rows,
+    tokenization,
+    tokenization,
+    ctx.openFileToLine,
+  );
+  return <>{rows}</>;
 }
 
 function SeparatorRow({children}: {children: React.ReactNode}): React.ReactElement {

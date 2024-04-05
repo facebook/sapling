@@ -131,6 +131,7 @@ function tokenizeHunks(
     // check for cancellation before doing expensive highlighting
     return undefined;
   }
+
   const tokenizedPatches: TokenizedDiffHunks = hunks
     .map(hunk => recoverFileContentsFromPatchLines(hunk.lines))
     .map(([before, after]) => [tokenizeLines(before, grammar), tokenizeLines(after, grammar)]);
