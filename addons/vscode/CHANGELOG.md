@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.46
+
+### Apr 5 2024
+
+- Fix GitHub integrations not working
+- Syntax highlighting runs in a WebWorker so it doesn't slow down the UI
+  - Clicking buttons in Interactive Split can be as much as 10x faster now
+
 ## 0.1.45
 
 ### Apr 4 2024
