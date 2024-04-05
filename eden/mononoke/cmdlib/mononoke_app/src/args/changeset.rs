@@ -99,7 +99,7 @@ impl ChangesetArgs {
                             Freshness::MostRecent,
                             &BookmarkPrefix::empty(),
                             BookmarkCategory::ALL,
-                            BookmarkKind::ALL,
+                            BookmarkKind::ALL_PUBLISHING,
                             &BookmarkPagination::FromStart,
                             std::u64::MAX,
                         )
