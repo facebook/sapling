@@ -540,6 +540,7 @@ impl BookmarkLogEntryBatch {
 mod test {
 
     use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::BookmarkUpdateLogId;
     use bookmarks::Bookmarks;
     use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
@@ -1002,13 +1003,13 @@ mod test {
     }
 
     fn create_bookmark_log_entry(
-        id: i64,
+        id: u64,
         bookmark_name: BookmarkKey,
         from_changeset_id: Option<ChangesetId>,
         to_changeset_id: Option<ChangesetId>,
     ) -> BookmarkUpdateLogEntry {
         BookmarkUpdateLogEntry {
-            id,
+            id: BookmarkUpdateLogId(id),
             repo_id: RepositoryId::new(0),
             bookmark_name,
             from_changeset_id,

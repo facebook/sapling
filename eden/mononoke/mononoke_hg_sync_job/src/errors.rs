@@ -8,6 +8,7 @@
 use anyhow::Error;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -16,7 +17,7 @@ pub enum ErrorKind {
     UnexpectedBookmarkMove(String),
     #[error("sync failed for ids {ids:?}")]
     SyncFailed {
-        ids: Vec<i64>,
+        ids: Vec<BookmarkUpdateLogId>,
         #[source]
         cause: Error,
     },
@@ -25,8 +26,8 @@ pub enum ErrorKind {
         entry {entry_id} modifies bookmark {entry_bookmark_name}, while bundle moves {bundle_bookmark_name}"
     )]
     BookmarkMismatchInBundleCombining {
-        ids: Vec<i64>,
-        entry_id: i64,
+        ids: Vec<BookmarkUpdateLogId>,
+        entry_id: BookmarkUpdateLogId,
         entry_bookmark_name: BookmarkKey,
         bundle_bookmark_name: BookmarkKey,
     },

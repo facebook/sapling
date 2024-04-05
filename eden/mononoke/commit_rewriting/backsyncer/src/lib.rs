@@ -42,6 +42,7 @@ use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
@@ -150,13 +151,14 @@ where
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
     let counter_name = format_counter(&source_repo_id);
 
-    let counter = target_repo_dbs
+    let counter: BookmarkUpdateLogId = target_repo_dbs
         .counters
         .get_counter(&ctx, &counter_name)
         .await?
-        .unwrap_or(0);
+        .unwrap_or(0)
+        .try_into()?;
 
-    debug!(ctx.logger(), "fetched counter {}", counter);
+    debug!(ctx.logger(), "fetched counter {}", &counter);
 
     let log_entries_limit = match limit {
         BacksyncLimit::Limit(limit) => limit,
@@ -170,7 +172,7 @@ where
         .bookmark_update_log()
         .read_next_bookmark_log_entries(
             ctx.clone(),
-            counter as u64,
+            counter,
             log_entries_limit,
             Freshness::MostRecent,
         )
@@ -208,7 +210,7 @@ async fn sync_entries<M, R>(
     commit_syncer: &CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
-    mut counter: i64,
+    mut counter: BookmarkUpdateLogId,
     cancellation_requested: Arc<AtomicBool>,
     sync_context: CommitSyncContext,
     disable_lease: bool,
@@ -243,8 +245,8 @@ where
                 .set_counter(
                     &ctx,
                     &format_counter(&commit_syncer.get_source_repo().repo_identity().id()),
-                    entry.id,
-                    Some(counter),
+                    entry.id.try_into()?,
+                    Some(counter.try_into()?),
                 )
                 .await?;
             counter = entry.id;
@@ -283,7 +285,7 @@ where
         }
 
         let mut scuba_sample = ctx.scuba().clone();
-        scuba_sample.add("backsyncer_bookmark_log_entry_id", entry.id);
+        scuba_sample.add("backsyncer_bookmark_log_entry_id", u64::from(entry.id));
 
         let start_instant = Instant::now();
 
@@ -311,8 +313,8 @@ where
                     .set_counter(
                         &ctx,
                         &format_counter(&commit_syncer.get_source_repo().repo_identity().id()),
-                        entry.id,
-                        Some(counter),
+                        entry.id.try_into()?,
+                        Some(counter.try_into()?),
                     )
                     .await?;
                 counter = entry.id;
@@ -366,7 +368,8 @@ where
                 .counters
                 .get_counter(&ctx, &counter_name)
                 .await?
-                .unwrap_or(0);
+                .unwrap_or(0)
+                .try_into()?;
             if new_counter <= counter {
                 return Err(format_err!(
                     "backsync transaction failed, but the counter didn't move forward. Was {}, became {}",
@@ -418,13 +421,14 @@ async fn backsync_bookmark<M, R>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
-    prev_counter: Option<i64>,
+    prev_counter: Option<BookmarkUpdateLogId>,
     log_entry: BookmarkUpdateLogEntry,
-) -> Result<Option<i64>, Error>
+) -> Result<Option<BookmarkUpdateLogId>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
 {
+    let prev_counter: Option<i64> = prev_counter.map(|x| x.try_into()).transpose()?;
     let target_repo_id = commit_syncer.get_target_repo().repo_identity().id();
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
 
@@ -571,6 +575,7 @@ where
                     bail!("unexpected bookmark move");
                 }
             };
+            let new_counter = new_counter.try_into()?;
 
             let txn_hook = Arc::new({
                 move |ctx: CoreContext, txn: Transaction| {
@@ -611,7 +616,10 @@ where
                 }
             });
 
-            let res = bookmark_txn.commit_with_hook(txn_hook).await?;
+            let res = bookmark_txn
+                .commit_with_hook(txn_hook)
+                .await?
+                .map(|x| x.into());
             log_new_bonsai_changesets(
                 &ctx,
                 target_repo,
@@ -621,7 +629,7 @@ where
             )
             .await;
 
-            return Ok(res.map(|counter| counter as i64));
+            return Ok(res);
         } else {
             debug!(
                 ctx.logger(),
@@ -639,7 +647,7 @@ where
         .set_counter(
             &ctx,
             &format_counter(&source_repo_id),
-            new_counter,
+            new_counter.try_into()?,
             prev_counter,
         )
         .await?

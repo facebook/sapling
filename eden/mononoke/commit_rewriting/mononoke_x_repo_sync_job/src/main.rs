@@ -315,14 +315,19 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
     let start_id = maybe_start_id.ok_or_else(|| format_err!("counter not found"))?;
     let limit = 10;
     let log_entries = bookmark_update_log
-        .read_next_bookmark_log_entries(ctx.clone(), start_id as u64, limit, Freshness::MaybeStale)
+        .read_next_bookmark_log_entries(
+            ctx.clone(),
+            start_id.try_into()?,
+            limit,
+            Freshness::MaybeStale,
+        )
         .try_collect::<Vec<_>>()
         .await?;
 
     let remaining_entries = commit_syncer
         .get_source_repo()
         .bookmark_update_log()
-        .count_further_bookmark_log_entries(ctx.clone(), start_id as u64, None)
+        .count_further_bookmark_log_entries(ctx.clone(), start_id.try_into()?, None)
         .await?;
 
     if log_entries.is_empty() {
@@ -334,7 +339,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
 
         for entry in log_entries {
             let entry_id = entry.id;
-            scuba_sample.add("entry_id", entry.id);
+            scuba_sample.add("entry_id", u64::from(entry.id));
 
             let mut skip = false;
             if let Some(regex) = maybe_bookmark_regex {
@@ -391,7 +396,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
             // This is expected - next run will try to update the counter again without
             // re-syncing the commits.
             target_mutable_counters
-                .set_counter(ctx, &counter, entry_id, None)
+                .set_counter(ctx, &counter, entry_id.try_into()?, None)
                 .await?;
         }
         Ok(true)
@@ -417,7 +422,9 @@ async fn maybe_apply_backpressure(
                     let maybe_counter = repo
                         .mutable_counters()
                         .get_counter(ctx, &backsyncer_counter)
-                        .await?;
+                        .await?
+                        .map(|counter| counter.try_into())
+                        .transpose()?;
 
                     match maybe_counter {
                         Some(counter) => {
@@ -426,7 +433,7 @@ async fn maybe_apply_backpressure(
                             bookmark_update_log
                                 .count_further_bookmark_log_entries(
                                     ctx.clone(),
-                                    counter as u64,
+                                    counter,
                                     None, // exclude_reason
                                 )
                                 .await

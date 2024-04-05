@@ -24,6 +24,7 @@ use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
@@ -629,8 +630,6 @@ pub struct LatestUnderivedBookmarkEntry {
     maybe_id_ts: Option<(BookmarkUpdateLogId, Timestamp)>,
 }
 
-pub struct BookmarkUpdateLogId(pub u64);
-
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
 /// deletes a bookmark to be derived.
 pub async fn find_latest_derived_and_underived(
@@ -661,7 +660,7 @@ pub async fn find_latest_derived_and_underived(
                 Freshness::MaybeStale,
             )
             .map_ok(|(id, maybe_cs_id, _, ts)| {
-                let id = BookmarkUpdateLogId(id);
+                let id = id.into();
                 (maybe_cs_id, Some((id, ts)))
             })
             .try_collect::<Vec<_>>()
@@ -1097,7 +1096,7 @@ async fn single_bookmark_updater(
             staleness_reporter(ts);
         }
 
-        let bookmark_log_id = maybe_id_ts.as_ref().map(|(id, _)| id.0);
+        let bookmark_log_id = maybe_id_ts.as_ref().map(|(id, _)| u64::from(*id));
         let maybe_ts = maybe_id_ts.map(|(_, ts)| ts);
 
         let ctx = ctx.clone().with_mutated_scuba(|mut scuba| {

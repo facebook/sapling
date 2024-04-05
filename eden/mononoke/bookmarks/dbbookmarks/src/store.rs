@@ -19,6 +19,7 @@ use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksSubscription;
@@ -700,7 +701,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn count_further_bookmark_log_entries(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         maybe_exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<'static, Result<u64>> {
         ctx.perf_counters()
@@ -742,7 +743,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn count_further_bookmark_log_entries_by_reason(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
     ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
@@ -762,7 +763,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn skip_over_bookmark_log_entries_with_reason(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         reason: BookmarkUpdateReason,
     ) -> BoxFuture<'static, Result<Option<u64>>> {
         ctx.perf_counters()
@@ -783,7 +784,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn read_next_bookmark_log_entries_same_bookmark_and_reason(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         limit: u64,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         ctx.perf_counters()
@@ -827,7 +828,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     let (id, repo_id, name, category, to_cs_id, from_cs_id, reason, timestamp) =
                         entry;
                     Ok(BookmarkUpdateLogEntry {
-                        id,
+                        id: BookmarkUpdateLogId(id.try_into()?),
                         repo_id,
                         bookmark_name: BookmarkKey::with_name_and_category(name, category),
                         to_changeset_id: to_cs_id,
@@ -845,7 +846,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn read_next_bookmark_log_entries(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         limit: u64,
         freshness: Freshness,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
@@ -877,7 +878,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     let (id, repo_id, name, category, to_cs_id, from_cs_id, reason, timestamp) =
                         entry;
                     Ok(BookmarkUpdateLogEntry {
-                        id,
+                        id: id.try_into()?,
                         repo_id,
                         bookmark_name: BookmarkKey::with_name_and_category(name, category),
                         to_changeset_id: to_cs_id,

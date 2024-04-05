@@ -37,6 +37,7 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use borrowed::borrowed;
 use changeset_fetcher::ChangesetFetcher;
@@ -558,12 +559,16 @@ type OutcomeWithStats =
 
 type Outcome = Result<PipelineState<RetryAttemptsCount>, PipelineError>;
 
-fn get_id_to_search_after(entries: &[BookmarkUpdateLogEntry]) -> i64 {
-    entries.iter().map(|entry| entry.id).max().unwrap_or(0)
+fn get_id_to_search_after(entries: &[BookmarkUpdateLogEntry]) -> BookmarkUpdateLogId {
+    entries
+        .iter()
+        .map(|entry| entry.id)
+        .max()
+        .unwrap_or(0.into())
 }
 
 fn bind_sync_err(entries: &[BookmarkUpdateLogEntry], cause: Error) -> PipelineError {
-    let ids: Vec<i64> = entries.iter().map(|entry| entry.id).collect();
+    let ids: Vec<_> = entries.iter().map(|entry| entry.id).collect();
     let entries = entries.to_vec();
     EntryError {
         entries,
@@ -632,7 +637,7 @@ where
                     let next_id = get_id_to_search_after(&log_entries);
 
                     let n = bookmarks
-                        .count_further_bookmark_log_entries(ctx.clone(), next_id as u64, None)
+                        .count_further_bookmark_log_entries(ctx.clone(), next_id, None)
                         .await?;
                     let queue_size = QueueSize(n as usize);
                     info!(
@@ -825,7 +830,7 @@ fn log_processed_entry_to_scuba(
     let delay = log_entry.timestamp.since_seconds();
 
     scuba_sample
-        .add("entry", entry)
+        .add("entry", u64::from(entry))
         .add("bookmark", book)
         .add("reason", reason)
         .add("attempts", attempts.0)
@@ -864,7 +869,9 @@ fn log_processed_entries_to_scuba(
         // This will make it easier to find entries that were batched
         None
     } else {
-        entries.first().map(|entry| entry.id)
+        entries
+            .first()
+            .map(|entry| i64::try_from(entry.id).expect("Entry id must be positive"))
     };
     entries.iter().for_each(|entry| {
         log_processed_entry_to_scuba(
@@ -889,7 +896,7 @@ fn get_path(f: &NamedTempFile) -> Result<String> {
 fn loop_over_log_entries<'a, B>(
     ctx: &'a CoreContext,
     bookmarks: &'a B,
-    start_id: i64,
+    start_id: BookmarkUpdateLogId,
     loop_forever: bool,
     scuba_sample: &'a MononokeScubaSampleBuilder,
     fetch_up_to_bundles: u64,
@@ -907,7 +914,7 @@ where
                         let entries = bookmarks
                             .read_next_bookmark_log_entries_same_bookmark_and_reason(
                                 ctx.clone(),
-                                current_id as u64,
+                                current_id,
                                 fetch_up_to_bundles,
                             )
                             .try_collect::<Vec<_>>()
@@ -1328,14 +1335,15 @@ async fn run<'a>(
         // In sync-mode, the command will auto-terminate after one iteration.
         // Hence, no need to check cancellation flag.
         (MODE_SYNC_ONCE, Some(sub_m)) => {
-            let start_id = args::get_usize_opt(&sub_m, "start-id")
-                .ok_or_else(|| Error::msg("--start-id must be specified"))?;
+            let start_id = args::get_u64_opt(&sub_m, "start-id")
+                .ok_or_else(|| Error::msg("--start-id must be specified"))?
+                .into();
 
             let (maybe_log_entry, (bundle_preparer, overlay, globalrev_syncer)) = try_join(
                 bookmarks
                     .read_next_bookmark_log_entries(
                         ctx.clone(),
-                        start_id as u64,
+                        start_id,
                         1u64,
                         Freshness::MaybeStale,
                     )
@@ -1385,7 +1393,8 @@ async fn run<'a>(
             }
         }
         (MODE_SYNC_LOOP, Some(sub_m)) => {
-            let start_id = args::get_i64_opt(&sub_m, "start-id");
+            let start_id: Option<BookmarkUpdateLogId> =
+                args::get_u64_opt(&sub_m, "start-id").map(|id| id.into());
             let bundle_buffer_size = args::get_usize_opt(&sub_m, "bundle-buffer-size").unwrap_or(5);
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let max_commits_per_combined_bundle =
@@ -1434,7 +1443,7 @@ async fn run<'a>(
             let counter = replayed_sync_counter
                 .get_counter(ctx)
                 .and_then(move |maybe_counter| {
-                    future::ready(maybe_counter.or(start_id).ok_or_else(|| {
+                    future::ready(maybe_counter.map(|counter| counter.try_into().expect("Counter must be positive")).or(start_id).ok_or_else(|| {
                         format_err!(
                             "{} counter not found. Pass `--start-id` flag to set the counter",
                             LATEST_REPLAYED_REQUEST_KEY
@@ -1559,7 +1568,7 @@ async fn run<'a>(
                         ctx.logger(),
                         |_| async {
                             let success = replayed_sync_counter
-                                .set_counter(ctx, next_id)
+                                .set_counter(ctx, next_id.try_into()?)
                                 .watched(ctx.logger())
                                 .await?;
 

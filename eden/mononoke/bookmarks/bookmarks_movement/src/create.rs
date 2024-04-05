@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
@@ -30,7 +31,6 @@ use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkMovementError;
-use crate::BookmarkUpdateLogId;
 use crate::Repo;
 
 #[must_use = "CreateBookmarkOp must be run to have an effect"]

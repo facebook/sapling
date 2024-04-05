@@ -6,12 +6,20 @@
  */
 
 use std::fmt;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::num::TryFromIntError;
 
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::Freshness;
 use clap::ValueEnum;
 use context::CoreContext;
+use derive_more::Deref;
+use derive_more::Display;
+use derive_more::From;
+use derive_more::FromStr;
+use derive_more::Into;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
@@ -23,12 +31,38 @@ use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 
+/// An id in the BookmarkUpdateLog
+#[derive(
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, From, Into, Deref, FromStr, Display
+)]
+pub struct BookmarkUpdateLogId(pub u64);
+
+impl Debug for BookmarkUpdateLogId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl TryFrom<i64> for BookmarkUpdateLogId {
+    type Error = TryFromIntError;
+    fn try_from(x: i64) -> Result<Self, Self::Error> {
+        Ok(Self(u64::try_from(x)?))
+    }
+}
+
+impl TryFrom<BookmarkUpdateLogId> for i64 {
+    type Error = TryFromIntError;
+    fn try_from(x: BookmarkUpdateLogId) -> Result<Self, Self::Error> {
+        x.0.try_into()
+    }
+}
+
 /// Entry that describes an update to a bookmark
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BookmarkUpdateLogEntry {
     /// Number that sets a total order on single bookmark updates. It can be used to fetch
     /// new log entries
-    pub id: i64,
+    pub id: BookmarkUpdateLogId,
     /// Id of a repo
     pub repo_id: RepositoryId,
     /// Name of the bookmark
@@ -52,7 +86,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
     fn read_next_bookmark_log_entries(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         limit: u64,
         freshness: Freshness,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
@@ -62,7 +96,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
     fn read_next_bookmark_log_entries_same_bookmark_and_reason(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         limit: u64,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
 
@@ -91,7 +125,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
     fn count_further_bookmark_log_entries(
         &self,
         _ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<'static, Result<u64>>;
 
@@ -99,14 +133,14 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
     fn count_further_bookmark_log_entries_by_reason(
         &self,
         _ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
     ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>>;
 
     /// Find the last contiguous BookmarkUpdateLog entry matching the reason provided.
     fn skip_over_bookmark_log_entries_with_reason(
         &self,
         ctx: CoreContext,
-        id: u64,
+        id: BookmarkUpdateLogId,
         reason: BookmarkUpdateReason,
     ) -> BoxFuture<'static, Result<Option<u64>>>;
 

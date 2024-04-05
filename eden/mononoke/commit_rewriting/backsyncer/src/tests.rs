@@ -21,6 +21,7 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksArc;
@@ -191,7 +192,12 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
 
         let next_log_entries: Vec<_> = source_repo
             .bookmark_update_log()
-            .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MostRecent)
+            .read_next_bookmark_log_entries(
+                ctx.clone(),
+                BookmarkUpdateLogId(0),
+                1000,
+                Freshness::MostRecent,
+            )
             .try_collect()
             .await?;
 
@@ -202,7 +208,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             &commit_syncer,
             target_repo_dbs.clone(),
             next_log_entries.clone(),
-            0,
+            BookmarkUpdateLogId(0),
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
             false,
@@ -919,7 +925,12 @@ async fn backsync_and_verify_master_wc(
     let next_log_entries: Vec<_> = commit_syncer
         .get_source_repo()
         .bookmark_update_log()
-        .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MaybeStale)
+        .read_next_bookmark_log_entries(
+            ctx.clone(),
+            BookmarkUpdateLogId(0),
+            1000,
+            Freshness::MaybeStale,
+        )
         .try_collect()
         .await?;
     let target_repo_dbs = Arc::new(target_repo_dbs);

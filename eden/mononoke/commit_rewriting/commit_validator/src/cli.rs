@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use bookmarks::BookmarkUpdateLogId;
 use clap::Parser;
 use mononoke_app::args::RepoArgs;
 
@@ -14,13 +15,13 @@ pub(crate) enum SubcommandValidator {
     Once {
         /// A commit to validate
         #[clap(long)]
-        entry_id: u64,
+        entry_id: BookmarkUpdateLogId,
     },
     /// Validates entries in a loop, tailing bookmarks_update_log
     Tail {
         /// Starting BookmarksUpdateLog entry id to use (ignores the mutable_counters)
         #[clap(long)]
-        start_id: Option<u64>,
+        start_id: Option<BookmarkUpdateLogId>,
     },
 }
 

@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use bookmarks::BookmarkUpdateLogId;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
@@ -235,7 +236,7 @@ pub fn log_backpressure(
 
 pub fn log_bookmark_update_result(
     ctx: &CoreContext,
-    entry_id: i64,
+    entry_id: BookmarkUpdateLogId,
     mut scuba_sample: MononokeScubaSampleBuilder,
     res: &Result<SyncResult, Error>,
     stats: FutureStats,

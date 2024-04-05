@@ -50,7 +50,7 @@ pub async fn show(ctx: &CoreContext, repo: &Repo, show_args: HgSyncShowArgs) -> 
                 entry.bookmark_name,
                 entry.reason,
                 entry.to_changeset_id,
-                Some(entry.id.try_into()?),
+                Some(entry.id.into()),
                 &[IdentityScheme::Hg],
             )
             .await

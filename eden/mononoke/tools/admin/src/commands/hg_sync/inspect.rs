@@ -9,6 +9,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Args;
@@ -20,7 +21,7 @@ use super::Repo;
 #[derive(Args)]
 pub struct HgSyncInspectArgs {
     /// Sync log entry to inspect
-    id: i64,
+    id: BookmarkUpdateLogId,
 }
 
 pub async fn inspect(
@@ -32,7 +33,9 @@ pub async fn inspect(
         .bookmark_update_log()
         .read_next_bookmark_log_entries(
             ctx.clone(),
-            (inspect_args.id - 1).try_into().context("Invalid log id")?,
+            (i64::try_from(inspect_args.id)? - 1)
+                .try_into()
+                .context("Invalid log id")?,
             1,
             Freshness::MostRecent,
         )

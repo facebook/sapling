@@ -22,6 +22,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use context::CoreContext;
@@ -104,7 +105,7 @@ async fn run_in_tailing_mode(
     blobrepo: BlobRepo,
     skip_bookmarks: HashSet<BookmarkKey>,
     validation_helpers: ValidationHelpers,
-    start_id: u64,
+    start_id: BookmarkUpdateLogId,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<(), Error> {
     info!(
@@ -129,7 +130,7 @@ async fn run_in_tailing_mode(
                     let id = entry_id.bookmarks_update_log_entry_id;
                     blobrepo
                         .mutable_counters()
-                        .set_counter(ctx, &counter_name, id, None)
+                        .set_counter(ctx, &counter_name, id.try_into()?, None)
                         .await?;
                 }
 
@@ -144,13 +145,13 @@ async fn run_in_once_mode(
     ctx: &CoreContext,
     blobrepo: BlobRepo,
     validation_helpers: ValidationHelpers,
-    entry_id: u64,
+    entry_id: BookmarkUpdateLogId,
 ) -> Result<(), Error> {
     let bookmark_update_log = blobrepo.bookmark_update_log();
     let entries: Vec<Result<(BookmarkUpdateLogEntry, QueueSize), Error>> = bookmark_update_log
         .read_next_bookmark_log_entries(
             ctx.clone(),
-            entry_id - 1,
+            BookmarkUpdateLogId(u64::from(entry_id) - 1),
             1, /* limit */
             Freshness::MaybeStale,
         )
@@ -162,7 +163,7 @@ async fn run_in_once_mode(
         return Err(format_err!(
             "No entries for {} with id >{}",
             blobrepo.repo_identity().id(),
-            entry_id - 1
+            u64::from(entry_id) - 1
         ));
     }
 

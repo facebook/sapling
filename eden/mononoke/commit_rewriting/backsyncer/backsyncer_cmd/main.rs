@@ -377,15 +377,17 @@ where
 
     let counter_name = format_counter(&source_repo_id);
     let maybe_counter = counters.get_counter(ctx, &counter_name).await?;
-    let counter = maybe_counter.ok_or_else(|| format_err!("{} counter not found", counter_name))?;
+    let counter = maybe_counter
+        .ok_or_else(|| format_err!("{} counter not found", counter_name))?
+        .try_into()?;
     let source_repo = commit_syncer.get_source_repo();
     let next_entry = source_repo
         .bookmark_update_log()
-        .read_next_bookmark_log_entries(ctx.clone(), counter as u64, 1, Freshness::MostRecent)
+        .read_next_bookmark_log_entries(ctx.clone(), counter, 1, Freshness::MostRecent)
         .try_collect::<Vec<_>>();
     let remaining_entries = source_repo
         .bookmark_update_log()
-        .count_further_bookmark_log_entries(ctx.clone(), counter as u64, None);
+        .count_further_bookmark_log_entries(ctx.clone(), counter, None);
 
     let (next_entry, remaining_entries) = try_join!(next_entry, remaining_entries)?;
     let delay_secs = next_entry

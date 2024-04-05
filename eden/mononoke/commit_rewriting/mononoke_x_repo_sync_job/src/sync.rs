@@ -1314,7 +1314,7 @@ mod test {
             .bookmark_update_log()
             .read_next_bookmark_log_entries(
                 ctx.clone(),
-                start_from as u64,
+                start_from.try_into()?,
                 read_all,
                 Freshness::MostRecent,
             )
@@ -1330,7 +1330,7 @@ mod test {
 
         let mut res = vec![];
         for entry in log_entries {
-            let entry_id = entry.id;
+            let entry_id = entry.id.try_into()?;
             let single_res = sync_single_bookmark_update_log(
                 ctx,
                 commit_syncer,

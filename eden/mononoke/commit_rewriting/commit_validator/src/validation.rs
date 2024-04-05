@@ -18,6 +18,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksRef;
 use cloned::cloned;
 use commit_graph::CommitGraphArc;
@@ -82,7 +83,7 @@ define_stats! {
 #[derive(Clone, PartialEq, Eq)]
 pub struct EntryCommitId {
     /// A `BookmarkUpdateLogEntry` id, which introduced this commit
-    pub bookmarks_update_log_entry_id: i64,
+    pub bookmarks_update_log_entry_id: BookmarkUpdateLogId,
     /// An index of this commit in the "parent" `BookmarkUpdateLogEntry`
     commit_in_entry: i64,
     /// Total number of commits, introduced by the `BookmarkUpdateLogEntry`

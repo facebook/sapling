@@ -14,6 +14,7 @@ use anyhow::Error;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
@@ -53,7 +54,7 @@ fn add_queue_sizes<T>(
 async fn query_queue_size(
     ctx: CoreContext,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
-    current_id: u64,
+    current_id: BookmarkUpdateLogId,
 ) -> Result<u64, Error> {
     bookmark_update_log
         .count_further_bookmark_log_entries(ctx.clone(), current_id, None)
@@ -90,7 +91,7 @@ where
 
 pub(crate) fn tail_entries(
     ctx: CoreContext,
-    start_id: u64,
+    start_id: BookmarkUpdateLogId,
     skip_bookmarks: HashSet<BookmarkKey>,
     repo_id: RepositoryId,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
@@ -132,7 +133,7 @@ pub(crate) fn tail_entries(
 
                     Ok((
                         stream::iter(entries_with_queue_size).boxed(),
-                        (iteration + 1, last_entry_id as u64),
+                        (iteration + 1, last_entry_id),
                     ))
                 }
                 None => {

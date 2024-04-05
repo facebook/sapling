@@ -10,6 +10,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkUpdateLogId;
 use borrowed::borrowed;
 use context::CoreContext;
 use cross_repo_sync::Large;
@@ -104,8 +105,8 @@ pub fn format_counter() -> String {
 pub async fn get_start_id<'a>(
     ctx: &CoreContext,
     repo: &impl MutableCountersRef,
-    start_id: Option<u64>,
-) -> Result<u64, Error> {
+    start_id: Option<BookmarkUpdateLogId>,
+) -> Result<BookmarkUpdateLogId, Error> {
     match start_id {
         Some(start_id) => Ok(start_id),
         None => {
@@ -113,8 +114,9 @@ pub async fn get_start_id<'a>(
             repo.mutable_counters()
                 .get_counter(ctx, &counter)
                 .await?
+                .map(|val| val.try_into())
+                .transpose()?
                 .ok_or_else(|| format_err!("mutable counter {} is missing", counter))
-                .map(|val| val as u64)
         }
     }
 }

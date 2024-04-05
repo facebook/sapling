@@ -38,6 +38,7 @@ pub use log::ArcBookmarkUpdateLog;
 pub use log::BookmarkUpdateLog;
 pub use log::BookmarkUpdateLogArc;
 pub use log::BookmarkUpdateLogEntry;
+pub use log::BookmarkUpdateLogId;
 pub use log::BookmarkUpdateLogRef;
 pub use log::BookmarkUpdateReason;
 pub use subscription::BookmarksSubscription;
