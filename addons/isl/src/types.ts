@@ -534,8 +534,6 @@ export type ClientToServerMessageWithPayload = {
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
 export const allConfigNames = [
-  // used to check if commit cloud is enabled.
-  'extensions.commitcloud',
   // these config names are for compatibility.
   'isl.submitAsDraft',
   'isl.changedFilesDisplayType',

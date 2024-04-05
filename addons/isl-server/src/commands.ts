@@ -140,7 +140,11 @@ export async function getConfigs<T extends string>(
   }
   const configMap: Map<T, string> = new Map();
   try {
-    const result = await runCommand(ctx, ['config', '-Tjson'].concat(configNames));
+    // config command does not support multiple configs yet, but supports multiple sections.
+    // (such limitation makes sense for non-JSON output, which can be ambigious)
+    // TODO: Remove this once we can validate that OSS users are using a new enough Sapling version.
+    const sections = new Set<string>(configNames.flatMap(name => name.split('.').at(0) ?? []));
+    const result = await runCommand(ctx, ['config', '-Tjson'].concat([...sections]));
     const configs: [{name: T; value: string}] = JSON.parse(result.stdout);
     for (const config of configs) {
       configMap.set(config.name, config.value);
