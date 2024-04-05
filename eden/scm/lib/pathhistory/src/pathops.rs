@@ -62,6 +62,7 @@ struct State<'a> {
 }
 
 /// An item of a tree. It optionally contains a resolved `TreeEntry`.
+#[derive(Debug)]
 struct TreeItem<'a> {
     id: HgId,
     flag: Flag,
