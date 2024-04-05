@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use borrowed::borrowed;
@@ -16,7 +18,10 @@ use commit_graph_types::storage::PrefetchEdge;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::future;
+use futures::stream;
 use futures::Future;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
@@ -128,10 +133,24 @@ impl CommitGraph {
                     .fetch_many_edges(ctx, &cs_ids, prefetch)
                     .await?;
 
+                let property_map = stream::iter(frontier_edges.clone())
+                    .map(|(cs_id, edges)| {
+                        borrowed!(property);
+                        async move { anyhow::Ok((cs_id, property(edges.node).await?)) }
+                    })
+                    .buffered(100)
+                    .try_collect::<HashMap<_, _>>()
+                    .await?;
+
                 let mut property_frontier: Vec<_> = Default::default();
 
-                for (_, edges) in frontier_edges {
-                    if property(edges.node).await? {
+                for (cs_id, edges) in frontier_edges {
+                    if *property_map.get(&cs_id).ok_or_else(|| {
+                        anyhow!(
+                            "Missing changeset id {} from property_map (in ancestors_frontier)",
+                            cs_id
+                        )
+                    })? {
                         property_frontier.push(edges.node.cs_id);
                     } else {
                         let lowest_ancestor = edges
