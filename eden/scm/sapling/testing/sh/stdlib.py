@@ -709,8 +709,8 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
             stderr.write(f"ls: {arg}: No such file or directory\n".encode())
             return 1
 
-    if not args:
-        entries = listdir("")
+    if not args or (listall and not entries):
+        entries = listdir("", listall=listall)
     entries = sorted(entries)
     lines = [f"{path}\n" for path in entries]
     stdout.write("".join(lines).encode())
