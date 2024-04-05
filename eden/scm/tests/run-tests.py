@@ -2304,6 +2304,9 @@ class DebugRunTestTest(Test):
         return os.path.join(self._testdir, self.basename)
 
     def _run(self, env):
+        if use_edenfs:
+            self._edenfsmanager.start(env)
+
         cmdargs = [
             self._hgcommand,
             "debugpython",

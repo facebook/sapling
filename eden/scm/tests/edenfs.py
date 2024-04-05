@@ -34,7 +34,13 @@ def override_environ(values: Dict[str, str]) -> Generator[None, None, None]:
 class EdenFsManager:
     test_dir: Path
 
-    def __init__(self, orig_test_dir: Path) -> None:
+    def __init__(self, test_dir: Path) -> None:
+        self.test_dir = test_dir
+
+    def start(self, overrides: Dict[str, str]) -> None:
+        overrides = dict(overrides)
+        orig_test_dir = self.test_dir
+
         # Valid socketpaths on macOS are too short, and the usual temp dir created when running
         # this with Buck is too large. Similar to what's done in D43988120
         if sys.platform == "darwin":
@@ -63,13 +69,15 @@ overrides = "{{}}"
 """
             )
 
-        overrides = {
-            "SCRATCH_CONFIG_PATH": str(scratch_config),
-            "INTEGRATION_TEST": "1",
-            "HOME": str(self.test_dir),
-            # Just in case
-            "CHGDISABLE": "1",
-        }
+        overrides.update(
+            {
+                "SCRATCH_CONFIG_PATH": str(scratch_config),
+                "INTEGRATION_TEST": "1",
+                "HOME": str(self.test_dir),
+                # Just in case
+                "CHGDISABLE": "1",
+            }
+        )
 
         # See D43988120 to see why this is necessary
         if sys.platform == "darwin":
