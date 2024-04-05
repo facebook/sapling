@@ -785,8 +785,11 @@ impl Convert for RawShardingModeConfig {
             status: self
                 .status
                 .into_iter()
-                .map(|(k, v)| anyhow::Ok((k.convert()?, v)))
-                .collect::<Result<_>>()?,
+                // Since this is a simple type conversion, the only error that can be encountered would be due to an
+                // unknown enum value. If that happens, it means we have a config that has more values than the code understands. In
+                // such a case, it should be safe to ignore this unknown value cause the existing code can work without it.
+                .filter_map(|(k, v)| k.convert().map(|k| (k, v)).ok())
+                .collect(),
         })
     }
 }
