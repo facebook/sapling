@@ -61,24 +61,9 @@ export function startServer({
 
   return new Promise(resolve => {
     try {
-      const manifest = JSON.parse(
-        fs.readFileSync(path.join(serverRoot, 'build/.vite/manifest.json'), 'utf-8'),
-      ) as {[key: string]: {file: string; css?: string[]}};
-      const files = [];
-      for (const [file, asset] of Object.entries(manifest)) {
-        if (file.endsWith('.html')) {
-          files.push(file); // html file
-          files.push(asset.file); // js script file
-        } else {
-          // lazily loaded scripts
-          files.push(asset.file);
-          if (asset.css) {
-            for (const css of asset.css) {
-              files.push(css);
-            }
-          }
-        }
-      }
+      const files = JSON.parse(
+        fs.readFileSync(path.join(serverRoot, 'build/assetList.json'), 'utf-8'),
+      ) as Array<string>;
 
       for (const file of files) {
         // `file` might have OS slash like `"assets\\stylex.0f7433cc.css".

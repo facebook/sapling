@@ -6,7 +6,8 @@
  */
 
 import react from '@vitejs/plugin-react';
-import {resolve} from 'path';
+import fs from 'fs';
+import path, {resolve} from 'path';
 import {defineConfig} from 'vite';
 import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
@@ -60,10 +61,26 @@ export default defineConfig({
     }),
     styleX(),
     viteTsconfigPaths(),
+    // The manifest vite generates doesn't include web worker js files.
+    // Just output a simple list of all files that are produced,
+    // and the server can serve those known files.
+    {
+      name: 'emit-file-list',
+      apply: 'build',
+      writeBundle(options: {dir: string}, bundle: Record<string, unknown>) {
+        const outputDir = options.dir || 'dist';
+        const fileList = Object.keys(bundle)
+          .filter(file => file !== '.vite/manifest.json')
+          .map(p => p.replace(/\\/g, '/'));
+        fs.writeFileSync(
+          path.join(outputDir, 'assetList.json'),
+          JSON.stringify(fileList, undefined, 2),
+        );
+      },
+    },
   ],
   build: {
     outDir: 'build',
-    manifest: true,
     rollupOptions: {
       input: platforms,
     },
