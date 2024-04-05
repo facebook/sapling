@@ -9,7 +9,7 @@
 import os
 import shlex
 import sys
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, List, Optional, Set
@@ -30,6 +30,7 @@ from eden.fs.cli.doctor.util import (
     get_dependent_repos,
     hg_doctor_in_backing_repo,
 )
+
 from facebook.eden.ttypes import GetStatInfoParams, MountState
 from fb303_core.ttypes import fb303_status
 
@@ -899,9 +900,6 @@ class OutOfDateVersion(Problem):
 
 
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
-    def date_from_version(version: str) -> date:
-        return datetime.strptime(version, "%Y%m%d").date()
-
     rver, release = instance.get_running_version_parts()
     if not rver or not release:
         # This could be a dev build that returns the empty
@@ -914,8 +912,12 @@ def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> Non
         # dev build of eden client returns empty strings here
         return
 
-    # check if the runnig version is more than two weeks old
-    daysgap = date_from_version(iversion) - date_from_version(rver)
+    # check if the running version is more than two weeks old
+    iversion_date = version.date_from_version(iversion)
+    rversion_date = version.date_from_version(rver)
+    if not iversion_date or not rversion_date:
+        return
+    daysgap = iversion_date - rversion_date
     if daysgap.days < 14:
         return
 

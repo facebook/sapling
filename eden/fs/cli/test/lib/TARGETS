@@ -9,5 +9,6 @@ python_library(
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",
+        "//eden/fs/py/eden/thrift:legacy",
     ],
 )

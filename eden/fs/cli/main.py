@@ -137,28 +137,44 @@ def _get_unmount_timeout_suggestions(path: str) -> str:
         return UNMOUNT_TIMEOUT_SUGGESTIONS
 
 
-def do_version(args: argparse.Namespace, format_json: bool = False) -> int:
+def do_version(
+    args: argparse.Namespace, format_json: bool = False, verbose: bool = False
+) -> int:
     instance = get_eden_instance(args)
-    installed_version = version_mod.get_current_version()
-    running_version = "-"
-
-    try:
-        running_version = instance.get_running_version()
-    except EdenNotRunningError:
-        if not format_json:
-            running_version = "Unknown (EdenFS does not appear to be running)"
+    versions_info = version_mod.get_version_info(instance)
 
     if format_json:
-        if installed_version == "-":
-            installed_version = None
-        if running_version == "-":
-            running_version = None
-        info = {"installed": installed_version, "running": running_version}
+        if versions_info.installed_version == "-":
+            versions_info.installed_version = None
+        if versions_info.running_version == "-":
+            versions_info.running_version = None
+        info = {
+            "installed": versions_info.installed_version,
+            "running": versions_info.running_version,
+        }
         json.dump(info, sys.stdout, indent=2)
     else:
-        print(f"Installed: {installed_version}")
-        print(f"Running:   {running_version}")
-        if running_version.startswith("-") or running_version.endswith("-"):
+        if not versions_info.is_eden_running:
+            versions_info.running_version = (
+                "Unknown (EdenFS does not appear to be running)"
+            )
+
+        if verbose:
+            print(
+                f"Installed: {versions_info.installed_version}{f' ({versions_info.installed_version_age} days old)' if versions_info.installed_version_age else ''}"
+            )
+            print(
+                f"Running:   {versions_info.running_version}{f' ({versions_info.running_version_age} days old)' if versions_info.running_version_age else ''}"
+            )
+            if versions_info.ages_deltas:
+                print(
+                    f"Running version is {versions_info.ages_deltas} days older than installed"
+                )
+        else:
+            print(f"Installed: {versions_info.installed_version}")
+            print(f"Running:   {versions_info.running_version}")
+
+        if versions_info.is_dev:
             print("(Dev version of EdenFS seems to be running)")
 
     return 0
@@ -172,9 +188,14 @@ class VersionCmd(Subcmd):
             action="store_true",
             help="Print the running and installed versions in json format",
         )
+        parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Add more info to the output, such as elapsed days since each version and delta between them",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
-        return do_version(args, args.json)
+        return do_version(args, args.json, args.verbose)
 
 
 @subcmd("info", "Get details about a checkout")

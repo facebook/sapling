@@ -16,7 +16,6 @@ import os
 import random
 import re
 import shlex
-import socket
 import stat
 import subprocess
 import sys

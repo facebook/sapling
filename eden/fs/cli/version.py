@@ -7,7 +7,74 @@
 # pyre-strict
 
 import subprocess
-from typing import cast, Optional, Tuple
+from dataclasses import dataclass
+from datetime import datetime
+from typing import cast, Optional, Tuple, TYPE_CHECKING
+
+from eden.thrift.legacy import EdenNotRunningError
+
+if TYPE_CHECKING:
+    from .config import EdenInstance
+
+
+# We can live with version dates being a bit old relative to what dnf info shows for build since we're just working with differences
+# and strings shown to users.
+
+
+@dataclass
+class VersionInfo:
+    running_version: Optional[str]
+    running_version_age: Optional[int]
+    installed_version: Optional[str]
+    installed_version_age: Optional[int]
+    ages_deltas: Optional[int]
+    is_eden_running: bool
+    is_dev: bool
+
+
+def get_version_info(
+    instance: "EdenInstance",
+) -> VersionInfo:
+    is_eden_running = True
+    is_dev = False
+    installed_version = get_current_version()
+    installed_version_age: Optional[int] = None
+    installed_version_datetime = date_from_version(installed_version)
+    if installed_version_datetime:
+        installed_version_age = (datetime.now() - installed_version_datetime).days
+
+    running_version = "-"
+    running_version_datetime = None
+    running_version_age: Optional[int] = None
+    try:
+        running_version = instance.get_running_version()
+        running_version_datetime = date_from_version(running_version)
+        if running_version_datetime:
+            running_version_age = (datetime.now() - running_version_datetime).days
+    except EdenNotRunningError:
+        is_eden_running = False
+
+    ages_deltas: Optional[int] = (
+        (running_version_age - installed_version_age)
+        if running_version_age
+        and installed_version_age
+        and running_version_age != installed_version_age
+        else None
+    )
+
+    if running_version:
+        if running_version.startswith("-") or running_version.endswith("-"):
+            is_dev = True
+
+    return VersionInfo(
+        running_version,
+        running_version_age,
+        installed_version,
+        installed_version_age,
+        ages_deltas,
+        is_eden_running,
+        is_dev,
+    )
 
 
 # returns (installed_version, release) tuple
@@ -54,3 +121,15 @@ def get_current_version() -> str:
     versioned release.
     """
     return format_eden_version(get_current_version_parts())
+
+
+def date_from_version(version: str) -> Optional[datetime]:
+    """Convert a version string to a datetime object so we can calculate age and deltas, but return None if there's any problem"""
+    if len(version) < 8:
+        return None
+
+    try:
+        date = datetime.strptime(version[:8], "%Y%m%d")
+        return date
+    except ValueError:
+        return None
