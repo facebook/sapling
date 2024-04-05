@@ -106,13 +106,38 @@ allow-apple-double = "false"
                             eden_rc.write(
                                 """
 [redirections]
-darwin-redirection-type = "symlink"'
+darwin-redirection-type = "symlink"
 """
                             )
 
                 self.eden.start()
+                self.generate_eden_cli_wrapper(orig_test_dir)
             except Exception as e:
                 ex = e
 
         if ex:
             raise ex
+
+    def generate_eden_cli_wrapper(self, binpath: Path):
+        cmd, env = self.eden.get_edenfsctl_cmd_env("", config_dir=True)
+        edenpath = binpath.parents[1] / "install" / "bin" / "eden"
+        # These two are not really necessary and contain symbols that might be
+        # annoying to escape, so let's get rid of them
+        env.pop("HGTEST_EXCLUDED", None)
+        env.pop("HGTEST_INCLUDED", None)
+        if not os.name == "nt":
+            with open(edenpath, "w") as f:
+                f.write("#!/usr/bin/env bash\n")
+                for k, v in env.items():
+                    f.write(f"export {k}={repr(v)}\n")
+                f.write(" ".join(cmd) + ' "$@"\n')
+            os.chmod(edenpath, 0o775)
+        else:
+            with open(str(edenpath) + ".bat", "w") as f:
+                f.write("@echo off\n")
+                for k, v in env.items():
+                    f.write(f"set {k}={v}\n")
+                cmd[0] = f'"{cmd[0]}"'
+                fullpath = (" ".join(cmd)).strip()
+                f.write(f"{fullpath} %*\n")
+                f.write("exit /B %errorlevel%\n")
