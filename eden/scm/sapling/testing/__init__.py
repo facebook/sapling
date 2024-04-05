@@ -68,6 +68,8 @@ Tests passing with `run-tests.py` and a real `bash` can fail with
   `#inprocess-hg-incompatible` can make a test run `hg` as external process -
   trade performance for compatibility. `#inprocess-hg-incompatible` can be used
   together with `#chg-compatibile` to restore some performance using chg.
+  `#inprocess-hg-incompatible` disables in-process shell emulation.
+  Commands run by `ui.system` will use the real system shell.
 
 - Python block `>>>` behavior is different.
   In `debugruntest` the block won't be treated as a shell heredoc so things
