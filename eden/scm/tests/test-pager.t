@@ -9,11 +9,11 @@
   $ cat >> fakepager.py <<EOF
   > import sys
   > printed = False
-  > for line in sys.stdin:
-  >     ui.write('paged! %r\n' % line)
+  > for line in sys.stdin.buffer:
+  >     sys.stdout.buffer.write(('paged! %r\n' % line.decode()).encode())
   >     printed = True
   > if not printed:
-  >     ui.write('paged empty output!\n')
+  >     sys.stdout.buffer.write(b'paged empty output!\n')
   > EOF
 
 Enable ui.assume-tty so that the pager will start, and set the pager to our
@@ -21,7 +21,7 @@ fake pager that lets us see when the pager was running.
   $ setconfig ui.assume-tty=yes ui.color=no
   $ cat >>$HGRCPATH <<EOF
   > [pager]
-  > pager = hg dbsh $TESTTMP/fakepager.py
+  > pager = hg debugpython $TESTTMP/fakepager.py
   > EOF
 
   $ hg init repo
@@ -218,19 +218,10 @@ improve this.
 
 Pager works with shell aliases.
 
-#if windows
-On Windows cmd's echo is used, which prints carriage returns, so we use hg instead
-
-  $ cat >> $HGRCPATH <<EOF
-  > [alias]
-  > echoa = !hg dbsh -c "ui.write('a\n')"
-  > EOF
-#else
   $ cat >> $HGRCPATH <<EOF
   > [alias]
   > echoa = !echo a
   > EOF
-#endif
 
   $ hg echoa
   a
@@ -362,7 +353,7 @@ Environment variables like LESS and LV are set automatically:
   > import sys
   > sys.stdin.read()
   > for name in ['LESS', 'LV']:
-  >     ui.write(('%s=%s\n') % (name, os.environ.get(name, '-')))
+  >     sys.stdout.write(('%s=%s\n') % (name, os.environ.get(name, '-')))
   > EOF
 
   $ cat >> $HGRCPATH <<EOF
@@ -371,7 +362,7 @@ Environment variables like LESS and LV are set automatically:
   > [ui]
   > formatted=1
   > [pager]
-  > pager = hg dbsh $TESTTMP/printlesslv.py
+  > pager = hg debugpython $TESTTMP/printlesslv.py
   > EOF
   $ unset LESS
   $ unset LV

@@ -24,7 +24,7 @@ setup backing repo
 
 test eden clone
 
-  $ eden clone $TESTTMP/e1 $TESTTMP/e2 | dos2unix
+  $ eden clone $TESTTMP/e1 $TESTTMP/e2
   Cloning new repository at $TESTTMP/e2...
   Success.  Checked out commit 9bc730a1
   $ eden list

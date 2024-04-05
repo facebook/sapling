@@ -86,6 +86,20 @@ class ExpectLine:
         # normalize path separator on windows
         if os.name == "nt":
             line = line.replace("\\", "/")
+            # Output might sometimes use different line endings "\r\n", "\n".
+            # Normalize to "\n" on Windows to avoid verbose "#if win"s.
+            # Note: some tests (ex. test-import-eol.t) intentionally test "\r\n"
+            # on POSIX and Windows, so if the expected output (self.body) is
+            # "\r\n (esc)" explicitly, it should also be accepted.
+            if (
+                not self.isre
+                and line != self.body
+                # splitlines() turns "\r" to r"\r (esc)"
+                # which is replaced to r"/r (esc)" by the above line.
+                and line.endswith("/r (esc)")
+                and line[:-8] == self.body
+            ):
+                return True
         if self.isre:
             # pyre-fixme[7]: Expected `bool` but got `Optional[Match[str]]`.
             return re.match(self.body + r"\Z", line)

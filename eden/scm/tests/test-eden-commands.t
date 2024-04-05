@@ -14,7 +14,7 @@ Test a few simple eden commands
    $ eden status
    EdenFS is running normally \(pid ([0-9]+)\) (re)
    $ eden list
-   $ eden version | dos2unix
+   $ eden version
    Installed: -
    Running:   -
    (Dev version of EdenFS seems to be running)
