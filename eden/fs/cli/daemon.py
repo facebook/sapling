@@ -336,6 +336,11 @@ def get_edenfs_environment() -> Dict[str, str]:
         "HG_TEST_REMOTE_CONFIG",
         # In some environment, this is used instead of the USER variable
         "CLOUD2PROD_IDENTITY",
+        # The following 4 are used on sl's .t tests
+        "HGRCPATH",
+        "SL_CONFIG_PATH",
+        "TESTTMP",
+        "HGUSER",
     ]
 
     if sys.platform == "win32":
