@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -16,6 +17,7 @@ use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use pathhistory::RenameTracer;
+use pathmatcher::Matcher;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
 use types::RepoPath;
@@ -255,5 +257,16 @@ impl CopyTrace for DagCopyTrace {
                 return Ok(TraceResult::Deleted(rename_commit, curr_path));
             }
         }
+    }
+
+    /// find {x@dst: y@src} copy mapping for directed compare
+    async fn path_copies(
+        &self,
+        _src: Vertex,
+        _dst: Vertex,
+        _matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+        let result = HashMap::new();
+        Ok(result)
     }
 }

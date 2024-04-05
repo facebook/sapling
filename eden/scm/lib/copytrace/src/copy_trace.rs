@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::Vertex;
+use pathmatcher::Matcher;
 use serde::Serialize;
 use types::RepoPathBuf;
 
@@ -57,4 +61,12 @@ pub trait CopyTrace {
         dst: Vertex,
         src_path: RepoPathBuf,
     ) -> Result<TraceResult>;
+
+    /// find {x@dst: y@src} copy mapping for directed compare
+    async fn path_copies(
+        &self,
+        src: Vertex,
+        dst: Vertex,
+        matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>>;
 }
