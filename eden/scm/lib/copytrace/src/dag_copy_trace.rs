@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::DagAlgorithm;
+use dag::Vertex;
 use hg_metrics::increment_counter;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
@@ -57,7 +58,7 @@ impl DagCopyTrace {
         Ok(dag_copy_trace)
     }
 
-    async fn vertex_to_tree_manifest(&self, commit: &dag::Vertex) -> Result<TreeManifest> {
+    async fn vertex_to_tree_manifest(&self, commit: &Vertex) -> Result<TreeManifest> {
         let commit_id = HgId::from_slice(commit.as_ref())?;
         let commit_to_tree_id = self
             .root_tree_reader
@@ -72,10 +73,10 @@ impl DagCopyTrace {
 
     async fn trace_rename_commit(
         &self,
-        src: dag::Vertex,
-        dst: dag::Vertex,
+        src: Vertex,
+        dst: Vertex,
         path: RepoPathBuf,
-    ) -> Result<Option<dag::Vertex>> {
+    ) -> Result<Option<Vertex>> {
         let set = self.dag.range(src.into(), dst.into()).await?;
         let mut rename_tracer = RenameTracer::new(
             set,
@@ -90,10 +91,10 @@ impl DagCopyTrace {
 
     async fn find_rename_in_direction(
         &self,
-        commit: dag::Vertex,
+        commit: Vertex,
         path: &RepoPath,
         direction: SearchDirection,
-    ) -> Result<(Option<RepoPathBuf>, dag::Vertex)> {
+    ) -> Result<(Option<RepoPathBuf>, Vertex)> {
         let parents = self.dag.parent_names(commit.clone()).await?;
         if parents.is_empty() {
             return Err(CopyTraceError::NoParents(commit).into());
@@ -121,11 +122,7 @@ impl DagCopyTrace {
         Ok((rename, next_commit))
     }
 
-    async fn check_path(
-        &self,
-        target_commit: &dag::Vertex,
-        path: RepoPathBuf,
-    ) -> Result<TraceResult> {
+    async fn check_path(&self, target_commit: &Vertex, path: RepoPathBuf) -> Result<TraceResult> {
         let tree = self.vertex_to_tree_manifest(target_commit).await?;
         if tree.get(&path)?.is_some() {
             Ok(TraceResult::Renamed(path))
@@ -139,8 +136,8 @@ impl DagCopyTrace {
 impl CopyTrace for DagCopyTrace {
     async fn trace_rename(
         &self,
-        src: dag::Vertex,
-        dst: dag::Vertex,
+        src: Vertex,
+        dst: Vertex,
         src_path: RepoPathBuf,
     ) -> Result<TraceResult> {
         tracing::debug!(?src, ?dst, ?src_path, "trace_reanme");
@@ -182,8 +179,8 @@ impl CopyTrace for DagCopyTrace {
 
     async fn trace_rename_backward(
         &self,
-        src: dag::Vertex,
-        dst: dag::Vertex,
+        src: Vertex,
+        dst: Vertex,
         dst_path: RepoPathBuf,
     ) -> Result<TraceResult> {
         tracing::trace!(?src, ?dst, ?dst_path, "trace_rename_backward");
@@ -222,8 +219,8 @@ impl CopyTrace for DagCopyTrace {
 
     async fn trace_rename_forward(
         &self,
-        src: dag::Vertex,
-        dst: dag::Vertex,
+        src: Vertex,
+        dst: Vertex,
         src_path: RepoPathBuf,
     ) -> Result<TraceResult> {
         tracing::trace!(?src, ?dst, ?src_path, "trace_rename_forward");
