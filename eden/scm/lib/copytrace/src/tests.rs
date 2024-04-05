@@ -281,6 +281,25 @@ macro_rules! assert_trace_rename {
     }};
 }
 
+macro_rules! assert_path_copies {
+    ($copy_trace:ident $src:tt $dst:tt, [$( $key:expr => $val:expr ),*]) => {{
+        let src = vertex_from_str(stringify!($src));
+        let dst = vertex_from_str(stringify!($dst));
+        let result = $copy_trace
+            .path_copies(src, dst, Option::None)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect::<HashMap<_, _>>();
+
+        let mut expected = HashMap::new();
+        $( expected.insert($key.to_string(), $val.to_string()); )*
+
+        assert_eq!(result, expected);
+    }};
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_linear_single_rename() {
     let ascii = r#"
@@ -522,4 +541,25 @@ async fn test_linear_dir_move() {
 
     assert_trace_rename!(c A B, "a/b/3.c" -> "b/b/3.c");
     assert_trace_rename!(c B A, "b/b/3.c" -> "a/b/3.c");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_basic_path_copies() {
+    let ascii = r#"
+    C
+    |
+    B
+    |
+    A
+    "#;
+    let changes = HashMap::from([
+        ("A", vec!["+ a/1.txt 1", "+ b/3.c 3"]),
+        ("B", vec!["-> a/1.txt b/1.txt", "-> b/3.c b/3.cpp"]),
+        ("C", vec!["M b/1.txt 4"]),
+    ]);
+    let t = CopyTraceTestCase::new(ascii, changes).await;
+    let c = t.copy_trace().await;
+
+    assert_path_copies!(c A B, ["b/1.txt" => "a/1.txt", "b/3.cpp" => "b/3.c"]);
+    assert_path_copies!(c B A, ["a/1.txt" => "b/1.txt", "b/3.c" => "b/3.cpp"]);
 }
