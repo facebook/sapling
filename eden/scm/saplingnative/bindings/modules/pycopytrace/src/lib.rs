@@ -29,6 +29,7 @@ use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use parking_lot::Mutex;
+use pypathmatcher::extract_matcher;
 use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
@@ -134,6 +135,31 @@ py_class!(pub class dagcopytrace |py| {
         let inner = self.inner(py).clone();
         let trace_result = py.allow_threads(|| block_on(inner.trace_rename(src, dst, src_path))).map_pyerr(py)?;
         Ok(Serde(trace_result))
+    }
+
+    /// path_copies(src: node, dst: node, matcher: Optional[Matcher] = None) -> Dict[str, str]
+    ///
+    /// find {dst: src} copy mapping for directed compare.
+    def path_copies(
+        &self,
+        src: PyBytes,
+        dst: PyBytes,
+        matcher: Option<PyObject> = None,
+    ) -> PyResult<HashMap<String, String>> {
+        let src = Vertex::copy_from(src.data(py));
+        let dst = Vertex::copy_from(dst.data(py));
+        let matcher = match matcher {
+            Some(obj) => Some(extract_matcher(py, obj)?),
+            None => None,
+        };
+
+        let inner = self.inner(py).clone();
+        let copies = py.allow_threads(|| block_on(inner.path_copies(src, dst, matcher))).map_pyerr(py)?;
+
+        let copies = copies.into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        Ok(copies)
     }
 });
 

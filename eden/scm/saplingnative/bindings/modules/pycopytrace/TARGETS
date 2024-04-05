@@ -28,5 +28,6 @@ rust_python_library(
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
+        "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
     ],
 )
