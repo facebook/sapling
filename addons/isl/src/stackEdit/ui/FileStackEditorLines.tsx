@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TokenizedHunk} from '../../ComparisonView/SplitDiffView/syntaxHighlighting';
+import type {TokenizedHunk} from '../../ComparisonView/SplitDiffView/syntaxHighlightingTypes';
 import type {FlattenLine} from '../../linelog';
 import type {FileStackState, Rev} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';

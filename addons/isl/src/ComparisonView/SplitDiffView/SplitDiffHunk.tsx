@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlighting';
+import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlightingTypes';
 import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {ReactNode} from 'react';
 import type {Hunk, ParsedDiff} from 'shared/patch/parse';

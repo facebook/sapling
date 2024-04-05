@@ -5,31 +5,86 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ThemeColor} from '../../theme';
+import type {
+  SyntaxWorkerRequest,
+  SyntaxWorkerResponse,
+  TokenizedDiffHunks,
+  TokenizedHunk,
+} from './syntaxHighlightingTypes';
 import type {ParsedDiff} from 'shared/patch/parse';
-import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
-import type {TextMateGrammar} from 'shared/textmate-lib/types';
-import type {Registry, IGrammar} from 'vscode-textmate';
 
-import {grammars, languages} from '../../generated/textmate/TextMateGrammarManifest';
 import {themeState} from '../../theme';
-import VSCodeDarkPlusTheme from './VSCodeDarkPlusTheme';
-import VSCodeLightPlusTheme from './VSCodeLightPlusTheme';
+import {registerCleanup} from '../../utils';
 import {useAtomValue} from 'jotai';
 import {useEffect, useState} from 'react';
 import {CancellationToken} from 'shared/CancellationToken';
-import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
-import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
-import {tokenizeLines} from 'shared/textmate-lib/tokenize';
-import {nullthrows} from 'shared/utils';
-import {loadWASM} from 'vscode-oniguruma';
 
-const URL_TO_ONIG_WASM = 'generated/textmate/onig.wasm';
+class StubWorker {
+  public onmessage = (_e: MessageEvent) => null;
+  public postMessage = (_msg: unknown) => undefined;
+}
 
-export type TokenizedHunk = Array<Array<HighlightedToken>>;
-export type TokenizedDiffHunk = [before: TokenizedHunk, after: TokenizedHunk];
-export type TokenizedDiffHunks = Array<TokenizedDiffHunk>;
+class WorkerApi<Request extends {type: string}, Response extends {type: string}> {
+  public worker: Worker;
+
+  private id = 0;
+  private requests = new Map<number, (response: Response) => void>();
+  private listeners = new Map<Response['type'], (msg: Response) => void>();
+
+  constructor(url: URL) {
+    this.worker = window.Worker ? new Worker(url, {type: 'module'}) : (new StubWorker() as Worker);
+    type ResponseWithId = Response & {id: number};
+    this.worker.onmessage = e => {
+      const msg = e.data as Response;
+      const id = (msg as ResponseWithId).id;
+      const callback = this.requests.get(id);
+      if (callback) {
+        callback(msg);
+        this.requests.delete(id);
+      }
+
+      const listener = this.listeners.get(msg.type);
+      if (listener) {
+        listener(msg);
+      }
+    };
+  }
+
+  /** Send a message, then wait for a reply */
+  request<T extends Request['type']>(msg: Request & {type: T}): Promise<Response & {type: T}> {
+    return new Promise<Response & {type: T}>(resolve => {
+      const id = this.id++;
+      this.worker.postMessage({...msg, id});
+      this.requests.set(id, resolve as (response: Response) => void);
+    });
+  }
+
+  /** listen for messages from the server of a given type */
+  listen<T extends Response['type']>(
+    type: T,
+    listener: (msg: Response & {type: T}) => void,
+  ): () => void {
+    this.listeners.set(type, listener as (msg: Response) => void);
+    return () => this.listeners.delete(type);
+  }
+}
+
+const worker = new WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>(
+  new URL('./syntaxHighlightingWorker', import.meta.url),
+);
+registerCleanup(
+  worker,
+  worker.listen('cssColorMap', msg => {
+    // During testing-library tear down (ex. syntax highlighting was canceled),
+    // `document` may be null. Abort here to avoid errors.
+    if (document == null) {
+      return undefined;
+    }
+    updateTextMateGrammarCSS(msg.colorMap);
+  }),
+  import.meta.hot,
+);
 
 /**
  * Given a set of hunks from a diff view,
@@ -48,11 +103,9 @@ export function useTokenizedHunks(
 
   useEffect(() => {
     const token = newTrackedCancellationToken();
-    // TODO: run this in a web worker so we don't block the UI?
-    // May only be a problem for very large files.
-    tokenizeHunks(theme, path, hunks, token).then(result => {
+    worker.request({type: 'tokenizeHunks', theme, path, hunks}).then(result => {
       if (!token.isCancelled) {
-        setTokenized(result);
+        setTokenized(result.result);
       }
     });
     return () => token.cancel();
@@ -76,11 +129,9 @@ export function useTokenizedContents(
       return;
     }
     const token = newTrackedCancellationToken();
-    // TODO: run this in a web worker so we don't block the UI?
-    // May only be a problem for very large files.
-    tokenizeContent(theme, path, content, token).then(result => {
+    worker.request({type: 'tokenizeContents', theme, path, content}).then(result => {
       if (!token.isCancelled) {
-        setTokenized(result);
+        setTokenized(result.result);
       }
     });
     return () => token.cancel();
@@ -128,15 +179,16 @@ export function useTokenizedContentsOnceVisible(
       return;
     }
     const token = newTrackedCancellationToken();
+
     Promise.all([
-      tokenizeContent(theme, path, contentBefore, token),
-      tokenizeContent(theme, path, contentAfter, token),
+      worker.request({type: 'tokenizeContents', theme, path, content: contentBefore}),
+      worker.request({type: 'tokenizeContents', theme, path, content: contentAfter}),
     ]).then(([a, b]) => {
-      if (a == null || b == null) {
+      if (a?.result == null || b?.result == null) {
         return;
       }
       if (!token.isCancelled) {
-        setTokenized([a, b]);
+        setTokenized([a.result, b.result]);
       }
     });
     return () => token.cancel();
@@ -145,158 +197,6 @@ export function useTokenizedContentsOnceVisible(
     tokenized?.[1].length === contentAfter?.length
     ? tokenized
     : undefined;
-}
-
-async function tokenizeHunks(
-  theme: ThemeColor,
-  path: string,
-  hunks: Array<{lines: Array<string>}>,
-  cancellationToken: CancellationToken,
-): Promise<TokenizedDiffHunks | undefined> {
-  await ensureOnigurumaIsLoaded();
-
-  // During testing-library tear down (ex. syntax highlighting was canceled),
-  // `document` may be null. Abort here to avoid errors.
-  if (document == null) {
-    return undefined;
-  }
-
-  const scopeName = getFilepathClassifier().findScopeNameForPath(path);
-  if (!scopeName) {
-    return undefined;
-  }
-  const store = getGrammerStore(theme);
-  const grammar = await getGrammar(store, scopeName);
-  if (grammar == null) {
-    return undefined;
-  }
-  if (cancellationToken.isCancelled) {
-    // check for cancellation before doing expensive highlighting
-    return undefined;
-  }
-  const tokenizedPatches: TokenizedDiffHunks = hunks
-    .map(hunk => recoverFileContentsFromPatchLines(hunk.lines))
-    .map(([before, after]) => [tokenizeLines(before, grammar), tokenizeLines(after, grammar)]);
-
-  return tokenizedPatches;
-}
-
-async function tokenizeContent(
-  theme: ThemeColor,
-  path: string,
-  content: Array<string>,
-  cancellationToken: CancellationToken,
-): Promise<TokenizedHunk | undefined> {
-  await ensureOnigurumaIsLoaded();
-  const scopeName = getFilepathClassifier().findScopeNameForPath(path);
-  if (!scopeName) {
-    return undefined;
-  }
-  const store = getGrammerStore(theme);
-  const grammar = await getGrammar(store, scopeName);
-  if (grammar == null) {
-    return undefined;
-  }
-  if (cancellationToken.isCancelled) {
-    // check for cancellation before doing expensive highlighting
-    return undefined;
-  }
-
-  return tokenizeLines(content, grammar);
-}
-
-const grammarCache: Map<string, Promise<IGrammar | null>> = new Map();
-function getGrammar(store: Registry, scopeName: string): Promise<IGrammar | null> {
-  if (grammarCache.has(scopeName)) {
-    return nullthrows(grammarCache.get(scopeName));
-  }
-  const grammarPromise = store.loadGrammar(scopeName);
-  grammarCache.set(scopeName, grammarPromise);
-  return grammarPromise;
-}
-
-/**
- * Patch lines start with ' ', '+', or '-'. From this we can reconstruct before & after file contents as strings,
- * which we can actually use in the syntax highlighting.
- */
-function recoverFileContentsFromPatchLines(
-  lines: Array<string>,
-): [before: Array<string>, after: Array<string>] {
-  const linesBefore = [];
-  const linesAfter = [];
-  for (const line of lines) {
-    if (line[0] === ' ') {
-      linesBefore.push(line.slice(1));
-      linesAfter.push(line.slice(1));
-    } else if (line[0] === '+') {
-      linesAfter.push(line.slice(1));
-    } else if (line[0] === '-') {
-      linesBefore.push(line.slice(1));
-    }
-  }
-
-  return [linesBefore, linesAfter];
-}
-
-let cachedGrammarStore: {value: Registry; theme: ThemeColor} | null = null;
-function getGrammerStore(theme: ThemeColor) {
-  const found = cachedGrammarStore;
-  if (found != null && found.theme === theme) {
-    return found.value;
-  }
-
-  // Grammars were cached according to the store, but the theme may have changed. Just bust the cache
-  // to force grammars to reload.
-  grammarCache.clear();
-
-  const themeValues = theme === 'light' ? VSCodeLightPlusTheme : VSCodeDarkPlusTheme;
-
-  const registry = createTextMateRegistry(themeValues, grammars, fetchGrammar);
-
-  updateTextMateGrammarCSS(registry.getColorMap());
-  cachedGrammarStore = {value: registry, theme};
-  return registry;
-}
-
-async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {
-  const uri = `generated/textmate/${moduleName}.${type}`;
-  const response = await fetch(uri);
-  const grammar = await response.text();
-  return {type, grammar};
-}
-
-let onigurumaLoadingJob: Promise<void> | null = null;
-function ensureOnigurumaIsLoaded(): Promise<void> {
-  if (onigurumaLoadingJob === null) {
-    onigurumaLoadingJob = loadOniguruma();
-  }
-  return onigurumaLoadingJob;
-}
-
-async function loadOniguruma(): Promise<void> {
-  const onigurumaWASMRequest = fetch(URL_TO_ONIG_WASM);
-  const response = await onigurumaWASMRequest;
-
-  const contentType = response.headers.get('content-type');
-  const useStreamingParser = contentType === 'application/wasm';
-
-  if (useStreamingParser) {
-    await loadWASM(response);
-  } else {
-    const dataOrOptions = {
-      data: await response.arrayBuffer(),
-    };
-    await loadWASM(dataOrOptions);
-  }
-}
-
-let _classifier: FilepathClassifier | null = null;
-
-function getFilepathClassifier(): FilepathClassifier {
-  if (_classifier == null) {
-    _classifier = new FilepathClassifier(grammars, languages);
-  }
-  return _classifier;
 }
 
 /** Track the `CancellationToken`s so they can be cancelled immediately in tests. */
