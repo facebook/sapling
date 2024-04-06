@@ -60,6 +60,7 @@ use mononoke_app::MononokeReposManager;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_permission_checker::RepoPermissionChecker;
 use slog::info;
 use tokio::net::TcpListener;
 
@@ -118,6 +119,9 @@ pub struct Repo {
 
     #[facet]
     commit_graph: CommitGraph,
+
+    #[facet]
+    repo_permission_checker: dyn RepoPermissionChecker,
 }
 
 /// Mononoke Git Server
