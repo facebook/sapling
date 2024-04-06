@@ -19,7 +19,7 @@ blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bulkops = { version = "0.1.0", path = "../bulkops" }
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }

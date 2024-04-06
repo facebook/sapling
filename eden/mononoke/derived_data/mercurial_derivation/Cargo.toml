@@ -40,7 +40,7 @@ assert_matches = "1.5"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../../changesets" }
 cmdlib_caching = { version = "0.1.0", path = "../../cmdlib/caching" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }

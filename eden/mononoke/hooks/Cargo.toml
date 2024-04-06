@@ -15,7 +15,7 @@ doctest = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
 fancy-regex = "0.10.0"
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

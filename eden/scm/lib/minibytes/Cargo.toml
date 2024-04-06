@@ -7,7 +7,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-bytes = { version = "1.1", features = ["serde"], optional = true }
+bytes = { version = "1.6.0", features = ["serde"], optional = true }
 memmap2 = { version = "0.5.10", optional = true }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 
