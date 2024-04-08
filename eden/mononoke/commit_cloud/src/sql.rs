@@ -10,6 +10,7 @@ pub mod checkout_locations;
 pub mod heads;
 pub mod history;
 pub mod local_bookmarks;
+pub mod ops;
 pub mod remote_bookmarks;
 pub mod snapshots;
 pub mod versions;

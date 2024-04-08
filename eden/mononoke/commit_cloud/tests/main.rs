@@ -14,16 +14,17 @@ use commit_cloud::sql::heads::HeadExtraArgs;
 use commit_cloud::sql::heads::WorkspaceHead;
 use commit_cloud::sql::local_bookmarks::LocalBookmarkExtraArgs;
 use commit_cloud::sql::local_bookmarks::WorkspaceLocalBookmark;
+use commit_cloud::sql::ops::BasicOps;
 use commit_cloud::sql::remote_bookmarks::RemoteBookmarkExtraArgs;
 use commit_cloud::sql::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud::sql::snapshots::SnapshotExtraArgs;
 use commit_cloud::sql::snapshots::WorkspaceSnapshot;
 use commit_cloud::sql::versions::WorkspaceVersion;
-use commit_cloud::BasicOps;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
+
 #[fbinit::test]
 async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();

@@ -8,7 +8,8 @@
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 
-use crate::SqlCommitCloud;
+use crate::sql::ops::SqlCommitCloud;
+
 pub struct SqlCommitCloudBuilder {
     #[allow(unused)]
     pub(crate) connections: SqlConnections,

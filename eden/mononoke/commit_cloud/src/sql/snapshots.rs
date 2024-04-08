@@ -9,8 +9,8 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
 
-use crate::BasicOps;
-use crate::SqlCommitCloud;
+use crate::sql::ops::BasicOps;
+use crate::sql::ops::SqlCommitCloud;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceSnapshot {
