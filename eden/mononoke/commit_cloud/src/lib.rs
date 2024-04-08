@@ -8,18 +8,11 @@
 use async_trait::async_trait;
 use sql_ext::SqlConnections;
 
-use crate::heads::WorkspaceHead;
-use crate::history::WorkspaceHistory;
-use crate::local_bookmarks::WorkspaceLocalBookmark;
-use crate::remote_bookmarks::WorkspaceRemoteBookmark;
-pub mod builder;
-pub mod checkout_locations;
-pub mod heads;
-pub(crate) mod history;
-pub mod local_bookmarks;
-pub mod remote_bookmarks;
-pub mod snapshots;
-pub mod versions;
+use crate::sql::heads::WorkspaceHead;
+use crate::sql::history::WorkspaceHistory;
+use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
+use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
+pub mod sql;
 pub(crate) mod workspace;
 
 #[allow(unused)]

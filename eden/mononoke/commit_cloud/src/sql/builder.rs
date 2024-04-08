@@ -17,7 +17,7 @@ pub struct SqlCommitCloudBuilder {
 impl SqlConstruct for SqlCommitCloudBuilder {
     const LABEL: &'static str = "commit_cloud";
 
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-commit-cloud.sql");
+    const CREATION_QUERY: &'static str = include_str!("../../schemas/sqlite-commit-cloud.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }

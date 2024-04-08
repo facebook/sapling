@@ -7,9 +7,9 @@
 
 use mononoke_types::DateTime as MononokeDateTime;
 
-use crate::heads::WorkspaceHead;
-use crate::local_bookmarks::WorkspaceLocalBookmark;
-use crate::remote_bookmarks::WorkspaceRemoteBookmark;
+use crate::sql::heads::WorkspaceHead;
+use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
+use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
 
 #[allow(unused)]
 pub(crate) struct WorkspaceHistory {
