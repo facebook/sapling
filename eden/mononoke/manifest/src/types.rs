@@ -242,6 +242,40 @@ pub struct CombinedId<M, N>(pub M, pub N);
 
 pub struct Combined<M, N>(pub M, pub N);
 
+fn combine_entries<
+    M: AsyncManifest<Store> + Send + Sync,
+    N: AsyncManifest<Store> + Send + Sync,
+    Store: Send + Sync,
+>(
+    (m_result, n_result): (
+        Result<(MPathElement, Entry<M::TreeId, M::LeafId>)>,
+        Result<(MPathElement, Entry<N::TreeId, N::LeafId>)>,
+    ),
+) -> Result<(
+    MPathElement,
+    Entry<
+        <Combined<M, N> as AsyncManifest<Store>>::TreeId,
+        <Combined<M, N> as AsyncManifest<Store>>::LeafId,
+    >,
+)> {
+    let (m_elem, m_entry) = m_result?;
+    let (n_elem, n_entry) = n_result?;
+
+    match (m_elem == n_elem, m_entry, n_entry) {
+        (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
+            Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
+        }
+        (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
+            Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
+        }
+        _ => bail!(
+            "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
+            m_elem,
+            n_elem,
+        ),
+    }
+}
+
 #[async_trait]
 impl<S, M, N> StoreLoadable<S> for CombinedId<M, N>
 where
@@ -287,24 +321,8 @@ impl<
         Ok(m.list(ctx, blobstore)
             .await?
             .zip(n.list(ctx, blobstore).await?)
-            .map(|(m_result, n_result)| {
-                let (m_elem, m_entry) = m_result?;
-                let (n_elem, n_entry) = n_result?;
-
-                match (m_elem == n_elem, m_entry, n_entry) {
-                    (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
-                        Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
-                    }
-                    (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
-                        Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
-                    }
-                    _ => bail!(
-                        "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
-                        m_elem,
-                        n_elem,
-                    ),
-                }
-            }).boxed())
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
     }
 
     async fn list_prefix(
@@ -318,24 +336,8 @@ impl<
         Ok(m.list_prefix(ctx, blobstore, prefix)
             .await?
             .zip(n.list_prefix(ctx, blobstore, prefix).await?)
-            .map(|(m_result, n_result)| {
-                let (m_elem, m_entry) = m_result?;
-                let (n_elem, n_entry) = n_result?;
-
-                match (m_elem == n_elem, m_entry, n_entry) {
-                    (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
-                        Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
-                    }
-                    (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
-                        Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
-                    }
-                    _ => bail!(
-                        "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
-                        m_elem,
-                        n_elem,
-                    ),
-                }
-            }).boxed())
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
     }
 
     async fn lookup(
