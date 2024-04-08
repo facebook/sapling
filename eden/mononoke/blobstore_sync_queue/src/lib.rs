@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(slice_group_by)]
-
 mod write_ahead_log;
 
 use sql::mysql;
