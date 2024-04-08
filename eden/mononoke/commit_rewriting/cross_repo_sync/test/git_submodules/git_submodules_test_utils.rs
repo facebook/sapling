@@ -77,6 +77,9 @@ pub(crate) struct SubmoduleSyncTestData {
     pub(crate) repo_a_info: (TestRepo, BTreeMap<String, ChangesetId>),
     pub(crate) large_repo: TestRepo,
     pub(crate) commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    pub(crate) test_sync_config_source: TestLiveCommitSyncConfigSource,
+    pub(crate) mapping: SqlSyncedCommitMapping,
 }
 
 /// Simplified version of `FileChange` that allows to quickly create file change
@@ -201,6 +204,9 @@ pub(crate) async fn build_submodule_sync_test_data(
         repo_a_info: (repo_a, repo_a_cs_map),
         large_repo,
         commit_syncer,
+        mapping,
+        live_commit_sync_config,
+        test_sync_config_source,
     })
 }
 
@@ -388,6 +394,36 @@ pub(crate) fn create_small_repo_sync_config(
         submodule_config: small_repo_submodule_config,
     };
     Ok(small_repo_config)
+}
+
+pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
+    ctx: &CoreContext,
+    repo_a: &TestRepo,
+    large_repo: &TestRepo,
+    prefix: &str,
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    mapping: SqlSyncedCommitMapping,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    test_sync_config_source: TestLiveCommitSyncConfigSource,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+    let commit_sync_config = create_commit_sync_config(
+        large_repo.repo_identity().id(),
+        repo_a.repo_identity().id(),
+        prefix,
+        submodule_deps.clone(),
+    )?;
+    test_sync_config_source.add_config(commit_sync_config);
+    let commit_syncer = create_repo_a_to_large_repo_commit_syncer(
+        ctx,
+        repo_a.clone(),
+        large_repo.clone(),
+        "repo_a",
+        mapping.clone(),
+        live_commit_sync_config.clone(),
+        test_sync_config_source.clone(),
+        submodule_deps,
+    )?;
+    Ok(commit_syncer)
 }
 
 // -----------------------------------------------------------------------------

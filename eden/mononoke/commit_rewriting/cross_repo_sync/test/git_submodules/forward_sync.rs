@@ -454,18 +454,37 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
         large_repo,
-        commit_syncer,
+        mapping,
+        live_commit_sync_config,
+        test_sync_config_source,
         ..
     } = build_submodule_sync_test_data(
         fb,
         &repo_b,
-        vec![
-            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
-            // Add it as a submdule in the path of an existing file.
-            (NonRootMPath::new("A_A").unwrap(), repo_c.clone()),
-        ],
+        // Initial config should only have repo B as submodule dependency,
+        // because the test data setup will create a file in the path `A_A`
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
     )
     .await?;
+
+    // Update the commit syncer to use a new config version with extra submodule
+    // dependencies.
+    // This config version will include the submodule that will be added in the
+    // submodule deps.
+    let commit_syncer = add_new_commit_sync_config_version_with_submodule_deps(
+        &ctx,
+        &repo_a,
+        &large_repo,
+        "repo_a",
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            // Add it as a submdule in the path of the existing `A_A` file.
+            (NonRootMPath::new("A_A").unwrap(), repo_c.clone()),
+        ],
+        mapping,
+        live_commit_sync_config,
+        test_sync_config_source,
+    )?;
 
     let repo_c_mapped_git_commit = repo_c
         .repo_derived_data()
@@ -542,15 +561,15 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         repo_a_info: (repo_a, repo_a_cs_map),
         large_repo,
         commit_syncer,
+        mapping,
+        live_commit_sync_config,
+        test_sync_config_source,
         ..
     } = build_submodule_sync_test_data(
         fb,
         &repo_b,
         // Add it as a submdule in the path of an existing directory.
-        vec![
-            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
-            (dir_path.clone(), repo_c.clone()),
-        ],
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
     )
     .await?;
 
@@ -571,6 +590,25 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
     let _ = sync_to_master(ctx.clone(), &commit_syncer, add_dir_cs_id)
         .await
         .context("Failed to sync commit creating normal directory with files")?;
+
+    // Update the commit syncer to use a new config version with extra submodule
+    // dependencies.
+    // This config version will include the submodule that will be added in the
+    // path of an existing directory.
+    let commit_syncer = add_new_commit_sync_config_version_with_submodule_deps(
+        &ctx,
+        &repo_a,
+        &large_repo,
+        "repo_a",
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            // Add the submodule path to the config
+            (dir_path.clone(), repo_c.clone()),
+        ],
+        mapping,
+        live_commit_sync_config,
+        test_sync_config_source,
+    )?;
 
     let repo_c_mapped_git_commit = repo_c
         .repo_derived_data()
