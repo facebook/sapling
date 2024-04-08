@@ -270,18 +270,12 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
 
     let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
         .await?
-        .ok_or(anyhow!("Failed to sync commit"))?;
+        .ok_or(anyhow!("Commit wasn't synced"))?;
 
     println!("large_repo_cs_id: {}", large_repo_cs_id);
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
     derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
-
-    let expected_cs_id =
-        ChangesetId::from_str("b0db847efd159d8c84d9227c6ae2ac74caee7ff0c07543c034472b596f1af52c")
-            .unwrap();
-
-    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
@@ -293,15 +287,35 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
             vec![
                 // The submodule metadata file should also be deleted
                 // TODO(T179534458): delete metadata file when submodule is implicitly deleted
-                // "repo_a/submodules/.x-repo-submodule-repo_b",
-
-                // The submodule expansion should be entirely deleted
-                // TODO(T179534458): properly support submodule implicit deletion
+                "repo_a/submodules/.x-repo-submodule-repo_b",
+                // NOTE: no need to have explicit deletions for these files, because
+                // they're being deleted implicitly.
                 // "repo_a/submodules/repo_b/B_A",
                 // "repo_a/submodules/repo_b/B_B",
             ],
         )],
     )?;
+
+    // Assert that the submodule expansion was actually deleted implicitly
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            "repo_a/submodules/repo_b",
+        ],
+    )
+    .await?;
+
+    let expected_cs_id =
+        ChangesetId::from_str("723b5fd70f5a429c35fef028b7165f63c7f94821493db9188d83f6a2603b91a5")
+            .unwrap();
+
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(expected_cs_id)).await;
     Ok(())
 }
 

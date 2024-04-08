@@ -635,6 +635,7 @@ pub(crate) async fn derive_all_data_types_for_repo(
 
     Ok(())
 }
+
 /// Quickly check that working copy matches expectation by deriving fsnode
 /// and getting the path of all leaves.
 pub(crate) async fn assert_working_copy_matches_expected(

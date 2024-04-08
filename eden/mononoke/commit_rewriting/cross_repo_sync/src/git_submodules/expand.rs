@@ -143,7 +143,28 @@ async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
                             )
                             .await
                         }
-                        _ => Ok(vec![(p, fc)]),
+                        _ => {
+                            if sm_exp_data.submodule_deps.contains_key(&p) {
+                                // A normal file is replacing a submodule in the
+                                // small repo, which means that the submodule
+                                // expansion is being implicitly deleted in the
+                                // large repo.
+                                // If the expansion is deleted, we also need to
+                                // delete the submodule metadata file.
+                                let x_repo_sm_metadata_path =
+                                    get_x_repo_submodule_metadata_file_path(
+                                        &SubmodulePath(p.clone()),
+                                        sm_exp_data.x_repo_submodule_metadata_file_prefix,
+                                    )?;
+                                return Ok(vec![
+                                    (p, fc),
+                                    // Explicit deletion for the submodule
+                                    // metadata file
+                                    (x_repo_sm_metadata_path, FileChange::Deletion),
+                                ]);
+                            };
+                            Ok(vec![(p, fc)])
+                        }
                     },
                     FileChange::Deletion => {
                         let paths_to_delete =
