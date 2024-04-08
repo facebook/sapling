@@ -41,7 +41,6 @@ import {ModalContainer} from './useModal';
 import {usePromise} from './usePromise';
 import {isDev, isTest} from './utils';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Provider, atom, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React, {useMemo} from 'react';
 import {ContextMenus} from 'shared/ContextMenu';
@@ -49,6 +48,7 @@ import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
 
 import './index.css';
+import { Button } from './components/Button';
 
 export default function App() {
   return (
@@ -272,16 +272,15 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
             )
           }
           buttons={[
-            <VSCodeButton
+            <Button
               key="help-button"
-              appearance="secondary"
               onClick={e => {
                 platform.openExternalLink('https://sapling-scm.com/docs/introduction/installation');
                 e.preventDefault();
                 e.stopPropagation();
               }}>
               <T>See installation docs</T>
-            </VSCodeButton>,
+            </Button>,
           ]}
         />
       );
@@ -298,9 +297,8 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
             }
             details={<T replace={{$path: repoError.path ?? '(no path found)'}}>PATH: $path'</T>}
             buttons={[
-              <VSCodeButton
+              <Button
                 key="help-button"
-                appearance="secondary"
                 onClick={e => {
                   platform.openExternalLink(
                     'https://sapling-scm.com/docs/introduction/installation',
@@ -309,7 +307,7 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
                   e.stopPropagation();
                 }}>
                 <T>See installation docs</T>
-              </VSCodeButton>,
+              </Button>,
             ]}
           />
         );
