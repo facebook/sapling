@@ -13,9 +13,9 @@ import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
+import {Button} from './components/Button';
 
 import './BulkActionsMenu.css';
 
@@ -33,9 +33,9 @@ export function BulkActionsMenu() {
         </T>
       }
       additionalToggles={additionalToggles}>
-      <VSCodeButton appearance="icon" data-testid="bulk-actions-button">
+      <Button icon data-testid="bulk-actions-button">
         <Icon icon="run-all" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
