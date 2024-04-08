@@ -40,7 +40,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo &> /dev/null
+  $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
@@ -63,16 +63,16 @@
   $ git tag -a -m "last tag" last_tag
 
   $ cd "$GIT_REPO"
-  $ git pull "$GIT_REPO_ORIGIN" &> /dev/null
+  $ quiet git pull "$GIT_REPO_ORIGIN"
 # Capture all the known Git objects from the repo
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import the newly added commits to Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo &> /dev/null
+  $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
-  $ git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git &> /dev/null
+  $ quiet git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

@@ -56,7 +56,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo &> /dev/null
+  $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
