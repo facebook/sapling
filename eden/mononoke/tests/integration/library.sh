@@ -1623,7 +1623,13 @@ function lfs_server {
 }
 
 function git_client {
-  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/localhost.crt" -c http.sslKey="$TEST_CERTDIR/localhost.key" "$@"
+  git_client_as "client0" "$@"
+}
+
+function git_client_as {
+  local name="$1"
+  shift
+  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/$name.crt" -c http.sslKey="$TEST_CERTDIR/$name.key" "$@"
 }
 
 function mononoke_git_service {

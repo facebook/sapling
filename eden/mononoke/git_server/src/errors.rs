@@ -10,7 +10,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum GitServerContextErrorKind {
-    #[error("Operated not permitted")]
+    #[error("Operation not permitted")]
     Forbidden,
     #[error("Client not authenticated")]
     NotAuthenticated,

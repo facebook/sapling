@@ -6,11 +6,13 @@
  */
 
 mod context;
+mod method;
 
 pub use context::GitServerContext;
 pub use context::RepositoryRequestContext;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
+pub use method::GitMethod;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
