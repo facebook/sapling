@@ -75,7 +75,7 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         data: WorkspaceVersion,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertVersion::query(
             &self.connections.write_connection,
             &reponame,
@@ -83,8 +83,8 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
             &data.version,
             &data.timestamp,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }
 
@@ -96,7 +96,7 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
         _reponame: String,
         _workspace: String,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }

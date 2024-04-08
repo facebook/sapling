@@ -125,7 +125,7 @@ impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         data: WorkspaceCheckoutLocation,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertCheckoutLocations::query(
             &self.connections.write_connection,
             &reponame,
@@ -137,8 +137,8 @@ impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
             &data.unixname,
             &data.timestamp,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }
 
@@ -150,7 +150,7 @@ impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
         _reponame: String,
         _workspace: String,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         // Checkout locations update op endpoint is never used
         unimplemented!("delete is not implemented for checkout locations")
     }

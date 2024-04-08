@@ -32,7 +32,7 @@ pub trait Get<T = Self> {
 
 #[async_trait]
 pub trait Insert<T = Self> {
-    async fn insert(&self, reponame: String, workspace: String, data: T) -> anyhow::Result<bool>;
+    async fn insert(&self, reponame: String, workspace: String, data: T) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -43,7 +43,7 @@ pub trait Update<T = Self> {
         reponame: String,
         workspace: String,
         args: Self::UpdateArgs,
-    ) -> anyhow::Result<bool>;
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -54,7 +54,7 @@ pub trait Delete<T = Self> {
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<bool>;
+    ) -> anyhow::Result<()>;
 }
 
 trait SqlCommitCloudOps<T> = Get<T> + Update<T> + Insert<T> + Delete<T>;

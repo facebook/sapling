@@ -39,10 +39,8 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     };
     let expected = args.clone();
 
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), args)
-            .await?
-    );
+    sql.insert(reponame.clone(), workspace.clone(), args)
+        .await?;
 
     let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame, workspace, ()).await?;
 
@@ -66,28 +64,24 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
 
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), snapshot1.clone())
-            .await?
-    );
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), snapshot2.clone())
-            .await?
-    );
+    sql.insert(reponame.clone(), workspace.clone(), snapshot1.clone())
+        .await?;
+
+    sql.insert(reponame.clone(), workspace.clone(), snapshot2.clone())
+        .await?;
 
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
-    assert!(res.len() == 2);
+    assert_eq!(res.len(), 2);
 
     let removed_commits = vec![snapshot1.commit];
-    assert!(
-        Delete::<WorkspaceSnapshot>::delete(
-            &sql,
-            reponame.clone(),
-            workspace.clone(),
-            DeleteArgs { removed_commits }
-        )
-        .await?
-    );
+
+    Delete::<WorkspaceSnapshot>::delete(
+        &sql,
+        reponame.clone(),
+        workspace.clone(),
+        DeleteArgs { removed_commits },
+    )
+    .await?;
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame, workspace.clone(), ()).await?;
 
     assert_eq!(res, vec![snapshot2]);
@@ -110,27 +104,23 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
 
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), head1.clone())
-            .await?
-    );
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), head2.clone())
-            .await?
-    );
+    sql.insert(reponame.clone(), workspace.clone(), head1.clone())
+        .await?;
+
+    sql.insert(reponame.clone(), workspace.clone(), head2.clone())
+        .await?;
 
     let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
-    assert!(res.len() == 2);
+    assert_eq!(res.len(), 2);
     let removed_commits = vec![head1.commit];
-    assert!(
-        Delete::<WorkspaceHead>::delete(
-            &sql,
-            reponame.clone(),
-            workspace.clone(),
-            DeleteArgs { removed_commits }
-        )
-        .await?
-    );
+
+    Delete::<WorkspaceHead>::delete(
+        &sql,
+        reponame.clone(),
+        workspace.clone(),
+        DeleteArgs { removed_commits },
+    )
+    .await?;
     let res: Vec<WorkspaceHead> = sql.get(reponame, workspace.clone(), ()).await?;
 
     assert_eq!(res, vec![head2]);
@@ -156,28 +146,24 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
 
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
-            .await?
-    );
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
-            .await?
-    );
+    sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
+        .await?;
+
+    sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
+        .await?;
 
     let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
     assert_eq!(res.len(), 2);
 
     let removed_bookmarks = vec![bookmark1.commit.clone()];
-    assert!(
-        Delete::<WorkspaceLocalBookmark>::delete(
-            &sql,
-            reponame.clone(),
-            workspace.clone(),
-            DeleteArgs { removed_bookmarks }
-        )
-        .await?
-    );
+
+    Delete::<WorkspaceLocalBookmark>::delete(
+        &sql,
+        reponame.clone(),
+        workspace.clone(),
+        DeleteArgs { removed_bookmarks },
+    )
+    .await?;
     let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame, workspace.clone(), ()).await?;
     assert_eq!(res, vec![bookmark2]);
 
@@ -203,14 +189,11 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         remote: "remote".to_owned(),
     };
 
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
-            .await?
-    );
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
-            .await?
-    );
+    sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
+        .await?;
+
+    sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
+        .await?;
 
     let res: Vec<WorkspaceRemoteBookmark> =
         sql.get(reponame.clone(), workspace.clone(), ()).await?;
@@ -219,15 +202,13 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let removed_bookmarks = vec!["remote/my_bookmark1".to_owned()];
 
-    assert!(
-        Delete::<WorkspaceRemoteBookmark>::delete(
-            &sql,
-            reponame.clone(),
-            workspace.clone(),
-            DeleteArgs { removed_bookmarks }
-        )
-        .await?
-    );
+    Delete::<WorkspaceRemoteBookmark>::delete(
+        &sql,
+        reponame.clone(),
+        workspace.clone(),
+        DeleteArgs { removed_bookmarks },
+    )
+    .await?;
 
     let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame, workspace.clone(), ()).await?;
 
@@ -249,10 +230,8 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
         archived: false,
     };
 
-    assert!(
-        sql.insert(reponame.clone(), workspace.clone(), args.clone())
-            .await?
-    );
+    sql.insert(reponame.clone(), workspace.clone(), args.clone())
+        .await?;
 
     let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
     assert_eq!(vec![args], res);

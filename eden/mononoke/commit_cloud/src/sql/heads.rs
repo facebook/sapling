@@ -65,15 +65,15 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         data: WorkspaceHead,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertHead::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             &data.commit,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }
 
@@ -86,7 +86,7 @@ impl Update<WorkspaceHead> for SqlCommitCloud {
         _reponame: String,
         _workspace: String,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }
@@ -100,14 +100,14 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         DeleteHead::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             args.removed_commits.as_slice(),
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }

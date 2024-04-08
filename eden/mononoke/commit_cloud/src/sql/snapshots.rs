@@ -65,15 +65,15 @@ impl Insert<WorkspaceSnapshot> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         data: WorkspaceSnapshot,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertSnapshot::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             &data.commit,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }
 
@@ -85,7 +85,7 @@ impl Update<WorkspaceSnapshot> for SqlCommitCloud {
         _reponame: String,
         _workspace: String,
         _extra_arg: Self::UpdateArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }
@@ -99,14 +99,14 @@ impl Delete<WorkspaceSnapshot> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         DeleteSnapshot::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             args.removed_commits.as_slice(),
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }

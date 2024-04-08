@@ -69,7 +69,7 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         data: WorkspaceLocalBookmark,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertLocalBookmark::query(
             &self.connections.write_connection,
             &reponame,
@@ -77,8 +77,8 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
             &data.name,
             &data.commit,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }
 
@@ -91,7 +91,7 @@ impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
         _reponame: String,
         _workspace: String,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }
@@ -105,14 +105,14 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         DeleteLocalBookmark::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             args.removed_bookmarks.as_slice(),
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
 }
