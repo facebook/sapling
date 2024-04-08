@@ -64,6 +64,7 @@ use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
 use crate::git_submodules::expand_all_git_submodule_file_changes;
+use crate::git_submodules::SubmoduleExpansionData;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
 use crate::types::Repo;
@@ -93,11 +94,9 @@ pub async fn rewrite_commit<'a, R: Repo>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
     source_repo: &'a R,
-    // TODO(T174902563): support expansion of git submodules
-    submodule_deps: &'a SubmoduleDeps<R>,
     rewrite_opts: RewriteOpts,
     git_submodules_action: GitSubmodulesChangesAction,
-    x_repo_submodule_metadata_file_prefix: String,
+    mb_submodule_expansion_data: Option<SubmoduleExpansionData<'a, R>>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     // TODO(T169695293): add filter to only keep submodules for implicit deletes?
     let (file_changes_filters, cs): (Vec<FileChangeFilter<'a>>, BonsaiChangesetMut) =
@@ -119,19 +118,13 @@ pub async fn rewrite_commit<'a, R: Repo>(
             // Expand submodules -> no filters, but modify the file change
             // file types in the bonsai
             GitSubmodulesChangesAction::Expand => {
-                let submodule_deps_map = match submodule_deps {
-                    SubmoduleDeps::ForSync(sm_deps_map) => Ok(sm_deps_map),
-                    SubmoduleDeps::NotNeeded => Err(anyhow!(
-                        "Submodule dependencies map needed to expand git submodules was not provided"
-                    )),
-                }?;
+                let submodule_expansion_data = mb_submodule_expansion_data.ok_or(anyhow!("Submodule expansion data not provided when submodules is enabled for small repo"))?;
 
                 let new_cs = expand_all_git_submodule_file_changes(
                     ctx,
                     cs,
                     source_repo,
-                    submodule_deps_map,
-                    x_repo_submodule_metadata_file_prefix,
+                    submodule_expansion_data,
                 )
                 .await?;
                 (vec![], new_cs)

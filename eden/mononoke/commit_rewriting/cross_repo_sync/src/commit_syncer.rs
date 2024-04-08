@@ -69,6 +69,7 @@ use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
+use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting;
 use crate::reporting::log_rewrite;
 use crate::reporting::CommitSyncContext;
@@ -856,16 +857,23 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let submodule_expansion_data = match submodule_deps {
+            SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                submodule_deps: deps,
+                x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                    .as_str(),
+            }),
+            SubmoduleDeps::NotNeeded => None,
+        };
         let rewritten_commit = rewrite_commit(
             ctx,
             source_cs,
             &remapped_parents,
             mover,
             &source_repo,
-            submodule_deps,
             Default::default(),
             git_submodules_action,
-            x_repo_submodule_metadata_file_prefix,
+            submodule_expansion_data,
         )
         .await?;
         match rewritten_commit {
@@ -962,16 +970,23 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let submodule_expansion_data = match &source_repo_deps {
+            SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                submodule_deps: deps,
+                x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                    .as_str(),
+            }),
+            SubmoduleDeps::NotNeeded => None,
+        };
         let rewritten = rewrite_commit(
             ctx,
             source_cs_mut,
             &remapped_parents,
             mover,
             &source_repo,
-            source_repo_deps,
             Default::default(),
             git_submodules_action,
-            x_repo_submodule_metadata_file_prefix,
+            submodule_expansion_data,
         )
         .await?;
 

@@ -35,6 +35,7 @@ use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo;
 use cross_repo_sync::SubmoduleDeps;
+use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -149,21 +150,31 @@ where
         let map = HashMap::new();
         let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let mover = commit_syncer.get_mover_by_version(&version).await?;
+        let x_repo_submodule_metadata_file_prefix =
+            get_x_repo_submodule_metadata_file_prefx_from_config(
+                source_repo.repo_identity().id(),
+                &version,
+                commit_syncer.live_commit_sync_config.clone(),
+            )
+            .await?;
+
+        let submodule_expansion_data = match submodule_deps {
+            SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                submodule_deps: deps,
+                x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                    .as_str(),
+            }),
+            SubmoduleDeps::NotNeeded => None,
+        };
         rewrite_commit(
             &ctx,
             source_bcs_mut,
             &map,
             mover,
             source_repo,
-            submodule_deps,
             Default::default(),
             Default::default(),
-            get_x_repo_submodule_metadata_file_prefx_from_config(
-                source_repo.repo_identity().id(),
-                &version,
-                commit_syncer.live_commit_sync_config.clone(),
-            )
-            .await?,
+            submodule_expansion_data,
         )
         .await?
     };

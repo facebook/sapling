@@ -33,7 +33,6 @@ use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::get_strip_git_submodules_by_version;
-use cross_repo_sync::get_x_repo_submodule_metadata_file_prefx_from_config;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -1398,15 +1397,6 @@ async fn init_repos(
     upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
     let first_bcs_mut = first_bcs.into_mut();
 
-    let source_repo_deps = SubmoduleDeps::NotNeeded;
-    let x_repo_submodule_metadata_file_prefix =
-        get_x_repo_submodule_metadata_file_prefx_from_config(
-            target_repo.repo_identity().id(),
-            &version,
-            live_commit_sync_config,
-        )
-        .await?;
-
     let maybe_rewritten = {
         let empty_map = HashMap::new();
         cloned!(ctx, source_repo);
@@ -1416,10 +1406,9 @@ async fn init_repos(
             &empty_map,
             commit_syncer.get_mover_by_version(&version).await?,
             &source_repo,
-            &source_repo_deps,
             Default::default(),
             git_submodules_action,
-            x_repo_submodule_metadata_file_prefix,
+            None, // Submodule expansion data not needed here
         )
         .await
     }?;

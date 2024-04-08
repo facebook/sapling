@@ -36,6 +36,7 @@ use crate::commit_syncers_lib::get_mover_by_version;
 use crate::commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::strip_removed_parents;
+use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::sync_config_version_utils::get_version;
@@ -226,16 +227,23 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let submodule_expansion_data = match self.submodule_deps {
+            SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                submodule_deps: deps,
+                x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                    .as_str(),
+            }),
+            SubmoduleDeps::NotNeeded => None,
+        };
         match rewrite_commit(
             self.ctx,
             cs.into_mut(),
             &HashMap::new(),
             mover,
             self.source_repo.0,
-            self.submodule_deps,
             rewrite_opts,
             git_submodules_action,
-            x_repo_submodule_metadata_file_prefix,
+            submodule_expansion_data,
         )
         .await?
         {
@@ -322,16 +330,24 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                         self.live_commit_sync_config.clone(),
                     )
                     .await?;
+
+                let submodule_expansion_data = match self.submodule_deps {
+                    SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                        submodule_deps: deps,
+                        x_repo_submodule_metadata_file_prefix:
+                            x_repo_submodule_metadata_file_prefix.as_str(),
+                    }),
+                    SubmoduleDeps::NotNeeded => None,
+                };
                 let maybe_rewritten = rewrite_commit(
                     self.ctx,
                     cs,
                     &remapped_parents,
                     rewrite_paths,
                     self.source_repo.0,
-                    self.submodule_deps,
                     rewrite_opts,
                     git_submodules_action,
-                    x_repo_submodule_metadata_file_prefix,
+                    submodule_expansion_data,
                 )
                 .await?;
                 match maybe_rewritten {
@@ -466,16 +482,23 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     self.live_commit_sync_config.clone(),
                 )
                 .await?;
+            let submodule_expansion_data = match self.submodule_deps {
+                SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                    submodule_deps: deps,
+                    x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                        .as_str(),
+                }),
+                SubmoduleDeps::NotNeeded => None,
+            };
             match rewrite_commit(
                 self.ctx,
                 cs,
                 &new_parents,
                 mover,
                 self.source_repo.0,
-                self.submodule_deps,
                 Default::default(),
                 git_submodules_action,
-                x_repo_submodule_metadata_file_prefix,
+                submodule_expansion_data,
             )
             .await?
             {
