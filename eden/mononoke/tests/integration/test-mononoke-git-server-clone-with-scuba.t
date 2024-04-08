@@ -58,3 +58,12 @@
     "stream_max_poll_time_us": *, (glob)
     "stream_poll_count": *, (glob)
     "stream_poll_time_us": *, (glob)
+
+# Verify the future statistics get recorded in scuba
+  $ jq -S .int "$SCUBA" | grep [^_]poll
+    "poll_count": *, (glob)
+    "poll_time_us": *, (glob)
+    "poll_count": *, (glob)
+    "poll_time_us": *, (glob)
+    "poll_count": *, (glob)
+    "poll_time_us": *, (glob)
