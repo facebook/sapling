@@ -165,6 +165,14 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         blobstore: &Store,
         prefix: &[u8],
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    /// List all subentries with a given prefix after a specific key
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -185,6 +193,16 @@ pub trait Manifest: Sync + Sized + 'static {
         prefix: &'a [u8],
     ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
         Box::new(self.list().filter(|(k, _)| k.starts_with(prefix)))
+    }
+    fn list_prefix_after<'a>(
+        &'a self,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
+        Box::new(
+            self.list()
+                .filter(move |(k, _)| k.as_ref() > after && k.starts_with(prefix)),
+        )
     }
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>>;
 }
@@ -213,6 +231,22 @@ impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
     {
         Ok(stream::iter(
             Manifest::list_prefix(self, prefix)
+                .map(anyhow::Ok)
+                .collect::<Vec<_>>(),
+        )
+        .boxed())
+    }
+
+    async fn list_prefix_after(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(stream::iter(
+            Manifest::list_prefix_after(self, prefix, after)
                 .map(anyhow::Ok)
                 .collect::<Vec<_>>(),
         )
@@ -340,6 +374,22 @@ impl<
             .boxed())
     }
 
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let Combined(m, n) = self;
+        Ok(m.list_prefix_after(ctx, blobstore, prefix, after)
+            .await?
+            .zip(n.list_prefix_after(ctx, blobstore, prefix, after).await?)
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
+    }
+
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -407,6 +457,22 @@ impl<Store: Blobstore> AsyncManifest<Store> for BssmV3Directory {
         anyhow::Ok(
             self.clone()
                 .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries_after(ctx, blobstore, prefix, after)
                 .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
                 .boxed(),
         )
@@ -565,6 +631,22 @@ impl<Store: Blobstore> AsyncManifest<Store> for TestShardedManifest {
         anyhow::Ok(
             self.clone()
                 .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries_after(ctx, blobstore, prefix, after)
                 .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
                 .boxed(),
         )

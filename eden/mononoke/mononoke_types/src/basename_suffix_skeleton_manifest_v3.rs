@@ -203,6 +203,19 @@ impl BssmV3Directory {
             .boxed()
     }
 
+    pub fn into_prefix_subentries_after<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, BssmV3Entry)>> {
+        self.subentries
+            .into_prefix_entries_after(ctx, blobstore, prefix, after)
+            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
+    }
+
     pub fn rollup_count(&self) -> BssmV3RollupCount {
         BssmV3RollupCount(1 + self.subentries.rollup_data().0)
     }
