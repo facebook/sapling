@@ -13,8 +13,10 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use sql::Connection;
 
-use crate::sql::ops::BasicOps;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceCheckoutLocation {
@@ -86,14 +88,14 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceCheckoutLocation> for SqlCommitCloud {
-    type ExtraArgs = ();
+impl Get<WorkspaceCheckoutLocation> for SqlCommitCloud {
+    type GetArgs = ();
 
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_arg: (),
+        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceCheckoutLocation>> {
         let rows =
             GetCheckoutLocations::query(&self.connections.read_connection, &reponame, &workspace)
@@ -114,13 +116,15 @@ impl BasicOps<WorkspaceCheckoutLocation> for SqlCommitCloud {
             )
             .collect::<anyhow::Result<Vec<WorkspaceCheckoutLocation>>>()
     }
+}
 
+#[async_trait]
+impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceCheckoutLocation,
-        _extra_arg: (),
     ) -> anyhow::Result<bool> {
         InsertCheckoutLocations::query(
             &self.connections.write_connection,
@@ -136,20 +140,16 @@ impl BasicOps<WorkspaceCheckoutLocation> for SqlCommitCloud {
         .await
         .map(|res| res.affected_rows() > 0)
     }
-    async fn delete(
-        &self,
-        _reponame: String,
-        _workspace: String,
-        _extra_arg: (),
-    ) -> anyhow::Result<bool> {
-        // Checkout locations delete op is never used
-        unimplemented!("delete is not implemented for checkout locations")
-    }
+}
+
+#[async_trait]
+impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
+    type UpdateArgs = ();
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_arg: (),
+        _args: Self::UpdateArgs,
     ) -> anyhow::Result<bool> {
         // Checkout locations update op endpoint is never used
         unimplemented!("delete is not implemented for checkout locations")

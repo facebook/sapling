@@ -10,14 +10,12 @@ use std::str::FromStr;
 
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::checkout_locations::WorkspaceCheckoutLocation;
-use commit_cloud::sql::heads::HeadExtraArgs;
 use commit_cloud::sql::heads::WorkspaceHead;
-use commit_cloud::sql::local_bookmarks::LocalBookmarkExtraArgs;
 use commit_cloud::sql::local_bookmarks::WorkspaceLocalBookmark;
-use commit_cloud::sql::ops::BasicOps;
-use commit_cloud::sql::remote_bookmarks::RemoteBookmarkExtraArgs;
+use commit_cloud::sql::ops::Delete;
+use commit_cloud::sql::ops::Get;
+use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::remote_bookmarks::WorkspaceRemoteBookmark;
-use commit_cloud::sql::snapshots::SnapshotExtraArgs;
 use commit_cloud::sql::snapshots::WorkspaceSnapshot;
 use commit_cloud::sql::versions::WorkspaceVersion;
 use fbinit::FacebookInit;
@@ -42,7 +40,7 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     let expected = args.clone();
 
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), args, ())
+        sql.insert(reponame.clone(), workspace.clone(), args)
             .await?
     );
 
@@ -54,6 +52,8 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
+    use commit_cloud::sql::snapshots::DeleteArgs;
+
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -67,28 +67,28 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), snapshot1.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), snapshot1.clone())
             .await?
     );
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), snapshot2.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), snapshot2.clone())
             .await?
     );
 
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone(), None).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
     assert!(res.len() == 2);
 
     let removed_commits = vec![snapshot1.commit];
     assert!(
-        BasicOps::<WorkspaceSnapshot>::delete(
+        Delete::<WorkspaceSnapshot>::delete(
             &sql,
             reponame.clone(),
             workspace.clone(),
-            Some(SnapshotExtraArgs { removed_commits })
+            DeleteArgs { removed_commits }
         )
         .await?
     );
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame, workspace.clone(), None).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(reponame, workspace.clone(), ()).await?;
 
     assert_eq!(res, vec![snapshot2]);
 
@@ -97,6 +97,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
+    use commit_cloud::sql::heads::DeleteArgs;
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -110,27 +111,27 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), head1.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), head1.clone())
             .await?
     );
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), head2.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), head2.clone())
             .await?
     );
 
-    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone(), None).await?;
+    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
     assert!(res.len() == 2);
     let removed_commits = vec![head1.commit];
     assert!(
-        BasicOps::<WorkspaceHead>::delete(
+        Delete::<WorkspaceHead>::delete(
             &sql,
             reponame.clone(),
             workspace.clone(),
-            Some(HeadExtraArgs { removed_commits })
+            DeleteArgs { removed_commits }
         )
         .await?
     );
-    let res: Vec<WorkspaceHead> = sql.get(reponame, workspace.clone(), None).await?;
+    let res: Vec<WorkspaceHead> = sql.get(reponame, workspace.clone(), ()).await?;
 
     assert_eq!(res, vec![head2]);
 
@@ -139,6 +140,8 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
+    use commit_cloud::sql::local_bookmarks::DeleteArgs;
+
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -154,29 +157,28 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
             .await?
     );
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
             .await?
     );
 
-    let res: Vec<WorkspaceLocalBookmark> =
-        sql.get(reponame.clone(), workspace.clone(), None).await?;
+    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
     assert_eq!(res.len(), 2);
 
     let removed_bookmarks = vec![bookmark1.commit.clone()];
     assert!(
-        BasicOps::<WorkspaceLocalBookmark>::delete(
+        Delete::<WorkspaceLocalBookmark>::delete(
             &sql,
             reponame.clone(),
             workspace.clone(),
-            Some(LocalBookmarkExtraArgs { removed_bookmarks })
+            DeleteArgs { removed_bookmarks }
         )
         .await?
     );
-    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame, workspace.clone(), None).await?;
+    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame, workspace.clone(), ()).await?;
     assert_eq!(res, vec![bookmark2]);
 
     Ok(())
@@ -184,6 +186,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
+    use commit_cloud::sql::remote_bookmarks::DeleteArgs;
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -201,35 +204,32 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
             .await?
     );
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone(), None)
+        sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
             .await?
     );
 
     let res: Vec<WorkspaceRemoteBookmark> =
-        sql.get(reponame.clone(), workspace.clone(), None).await?;
+        sql.get(reponame.clone(), workspace.clone(), ()).await?;
 
     assert_eq!(res.len(), 2);
 
     let removed_bookmarks = vec!["remote/my_bookmark1".to_owned()];
 
     assert!(
-        BasicOps::<WorkspaceRemoteBookmark>::delete(
+        Delete::<WorkspaceRemoteBookmark>::delete(
             &sql,
             reponame.clone(),
             workspace.clone(),
-            Some(RemoteBookmarkExtraArgs {
-                removed_bookmarks,
-                remote: "remote".to_owned()
-            })
+            DeleteArgs { removed_bookmarks }
         )
         .await?
     );
 
-    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame, workspace.clone(), None).await?;
+    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame, workspace.clone(), ()).await?;
 
     assert_eq!(res, vec![bookmark2]);
 
@@ -250,20 +250,12 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     };
 
     assert!(
-        sql.insert(reponame.clone(), workspace.clone(), args.clone(), ())
+        sql.insert(reponame.clone(), workspace.clone(), args.clone())
             .await?
     );
 
     let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
     assert_eq!(vec![args], res);
-
-    let delete_res =
-        BasicOps::<WorkspaceVersion>::delete(&sql, reponame.clone(), workspace.clone(), ()).await;
-
-    assert_eq!(
-        format!("{}", delete_res.unwrap_err()),
-        "Deleting workspace versions is not supported"
-    );
 
     Ok(())
 }

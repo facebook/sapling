@@ -10,8 +10,10 @@ use async_trait::async_trait;
 use mononoke_types::Timestamp;
 use sql::Connection;
 
-use crate::sql::ops::BasicOps;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceVersion {
@@ -43,14 +45,13 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceVersion> for SqlCommitCloud {
-    type ExtraArgs = ();
-
+impl Get<WorkspaceVersion> for SqlCommitCloud {
+    type GetArgs = ();
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_args: Self::ExtraArgs,
+        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceVersion>> {
         let rows =
             GetVersion::query(&self.connections.read_connection, &reponame, &workspace).await?;
@@ -65,25 +66,15 @@ impl BasicOps<WorkspaceVersion> for SqlCommitCloud {
             })
             .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
     }
+}
 
-    async fn delete(
-        &self,
-        _reponame: String,
-        _workspace: String,
-        _extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
-        //Delete endpoint of versions table is not used
-        return Err(anyhow::anyhow!(
-            "Deleting workspace versions is not supported"
-        ));
-    }
-
+#[async_trait]
+impl Insert<WorkspaceVersion> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceVersion,
-        _extra_args: Self::ExtraArgs,
     ) -> anyhow::Result<bool> {
         InsertVersion::query(
             &self.connections.write_connection,
@@ -95,12 +86,16 @@ impl BasicOps<WorkspaceVersion> for SqlCommitCloud {
         .await
         .map(|res| res.affected_rows() > 0)
     }
+}
 
+#[async_trait]
+impl Update<WorkspaceVersion> for SqlCommitCloud {
+    type UpdateArgs = ();
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_arg: Self::ExtraArgs,
+        _args: Self::UpdateArgs,
     ) -> anyhow::Result<bool> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));

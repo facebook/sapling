@@ -9,14 +9,17 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
 
-use crate::sql::ops::BasicOps;
+use crate::sql::ops::Delete;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceHead {
     pub commit: HgChangesetId,
 }
 
-pub struct HeadExtraArgs {
+pub struct DeleteArgs {
     pub removed_commits: Vec<HgChangesetId>,
 }
 
@@ -39,13 +42,13 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceHead> for SqlCommitCloud {
-    type ExtraArgs = Option<HeadExtraArgs>;
+impl Get<WorkspaceHead> for SqlCommitCloud {
+    type GetArgs = ();
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_args: Self::ExtraArgs,
+        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceHead>> {
         let rows =
             GetHeads::query(&self.connections.read_connection, &reponame, &workspace).await?;
@@ -53,32 +56,15 @@ impl BasicOps<WorkspaceHead> for SqlCommitCloud {
             .map(|(_reponame, commit)| Ok(WorkspaceHead { commit }))
             .collect::<anyhow::Result<Vec<WorkspaceHead>>>()
     }
+}
 
-    async fn delete(
-        &self,
-        reponame: String,
-        workspace: String,
-        extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
-        DeleteHead::query(
-            &self.connections.write_connection,
-            &reponame,
-            &workspace,
-            extra_args
-                .expect("No removed commits list provided")
-                .removed_commits
-                .as_slice(),
-        )
-        .await
-        .map(|res| res.affected_rows() > 0)
-    }
-
+#[async_trait]
+impl Insert<WorkspaceHead> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceHead,
-        _extra_args: Self::ExtraArgs,
     ) -> anyhow::Result<bool> {
         InsertHead::query(
             &self.connections.write_connection,
@@ -89,14 +75,39 @@ impl BasicOps<WorkspaceHead> for SqlCommitCloud {
         .await
         .map(|res| res.affected_rows() > 0)
     }
+}
+
+#[async_trait]
+impl Update<WorkspaceHead> for SqlCommitCloud {
+    type UpdateArgs = ();
 
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_args: Self::ExtraArgs,
+        _args: Self::UpdateArgs,
     ) -> anyhow::Result<bool> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
+    }
+}
+
+#[async_trait]
+impl Delete<WorkspaceHead> for SqlCommitCloud {
+    type DeleteArgs = DeleteArgs;
+    async fn delete(
+        &self,
+        reponame: String,
+        workspace: String,
+        args: Self::DeleteArgs,
+    ) -> anyhow::Result<bool> {
+        DeleteHead::query(
+            &self.connections.write_connection,
+            &reponame,
+            &workspace,
+            args.removed_commits.as_slice(),
+        )
+        .await
+        .map(|res| res.affected_rows() > 0)
     }
 }

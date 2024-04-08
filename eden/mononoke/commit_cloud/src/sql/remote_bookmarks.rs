@@ -9,8 +9,11 @@ use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
 use sql_ext::mononoke_queries;
 
-use crate::sql::ops::BasicOps;
+use crate::sql::ops::Delete;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceRemoteBookmark {
@@ -19,8 +22,7 @@ pub struct WorkspaceRemoteBookmark {
     pub remote: String,
 }
 
-pub struct RemoteBookmarkExtraArgs {
-    pub remote: String,
+pub struct DeleteArgs {
     pub removed_bookmarks: Vec<String>,
 }
 
@@ -41,14 +43,14 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceRemoteBookmark> for SqlCommitCloud {
-    type ExtraArgs = Option<RemoteBookmarkExtraArgs>;
+impl Get<WorkspaceRemoteBookmark> for SqlCommitCloud {
+    type GetArgs = ();
 
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_args: Self::ExtraArgs,
+        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceRemoteBookmark>> {
         let rows = GetRemoteBookmarks::query(
             &self.connections.read_connection,
@@ -66,32 +68,15 @@ impl BasicOps<WorkspaceRemoteBookmark> for SqlCommitCloud {
             })
             .collect::<anyhow::Result<Vec<WorkspaceRemoteBookmark>>>()
     }
+}
 
-    async fn delete(
-        &self,
-        reponame: String,
-        workspace: String,
-        extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
-        DeleteRemoteBookmark::query(
-            &self.connections.write_connection,
-            &reponame,
-            &workspace,
-            extra_args
-                .expect("No removed commits list provided")
-                .removed_bookmarks
-                .as_slice(),
-        )
-        .await
-        .map(|res| res.affected_rows() > 0)
-    }
-
+#[async_trait]
+impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceRemoteBookmark,
-        _extra_args: Self::ExtraArgs,
     ) -> anyhow::Result<bool> {
         InsertRemoteBookmark::query(
             &self.connections.write_connection,
@@ -104,14 +89,38 @@ impl BasicOps<WorkspaceRemoteBookmark> for SqlCommitCloud {
         .await
         .map(|res| res.affected_rows() > 0)
     }
+}
 
+#[async_trait]
+impl Update<WorkspaceRemoteBookmark> for SqlCommitCloud {
+    type UpdateArgs = ();
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_arg: Self::ExtraArgs,
+        _args: Self::UpdateArgs,
     ) -> anyhow::Result<bool> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
+    }
+}
+
+#[async_trait]
+impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
+    type DeleteArgs = DeleteArgs;
+    async fn delete(
+        &self,
+        reponame: String,
+        workspace: String,
+        args: Self::DeleteArgs,
+    ) -> anyhow::Result<bool> {
+        DeleteRemoteBookmark::query(
+            &self.connections.write_connection,
+            &reponame,
+            &workspace,
+            args.removed_bookmarks.as_slice(),
+        )
+        .await
+        .map(|res| res.affected_rows() > 0)
     }
 }

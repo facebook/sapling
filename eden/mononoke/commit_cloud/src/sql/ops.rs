@@ -20,32 +20,42 @@ impl SqlCommitCloud {
 }
 
 #[async_trait]
-pub trait BasicOps<T = Self> {
-    type ExtraArgs;
-
+pub trait Get<T = Self> {
+    type GetArgs;
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        extra_args: Self::ExtraArgs,
+        args: Self::GetArgs,
     ) -> anyhow::Result<Vec<T>>;
-    async fn insert(
-        &self,
-        reponame: String,
-        workspace: String,
-        data: T,
-        extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool>;
-    async fn delete(
-        &self,
-        reponame: String,
-        workspace: String,
-        extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool>;
+}
+
+#[async_trait]
+pub trait Insert<T = Self> {
+    async fn insert(&self, reponame: String, workspace: String, data: T) -> anyhow::Result<bool>;
+}
+
+#[async_trait]
+pub trait Update<T = Self> {
+    type UpdateArgs;
     async fn update(
         &self,
         reponame: String,
         workspace: String,
-        extra_args: Self::ExtraArgs,
+        args: Self::UpdateArgs,
     ) -> anyhow::Result<bool>;
 }
+
+#[async_trait]
+pub trait Delete<T = Self> {
+    type DeleteArgs;
+    async fn delete(
+        &self,
+        reponame: String,
+        workspace: String,
+        args: Self::DeleteArgs,
+    ) -> anyhow::Result<bool>;
+}
+
+trait SqlCommitCloudOps<T> = Get<T> + Update<T> + Insert<T> + Delete<T>;
+trait ImmutableSqlCommitCloudOps<T> = Get<T> + Update<T> + Insert<T>;

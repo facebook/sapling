@@ -5,5 +5,6 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
 pub mod sql;
 pub mod workspace;

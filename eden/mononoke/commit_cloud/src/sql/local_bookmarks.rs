@@ -10,8 +10,11 @@ use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
 use sql::Connection;
 
-use crate::sql::ops::BasicOps;
+use crate::sql::ops::Delete;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceLocalBookmark {
@@ -19,7 +22,7 @@ pub struct WorkspaceLocalBookmark {
     pub commit: HgChangesetId,
 }
 
-pub struct LocalBookmarkExtraArgs {
+pub struct DeleteArgs {
     pub removed_bookmarks: Vec<HgChangesetId>,
 }
 
@@ -39,13 +42,13 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceLocalBookmark> for SqlCommitCloud {
-    type ExtraArgs = Option<LocalBookmarkExtraArgs>;
+impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
+    type GetArgs = ();
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_args: Self::ExtraArgs,
+        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
         let rows = GetLocalBookmarks::query(
             &self.connections.read_connection,
@@ -57,32 +60,15 @@ impl BasicOps<WorkspaceLocalBookmark> for SqlCommitCloud {
             .map(|(name, commit)| Ok(WorkspaceLocalBookmark { name, commit }))
             .collect::<anyhow::Result<Vec<WorkspaceLocalBookmark>>>()
     }
+}
 
-    async fn delete(
-        &self,
-        reponame: String,
-        workspace: String,
-        extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
-        DeleteLocalBookmark::query(
-            &self.connections.write_connection,
-            &reponame,
-            &workspace,
-            extra_args
-                .expect("No removed commits list provided")
-                .removed_bookmarks
-                .as_slice(),
-        )
-        .await
-        .map(|res| res.affected_rows() > 0)
-    }
-
+#[async_trait]
+impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceLocalBookmark,
-        _extra_args: Self::ExtraArgs,
     ) -> anyhow::Result<bool> {
         InsertLocalBookmark::query(
             &self.connections.write_connection,
@@ -94,14 +80,39 @@ impl BasicOps<WorkspaceLocalBookmark> for SqlCommitCloud {
         .await
         .map(|res| res.affected_rows() > 0)
     }
+}
+
+#[async_trait]
+impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
+    type UpdateArgs = ();
 
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_arg: Self::ExtraArgs,
+        _args: Self::UpdateArgs,
     ) -> anyhow::Result<bool> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
+    }
+}
+
+#[async_trait]
+impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
+    type DeleteArgs = DeleteArgs;
+    async fn delete(
+        &self,
+        reponame: String,
+        workspace: String,
+        args: Self::DeleteArgs,
+    ) -> anyhow::Result<bool> {
+        DeleteLocalBookmark::query(
+            &self.connections.write_connection,
+            &reponame,
+            &workspace,
+            args.removed_bookmarks.as_slice(),
+        )
+        .await
+        .map(|res| res.affected_rows() > 0)
     }
 }
