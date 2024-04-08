@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::clone::Clone;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -17,6 +18,8 @@ use async_recursion::async_recursion;
 use blobstore::Storable;
 use cloned::cloned;
 use commit_transformation::copy_file_contents;
+use commit_transformation::rewrite_commit;
+use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use either::Either;
 use either::Either::*;
@@ -40,13 +43,16 @@ use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
+use movers::Mover;
 use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_repo;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::id_to_fsnode_manifest_id;
+use crate::git_submodules::validation::validate_all_submodule_expansions;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
@@ -71,10 +77,47 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     pub submodule_deps: &'a HashMap<NonRootMPath, R>,
     pub x_repo_submodule_metadata_file_prefix: &'a str,
 }
+pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    bonsai: BonsaiChangesetMut,
+    small_repo: &'a R,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
+    mover: Mover,
+    // Parameters needed to generate a bonsai for the large repo using `rewrite_commit`
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
+    rewrite_opts: RewriteOpts,
+) -> Result<BonsaiChangesetMut> {
+    let new_bonsai =
+        expand_all_git_submodule_file_changes(ctx, bonsai, small_repo, sm_exp_data.clone())
+            .await
+            .context("Failed to expand submodule file changes from bonsai")?;
+
+    let rewritten_bonsai = rewrite_commit(
+        ctx,
+        new_bonsai,
+        remapped_parents,
+        mover_to_multi_mover(mover.clone()),
+        small_repo,
+        None,
+        rewrite_opts,
+    )
+    .await
+    .context("Failed to create bonsai to be synced")?
+    .ok_or(anyhow!("No bonsai to be synced was returned"))?;
+
+    let rewritten_bonsai = rewritten_bonsai.freeze()?;
+
+    // TODO(T179533620): validate that all changes are consistent with submodule
+    // metadata file.
+    let validated_bonsai = validate_all_submodule_expansions(rewritten_bonsai, sm_exp_data).await?;
+
+    Ok(validated_bonsai.into_mut())
+}
+
 /// Iterate over all file changes from the bonsai being synced and expand any
 /// changes to git submodule files, generating the bonsai that will be synced
 /// to the large repo.
-pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
+async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     small_repo: &'a R,
@@ -133,9 +176,6 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
             }
         })
         .collect::<Result<_>>()?;
-
-    // TODO(T179533620): validate that all changes are consistent with submodule
-    // metadata file.
 
     let new_cs = BonsaiChangesetMut {
         file_changes: expanded_fcs,

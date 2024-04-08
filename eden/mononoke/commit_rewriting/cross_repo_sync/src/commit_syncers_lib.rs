@@ -63,7 +63,7 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
-use crate::git_submodules::expand_all_git_submodule_file_changes;
+use crate::git_submodules::expand_and_validate_all_git_submodule_file_changes;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
@@ -122,14 +122,18 @@ pub async fn rewrite_commit<'a, R: Repo>(
 
                 // TODO(T179530927): crash if source_repo is large repo, because
                 // backsyncing is not supported yet.
-                let new_cs = expand_all_git_submodule_file_changes(
+                let new_bonsai = expand_and_validate_all_git_submodule_file_changes(
                     ctx,
                     cs,
                     source_repo,
                     submodule_expansion_data,
+                    mover.clone(),
+                    remapped_parents,
+                    rewrite_opts,
                 )
                 .await?;
-                (vec![], new_cs)
+
+                return Ok(Some(new_bonsai));
             }
         };
 

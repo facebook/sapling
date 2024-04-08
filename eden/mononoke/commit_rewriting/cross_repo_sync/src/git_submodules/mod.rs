@@ -7,6 +7,7 @@
 
 mod expand;
 mod utils;
+mod validation;
 
-pub use expand::expand_all_git_submodule_file_changes;
+pub use expand::expand_and_validate_all_git_submodule_file_changes;
 pub use expand::SubmoduleExpansionData;

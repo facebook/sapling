@@ -658,9 +658,14 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
 
     let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
 
-    assert!(sync_result.is_err_and(|e| {
-        e.to_string()
-            .contains("Mononoke repo from submodule submodules/repo_c not available")
+    println!("sync_result: {0:#?}", &sync_result);
+
+    assert!(sync_result.is_err_and(|err| {
+        err.chain().any(|e| {
+            // Make sure that we're throwing because the submodule repo is not available
+            e.to_string()
+                .contains("Mononoke repo from submodule submodules/repo_c not available")
+        })
     }));
 
     // Get all the changesets in the large repo
