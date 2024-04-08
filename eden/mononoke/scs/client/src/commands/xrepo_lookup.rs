@@ -6,8 +6,11 @@
  */
 
 use std::collections::BTreeMap;
+use std::io::Write;
 
+use anyhow::bail;
 use anyhow::Result;
+use serde::Serialize;
 use source_control as thrift;
 
 use crate::args::commit_id::map_commit_ids;
@@ -15,8 +18,9 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitId;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
-use crate::commands::lookup::LookupOutput;
 use crate::connection::Connection;
+use crate::library::commit_id::render_commit_id;
+use crate::render::Render;
 use crate::ScscApp;
 
 #[derive(clap::Parser)]
@@ -61,6 +65,36 @@ pub(super) struct CommandArgs {
     /// equivalent working copy (which happens in case the source commit rewrites to nothing in target
     /// repo).
     exact: bool,
+}
+
+#[derive(Serialize)]
+pub(crate) struct XRepoLookupOutput {
+    #[serde(skip)]
+    pub requested: String,
+    pub exists: bool,
+    pub ids: BTreeMap<String, String>,
+}
+
+impl Render for XRepoLookupOutput {
+    type Args = SchemeArgs;
+
+    fn render(&self, args: &Self::Args, w: &mut dyn Write) -> Result<()> {
+        if self.exists {
+            let schemes = args.scheme_string_set();
+            render_commit_id(None, "\n", &self.requested, &self.ids, &schemes, w)?;
+            write!(w, "\n")?;
+        } else {
+            bail!(
+                "{} does not exist or does not have an equivalent commit in the target repo\n",
+                self.requested
+            );
+        }
+        Ok(())
+    }
+
+    fn render_json(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
+        Ok(serde_json::to_writer(w, self)?)
+    }
 }
 
 async fn build_commit_hint(
@@ -154,7 +188,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         None => BTreeMap::new(),
     };
 
-    let output = LookupOutput {
+    let output = XRepoLookupOutput {
         requested: commit_id.to_string(),
         exists: response.exists,
         ids,
