@@ -635,3 +635,34 @@ pub(crate) async fn derive_all_data_types_for_repo(
 
     Ok(())
 }
+/// Quickly check that working copy matches expectation by deriving fsnode
+/// and getting the path of all leaves.
+pub(crate) async fn assert_working_copy_matches_expected(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    cs_id: ChangesetId,
+    expected_files: Vec<&str>,
+) -> Result<()> {
+    let root_fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?
+        .into_fsnode_id();
+
+    let blobstore = repo.repo_blobstore();
+    let all_files: Vec<String> = root_fsnode_id
+        .list_leaf_entries(ctx.clone(), blobstore.clone())
+        .map_ok(|(path, _fsnode_file)| path.to_string())
+        .try_collect()
+        .await?;
+
+    assert_eq!(
+        all_files,
+        expected_files
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+        "Working copy doesn't match expectation"
+    );
+    Ok(())
+}
