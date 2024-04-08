@@ -43,6 +43,7 @@ use gotham_ext::middleware::LogMiddleware;
 use gotham_ext::middleware::MetadataMiddleware;
 use gotham_ext::middleware::PostResponseMiddleware;
 use gotham_ext::middleware::RequestContextMiddleware;
+use gotham_ext::middleware::ScubaMiddleware;
 use gotham_ext::middleware::ServerIdentityMiddleware;
 use gotham_ext::middleware::TimerMiddleware;
 use gotham_ext::middleware::TlsSessionDataMiddleware;
@@ -69,6 +70,7 @@ use tokio::net::TcpListener;
 use crate::middleware::RequestContentEncodingMiddleware;
 use crate::middleware::ResponseContentTypeMiddleware;
 use crate::model::GitServerContext;
+use crate::scuba::MononokeGitScubaHandler;
 use crate::service::build_router;
 use crate::sharding::MononokeGitServerProcess;
 mod command;
@@ -77,6 +79,7 @@ mod errors;
 mod middleware;
 mod model;
 mod read;
+mod scuba;
 mod service;
 mod sharding;
 mod util;
@@ -185,6 +188,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let app = MononokeAppBuilder::new(fb)
+        .with_default_scuba_dataset("mononoke_git_server")
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .with_cachelib_settings(cachelib_settings)
@@ -212,7 +216,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .transpose()?;
     let acl_provider = app.environment().acl_provider.clone();
-    let scuba = app.environment().scuba_sample_builder.clone();
+    let mut scuba = app.environment().scuba_sample_builder.clone();
     let common = app.repo_configs().common.clone();
     let tls_session_data_log = args.tls_session_data_log_file.clone();
     let enforce_authorization = !args.skip_authorization;
@@ -278,7 +282,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(RequestContextMiddleware::new(
                     fb,
                     logger.clone(),
-                    scuba,
+                    scuba.clone(),
                     None,
                     args.readonly.readonly,
                 ))
@@ -286,6 +290,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(PostResponseMiddleware::default())
                 .add(LoadMiddleware::new())
                 .add(log_middleware)
+                .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new({
+                    scuba.add("log_tag", "MononokeGit Request Processed");
+                    scuba
+                }))
                 .add(TimerMiddleware::new())
                 .add(ConfigInfoMiddleware::new(configs))
                 .build(router);

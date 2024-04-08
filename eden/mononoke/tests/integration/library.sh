@@ -1644,6 +1644,7 @@ function mononoke_git_service {
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
     --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
     --listen-port 0 \
+    --scuba-dataset "file://$TESTTMP/scuba.json" \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/mononoke_git_service_addr.txt" \

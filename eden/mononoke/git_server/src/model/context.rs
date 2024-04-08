@@ -19,6 +19,7 @@ use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
 
 use super::method::GitMethod;
+use super::GitMethodInfo;
 use crate::errors::GitServerContextErrorKind;
 use crate::GitRepos;
 use crate::Repo;
@@ -32,13 +33,13 @@ pub struct RepositoryRequestContext {
 impl RepositoryRequestContext {
     pub async fn instantiate(
         state: &mut State,
-        repo: &str,
-        method: GitMethod,
+        method_info: GitMethodInfo,
     ) -> Result<Self, GitServerContextErrorKind> {
+        state.put(method_info.clone());
         let req_ctx = state.borrow_mut::<RequestContext>();
         let ctx = req_ctx.ctx.clone();
         let git_ctx = GitServerContext::borrow_from(state);
-        git_ctx.request_context(ctx, repo, method).await
+        git_ctx.request_context(ctx, method_info).await
     }
 
     pub fn _logger(&self) -> &Logger {
@@ -81,24 +82,23 @@ impl GitServerContext {
     pub async fn request_context(
         &self,
         ctx: CoreContext,
-        repo_name: &str,
-        method: GitMethod,
+        method_info: GitMethodInfo,
     ) -> Result<RepositoryRequestContext, GitServerContextErrorKind> {
         let (repo, enforce_authorization) = {
             let inner = self
                 .inner
                 .read()
                 .expect("poisoned lock in git server context");
-            match inner.repos.get(repo_name) {
+            match inner.repos.get(&method_info.repo) {
                 Some(repo) => (repo, inner.enforce_auth),
                 None => {
                     return Err(GitServerContextErrorKind::RepositoryDoesNotExist(
-                        repo_name.to_string(),
+                        method_info.repo.to_string(),
                     ));
                 }
             }
         };
-        acl_check(&ctx, &repo, enforce_authorization, method).await?;
+        acl_check(&ctx, &repo, enforce_authorization, method_info.method).await?;
         Ok(RepositoryRequestContext { ctx, repo })
     }
 }

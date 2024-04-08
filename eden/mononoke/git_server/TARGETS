@@ -42,6 +42,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/git/packetline:packetline",
         "//eden/mononoke/git/packfile:packfile",
         "//eden/mononoke/git/protocol:protocol",

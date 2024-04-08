@@ -7,6 +7,8 @@
 
 use std::fmt;
 
+use gotham_derive::StateData;
+
 /// Enum representing the method (and the corresponding handler) supported by the Git Server
 #[derive(Copy, Clone)]
 pub enum GitMethod {
@@ -35,5 +37,48 @@ impl fmt::Display for GitMethod {
             Self::LsRefs => "ls-refs",
         };
         write!(f, "{}", name)
+    }
+}
+
+/// Enum representing the variant of the methods supported by the Git Server
+#[derive(Copy, Clone)]
+pub enum GitMethodVariant {
+    /// Git method variant for when the client specified filter criteria in
+    /// the request
+    Filter,
+    /// Git method variant for when the client specified one of the shallow
+    /// arguments in the request
+    Shallow,
+    /// Git method variant for when the client utilized the standard workflow
+    Standard,
+}
+
+impl fmt::Display for GitMethodVariant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::Filter => "filter",
+            Self::Shallow => "shallow",
+            Self::Standard => "standard",
+        };
+        write!(f, "{}", name)
+    }
+}
+
+/// Struct providing info about the method and its variants supported
+/// by the Git Server in the context of a given repo
+#[derive(Clone, StateData)]
+pub struct GitMethodInfo {
+    pub repo: String,
+    pub method: GitMethod,
+    pub variants: Vec<GitMethodVariant>,
+}
+
+impl GitMethodInfo {
+    pub fn variants_to_string(&self) -> String {
+        self.variants
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
+            .join(",")
     }
 }
