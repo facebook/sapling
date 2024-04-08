@@ -56,6 +56,11 @@ pub(super) struct CommandArgs {
     /// Do not sync the commit between source and target repo on demand. Only return result of
     /// previous sync (if synced at all).
     no_ondemand_sync: bool,
+    #[clap(long, short)]
+    /// Return result only if there's exact match for the requested commit - rather than commit with
+    /// equivalent working copy (which happens in case the source commit rewrites to nothing in target
+    /// repo).
+    exact: bool,
 }
 
 async fn build_commit_hint(
@@ -137,6 +142,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         candidate_selection_hint: hint,
         no_ondemand_sync: args.no_ondemand_sync,
+        exact: args.exact,
         ..Default::default()
     };
     // XXX Repos for xrepo methods need to be available on all servers,

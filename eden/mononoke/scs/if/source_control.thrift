@@ -1464,6 +1464,10 @@ struct CommitLookupXRepoParams {
   /// Do not sync the requests commit on-demand. Returns quicker with result or not-existing mapped
   /// commit if the commit wasn't synced yet.
   4: bool no_ondemand_sync;
+  /// Return result only if there's exact match for the requested commit - rather than commit with
+  /// equivalent working copy (which happens in case the source commit rewrites to nothing in target
+  /// repo).
+  5: bool exact;
 }
 
 /// Synchronization target

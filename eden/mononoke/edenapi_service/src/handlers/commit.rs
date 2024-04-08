@@ -67,6 +67,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
+use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
@@ -843,6 +844,7 @@ impl EdenApiHandler for CommitTranslateId {
                                     bs.clone(),
                                     None,
                                     XRepoLookupSyncBehaviour::SyncIfAbsent,
+                                    XRepoLookupExactBehaviour::WorkingCopyEquivalence,
                                 )
                                 .await,
                         )

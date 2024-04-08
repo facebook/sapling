@@ -72,6 +72,7 @@ pub use crate::repo::BookmarkInfo;
 pub use crate::repo::Repo;
 pub use crate::repo::RepoContext;
 pub use crate::repo::StoreRequest;
+pub use crate::repo::XRepoLookupExactBehaviour;
 pub use crate::repo::XRepoLookupSyncBehaviour;
 pub use crate::specifiers::ChangesetId;
 pub use crate::specifiers::ChangesetIdPrefix;

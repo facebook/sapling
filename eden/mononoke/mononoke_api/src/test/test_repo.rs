@@ -53,6 +53,7 @@ use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
+use crate::repo::XRepoLookupExactBehaviour;
 use crate::BookmarkFreshness;
 use crate::ChangesetFileOrdering;
 use crate::ChangesetId;
@@ -1125,6 +1126,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
             small_master_cs_id,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?
         .expect("changeset should exist");
@@ -1141,6 +1143,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
             large_master_cs_id,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?
         .expect("changeset should exist");
@@ -1181,6 +1184,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
             new_large_draft,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?;
     assert!(cs.is_some());
@@ -1204,6 +1208,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
             new_small_draft,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?;
     assert!(cs.is_some());
@@ -1255,6 +1260,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
             new_large_public,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?;
     assert!(cs.is_some());
@@ -1281,6 +1287,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
             new_small_public,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await;
     assert!(res.is_err());
@@ -1322,6 +1329,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             first_large,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?;
     let file_changes: Vec<_> = first_small
@@ -1404,6 +1412,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             second_large,
             None,
             XRepoLookupSyncBehaviour::SyncIfAbsent,
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence,
         )
         .await?;
     let file_changes: Vec<_> = second_small

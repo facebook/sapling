@@ -37,6 +37,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
+use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_types::path::MPath;
 use source_control as thrift;
@@ -1012,12 +1013,18 @@ impl SourceControlServiceImpl {
         } else {
             XRepoLookupSyncBehaviour::SyncIfAbsent
         };
+        let exact = if params.exact {
+            XRepoLookupExactBehaviour::OnlyExactMapping
+        } else {
+            XRepoLookupExactBehaviour::WorkingCopyEquivalence
+        };
         match repo
             .xrepo_commit_lookup(
                 &other_repo,
                 ChangesetSpecifier::from_request(&commit.id)?,
                 candidate_selection_hint,
                 sync_behaviour,
+                exact,
             )
             .await?
         {
