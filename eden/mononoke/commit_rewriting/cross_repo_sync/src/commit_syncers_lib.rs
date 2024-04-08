@@ -120,6 +120,8 @@ pub async fn rewrite_commit<'a, R: Repo>(
             GitSubmodulesChangesAction::Expand => {
                 let submodule_expansion_data = mb_submodule_expansion_data.ok_or(anyhow!("Submodule expansion data not provided when submodules is enabled for small repo"))?;
 
+                // TODO(T179530927): crash if source_repo is large repo, because
+                // backsyncing is not supported yet.
                 let new_cs = expand_all_git_submodule_file_changes(
                     ctx,
                     cs,
