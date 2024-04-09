@@ -58,7 +58,7 @@ def _lldb_backtrace_all(pid: int, write):
     debugger = lldb.debugger
     target = debugger.CreateTarget("")
     process = target.AttachToProcessWithID(lldb.SBListener(), pid, lldb.SBError())
-    if struct.calcsize("P") != 8:
+    if target.addr_size != 8:
         write("non-64-bit architecture is not yet supported")
         return
 
