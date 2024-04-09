@@ -98,14 +98,37 @@ def _lldb_backtrace_all(pid: int):
         #   ldp    x29, x30, [sp, #0x20]
         #   add    sp, sp, #0x30
         #   ret
+        #
+        # x64 MSVC:
+        #   ; Sapling_PyEvalFrame(PyThreadState* tstate, PyFrame* f, int exc) {
+        #   push        rbp
+        #   sub         rsp,40h
+        #   lea         rbp,[rsp+40h]
+        #   mov         dword ptr [rbp-4],r8d
+        #   mov         qword ptr [rbp-18h],rdx       ; FP - 0x18
+        #   mov         qword ptr [rbp-10h],rcx
+        #   ; return _PyEval_EvalFrameDefault(tstate, f, exc);
+        #   mov         r8d,dword ptr [exc]
+        #   mov         rdx,qword ptr [f]
+        #   mov         rcx,qword ptr [tstate]
+        #   call        qword ptr [__imp__PyEval_EvalFrameDefault (07FF748CDDF40h)]
+        #   nop
+        #   add         rsp,40h
+        #   pop         rbp
+        #   ret
         fp: int = frame.fp
         sp: int = frame.sp
-        if fp - sp == 0x20:
+        ptr_addr = None
+        if fp - sp == 0x40 and sys.platform == "win32":
+            ptr_addr = fp - 0x18
+        elif fp - sp == 0x20:
+            ptr_addr = fp - 0x10
+        if ptr_addr is not None:
             try:
-                python_frame_address = read_u64(fp - 0x10)
+                python_frame_address = read_u64(ptr_addr)
                 return resolve_python_frame(python_frame_address)
             except Exception as e:
-                return f"<error {e} {fp - 0x10}>"
+                return f"<error {e} {ptr_addr}>"
         return ""
 
     def resolve_python_frame(python_frame_address: int) -> str:
