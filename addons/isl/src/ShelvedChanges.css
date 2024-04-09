@@ -14,6 +14,8 @@
   flex-direction: column;
   gap: calc(2 * var(--pad));
   align-items: flex-start;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .shelved-changes-item {
