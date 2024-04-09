@@ -55,19 +55,26 @@ pub(crate) fn file_path_similarity(p1: &RepoPath, p2: &RepoPath) -> f64 {
 
 /// Check if two contents are considered similar based on the given config.
 pub fn is_content_similar(a: &[u8], b: &[u8], config: &dyn Config) -> Result<bool> {
-    let (similar, _) = content_similarity(a, b, config)?;
+    let (similar, _) = content_similarity(a, b, config, Option::None)?;
     Ok(similar)
 }
 
 /// Return (is_similar, similarity score) pair between two contents.
 ///   - When is_similar is false, the similarity score is always 0.0. This is an optimization
 ///     to calculate similarity score only when necessary.
-fn content_similarity(a: &[u8], b: &[u8], config: &dyn Config) -> Result<(bool, f32)> {
-    let config_percentage = config
+fn content_similarity(
+    a: &[u8],
+    b: &[u8],
+    config: &dyn Config,
+    threshold: Option<f32>,
+) -> Result<(bool, f32)> {
+    let config_threshold = config
         .get_opt::<f32>("copytrace", "similarity-threshold")?
         .unwrap_or(DEFAULT_SIMILARITY_THRESHOLD);
+    tracing::trace!(?threshold, ?config_threshold, " content similarity");
 
-    if config_percentage <= 0.0 {
+    let threshold = threshold.unwrap_or(config_threshold);
+    if threshold <= 0.0 {
         return Ok((true, 0.0));
     }
 
@@ -80,12 +87,11 @@ fn content_similarity(a: &[u8], b: &[u8], config: &dyn Config) -> Result<(bool, 
         lines += 1;
     }
 
-    let max_edit_cost =
-        config_max_edit_cost.min((lines as f32 * (1.0 - config_percentage)).round() as u64);
+    let max_edit_cost = config_max_edit_cost.min((lines as f32 * (1.0 - threshold)).round() as u64);
     let cost = xdiff::edit_cost(a, b, max_edit_cost + 1);
 
     tracing::trace!(
-        ?config_percentage,
+        ?threshold,
         ?config_max_edit_cost,
         ?lines,
         ?max_edit_cost,
