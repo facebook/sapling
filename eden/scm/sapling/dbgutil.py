@@ -143,17 +143,32 @@ def _lldb_backtrace_all(pid: int):
 
     for thread in process.threads:
         write(("%r\n") % thread)
+        frames = []  # [(frame | None, line)]
+        has_resolved_python_frame = False
         for i, frame in enumerate(thread.frames):
             name = frame.GetDisplayFunctionName()
             if name == "Sapling_PyEvalFrame":
                 resolved = resolve_frame(frame)
                 if resolved:
+                    has_resolved_python_frame = True
                     # The "frame #i" format matches the repr(frame) style.
-                    write(f"  frame #{i}: {resolved}\n")
+                    frames.append((None, f"  frame #{i}: {resolved}\n"))
                     continue
             if name:
-                write(f"  {repr(frame)}\n")
+                frames.append((frame, f"  {repr(frame)}\n"))
+        if has_resolved_python_frame:
+            # If any Python frame is resolved, strip out noisy frames like _PyEval_EvalFrameDefault.
+            frames = [
+                (frame, line)
+                for frame, line in frames
+                if not _is_cpython_function(frame)
+            ]
+        write("".join(line for _frame, line in frames))
         write("\n")
+
+
+def _is_cpython_function(frame) -> bool:
+    return frame is not None and "python" in (frame.module.file.basename or "").lower()
 
 
 def _lldb_backtrace_all_command(debugger, command, result, internal_dict):
