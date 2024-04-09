@@ -26,8 +26,7 @@ import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {loadable} from 'jotai/utils';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {
   comparisonIsAgainstHead,

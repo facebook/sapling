@@ -13,7 +13,6 @@ import {
   COMMIT,
   closeCommitInfoSidebar,
   simulateRepoConnected,
-  simulateMessageFromServer,
 } from '../testUtils';
 import {succeedableRevset} from '../types';
 import {fireEvent, render, screen, within, act} from '@testing-library/react';
