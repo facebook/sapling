@@ -109,6 +109,11 @@ module.exports = {
             message:
               'atomFamily leaks memory. Use atomFamilyWeak(keyToAtom), or cached(keyToAtom), or useAtomValue(useMemo(() => keyToAtom(k), [k])), or useAtomGet and useAtomHas instead.',
           },
+          {
+            name: 'react-dom/test-utils',
+            importNames: ['act'],
+            message: 'Prefer importing act from @testing-library/react instead.',
+          },
         ],
       },
     ],
