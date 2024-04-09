@@ -596,7 +596,7 @@ Python utility:
   patching file a
   patching file b
   adding b
-  recording removal of a as rename to b (88% similar)
+  recording removal of a as rename to b (50% similar)
   applied to working directory
   $ echo 'mod b' > b
   $ hg st -C
@@ -1525,4 +1525,3 @@ Python utility:
   $ hg commit -qm remove
   $ hg export --rev 'desc(unicode)' | hg import -
   applying patch from stdin
-

@@ -12,6 +12,8 @@
 
 from __future__ import absolute_import
 
+import bindings
+
 from . import mdiff, progress, pycompat
 from .i18n import _
 
@@ -50,29 +52,16 @@ def _findexactmatches(repo, added, removed):
                     break
 
 
-def _ctxdata(fctx):
-    # lazily load text
-    orig = fctx.data()
-    return orig, mdiff.splitnewlines(orig)
+def _score(fctx, otherdata, threshold):
+    data = fctx.data()
+    _is_similar, score = bindings.copytrace.content_similarity(
+        data, otherdata, fctx.repo().ui._rcfg, threshold
+    )
+    return score
 
 
-def _score(fctx, otherdata):
-    orig, lines = otherdata
-    text = fctx.data()
-    # mdiff.blocks() returns blocks of matching lines
-    # count the number of bytes in each
-    equal = 0
-    matches = mdiff.blocks(text, orig)
-    for x1, x2, y1, y2 in matches:
-        for line in lines[y1:y2]:
-            equal += len(line)
-
-    lengths = len(text) + len(orig)
-    return equal * 2.0 / lengths
-
-
-def score(fctx1, fctx2):
-    return _score(fctx1, _ctxdata(fctx2))
+def score(fctx1, fctx2, threshold=None):
+    return _score(fctx1, fctx2.data(), threshold)
 
 
 def _findsimilarmatches(repo, added, removed, threshold):
@@ -81,6 +70,8 @@ def _findsimilarmatches(repo, added, removed, threshold):
     Takes a list of new filectxs and a list of removed filectxs, and yields
     (before, after, score) tuples of partial matches.
     """
+    import sys
+
     copies = {}
     with progress.bar(
         repo.ui, _("searching for similar files"), _("files"), len(removed)
@@ -90,10 +81,10 @@ def _findsimilarmatches(repo, added, removed, threshold):
 
             data = None
             for a in added:
-                bestscore = copies.get(a, (None, threshold))[1]
+                bestscore = copies.get(a, (None, threshold - sys.float_info.epsilon))[1]
                 if data is None:
-                    data = _ctxdata(r)
-                myscore = _score(a, data)
+                    data = r.data()
+                myscore = _score(a, data, threshold)
                 if myscore > bestscore:
                     copies[a] = (r, myscore)
 

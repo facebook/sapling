@@ -71,7 +71,7 @@ pub fn content_similarity(
     let config_threshold = config
         .get_opt::<f32>("copytrace", "similarity-threshold")?
         .unwrap_or(DEFAULT_SIMILARITY_THRESHOLD);
-    tracing::trace!(?threshold, ?config_threshold, " content similarity");
+    tracing::trace!(?threshold, ?config_threshold, "content similarity");
 
     let threshold = threshold.unwrap_or(config_threshold);
     if threshold <= 0.0 {
@@ -96,11 +96,12 @@ pub fn content_similarity(
         ?lines,
         ?max_edit_cost,
         ?cost,
-        " content similarity configs"
+        "content similarity configs"
     );
 
     if cost <= max_edit_cost {
         let score = (lines as f32 - cost as f32) / lines as f32;
+        tracing::trace!(?score, "content similarity score");
         Ok((true, score))
     } else {
         // For cost > max_edit_cost, we treat it as not similar and we don't care about

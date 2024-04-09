@@ -3128,7 +3128,8 @@ def trydiff(
                     header.append(b"new mode %s" % mode2)
                 if copyop is not None:
                     if opts.showsimilarity:
-                        sim = similar.score(ctx1[path1], ctx2[path2]) * 100
+                        threshold = repo.ui.configint("patch", "similarity", 1) / 100.0
+                        sim = similar.score(ctx1[path1], ctx2[path2], threshold) * 100
                         header.append(b"similarity index %d%%" % sim)
                     header.append(b"%s from %s" % (copyop, encodeutf8(path1)))
                     header.append(b"%s to %s" % (copyop, encodeutf8(path2)))

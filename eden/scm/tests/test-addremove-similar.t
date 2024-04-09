@@ -60,7 +60,7 @@ comparing two empty files caused ZeroDivisionError in the past
   removing large-file
   adding small-file
   removing tiny-file
-  recording removal of tiny-file as rename to small-file (82% similar)
+  recording removal of tiny-file as rename to small-file (71% similar)
 
   $ hg commit -m B
 
@@ -133,7 +133,7 @@ pick one from many similar files
   removing 8
   removing 9
   adding a
-  recording removal of 0 as rename to a (99% similar)
+  recording removal of 0 as rename to a (98% similar)
   $ hg commit -m 'always the same file should be selected'
 
 should all fail
