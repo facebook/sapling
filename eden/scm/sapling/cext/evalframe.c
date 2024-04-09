@@ -28,6 +28,12 @@ To learn examples about the APIs, check  cpython/Modules/_testinternalcapi.c.
 #define PY_SSIZE_T_CLEAN
 #include <Python.h> // @manual=fbsource//third-party/python:python
 
+#if defined(_WIN32)
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT
+#endif
+
 // _PyInterpreterState_SetEvalFrameFunc is new in CPython 3.9.
 #define HAS_SET_EVAL_FRAME_FUNC (PY_VERSION_HEX >= 0x03090000)
 
@@ -55,7 +61,7 @@ To learn examples about the APIs, check  cpython/Modules/_testinternalcapi.c.
 #pragma optimize("", off)
 #endif
 
-PyObject* NO_OPT
+EXPORT PyObject* NO_OPT
 Sapling_PyEvalFrame(PyThreadState* tstate, PyFrame* f, int exc) {
   return _PyEval_EvalFrameDefault(tstate, f, exc);
 }
@@ -83,7 +89,7 @@ void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
  * Resolve a PyFrame to a "name at path:line".
  * Intended to be called by a debugger like lldb. Not thread safe.
  */
-const char* sapling_cext_evalframe_resolve_frame(size_t address) {
+EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
   PyFrame* f = (PyFrame*)address;
   static char buf[4096] = {0};
   if (!f) {
