@@ -68,12 +68,36 @@ def _lldb_backtrace_all(pid: int):
         The frame should be a Sapling_PyEvalFrame function call.
         """
         # Sapling_PyEvalFrame(PyThreadState* tstate, PyFrameObject* f, int exc)
-        # push   %rbp
-        # mov    %rsp,%rbp        ; FP
-        # sub    $0x20,%rsp       ; SP = FP - 0x20
-        # mov    %rdi,-0x18(%rbp)
-        # mov    %rsi,-0x10(%rbp) ; PyFrame f, at FP - 0x10
-        # mov    %edx,-0x4(%rbp)
+        #
+        # x64:
+        #   pushq  %rbp
+        #   movq   %rsp, %rbp        ; FP
+        #   subq   $0x20, %rsp       ; SP = FP - 0x20
+        #   movq   %rdi, -0x8(%rbp)
+        #   movq   %rsi, -0x10(%rbp) ; PyFrame f at FP - 0x10, or SP + 0x10
+        #   movl   %edx, -0x14(%rbp)
+        #   movq   -0x8(%rbp), %rdi
+        #   movq   -0x10(%rbp), %rsi
+        #   movl   -0x14(%rbp), %edx
+        #   callq  0x1034bddee       ; symbol stub for: _PyEval_EvalFrameDefault
+        #   addq   $0x20, %rsp
+        #   popq   %rbp
+        #   retq
+        #
+        # arm64 (x29 is FP):
+        #   sub    sp, sp, #0x30
+        #   stp    x29, x30, [sp, #0x20]
+        #   add    x29, sp, #0x20      ; FP = SP + 0x20
+        #   stur   x0, [x29, #-0x8]    ; x0 is 1st arg (tstate)
+        #   str    x1, [sp, #0x10]     ; x1 is 2nd arg, `f`, at SP + 0x10
+        #   str    w2, [sp, #0xc]
+        #   ldur   x0, [x29, #-0x8]
+        #   ldr    x1, [sp, #0x10]
+        #   ldr    w2, [sp, #0xc]
+        #   bl     0x1046b6140          ; symbol stub for: _PyEval_EvalFrameDefault
+        #   ldp    x29, x30, [sp, #0x20]
+        #   add    sp, sp, #0x30
+        #   ret
         fp: int = frame.fp
         sp: int = frame.sp
         if fp - sp == 0x20:
