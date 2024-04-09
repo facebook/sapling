@@ -16,8 +16,7 @@ import {
   resetTestMessages,
   simulateRepoConnected,
 } from '../testUtils';
-import {fireEvent, render, screen, within} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, within, act} from '@testing-library/react';
 
 const {clickGoto} = CommitTreeListTestUtils;
 

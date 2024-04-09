@@ -16,8 +16,7 @@ import {
   simulateMessageFromServer,
 } from '../testUtils';
 import {succeedableRevset} from '../types';
-import {fireEvent, render, screen, within} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, within, act} from '@testing-library/react';
 
 describe('Suggested Rebase button', () => {
   beforeEach(() => {

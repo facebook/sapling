@@ -15,9 +15,8 @@ import {
   openCommitInfoSidebar,
   simulateMessageFromServer,
 } from '../testUtils';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react-dom/test-utils';
 import {nullthrows} from 'shared/utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */

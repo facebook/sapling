@@ -23,9 +23,8 @@ import {
   waitForWithTick,
 } from '../testUtils';
 import {CommandRunner, succeedableRevset} from '../types';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react-dom/test-utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 

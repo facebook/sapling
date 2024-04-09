@@ -13,8 +13,7 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {readAtom} from './jotaiUtils';
 import {individualToggleKey} from './selection';
-import {screen, within, fireEvent, waitFor} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {screen, within, fireEvent, waitFor, act} from '@testing-library/react';
 import {nullthrows} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {

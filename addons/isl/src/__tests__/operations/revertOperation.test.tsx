@@ -17,8 +17,7 @@ import {
   expectMessageNOTSentToServer,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
-import {fireEvent, render, screen, within} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, within, act} from '@testing-library/react';
 import {nextTick} from 'shared/testUtils';
 
 /* eslint-disable require-await */

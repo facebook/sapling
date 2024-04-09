@@ -14,8 +14,7 @@ import {
   simulateMessageFromServer,
   simulateRepoConnected,
 } from '../testUtils';
-import {render, screen, fireEvent} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {render, screen, fireEvent, act} from '@testing-library/react';
 
 describe('cwd', () => {
   beforeEach(() => {

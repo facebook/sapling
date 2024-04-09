@@ -16,9 +16,8 @@ import {
   simulateMessageFromServer,
   openCommitInfoSidebar,
 } from '../../testUtils';
-import {render, waitFor} from '@testing-library/react';
+import {render, waitFor, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react-dom/test-utils';
 import * as utils from 'shared/utils';
 
 describe('AmendOperation', () => {

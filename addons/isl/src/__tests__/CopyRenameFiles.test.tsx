@@ -18,8 +18,7 @@ import {
   closeCommitInfoSidebar,
   simulateRepoConnected,
 } from '../testUtils';
-import {fireEvent, render, screen} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, act} from '@testing-library/react';
 
 describe('CommitTreeList', () => {
   beforeEach(() => {

@@ -21,8 +21,7 @@ import {
   COMMIT,
   expectYouAreHerePointAt,
 } from '../testUtils';
-import {fireEvent, render, screen, within} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, within, act} from '@testing-library/react';
 import * as utils from 'shared/utils';
 
 const {clickGoto} = CommitTreeListTestUtils;

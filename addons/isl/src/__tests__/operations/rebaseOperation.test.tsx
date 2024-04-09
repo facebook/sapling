@@ -25,8 +25,7 @@ import {
   scanForkedBranchHashes,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
 
