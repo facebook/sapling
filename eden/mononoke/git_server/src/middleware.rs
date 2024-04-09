@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+mod ods;
 mod request;
 mod response;
 
+pub use self::ods::OdsMiddleware;
 pub use self::request::RequestContentEncodingMiddleware;
 pub use self::response::ResponseContentTypeMiddleware;

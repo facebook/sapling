@@ -67,6 +67,7 @@ use repo_permission_checker::RepoPermissionChecker;
 use slog::info;
 use tokio::net::TcpListener;
 
+use crate::middleware::OdsMiddleware;
 use crate::middleware::RequestContentEncodingMiddleware;
 use crate::middleware::ResponseContentTypeMiddleware;
 use crate::model::GitServerContext;
@@ -290,6 +291,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(PostResponseMiddleware::default())
                 .add(LoadMiddleware::new())
                 .add(log_middleware)
+                .add(OdsMiddleware::new())
                 .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new({
                     scuba.add("log_tag", "MononokeGit Request Processed");
                     scuba
