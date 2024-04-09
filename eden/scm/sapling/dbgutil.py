@@ -43,7 +43,7 @@ def backtrace_all(ui, pid: int):
             "-o",
             f"bta {pid} {out_path}",
         ]
-        subprocess.run(args)
+        subprocess.run(args, stdout=subprocess.DEVNULL)
         with open(out_path, "rb") as f:
             data = f.read()
             ui.writebytes(data)
