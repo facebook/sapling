@@ -83,7 +83,8 @@ void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
  * Resolve a PyFrame to a "name at path:line".
  * Intended to be called by a debugger like lldb. Not thread safe.
  */
-const char* sapling_cext_evalframe_resolve_frame(PyFrame* f) {
+const char* sapling_cext_evalframe_resolve_frame(size_t address) {
+  PyFrame* f = (PyFrame*)address;
   static char buf[4096] = {0};
   if (!f) {
     return buf;
