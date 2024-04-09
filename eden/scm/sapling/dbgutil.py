@@ -31,6 +31,7 @@ def backtrace_all(ui, pid: int):
 
     with tempfile.TemporaryDirectory(prefix="saplinglldb") as dir:
         python_script_path = os.path.join(dir, "dbgutil.py")
+        out_path = os.path.join(dir, "bta_output.txt")
         with open(python_script_path, "wb") as f:
             f.write(python_source.encode())
         args = [
@@ -40,18 +41,20 @@ def backtrace_all(ui, pid: int):
             "-o",
             f"command script import {python_script_path}",
             "-o",
-            f"bta {pid}",
+            f"bta {pid} {out_path}",
         ]
         subprocess.run(args)
+        with open(out_path, "rb") as f:
+            data = f.read()
+            ui.writebytes(data)
 
 
-def _lldb_backtrace_all(pid: int):
+def _lldb_backtrace_all(pid: int, write):
     """intended to be executed as a lldb script.
     Runs inside lldb Python environment, outside Sapling environment.
     """
     import lldb
 
-    write = sys.stdout.write
     debugger = lldb.debugger
     target = debugger.CreateTarget("")
     process = target.AttachToProcessWithID(lldb.SBListener(), pid, lldb.SBError())
@@ -172,9 +175,16 @@ def _is_cpython_function(frame) -> bool:
 
 
 def _lldb_backtrace_all_command(debugger, command, result, internal_dict):
-    # lldb command to take a `pid` and call _lldb_backtrace_all.
-    pid = int(command.split()[-1])
-    _lldb_backtrace_all(pid)
+    """lldb command: bta pid [PATH]. Write Python+Rust traceback to stdout or PATH."""
+    pid_str, *rest = command.split(" ", 1)
+    pid = int(pid_str)
+    if rest:
+        path = rest[0]
+        with open(path, "w", newline="\n") as f:
+            _lldb_backtrace_all(pid, f.write)
+            f.flush()
+    else:
+        _lldb_backtrace_all(pid, sys.stdout.write)
 
 
 def __lldb_init_module(debugger, internal_dict):
