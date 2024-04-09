@@ -62,7 +62,7 @@ pub fn is_content_similar(a: &[u8], b: &[u8], config: &dyn Config) -> Result<boo
 /// Return (is_similar, similarity score) pair between two contents.
 ///   - When is_similar is false, the similarity score is always 0.0. This is an optimization
 ///     to calculate similarity score only when necessary.
-fn content_similarity(
+pub fn content_similarity(
     a: &[u8],
     b: &[u8],
     config: &dyn Config,
