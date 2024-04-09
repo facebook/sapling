@@ -28,6 +28,7 @@ export type TrackEventName =
   | 'ArcPullOperation'
   | 'ArcStableForCommand'
   | 'BulkRebaseOperation'
+  | 'BookmarkDeleteOperation'
   | 'CommitOperation'
   | 'CommitFileSubsetOperation'
   | 'ContinueMergeOperation'

@@ -5,12 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ContextMenuItem} from 'shared/ContextMenu';
+
 import {bookmarksDataStorage} from './BookmarksData';
 import {Tooltip} from './Tooltip';
 import {tracker} from './analytics';
 import {Tag} from './components/Tag';
+import {T} from './i18n';
+import {BookmarkDeleteOperation} from './operations/BookmarkDeleteOperation';
+import {useRunOperation} from './operationsState';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
+import {useContextMenu} from 'shared/ContextMenu';
 
 const styles = stylex.create({
   stable: {
@@ -44,14 +50,33 @@ export function Bookmark({
   fullLength?: boolean;
   tooltip?: string;
 }) {
+  const bookmark = children;
+  const contextMenu = useContextMenu(makeBookmarkContextMenuOptions);
+
+  const runOperation = useRunOperation();
+
+  function makeBookmarkContextMenuOptions() {
+    const items: Array<ContextMenuItem> = [];
+    if (kind === 'local') {
+      items.push({
+        label: <T replace={{$book: bookmark}}>Delete Bookmark "$book"</T>,
+        onClick: () => {
+          runOperation(new BookmarkDeleteOperation(bookmark));
+        },
+      });
+    }
+    return items;
+  }
+
   if (kind === 'stable') {
-    logExposureOncePerSession(children);
+    logExposureOncePerSession(bookmark);
   }
   const inner = (
     <Tag
+      onContextMenu={contextMenu}
       xstyle={[kind === 'stable' && styles.stable, fullLength === true && styles.fullLength]}
-      title={tooltip == null ? children : undefined}>
-      {children}
+      title={tooltip == null ? bookmark : undefined}>
+      {bookmark}
     </Tag>
   );
   return tooltip ? <Tooltip title={tooltip}>{inner}</Tooltip> : inner;
