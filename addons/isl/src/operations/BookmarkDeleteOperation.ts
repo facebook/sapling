@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Dag} from '../previews';
+
 import {Operation} from './Operation';
 
 export class BookmarkDeleteOperation extends Operation {
@@ -19,5 +21,17 @@ export class BookmarkDeleteOperation extends Operation {
 
   getArgs() {
     return ['bookmark', '--delete', this.bookmark];
+  }
+
+  optimisticDag(dag: Dag): Dag {
+    const commit = dag.resolve(this.bookmark);
+    if (commit) {
+      return dag.replaceWith(commit.hash, (_h, c) =>
+        c?.merge({
+          bookmarks: commit.bookmarks.filter(b => b !== this.bookmark),
+        }),
+      );
+    }
+    return dag;
   }
 }
