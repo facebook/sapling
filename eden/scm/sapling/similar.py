@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import bindings
 
-from . import mdiff, progress, pycompat
+from . import progress, pycompat
 from .i18n import _
 
 
@@ -52,16 +52,15 @@ def _findexactmatches(repo, added, removed):
                     break
 
 
-def _score(fctx, otherdata, threshold):
-    data = fctx.data()
-    _is_similar, score = bindings.copytrace.content_similarity(
-        data, otherdata, fctx.repo().ui._rcfg, threshold
+def _score(repo, data, otherdata, threshold):
+    is_similar, score = bindings.copytrace.content_similarity(
+        data, otherdata, repo.ui._rcfg, threshold
     )
-    return score
+    return is_similar, score
 
 
 def score(fctx1, fctx2, threshold=None):
-    return _score(fctx1, fctx2.data(), threshold)
+    return _score(fctx1.repo(), fctx1.data(), fctx2.data(), threshold)[1]
 
 
 def _findsimilarmatches(repo, added, removed, threshold):
@@ -70,23 +69,22 @@ def _findsimilarmatches(repo, added, removed, threshold):
     Takes a list of new filectxs and a list of removed filectxs, and yields
     (before, after, score) tuples of partial matches.
     """
-    import sys
+    if not added or not removed:
+        return None
 
     copies = {}
     with progress.bar(
-        repo.ui, _("searching for similar files"), _("files"), len(removed)
+        repo.ui, _("searching for similar files"), _("files"), len(added)
     ) as prog:
-        for r in removed:
+        for a in added:
             prog.value += 1
-
-            data = None
-            for a in added:
-                bestscore = copies.get(a, (None, threshold - sys.float_info.epsilon))[1]
-                if data is None:
-                    data = r.data()
-                myscore = _score(a, data, threshold)
-                if myscore > bestscore:
-                    copies[a] = (r, myscore)
+            data = a.data()
+            bestscore = -1
+            for r in removed:
+                is_similar, score = _score(repo, data, r.data(), threshold)
+                if is_similar and score > bestscore:
+                    copies[a] = (r, score)
+                    bestscore = score
 
     for dest, v in pycompat.iteritems(copies):
         source, bscore = v
