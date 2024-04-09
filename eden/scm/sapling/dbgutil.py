@@ -58,6 +58,20 @@ def _lldb_backtrace_all(pid: int, write):
     debugger = lldb.debugger
     target = debugger.CreateTarget("")
     process = target.AttachToProcessWithID(lldb.SBListener(), pid, lldb.SBError())
+    try:
+        _lldb_backtrace_all_process(target, process, write)
+    finally:
+        if sys.platform == "win32":
+            # Attempt to resume the suspended process. "Detach()" alone does not
+            # seem to resume it...
+            debugger.SetAsync(True)
+            process.Continue()
+        process.Detach()
+
+
+def _lldb_backtrace_all_process(target, process, write):
+    import lldb
+
     if target.addr_size != 8:
         write("non-64-bit architecture is not yet supported")
         return
