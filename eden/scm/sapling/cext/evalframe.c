@@ -31,7 +31,6 @@ To learn examples about the APIs, check  cpython/Modules/_testinternalcapi.c.
 // _PyInterpreterState_SetEvalFrameFunc is new in CPython 3.9.
 #define HAS_SET_EVAL_FRAME_FUNC (PY_VERSION_HEX >= 0x03090000)
 
-#if HAS_SET_EVAL_FRAME_FUNC
 #if PY_VERSION_HEX >= 0x030b0000
 // CPython 3.11 changed PyFrameObject* to _PyInterpreterFrame*.
 #define PyFrame struct _PyInterpreterFrame
@@ -39,6 +38,8 @@ To learn examples about the APIs, check  cpython/Modules/_testinternalcapi.c.
 #include <frameobject.h> // @manual=fbsource//third-party/python:python
 #define PyFrame PyFrameObject
 #endif
+
+#if HAS_SET_EVAL_FRAME_FUNC
 
 // Disable optimization like tail recursion, dead code elimination,
 // so function args are pushed to stack.
@@ -76,4 +77,47 @@ void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
       PyInterpreterState_Get(),
       enabled ? Sapling_PyEvalFrame : _PyEval_EvalFrameDefault);
 #endif
+}
+
+/**
+ * Resolve a PyFrame to a "name at path:line".
+ * Intended to be called by a debugger like lldb. Not thread safe.
+ */
+const char* sapling_cext_evalframe_resolve_frame(PyFrame* f) {
+  static char buf[4096] = {0};
+  if (!f) {
+    return buf;
+  }
+  memset(buf, 0, sizeof buf);
+  // 3.12: f is _PyInterpreterFrame. Can be accessed via PyUnstable APIs.
+  // 3.11: f is _PyInterpreterFrame. Need Py_BUILD_CORE_MODULE to access.
+  // See also
+  // https://github.com/python/cpython/issues/91006#issuecomment-1093945542
+#if PY_VERSION_HEX >= 0x03090000 && PY_VERSION_HEX < 0x030b0000
+  // 3.9-3.10: f is PyFrameObject* and can be read by PyFrame APIs.
+  PyCodeObject* code = NULL;
+  if (!PyFrame_Check(f)) {
+    goto out;
+  }
+  code = PyFrame_GetCode(f);
+  if (code == NULL) {
+    goto out;
+  }
+  PyObject* filename_obj = code->co_filename;
+  PyObject* name_obj = code->co_name;
+  if (!filename_obj || !name_obj || !PyUnicode_Check(filename_obj) ||
+      !PyUnicode_Check(name_obj)) {
+    goto out;
+  }
+  const char* filename = PyUnicode_AsUTF8(filename_obj);
+  const char* name = PyUnicode_AsUTF8(name_obj);
+  if (filename == NULL || name == NULL) {
+    goto out;
+  }
+  int line_no = PyFrame_GetLineNumber(f);
+  snprintf(buf, (sizeof buf) - 1, "%s at %s:%d", name, filename, line_no);
+out:
+  Py_XDECREF(code);
+#endif
+  return buf;
 }
