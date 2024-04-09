@@ -84,3 +84,18 @@ cpp_library(
         "//eden/scm:core_headers",
     ],
 )
+
+cpp_library(
+    name = "evalframe",
+    srcs = [
+        "evalframe.c",
+    ],
+    compiler_flags = [
+        "-fno-strict-aliasing",
+        "-Wno-missing-field-initializers",
+        "-Wno-deprecated-declarations",
+    ],
+    deps = [
+        "fbsource//third-party/python:python",
+    ],
+)
