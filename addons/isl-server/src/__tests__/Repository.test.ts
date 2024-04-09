@@ -425,7 +425,9 @@ describe('Repository', () => {
       const execaSpy = mockExeca([]);
       const repo = new Repository(repoInfo, ctx);
 
-      repo.stableLocations = [{name: 'mystable', hash: 'aaa', info: 'this is the stable for aaa'}];
+      repo.stableLocations = [
+        {name: 'mystable', hash: 'aaa', info: 'this is the stable for aaa', date: new Date(0)},
+      ];
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
         execaSpy,
@@ -433,8 +435,8 @@ describe('Repository', () => {
       );
 
       repo.stableLocations = [
-        {name: 'mystable', hash: 'aaa', info: 'this is the stable for aaa'},
-        {name: '2', hash: 'bbb', info: '2'},
+        {name: 'mystable', hash: 'aaa', info: 'this is the stable for aaa', date: new Date(0)},
+        {name: '2', hash: 'bbb', info: '2', date: new Date(0)},
       ];
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(

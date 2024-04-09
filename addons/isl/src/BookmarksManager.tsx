@@ -70,7 +70,7 @@ export function BookmarksManagerMenu() {
 
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
-  const stableLocations = useAtomValue(fetchedStablesAtom);
+
   return (
     <DropdownFields
       title={<T>Bookmarks Manager</T>}
@@ -82,23 +82,28 @@ function BookmarksManager(_props: {dismiss: () => void}) {
           description={<T>Uncheck remote bookmarks you don't use to hide them</T>}>
           <BookmarksList bookmarks={bookmarks} kind="remote" />
         </Section>
-        {stableLocations?.special && (
-          <Section
-            title={<T>Stable Locations</T>}
-            description={
-              <T>
-                Commits that have had successful builds and warmed up caches for a particular build
-                target
-              </T>
-            }>
-            <BookmarksList
-              bookmarks={stableLocations?.special?.map(info => info.value).filter(notEmpty) ?? []}
-              kind="stable"
-            />
-          </Section>
-        )}
+        <StableLocationsSection />
       </Column>
     </DropdownFields>
+  );
+}
+
+function StableLocationsSection() {
+  const stableLocations = useAtomValue(fetchedStablesAtom);
+
+  return (
+    <Section
+      title={<T>Stable Locations</T>}
+      description={
+        <T>
+          Commits that have had successful builds and warmed up caches for a particular build target
+        </T>
+      }>
+      <BookmarksList
+        bookmarks={stableLocations?.special?.map(info => info.value).filter(notEmpty) ?? []}
+        kind="stable"
+      />
+    </Section>
   );
 }
 

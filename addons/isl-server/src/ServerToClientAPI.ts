@@ -26,7 +26,6 @@ import type {
   FetchedUncommittedChanges,
   LandInfo,
   CodeReviewProviderSpecificClientToServerMessages,
-  StableInfo,
   StableLocationData,
 } from 'isl/src/types';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';

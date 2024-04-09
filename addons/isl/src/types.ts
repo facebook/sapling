@@ -194,7 +194,11 @@ export type StableLocationData = {
 export type StableInfo = {
   hash: string;
   name: string;
-  info: string;
+  /** If present, this is informational text, like the reason it's been added */
+  byline?: string;
+  /** If present, this is extra details that might be shown in a tooltip */
+  info?: string;
+  date: Date;
 };
 
 export type CommitInfo = {

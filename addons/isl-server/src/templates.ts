@@ -131,7 +131,7 @@ export function attachStableLocations(commits: Array<CommitInfo>, locations: Arr
         ...(commit.stableCommitMetadata ?? []),
         ...map[commit.hash].map(location => ({
           value: location.name,
-          description: location.info,
+          description: location.info ?? '',
         })),
       ];
     }
