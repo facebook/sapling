@@ -1134,7 +1134,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableEdenMenu{
       "notifications:enable-eden-menu",
-      false,
+      true,
       this};
 
   /**
@@ -1142,7 +1142,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableNotifications{
       "notifications:enable-notifications",
-      false,
+      true,
       this};
 
   /**
@@ -1150,7 +1150,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableEdenDebugMenu{
       "notifications:enable-debug",
-      false,
+      true,
       this};
 
   // [log]
