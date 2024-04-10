@@ -109,7 +109,8 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
 
     // TODO(T179533620): validate that all changes are consistent with submodule
     // metadata file.
-    let validated_bonsai = validate_all_submodule_expansions(rewritten_bonsai, sm_exp_data).await?;
+    let validated_bonsai =
+        validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover).await?;
 
     Ok(validated_bonsai.into_mut())
 }
