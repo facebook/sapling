@@ -180,7 +180,7 @@ pub async fn ref_oid_mapping(
                     cs_id
                 )
             })?;
-            let ref_name = format!("{}{}", REF_PREFIX, bookmark.name().to_string());
+            let ref_name = format!("{}{}", REF_PREFIX, bookmark.name());
             anyhow::Ok((ref_name, oid.clone()))
         })
         .collect::<Result<Vec<_>>>()?;

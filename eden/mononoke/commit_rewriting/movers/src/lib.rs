@@ -384,7 +384,7 @@ mod test {
 
     #[test]
     fn test_get_path_action() {
-        let foo_el = vec![mpe(b"foo")];
+        let foo_el = [mpe(b"foo")];
         assert_eq!(
             get_path_action(foo_el.iter(), &PrefixAction::DoNotSync).unwrap(),
             PathAction::DoNotSync

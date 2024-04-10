@@ -89,12 +89,12 @@ impl<'a> std::fmt::Debug for ParamsWrapper<'a> {
     }
 }
 
-struct ResultsWrapper<'a>(&'a Mononoke, Option<MegarepoAsynchronousRequestResult>);
-impl<'a> std::fmt::Debug for ResultsWrapper<'a> {
+struct ResultsWrapper(Option<MegarepoAsynchronousRequestResult>);
+impl std::fmt::Debug for ResultsWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let _ = self.0;
         // impl Debug for HexArray here
-        match &self.1 {
+        match &self.0 {
             Some(res) => match res.thrift() {
                 ThriftMegarepoAsynchronousRequestResult::megarepo_sync_changeset_result(
                     ThriftMegarepoSyncChangesetResult::success(result),
@@ -127,7 +127,7 @@ pub async fn show_request(
                 "Entry: {:#?}\nParams: {:#?}\nResult: {:#?}",
                 entry,
                 ParamsWrapper(&megarepo.mononoke(), params),
-                ResultsWrapper(&megarepo.mononoke(), maybe_result),
+                ResultsWrapper(maybe_result),
             );
             return Ok(());
         }

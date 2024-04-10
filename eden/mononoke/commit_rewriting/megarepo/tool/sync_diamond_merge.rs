@@ -418,7 +418,7 @@ fn find_root(new_branch: &Vec<BonsaiChangeset>) -> Result<ChangesetId, Error> {
         }
     }
 
-    validate_roots(roots).map(|root| *root)
+    validate_roots(roots).copied()
 }
 
 async fn find_new_branch_oldest_first(

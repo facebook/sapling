@@ -239,7 +239,7 @@ async fn rewrite_file_paths(
         let large_repo_id = Large(repo.repo_identity().id());
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
-                submodule_deps: &deps,
+                submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX,
                 large_repo_id,
             }),
