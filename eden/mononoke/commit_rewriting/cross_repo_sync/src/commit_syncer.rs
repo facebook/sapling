@@ -76,6 +76,7 @@ use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::set_mapping_change_version;
 use crate::types::ErrorKind;
+use crate::types::Large;
 use crate::types::PushrebaseRewriteDates;
 use crate::types::Repo;
 use crate::types::Source;
@@ -857,14 +858,18 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let large_repo = self.get_large_repo();
+        let large_repo_id = Large(large_repo.repo_identity().id());
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
+                large_repo_id,
             }),
             SubmoduleDeps::NotNeeded => None,
         };
+
         let rewritten_commit = rewrite_commit(
             ctx,
             source_cs,
@@ -970,11 +975,15 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let large_repo = self.get_large_repo();
+        let large_repo_id = Large(large_repo.repo_identity().id());
+
         let submodule_expansion_data = match &source_repo_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
+                large_repo_id,
             }),
             SubmoduleDeps::NotNeeded => None,
         };

@@ -148,6 +148,7 @@ pub(crate) async fn build_submodule_sync_test_data(
     let (small_repo, large_repo, mapping, live_commit_sync_config, test_sync_config_source) =
         prepare_repos_mapping_and_config(fb).await?;
 
+    println!("Got small/large repos, mapping and config stores");
     let large_repo_root = CreateCommitContext::new(&ctx, &large_repo, Vec::<String>::new())
         .set_message("First commit in large repo")
         .add_files(btreemap! {"large_repo_root" => "File in large repo root"})
@@ -156,6 +157,7 @@ pub(crate) async fn build_submodule_sync_test_data(
     let bookmark_update_ctx = bookmark(&ctx, &large_repo, MASTER_BOOKMARK_NAME);
     let _master_bookmark_key = bookmark_update_ctx.set_to(large_repo_root).await?;
 
+    println!("Got small/large repos, mapping and config stores");
     let b_master_cs = repo_b
         .bookmarks()
         .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
@@ -167,6 +169,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         .await?;
 
     let (repo_a, repo_a_cs_map) = build_repo_a(fb, small_repo, *b_master_git_sha1.oid()).await?;
+    println!("Build repo_a");
     let repo_a_root = repo_a_cs_map
         .get("A_A")
         .expect("Failed to get root changeset id in repo A");
@@ -181,6 +184,8 @@ pub(crate) async fn build_submodule_sync_test_data(
         test_sync_config_source.clone(),
         submodule_deps,
     )?;
+
+    println!("Created commit syncer");
 
     rebase_root_on_master(ctx.clone(), &commit_syncer, *repo_a_root).await?;
 
@@ -316,6 +321,7 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
 
+    println!("Created commit sync config");
     let commit_sync_config =
         create_commit_sync_config(large_repo_id, small_repo_id, prefix, submodule_deps.clone())?;
 

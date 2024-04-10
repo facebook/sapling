@@ -42,6 +42,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
 use movers::Mover;
 use slog::debug;
@@ -53,6 +54,7 @@ use crate::git_submodules::utils::get_submodule_repo;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::id_to_fsnode_manifest_id;
 use crate::git_submodules::validation::validate_all_submodule_expansions;
+use crate::types::Large;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
@@ -76,6 +78,10 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     // expansions.
     pub submodule_deps: &'a HashMap<NonRootMPath, R>,
     pub x_repo_submodule_metadata_file_prefix: &'a str,
+    // TODO(T179530927): remove this once backsync is supported
+    /// Used to ensure that trying to backsync from large to small repos that
+    /// have submodule expansion enabled crashes while backsync is not supported.
+    pub large_repo_id: Large<RepositoryId>,
 }
 pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
@@ -87,6 +93,11 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     rewrite_opts: RewriteOpts,
 ) -> Result<BonsaiChangesetMut> {
+    ensure!(
+        small_repo.repo_identity().id() != *sm_exp_data.large_repo_id,
+        "Can't sync changes from large to small repo if small repo has submodule expansion enabled"
+    );
+
     let new_bonsai =
         expand_all_git_submodule_file_changes(ctx, bonsai, small_repo, sm_exp_data.clone())
             .await

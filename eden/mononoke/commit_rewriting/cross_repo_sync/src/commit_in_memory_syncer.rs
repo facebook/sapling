@@ -42,6 +42,7 @@ use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::get_version_for_merge;
 use crate::types::ErrorKind;
+use crate::types::Large;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::SubmoduleDeps;
@@ -232,6 +233,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
+                large_repo_id: Large(self.large_repo_id()),
             }),
             SubmoduleDeps::NotNeeded => None,
         };
@@ -336,6 +338,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                         submodule_deps: deps,
                         x_repo_submodule_metadata_file_prefix:
                             x_repo_submodule_metadata_file_prefix.as_str(),
+                        large_repo_id: Large(self.large_repo_id()),
                     }),
                     SubmoduleDeps::NotNeeded => None,
                 };
@@ -487,6 +490,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     submodule_deps: deps,
                     x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                         .as_str(),
+                    large_repo_id: Large(self.large_repo_id()),
                 }),
                 SubmoduleDeps::NotNeeded => None,
             };
@@ -616,6 +620,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             self.source_repo.0.repo_identity().id()
         } else {
             self.target_repo_id.0
+        }
+    }
+
+    fn large_repo_id(&self) -> RepositoryId {
+        if self.small_to_large {
+            self.target_repo_id.0
+        } else {
+            self.source_repo.0.repo_identity().id()
         }
     }
 }
