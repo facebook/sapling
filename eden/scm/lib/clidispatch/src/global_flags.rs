@@ -77,6 +77,9 @@ define_flags! {
         /// when to paginate (boolean, always, auto, or never)
         pager: String = "auto",
 
+        /// why this runs, usually set by automation (ADVANCED)
+        reason: Vec<String>,
+
         #[args]
         args: Vec<String>,
     }

@@ -176,6 +176,7 @@ globalopts = cmdutil._typedflags(
             _("when to paginate (boolean, always, auto, or never)"),
             _("TYPE"),
         ),
+        ("", "reason", [], _("why this runs, usually set by automation (ADVANCED)")),
     ]
 )
 
