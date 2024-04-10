@@ -1740,7 +1740,7 @@ EOF
 }
 
 function hgmn_clone() {
-  quiet hgmn clone --shallow  --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True && \
+  quiet hgmn clone --shallow  --config extensions.remotenames= --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True && \
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=

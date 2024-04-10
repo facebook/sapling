@@ -401,7 +401,7 @@ forward synced to the large repo
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
   $ hg pull -q 
-  $ hg co -q default/master
+  $ hg co -q master
 
   $ hg log --graph -T '{node|short} {desc}\n' -r "all()"
   @  6983801de625 Remove repo C submodule from repo A
