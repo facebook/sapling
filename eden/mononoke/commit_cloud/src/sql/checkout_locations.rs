@@ -89,13 +89,10 @@ mononoke_queries! {
 
 #[async_trait]
 impl Get<WorkspaceCheckoutLocation> for SqlCommitCloud {
-    type GetArgs = ();
-
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceCheckoutLocation>> {
         let rows =
             GetCheckoutLocations::query(&self.connections.read_connection, &reponame, &workspace)

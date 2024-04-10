@@ -44,12 +44,10 @@ mononoke_queries! {
 
 #[async_trait]
 impl Get<WorkspaceSnapshot> for SqlCommitCloud {
-    type GetArgs = ();
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceSnapshot>> {
         let rows =
             GetSnapshots::query(&self.connections.read_connection, &reponame, &workspace).await?;

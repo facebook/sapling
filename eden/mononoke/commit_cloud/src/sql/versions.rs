@@ -46,12 +46,10 @@ mononoke_queries! {
 
 #[async_trait]
 impl Get<WorkspaceVersion> for SqlCommitCloud {
-    type GetArgs = ();
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceVersion>> {
         let rows =
             GetVersion::query(&self.connections.read_connection, &reponame, &workspace).await?;

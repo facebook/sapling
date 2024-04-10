@@ -42,7 +42,7 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     sql.insert(reponame.clone(), workspace.clone(), args)
         .await?;
 
-    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame, workspace, ()).await?;
+    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame, workspace).await?;
 
     assert_eq!(vec![expected], res);
     Ok(())
@@ -70,7 +70,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     sql.insert(reponame.clone(), workspace.clone(), snapshot2.clone())
         .await?;
 
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
     let removed_commits = vec![snapshot1.commit];
@@ -82,7 +82,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
         DeleteArgs { removed_commits },
     )
     .await?;
-    let res: Vec<WorkspaceSnapshot> = sql.get(reponame, workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
 
     assert_eq!(res, vec![snapshot2]);
 
@@ -110,7 +110,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     sql.insert(reponame.clone(), workspace.clone(), head2.clone())
         .await?;
 
-    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
     let removed_commits = vec![head1.commit];
 
@@ -121,7 +121,7 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
         DeleteArgs { removed_commits },
     )
     .await?;
-    let res: Vec<WorkspaceHead> = sql.get(reponame, workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
 
     assert_eq!(res, vec![head2]);
 
@@ -152,7 +152,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
         .await?;
 
-    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
     let removed_bookmarks = vec![bookmark1.commit.clone()];
@@ -164,7 +164,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         DeleteArgs { removed_bookmarks },
     )
     .await?;
-    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame, workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res, vec![bookmark2]);
 
     Ok(())
@@ -195,8 +195,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
         .await?;
 
-    let res: Vec<WorkspaceRemoteBookmark> =
-        sql.get(reponame.clone(), workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
 
     assert_eq!(res.len(), 2);
 
@@ -210,7 +209,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     )
     .await?;
 
-    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame, workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
 
     assert_eq!(res, vec![bookmark2]);
 
@@ -233,7 +232,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     sql.insert(reponame.clone(), workspace.clone(), args.clone())
         .await?;
 
-    let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone(), ()).await?;
+    let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(vec![args], res);
 
     Ok(())

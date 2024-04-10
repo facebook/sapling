@@ -21,13 +21,18 @@ impl SqlCommitCloud {
 
 #[async_trait]
 pub trait Get<T = Self> {
+    async fn get(&self, reponame: String, workspace: String) -> anyhow::Result<Vec<T>>;
+}
+#[async_trait]
+pub trait GenericGet<T = Self> {
     type GetArgs;
+    type GetOutput;
     async fn get(
         &self,
         reponame: String,
         workspace: String,
         args: Self::GetArgs,
-    ) -> anyhow::Result<Vec<T>>;
+    ) -> anyhow::Result<Vec<Self::GetOutput>>;
 }
 
 #[async_trait]

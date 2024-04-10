@@ -43,12 +43,10 @@ mononoke_queries! {
 
 #[async_trait]
 impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
-    type GetArgs = ();
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _args: Self::GetArgs,
     ) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
         let rows = GetLocalBookmarks::query(
             &self.connections.read_connection,
