@@ -21,7 +21,8 @@ NEW_BOOKMARK_NAME="SYNCED_HEAD"
 LATEST_CONFIG_VERSION_NAME="INITIAL_IMPORT_SYNC_CONFIG"
 
 ENABLE_API_WRITES=1 REPOID="$LARGE_REPO_ID" REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
-REPOID="$SMALL_REPO_ID" REPONAME="$SMALL_REPO_NAME" setup_common_config "$REPOTYPE"
+# Enable writes in small repo as well, so we can update bookmarks when running gitimport
+ENABLE_API_WRITES=1 REPOID="$SMALL_REPO_ID" REPONAME="$SMALL_REPO_NAME" setup_common_config "$REPOTYPE"
 
 # By default, the `git_submodules_action` will be `STRIP`, meaning that any
 # changes to git submodules will not be synced to the large repo.

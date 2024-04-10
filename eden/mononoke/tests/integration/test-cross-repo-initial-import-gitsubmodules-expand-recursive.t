@@ -35,8 +35,9 @@ Run the x-repo with submodules setup
   $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SMALL_REPO_ID" 3
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SMALL_REPO_ID" '{"git-repo-b": 3, "git-repo-b/git-repo-c": 2, "repo_c": 2}'
-  $ REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
-  $ REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
+
 
 
 Setup git repo C to be used as submodule in git repo B
@@ -152,9 +153,15 @@ Setup git repo A
 
 Import repos in reverse dependency order, C, B then A.
 
-  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling full-repo
-  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling full-repo
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling full-repo > $TESTTMP/gitimport_output
+  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
+  > --bypass-readonly --generate-bookmarks full-repo
+
+  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
+  > --bypass-readonly --generate-bookmarks full-repo
+
+  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+  > --bypass-readonly --generate-bookmarks full-repo > $TESTTMP/gitimport_output
+
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" initial-import \
@@ -263,6 +270,7 @@ Make changes to repo C
   55e8308 commit #3 in repo C
   114b61c Add hoo/qux
   7f760d8 Add choo
+  $ GIT_REPO_C_HEAD=$(git rev-parse HEAD)
 
 Update those changes in repo B
   $ cd $GIT_REPO_B
@@ -280,6 +288,7 @@ Update those changes in repo B
   776166f Added git repo C as submodule in B
   b7dc5d8 Add bar/zoo
   1c7ecd4 Add foo
+  $ GIT_REPO_B_HEAD=$(git rev-parse HEAD)
 
 Update those changes in repo A
   $ cd $GIT_REPO_A
@@ -295,6 +304,7 @@ Update submodule b in A
      114b61c..810d4f5  master     -> origin/master
   Submodule path 'repo_c': checked out '810d4f53650b0fd891ad367ccfd8fa6067d93937'
   $ git commit -q -am "Update submodule B in repo A" 
+
 Then delete repo C submodule used directly in repo A
   $ git submodule deinit --force repo_c
   Cleared directory 'repo_c'
@@ -310,11 +320,16 @@ Then delete repo C submodule used directly in repo A
   f3ce0ee Added git repo B as submodule in A
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
+  $ GIT_REPO_A_HEAD=$(git rev-parse HEAD)
 
 
-  $ REPOID="$REPO_C_ID" quiet gitimport --bypass-derived-data-backfilling "$GIT_REPO_C" full-repo
-  $ REPOID="$REPO_B_ID" quiet gitimport --bypass-derived-data-backfilling "$GIT_REPO_B" full-repo
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling full-repo > $TESTTMP/gitimport_output
+  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
+  > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_C_HEAD"
+  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
+  > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_B_HEAD"
+  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+  > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > $TESTTMP/gitimport_output
+
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
 # TODO(T174902563): set up live sync instead of initial-import

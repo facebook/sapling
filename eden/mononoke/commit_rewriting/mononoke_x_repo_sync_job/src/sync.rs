@@ -43,6 +43,7 @@ use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::debug;
 use slog::info;
 use slog::trace;
 use slog::warn;
@@ -154,6 +155,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
 where
     R: Repo,
 {
+    debug!(
+        ctx.logger(),
+        "Syncing commit {to_cs_id} from commit {0:#?}", from_cs_id
+    );
+    debug!(ctx.logger(), "Targeting bookmark {0:#?}", target_bookmark);
+
     let hint = match target_bookmark {
         Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
             CandidateSelectionHint::AncestorOfBookmark(
@@ -162,7 +169,11 @@ where
             )
             .try_into_desired_relationship(ctx)
             .await?
-            .ok_or_else(|| anyhow!("ProgrammingError: hint doesn't represent relationship"))?,
+            .ok_or_else(||
+                anyhow!(
+                    "ProgrammingError: hint doesn't represent relationship when targeting bookmark {target_bookmark}"
+                )
+            )?,
         ),
         _ => None,
     };
