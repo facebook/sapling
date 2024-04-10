@@ -4,7 +4,7 @@ sidebar_position: 39
 
 ## split | spl
 <!--
-  @generated SignedSource<<b0318c1dddd5b1f29a78af210550d084>>
+  @generated SignedSource<<fa0db9f9a570d3f38bbf26c2ae510f96>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -23,7 +23,7 @@ commit instead.
 | shortname | fullname | default | description |
 | - | - | - | - |
 | `-r`| `--rev`| | revision to split|
-| | `--no-rebase`| `false`| don't rebase descendants after split|
+| | `--no-rebase`| `false`| don&#x27;t rebase descendants after split|
 | `-m`| `--message`| | use text as commit message|
 | `-l`| `--logfile`| | read commit message from file|
 | `-d`| `--date`| | record the specified date as commit date|

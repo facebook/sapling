@@ -4,7 +4,7 @@ sidebar_position: 2
 
 ## addremove | addrm
 <!--
-  @generated SignedSource<<031c73bb234acc01ca8218d57e286b85>>
+  @generated SignedSource<<eb5d9f6de3184c7ef9c08f84af268cf3>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -72,7 +72,7 @@ Returns 0 if all files are successfully added/removed.
 ## arguments
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-s`| `--similarity`| | guess renamed files by similarity (0<=s<=100)|
+| `-s`| `--similarity`| | guess renamed files by similarity (0&lt;=s&lt;=100)|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|
 | `-n`| `--dry-run`| | do not perform actions, just print output|

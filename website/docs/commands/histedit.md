@@ -4,7 +4,7 @@ sidebar_position: 20
 
 ## histedit
 <!--
-  @generated SignedSource<<f3249215bb5455fdfb95ac84229f7a2c>>
+  @generated SignedSource<<c9c2d2008043d96fdbdb69b42c8d0c14>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -101,7 +101,7 @@ Returns 0 on success, 1 if user intervention is required for
 | | `--commands`| | read history edits from the specified file|
 | `-c`| `--continue`| `false`| continue an edit already in progress|
 | | `--edit-plan`| `false`| edit remaining actions list|
-| `-k`| `--keep`| `false`| don't strip old nodes after edit is complete|
+| `-k`| `--keep`| `false`| don&#x27;t strip old nodes after edit is complete|
 | | `--abort`| `false`| abort an edit in progress|
 | `-r`| `--rev`| | first revision to be edited|
 | `-x`| `--retry`| `false`| retry exec command that failed and try to continue|
