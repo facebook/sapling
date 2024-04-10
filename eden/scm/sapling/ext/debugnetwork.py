@@ -97,7 +97,7 @@ def checkmononokehost(ui, url, opts) -> bool:
         res.read(length=BLOCK_SIZE)
     if not httpstatussuccess(res.status):
         raise error.Abort(
-            "checkmononokehost: HTTP response status code: %s", res.status
+            _("checkmononokehost: HTTP response status code: %s") % res.status
         )
 
     hostname = res.headers.get(HEADER_MONONOKE_HOST)
