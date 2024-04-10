@@ -37,7 +37,11 @@ def backtrace_all(ui, pid: int):
 
     with tempfile.TemporaryDirectory(prefix="saplinglldb") as dir:
         python_script_path = os.path.join(dir, "dbgutil.py")
-        out_path = os.path.join(dir, "bta_output.txt")
+        if ui.formatted:
+            out_path = ""
+        else:
+            # Buffer output so we
+            out_path = os.path.join(dir, "bta_output.txt")
         with open(python_script_path, "wb") as f:
             f.write(python_source.encode())
         args = [
@@ -47,12 +51,13 @@ def backtrace_all(ui, pid: int):
             "-o",
             f"command script import {python_script_path}",
             "-o",
-            f"bta {pid} {out_path}",
+            f"bta {pid}{out_path and ' ' + out_path}",
         ]
-        subprocess.run(args, stdout=subprocess.DEVNULL)
-        with open(out_path, "rb") as f:
-            data = f.read()
-            ui.writebytes(data)
+        subprocess.run(args, stdout=(subprocess.DEVNULL if out_path else None))
+        if out_path:
+            with open(out_path, "rb") as f:
+                data = f.read()
+                ui.writebytes(data)
 
 
 def _lldb_backtrace_all_attach_pid(pid, write):
@@ -208,8 +213,8 @@ def _lldb_backtrace_all_command(debugger, command, exe_ctx, result, internal_dic
         process = exe_ctx.process
         impl = functools.partial(_lldb_backtrace_all_for_process, target, process)
 
-    if len(args) >= 2:
-        path = args[1]
+    path = args[1].strip() if len(args) >= 2 else None
+    if path:
         with open(path, "w", newline="\n") as f:
             impl(f.write)
             f.flush()
