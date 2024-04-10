@@ -64,7 +64,8 @@ impl Globalrev {
         ) {
             (Some((_, globalrev)), Some((_, svnrev))) => {
                 let globalrev = str::from_utf8(globalrev)?.parse::<u64>()?;
-                let svnrev = Globalrev::parse_svnrev(str::from_utf8(svnrev)?)?;
+                // if we can't parse svnrev, we fallback to globalrev
+                let svnrev = Globalrev::parse_svnrev(str::from_utf8(svnrev)?).unwrap_or(globalrev);
                 if globalrev >= START_COMMIT_GLOBALREV {
                     Ok(Self::new(globalrev))
                 } else {
@@ -134,7 +135,7 @@ mod test {
     fn create_bonsai(
         hg_extra: impl IntoIterator<Item = (String, Vec<u8>)>,
     ) -> Result<BonsaiChangeset, Error> {
-        let mut bcs = BonsaiChangesetMut {
+        let bcs = BonsaiChangesetMut {
             parents: vec![ChangesetId::new(Blake2::from_byte_array([0x33; 32]))],
             author: "author".into(),
             author_date: DateTime::from_timestamp(0, 0)?,
@@ -194,9 +195,7 @@ mod test {
                 "3eecc374fc80412b070f0757db694064308aa230".into(),
             ),
         ])?;
-        // THE CURRENT BEHAVIOUR IS WRONG!
-        // assert_eq!(Globalrev::new(1012511548), Globalrev::from_bcs(&bcs)?);
-        assert!(Globalrev::from_bcs(&bcs).is_err());
+        assert_eq!(Globalrev::new(1012511548), Globalrev::from_bcs(&bcs)?);
         Ok(())
     }
 }
