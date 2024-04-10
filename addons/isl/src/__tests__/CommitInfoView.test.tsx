@@ -8,7 +8,6 @@
 import type {Hash} from '../types';
 
 import App from '../App';
-import * as commitMessageFields from '../CommitInfoView/CommitMessageFields';
 import platform from '../platform';
 import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
@@ -48,10 +47,6 @@ const {
 describe('CommitInfoView', () => {
   beforeEach(() => {
     resetTestMessages();
-    // Use OSS message fields for tests, even internally for consistency
-    jest
-      .spyOn(commitMessageFields, 'getDefaultCommitMessageSchema')
-      .mockImplementation(() => commitMessageFields.OSSDefaultFieldSchema);
   });
 
   it('shows loading spinner on mount', () => {

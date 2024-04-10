@@ -17,6 +17,8 @@ import type {UICodeReviewProvider} from '../UICodeReviewProvider';
 import type {SyncStatus} from '../syncStatus';
 import type {ReactNode} from 'react';
 
+import {OSSCommitMessageFieldSchema} from '../../CommitInfoView/OSSCommitMessageFieldsSchema';
+import {Internal} from '../../Internal';
 import {Tooltip} from '../../Tooltip';
 import {t, T} from '../../i18n';
 import {GhStackSubmitOperation} from '../../operations/GhStackSubmitOperation';
@@ -110,6 +112,9 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   isDiffEligibleForCleanup(diff: DiffSummary & {type: 'github'}): boolean {
     return diff.state === PullRequestState.Closed;
   }
+
+  commitMessageFieldsSchema =
+    Internal.CommitMessageFieldSchemaForGitHub ?? OSSCommitMessageFieldSchema;
 
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
   supportsUpdateMessage = false;

@@ -10,9 +10,9 @@ import {
   isFieldNonEmpty,
   mergeCommitMessageFields,
   mergeManyCommitMessageFields,
-  OSSDefaultFieldSchema,
   parseCommitMessageFields,
 } from '../CommitMessageFields';
+import {OSSCommitMessageFieldSchema} from '../OSSCommitMessageFieldsSchema';
 
 describe('isFieldNonEmpty', () => {
   it('handles strings', () => {
@@ -29,7 +29,7 @@ describe('isFieldNonEmpty', () => {
 describe('InternalCommitInfoFields', () => {
   it('parses messages correctly', () => {
     const parsed = parseCommitMessageFields(
-      OSSDefaultFieldSchema,
+      OSSCommitMessageFieldSchema,
       'my title',
       `My description!
 another line
@@ -42,7 +42,7 @@ another line
 
   it('converts to string properly', () => {
     expect(
-      commitMessageFieldsToString(OSSDefaultFieldSchema, {
+      commitMessageFieldsToString(OSSCommitMessageFieldSchema, {
         Title: 'my title',
         Description: 'my summary\nline 2',
       }),
@@ -56,7 +56,7 @@ line 2`,
 
   it('handles empty title when coverting to string', () => {
     expect(
-      commitMessageFieldsToString(OSSDefaultFieldSchema, {
+      commitMessageFieldsToString(OSSCommitMessageFieldSchema, {
         Title: '',
         Description: 'my summary\nline 2',
       }),
@@ -65,7 +65,7 @@ line 2`,
 
   it('leading spaces in title is OK', () => {
     expect(
-      commitMessageFieldsToString(OSSDefaultFieldSchema, {
+      commitMessageFieldsToString(OSSCommitMessageFieldSchema, {
         Title: '     title',
         Description: 'my summary\nline 2',
       }),
@@ -81,7 +81,7 @@ line 2`,
     it('can merge fields', () => {
       expect(
         mergeCommitMessageFields(
-          OSSDefaultFieldSchema,
+          OSSCommitMessageFieldSchema,
           {
             Title: 'Commit A',
             Description: 'Description A',
@@ -100,7 +100,7 @@ line 2`,
     it('leaves identical fields alone', () => {
       expect(
         mergeCommitMessageFields(
-          OSSDefaultFieldSchema,
+          OSSCommitMessageFieldSchema,
           {
             Title: 'Commit A',
             Description: 'Description A',
@@ -119,7 +119,7 @@ line 2`,
     it('ignores empty fields', () => {
       expect(
         mergeCommitMessageFields(
-          OSSDefaultFieldSchema,
+          OSSCommitMessageFieldSchema,
           {
             Title: 'Commit A',
           },
@@ -136,7 +136,7 @@ line 2`,
   describe('mergeManyCommitMessageFields', () => {
     it('can merge fields', () => {
       expect(
-        mergeManyCommitMessageFields(OSSDefaultFieldSchema, [
+        mergeManyCommitMessageFields(OSSCommitMessageFieldSchema, [
           {
             Title: 'Commit A',
             Description: 'Description A',
@@ -158,7 +158,7 @@ line 2`,
 
     it('ignores empty fields', () => {
       expect(
-        mergeManyCommitMessageFields(OSSDefaultFieldSchema, [
+        mergeManyCommitMessageFields(OSSCommitMessageFieldSchema, [
           {
             Title: 'Commit A',
           },

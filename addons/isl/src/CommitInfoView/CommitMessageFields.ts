@@ -10,8 +10,11 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 
 import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
+import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {atomResetOnCwdChange} from '../repositoryData';
 import {arraysEqual} from '../utils';
+import {OSSCommitMessageFieldSchema} from './OSSCommitMessageFieldsSchema';
+import {atom} from 'jotai';
 import {notEmpty} from 'shared/utils';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
@@ -299,22 +302,17 @@ export function parseCommitMessageFields(
   return result;
 }
 
-export const OSSDefaultFieldSchema: Array<FieldConfig> = [
-  {key: 'Title', type: 'title', icon: 'milestone'},
-  {key: 'Description', type: 'textarea', icon: 'note'},
-];
-
 /**
  * Schema defining what fields we expect to be in a CommitMessageFields object,
  * and some information about those fields.
- * This is determined by an sl config on the server, hence it lives as an atom.
  */
-export const commitMessageFieldsSchema = atomResetOnCwdChange<Array<FieldConfig>>(
-  getDefaultCommitMessageSchema(),
-);
+export const commitMessageFieldsSchema = atom(get => {
+  const provider = get(codeReviewProvider);
+  return provider?.commitMessageFieldsSchema ?? getDefaultCommitMessageSchema();
+});
 
 export function getDefaultCommitMessageSchema() {
-  return Internal.CommitMessageFieldSchema ?? OSSDefaultFieldSchema;
+  return Internal.CommitMessageFieldSchemaForGitHub ?? OSSCommitMessageFieldSchema;
 }
 
 export function editedMessageSubset(
