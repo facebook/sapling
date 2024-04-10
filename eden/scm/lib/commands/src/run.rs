@@ -752,7 +752,7 @@ fn log_end(
         target: "command_info",
         exit_code=exit_code,
         max_rss=max_rss,
-        total_blocked_ms=util::math::truncate_int(total_blocked_ms, 3),
+        total_blocked_ms=util::math::truncate_int(total_blocked_ms, 8),
         is_plain=hgplain::is_plain(None),
     );
 
@@ -921,7 +921,7 @@ fn setup_atexit(start_time: StartTime) {
 
         // Truncate duration to top three significant decimal digits of
         // precision to reduce cardinality for logging storage.
-        tracing::debug!(target: "measuredtimes", command_duration=util::math::truncate_int(duration_ms, 3));
+        tracing::debug!(target: "measuredtimes", command_duration=util::math::truncate_int(duration_ms, 8));
 
         // Make extra sure our metrics are written out.
         sampling::flush();
