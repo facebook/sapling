@@ -8,10 +8,16 @@ integration with a native debugger like lldb
 
 Check https://lldb.llvm.org/python_api.html for APIs.
 
-This file might run as an independent lldb script when lldb cannot be imported
-(because Python version mismatch). Try to avoid depending on other modules.
+This file runs standalone by lldb's Python interperter. It does not have access
+to `bindings` or other Sapling modules. Do not import Sapling modules here.
+
+There are 2 ways to use this feature,
+- Use `debugbt` command.
+- Use `lldb -p <pid>`, then run `command script import ./dbgutil.py`,
+  then use the `bta` command.
 """
 
+import functools
 import struct
 import subprocess
 import sys
@@ -49,8 +55,8 @@ def backtrace_all(ui, pid: int):
             ui.writebytes(data)
 
 
-def _lldb_backtrace_all(pid: int, write):
-    """intended to be executed as a lldb script.
+def _lldb_backtrace_all_attach_pid(pid, write):
+    """Attach to a pid and write its backtraces.
     Runs inside lldb Python environment, outside Sapling environment.
     """
     import lldb
@@ -59,7 +65,7 @@ def _lldb_backtrace_all(pid: int, write):
     target = debugger.CreateTarget("")
     process = target.AttachToProcessWithID(lldb.SBListener(), pid, lldb.SBError())
     try:
-        _lldb_backtrace_all_process(target, process, write)
+        _lldb_backtrace_all_for_process(target, process, write)
     finally:
         if sys.platform == "win32":
             # Attempt to resume the suspended process. "Detach()" alone does not
@@ -69,11 +75,14 @@ def _lldb_backtrace_all(pid: int, write):
         process.Detach()
 
 
-def _lldb_backtrace_all_process(target, process, write):
+def _lldb_backtrace_all_for_process(target, process, write):
+    """Write backtraces for the given lldb target/process.
+    Runs inside lldb Python environment, outside Sapling environment.
+    """
     import lldb
 
     if target.addr_size != 8:
-        write("non-64-bit architecture is not yet supported")
+        write("non-64-bit architecture is not yet supported\n")
         return
 
     def read_u64(address: int) -> int:
@@ -188,17 +197,24 @@ def _is_cpython_function(frame) -> bool:
     return frame is not None and "python" in (frame.module.file.basename or "").lower()
 
 
-def _lldb_backtrace_all_command(debugger, command, result, internal_dict):
-    """lldb command: bta pid [PATH]. Write Python+Rust traceback to stdout or PATH."""
-    pid_str, *rest = command.split(" ", 1)
-    pid = int(pid_str)
-    if rest:
-        path = rest[0]
+def _lldb_backtrace_all_command(debugger, command, exe_ctx, result, internal_dict):
+    """lldb command: bta [pid] [PATH]. Write Python+Rust traceback to stdout or PATH."""
+    args = command.split(" ", 1)
+    if len(args) >= 1 and args[0]:
+        pid = int(args[0])
+        impl = functools.partial(_lldb_backtrace_all_attach_pid, pid)
+    else:
+        target = exe_ctx.target
+        process = exe_ctx.process
+        impl = functools.partial(_lldb_backtrace_all_for_process, target, process)
+
+    if len(args) >= 2:
+        path = args[1]
         with open(path, "w", newline="\n") as f:
-            _lldb_backtrace_all(pid, f.write)
+            impl(f.write)
             f.flush()
     else:
-        _lldb_backtrace_all(pid, sys.stdout.write)
+        impl(sys.stdout.write)
 
 
 def __lldb_init_module(debugger, internal_dict):
