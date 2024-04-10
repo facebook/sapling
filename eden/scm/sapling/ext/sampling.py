@@ -69,10 +69,7 @@ def telemetry(reporef):
         # Round to the nearest 100MB megabyte to reduce our storage size
         maxrss = int(util.getmaxrss() / onehundredmb) * onehundredmb
 
-        # Log maxrss from within the hg process. The wrapper logs its own
-        # value (which is incorrect if chg is used) so the column is
-        # prefixed.
-        ui.log("command_info", hg_maxrss=maxrss, caller=util.caller())
+        ui.log("command_info", caller=util.caller())
     except Exception as e:
         ui.log("command_info", sampling_failure=str(e))
 
