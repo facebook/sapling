@@ -76,7 +76,6 @@ tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
 tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
-util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
