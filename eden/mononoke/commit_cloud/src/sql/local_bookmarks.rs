@@ -8,6 +8,8 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
+use serde::Deserialize;
+use serde::Serialize;
 use sql::Connection;
 
 use crate::sql::ops::Delete;
@@ -16,7 +18,7 @@ use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkspaceLocalBookmark {
     pub name: String,
     pub commit: HgChangesetId,

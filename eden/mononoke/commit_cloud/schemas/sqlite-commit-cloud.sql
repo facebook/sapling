@@ -49,14 +49,12 @@ CREATE TABLE IF NOT EXISTS  `history`(
   `reponame` VARCHAR(255) NOT NULL,
   `workspace` VARCHAR(255) NOT NULL,
   `version` BIGINT(20) NOT NULL,
-  `date` DATE NOT NULL,
-  `timestamp` TIMESTAMP DEFAULT CURRENT NOT NULL,
+  `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
   `heads` BLOB NOT NULL,
   `bookmarks` BLOB NOT NULL,
   `remotebookmarks` BLOB NOT NULL,
   PRIMARY KEY (`reponame`,`workspace`,`version`)
 );
-CREATE INDEX `reponame_workspace_date` ON `history`(`reponame`, `workspace`, `date`);
 CREATE INDEX `reponame_workspace_timestamp` ON `history`(`reponame`, `workspace`, `timestamp`);
 
 
