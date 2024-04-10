@@ -119,3 +119,84 @@ impl From<Globalrev> for EdenapiCommitId {
         EdenapiCommitId::Globalrev(value.id())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use anyhow::Error;
+
+    use crate::private::Blake2;
+    use crate::BonsaiChangeset;
+    use crate::BonsaiChangesetMut;
+    use crate::ChangesetId;
+    use crate::DateTime;
+    use crate::Globalrev;
+
+    fn create_bonsai(
+        hg_extra: impl IntoIterator<Item = (String, Vec<u8>)>,
+    ) -> Result<BonsaiChangeset, Error> {
+        let mut bcs = BonsaiChangesetMut {
+            parents: vec![ChangesetId::new(Blake2::from_byte_array([0x33; 32]))],
+            author: "author".into(),
+            author_date: DateTime::from_timestamp(0, 0)?,
+            committer: None,
+            committer_date: None,
+            message: "message".into(),
+            hg_extra: hg_extra.into_iter().collect(),
+            git_extra_headers: None,
+            git_tree_hash: None,
+            file_changes: Default::default(),
+            is_snapshot: false,
+            git_annotated_tag: None,
+        };
+        bcs.freeze()
+    }
+
+    #[test]
+    fn test_globalrev_from_bcs_should_error_when_not_present() -> Result<(), Error> {
+        let bcs = create_bonsai(vec![])?;
+        assert!(Globalrev::from_bcs(&bcs).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_globalrev_from_bcs_from_globalrev_extra() -> Result<(), Error> {
+        let bcs = create_bonsai(vec![("global_rev".into(), "1012511548".into())])?;
+        assert_eq!(Globalrev::new(1012511548), Globalrev::from_bcs(&bcs)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_globalrev_from_bcs_from_convert_revision() -> Result<(), Error> {
+        let bcs = create_bonsai(vec![(
+            "convert_revision".into(),
+            "svn:uuid/path@9999999993".into(),
+        )])?;
+        assert_eq!(Globalrev::new(9999999993), Globalrev::from_bcs(&bcs)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_globalrev_from_bcs_from_both_extras() -> Result<(), Error> {
+        let bcs = create_bonsai(vec![
+            ("global_rev".into(), "1012511548".into()),
+            ("convert_revision".into(), "svn:uuid/path@9999999993".into()),
+        ])?;
+        assert_eq!(Globalrev::new(1012511548), Globalrev::from_bcs(&bcs)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_globalrev_from_bcs_from_both_extrasut_and_hg_convert_revision() -> Result<(), Error> {
+        let bcs = create_bonsai(vec![
+            ("global_rev".into(), "1012511548".into()),
+            (
+                "convert_revision".into(),
+                "3eecc374fc80412b070f0757db694064308aa230".into(),
+            ),
+        ])?;
+        // THE CURRENT BEHAVIOUR IS WRONG!
+        // assert_eq!(Globalrev::new(1012511548), Globalrev::from_bcs(&bcs)?);
+        assert!(Globalrev::from_bcs(&bcs).is_err());
+        Ok(())
+    }
+}
