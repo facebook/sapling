@@ -17,6 +17,7 @@
 # one more time.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
   $ GIT_REPO_A="${TESTTMP}/git-repo-a"
   $ GIT_REPO_B="${TESTTMP}/git-repo-b"
@@ -39,6 +40,15 @@ Run the x-repo with submodules setup
   $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
 
 
+Create a commit in the large repo
+  $ testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
+  > L_A
+  > # modify: L_A "file_in_large_repo.txt" "first file"
+  > # bookmark: L_A master
+  > EOF
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
+
+$ mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
 
 Setup git repo C to be used as submodule in git repo B
   $ mkdir "$GIT_REPO_C"
@@ -164,6 +174,9 @@ Import repos in reverse dependency order, C, B then A.
 
   $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
 
+  $ mononoke_newadmin bookmarks -R "$SMALL_REPO_NAME" list -S hg
+  heads/master
+
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" initial-import \
   > --no-progress-bar -i "$GIT_REPO_A_HEAD" \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee $TESTTMP/initial_import_output
@@ -174,37 +187,90 @@ Import repos in reverse dependency order, C, B then A.
   changeset * synced as * in * (glob)
   successful sync of head * (glob)
 
+  $ mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
+  54a6db91baf1c10921369339b50e5a174a7ca82e master
+
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
+  $ PARENT=$(mononoke_newadmin fetch -R "$LARGE_REPO_NAME"  -i "$SYNCED_HEAD" --json | jq -r .parents[0])
+
+  $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
+  $ with_stripped_logs megarepo_tool gradual-merge \
+  > test_user \
+  > "gradual merge" \
+  > --pre-deletion-commit "$PARENT" \
+  > --last-deletion-commit "$SYNCED_HEAD" \
+  > --bookmark master \
+  > --limit 1 \
+  > --commit-date-rfc3339 "$COMMIT_DATE"
+  using repo "large_repo" repoid RepositoryId(0)
+  changeset resolved as: ChangesetId(Blake2(bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655))
+  changeset resolved as: ChangesetId(Blake2(e7ba6c7472c561619cf7fbe392ab881eec075f443e671a45c2f6a5f4effa9865))
+  Finding all commits to merge...
+  2 total commits to merge
+  Finding commits that haven't been merged yet...
+  changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
+  merging 1 commits
+  Preparing to merge bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655
+  changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
+  Created merge changeset c8c3a69055051bf32202e36013cdebbdeb75ca20d798cd50328fb12f8e29e150
+  Generated hg changeset eae90b3bbae442f600e8903e5e3ce648e8c8c59e
+  Now running pushrebase...
+  Pushrebased to c8c3a69055051bf32202e36013cdebbdeb75ca20d798cd50328fb12f8e29e150
+
+
   $ echo $SYNCED_HEAD
   bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655
+
   $ clone_and_log_large_repo "$SYNCED_HEAD"
-  o  c1e1c514c4c2 Added git repo C as submodule directly in A
-  │   smallrepofolder1/.gitmodules              |  3 +++
-  │   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
-  │   smallrepofolder1/repo_c/choo              |  1 +
-  │   smallrepofolder1/repo_c/hoo/qux           |  1 +
-  │   4 files changed, 6 insertions(+), 0 deletions(-)
+  @    eae90b3bbae4 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  ├─╮   smallrepofolder1/.gitmodules                   |  6 ++++++
+  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b  |  1 +
+  │ │   smallrepofolder1/.x-repo-submodule-repo_c      |  1 +
+  │ │   smallrepofolder1/duplicates/x                  |  1 +
+  │ │   smallrepofolder1/duplicates/y                  |  1 +
+  │ │   smallrepofolder1/duplicates/z                  |  1 +
+  │ │   smallrepofolder1/git-repo-b/.gitmodules        |  3 +++
+  │ │   smallrepofolder1/git-repo-b/bar/zoo            |  1 +
+  │ │   smallrepofolder1/git-repo-b/foo                |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo    |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 +
+  │ │   smallrepofolder1/regular_dir/aardvar           |  1 +
+  │ │   smallrepofolder1/repo_c/choo                   |  1 +
+  │ │   smallrepofolder1/repo_c/hoo/qux                |  1 +
+  │ │   smallrepofolder1/root_file                     |  1 +
+  │ │   15 files changed, 22 insertions(+), 0 deletions(-)
+  │ │
+  │ o  c1e1c514c4c2 Added git repo C as submodule directly in A
+  │ │   smallrepofolder1/.gitmodules              |  3 +++
+  │ │   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
+  │ │   smallrepofolder1/repo_c/choo              |  1 +
+  │ │   smallrepofolder1/repo_c/hoo/qux           |  1 +
+  │ │   4 files changed, 6 insertions(+), 0 deletions(-)
+  │ │
+  │ o  72a5410557a9 Added git repo B as submodule in A
+  │ │   smallrepofolder1/.gitmodules                   |  3 +++
+  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b  |  1 +
+  │ │   smallrepofolder1/git-repo-b/.gitmodules        |  3 +++
+  │ │   smallrepofolder1/git-repo-b/bar/zoo            |  1 +
+  │ │   smallrepofolder1/git-repo-b/foo                |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo    |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 +
+  │ │   7 files changed, 11 insertions(+), 0 deletions(-)
+  │ │
+  │ o  e2c69ce8cc11 Add regular_dir/aardvar
+  │ │   smallrepofolder1/regular_dir/aardvar |  1 +
+  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  │ o  df9086c77129 Add root_file
+  │     smallrepofolder1/duplicates/x |  1 +
+  │     smallrepofolder1/duplicates/y |  1 +
+  │     smallrepofolder1/duplicates/z |  1 +
+  │     smallrepofolder1/root_file    |  1 +
+  │     4 files changed, 4 insertions(+), 0 deletions(-)
   │
-  o  72a5410557a9 Added git repo B as submodule in A
-  │   smallrepofolder1/.gitmodules                   |  3 +++
-  │   smallrepofolder1/.x-repo-submodule-git-repo-b  |  1 +
-  │   smallrepofolder1/git-repo-b/.gitmodules        |  3 +++
-  │   smallrepofolder1/git-repo-b/bar/zoo            |  1 +
-  │   smallrepofolder1/git-repo-b/foo                |  1 +
-  │   smallrepofolder1/git-repo-b/git-repo-c/choo    |  1 +
-  │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 +
-  │   7 files changed, 11 insertions(+), 0 deletions(-)
-  │
-  o  e2c69ce8cc11 Add regular_dir/aardvar
-  │   smallrepofolder1/regular_dir/aardvar |  1 +
-  │   1 files changed, 1 insertions(+), 0 deletions(-)
-  │
-  o  df9086c77129 Add root_file
-      smallrepofolder1/duplicates/x |  1 +
-      smallrepofolder1/duplicates/y |  1 +
-      smallrepofolder1/duplicates/z |  1 +
-      smallrepofolder1/root_file    |  1 +
-      4 files changed, 4 insertions(+), 0 deletions(-)
+  o  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   
@@ -213,22 +279,11 @@ Import repos in reverse dependency order, C, B then A.
   RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
+  $ hg co -q master
 
-  $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
-  $ hg show --stat -T 'commit: {node}\n{desc}\n' "$HG_SYNCED_HEAD"
-  commit: c1e1c514c4c20f05e5a6131d5403fff5e7b4e8cb
-  Added git repo C as submodule directly in A
-   smallrepofolder1/.gitmodules              |  3 +++
-   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
-   smallrepofolder1/repo_c/choo              |  1 +
-   smallrepofolder1/repo_c/hoo/qux           |  1 +
-   4 files changed, 6 insertions(+), 0 deletions(-)
-  
-
-  $ hg co -q "$HG_SYNCED_HEAD"
-
-  $ tree -a -I ".hg"| tee ${TESTTMP}/repo_a_tree_1
+  $ tree -a -I ".hg"| tee ${TESTTMP}/large_repo_tree_1
   .
+  |-- file_in_large_repo.txt
   `-- smallrepofolder1
       |-- .gitmodules
       |-- .x-repo-submodule-git-repo-b
@@ -254,7 +309,7 @@ Import repos in reverse dependency order, C, B then A.
       |       `-- qux
       `-- root_file
   
-  9 directories, 15 files
+  9 directories, 16 files
 
 
 Make changes to submodule and make sure they're synced properly
@@ -322,40 +377,56 @@ Then delete repo C submodule used directly in repo A
   8c33a27 Add root_file
   $ GIT_REPO_A_HEAD=$(git rev-parse HEAD)
 
+  $ mononoke_newadmin bookmarks -R "$SMALL_REPO_NAME" list -S hg
+  heads/master
 
+Import the changes from the git repos B and C into their Mononoke repos
   $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_C_HEAD"
+
   $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_B_HEAD"
+
+Set up live forward syncer, which should sync all commits in small repo's (repo A)
+heads/master bookmark to large repo's master bookmark via pushrebase
+  $ touch $TESTTMP/xreposync.out
+  $ with_stripped_logs mononoke_x_repo_sync_forever "$SMALL_REPO_ID" "$LARGE_REPO_ID" 
+
+Import the changes from git repo A into its Mononoke repo. They should be automatically
+forward synced to the large repo
   $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > $TESTTMP/gitimport_output
 
-  $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
+  $ wait_for_xrepo_sync 2
 
-# TODO(T174902563): set up live sync instead of initial-import
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" initial-import \
-  > --no-progress-bar -i "$GIT_REPO_A_HEAD" \
-  > --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee $TESTTMP/initial_import_output
-  Starting session with id * (glob)
-  Checking if * (glob)
-  syncing * (glob)
-  Found * unsynced ancestors (glob)
-  changeset * synced as * in * (glob)
-  successful sync of head * (glob)
- 
-  $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
-  $ echo "$SYNCED_HEAD" 
-  824785a25f6bd08bb771faacc9f7323887e715d06c5e9e470c62072c4ebba79c
-  $ with_stripped_logs mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive -i "$SYNCED_HEAD" -T hgchangesets
-  $ HG_SYNCED_HEAD=$(mononoke_newadmin convert -R "$LARGE_REPO_NAME" -f bonsai -t hg "$SYNCED_HEAD")
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
-  $ hg pull -q -r "$HG_SYNCED_HEAD"
-  $ hg co -q "$HG_SYNCED_HEAD"
+  $ hg pull -q 
+  $ hg co -q default/master
+
+  $ hg log --graph -T '{node|short} {desc}\n' -r "all()"
+  @  6983801de625 Remove repo C submodule from repo A
+  │
+  o  ebb491080818 Update submodule B in repo A
+  │
+  o  8dac396dd939 Change directly in A
+  │
+  o    eae90b3bbae4 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  ├─╮
+  │ o  c1e1c514c4c2 Added git repo C as submodule directly in A
+  │ │
+  │ o  72a5410557a9 Added git repo B as submodule in A
+  │ │
+  │ o  e2c69ce8cc11 Add regular_dir/aardvar
+  │ │
+  │ o  df9086c77129 Add root_file
+  │
+  o  54a6db91baf1 L_A
+  
 
 Check that deletions were made properly, i.e. submodule in repo_c was entirely
 deleted and the files deleted in repo B were deleted inside its copy.
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .
-  commit: d54f01fb13300e675fdf3740d83cd29d3a44e9f1
+  commit: 6983801de6259a0d33ce2984ba828ebdac2dcecd
   Remove repo C submodule from repo A
    smallrepofolder1/.gitmodules              |  3 ---
    smallrepofolder1/.x-repo-submodule-repo_c |  1 -
@@ -368,9 +439,10 @@ deleted and the files deleted in repo B were deleted inside its copy.
 
 
 TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
-  $ tree -a -I ".hg" &> ${TESTTMP}/repo_a_tree_2
-  $ diff -y -t -T ${TESTTMP}/repo_a_tree_1 ${TESTTMP}/repo_a_tree_2
+  $ tree -a -I ".hg" &> ${TESTTMP}/large_repo_tree_2
+  $ diff -y -t -T ${TESTTMP}/large_repo_tree_1 ${TESTTMP}/large_repo_tree_2
   .                                                                  .
+  |-- file_in_large_repo.txt                                         |-- file_in_large_repo.txt
   `-- smallrepofolder1                                               `-- smallrepofolder1
       |-- .gitmodules                                                    |-- .gitmodules
       |-- .x-repo-submodule-git-repo-b                                   |-- .x-repo-submodule-git-repo-b
@@ -398,13 +470,13 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
       |       `-- qux                                             <
       `-- root_file                                                      `-- root_file
   
-  9 directories, 15 files                                         |  6 directories, 12 files
+  9 directories, 16 files                                         |  6 directories, 13 files
   [1]
 
 Check that the diff that updates the submodule generates the correct delta
 (i.e. instead of copying the entire working copy of the submodule every time)
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
-  commit: 5411f26a3ab33e5a69d10a7a8cccd01c1939b032
+  commit: ebb49108081816413472ab4f46848efcb3ee9859
   Update submodule B in repo A
    smallrepofolder1/.x-repo-submodule-git-repo-b |  2 +-
    smallrepofolder1/.x-repo-submodule-repo_c     |  2 +-
