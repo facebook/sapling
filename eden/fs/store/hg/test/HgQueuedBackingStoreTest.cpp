@@ -48,7 +48,7 @@ struct TestRepo {
     repo.writeFile("src/hello.txt", "world\n");
     repo.writeFile("foo.txt", "foo\n");
     repo.writeFile("bar.txt", "bar\n");
-    repo.hg("add", "foo", "src");
+    repo.hg("add", "foo/bar.txt", "src/hello.txt", "foo.txt", "bar.txt");
     commit1 = repo.commit("Initial commit");
     manifest1 = repo.getManifestForCommit(commit1);
   }
@@ -58,7 +58,9 @@ std::vector<PathComponent> getTreeNames(
     const std::shared_ptr<const Tree>& tree) {
   std::vector<PathComponent> names;
   for (const auto& entry : *tree) {
-    names.emplace_back(entry.first);
+    if (entry.second.isTree()) {
+      names.emplace_back(entry.first);
+    }
   }
   return names;
 }
