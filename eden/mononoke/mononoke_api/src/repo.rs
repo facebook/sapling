@@ -57,6 +57,7 @@ use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
+use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -234,6 +235,7 @@ pub struct Repo {
         CommitGraph,
         dyn GitSymbolicRefs,
         dyn Filenodes,
+        CommitCloud
     )]
     pub inner: InnerRepo,
 

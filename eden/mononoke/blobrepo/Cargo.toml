@@ -18,6 +18,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 changeset_fetcher = { version = "0.1.0", path = "changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
 changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
+commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }

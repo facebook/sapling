@@ -17,6 +17,7 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
 use ephemeral_blobstore::RepoEphemeralStore;
 use filenodes::Filenodes;
@@ -69,6 +70,7 @@ pub struct InnerRepo {
         dyn RepoLock,
         CommitGraph,
         dyn GitSymbolicRefs,
+        CommitCloud
     )]
     pub blob_repo: BlobRepo,
 

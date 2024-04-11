@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
 use crate::sql::ops::SqlCommitCloud;
@@ -22,6 +25,14 @@ impl SqlConstruct for SqlCommitCloudBuilder {
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlCommitCloudBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        remote.commit_cloud.as_ref()
     }
 }
 

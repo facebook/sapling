@@ -35,6 +35,8 @@ use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
+use commit_cloud::sql::builder::SqlCommitCloudBuilder;
+use commit_cloud::ArcCommitCloud;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
@@ -257,6 +259,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlCommitGraphStorageBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlCommitCloudBuilder::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(match callbacks {
             Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks),
             None => Connection::with_sqlite(metadata_con),
@@ -849,5 +852,12 @@ impl TestRepoFactory {
         warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
         warm_bookmarks_cache_builder.wait_until_warmed();
         Ok(Arc::new(warm_bookmarks_cache_builder.build().await?))
+    }
+
+    /// Commit cloud
+    pub fn commit_cloud(&self, _repo_identity: &RepoIdentity) -> Result<ArcCommitCloud> {
+        Ok(Arc::new(commit_cloud::CommitCloud {
+            storage: SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(),
+        }))
     }
 }

@@ -20,6 +20,7 @@ rust_library(
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/commit_cloud:commit_cloud",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",

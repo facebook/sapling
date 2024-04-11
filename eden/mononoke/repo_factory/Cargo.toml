@@ -28,6 +28,7 @@ caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
 changesets_impl = { version = "0.1.0", path = "../changesets/changesets_impl" }
+commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 commit_graph_compat = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_compat" }
 commit_graph_types = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_types" }

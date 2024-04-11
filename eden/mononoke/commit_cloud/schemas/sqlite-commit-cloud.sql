@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `heads` (
   `seq` INTEGER PRIMARY KEY AUTOINCREMENT,
   UNIQUE(`reponame`, `workspace`, `commit`)
 );
-CREATE INDEX `reponame_commit` ON `heads`(`reponame`, `commit`);
+CREATE INDEX IF NOT EXISTS `reponame_commit` ON `heads`(`reponame`, `commit`);
 
 
 -- history
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS  `history`(
   `remotebookmarks` BLOB NOT NULL,
   PRIMARY KEY (`reponame`,`workspace`,`version`)
 );
-CREATE INDEX `reponame_workspace_timestamp` ON `history`(`reponame`, `workspace`, `timestamp`);
+CREATE INDEX IF NOT EXISTS `reponame_workspace_timestamp` ON `history`(`reponame`, `workspace`, `timestamp`);
 
 
 -- remotebookmarks
