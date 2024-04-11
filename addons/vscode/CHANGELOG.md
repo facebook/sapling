@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.47
+
+### Apr 11 2024
+
+- Allow deleting bookmarks via context menu
+- Allow scrolling the list of shelves
+
 ## 0.1.46
 
 ### Apr 5 2024
