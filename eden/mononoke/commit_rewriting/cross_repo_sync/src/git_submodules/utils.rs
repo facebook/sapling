@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -13,12 +14,21 @@ use anyhow::Error;
 use anyhow::Result;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
+use futures::future;
+use futures::stream;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use git_types::ObjectKind;
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::FsnodeId;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 
 use crate::git_submodules::expand::SubmodulePath;
@@ -58,18 +68,16 @@ pub(crate) fn get_submodule_repo<'a, 'b, R: Repo>(
         .ok_or_else(|| anyhow!("Mononoke repo from submodule {} not available", sm_path.0))
 }
 
-pub(crate) async fn id_to_fsnode_manifest_id(
+/// Returns true if the given path is a git submodule.
+pub(crate) async fn is_path_git_submodule(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bcs_id: ChangesetId,
-) -> Result<FsnodeId, Error> {
-    let repo_derived_data = repo.repo_derived_data();
-
-    let root_fsnode_id = repo_derived_data
-        .derive::<RootFsnodeId>(ctx, bcs_id)
-        .await?;
-
-    Ok(root_fsnode_id.into_fsnode_id())
+    changeset: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<bool, Error> {
+    Ok(get_submodule_file_content_id(ctx, repo, changeset, path)
+        .await?
+        .is_some())
 }
 
 /// Builds the full path of the x-repo submodule metadata file for a given
@@ -93,4 +101,110 @@ pub(crate) fn get_x_repo_submodule_metadata_file_path(
         None => x_repo_sm_metadata_file,
     };
     Ok(x_repo_sm_metadata_path)
+}
+
+// Returns the differences between a submodule commit and its parents.
+pub(crate) async fn submodule_diff(
+    ctx: &CoreContext,
+    sm_repo: &impl Repo,
+    cs_id: ChangesetId,
+    parents: Vec<ChangesetId>,
+) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(ContentId, u64)>>>> {
+    let fsnode_id = sm_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await
+        .with_context(|| format!("Failed to get fsnode id form changeset id {}", cs_id))?
+        .into_fsnode_id();
+
+    let parent_fsnode_ids = stream::iter(parents)
+        .then(|parent_cs_id| async move {
+            anyhow::Ok(
+                sm_repo
+                    .repo_derived_data()
+                    .derive::<RootFsnodeId>(ctx, parent_cs_id)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Failed to get parent's fsnode id from its changeset id: {}",
+                            parent_cs_id
+                        )
+                    })?
+                    .into_fsnode_id(),
+            )
+        })
+        .try_collect::<HashSet<_>>()
+        .await?;
+
+    Ok(bonsai_diff(
+        ctx.clone(),
+        sm_repo.repo_blobstore_arc().clone(),
+        fsnode_id,
+        parent_fsnode_ids,
+    ))
+}
+
+/// Returns the content id of the given path if it is a submodule file.
+pub(crate) async fn get_submodule_file_content_id(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<Option<ContentId>> {
+    let fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?
+        .into_fsnode_id();
+
+    let entry = fsnode_id
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone().into())
+        .await?;
+
+    match entry {
+        Some(Entry::Leaf(file)) if *file.file_type() == FileType::GitSubmodule => {
+            Ok(Some(file.content_id().clone()))
+        }
+        _ => Ok(None),
+    }
+}
+
+pub(crate) async fn list_all_paths(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    changeset: ChangesetId,
+) -> Result<impl Stream<Item = Result<NonRootMPath>>> {
+    let fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, changeset)
+        .await?
+        .into_fsnode_id();
+    Ok(fsnode_id
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
+        .map_ok(|(path, _)| path))
+}
+
+pub(crate) async fn list_non_submodule_files_under(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    submodule_path: SubmodulePath,
+) -> Result<impl Stream<Item = Result<NonRootMPath>>> {
+    let fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?
+        .into_fsnode_id();
+
+    Ok(fsnode_id
+        .list_leaf_entries_under(
+            ctx.clone(),
+            repo.repo_blobstore_arc(),
+            vec![submodule_path.0],
+        )
+        .try_filter_map(|(path, fsnode_file)| {
+            future::ready(Ok(
+                (*fsnode_file.file_type() != FileType::GitSubmodule).then_some(path)
+            ))
+        }))
 }
