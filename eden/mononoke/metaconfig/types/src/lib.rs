@@ -1091,6 +1091,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub bonsai_blob_mapping: Option<ShardableRemoteDatabaseConfig>,
     /// Database for deletion log
     pub deletion_log: Option<RemoteDatabaseConfig>,
+    /// Database for commit cloud info
+    pub commit_cloud: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database when it is remote.

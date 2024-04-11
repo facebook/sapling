@@ -896,7 +896,7 @@ mod test {
             [walker_config]
             scrub_enabled = true
             validate_enabled = true
-            
+
             [git_concurrency]
             trees_and_blobs = 500
             commits = 1000
@@ -977,6 +977,7 @@ mod test {
         sparse_profiles = { db_address = "sparse_profiles_db_address" }
         bonsai_blob_mapping = { sharded = { shard_map = "blob_mapping_shards", shard_num = 12 } }
         deletion_log = { db_address = "deletion_log" }
+        commit_cloud = { db_address = "commit_cloud_db_address" }
 
         [main.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1086,6 +1087,9 @@ mod test {
                 )),
                 deletion_log: Some(RemoteDatabaseConfig {
                     db_address: "deletion_log".into(),
+                }),
+                commit_cloud: Some(RemoteDatabaseConfig {
+                    db_address: "commit_cloud_db_address".into(),
                 }),
             }),
             ephemeral_blobstore: None,
@@ -1554,6 +1558,7 @@ mod test {
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
         mutation = { db_address = "some_db" }
         sparse_profiles = { db_address = "some_db" }
+        commit_cloud = { db_address = "some_db" }
 
         [multiplex_store.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1641,6 +1646,9 @@ mod test {
                         },
                         bonsai_blob_mapping: None,
                         deletion_log: None,
+                        commit_cloud:  Some(RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
+                        }),
                     }),
                     ephemeral_blobstore: None,
                 },
@@ -1692,6 +1700,7 @@ mod test {
         filenodes = { sharded = { shard_map = "other-other-shards", shard_num = 789 } }
         mutation = { db_address = "other_other_mutation_db" }
         sparse_profiles = { db_address = "test_db" }
+        commit_cloud = { db_address = "other_other_other_mutation_db" }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -1737,6 +1746,7 @@ mod test {
                         sparse_profiles: RemoteDatabaseConfig { db_address: "test_db".into(), },
                         bonsai_blob_mapping: None,
                         deletion_log: None,
+                        commit_cloud: Some(RemoteDatabaseConfig { db_address: "other_other_other_mutation_db".into(), }),
                     }),
 
                     ephemeral_blobstore: None,
