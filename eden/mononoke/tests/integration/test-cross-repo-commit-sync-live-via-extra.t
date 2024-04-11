@@ -138,7 +138,7 @@ After the change
   $ hg ci -Aqm "after config change from large"
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
 
--- trigger xrepo sync and show that it fails to sync the config change
+-- trigger xrepo sync and show that can sync commit over the config change
   $ with_stripped_logs wait_for_xrepo_sync 3
 Rest of this test won't pass as we failed the previous command so is commented out.
   $ flush_mononoke_bookmarks

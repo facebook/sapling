@@ -1067,6 +1067,7 @@ where
                     }),
                 )?;
 
+                debug!(ctx.logger(), "Starting pushrebase...");
                 let pushrebase_res = do_pushrebase_bonsai(
                     ctx,
                     &target_repo,
@@ -1078,6 +1079,12 @@ where
                 .await;
                 let pushrebase_res =
                     pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
+                debug!(
+                    ctx.logger(),
+                    "Pushrebase complete: distance: {}, retry_num: {}",
+                    pushrebase_res.pushrebase_distance.0,
+                    pushrebase_res.retry_num.0
+                );
                 let pushrebased_changeset = pushrebase_res.head;
                 Ok(Some(pushrebased_changeset))
             }

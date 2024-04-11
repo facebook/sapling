@@ -177,6 +177,10 @@ where
         ),
         _ => None,
     };
+    debug!(
+        ctx.logger(),
+        "finding unsynced ancestors from source repo..."
+    );
     let (unsynced_ancestors, synced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint).await?;
 
@@ -211,6 +215,7 @@ where
                 check_forward_move(ctx, commit_syncer, to_cs_id, from_cs_id).await?;
             }
 
+            debug!(ctx.logger(), "obtaining version for the sync...");
             let (version, parent_mapping) = get_version_and_parent_map_for_sync_via_pushrebase(
                 ctx,
                 commit_syncer,

@@ -51,6 +51,7 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
+use slog::debug;
 use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -474,12 +475,20 @@ where
     {
         target_bookmark_version
     } else {
+        debug!(
+            ctx.logger(),
+            "target bookmark version: none, parent version: {}", parent_version,
+        );
         // If we don't have a version for the target bookmark, we can't do anything.
         return Ok((parent_version, HashMap::new()));
     };
+    debug!(
+        ctx.logger(),
+        "target bookmark version: {}, parent version: {}", target_bookmark_version, parent_version,
+    );
 
     if parent_version == target_bookmark_version {
-        // If the parent version is the same as the target bookmark version we don't neet
+        // If the parent version is the same as the target bookmark version we don't need
         // to be smart: we can just use the parent version.
         return Ok((parent_version, HashMap::new()));
     }
@@ -487,21 +496,26 @@ where
     // Let's first validate that the target bookmark is still working-copy equivalent to what the
     // parent of the commit we'd like to sync
     let backsyncer = commit_syncer.reverse()?;
-    let small_csid_equivalent_to_target_bookmark =
-        if let Some(small_csid_equivalent_to_target_bookmark) = backsyncer
-            .sync_commit(
-                ctx,
-                target_bookmark_csid,
-                CandidateSelectionHint::Only,
-                CommitSyncContext::XRepoSyncJob,
-                false,
-            )
-            .await?
-        {
-            small_csid_equivalent_to_target_bookmark
-        } else {
-            return Ok((parent_version, HashMap::new()));
-        };
+    let small_csid_equivalent_to_target_bookmark = if let Some(
+        small_csid_equivalent_to_target_bookmark,
+    ) = backsyncer
+        .sync_commit(
+            ctx,
+            target_bookmark_csid,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::XRepoSyncJob,
+            false,
+        )
+        .await?
+    {
+        small_csid_equivalent_to_target_bookmark
+    } else {
+        debug!(
+            ctx.logger(),
+            "target bookmark is not wc-equivalent to synced commit, falling back to parent_version",
+        );
+        return Ok((parent_version, HashMap::new()));
+    };
 
     let mut parent_mapping = HashMap::new();
     for (source_parent_csid, (target_parent_csid, _version)) in
@@ -518,12 +532,21 @@ where
             parent_mapping.insert(*target_parent_csid, target_bookmark_csid);
         }
     }
+    debug!(ctx.logger(), "parent_mapping: {:?}", parent_mapping,);
 
     if parent_mapping.is_empty() {
         // None of the parents are ancestors of current position of target_bookmark. Perhaps
         // our view of target bookmark is stale. It's better to avoid changing version.
+        debug!(
+            ctx.logger(),
+            "parent mapping is empty, falling back to parent_version",
+        );
         Ok((parent_version, parent_mapping))
     } else if parent_mapping.len() == 1 {
+        debug!(
+            ctx.logger(),
+            "all validations passed, using target_bookmark_version: {}", target_bookmark_version,
+        );
         // There's exactly one parent that's ancestor of target_bookmark.
         // let's assume that the target_bookmark is still equivalent to what it represents.
         Ok((target_bookmark_version, parent_mapping))
