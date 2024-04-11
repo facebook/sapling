@@ -4,7 +4,7 @@ sidebar_position: 3
 
 ## amend | am
 <!--
-  @generated SignedSource<<a67553916fa9b0f9dcf8d863fb1ecfe5>>
+  @generated SignedSource<<be3b152b1962a051650c4e39a8a48ded>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -61,4 +61,4 @@ conflict resolution process. Alternatively:
 | `-d`| `--date`| | record the specified date as commit date|
 | `-u`| `--user`| | record the specified user as committer|
 | | `--no-move-detection`| | disable automatic file move detection|
-| | `--stack`| | incorporate corrections into stack. see 'sl help absorb' for details|
+| | `--stack`| | incorporate corrections into stack. see &#x27;sl help absorb&#x27; for details|

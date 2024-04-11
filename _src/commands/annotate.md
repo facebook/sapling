@@ -4,7 +4,7 @@ sidebar_position: 4
 
 ## annotate | blame | an
 <!--
-  @generated SignedSource<<68dd9e5d01aff54467da88143c5d6825>>
+  @generated SignedSource<<aa3c51f6a0f8fe090098ef6dcccb41af>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -29,7 +29,7 @@ Returns 0 on success.
 | shortname | fullname | default | description |
 | - | - | - | - |
 | `-r`| `--rev`| | annotate the specified revision|
-| | `--no-follow`| `false`| don't follow copies and renames|
+| | `--no-follow`| `false`| don&#x27;t follow copies and renames|
 | `-a`| `--text`| | treat all files as text|
 | `-u`| `--user`| | list the author (long with -v)|
 | `-f`| `--file`| | list the filename|

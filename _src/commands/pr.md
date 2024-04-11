@@ -4,7 +4,7 @@ sidebar_position: 26
 
 ## pr
 <!--
-  @generated SignedSource<<e46805d6e8254145afa6487d46a2d334>>
+  @generated SignedSource<<371911003623ba9e2a880dae7e1ba9d8>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -92,6 +92,6 @@ calls `gh pr list [flags]` with the current repo as the value of --repo
 | `-l`| `--label`| | filter by label|
 | `-L`| `--limit`| `30`| maximum number of items to fetch (default 30)|
 | `-S`| `--search`| | search pull requests with query|
-| `-s`| `--state`| | filter by state: {open|closed|merged|all} (default "open")|
-| `-t`| `--template`| | format JSON output using a Go template; see "gh help formatting"|
+| `-s`| `--state`| | filter by state: {open|closed|merged|all} (default &quot;open&quot;)|
+| `-t`| `--template`| | format JSON output using a Go template; see &quot;gh help formatting&quot;|
 | `-w`| `--web`| `false`| list pull requests in the web browser|
