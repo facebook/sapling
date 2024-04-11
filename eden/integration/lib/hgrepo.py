@@ -24,16 +24,6 @@ from .error import CommandError
 from .find_executables import FindExe
 
 
-# The standard test timeout is 10 minutes. So a 4 minute timeout is pretty
-# generous, most hg commands should really finish much faster than this.
-# Realistically a couple seconds. But we have had issues with tests hanging due
-# to hg hangs. For now so that we can run most of our tests we are adding a
-# timeout because this seems to unblock the tests. This is a temporary solution
-# until we can fix the underlying hg issues which are proving to be rather
-# difficult to debug: TODO(kmancini): T180667613.
-HG_COMMAND_TIMEOUT = 240
-
-
 class HgError(CommandError):
     pass
 
@@ -178,10 +168,23 @@ class HgRepository(repobase.Repository):
             input_file.seek(0)
             stdin = input_file.fileno()
 
+        # Turn subprocess.PIPE to temporary files to avoid issues with selectors.
+        stdout_file = None
+        stderr_file = None
+        if stdout is subprocess.PIPE:
+            stdout = stdout_file = self.temp_mgr.make_temp_binary(prefix="hg_stdout.")
+        if stderr is subprocess.PIPE:
+            stderr = stderr_file = self.temp_mgr.make_temp_binary(prefix="hg_stdout.")
+
         if cwd is None:
             cwd = self.path
+
+        result = None
+        error = None
+        stdout_content = None
+        stderr_content = None
         try:
-            return subprocess.run(
+            result = subprocess.run(
                 cmd,
                 stdout=stdout,
                 stderr=stderr,
@@ -189,20 +192,41 @@ class HgRepository(repobase.Repository):
                 check=check,
                 cwd=cwd,
                 env=env,
-                timeout=HG_COMMAND_TIMEOUT,
             )
         except subprocess.CalledProcessError as ex:
-            print("----------- Mercurial Crash Report")
-            print("cmd: ", " ".join(cmd))
-            if ex.stdout:
-                print("stdout: ", ex.stdout.decode())
-            if ex.stderr:
-                print("stderr: ", ex.stderr.decode())
-            print("----------- Mercurial Crash Report End")
-            raise HgError(ex) from ex
+            error = ex
         finally:
             if input_file:
                 input_file.close()
+            if stdout_file is not None:
+                stdout_file.seek(0)
+                stdout_content = stdout_file.read()
+                stdout_file.close()
+            if stderr_file is not None:
+                stderr_file.seek(0)
+                stderr_content = stderr_file.read()
+                stderr_file.close()
+
+        if error is not None:
+            print("----------- Mercurial Crash Report")
+            print("cmd: ", " ".join(cmd))
+            if stdout_content is not None:
+                error.stdout = stdout_content
+                print("stdout: ", stdout_content.decode())
+            if stderr_content is not None:
+                error.stderr = stderr_content
+                print("stderr: ", stderr_content.decode())
+            print("----------- Mercurial Crash Report End")
+            raise HgError(error) from error
+        elif result is not None:
+            if stdout_content is not None:
+                result.stdout = stdout_content
+            if stderr_content is not None:
+                result.stderr = stderr_content
+            return result
+        else:
+            # practically unreachable, just to make pyre happy.
+            raise RuntimeError("either result or error should be set")
 
     def hg(
         self,
