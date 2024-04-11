@@ -20,6 +20,7 @@ buck_filegroup(
 
 fbpkg.builder(
     name = "mononoke.scripts",
+    architectures = ["noarch"],
     buck_opts = fbpkg.buck_opts(version = "v2"),
     fail_on_redundant_configerator_fbpkg = False,
     override_log_paths = [
