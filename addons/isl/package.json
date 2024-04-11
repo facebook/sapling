@@ -23,7 +23,7 @@
     "react-dom": "^18.1.0",
     "shared": "0.1.0",
     "typescript": "^4.4.2",
-    "vite": "^5.1.0-beta.2",
+    "vite": "^5.1.7",
     "vite-tsconfig-paths": "^4.3.1",
     "vscode-oniguruma": "^1.6.1",
     "vscode-textmate": "^6.0.0"
