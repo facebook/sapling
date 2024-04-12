@@ -18,13 +18,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
-  $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
-  $ GIT_REPO_A="${TESTTMP}/git-repo-a"
-  $ GIT_REPO_B="${TESTTMP}/git-repo-b"
-  $ GIT_REPO_C="${TESTTMP}/git-repo-c"
-  $ REPO_C_ID=2
-  $ REPO_B_ID=3
-  $ REPO_A_ID=$SMALL_REPO_ID
+  $ . "${TEST_FIXTURES}/library-xrepo-git-submodule-expansion.sh"
 
 Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
   $ export XDG_CONFIG_HOME=$TESTTMP
@@ -48,48 +42,21 @@ Create a commit in the large repo
   > EOF
   L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
-$ mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
-
-Setup git repo C to be used as submodule in git repo B
-  $ mkdir "$GIT_REPO_C"
-  $ cd "$GIT_REPO_C"
-  $ git init -q
-  $ echo "choo" > choo
-  $ git add choo
-  $ git commit -q -am "Add choo"
-  $ mkdir hoo
-  $ cd hoo
-  $ echo "qux" > qux
-  $ cd ..
-  $ git add hoo/qux
-  $ git commit -q -am "Add hoo/qux"
-  $ git log --oneline
+Setup git repos A, B and C
+  $ setup_git_repos_a_b_c
+  
+  
+  NOTE: Setting up git repo C to be used as submodule in git repo B
   114b61c Add hoo/qux
   7f760d8 Add choo
-
-Setup git repo B to be used as submodule in git repo A
-  $ mkdir "$GIT_REPO_B"
-  $ cd "$GIT_REPO_B"
-  $ git init -q
-  $ echo "foo" > foo
-  $ git add foo
-  $ git commit -q -am "Add foo"
-  $ mkdir bar
-  $ cd bar
-  $ echo "zoo" > zoo
-  $ cd ..
-  $ git add bar/zoo
-  $ git commit -q -am "Add bar/zoo"
-  $ git submodule add ../git-repo-c
+  
+  
+  NOTE: Setting up git repo B to be used as submodule in git repo A
   Cloning into '$TESTTMP/git-repo-b/git-repo-c'...
   done.
-  $ git add .
-  $ git commit -q -am "Added git repo C as submodule in B" 
-  $ git log --oneline
   776166f Added git repo C as submodule in B
   b7dc5d8 Add bar/zoo
   1c7ecd4 Add foo
-  $ tree -a -I ".git"
   .
   |-- .gitmodules
   |-- bar
@@ -101,40 +68,16 @@ Setup git repo B to be used as submodule in git repo A
           `-- qux
   
   3 directories, 5 files
-
-
-Setup git repo A
-  $ mkdir "$GIT_REPO_A"
-  $ cd "$GIT_REPO_A"
-  $ git init -q
-  $ echo "root_file" > root_file
-  $ mkdir duplicates
-  $ echo "Same content" > duplicates/x
-  $ echo "Same content" > duplicates/y
-  $ echo "Same content" > duplicates/z
-  $ git add .
-  $ git commit -q -am "Add root_file"
-  $ mkdir regular_dir
-  $ cd regular_dir
-  $ echo "aardvar" > aardvar
-  $ cd ..
-  $ git add regular_dir/aardvar
-  $ git commit -q -am "Add regular_dir/aardvar"
-  $ git submodule add ../git-repo-b
+  
+  
+  NOTE: Setting up git repo A
   Cloning into '$TESTTMP/git-repo-a/git-repo-b'...
   done.
-  $ git add .
-  $ git commit -q -am "Added git repo B as submodule in A" 
-  $ git log --oneline
   f3ce0ee Added git repo B as submodule in A
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
-  $ git submodule add ../git-repo-c repo_c
   Cloning into '$TESTTMP/git-repo-a/repo_c'...
   done.
-  $ git add . && git commit -q -am "Added git repo C as submodule directly in A" 
-
-  $ tree -a -I ".git"
   .
   |-- .gitmodules
   |-- duplicates
@@ -157,51 +100,30 @@ Setup git repo A
   
   7 directories, 11 files
 
+Import all git repos into Mononoke
+  $ gitimport_repos_a_b_c
+  
+  
+  NOTE: Importing repos in reverse dependency order, C, B then A
 
-  $ cd "$TESTTMP"
-
-
-Import repos in reverse dependency order, C, B then A.
-
-  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
-  > --bypass-readonly --generate-bookmarks full-repo
-
-  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
-  > --bypass-readonly --generate-bookmarks full-repo
-
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
-  > --bypass-readonly --generate-bookmarks full-repo > $TESTTMP/gitimport_output
-
-  $ GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' $TESTTMP/gitimport_output)
-
-  $ mononoke_newadmin bookmarks -R "$SMALL_REPO_NAME" list -S hg
-  heads/master
-
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" initial-import \
-  > --no-progress-bar -i "$GIT_REPO_A_HEAD" \
-  > --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee $TESTTMP/initial_import_output
+Merge repo A into the large repo
+  $ merge_repo_a_to_large_repo
+  
+  
+  NOTE: Importing repo A commits into large repo
   Starting session with id * (glob)
   Checking if * (glob)
   syncing * (glob)
   Found * unsynced ancestors (glob)
   changeset * synced as * in * (glob)
   successful sync of head * (glob)
-
-  $ mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
+  
+  
+  NOTE: Large repo bookmarks
   54a6db91baf1c10921369339b50e5a174a7ca82e master
-
-  $ SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' $TESTTMP/initial_import_output)
-  $ PARENT=$(mononoke_newadmin fetch -R "$LARGE_REPO_NAME"  -i "$SYNCED_HEAD" --json | jq -r .parents[0])
-
-  $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  $ with_stripped_logs megarepo_tool gradual-merge \
-  > test_user \
-  > "gradual merge" \
-  > --pre-deletion-commit "$PARENT" \
-  > --last-deletion-commit "$SYNCED_HEAD" \
-  > --bookmark master \
-  > --limit 1 \
-  > --commit-date-rfc3339 "$COMMIT_DATE"
+  
+  
+  NOTE: Creating gradual merge commit
   using repo "large_repo" repoid RepositoryId(0)
   changeset resolved as: ChangesetId(Blake2(bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655))
   changeset resolved as: ChangesetId(Blake2(e7ba6c7472c561619cf7fbe392ab881eec075f443e671a45c2f6a5f4effa9865))
@@ -216,12 +138,9 @@ Import repos in reverse dependency order, C, B then A.
   Generated hg changeset eae90b3bbae442f600e8903e5e3ce648e8c8c59e
   Now running pushrebase...
   Pushrebased to c8c3a69055051bf32202e36013cdebbdeb75ca20d798cd50328fb12f8e29e150
-
-
-  $ echo $SYNCED_HEAD
-  bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655
-
-  $ clone_and_log_large_repo "$SYNCED_HEAD"
+  
+  SYNCHED_HEAD: bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655
+  
   @    eae90b3bbae4 [MEGAREPO GRADUAL MERGE] gradual merge (0)
   ├─╮   smallrepofolder1/.gitmodules                   |  6 ++++++
   │ │   smallrepofolder1/.x-repo-submodule-git-repo-b  |  1 +
@@ -279,9 +198,7 @@ Import repos in reverse dependency order, C, B then A.
   RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
-  $ hg co -q master
-
-  $ tree -a -I ".hg"| tee ${TESTTMP}/large_repo_tree_1
+  Large repo tree:
   .
   |-- file_in_large_repo.txt
   `-- smallrepofolder1
@@ -311,63 +228,44 @@ Import repos in reverse dependency order, C, B then A.
   
   9 directories, 16 files
 
-
 Make changes to submodule and make sure they're synced properly
-
-Make changes to repo C
-  $ cd $GIT_REPO_C
-  $ echo 'another file' > choo3 && git add .
-  $ git commit -q -am "commit #3 in repo C" 
-  $ echo 'another file' > choo4 && git add .
-  $ git commit -q -am "commit #4 in repo C" 
-  $ git log --oneline
+  $ make_changes_to_git_repos_a_b_c
+  
+  
+  NOTE: Make changes to repo C
   810d4f5 commit #4 in repo C
   55e8308 commit #3 in repo C
   114b61c Add hoo/qux
   7f760d8 Add choo
-  $ GIT_REPO_C_HEAD=$(git rev-parse HEAD)
-
-Update those changes in repo B
-  $ cd $GIT_REPO_B
-  $ git submodule update --remote
+  
+  
+  NOTE: Update those changes in repo B
   From $TESTTMP/git-repo-c
      114b61c..810d4f5  master     -> origin/master
   Submodule path 'git-repo-c': checked out '810d4f53650b0fd891ad367ccfd8fa6067d93937'
-  $ git add .
-  $ git commit -q -am "Update submodule C in repo B" 
-  $ rm bar/zoo foo
-  $ git add . && git commit -q -am "Delete files in repo B" 
-  $ git log --oneline
   0597690 Delete files in repo B
   c9e2185 Update submodule C in repo B
   776166f Added git repo C as submodule in B
   b7dc5d8 Add bar/zoo
   1c7ecd4 Add foo
-  $ GIT_REPO_B_HEAD=$(git rev-parse HEAD)
-
-Update those changes in repo A
-  $ cd $GIT_REPO_A
-  $ # Make simple change directly in repo A
-  $ echo "in A" >> root_file && git add .
-  $ git commit -q -am "Change directly in A"
-Update submodule b in A
-  $ git submodule update --remote
+  
+  
+  NOTE: Update those changes in repo A
+  
+  
+  NOTE: Update submodule b in A
   From $TESTTMP/git-repo-b
      776166f..0597690  master     -> origin/master
   Submodule path 'git-repo-b': checked out '0597690a839ce11a250139dae33ee85d9772a47a'
   From $TESTTMP/git-repo-c
      114b61c..810d4f5  master     -> origin/master
   Submodule path 'repo_c': checked out '810d4f53650b0fd891ad367ccfd8fa6067d93937'
-  $ git commit -q -am "Update submodule B in repo A" 
-
-Then delete repo C submodule used directly in repo A
-  $ git submodule deinit --force repo_c
+  
+  
+  NOTE: Then delete repo C submodule used directly in repo A
   Cleared directory 'repo_c'
   Submodule 'repo_c' (../git-repo-c) unregistered for path 'repo_c'
-  $ git rm -r repo_c
   rm 'repo_c'
-  $ git add . && git commit -q -am "Remove repo C submodule from repo A"
-  $ git log --oneline
   6775096 Remove repo C submodule from repo A
   5f6b001 Update submodule B in repo A
   de77178 Change directly in A
@@ -375,7 +273,6 @@ Then delete repo C submodule used directly in repo A
   f3ce0ee Added git repo B as submodule in A
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
-  $ GIT_REPO_A_HEAD=$(git rev-parse HEAD)
 
   $ mononoke_newadmin bookmarks -R "$SMALL_REPO_NAME" list -S hg
   heads/master
