@@ -24,9 +24,12 @@
 //!    log id.
 
 use std::collections::HashSet;
+use std::iter::once;
+use std::iter::repeat;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::bail;
@@ -131,6 +134,65 @@ pub enum BacksyncError {
 pub enum BacksyncLimit {
     NoLimit,
     Limit(u64),
+}
+
+/// Block until a specific bookmark transaction (identified by its log id) is confirmed to be
+/// backsynced.
+///
+/// The backsyncer tw jobs are responsible for backsyncing bookmark transactions.
+/// When they do, they update a mutable counter to the id found in the bookmark update log for this
+/// transaction.
+/// Wait until the mutable counters indicate that backyncing caught up.
+///
+/// Note that we use some form of exponential backoff to avoid causing a thundering herd problem on
+/// reading the mutable counters if the backsync is lagging
+///
+/// We also use a hard-coded timeout to avoid being stuck forever waiting for the backsync if it is
+/// lagging. Not having this timeout has caused SEVs in the past, blocking lands.
+pub async fn ensure_backsynced<M, R>(
+    ctx: CoreContext,
+    commit_syncer: CommitSyncer<M, R>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
+    log_id: BookmarkUpdateLogId,
+) -> Result<(), Error>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+    R: RepoLike + Send + Sync + Clone + 'static,
+{
+    let timeout = Duration::from_secs(
+        justknobs::get_as::<u64>(
+            "scm/mononoke:defer_to_backsyncer_for_backsync_timeout_seconds",
+            None,
+        )
+        .unwrap_or(60),
+    );
+
+    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+    let counter_name = format_counter(&source_repo_id);
+    let start_instant = Instant::now();
+
+    let mut sleep_times = once(1)
+        .chain(once(2))
+        .chain(once(5))
+        .chain(repeat(10))
+        .map(Duration::from_secs);
+    while start_instant.elapsed() < timeout {
+        let counter: BookmarkUpdateLogId = target_repo_dbs
+            .counters
+            .get_counter(&ctx, &counter_name)
+            .await?
+            .unwrap_or(0)
+            .try_into()?;
+        if counter >= log_id {
+            return Ok(());
+        }
+        std::thread::sleep(
+            sleep_times
+                .next()
+                .expect("sleep_times is an unbounded iterator"),
+        )
+    }
+    bail!("Timeout expired while waiting for backsyncing")
 }
 
 pub async fn backsync_latest<M, R>(

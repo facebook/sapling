@@ -84,7 +84,7 @@ impl RepoContext {
             pushrebase_distance,
             log_id,
         }) = outcome;
-        redirector.backsync_latest(ctx).await?;
+        redirector.ensure_backsynced(ctx, log_id).await?;
 
         // Convert all fields from large to small repo
         let (Small(old_bookmark_value), head, rebased_changesets) = futures::try_join!(

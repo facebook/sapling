@@ -84,7 +84,7 @@ impl RepoContext {
                 redirector.get_small_to_large_commit_equivalent(ctx, target),
                 redirector.get_small_to_large_commit_equivalent(ctx, old_target),
             )?;
-            make_move_op(
+            let log_id = make_move_op(
                 &large_bookmark,
                 target,
                 old_target,
@@ -99,7 +99,7 @@ impl RepoContext {
             )
             .await?;
             // Wait for bookmark to catch up on small repo
-            redirector.backsync_latest(ctx).await?;
+            redirector.ensure_backsynced(ctx, log_id).await?;
         } else {
             make_move_op(
                 bookmark,
