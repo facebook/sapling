@@ -197,8 +197,6 @@ impl Convert for RawBlobstoreConfig {
                 secret_name: raw.secret_name,
             },
             RawBlobstoreConfig::aws_s3(raw) => BlobConfig::AwsS3 {
-                aws_account_id: raw.aws_account_id,
-                aws_role: raw.aws_role,
                 bucket: raw.bucket,
                 region: rusoto_core::Region::from_str(&raw.region)?,
                 num_concurrent_operations: raw

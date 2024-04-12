@@ -944,10 +944,6 @@ pub enum BlobConfig {
     },
     /// Store in an AWS S3 bucket
     AwsS3 {
-        /// AWS Account ID
-        aws_account_id: String,
-        /// AWS Role
-        aws_role: String,
         /// Bucket to connect to
         bucket: String,
         /// AWS Region
