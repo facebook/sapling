@@ -21,6 +21,7 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use buffered_weighted::StreamExt as _;
 use bytes::Bytes;
 use bytes::BytesMut;
 use commit_graph::CommitGraphRef;
@@ -29,7 +30,7 @@ use futures::future;
 use futures::future::Either;
 use futures::stream;
 use futures::stream::BoxStream;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::fetch_delta_instructions;
@@ -75,6 +76,9 @@ use crate::types::TagInclusion;
 const HEAD_REF: &str = "HEAD";
 const TAGS_PREFIX: &str = "tags/";
 const REF_PREFIX: &str = "refs/";
+
+// The threshold in bytes below which we consider a future cheap enough to have a weight of 1
+const THRESHOLD_BYTES: usize = 6000;
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -729,18 +733,23 @@ async fn blob_and_tree_packfile_stream<'a>(
             let ctx = ctx.clone();
             blob_and_tree_packfile_items(ctx, blobstore, derived_data, changeset_id)
         })
-        .try_buffered(concurrency / 3)
+        .try_buffered(concurrency * 2)
         .try_flatten()
         // We use map + buffered instead of map_ok + try_buffered since weighted buffering for futures
         // currently exists only for Stream and not for TryStream
         .map(move |result| {
             match result {
-                Err(err) => Either::Left(future::err(err)),
+                Err(err) => (0, Either::Left(future::err(err))),
                 Ok((changeset_id, path, mut entry)) => {
                     let ctx = second_ctx.clone();
                     let blobstore = second_blobstore.clone();
+                    let delta = delta_base(&mut entry, delta_inclusion);
+                    let weight = delta
+                        .as_ref()
+                        .map_or(entry.full.size, |delta| delta.instructions_compressed_size)
+                        as usize;
+                    let weight = std::cmp::max(weight / THRESHOLD_BYTES, 1);
                     let fetch_future = async move {
-                        let delta = delta_base(&mut entry, delta_inclusion);
                         match delta {
                             Some(delta) => {
                                 let chunk_id_prefix = DeltaInstructionChunkIdPrefix::new(
@@ -792,11 +801,11 @@ async fn blob_and_tree_packfile_stream<'a>(
                             }
                         }
                     };
-                    Either::Right(fetch_future)
+                    (weight, Either::Right(fetch_future))
                 }
             }
         })
-        .buffered(concurrency)
+        .buffered_weighted(concurrency)
         .boxed();
     Ok(packfile_item_stream)
 }

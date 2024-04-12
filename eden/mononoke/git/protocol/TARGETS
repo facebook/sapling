@@ -15,6 +15,7 @@ rust_library(
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:rustc-hash",
         "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/buffered_weighted:buffered_weighted",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
