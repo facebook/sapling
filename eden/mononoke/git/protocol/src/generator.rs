@@ -25,6 +25,8 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use futures::future;
+use futures::future::Either;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
@@ -728,58 +730,72 @@ async fn blob_and_tree_packfile_stream<'a>(
         })
         .try_buffered(concurrency / 3)
         .try_flatten()
-        .map_ok(move |(changeset_id, path, mut entry)| {
-            let ctx = second_ctx.clone();
-            let blobstore = second_blobstore.clone();
-            async move {
-                let delta = delta_base(&mut entry, delta_inclusion);
-                match delta {
-                    Some(delta) => {
-                        let chunk_id_prefix = DeltaInstructionChunkIdPrefix::new(
-                            changeset_id,
-                            path.clone(),
-                            delta.origin,
-                            path,
-                        );
-                        let instruction_bytes = fetch_delta_instructions(
-                            &ctx,
-                            &blobstore,
-                            &chunk_id_prefix,
-                            delta.instructions_chunk_count,
-                        )
-                        .try_fold(
-                            BytesMut::with_capacity(delta.instructions_compressed_size as usize),
-                            |mut acc, bytes| async move {
-                                acc.extend_from_slice(bytes.as_ref());
-                                anyhow::Ok(acc)
-                            },
-                        )
-                        .await
-                        .context("Error in fetching delta instruction bytes from byte stream")?
-                        .freeze();
+        // We use map + buffered instead of map_ok + try_buffered since weighted buffering for futures
+        // currently exists only for Stream and not for TryStream
+        .map(move |result| {
+            match result {
+                Err(err) => Either::Left(future::err(err)),
+                Ok((changeset_id, path, mut entry)) => {
+                    let ctx = second_ctx.clone();
+                    let blobstore = second_blobstore.clone();
+                    let fetch_future = async move {
+                        let delta = delta_base(&mut entry, delta_inclusion);
+                        match delta {
+                            Some(delta) => {
+                                let chunk_id_prefix = DeltaInstructionChunkIdPrefix::new(
+                                    changeset_id,
+                                    path.clone(),
+                                    delta.origin,
+                                    path,
+                                );
+                                let instruction_bytes = fetch_delta_instructions(
+                                    &ctx,
+                                    &blobstore,
+                                    &chunk_id_prefix,
+                                    delta.instructions_chunk_count,
+                                )
+                                .try_fold(
+                                    BytesMut::with_capacity(
+                                        delta.instructions_compressed_size as usize,
+                                    ),
+                                    |mut acc, bytes| async move {
+                                        acc.extend_from_slice(bytes.as_ref());
+                                        anyhow::Ok(acc)
+                                    },
+                                )
+                                .await
+                                .context(
+                                    "Error in fetching delta instruction bytes from byte stream",
+                                )?
+                                .freeze();
 
-                        let packfile_item = PackfileItem::new_delta(
-                            entry.full.oid,
-                            delta.base.oid,
-                            delta.instructions_uncompressed_size,
-                            instruction_bytes,
-                        );
-                        anyhow::Ok(packfile_item)
-                    }
-                    None => {
-                        // Use the full object instead
-                        base_packfile_item(
-                            ctx.clone(),
-                            blobstore.clone(),
-                            ObjectIdentifierType::AllObjects(entry.full.as_rich_git_sha1()?),
-                            packfile_item_inclusion,
-                        )
-                        .await
-                    }
+                                let packfile_item = PackfileItem::new_delta(
+                                    entry.full.oid,
+                                    delta.base.oid,
+                                    delta.instructions_uncompressed_size,
+                                    instruction_bytes,
+                                );
+                                anyhow::Ok(packfile_item)
+                            }
+                            None => {
+                                // Use the full object instead
+                                base_packfile_item(
+                                    ctx.clone(),
+                                    blobstore.clone(),
+                                    ObjectIdentifierType::AllObjects(
+                                        entry.full.as_rich_git_sha1()?,
+                                    ),
+                                    packfile_item_inclusion,
+                                )
+                                .await
+                            }
+                        }
+                    };
+                    Either::Right(fetch_future)
                 }
             }
         })
-        .try_buffered(concurrency)
+        .buffered(concurrency)
         .boxed();
     Ok(packfile_item_stream)
 }
