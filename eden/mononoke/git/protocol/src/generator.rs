@@ -194,6 +194,7 @@ async fn trees_and_blobs_count(
     ctx: &CoreContext,
     repo: &impl Repo,
     target_commits: BoxStream<'_, Result<ChangesetId>>,
+    concurrency: usize,
 ) -> Result<usize> {
     // Sum up the entries in the delta manifest for each commit included in packfile
     target_commits
@@ -236,7 +237,7 @@ async fn trees_and_blobs_count(
                 anyhow::Ok(objects)
             }
         })
-        .try_buffer_unordered(1000)
+        .try_buffer_unordered(concurrency)
         .try_concat()
         .await
         .map(|objects| objects.len())
@@ -999,10 +1000,14 @@ pub async fn generate_pack_item_stream<'a>(
     target_commits.reverse();
     let commits_count = target_commits.len();
     // STEP 1: Get the count of distinct blob and tree objects to be included in the packfile/bundle.
-    let trees_and_blobs_count =
-        trees_and_blobs_count(&ctx, repo, to_commit_stream(target_commits.clone()))
-            .await
-            .context("Error while calculating object count")?;
+    let trees_and_blobs_count = trees_and_blobs_count(
+        &ctx,
+        repo,
+        to_commit_stream(target_commits.clone()),
+        request.concurrency.trees_and_blobs,
+    )
+    .await
+    .context("Error while calculating object count")?;
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
@@ -1122,10 +1127,14 @@ pub async fn fetch_response<'a>(
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
     // Get the count of unique blob and tree objects to be included in the packfile
-    let trees_and_blobs_count =
-        trees_and_blobs_count(&ctx, repo, to_commit_stream(target_commits.clone()))
-            .await
-            .context("Error while calculating object count during fetch")?;
+    let trees_and_blobs_count = trees_and_blobs_count(
+        &ctx,
+        repo,
+        to_commit_stream(target_commits.clone()),
+        request.concurrency.trees_and_blobs,
+    )
+    .await
+    .context("Error while calculating object count during fetch")?;
     // Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
     let blob_and_tree_stream = blob_and_tree_packfile_stream(
