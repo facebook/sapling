@@ -489,7 +489,12 @@ via-profile = "bind"
         repo_path = os.path.join("a", "new-one")
         abs_path = os.path.join(self.mount, repo_path)
         output = self.eden.run_cmd(
-            "redirect", "add", "--mount", self.mount, abs_path, "bind"
+            "redirect",
+            "add",
+            "--mount",
+            self.mount,
+            abs_path,
+            "bind",
         )
         self.assertEqual(output, "", msg="we believe we set up a new bind mount")
 

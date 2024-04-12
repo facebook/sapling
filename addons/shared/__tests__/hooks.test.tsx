@@ -8,10 +8,9 @@
  */
 
 import {useDeepMemo, useThrottledEffect} from '../hooks';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, act} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {useState} from 'react';
-import {act} from 'react-dom/test-utils';
 
 describe('useThrottledEffect', () => {
   afterEach(() => {

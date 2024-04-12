@@ -384,11 +384,21 @@ pub async fn open_synced_commit_mapping(
 }
 
 /// Defines behavuiour of xrepo_commit_lookup when there's no mapping for queries commit just yet.
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum XRepoLookupSyncBehaviour {
     // Initiates sync and returns the sync result
     SyncIfAbsent,
     // Returns None
     NeverSync,
+}
+
+/// Defines behavuiour of xrepo_commit_lookup when there's no exact mapping but only working copy equivalence
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum XRepoLookupExactBehaviour {
+    // Returns result only when there's exact mapping
+    OnlyExactMapping,
+    // Returns result also when there's working copy equivalent match
+    WorkingCopyEquivalence,
 }
 
 impl Repo {
@@ -1594,12 +1604,17 @@ impl RepoContext {
 
     /// Get the equivalent changeset from another repo - it may sync it if needed (depending on
     /// `sync_behaviour` arg).
+    ///
+    /// Setting exact to true will return result only if there's exact match for the requested
+    /// commit - rather than commit with equivalent working copy (which happens in case the source
+    /// commit rewrites to nothing in target repo).
     pub async fn xrepo_commit_lookup(
         &self,
         other: &Self,
         specifier: impl Into<ChangesetSpecifier>,
         maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
         sync_behaviour: XRepoLookupSyncBehaviour,
+        exact: XRepoLookupExactBehaviour,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let common_config = self
             .live_commit_sync_config()
@@ -1637,33 +1652,30 @@ impl RepoContext {
             self.repo.x_repo_sync_lease().clone(),
         );
 
-        let maybe_cs_id = match sync_behaviour {
-            XRepoLookupSyncBehaviour::NeverSync => {
-                // We are not using the candidate_selection_hint here as  it's also not used by the
-                // sync_commit to resolve the result to return. (It's used when remapping parents).
-                use cross_repo_sync::CommitSyncOutcome::*;
-                commit_syncer
-                    .get_commit_sync_outcome(&self.ctx, changeset)
-                    .await?
-                    .and_then(|outcome| match outcome {
-                        NotSyncCandidate(_) => None,
-                        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
-                            Some(cs_id)
-                        }
-                    })
-            }
-            XRepoLookupSyncBehaviour::SyncIfAbsent => {
-                commit_syncer
-                    .sync_commit(
-                        &self.ctx,
-                        changeset,
-                        candidate_selection_hint,
-                        CommitSyncContext::ScsXrepoLookup,
-                        false,
-                    )
-                    .await?
-            }
-        };
+        if sync_behaviour == XRepoLookupSyncBehaviour::SyncIfAbsent {
+            let _ = commit_syncer
+                .sync_commit(
+                    &self.ctx,
+                    changeset,
+                    candidate_selection_hint,
+                    CommitSyncContext::ScsXrepoLookup,
+                    false,
+                )
+                .await?;
+        }
+        use cross_repo_sync::CommitSyncOutcome::*;
+        let maybe_cs_id = commit_syncer
+            .get_commit_sync_outcome(&self.ctx, changeset)
+            .await?
+            .and_then(|outcome| match outcome {
+                NotSyncCandidate(_) => None,
+                EquivalentWorkingCopyAncestor(_cs_id, _)
+                    if exact == XRepoLookupExactBehaviour::OnlyExactMapping =>
+                {
+                    None
+                }
+                EquivalentWorkingCopyAncestor(cs_id, _) | RewrittenAs(cs_id, _) => Some(cs_id),
+            });
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 

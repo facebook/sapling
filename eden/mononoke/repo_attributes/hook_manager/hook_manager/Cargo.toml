@@ -15,7 +15,7 @@ doctest = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 bookmarks_types = { version = "0.1.0", path = "../../../bookmarks/bookmarks_types" }
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../../../derived_data/changeset_info" }
 context = { version = "0.1.0", path = "../../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

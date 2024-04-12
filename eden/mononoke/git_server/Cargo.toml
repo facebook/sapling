@@ -14,7 +14,7 @@ async-trait = "0.1.71"
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -27,6 +27,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../git_symbolic_refs" }
 gix-date = "0.7"
 gix-hash = "0.11"
@@ -43,13 +44,17 @@ packetline = { version = "0.1.0", path = "../git/packetline" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
+repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
+repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0.49"
 tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }

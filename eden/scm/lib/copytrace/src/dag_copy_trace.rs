@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -12,10 +13,13 @@ use async_trait::async_trait;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use hg_metrics::increment_counter;
+use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use pathhistory::RenameTracer;
+use pathmatcher::AlwaysMatcher;
+use pathmatcher::Matcher;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
 use types::RepoPath;
@@ -256,4 +260,46 @@ impl CopyTrace for DagCopyTrace {
             }
         }
     }
+
+    /// find {x@dst: y@src} copy mapping for directed compare
+    async fn path_copies(
+        &self,
+        src: Vertex,
+        dst: Vertex,
+        matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+        // todo(zhaolong): optimize dst.p1() == src case
+        let msrc = self.vertex_to_tree_manifest(&src).await?;
+        let mdst = self.vertex_to_tree_manifest(&dst).await?;
+        let missing = compute_missing_files(&msrc, &mdst, matcher)?;
+
+        let mut result = HashMap::new();
+        for dst_path in missing {
+            let src_path = self
+                .trace_rename(dst.clone(), src.clone(), dst_path.clone())
+                .await?;
+            if let TraceResult::Renamed(src_path) = src_path {
+                result.insert(dst_path, src_path);
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+fn compute_missing_files(
+    msrc: &TreeManifest,
+    mdst: &TreeManifest,
+    matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+) -> Result<Vec<RepoPathBuf>> {
+    let mut missing = Vec::new();
+    let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
+    let diff_entries = mdst.diff(msrc, &matcher)?;
+    for entry in diff_entries {
+        let entry = entry?;
+        if let DiffType::LeftOnly(_) = entry.diff_type {
+            missing.push(entry.path);
+        }
+    }
+    Ok(missing)
 }

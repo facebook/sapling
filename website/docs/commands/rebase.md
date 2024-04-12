@@ -4,7 +4,7 @@ sidebar_position: 30
 
 ## rebase
 <!--
-  @generated SignedSource<<4dad671846a7aa037fced91b527cd34a>>
+  @generated SignedSource<<94e5e47995f103ffe84f795fb37f9ec1>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -109,14 +109,6 @@ sl rebase --restack
 ```
 
 Configuration Options:
-
-You can make rebase require a destination if you set the following config
-option:
-
-```
-[commands]
-rebase.requiredest = True
-```
 
 By default, rebase will close the transaction after each commit. For
 performance purposes, you can configure rebase to use a single transaction

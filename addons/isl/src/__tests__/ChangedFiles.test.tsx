@@ -21,9 +21,8 @@ import {
   simulateMessageFromServer,
 } from '../testUtils';
 import {leftPad} from '../utils';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react-dom/test-utils';
 
 jest.mock('shared/OperatingSystem', () => ({
   isMac: true,

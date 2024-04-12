@@ -17,11 +17,10 @@ import {
   useAtomHas,
   atomResetOnDepChange,
 } from '../jotaiUtils';
-import {render} from '@testing-library/react';
+import {render, act} from '@testing-library/react';
 import {List} from 'immutable';
 import {Provider, atom, createStore, useAtomValue} from 'jotai';
 import {StrictMode} from 'react';
-import {act} from 'react-dom/test-utils';
 import {SelfUpdate} from 'shared/immutableExt';
 import {gc, nextTick} from 'shared/testUtils';
 

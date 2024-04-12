@@ -896,7 +896,7 @@ mod test {
             .await?;
         // Reopen bubble from the store and verify it has the added labels
         // and the labels are not duplicated.
-        let unique_labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        let unique_labels = ["workspace".to_string(), "debug_version".to_string()];
         let bubble_read = eph.open_bubble(&ctx, bubble.bubble_id()).await?;
         assert_eq!(bubble_read.labels().await?.len(), unique_labels.len());
         assert!(
@@ -1165,7 +1165,7 @@ mod test {
         .await?;
         // Reopen the bubble and verify that it has the right set of labels after the
         // add and remove operation.
-        let remaining_labels = vec!["some_label".to_string(), "important_snapshot".to_string()];
+        let remaining_labels = ["some_label".to_string(), "important_snapshot".to_string()];
         let bubble_read = eph.open_bubble(&ctx, bubble.bubble_id()).await?;
         assert_eq!(bubble_read.labels().await?.len(), remaining_labels.len());
         assert!(

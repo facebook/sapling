@@ -75,9 +75,11 @@ const MASTER_BOOKMARK_NAME: &str = "master";
 
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) repo_a_info: (TestRepo, BTreeMap<String, ChangesetId>),
-    pub(crate) repo_b_info: (TestRepo, BTreeMap<String, ChangesetId>),
     pub(crate) large_repo: TestRepo,
     pub(crate) commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    pub(crate) test_sync_config_source: TestLiveCommitSyncConfigSource,
+    pub(crate) mapping: SqlSyncedCommitMapping,
 }
 
 /// Simplified version of `FileChange` that allows to quickly create file change
@@ -138,13 +140,15 @@ impl ExpectedChangeset {
 /// large repo and all the commit syncer with a config that expands submodules.
 pub(crate) async fn build_submodule_sync_test_data(
     fb: FacebookInit,
+    repo_b: &TestRepo,
     // Add more small repo submodule dependencies for the test case
-    extra_submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<SubmoduleSyncTestData> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (small_repo, large_repo, mapping, live_commit_sync_config, test_sync_config_source) =
         prepare_repos_mapping_and_config(fb).await?;
 
+    println!("Got small/large repos, mapping and config stores");
     let large_repo_root = CreateCommitContext::new(&ctx, &large_repo, Vec::<String>::new())
         .set_message("First commit in large repo")
         .add_files(btreemap! {"large_repo_root" => "File in large repo root"})
@@ -153,8 +157,7 @@ pub(crate) async fn build_submodule_sync_test_data(
     let bookmark_update_ctx = bookmark(&ctx, &large_repo, MASTER_BOOKMARK_NAME);
     let _master_bookmark_key = bookmark_update_ctx.set_to(large_repo_root).await?;
 
-    let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;
-
+    println!("Got small/large repos, mapping and config stores");
     let b_master_cs = repo_b
         .bookmarks()
         .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
@@ -166,6 +169,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         .await?;
 
     let (repo_a, repo_a_cs_map) = build_repo_a(fb, small_repo, *b_master_git_sha1.oid()).await?;
+    println!("Build repo_a");
     let repo_a_root = repo_a_cs_map
         .get("A_A")
         .expect("Failed to get root changeset id in repo A");
@@ -174,13 +178,14 @@ pub(crate) async fn build_submodule_sync_test_data(
         &ctx,
         repo_a.clone(),
         large_repo.clone(),
-        repo_b.clone(),
         "repo_a",
         mapping.clone(),
         live_commit_sync_config.clone(),
-        test_sync_config_source,
-        extra_submodule_deps,
+        test_sync_config_source.clone(),
+        submodule_deps,
     )?;
+
+    println!("Created commit syncer");
 
     rebase_root_on_master(ctx.clone(), &commit_syncer, *repo_a_root).await?;
 
@@ -202,9 +207,11 @@ pub(crate) async fn build_submodule_sync_test_data(
 
     Ok(SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        repo_b_info: (repo_b, repo_b_cs_map),
         large_repo,
         commit_syncer,
+        mapping,
+        live_commit_sync_config,
+        test_sync_config_source,
     })
 }
 
@@ -304,23 +311,19 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
     ctx: &CoreContext,
     small_repo: TestRepo,
     large_repo: TestRepo,
-    repo_b: TestRepo,
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     test_sync_config_source: TestLiveCommitSyncConfigSource,
-    extra_submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    // The submodules dependency map that should be used in the commit syncer
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
 
-    let commit_sync_config = create_base_commit_sync_config(
-        large_repo_id,
-        small_repo_id,
-        repo_b.repo_identity().id(),
-        prefix,
-        extra_submodule_deps.clone(),
-    )?;
+    println!("Created commit sync config");
+    let commit_sync_config =
+        create_commit_sync_config(large_repo_id, small_repo_id, prefix, submodule_deps.clone())?;
 
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
@@ -333,9 +336,9 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
         large_repo_id: large_repo.repo_identity().id(),
     };
 
-    let mut all_submodule_deps = extra_submodule_deps.into_iter().collect::<HashMap<_, _>>();
+    let all_submodule_deps = submodule_deps.into_iter().collect::<HashMap<_, _>>();
 
-    all_submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b.clone());
+    // all_submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b.clone());
     let submodule_deps = SubmoduleDeps::ForSync(all_submodule_deps);
 
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps, &common_config)?;
@@ -355,19 +358,34 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
 
 /// Creates the commit sync config to setup the sync from repo A to the large repo,
 /// expanding all of its submodules.
-pub(crate) fn create_base_commit_sync_config(
+pub(crate) fn create_commit_sync_config(
     large_repo_id: RepositoryId,
     repo_a_id: RepositoryId,
-    repo_b_id: RepositoryId,
     prefix: &str,
-    extra_submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<CommitSyncConfig, Error> {
-    let mut submodule_deps = extra_submodule_deps
+    let small_repo_config = create_small_repo_sync_config(prefix, submodule_deps)?;
+    Ok(CommitSyncConfig {
+        large_repo_id,
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            repo_a_id => small_repo_config,
+        },
+        version_name: base_commit_sync_version_name(),
+    })
+}
+
+/// Creates a small repo sync config using the given submodule dependencies
+pub(crate) fn create_small_repo_sync_config(
+    prefix: &str,
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+) -> Result<SmallRepoCommitSyncConfig, Error> {
+    let submodule_deps = submodule_deps
         .into_iter()
         .map(|(path, repo)| (path, repo.repo_identity().id()))
         .collect::<HashMap<_, _>>();
 
-    submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b_id);
+    // submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b_id);
 
     let small_repo_submodule_config = SmallRepoGitSubmoduleConfig {
         git_submodules_action: GitSubmodulesChangesAction::Expand,
@@ -381,15 +399,37 @@ pub(crate) fn create_base_commit_sync_config(
         map: hashmap! {},
         submodule_config: small_repo_submodule_config,
     };
+    Ok(small_repo_config)
+}
 
-    Ok(CommitSyncConfig {
-        large_repo_id,
-        common_pushrebase_bookmarks: vec![],
-        small_repos: hashmap! {
-            repo_a_id => small_repo_config,
-        },
-        version_name: base_commit_sync_version_name(),
-    })
+pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
+    ctx: &CoreContext,
+    repo_a: &TestRepo,
+    large_repo: &TestRepo,
+    prefix: &str,
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    mapping: SqlSyncedCommitMapping,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    test_sync_config_source: TestLiveCommitSyncConfigSource,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+    let commit_sync_config = create_commit_sync_config(
+        large_repo.repo_identity().id(),
+        repo_a.repo_identity().id(),
+        prefix,
+        submodule_deps.clone(),
+    )?;
+    test_sync_config_source.add_config(commit_sync_config);
+    let commit_syncer = create_repo_a_to_large_repo_commit_syncer(
+        ctx,
+        repo_a.clone(),
+        large_repo.clone(),
+        "repo_a",
+        mapping.clone(),
+        live_commit_sync_config.clone(),
+        test_sync_config_source.clone(),
+        submodule_deps,
+    )?;
+    Ok(commit_syncer)
 }
 
 // -----------------------------------------------------------------------------
@@ -599,5 +639,37 @@ pub(crate) async fn derive_all_data_types_for_repo(
         )
         .await?;
 
+    Ok(())
+}
+
+/// Quickly check that working copy matches expectation by deriving fsnode
+/// and getting the path of all leaves.
+pub(crate) async fn assert_working_copy_matches_expected(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    cs_id: ChangesetId,
+    expected_files: Vec<&str>,
+) -> Result<()> {
+    let root_fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?
+        .into_fsnode_id();
+
+    let blobstore = repo.repo_blobstore();
+    let all_files: Vec<String> = root_fsnode_id
+        .list_leaf_entries(ctx.clone(), blobstore.clone())
+        .map_ok(|(path, _fsnode_file)| path.to_string())
+        .try_collect()
+        .await?;
+
+    assert_eq!(
+        all_files,
+        expected_files
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+        "Working copy doesn't match expectation"
+    );
     Ok(())
 }

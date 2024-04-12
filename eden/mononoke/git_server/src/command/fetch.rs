@@ -120,6 +120,19 @@ fn bytes_to_str<'a, 'b, 'c>(
 }
 
 impl FetchArgs {
+    /// Method determining if the fetch request is a shallow fetch request
+    pub fn is_shallow(&self) -> bool {
+        !self.shallow.is_empty()
+            || self.deepen.is_some()
+            || self.deepen_since.is_some()
+            || self.deepen_not.is_some()
+    }
+
+    /// Method determining if the fetch request is a filter fetch request
+    pub fn is_filter(&self) -> bool {
+        self.filter.is_some()
+    }
+
     fn validate(&self) -> anyhow::Result<()> {
         if self.deepen.is_some() && self.deepen_since.is_some() {
             anyhow::bail!(

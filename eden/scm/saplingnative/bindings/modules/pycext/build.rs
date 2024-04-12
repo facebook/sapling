@@ -80,6 +80,7 @@ fn main() {
         cext_dir.join("manifest.c"),
         cext_dir.join("revlog.c"),
         cext_dir.join("parsers.c"),
+        cext_dir.join("evalframe.c"),
         cext_dir.join("../ext/extlib/pywatchman/bser.c"),
     ])
     .include(root_dir)

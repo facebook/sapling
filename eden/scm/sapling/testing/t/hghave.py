@@ -285,6 +285,11 @@ def getgitversion():
     return (int(m.group(1)), int(m.group(2)))
 
 
+@check("lldb", "lldb debugger from LLVM", exe=True)
+def has_lldb():
+    return matchoutput("lldb -P 2>&1", b"python")
+
+
 # https://github.com/git-lfs/lfs-test-server
 @check("lfs-test-server", "git-lfs test server")
 def has_lfsserver():
@@ -562,3 +567,8 @@ def has_ipython():
     except Exception:
         return False
     return True
+
+
+@check("py3.10", "Python is 3.10")
+def has_python310():
+    return sys.version_info[:2] == (3, 10)

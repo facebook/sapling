@@ -32,7 +32,11 @@ export function useContextMenu<T>(
   const setState = useSetAtom(contextMenuState);
   return e => {
     const zoom = getZoomLevel();
-    setState({x: e.clientX / zoom, y: e.clientY / zoom, items: creator()});
+    const items = creator();
+    if (items.length === 0) {
+      return;
+    }
+    setState({x: e.clientX / zoom, y: e.clientY / zoom, items});
 
     e.preventDefault();
     e.stopPropagation();

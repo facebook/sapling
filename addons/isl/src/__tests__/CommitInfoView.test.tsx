@@ -8,7 +8,6 @@
 import type {Hash} from '../types';
 
 import App from '../App';
-import * as commitMessageFields from '../CommitInfoView/CommitMessageFields';
 import platform from '../platform';
 import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
@@ -23,9 +22,8 @@ import {
   waitForWithTick,
 } from '../testUtils';
 import {CommandRunner, succeedableRevset} from '../types';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react-dom/test-utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
@@ -49,10 +47,6 @@ const {
 describe('CommitInfoView', () => {
   beforeEach(() => {
     resetTestMessages();
-    // Use OSS message fields for tests, even internally for consistency
-    jest
-      .spyOn(commitMessageFields, 'getDefaultCommitMessageSchema')
-      .mockImplementation(() => commitMessageFields.OSSDefaultFieldSchema);
   });
 
   it('shows loading spinner on mount', () => {

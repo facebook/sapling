@@ -47,7 +47,7 @@ const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
-const EXPERIMENTAL_COMMANDS: &[&str] = &["redirect"];
+const EXPERIMENTAL_COMMANDS: &[&str] = &[];
 
 type ExitCode = i32;
 
@@ -224,7 +224,7 @@ impl MainCommand {
 
     /// For experimental commands, we should check whether Chef enabled the command for our shard. If not, fall back to python cli
     pub fn is_enabled(&self) -> bool {
-        is_command_enabled(self.subcommand.name(), &self.etc_eden_dir)
+        is_command_enabled(self.subcommand.name(), &self.etc_eden_dir, &None)
     }
 
     pub fn run(self) -> Result<ExitCode> {
@@ -255,9 +255,18 @@ impl MainCommand {
     }
 }
 
-pub fn is_command_enabled(name: &str, etc_eden_dir_override: &Option<PathBuf>) -> bool {
-    is_command_enabled_in_json(name, etc_eden_dir_override)
-        .unwrap_or_else(|| !EXPERIMENTAL_COMMANDS.contains(&name))
+pub fn is_command_enabled(
+    name: &str,
+    etc_eden_dir_override: &Option<PathBuf>,
+    experimental_commands_override: &Option<Vec<&str>>,
+) -> bool {
+    is_command_enabled_in_json(name, etc_eden_dir_override).unwrap_or_else(|| {
+        let effective_exp_commands = match experimental_commands_override {
+            Some(vec) => vec,
+            None => EXPERIMENTAL_COMMANDS,
+        };
+        !effective_exp_commands.contains(&name)
+    })
 }
 
 fn is_command_enabled_in_json(name: &str, etc_eden_dir_override: &Option<PathBuf>) -> Option<bool> {

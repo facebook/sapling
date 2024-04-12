@@ -4,7 +4,7 @@ sidebar_position: 12
 
 ## fold | squash
 <!--
-  @generated SignedSource<<c3e296c77c7474661372f0d18a1ada98>>
+  @generated SignedSource<<80d8c349ed3d7c3540b7f056df618e54>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -57,7 +57,7 @@ sl fold foo::. --exact
 | `-r`| `--rev`| | revision to fold|
 | | `--exact`| | only fold specified revisions|
 | | `--from`| | fold linearly from current revision to specified revision|
-| | `--no-rebase`| `false`| don't rebase descendants after fold|
+| | `--no-rebase`| `false`| don&#x27;t rebase descendants after fold|
 | `-M`| `--reuse-message`| | reuse commit message from REV|
 | `-m`| `--message`| | use text as commit message|
 | `-l`| `--logfile`| | read commit message from file|

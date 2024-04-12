@@ -390,6 +390,9 @@ def _fullcopytracing(repo, c1, c2, base):
     This is pretty slow when a lot of changesets are involved but will track all
     the copies.
     """
+    if git.isgitformat(repo):
+        return {}, {}, {}, {}, {}
+
     # In certain scenarios (e.g. graft, update or rebase), base can be
     # overridden We still need to know a real common ancestor in this case We
     # can't just compute _c1.ancestor(_c2) and compare it to ca, because there

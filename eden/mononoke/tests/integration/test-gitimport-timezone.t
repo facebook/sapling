@@ -49,7 +49,6 @@
   this is file1
   $ hg log -r master
   commit:      89e61a7d29d5
-  bookmark:    master
   bookmark:    default/master
   hoistedname: master
   user:        mononoke <mononoke@mononoke>

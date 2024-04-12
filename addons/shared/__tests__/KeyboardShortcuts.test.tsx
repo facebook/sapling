@@ -8,11 +8,10 @@
  */
 
 import {makeCommandDispatcher, KeyCode, Modifier} from '../KeyboardShortcuts';
-import {render, screen} from '@testing-library/react';
+import {render, screen, act} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import {useCallback, useState} from 'react';
-import {act} from 'react-dom/test-utils';
 
 /* eslint-disable no-bitwise */
 

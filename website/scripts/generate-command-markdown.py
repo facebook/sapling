@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import html
 import json
 import os
 import shutil
@@ -337,7 +338,7 @@ def create_arg_table(args) -> str:
                 cells[2] = f"`{default}`"
 
         if description:
-            cells[3] = description
+            cells[3] = html.escape(description)
 
         arg_table += "".join([f"| {cell}" for cell in cells]) + "|\n"
     return arg_table.rstrip("\n")

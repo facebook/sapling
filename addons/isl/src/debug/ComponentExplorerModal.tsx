@@ -8,6 +8,8 @@
 import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
 
 import {Banner, BannerKind} from '../Banner';
+import {TypeaheadResult} from '../CommitInfoView/types';
+import {Column} from '../ComponentUtils';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
@@ -20,6 +22,7 @@ import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
 import {TextArea} from '../components/TextArea';
 import {TextField} from '../components/TextField';
+import {Typeahead} from '../components/Typeahead';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
@@ -174,6 +177,10 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
             Thing
           </Tooltip>
         </Row>
+        <Row>
+          <span>Typeahead:</span>
+          <ExampleTypeahead />
+        </Row>
 
         <Row>
           <Banner>Banner</Banner>
@@ -271,4 +278,42 @@ function Row({children, style}: {children: ReactNode; style?: stylex.StyleXStyle
 
 function GroupName({children}: {children: ReactNode}) {
   return <div {...stylex.props(styles.groupName)}>{children}</div>;
+}
+
+function ExampleTypeahead() {
+  const [value, setValue] = useState('');
+
+  const possibleValues = [
+    'apple',
+    'banana',
+    'cherry',
+    'date',
+    'elderberry',
+    'fig',
+    'grape',
+    'honeydew',
+    'jackfruit',
+    'kiwi',
+  ];
+  const fetchTokens = async (searchTerm: string) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      values: possibleValues
+        .filter(v => v.includes(searchTerm))
+        .map(value => ({
+          label: value,
+          value,
+        })),
+      fetchStartTimestamp: Date.now(),
+    };
+  };
+  return (
+    <Typeahead
+      tokenString={value}
+      setTokenString={setValue}
+      fetchTokens={fetchTokens}
+      autoFocus={false}
+      maxTokens={3}
+    />
+  );
 }

@@ -827,7 +827,7 @@ mod test {
         assert_eq!(&routing_key_base, &allowed_routing_key_base);
 
         // random key case
-        let allowed_routing_keys = vec![allowed_routing_key_base, allowed_routing_key_one];
+        let allowed_routing_keys = [allowed_routing_key_base, allowed_routing_key_one];
         for _ in 0..5 {
             let routing_key = generate_routing_key(NonZeroU16::new(2).unwrap(), ONES_SHA256);
             assert!(allowed_routing_keys.contains(&routing_key))

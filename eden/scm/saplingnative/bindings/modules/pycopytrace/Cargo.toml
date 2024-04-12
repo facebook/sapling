@@ -13,5 +13,6 @@ cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 dag = { version = "0.1.0", path = "../../../../lib/dag" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
 types = { version = "0.1.0", path = "../../../../lib/types" }

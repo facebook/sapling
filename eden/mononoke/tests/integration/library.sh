@@ -1623,7 +1623,13 @@ function lfs_server {
 }
 
 function git_client {
-  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/localhost.crt" -c http.sslKey="$TEST_CERTDIR/localhost.key" "$@"
+  git_client_as "client0" "$@"
+}
+
+function git_client_as {
+  local name="$1"
+  shift
+  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/$name.crt" -c http.sslKey="$TEST_CERTDIR/$name.key" "$@"
 }
 
 function mononoke_git_service {
@@ -1638,6 +1644,7 @@ function mononoke_git_service {
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
     --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
     --listen-port 0 \
+    --scuba-dataset "file://$TESTTMP/scuba.json" \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/mononoke_git_service_addr.txt" \
@@ -1733,7 +1740,7 @@ EOF
 }
 
 function hgmn_clone() {
-  quiet hgmn clone --shallow  --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True && \
+  quiet hgmn clone --shallow  --config extensions.remotenames= --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True && \
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=

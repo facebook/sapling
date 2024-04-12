@@ -42,6 +42,11 @@ test eden clone
   update complete
   $ ls
   A
+# Make sure dynamic config doesn't get loaded
+  $ [ -f $TESTTMP/e1/.hg/hgrc.dynamic ]
+  [1]
+  $ [ -f $TESTTMP/e2/.hg/hgrc.dynamic ]
+  [1]
 
 test rust clone
   $ cd $TESTTMP
@@ -74,3 +79,8 @@ test rust clone
   A
   B
   C
+# Make sure dynamic config doesn't get loaded
+  $ [ -f $TESTTMP/e1/.hg/hgrc.dynamic ]
+  [1]
+  $ [ -f $TESTTMP/hemlo/.hg/hgrc.dynamic ]
+  [1]

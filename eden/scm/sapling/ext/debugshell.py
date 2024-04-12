@@ -192,6 +192,12 @@ Available IPython magics (auto magic is on, `%` is optional):
         # Disable history during tests.
         config.HistoryAccessor.enabled = False
 
+    # Insert a dummy SIGINT handler to workaround a prompt-toolkit bug.
+    # See https://github.com/prompt-toolkit/python-prompt-toolkit/commit/6a24c99f7db0729d60d7d56f9759db617f266164
+    import signal
+
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     globals().update(env)
     shell = InteractiveShellEmbed.instance(
         config=config, user_ns=globals(), user_module=sys.modules[__name__]

@@ -12,7 +12,9 @@
 
 from __future__ import absolute_import
 
-from . import mdiff, progress, pycompat
+import bindings
+
+from . import progress, pycompat
 from .i18n import _
 
 
@@ -50,29 +52,15 @@ def _findexactmatches(repo, added, removed):
                     break
 
 
-def _ctxdata(fctx):
-    # lazily load text
-    orig = fctx.data()
-    return orig, mdiff.splitnewlines(orig)
+def _score(repo, data, otherdata, threshold):
+    is_similar, score = bindings.copytrace.content_similarity(
+        data, otherdata, repo.ui._rcfg, threshold
+    )
+    return is_similar, score
 
 
-def _score(fctx, otherdata):
-    orig, lines = otherdata
-    text = fctx.data()
-    # mdiff.blocks() returns blocks of matching lines
-    # count the number of bytes in each
-    equal = 0
-    matches = mdiff.blocks(text, orig)
-    for x1, x2, y1, y2 in matches:
-        for line in lines[y1:y2]:
-            equal += len(line)
-
-    lengths = len(text) + len(orig)
-    return equal * 2.0 / lengths
-
-
-def score(fctx1, fctx2):
-    return _score(fctx1, _ctxdata(fctx2))
+def score(fctx1, fctx2, threshold=None):
+    return _score(fctx1.repo(), fctx1.data(), fctx2.data(), threshold)[1]
 
 
 def _findsimilarmatches(repo, added, removed, threshold):
@@ -81,21 +69,22 @@ def _findsimilarmatches(repo, added, removed, threshold):
     Takes a list of new filectxs and a list of removed filectxs, and yields
     (before, after, score) tuples of partial matches.
     """
+    if not added or not removed:
+        return None
+
     copies = {}
     with progress.bar(
-        repo.ui, _("searching for similar files"), _("files"), len(removed)
+        repo.ui, _("searching for similar files"), _("files"), len(added)
     ) as prog:
-        for r in removed:
+        for a in added:
             prog.value += 1
-
-            data = None
-            for a in added:
-                bestscore = copies.get(a, (None, threshold))[1]
-                if data is None:
-                    data = _ctxdata(r)
-                myscore = _score(a, data)
-                if myscore > bestscore:
-                    copies[a] = (r, myscore)
+            data = a.data()
+            bestscore = -1
+            for r in removed:
+                is_similar, score = _score(repo, data, r.data(), threshold)
+                if is_similar and score > bestscore:
+                    copies[a] = (r, score)
+                    bestscore = score
 
     for dest, v in pycompat.iteritems(copies):
         source, bscore = v

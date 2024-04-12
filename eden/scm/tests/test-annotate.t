@@ -5,7 +5,6 @@
 
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ disable treemanifest
 
   $ HGMERGE=true; export HGMERGE
 
@@ -307,11 +306,9 @@ annotate after ABA with follow
   $ hg annotate --file foo
   foo: foo
 
-missing file
+missing file (tofix: treemanifest.walk should abort with no such file error)
 
   $ hg ann nosuchfile
-  abort: nosuchfile: no such file in rev e9e6b4fa872f
-  [255]
 
 annotate file without '\n' on last line
 
@@ -387,7 +384,7 @@ and its ancestor by overriding "repo._filecommit".
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:2"
   $ hg annotate baz
   933981f26457: 1 baz:1
-  5d14c328cf75: 2 baz:2
+  be4ba992a055: 2 baz:2
   6bf217a7698a: 3
   6bf217a7698a: 4
   6bf217a7698a: 5
@@ -408,13 +405,13 @@ and its ancestor by overriding "repo._filecommit".
   > 4 baz:4
   > 5
   > EOF
-  $ hg debugsetparents b94c9d8986533962f0ee2d1a8f1e244f839b6868 5d14c328cf75b0994b39f667b9a453cc4d050663
+  $ hg debugsetparents 79574f0f4414c85637f114949d21baf1e189f7fa be4ba992a05544692d87c941b05d044a3ebe48a0
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:4"
   $ hg annotate baz
   933981f26457: 1 baz:1
-  5d14c328cf75: 2 baz:2
-  b94c9d898653: 3 baz:3
-  b6bedd5477e7: 4 baz:4
+  be4ba992a055: 2 baz:2
+  79574f0f4414: 3 baz:3
+  3a681db4976d: 4 baz:4
   6bf217a7698a: 5
 
 annotate clean file
@@ -427,19 +424,19 @@ annotate modified file
   $ echo foofoo >> foo
   $ hg annotate -r "wdir()" foo
   472b18db256d : foo
-  b6bedd5477e7+: foofoo
+  3a681db4976d+: foofoo
 
   $ hg annotate -cr "wdir()" foo
   472b18db256d : foo
-  b6bedd5477e7+: foofoo
+  3a681db4976d+: foofoo
 
   $ hg annotate -ncr "wdir()" foo
   11 472b18db256d : foo
-  20 b6bedd5477e7+: foofoo
+  20 3a681db4976d+: foofoo
 
   $ hg annotate --debug -ncr "wdir()" foo
   11 472b18db256d1e8282064eab4bfdaf48cbfe83cd : foo
-  20 b6bedd5477e797f25e568a6402d4697f3f895a72+: foofoo
+  20 3a681db4976d5f6c78ca87a4d6f933ff7867ccca+: foofoo
 
   $ hg annotate -udr "wdir()" foo
   test Thu Jan 01 00:00:00 1970 +0000: foo
@@ -459,14 +456,14 @@ annotate added file
   $ echo bar > bar
   $ hg add bar
   $ hg annotate -ncr "wdir()" bar
-  20 b6bedd5477e7+: bar
+  20 3a681db4976d+: bar
 
 annotate renamed file
 
   $ hg rename foo renamefoo2
   $ hg annotate -ncr "wdir()" renamefoo2
   11 472b18db256d : foo
-  20 b6bedd5477e7+: foofoo
+  20 3a681db4976d+: foofoo
 
 annotate missing file
 

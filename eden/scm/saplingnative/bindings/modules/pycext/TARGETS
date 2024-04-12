@@ -34,6 +34,7 @@ rust_python_library(
         "//eden/scm:bser",
         "//eden/scm:traceprof",
         "//eden/scm/sapling/cext:bdiff",
+        "//eden/scm/sapling/cext:evalframe",
         "//eden/scm/sapling/cext:mpatch",
         "//eden/scm/sapling/cext:osutil",
         "//eden/scm/sapling/cext:parsers",

@@ -1527,7 +1527,7 @@ mod tests {
                 .await?;
 
             let hook: Box<dyn PushrebaseHook> = Box::new(Hook(repo.repo_identity().id()));
-            let hooks = vec![hook];
+            let hooks = [hook];
 
             do_pushrebase_bonsai(
                 &ctx,
@@ -1535,7 +1535,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![bcs.clone()],
-                &hooks[..],
+                &hooks,
             )
             .map_err(|err| format_err!("{:?}", err))
             .await?;
@@ -1556,7 +1556,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![bcs],
-                &hooks[..],
+                &hooks,
             )
             .map_err(|err| format_err!("{:?}", err))
             .await?;
@@ -3285,7 +3285,7 @@ mod tests {
             .await?;
 
         let hook: Box<dyn PushrebaseHook> = Box::new(InvalidPushrebaseHook {});
-        let hooks = vec![hook];
+        let hooks = [hook];
 
         let bcs_merge = bcs_id_merge.load(&ctx, repo.repo_blobstore()).await?;
 
@@ -3296,7 +3296,7 @@ mod tests {
             &Default::default(),
             &book,
             &hashset![bcs_merge.clone()],
-            &hooks[..],
+            &hooks,
         )
         .await;
 

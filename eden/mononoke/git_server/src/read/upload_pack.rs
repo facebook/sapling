@@ -50,11 +50,13 @@ use crate::command::Command;
 use crate::command::FetchArgs;
 use crate::command::LsRefsArgs;
 use crate::command::RequestCommand;
+use crate::model::GitMethod;
+use crate::model::GitMethodInfo;
+use crate::model::GitMethodVariant;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::model::ResponseType;
 use crate::model::Service;
-use crate::GitServerContext;
 
 /// The header for the packfile section of the response
 const PACKFILE_HEADER: &[u8] = b"packfile";
@@ -262,6 +264,35 @@ async fn get_body(state: &mut State) -> Result<Bytes, HttpError> {
         .map_err(HttpError::e500)
 }
 
+fn git_method_info(command: &Command, repo: String) -> GitMethodInfo {
+    let (method, variants) = match command {
+        Command::LsRefs(_) => (GitMethod::LsRefs, vec![GitMethodVariant::Standard]),
+        Command::Fetch(ref fetch_args) => {
+            let method = if fetch_args.haves.is_empty() && fetch_args.done {
+                GitMethod::Clone
+            } else {
+                GitMethod::Pull
+            };
+            let mut variants = vec![];
+            if fetch_args.is_shallow() {
+                variants.push(GitMethodVariant::Shallow);
+            }
+            if fetch_args.is_filter() {
+                variants.push(GitMethodVariant::Filter);
+            }
+            if variants.is_empty() {
+                variants.push(GitMethodVariant::Standard);
+            }
+            (method, variants)
+        }
+    };
+    GitMethodInfo {
+        method,
+        variants,
+        repo,
+    }
+}
+
 pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
     let body_bytes = get_body(state).await?;
     // We got a flush line packet to keep the connection alive. Just return Ok.
@@ -273,8 +304,11 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
     let request_command =
         RequestCommand::parse_from_packetline(&body_bytes).map_err(HttpError::e400)?;
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
-    let context = GitServerContext::borrow_from(state);
-    let request_context = context.request_context(&repo_name)?;
+    let request_context = RepositoryRequestContext::instantiate(
+        state,
+        git_method_info(&request_command.command, repo_name),
+    )
+    .await?;
     state.put(Service::GitUploadPack);
     state.put(ResponseType::Result);
     match request_command.command {

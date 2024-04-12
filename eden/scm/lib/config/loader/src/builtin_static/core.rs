@@ -55,6 +55,8 @@ log-implicit-follow-threshold=10000
 titles-namespace=true
 local-committemplate=true
 
+evalframe-passthrough=true
+
 [zsh]
 completion-age=7
 completion-description=false

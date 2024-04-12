@@ -284,8 +284,9 @@
 
 # Checks all the bookmarks were created
   $ hg bookmarks --all
-  * heads/master * (glob)
-  * tags/empty_tag * e7f52161c612 (glob)
-  * tags/first_tag * b48ed4600785 (glob)
-  * tags/recursive_tag * b48ed4600785 (glob)
-  * tags/simple_tag * e7f52161c612 (glob)
+  no bookmarks set
+     default/heads/master      b48ed4600785
+     default/tags/empty_tag    e7f52161c612
+     default/tags/first_tag    b48ed4600785
+     default/tags/recursive_tag b48ed4600785
+     default/tags/simple_tag   e7f52161c612

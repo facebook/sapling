@@ -43,6 +43,7 @@ use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::debug;
 use slog::info;
 use slog::trace;
 use slog::warn;
@@ -154,6 +155,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
 where
     R: Repo,
 {
+    debug!(
+        ctx.logger(),
+        "Syncing commit {to_cs_id} from commit {0:#?}", from_cs_id
+    );
+    debug!(ctx.logger(), "Targeting bookmark {0:#?}", target_bookmark);
+
     let hint = match target_bookmark {
         Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
             CandidateSelectionHint::AncestorOfBookmark(
@@ -162,10 +169,18 @@ where
             )
             .try_into_desired_relationship(ctx)
             .await?
-            .ok_or_else(|| anyhow!("ProgrammingError: hint doesn't represent relationship"))?,
+            .ok_or_else(||
+                anyhow!(
+                    "ProgrammingError: hint doesn't represent relationship when targeting bookmark {target_bookmark}"
+                )
+            )?,
         ),
         _ => None,
     };
+    debug!(
+        ctx.logger(),
+        "finding unsynced ancestors from source repo..."
+    );
     let (unsynced_ancestors, synced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint).await?;
 
@@ -200,6 +215,7 @@ where
                 check_forward_move(ctx, commit_syncer, to_cs_id, from_cs_id).await?;
             }
 
+            debug!(ctx.logger(), "obtaining version for the sync...");
             let (version, parent_mapping) = get_version_and_parent_map_for_sync_via_pushrebase(
                 ctx,
                 commit_syncer,

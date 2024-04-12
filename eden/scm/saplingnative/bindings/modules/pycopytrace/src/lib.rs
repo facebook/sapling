@@ -29,6 +29,7 @@ use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use parking_lot::Mutex;
+use pypathmatcher::extract_matcher;
 use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
@@ -43,9 +44,20 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py,
         "is_content_similar",
         py_fn!(py, is_content_similar(
-    a: PyBytes,
-    b: PyBytes,
-    config: ImplInto<Arc<dyn Config + Send + Sync>>)),
+            a: PyBytes,
+            b: PyBytes,
+            config: ImplInto<Arc<dyn Config + Send + Sync>>,
+        )),
+    )?;
+    m.add(
+        py,
+        "content_similarity",
+        py_fn!(py, content_similarity(
+            a: PyBytes,
+            b: PyBytes,
+            config: ImplInto<Arc<dyn Config + Send + Sync>>,
+            threshold: Option<f32> = None,
+        )),
     )?;
     Ok(m)
 }
@@ -135,6 +147,31 @@ py_class!(pub class dagcopytrace |py| {
         let trace_result = py.allow_threads(|| block_on(inner.trace_rename(src, dst, src_path))).map_pyerr(py)?;
         Ok(Serde(trace_result))
     }
+
+    /// path_copies(src: node, dst: node, matcher: Optional[Matcher] = None) -> Dict[str, str]
+    ///
+    /// find {dst: src} copy mapping for directed compare.
+    def path_copies(
+        &self,
+        src: PyBytes,
+        dst: PyBytes,
+        matcher: Option<PyObject> = None,
+    ) -> PyResult<HashMap<String, String>> {
+        let src = Vertex::copy_from(src.data(py));
+        let dst = Vertex::copy_from(dst.data(py));
+        let matcher = match matcher {
+            Some(obj) => Some(extract_matcher(py, obj)?),
+            None => None,
+        };
+
+        let inner = self.inner(py).clone();
+        let copies = py.allow_threads(|| block_on(inner.path_copies(src, dst, matcher))).map_pyerr(py)?;
+
+        let copies = copies.into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        Ok(copies)
+    }
 });
 
 fn is_content_similar(
@@ -147,5 +184,19 @@ fn is_content_similar(
     let b = b.data(py);
     let config = config.into();
     py.allow_threads(|| copytrace::is_content_similar(a, b, &config))
+        .map_pyerr(py)
+}
+
+fn content_similarity(
+    py: Python,
+    a: PyBytes,
+    b: PyBytes,
+    config: ImplInto<Arc<dyn Config + Send + Sync>>,
+    threshold: Option<f32>,
+) -> PyResult<(bool, f32)> {
+    let a = a.data(py);
+    let b = b.data(py);
+    let config = config.into();
+    py.allow_threads(|| copytrace::content_similarity(a, b, &config, threshold))
         .map_pyerr(py)
 }

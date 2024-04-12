@@ -9,6 +9,7 @@ import type {BookmarkKind} from './Bookmark';
 import type {StableInfo} from './types';
 import type {ReactNode} from 'react';
 
+import {Banner, BannerKind} from './Banner';
 import {Bookmark} from './Bookmark';
 import {bookmarksDataStorage, fetchedStablesAtom, remoteBookmarks} from './BookmarksData';
 import {Column, ScrollY} from './ComponentUtils';
@@ -19,10 +20,11 @@ import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {Checkbox} from './components/Checkbox';
 import {T} from './i18n';
+import {latestDag} from './serverAPIState';
 import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useAtom, useAtomValue} from 'jotai';
+import {atom, useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {notEmpty} from 'shared/utils';
@@ -70,7 +72,7 @@ export function BookmarksManagerMenu() {
 
 function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarks = useAtomValue(remoteBookmarks);
-  const stableLocations = useAtomValue(fetchedStablesAtom);
+
   return (
     <DropdownFields
       title={<T>Bookmarks Manager</T>}
@@ -82,23 +84,52 @@ function BookmarksManager(_props: {dismiss: () => void}) {
           description={<T>Uncheck remote bookmarks you don't use to hide them</T>}>
           <BookmarksList bookmarks={bookmarks} kind="remote" />
         </Section>
-        {stableLocations?.special && (
-          <Section
-            title={<T>Stable Locations</T>}
-            description={
-              <T>
-                Commits that have had successful builds and warmed up caches for a particular build
-                target
-              </T>
-            }>
-            <BookmarksList
-              bookmarks={stableLocations?.special?.map(info => info.value).filter(notEmpty) ?? []}
-              kind="stable"
-            />
-          </Section>
-        )}
+        <StableLocationsSection />
       </Column>
     </DropdownFields>
+  );
+}
+
+const latestPublicCommitAtom = atom(get => {
+  const dag = get(latestDag);
+  const latestHash = dag.heads(dag.public_()).toArray()[0];
+  return latestHash ? dag.get(latestHash) : undefined;
+});
+
+function StableLocationsSection() {
+  const stableLocations = useAtomValue(fetchedStablesAtom);
+  const latestPublic = useAtomValue(latestPublicCommitAtom);
+
+  return (
+    <Section
+      title={<T>Stable Locations</T>}
+      description={
+        <T>
+          Commits that have had successful builds and warmed up caches for a particular build target
+        </T>
+      }>
+      <BookmarksList
+        bookmarks={
+          stableLocations?.special
+            ?.map(info => {
+              if (info.value == null) {
+                return undefined;
+              }
+              const isNewerThanLatest = latestPublic && info.value.date > latestPublic.date;
+              return {
+                ...info.value,
+                extra: isNewerThanLatest ? (
+                  <Banner kind={BannerKind.warning}>
+                    <T>Stable is newer than latest pulled commit. Pull to fetch latest.</T>
+                  </Banner>
+                ) : undefined,
+              };
+            })
+            .filter(notEmpty) ?? []
+        }
+        kind="stable"
+      />
+    </Section>
   );
 }
 
@@ -124,7 +155,7 @@ function BookmarksList({
   bookmarks,
   kind,
 }: {
-  bookmarks: Array<string | StableInfo>;
+  bookmarks: Array<string | (StableInfo & {extra?: ReactNode})>;
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
@@ -139,6 +170,7 @@ function BookmarksList({
           {bookmarks.map(bookmark => {
             const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
             const tooltip = typeof bookmark === 'string' ? undefined : bookmark.info;
+            const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
             return (
               <Checkbox
                 key={name}
@@ -156,6 +188,7 @@ function BookmarksList({
                 <Bookmark fullLength key={name} kind={kind} tooltip={tooltip}>
                   {name}
                 </Bookmark>
+                {extra}
               </Checkbox>
             );
           })}

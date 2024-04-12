@@ -37,7 +37,7 @@ impl<R> MononokeRepos<R> {
     /// Get the repo corresponding to the repo-name if the repo
     /// has been loaded for the service/command, else return None.
     pub fn get_by_name(&self, repo_name: &str) -> Option<Arc<R>> {
-        self.name_to_repo_map.load().get(repo_name).map(Arc::clone)
+        self.name_to_repo_map.load().get(repo_name).cloned()
     }
 
     /// Get the repo corresponding to the repo-id if the repo
@@ -46,7 +46,7 @@ impl<R> MononokeRepos<R> {
         self.id_to_name_map
             .load()
             .get(&repo_id)
-            .and_then(|repo_name| self.name_to_repo_map.load().get(repo_name).map(Arc::clone))
+            .and_then(|repo_name| self.name_to_repo_map.load().get(repo_name).cloned())
     }
 
     /// Returns an iterator over the set of repos currently loaded

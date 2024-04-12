@@ -176,6 +176,7 @@ globalopts = cmdutil._typedflags(
             _("when to paginate (boolean, always, auto, or never)"),
             _("TYPE"),
         ),
+        ("", "reason", [], _("why this runs, usually set by automation (ADVANCED)")),
     ]
 )
 
@@ -5228,7 +5229,7 @@ def remove(ui, repo, *pats, **opts):
 @command(
     "rename|move|mv",
     [
-        ("", "mark", None, _("mark as a rename without actual renaming")),
+        ("", "mark", None, _("mark a rename that has already occurred")),
         ("", "amend", None, _("amend the current commit to mark a rename")),
         ("A", "after", None, _("alias to --mark (DEPRECATED)")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),

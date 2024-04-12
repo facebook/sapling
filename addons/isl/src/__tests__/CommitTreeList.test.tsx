@@ -19,8 +19,7 @@ import {
   openCommitInfoSidebar,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 
 describe('CommitTreeList', () => {
   beforeEach(() => {

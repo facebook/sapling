@@ -18,12 +18,13 @@ import type {
 } from 'shared/types/stack';
 
 import {
+  commitMessageFieldsSchema,
   commitMessageFieldsToString,
-  getDefaultCommitMessageSchema,
   mergeCommitMessageFields,
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {t} from '../i18n';
+import {readAtom} from '../jotaiUtils';
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
@@ -981,7 +982,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Fold other properties to parent.
     let newParentText = parent.text;
     if (isMeaningfulText(commit.text)) {
-      const schema = getDefaultCommitMessageSchema();
+      const schema = readAtom(commitMessageFieldsSchema);
       const parentTitle = firstLine(parent.text);
       const parentFields = parseCommitMessageFields(
         schema,

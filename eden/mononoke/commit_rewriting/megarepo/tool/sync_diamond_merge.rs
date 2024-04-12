@@ -36,7 +36,9 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Large;
 use cross_repo_sync::SubmoduleDeps;
+use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
 use futures::compat::Future01CompatExt;
 use futures::future::FutureExt;
@@ -281,7 +283,25 @@ async fn create_rewritten_merge_commit(
         p2 => remapped_p2,
     };
 
+    let x_repo_submodule_metadata_file_prefix =
+        get_x_repo_submodule_metadata_file_prefx_from_config(
+            small_repo.repo_identity().id(),
+            &root_version,
+            syncers.small_to_large.live_commit_sync_config.clone(),
+        )
+        .await?;
+
     let submodule_deps = syncers.small_to_large.get_submodule_deps();
+
+    let large_repo_id = Large(large_repo.repo_identity().id());
+    let submodule_expansion_data = match submodule_deps {
+        SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+            submodule_deps: deps,
+            x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix.as_str(),
+            large_repo_id,
+        }),
+        SubmoduleDeps::NotNeeded => None,
+    };
 
     let source_repo = syncers.small_to_large.get_source_repo();
     let maybe_rewritten = rewrite_commit(
@@ -293,15 +313,9 @@ async fn create_rewritten_merge_commit(
             .get_mover_by_version(&version_p1)
             .await?,
         source_repo,
-        submodule_deps,
         Default::default(),
         Default::default(),
-        get_x_repo_submodule_metadata_file_prefx_from_config(
-            small_repo.repo_identity().id(),
-            &root_version,
-            syncers.small_to_large.live_commit_sync_config.clone(),
-        )
-        .await?,
+        submodule_expansion_data,
     )
     .await?;
     let mut rewritten =
@@ -404,7 +418,7 @@ fn find_root(new_branch: &Vec<BonsaiChangeset>) -> Result<ChangesetId, Error> {
         }
     }
 
-    validate_roots(roots).map(|root| *root)
+    validate_roots(roots).copied()
 }
 
 async fn find_new_branch_oldest_first(

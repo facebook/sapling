@@ -9,15 +9,18 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
 
-use crate::BasicOps;
-use crate::SqlCommitCloud;
+use crate::sql::ops::Delete;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
+use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceSnapshot {
     pub commit: HgChangesetId,
 }
 
-pub struct SnapshotExtraArgs {
+pub struct DeleteArgs {
     pub removed_commits: Vec<HgChangesetId>,
 }
 
@@ -40,13 +43,11 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceSnapshot> for SqlCommitCloud {
-    type ExtraArgs = Option<SnapshotExtraArgs>;
+impl Get<WorkspaceSnapshot> for SqlCommitCloud {
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_args: Self::ExtraArgs,
     ) -> anyhow::Result<Vec<WorkspaceSnapshot>> {
         let rows =
             GetSnapshots::query(&self.connections.read_connection, &reponame, &workspace).await?;
@@ -54,50 +55,56 @@ impl BasicOps<WorkspaceSnapshot> for SqlCommitCloud {
             .map(|(_reponame, commit)| Ok(WorkspaceSnapshot { commit }))
             .collect::<anyhow::Result<Vec<WorkspaceSnapshot>>>()
     }
-
-    async fn delete(
-        &self,
-        reponame: String,
-        workspace: String,
-        extra_args: Option<SnapshotExtraArgs>,
-    ) -> anyhow::Result<bool> {
-        DeleteSnapshot::query(
-            &self.connections.write_connection,
-            &reponame,
-            &workspace,
-            extra_args
-                .expect("No removed commits list provided")
-                .removed_commits
-                .as_slice(),
-        )
-        .await
-        .map(|res| res.affected_rows() > 0)
-    }
-
+}
+#[async_trait]
+impl Insert<WorkspaceSnapshot> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceSnapshot,
-        _extra_args: Option<SnapshotExtraArgs>,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertSnapshot::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             &data.commit,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
+}
 
+#[async_trait]
+impl Update<WorkspaceSnapshot> for SqlCommitCloud {
+    type UpdateArgs = ();
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_arg: Option<SnapshotExtraArgs>,
-    ) -> anyhow::Result<bool> {
+        _extra_arg: Self::UpdateArgs,
+    ) -> anyhow::Result<()> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
+    }
+}
+
+#[async_trait]
+impl Delete<WorkspaceSnapshot> for SqlCommitCloud {
+    type DeleteArgs = DeleteArgs;
+    async fn delete(
+        &self,
+        reponame: String,
+        workspace: String,
+        args: Self::DeleteArgs,
+    ) -> anyhow::Result<()> {
+        DeleteSnapshot::query(
+            &self.connections.write_connection,
+            &reponame,
+            &workspace,
+            args.removed_commits.as_slice(),
+        )
+        .await?;
+        Ok(())
     }
 }

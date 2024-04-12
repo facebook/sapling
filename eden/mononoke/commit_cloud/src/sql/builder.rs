@@ -8,7 +8,8 @@
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 
-use crate::SqlCommitCloud;
+use crate::sql::ops::SqlCommitCloud;
+
 pub struct SqlCommitCloudBuilder {
     #[allow(unused)]
     pub(crate) connections: SqlConnections,
@@ -17,7 +18,7 @@ pub struct SqlCommitCloudBuilder {
 impl SqlConstruct for SqlCommitCloudBuilder {
     const LABEL: &'static str = "commit_cloud";
 
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-commit-cloud.sql");
+    const CREATION_QUERY: &'static str = include_str!("../../schemas/sqlite-commit-cloud.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }

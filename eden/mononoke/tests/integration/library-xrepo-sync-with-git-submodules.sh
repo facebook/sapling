@@ -21,7 +21,8 @@ NEW_BOOKMARK_NAME="SYNCED_HEAD"
 LATEST_CONFIG_VERSION_NAME="INITIAL_IMPORT_SYNC_CONFIG"
 
 ENABLE_API_WRITES=1 REPOID="$LARGE_REPO_ID" REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
-REPOID="$SMALL_REPO_ID" REPONAME="$SMALL_REPO_NAME" setup_common_config "$REPOTYPE"
+# Enable writes in small repo as well, so we can update bookmarks when running gitimport
+ENABLE_API_WRITES=1 REPOID="$SMALL_REPO_ID" REPONAME="$SMALL_REPO_NAME" setup_common_config "$REPOTYPE"
 
 # By default, the `git_submodules_action` will be `STRIP`, meaning that any
 # changes to git submodules will not be synced to the large repo.
@@ -52,7 +53,7 @@ function default_initial_import_config {
         "versions": [
           {
             "large_repo_id": $LARGE_REPO_ID,
-            "common_pushrebase_bookmarks": [],
+            "common_pushrebase_bookmarks": ["master"],
             "small_repos": [
               $SMALL_REPO_CFG
             ],
@@ -60,11 +61,12 @@ function default_initial_import_config {
           }
         ],
         "common": {
-          "common_pushrebase_bookmarks": [],
+          "common_pushrebase_bookmarks": ["master"],
           "large_repo_id": $LARGE_REPO_ID,
           "small_repos": {
             "$SMALL_REPO_ID": {
-              "bookmark_prefix": "bookprefix1/"
+              "bookmark_prefix": "bookprefix1/",
+              "common_pushrebase_bookmarks_map": { "master": "heads/master" }
             }
           }
         }
@@ -108,6 +110,10 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   setup_sync_config_stripping_git_submodules
 
   start_and_wait_for_mononoke_server
+
+  # Setting up mutable counter for live forward sync
+  # NOTE: this might need to be updated/refactored when setting up test for backsyncing
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($LARGE_REPO_ID, 'xreposync_from_$SMALL_REPO_ID', 1)";
 
   cd "$TESTTMP" || exit
 }

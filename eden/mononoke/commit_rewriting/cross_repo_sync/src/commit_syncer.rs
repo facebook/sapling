@@ -69,12 +69,14 @@ use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
+use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting;
 use crate::reporting::log_rewrite;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::set_mapping_change_version;
 use crate::types::ErrorKind;
+use crate::types::Large;
 use crate::types::PushrebaseRewriteDates;
 use crate::types::Repo;
 use crate::types::Source;
@@ -856,16 +858,27 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let large_repo = self.get_large_repo();
+        let large_repo_id = Large(large_repo.repo_identity().id());
+        let submodule_expansion_data = match submodule_deps {
+            SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                submodule_deps: deps,
+                x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                    .as_str(),
+                large_repo_id,
+            }),
+            SubmoduleDeps::NotNeeded => None,
+        };
+
         let rewritten_commit = rewrite_commit(
             ctx,
             source_cs,
             &remapped_parents,
             mover,
             &source_repo,
-            submodule_deps,
             Default::default(),
             git_submodules_action,
-            x_repo_submodule_metadata_file_prefix,
+            submodule_expansion_data,
         )
         .await?;
         match rewritten_commit {
@@ -962,16 +975,27 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+        let large_repo = self.get_large_repo();
+        let large_repo_id = Large(large_repo.repo_identity().id());
+
+        let submodule_expansion_data = match &source_repo_deps {
+            SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                submodule_deps: deps,
+                x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
+                    .as_str(),
+                large_repo_id,
+            }),
+            SubmoduleDeps::NotNeeded => None,
+        };
         let rewritten = rewrite_commit(
             ctx,
             source_cs_mut,
             &remapped_parents,
             mover,
             &source_repo,
-            source_repo_deps,
             Default::default(),
             git_submodules_action,
-            x_repo_submodule_metadata_file_prefix,
+            submodule_expansion_data,
         )
         .await?;
 
@@ -1043,6 +1067,7 @@ where
                     }),
                 )?;
 
+                debug!(ctx.logger(), "Starting pushrebase...");
                 let pushrebase_res = do_pushrebase_bonsai(
                     ctx,
                     &target_repo,
@@ -1054,6 +1079,12 @@ where
                 .await;
                 let pushrebase_res =
                     pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
+                debug!(
+                    ctx.logger(),
+                    "Pushrebase complete: distance: {}, retry_num: {}",
+                    pushrebase_res.pushrebase_distance.0,
+                    pushrebase_res.retry_num.0
+                );
                 let pushrebased_changeset = pushrebase_res.head;
                 Ok(Some(pushrebased_changeset))
             }

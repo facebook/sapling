@@ -165,6 +165,14 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         blobstore: &Store,
         prefix: &[u8],
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    /// List all subentries with a given prefix after a specific key
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -185,6 +193,16 @@ pub trait Manifest: Sync + Sized + 'static {
         prefix: &'a [u8],
     ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
         Box::new(self.list().filter(|(k, _)| k.starts_with(prefix)))
+    }
+    fn list_prefix_after<'a>(
+        &'a self,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
+        Box::new(
+            self.list()
+                .filter(move |(k, _)| k.as_ref() > after && k.starts_with(prefix)),
+        )
     }
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>>;
 }
@@ -219,6 +237,22 @@ impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
         .boxed())
     }
 
+    async fn list_prefix_after(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(stream::iter(
+            Manifest::list_prefix_after(self, prefix, after)
+                .map(anyhow::Ok)
+                .collect::<Vec<_>>(),
+        )
+        .boxed())
+    }
+
     async fn lookup(
         &self,
         _ctx: &CoreContext,
@@ -241,6 +275,40 @@ impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
 pub struct CombinedId<M, N>(pub M, pub N);
 
 pub struct Combined<M, N>(pub M, pub N);
+
+fn combine_entries<
+    M: AsyncManifest<Store> + Send + Sync,
+    N: AsyncManifest<Store> + Send + Sync,
+    Store: Send + Sync,
+>(
+    (m_result, n_result): (
+        Result<(MPathElement, Entry<M::TreeId, M::LeafId>)>,
+        Result<(MPathElement, Entry<N::TreeId, N::LeafId>)>,
+    ),
+) -> Result<(
+    MPathElement,
+    Entry<
+        <Combined<M, N> as AsyncManifest<Store>>::TreeId,
+        <Combined<M, N> as AsyncManifest<Store>>::LeafId,
+    >,
+)> {
+    let (m_elem, m_entry) = m_result?;
+    let (n_elem, n_entry) = n_result?;
+
+    match (m_elem == n_elem, m_entry, n_entry) {
+        (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
+            Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
+        }
+        (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
+            Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
+        }
+        _ => bail!(
+            "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
+            m_elem,
+            n_elem,
+        ),
+    }
+}
 
 #[async_trait]
 impl<S, M, N> StoreLoadable<S> for CombinedId<M, N>
@@ -287,24 +355,8 @@ impl<
         Ok(m.list(ctx, blobstore)
             .await?
             .zip(n.list(ctx, blobstore).await?)
-            .map(|(m_result, n_result)| {
-                let (m_elem, m_entry) = m_result?;
-                let (n_elem, n_entry) = n_result?;
-
-                match (m_elem == n_elem, m_entry, n_entry) {
-                    (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
-                        Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
-                    }
-                    (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
-                        Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
-                    }
-                    _ => bail!(
-                        "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
-                        m_elem,
-                        n_elem,
-                    ),
-                }
-            }).boxed())
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
     }
 
     async fn list_prefix(
@@ -318,24 +370,24 @@ impl<
         Ok(m.list_prefix(ctx, blobstore, prefix)
             .await?
             .zip(n.list_prefix(ctx, blobstore, prefix).await?)
-            .map(|(m_result, n_result)| {
-                let (m_elem, m_entry) = m_result?;
-                let (n_elem, n_entry) = n_result?;
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
+    }
 
-                match (m_elem == n_elem, m_entry, n_entry) {
-                    (true, Entry::Tree(m_tree), Entry::Tree(n_tree)) => {
-                        Ok((m_elem, Entry::Tree(CombinedId(m_tree, n_tree))))
-                    }
-                    (true, Entry::Leaf(m_leaf), Entry::Leaf(n_leaf)) => {
-                        Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
-                    }
-                    _ => bail!(
-                        "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
-                        m_elem,
-                        n_elem,
-                    ),
-                }
-            }).boxed())
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let Combined(m, n) = self;
+        Ok(m.list_prefix_after(ctx, blobstore, prefix, after)
+            .await?
+            .zip(n.list_prefix_after(ctx, blobstore, prefix, after).await?)
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
     }
 
     async fn lookup(
@@ -405,6 +457,22 @@ impl<Store: Blobstore> AsyncManifest<Store> for BssmV3Directory {
         anyhow::Ok(
             self.clone()
                 .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries_after(ctx, blobstore, prefix, after)
                 .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
                 .boxed(),
         )
@@ -563,6 +631,22 @@ impl<Store: Blobstore> AsyncManifest<Store> for TestShardedManifest {
         anyhow::Ok(
             self.clone()
                 .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries_after(ctx, blobstore, prefix, after)
                 .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
                 .boxed(),
         )

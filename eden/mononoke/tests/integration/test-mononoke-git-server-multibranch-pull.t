@@ -74,7 +74,7 @@
   $ git commit -qam "Modified file1.2 -> file1 in branch R2"
 
   $ cd "$GIT_REPO"
-  $ git pull "$GIT_REPO_ORIGIN" &> /dev/null
+  $ quiet git pull "$GIT_REPO_ORIGIN"
 # Capture all the known Git objects from the repo
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list_after_pull
 # Diff the list of objects before and after the pull to show that we got new objects
@@ -87,7 +87,7 @@
   $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
-  $ git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git &> /dev/null
+  $ quiet git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list_after_pull

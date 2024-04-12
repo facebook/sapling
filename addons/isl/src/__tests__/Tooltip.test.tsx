@@ -17,9 +17,8 @@ import {
   COMMIT,
   closeCommitInfoSidebar,
 } from '../testUtils';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, within, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react-dom/test-utils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 

@@ -1275,14 +1275,6 @@ def cloudreclaimworkspaces(ui, repo, **opts):
     + [
         (
             "",
-            "reason",
-            "",
-            _(
-                "reason why the sync has been triggered (used for logging purposes) (ADVANCED)"
-            ),
-        ),
-        (
-            "",
             "best-effort",
             False,
             _(

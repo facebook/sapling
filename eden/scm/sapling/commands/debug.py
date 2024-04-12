@@ -193,6 +193,14 @@ def debugapplystreamclonebundle(ui, repo, fname) -> None:
     gen.apply(repo)
 
 
+@command("debugbacktrace|debugbt", [], _("PID"), norepo=True)
+def debugbacktrace(ui, pid) -> None:
+    """attempt to extract backtraces for a specified pid"""
+    from .. import dbgutil
+
+    dbgutil.backtrace_all(ui, int(pid))
+
+
 @command(
     "debugbindag",
     [

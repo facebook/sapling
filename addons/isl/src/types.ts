@@ -10,7 +10,6 @@ import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
-import type {ReactionContent} from 'isl-server/src/github/generated/graphql';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
 import type {ParsedDiff} from 'shared/patch/parse';
@@ -195,7 +194,11 @@ export type StableLocationData = {
 export type StableInfo = {
   hash: string;
   name: string;
-  info: string;
+  /** If present, this is informational text, like the reason it's been added */
+  byline?: string;
+  /** If present, this is extra details that might be shown in a tooltip */
+  info?: string;
+  date: Date;
 };
 
 export type CommitInfo = {

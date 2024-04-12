@@ -12,7 +12,7 @@ abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
-bytes = { version = "1.1", features = ["serde"] }
+bytes = { version = "1.6.0", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../../../common/rust/caching_ext" }
 commit_graph_thrift = { version = "0.1.0", path = "../commit_graph_types/if" }
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }

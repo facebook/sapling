@@ -157,6 +157,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       <div className="download-commits-content">
         <div className="download-commits-input-row">
           <TextField
+            width="100%"
             placeholder={
               supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')
             }

@@ -8,7 +8,6 @@
 import type {Operation} from './operations/Operation';
 import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
-import {bookmarksDataStorage} from './BookmarksData';
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {findCurrentPublicBase} from './getCommitTree';
@@ -20,7 +19,7 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
-import {commitsShownRange, latestCommits, latestDag} from './serverAPIState';
+import {commitsShownRange, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom} from 'jotai';

@@ -156,7 +156,7 @@ fn wrapper_main() -> Result<i32> {
             Err(e) => {
                 if (e.kind() == clap::ErrorKind::DisplayHelp
                     || e.kind() == clap::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand)
-                    && should_use_rust_help(std::env::args(), &None).unwrap_or(false)
+                    && should_use_rust_help(std::env::args(), &None, &None).unwrap_or(false)
                 {
                     e.exit()
                 } else {
@@ -167,7 +167,11 @@ fn wrapper_main() -> Result<i32> {
     }
 }
 
-fn should_use_rust_help<T>(args: T, etc_eden_dir_override: &Option<&Path>) -> Result<bool>
+fn should_use_rust_help<T>(
+    args: T,
+    etc_eden_dir_override: &Option<&Path>,
+    experimental_commands_override: &Option<Vec<&str>>,
+) -> Result<bool>
 where
     T: Iterator<Item = String>,
 {
@@ -183,6 +187,7 @@ where
     Ok(is_command_enabled(
         &subcommand_name,
         &etc_eden_dir_override.map(Path::to_owned),
+        experimental_commands_override,
     ))
 }
 
@@ -238,30 +243,36 @@ mod tests {
 
     #[test]
     fn test_should_use_rust_help() -> Result<()> {
-        assert!(should_use_rust_help(args!["eden.exe", "minitop"], &None)?);
+        assert!(should_use_rust_help(
+            args!["eden.exe", "minitop"],
+            &None,
+            &None
+        )?);
         {
             let dir = TempDir::new()?;
             assert!(!should_use_rust_help(
-                args!["eden.exe", "redirect"],
-                &Some(dir.path())
+                args!["eden.exe", "debug"],
+                &Some(dir.path()),
+                &Some(vec!["debug"])
             )?,);
             assert!(!should_use_rust_help(
-                args!["eden.exe", "--xyz", "redirect"],
-                &Some(dir.path())
+                args!["eden.exe", "--xyz", "debug"],
+                &Some(dir.path()),
+                &Some(vec!["debug"])
             )?,);
         }
         {
             let dir = TempDir::new()?;
             let rollout_path = dir.path().join("edenfsctl_rollout.json");
             let mut rollout_file = File::create(rollout_path)?;
-            writeln!(rollout_file, r#"{{"redirect": true}}"#)?;
+            writeln!(rollout_file, r#"{{"debug": true}}"#)?;
 
             assert!(should_use_rust_help(
-                args!["eden.exe", "redirect"],
-                &Some(dir.path())
+                args!["eden.exe", "debug"],
+                &Some(dir.path()),
+                &Some(vec!["debug"])
             )?,);
         }
-
         Ok(())
     }
 }

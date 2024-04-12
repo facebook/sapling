@@ -243,4 +243,17 @@ impl TestShardedManifest {
             .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
             .boxed()
     }
+
+    pub fn into_prefix_subentries_after<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {
+        self.subentries
+            .into_prefix_entries_after(ctx, blobstore, prefix, after)
+            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
+    }
 }

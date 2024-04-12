@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::clone::Clone;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -12,29 +13,21 @@ use std::fmt;
 use anyhow::anyhow;
 use anyhow::ensure;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Storable;
 use cloned::cloned;
 use commit_transformation::copy_file_contents;
+use commit_transformation::rewrite_commit;
+use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use either::Either;
 use either::Either::*;
-use fsnodes::RootFsnodeId;
-use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use git_types::ObjectKind;
-use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
-use manifest::Entry::*;
-use manifest::ManifestOps;
 use maplit::hashmap;
-use mononoke_types::fsnode::FsnodeFile;
-use mononoke_types::hash::GitSha1;
-use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -42,18 +35,30 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
-use mononoke_types::FsnodeId;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
+use movers::Mover;
 use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::commit_syncers_lib::mover_to_multi_mover;
+use crate::git_submodules::utils::get_git_hash_from_submodule_file;
+use crate::git_submodules::utils::get_submodule_file_content_id;
+use crate::git_submodules::utils::get_submodule_repo;
+use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
+use crate::git_submodules::utils::is_path_git_submodule;
+use crate::git_submodules::utils::list_all_paths;
+use crate::git_submodules::utils::list_non_submodule_files_under;
+use crate::git_submodules::utils::submodule_diff;
+use crate::git_submodules::validation::validate_all_submodule_expansions;
+use crate::types::Large;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.
 #[derive(Eq, Clone, Debug, PartialEq, Hash, PartialOrd, Ord)]
-struct SubmodulePath(pub(crate) NonRootMPath);
+pub(crate) struct SubmodulePath(pub(crate) NonRootMPath);
 
 impl std::fmt::Display for SubmodulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -61,54 +66,127 @@ impl std::fmt::Display for SubmodulePath {
     }
 }
 
+// TODO(T174902563): support expansion of git submodules
+/// Everything needed to expand submodule changes
+#[derive(Clone)]
+pub struct SubmoduleExpansionData<'a, R: Repo> {
+    // Submodule dependencies of from the small repo, which have to be loaded
+    // and available to (a) expand submodule file changes or (b) validate
+    // that a bonsai in the large repo doesn't break the consistency of submodule
+    // expansions.
+    pub submodule_deps: &'a HashMap<NonRootMPath, R>,
+    pub x_repo_submodule_metadata_file_prefix: &'a str,
+    // TODO(T179530927): remove this once backsync is supported
+    /// Used to ensure that trying to backsync from large to small repos that
+    /// have submodule expansion enabled crashes while backsync is not supported.
+    pub large_repo_id: Large<RepositoryId>,
+}
+pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    bonsai: BonsaiChangesetMut,
+    small_repo: &'a R,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
+    mover: Mover,
+    // Parameters needed to generate a bonsai for the large repo using `rewrite_commit`
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
+    rewrite_opts: RewriteOpts,
+) -> Result<BonsaiChangesetMut> {
+    ensure!(
+        small_repo.repo_identity().id() != *sm_exp_data.large_repo_id,
+        "Can't sync changes from large to small repo if small repo has submodule expansion enabled"
+    );
+
+    let new_bonsai =
+        expand_all_git_submodule_file_changes(ctx, bonsai, small_repo, sm_exp_data.clone())
+            .await
+            .context("Failed to expand submodule file changes from bonsai")?;
+
+    let rewritten_bonsai = rewrite_commit(
+        ctx,
+        new_bonsai,
+        remapped_parents,
+        mover_to_multi_mover(mover.clone()),
+        small_repo,
+        None,
+        rewrite_opts,
+    )
+    .await
+    .context("Failed to create bonsai to be synced")?
+    .ok_or(anyhow!("No bonsai to be synced was returned"))?;
+
+    let rewritten_bonsai = rewritten_bonsai.freeze()?;
+
+    // TODO(T179533620): validate that all changes are consistent with submodule
+    // metadata file.
+    let validated_bonsai =
+        validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover).await?;
+
+    Ok(validated_bonsai.into_mut())
+}
+
 /// Iterate over all file changes from the bonsai being synced and expand any
 /// changes to git submodule files, generating the bonsai that will be synced
 /// to the large repo.
-pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
+async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
-    source_repo: &'a R,
-    source_repo_deps: &'a HashMap<NonRootMPath, R>,
-    x_repo_submodule_metadata_file_prefix: String,
+    small_repo: &'a R,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
 ) -> Result<BonsaiChangesetMut> {
     let fcs: SortedVectorMap<NonRootMPath, FileChange> = cs.file_changes;
     let parents = cs.parents.as_slice();
-    let x_repo_submodule_metadata_prefix_str = x_repo_submodule_metadata_file_prefix.as_str();
 
     let expanded_fcs: SortedVectorMap<NonRootMPath, FileChange> = stream::iter(fcs)
-        .then(|(p, fc)| async move {
-            match &fc {
-                FileChange::Change(tfc) => match &tfc.file_type() {
-                    FileType::GitSubmodule => {
-                        expand_git_submodule_file_change(
-                            ctx,
-                            source_repo,
-                            source_repo_deps,
-                            parents,
-                            p,
-                            tfc.content_id(),
-                            x_repo_submodule_metadata_prefix_str,
-                        )
-                        .await
+        .then(|(p, fc)| {
+            cloned!(sm_exp_data);
+            async move {
+                match &fc {
+                    FileChange::Change(tfc) => match &tfc.file_type() {
+                        FileType::GitSubmodule => {
+                            expand_git_submodule_file_change(
+                                ctx,
+                                small_repo,
+                                sm_exp_data.clone(),
+                                parents,
+                                p,
+                                tfc.content_id(),
+                            )
+                            .await
+                        }
+                        _ => {
+                            if sm_exp_data.submodule_deps.contains_key(&p) {
+                                // A normal file is replacing a submodule in the
+                                // small repo, which means that the submodule
+                                // expansion is being implicitly deleted in the
+                                // large repo.
+                                // If the expansion is deleted, we also need to
+                                // delete the submodule metadata file.
+                                let x_repo_sm_metadata_path =
+                                    get_x_repo_submodule_metadata_file_path(
+                                        &SubmodulePath(p.clone()),
+                                        sm_exp_data.x_repo_submodule_metadata_file_prefix,
+                                    )?;
+                                return Ok(vec![
+                                    (p, fc),
+                                    // Explicit deletion for the submodule
+                                    // metadata file
+                                    (x_repo_sm_metadata_path, FileChange::Deletion),
+                                ]);
+                            };
+                            Ok(vec![(p, fc)])
+                        }
+                    },
+                    FileChange::Deletion => {
+                        let paths_to_delete =
+                            handle_submodule_deletion(ctx, small_repo, sm_exp_data, parents, p)
+                                .await?;
+                        Ok(paths_to_delete
+                            .into_iter()
+                            .map(|p| (p, FileChange::Deletion))
+                            .collect())
                     }
                     _ => Ok(vec![(p, fc)]),
-                },
-                FileChange::Deletion => {
-                    let paths_to_delete = handle_submodule_deletion(
-                        ctx,
-                        source_repo,
-                        source_repo_deps,
-                        parents,
-                        p,
-                        x_repo_submodule_metadata_prefix_str,
-                    )
-                    .await?;
-                    Ok(paths_to_delete
-                        .into_iter()
-                        .map(|p| (p, FileChange::Deletion))
-                        .collect())
                 }
-                _ => Ok(vec![(p, fc)]),
             }
         })
         .try_collect::<Vec<_>>()
@@ -129,9 +207,6 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
             }
         })
         .collect::<Result<_>>()?;
-
-    // TODO(T179533620): validate that all changes are consistent with submodule
-    // metadata file.
 
     let new_cs = BonsaiChangesetMut {
         file_changes: expanded_fcs,
@@ -162,7 +237,7 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
 ///
 /// This function assumes that all the submodules (direct or recursive) are
 /// mirrored in a Mononoke repo and these repos are loaded and available inside
-/// `source_repo_deps`. It will crash if that's not the case.
+/// `submodule_deps`. It will crash if that's not the case.
 ///
 /// This depends on fsnodes from the commits in the source repo and the
 /// submodule repos, so if they aren't already derived, they will be during the
@@ -173,12 +248,11 @@ pub async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
 /// into the target repo.
 async fn expand_git_submodule_file_change<'a, R: Repo>(
     ctx: &'a CoreContext,
-    source_repo: &'a R,
-    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    small_repo: &'a R,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
     parents: &'a [ChangesetId],
     submodule_file_path: NonRootMPath,
     submodule_file_content_id: ContentId,
-    x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<Vec<(NonRootMPath, FileChange)>> {
     let submodule_path = SubmodulePath(submodule_file_path);
     // Contains lists of file changes along
@@ -188,10 +262,10 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
     // the source repo's blobstore.
     let exp_results = expand_git_submodule(
         ctx,
-        source_repo,
+        small_repo,
         parents,
         submodule_path.clone(),
-        source_repo_deps,
+        sm_exp_data.submodule_deps,
         submodule_file_content_id,
     )
     .await?;
@@ -233,20 +307,14 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
 
     stream::iter(copy_per_submodule)
         .then(|(sm_path, content_ids_to_copy)| async move {
-            let submodule_repo = get_submodule_repo(&sm_path, source_repo_deps)?;
+            let submodule_repo = get_submodule_repo(&sm_path, sm_exp_data.submodule_deps)?;
 
             // The commit rewrite crate copies the file content blobs from the
             // source repo to the target repo, so all the blobs from the submodule
             // repos need to be copied to the source repo.
-            copy_file_contents(
-                ctx,
-                submodule_repo,
-                source_repo,
-                content_ids_to_copy,
-                |_| {},
-            )
-            .await
-            .with_context(|| format!("Failed to copy file blobs from submodule {}", &sm_path.0))
+            copy_file_contents(ctx, submodule_repo, small_repo, content_ids_to_copy, |_| {})
+                .await
+                .with_context(|| format!("Failed to copy file blobs from submodule {}", &sm_path.0))
         })
         .try_collect()
         .await?;
@@ -255,11 +323,11 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
     // x-repo submodule metadata file
     let all_file_changes = generate_additional_file_changes(
         ctx,
-        source_repo,
+        small_repo,
         parents,
         submodule_path,
         submodule_file_content_id,
-        x_repo_submodule_metadata_file_prefix,
+        sm_exp_data.x_repo_submodule_metadata_file_prefix,
         expanded_file_changes,
     )
     .await?;
@@ -270,7 +338,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
 #[async_recursion]
 async fn expand_git_submodule<'a, R: Repo>(
     ctx: &'a CoreContext,
-    source_repo: &'a R,
+    small_repo: &'a R,
     // Parents from the **source repo commmit** being rewritten.
     // This is needed to get the hash of the previous commit of the submodule
     // being expanded.
@@ -279,7 +347,7 @@ async fn expand_git_submodule<'a, R: Repo>(
     // git hash of the submodule's commit that the source repo depends on.
     submodule_path: SubmodulePath,
     // Map of submodule file paths to their corresponding Mononoke repo instances.
-    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    submodule_deps: &'a HashMap<NonRootMPath, R>,
     // The
     submodule_file_content_id: ContentId,
     // Returns a map from submodule path to a list of file changes, so that
@@ -288,10 +356,10 @@ async fn expand_git_submodule<'a, R: Repo>(
 ) -> Result<HashMap<SubmodulePath, Vec<(NonRootMPath, FileChange)>>> {
     debug!(ctx.logger(), "Expanding submodule {}", &submodule_path);
 
-    let submodule_repo = get_submodule_repo(&submodule_path, source_repo_deps)?;
+    let submodule_repo = get_submodule_repo(&submodule_path, submodule_deps)?;
     let git_submodule_sha1 = get_git_hash_from_submodule_file(
         ctx,
-        source_repo,
+        small_repo,
         submodule_file_content_id,
         &submodule_path,
     )
@@ -317,35 +385,14 @@ async fn expand_git_submodule<'a, R: Repo>(
             )
         })?;
 
-    let sm_manifest_id = id_to_fsnode_manifest_id(ctx, submodule_repo, sm_changeset_id)
-        .await
-        .context(format!(
-            "Failed to get fsnode id from changeset id {}",
-            &sm_changeset_id
-        ))?;
-
     let sm_parents = get_previous_submodule_commits(
         ctx,
         parents,
-        source_repo,
+        small_repo,
         submodule_path.clone(),
         submodule_repo,
     )
     .await?;
-
-    let sm_parent_manifest_ids = stream::iter(sm_parents)
-        .then(|cs_id| async move {
-            id_to_fsnode_manifest_id(ctx, submodule_repo, cs_id)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failed to get parent's fsnode id from its changeset id: {}",
-                        &cs_id
-                    )
-                })
-        })
-        .try_collect::<HashSet<_>>()
-        .await?;
 
     // `sm_file_changes` are the changes in the submodule being processed
     // that should be expanded.
@@ -354,79 +401,81 @@ async fn expand_git_submodule<'a, R: Repo>(
     // The latter need to be stored separately because all the file content
     // blobs will need to be copied from the appropriate repository after
     // generating the file changes.
-    let (sm_file_changes, recursive_sm_file_changes) = bonsai_diff(
-        ctx.clone(),
-        submodule_repo.repo_blobstore_arc().clone(),
-        sm_manifest_id,
-        sm_parent_manifest_ids,
-    )
-    .map_ok(|diff| {
-        cloned!(submodule_path);
+    let (sm_file_changes, recursive_sm_file_changes) =
+        submodule_diff(ctx, submodule_repo, sm_changeset_id, sm_parents)
+            .await?
+            .map_ok(|diff| {
+                cloned!(submodule_path);
 
-        async move {
-            match diff {
-                BonsaiDiffFileChange::Changed(path, file_type, (content_id, size))
-                | BonsaiDiffFileChange::ChangedReusedId(path, file_type, (content_id, size)) => {
-                    if file_type != FileType::GitSubmodule {
-                        // Non-submodule file changes just need to have the submodule
-                        // path in the source repo pre-pended to their path.
-                        let new_tfc = TrackedFileChange::new(content_id, file_type, size, None);
-                        let path_in_sm = submodule_path.0.join(&path);
+                async move {
+                    match diff {
+                        BonsaiDiffFileChange::Changed(path, file_type, (content_id, size))
+                        | BonsaiDiffFileChange::ChangedReusedId(
+                            path,
+                            file_type,
+                            (content_id, size),
+                        ) => {
+                            if file_type != FileType::GitSubmodule {
+                                // Non-submodule file changes just need to have the submodule
+                                // path in the source repo pre-pended to their path.
+                                let new_tfc =
+                                    TrackedFileChange::new(content_id, file_type, size, None);
+                                let path_in_sm = submodule_path.0.join(&path);
 
-                        let fcs = vec![(path_in_sm, FileChange::Change(new_tfc))];
-                        return Ok(Left(fcs));
+                                let fcs = vec![(path_in_sm, FileChange::Change(new_tfc))];
+                                return Ok(Left(fcs));
+                            }
+
+                            let previous_submodule_commits = get_previous_submodule_commits(
+                                ctx,
+                                parents,
+                                small_repo,
+                                submodule_path.clone(),
+                                submodule_repo,
+                            )
+                            .await?;
+
+                            process_recursive_submodule_file_change(
+                                ctx,
+                                // Use the previous commits of the submodule as parents
+                                // when expanding any recursive submodules.
+                                previous_submodule_commits.as_slice(),
+                                submodule_path,
+                                submodule_repo,
+                                submodule_deps,
+                                SubmodulePath(path),
+                                content_id,
+                            )
+                            .await
+                        }
+                        BonsaiDiffFileChange::Deleted(path) => {
+                            let path_in_sm = submodule_path.0.join(&path);
+                            let fcs = vec![(path_in_sm, FileChange::Deletion)];
+                            Ok(Left(fcs))
+                        }
                     }
-
-                    let previous_submodule_commits = get_previous_submodule_commits(
-                        ctx,
-                        parents,
-                        source_repo,
-                        submodule_path.clone(),
-                        submodule_repo,
-                    )
-                    .await?;
-
-                    process_recursive_submodule_file_change(
-                        ctx,
-                        // Use the previous commits of the submodule as parents
-                        // when expanding any recursive submodules.
-                        previous_submodule_commits.as_slice(),
-                        submodule_path,
-                        submodule_repo,
-                        source_repo_deps,
-                        SubmodulePath(path),
-                        content_id,
-                    )
-                    .await
                 }
-                BonsaiDiffFileChange::Deleted(path) => {
-                    let path_in_sm = submodule_path.0.join(&path);
-                    let fcs = vec![(path_in_sm, FileChange::Deletion)];
-                    Ok(Left(fcs))
+            })
+            .map_err(|e| anyhow!("Failed to generate a BonsaiDiffFileChange: {e}"))
+            .try_buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .fold((vec![], HashMap::new()), |(mut fcs, mut sm_fcs), res| {
+                match res {
+                    Left(res_fcs) => {
+                        fcs.extend(res_fcs);
+                    }
+                    Right(sm_fcs_map) => {
+                        sm_fcs_map.into_iter().for_each(|(path, res_fcs)| {
+                            let fcs = sm_fcs.entry(path).or_insert(vec![]);
+                            fcs.extend(res_fcs);
+                        });
+                    }
                 }
-            }
-        }
-    })
-    .map_err(|e| anyhow!("Failed to generate a BonsaiDiffFileChange: {e}"))
-    .try_buffer_unordered(100)
-    .try_collect::<Vec<_>>()
-    .await?
-    .into_iter()
-    .fold((vec![], HashMap::new()), |(mut fcs, mut sm_fcs), res| {
-        match res {
-            Left(res_fcs) => {
-                fcs.extend(res_fcs);
-            }
-            Right(sm_fcs_map) => {
-                sm_fcs_map.into_iter().for_each(|(path, res_fcs)| {
-                    let fcs = sm_fcs.entry(path).or_insert(vec![]);
-                    fcs.extend(res_fcs);
-                });
-            }
-        }
 
-        (fcs, sm_fcs)
-    });
+                (fcs, sm_fcs)
+            });
 
     let mut fc_map = hashmap![submodule_path => sm_file_changes];
     recursive_sm_file_changes
@@ -452,7 +501,7 @@ async fn process_recursive_submodule_file_change<'a, R: Repo>(
     // Path of submodule `A` within repo `source`.
     submodule_path: SubmodulePath,
     submodule_repo: &'a R,
-    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    submodule_deps: &'a HashMap<NonRootMPath, R>,
     // Path of submodule `B` within repo `A`.
     recursive_submodule_path: SubmodulePath,
     // Content id of the submodule `B` file inside repo `A`.
@@ -468,7 +517,7 @@ async fn process_recursive_submodule_file_change<'a, R: Repo>(
     // submodule prefix from the keys that have it and ignoring the ones that
     // don't, because they're not relevant to the submodule being processed.
     // This prefix is added back to the results, before they're returned.
-    let rec_source_repo_deps: HashMap<NonRootMPath, R> = source_repo_deps
+    let rec_small_repo_deps: HashMap<NonRootMPath, R> = submodule_deps
         .iter()
         .filter_map(|(p, repo)| {
             p.remove_prefix_component(&submodule_path.0)
@@ -481,7 +530,7 @@ async fn process_recursive_submodule_file_change<'a, R: Repo>(
         submodule_repo,
         parents,
         recursive_submodule_path,
-        &rec_source_repo_deps,
+        &rec_small_repo_deps,
         recursive_sm_file_content_id,
     )
     .await
@@ -525,14 +574,12 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     // contents of the submodule file in those revisions to get the previous
     // submodule commit the source repo dependend on.
     parents: &'a [ChangesetId],
-    source_repo: &'a R,
+    small_repo: &'a R,
     // Path of submodule `A` within repo `source`.
     submodule_path: SubmodulePath,
     // Submodule repo in Mononoke
     submodule_repo: &'a R,
 ) -> Result<Vec<ChangesetId>> {
-    let source_repo_blobstore = source_repo.repo_blobstore_arc().clone();
-
     let parents_vec = parents
         .iter()
         .map(|cs_id| anyhow::Ok(*cs_id))
@@ -543,34 +590,19 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     // submodule is being added, this set will be empty.
     let sm_parents: Vec<ChangesetId> = stream::iter(parents_vec)
         .try_filter_map(|cs_id| {
-            cloned!(ctx, submodule_path, source_repo_blobstore);
+            cloned!(ctx, submodule_path);
 
             async move {
-                let fsnode_id = id_to_fsnode_manifest_id(&ctx, source_repo, cs_id).await?;
-                // Get the manifest entry in the submodule path
-                let entry = fsnode_id
-                    .find_entry(ctx.clone(), source_repo_blobstore, submodule_path.0.clone().into())
-                    .await?;
-
-                // Check what kind of manifest entry the submodule path is on
-                // that revision
-                match entry {
-                    // If it's a file, the submodule is likely being updated
-                    Some(Leaf(fsnode_file)) => {
-                        if *fsnode_file.file_type() != FileType::GitSubmodule {
-                            // If the entry is a file of type other than GitSubmodule,
-                            // it means that a submodule is being added in the place
-                            // of a regular file.
-                            // This means that this revision didn't have a dependency
-                            // on the submodule, so skip it.
-                            return Ok(None);
-                        };
+                // Check the submodule path on that revision
+                match get_submodule_file_content_id(&ctx, small_repo, cs_id, &submodule_path.0).await? {
+                    // If it's a submodule file, the submodule is being updated
+                    Some(submodule_file_content_id) => {
                         // File is a submodule, so get the git hash that it stored
                         // which represents the pointer to that submodule.
                         let git_sha1 = get_git_hash_from_submodule_file(
                             &ctx,
-                            source_repo,
-                            *fsnode_file.content_id(),
+                            small_repo,
+                            submodule_file_content_id,
                             &submodule_path,
                         )
                         .await?;
@@ -590,10 +622,14 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
                             })?;
                         Ok(Some(sm_parent_cs_id))
                     }
-                // If it doesn't exist, or is a directory, skip it because it's
-                // not a revision that can be used as a parent to generate delta
-                // for the submodule expansion.
-                    Some(Tree(_)) | None => Ok(None),
+                    // If it doesn't exist, or is a directory, skip it because
+                    // it's not a revision that can be used as a parent to
+                    // generate delta for the submodule expansion.  If it is a
+                    // file of type other than GitSubmodule, it means that a
+                    // submodule is being added in the place of a regular
+                    // file, so this revision didn't have a dependency on the
+                    // submodule, and can also be skipped.
+                    None => Ok(None),
                 }
             // Get content id of the file
         }})
@@ -602,94 +638,28 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     Ok(sm_parents)
 }
 
-/// Get the git hash from a submodule file, which represents the commit from the
-/// given submodule that the source repo depends on at that revision.
-async fn get_git_hash_from_submodule_file<'a, R: Repo>(
-    ctx: &'a CoreContext,
-    repo: &'a R,
-    submodule_file_content_id: ContentId,
-    submodule_path: &'a SubmodulePath,
-) -> Result<GitSha1> {
-    let blobstore = repo.repo_blobstore_arc();
-
-    let bytes = filestore::fetch_concat_exact(&blobstore, ctx, submodule_file_content_id, 20)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to fetch content of submodule {} file containing the submodule's git commit hash",
-                &submodule_path
-            )
-        })?;
-
-    let git_submodule_hash = RichGitSha1::from_bytes(&bytes, ObjectKind::Commit.as_str(), 0)?;
-    let git_submodule_sha1 = git_submodule_hash.sha1();
-
-    anyhow::Ok(git_submodule_sha1)
-}
-
-fn get_submodule_repo<'a, 'b, R: Repo>(
-    sm_path: &'a SubmodulePath,
-    source_repo_deps: &'b HashMap<NonRootMPath, R>,
-) -> Result<&'b R> {
-    source_repo_deps
-        .get(&sm_path.0)
-        .ok_or_else(|| anyhow!("Mononoke repo from submodule {} not available", sm_path.0))
-}
-
-async fn id_to_fsnode_manifest_id(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    bcs_id: ChangesetId,
-) -> Result<FsnodeId, Error> {
-    let repo_derived_data = repo.repo_derived_data();
-
-    let root_fsnode_id = repo_derived_data
-        .derive::<RootFsnodeId>(ctx, bcs_id)
-        .await?;
-
-    Ok(root_fsnode_id.into_fsnode_id())
-}
-
 /// If a submodule is being deleted from the source repo, we should delete its
 /// entire expanded copy in the large repo.
 async fn handle_submodule_deletion<'a, R: Repo>(
     ctx: &'a CoreContext,
-    source_repo: &'a R,
-    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    small_repo: &'a R,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
     parents: &'a [ChangesetId],
     submodule_file_path: NonRootMPath,
-    x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<Vec<NonRootMPath>> {
-    // If the path is in the source_repo_deps keys, it's almost
+    // If the path is in the submodule_deps keys, it's almost
     // certainly a submodule being deleted.
-    if source_repo_deps.contains_key(&submodule_file_path) {
+    if sm_exp_data
+        .submodule_deps
+        .contains_key(&submodule_file_path)
+    {
         // However, to be certain, let's verify that this file
-        // was indeed of type `GitSubmodule` by getting the parent fsnodes
-        // and checking the FileType of the submodule file path.
-        let parent_fsnode_ids: Vec<_> = stream::iter(parents)
-            .then(|cs_id| id_to_fsnode_manifest_id(ctx, source_repo, *cs_id))
-            .try_collect()
-            .await?;
-
-        // Checks if in any of the parents that path corresponds
-        // to a file of type `GitSubmodule`.
-        let is_git_submodule_file = stream::iter(parent_fsnode_ids)
-            .then(|fsnode_id| {
-                cloned!(ctx, submodule_file_path);
-                let source_repo_blobstore = source_repo.repo_blobstore_arc();
-
-                async move {
-                    let entry = fsnode_id
-                        .find_entry(ctx, source_repo_blobstore, submodule_file_path.into())
-                        .await?;
-                    match entry {
-                        Some(manifest::Entry::Leaf(fsnode_file)) => {
-                            Ok(*fsnode_file.file_type() == FileType::GitSubmodule)
-                        }
-                        _ => anyhow::Ok(false),
-                    }
-                }
-            })
+        // was indeed of type `GitSubmodule` by getting the checking
+        // the FileType of the submodule file path in each of the parents.
+        let is_git_submodule_file = stream::iter(parents)
+            .map(|cs_id| is_path_git_submodule(ctx, small_repo, *cs_id, &submodule_file_path))
+            .buffered(10)
+            .boxed()
             .try_collect::<Vec<_>>()
             .await?
             .into_iter()
@@ -704,11 +674,10 @@ async fn handle_submodule_deletion<'a, R: Repo>(
         // This is a submodule file, so delete its entire expanded directory.
         return delete_submodule_expansion(
             ctx,
-            source_repo,
-            source_repo_deps,
+            small_repo,
+            sm_exp_data,
             parents,
             submodule_file_path,
-            x_repo_submodule_metadata_file_prefix,
         )
         .await;
     };
@@ -720,37 +689,30 @@ async fn handle_submodule_deletion<'a, R: Repo>(
 /// generate the deletion for its entire expanded directory.
 async fn delete_submodule_expansion<'a, R: Repo>(
     ctx: &'a CoreContext,
-    source_repo: &'a R,
-    source_repo_deps: &'a HashMap<NonRootMPath, R>,
+    small_repo: &'a R,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
     parents: &'a [ChangesetId],
     submodule_file_path: NonRootMPath,
-    x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<Vec<NonRootMPath>> {
     let submodule_path = SubmodulePath(submodule_file_path.clone());
-    let submodule_repo = get_submodule_repo(&submodule_path, source_repo_deps)?;
+    let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;
 
     // Gets the submodule revision that the source repo is currently pointing to.
     let sm_parents = get_previous_submodule_commits(
         ctx,
         parents,
-        source_repo,
+        small_repo,
         submodule_path.clone(),
         submodule_repo,
     )
     .await?;
 
-    let parent_fsnode_ids: Vec<_> = stream::iter(sm_parents)
-        .then(|cs_id| id_to_fsnode_manifest_id(ctx, submodule_repo, cs_id))
-        .try_collect()
-        .await?;
-
-    let submodule_blobstore = submodule_repo.repo_blobstore_arc().clone();
-
     // Get the entire working copy of the submodule in those revisions, so we
     // can generate the proper paths to be deleted.
-    let submodule_leaves = stream::iter(parent_fsnode_ids)
-        .map(|fsnode_id| fsnode_id.list_leaf_entries(ctx.clone(), submodule_blobstore.clone()))
-        .flatten_unordered(None)
+    let submodule_leaves = stream::iter(sm_parents)
+        .map(|cs_id| list_all_paths(ctx, submodule_repo, cs_id))
+        .buffered(10)
+        .try_flatten_unordered(None)
         .try_collect::<Vec<_>>()
         .await?;
 
@@ -758,40 +720,17 @@ async fn delete_submodule_expansion<'a, R: Repo>(
     let paths_to_delete: Vec<_> = {
         let mut paths_to_delete: Vec<_> = submodule_leaves
             .into_iter()
-            .map(|(path, _)| submodule_file_path.join(&path))
+            .map(|path| submodule_file_path.join(&path))
             .collect();
         let x_repo_sm_metadata_path = get_x_repo_submodule_metadata_file_path(
             &submodule_path,
-            x_repo_submodule_metadata_file_prefix,
+            sm_exp_data.x_repo_submodule_metadata_file_prefix,
         )?;
         paths_to_delete.push(x_repo_sm_metadata_path);
         paths_to_delete
     };
 
     Ok(paths_to_delete)
-}
-
-/// Builds the full path of the x-repo submodule metadata file for a given
-/// submodule.
-fn get_x_repo_submodule_metadata_file_path(
-    submodule_file_path: &SubmodulePath,
-    // Prefix used to generate the metadata file basename. Obtained from
-    // the small repo sync config.
-    x_repo_submodule_metadata_file_prefix: &str,
-) -> Result<NonRootMPath> {
-    let (mb_sm_parent_dir, sm_basename) = submodule_file_path.0.split_dirname();
-
-    let x_repo_sm_metadata_file: NonRootMPath = NonRootMPath::new(
-        format!(".{x_repo_submodule_metadata_file_prefix}-{sm_basename}")
-            .to_string()
-            .into_bytes(),
-    )?;
-
-    let x_repo_sm_metadata_path = match mb_sm_parent_dir {
-        Some(sm_parent_dir) => sm_parent_dir.join(&x_repo_sm_metadata_file),
-        None => x_repo_sm_metadata_file,
-    };
-    Ok(x_repo_sm_metadata_path)
 }
 
 /**
@@ -805,7 +744,7 @@ fn get_x_repo_submodule_metadata_file_path(
 */
 async fn generate_additional_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
-    source_repo: &'a R,
+    small_repo: &'a R,
     parents: &'a [ChangesetId],
     submodule_path: SubmodulePath,
     submodule_file_content_id: ContentId,
@@ -824,7 +763,7 @@ async fn generate_additional_file_changes<'a, R: Repo>(
 
     let git_submodule_sha1 = get_git_hash_from_submodule_file(
         ctx,
-        source_repo,
+        small_repo,
         submodule_file_content_id,
         &submodule_path,
     )
@@ -833,7 +772,7 @@ async fn generate_additional_file_changes<'a, R: Repo>(
     let metadata_file_size = metadata_file_content.size();
     let metadata_file_content_id = metadata_file_content
         .into_blob()
-        .store(ctx, source_repo.repo_blobstore())
+        .store(ctx, small_repo.repo_blobstore())
         .await?;
 
     // The metadata file will have the same content as the submodule file
@@ -850,35 +789,16 @@ async fn generate_additional_file_changes<'a, R: Repo>(
     // Step 2: Generate the deletions of files/directories that are being
     // replaced by the creation of the submodule expansion.
 
-    let blobstore = source_repo.repo_blobstore();
-    let derived_data = source_repo.repo_derived_data();
-
-    // Get the fsnode entries for the submodule path in the parent commits
-    let fsnode_entries: Vec<(NonRootMPath, FsnodeFile)> = stream::iter(parents)
+    // Get the non submodule files underneath the submodule path in the parent commits
+    let non_submodule_paths: Vec<NonRootMPath> = stream::iter(parents)
         .then(|cs_id| {
-            // These are cheap to clone and we'll do it at most twice, so it
-            // should be fine.
-            cloned!(submodule_path, blobstore, derived_data, ctx);
-            async move {
-                let fsnode_id = derived_data
-                    .derive::<RootFsnodeId>(&ctx, *cs_id)
-                    .await?
-                    .into_fsnode_id();
-
-                // If there is an entry for a **non-GitSubmodule file type**, it
-                // means that in the large repo we're replacing a regular file or
-                // regular directory with the submodule expansion, so we need to
-                // generate deletions for it.
-                // The paths to be deleted, will be all the leaves under the
-                // submodule path.
-                let leaf_stream = fsnode_id
-                    .list_leaf_entries_under(ctx, blobstore, vec![submodule_path.0])
-                    .try_filter(|(_path, fsnode_file)| {
-                        future::ready(*fsnode_file.file_type() != FileType::GitSubmodule)
-                    });
-
-                anyhow::Ok(leaf_stream)
-            }
+            // If there is an entry for a **non-GitSubmodule file type**, it
+            // means that in the large repo we're replacing a regular file or
+            // regular directory with the submodule expansion, so we need to
+            // generate deletions for it.
+            // The paths to be deleted, will be all the leaves under the
+            // submodule path.
+            list_non_submodule_files_under(ctx, small_repo, *cs_id, submodule_path.clone())
         })
         .boxed()
         .try_flatten()
@@ -892,9 +812,9 @@ async fn generate_additional_file_changes<'a, R: Repo>(
     // We don't want this file actually deleted.
 
     all_changes.extend(
-        fsnode_entries
+        non_submodule_paths
             .into_iter()
-            .map(|(path, _)| (path, FileChange::Deletion)),
+            .map(|path| (path, FileChange::Deletion)),
     );
 
     all_changes.extend(expanded_file_changes);

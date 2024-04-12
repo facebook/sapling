@@ -452,7 +452,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
-        self.into_prefix_entries(ctx, blobstore, &[])
+        self.into_prefix_entries_impl(ctx, blobstore, &[], None)
     }
 
     /// Returns an ordered stream over all key-value pairs in the map for which
@@ -462,6 +462,30 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
         prefix: &'a [u8],
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        self.into_prefix_entries_impl(ctx, blobstore, prefix, None)
+    }
+
+    /// Returns an ordered stream over all key-value pairs in the map for which
+    /// the key starts with the given prefix.
+    pub fn into_prefix_entries_after<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        self.into_prefix_entries_impl(ctx, blobstore, prefix, Some(after))
+    }
+
+    /// Returns an ordered stream over all key-value pairs in the map for which
+    /// the key starts with the given prefix.
+    fn into_prefix_entries_impl<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+        after: Option<&'a [u8]>,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         const BOUNDED_TRAVERSAL_SCHEDULED_MAX: NonZeroUsize = nonzero!(256usize);
         const BOUNDED_TRAVERSAL_QUEUED_MAX: NonZeroUsize = nonzero!(256usize);
@@ -474,18 +498,20 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                 (
                     SmallBinary::new(),
                     prefix,
+                    after,
                     LoadableShardedMapV2Node::Inlined(self),
                 ),
             )],
-            move |(mut accumulated_prefix, target_prefix, current_node): (
+            move |(mut accumulated_prefix, target_prefix, target_after, current_node): (
                 SmallBinary,
                 &[u8],
+                Option<&[u8]>,
                 LoadableShardedMapV2Node<Value>,
             )| {
                 async move {
                     let Self {
                         prefix: current_prefix,
-                        value,
+                        mut value,
                         mut children,
                         ..
                     } = current_node.load(ctx, blobstore).await?;
@@ -498,9 +524,31 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                             return Ok(vec![]);
                         }
 
+                        // Trim the current prefix from the resume point and work out if we need to filter
+                        // the children of this node.
+                        if target_after
+                            .is_some_and(|after| after.starts_with(current_prefix.as_slice()))
+                        {
+                            // The value at this point is before the resume point, so it should
+                            // not be output.
+                            value = None;
+                        }
+                        let (byte_after, child_after) = match target_after
+                            .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
+                            .and_then(|after| after.split_first())
+                        {
+                            None if Some(current_prefix.as_slice()) < target_after => {
+                                // The target prefix is after the current prefix, so we should
+                                // not recurse into any children.
+                                return Ok(vec![]);
+                            }
+                            None => (None, None),
+                            Some((byte, rest)) => (Some(*byte), Some(rest)),
+                        };
+
                         // If target_prefix is a prefix of the current node, then
                         // we should output all the values included in this node and
-                        // its descendants.
+                        // its descendants, after any resume point.
 
                         accumulated_prefix.extend(current_prefix);
 
@@ -509,18 +557,26 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                             .map(|value| {
                                 OrderedTraversal::Output((accumulated_prefix.clone(), *value))
                             })
-                            .chain(children.into_iter().map(|(byte, child)| {
+                            .chain(children.into_iter().filter_map(|(byte, child)| {
                                 let mut accumulated_prefix = accumulated_prefix.clone();
                                 accumulated_prefix.push(byte);
-
-                                OrderedTraversal::Recurse(
-                                    child.size(),
-                                    (accumulated_prefix, b"".as_slice(), child),
-                                )
+                                if Some(byte) < byte_after {
+                                    None
+                                } else {
+                                    let child_after = if Some(byte) == byte_after {
+                                        child_after
+                                    } else {
+                                        None
+                                    };
+                                    Some(OrderedTraversal::Recurse(
+                                        child.size(),
+                                        (accumulated_prefix, b"".as_slice(), child_after, child),
+                                    ))
+                                }
                             }))
                             .collect::<Vec<_>>())
                     } else {
-                        // target_prefix is longer than the prefix of the curernt node. This
+                        // target_prefix is longer than the prefix of the current node. This
                         // means that there's at most one child we should recurse to while
                         // ignoring the value of the current node and all other children.
 
@@ -531,8 +587,24 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                                 // as none of the keys in the map can start with the target prefix.
                                 None => return Ok(vec![]),
                             };
+                        let target_after = match target_after
+                            .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
+                        {
+                            Some(remaining_after) => Some(remaining_after),
+                            None if Some(current_prefix.as_slice()) < target_after => {
+                                return Ok(vec![]);
+                            }
+                            None => None,
+                        };
 
                         let (first, rest) = target_prefix.split_first().unwrap();
+                        let child_after = match target_after.and_then(|after| after.split_first()) {
+                            Some((after_first, _)) if first < after_first => return Ok(vec![]),
+                            Some((after_first, after_rest)) if first == after_first => {
+                                Some(after_rest)
+                            }
+                            None | Some(_) => None,
+                        };
 
                         let child = match children.remove(first) {
                             Some(child) => child,
@@ -547,7 +619,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
                         Ok(vec![OrderedTraversal::Recurse(
                             child.size(),
-                            (accumulated_prefix, rest, child),
+                            (accumulated_prefix, rest, child_after, child),
                         )])
                     }
                 }
@@ -821,6 +893,19 @@ mod test {
                 .await
         }
 
+        async fn into_prefix_entries_after(
+            &self,
+            map: ShardedMapV2Node<TestValue>,
+            prefix: impl AsRef<[u8]>,
+            after: impl AsRef<[u8]>,
+        ) -> Result<Vec<(String, u32)>> {
+            map.into_prefix_entries_after(&self.0, &self.1, prefix.as_ref(), after.as_ref())
+                .and_then(
+                    |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
+                )
+                .try_collect::<Vec<_>>()
+                .await
+        }
         async fn check_example_map(&self, map: ShardedMapV2Node<TestValue>) -> Result<()> {
             self.check_sharded_map(map.clone()).await?;
 
@@ -861,6 +946,37 @@ mod test {
             assert_eq!(
                 self.into_prefix_entries(map.clone(), "omu").await?,
                 to_test_vec(&EXAMPLE_ENTRIES[10..12])
+            );
+
+            assert_eq!(
+                self.into_prefix_entries_after(map.clone(), "a", "abacab")
+                    .await?,
+                to_test_vec(&EXAMPLE_ENTRIES[2..8])
+            );
+            assert_eq!(
+                self.into_prefix_entries_after(map.clone(), "abac", "aba")
+                    .await?,
+                to_test_vec(&EXAMPLE_ENTRIES[1..6])
+            );
+            assert_eq!(
+                self.into_prefix_entries_after(map.clone(), "aba", "abalada")
+                    .await?,
+                to_test_vec(&EXAMPLE_ENTRIES[8..8])
+            );
+            assert_eq!(
+                self.into_prefix_entries_after(map.clone(), "om", "ab")
+                    .await?,
+                to_test_vec(&EXAMPLE_ENTRIES[8..12])
+            );
+            assert_eq!(
+                self.into_prefix_entries_after(map.clone(), "omi", "")
+                    .await?,
+                to_test_vec(&EXAMPLE_ENTRIES[8..10])
+            );
+            assert_eq!(
+                self.into_prefix_entries_after(map.clone(), "", "abalaba")
+                    .await?,
+                to_test_vec(&EXAMPLE_ENTRIES[7..12])
             );
 
             assert_eq!(map.rollup_data(), MaxTestValue(12),);

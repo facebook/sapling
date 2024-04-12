@@ -21,8 +21,7 @@ import {
   simulateMessageFromServer,
 } from '../testUtils';
 import {GeneratedStatus} from '../types';
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
-import {act} from 'react-dom/test-utils';
+import {fireEvent, render, screen, waitFor, act} from '@testing-library/react';
 
 /** Generated `num` files, in the repeating pattern: genereated, partially generated, manual */
 async function simulateGeneratedFiles(num: number) {

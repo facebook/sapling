@@ -88,7 +88,6 @@ rust_library(
         "//eden/scm/lib/tracing-collector:tracing-collector",
         "//eden/scm/lib/tracing-reload:tracing-reload",
         "//eden/scm/lib/tracing-sampler:tracing-sampler",
-        "//eden/scm/lib/util:util",
         "//eden/scm/lib/util/atexit:atexit",
         "//eden/scm/lib/util/hgplain:hgplain",
         "//eden/scm/lib/util/nodeipc:nodeipc",

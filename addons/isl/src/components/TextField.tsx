@@ -15,7 +15,6 @@ import {forwardRef, useId} from 'react';
 const styles = stylex.create({
   root: {
     alignItems: 'flex-start',
-    width: '100%',
     gap: 0,
   },
   label: {
@@ -45,17 +44,19 @@ export const TextField = forwardRef(
       children,
       xstyle,
       value,
+      width,
       ...rest
     }: {
       children?: ReactNode;
       xstyle?: stylex.StyleXStyles;
       value?: string;
+      width?: string;
     } & ReactProps<HTMLInputElement>,
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
     const id = useId();
     return (
-      <Column xstyle={styles.root}>
+      <Column xstyle={styles.root} style={{width}}>
         {children && (
           <label htmlFor={id} {...stylex.props(styles.label)}>
             {children}

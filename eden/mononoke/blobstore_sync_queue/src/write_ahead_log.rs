@@ -235,7 +235,7 @@ impl SqlBlobstoreWal {
         del_info.sort_unstable_by_key(|(group, _)| *group);
         stream::iter(
             del_info
-                .group_by(|(group1, _), (group2, _)| group1 == group2)
+                .chunk_by(|(group1, _), (group2, _)| group1 == group2)
                 .map(|batch| async move {
                     let (shard_id, multiplex_id) = batch[0].0;
                     let del_entries: Vec<String> =
@@ -381,7 +381,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
         entry_info.sort_unstable_by_key(|(_, shard_id)| *shard_id);
         stream::iter(
             entry_info
-                .group_by(|(_, shard_id1), (_, shard_id2)| shard_id1 == shard_id2)
+                .chunk_by(|(_, shard_id1), (_, shard_id2)| shard_id1 == shard_id2)
                 .map(|batch| async move {
                     let shard_id: usize = batch[0].1;
                     let ids: Vec<u64> = batch.iter().map(|(id, _)| *id).collect();

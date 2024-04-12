@@ -60,6 +60,7 @@ Show the global options
   --pager
   --profile
   --quiet
+  --reason
   --repository
   --time
   --trace
@@ -104,6 +105,7 @@ Show the options for the "serve" command
   --profile
   --quiet
   --read-only
+  --reason
   --repository
   --stdio
   --style

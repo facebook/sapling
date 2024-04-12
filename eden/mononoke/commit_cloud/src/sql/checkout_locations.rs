@@ -13,8 +13,10 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use sql::Connection;
 
-use crate::BasicOps;
-use crate::SqlCommitCloud;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
+use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceCheckoutLocation {
@@ -86,14 +88,11 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceCheckoutLocation> for SqlCommitCloud {
-    type ExtraArgs = ();
-
+impl Get<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn get(
         &self,
         reponame: String,
         workspace: String,
-        _extra_arg: (),
     ) -> anyhow::Result<Vec<WorkspaceCheckoutLocation>> {
         let rows =
             GetCheckoutLocations::query(&self.connections.read_connection, &reponame, &workspace)
@@ -114,14 +113,16 @@ impl BasicOps<WorkspaceCheckoutLocation> for SqlCommitCloud {
             )
             .collect::<anyhow::Result<Vec<WorkspaceCheckoutLocation>>>()
     }
+}
 
+#[async_trait]
+impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceCheckoutLocation,
-        _extra_arg: (),
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertCheckoutLocations::query(
             &self.connections.write_connection,
             &reponame,
@@ -133,24 +134,20 @@ impl BasicOps<WorkspaceCheckoutLocation> for SqlCommitCloud {
             &data.unixname,
             &data.timestamp,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
-    async fn delete(
-        &self,
-        _reponame: String,
-        _workspace: String,
-        _extra_arg: (),
-    ) -> anyhow::Result<bool> {
-        // Checkout locations delete op is never used
-        unimplemented!("delete is not implemented for checkout locations")
-    }
+}
+
+#[async_trait]
+impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
+    type UpdateArgs = ();
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_arg: (),
-    ) -> anyhow::Result<bool> {
+        _args: Self::UpdateArgs,
+    ) -> anyhow::Result<()> {
         // Checkout locations update op endpoint is never used
         unimplemented!("delete is not implemented for checkout locations")
     }

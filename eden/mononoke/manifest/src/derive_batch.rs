@@ -197,7 +197,7 @@ where
         }
 
         enum FoldState<TreeId, LeafId, Leaf> {
-            Reuse(MPath, Option<MPathElement>, Option<Entry<TreeId, LeafId>>),
+            Reuse(Option<MPathElement>, Option<Entry<TreeId, LeafId>>),
             CreateLeaves(
                 MPath,
                 MPathElement,
@@ -311,7 +311,7 @@ where
                             Ok((FoldState::CreateTrees(MPath::ROOT, None, None, None), vec![]))
                         } else {
                             // No changes, no subentries - just reuse the entry
-                            Ok((FoldState::Reuse(path, name, parent.map(convert_to_intermediate_entry)), vec![]))
+                            Ok((FoldState::Reuse(name, parent.map(convert_to_intermediate_entry)), vec![]))
                         }
                     }
                     .boxed()
@@ -365,7 +365,7 @@ where
                                 .await?;
                                 Ok((name, entry_stack))
                             }
-                            FoldState::Reuse(_, name, maybe_entry) => {
+                            FoldState::Reuse(name, maybe_entry) => {
                                 let entry_stack = EntryStack {
                                     parent: maybe_entry.map(convert_to_intermediate_entry),
                                     values: vec![],

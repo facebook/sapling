@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {FieldConfig} from '../CommitInfoView/types';
 import type {Operation} from '../operations/Operation';
 import type {Dag} from '../previews';
 import type {CommitInfo, DiffId, DiffSummary, Hash} from '../types';
@@ -80,6 +81,8 @@ export interface UICodeReviewProvider {
     commits: Array<CommitInfo>,
     allDiffSummaries: Map<string, DiffSummary>,
   ): Array<CommitInfo>;
+
+  commitMessageFieldsSchema: Array<FieldConfig>;
 
   enableMessageSyncing: boolean;
 

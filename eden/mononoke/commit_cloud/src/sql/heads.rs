@@ -8,15 +8,20 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::BasicOps;
-use crate::SqlCommitCloud;
-#[derive(Clone, Debug, PartialEq)]
+use crate::sql::ops::Delete;
+use crate::sql::ops::Get;
+use crate::sql::ops::Insert;
+use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceHead {
     pub commit: HgChangesetId,
 }
 
-pub struct HeadExtraArgs {
+pub struct DeleteArgs {
     pub removed_commits: Vec<HgChangesetId>,
 }
 
@@ -39,64 +44,66 @@ mononoke_queries! {
 }
 
 #[async_trait]
-impl BasicOps<WorkspaceHead> for SqlCommitCloud {
-    type ExtraArgs = Option<HeadExtraArgs>;
-    async fn get(
-        &self,
-        reponame: String,
-        workspace: String,
-        _extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<Vec<WorkspaceHead>> {
+impl Get<WorkspaceHead> for SqlCommitCloud {
+    async fn get(&self, reponame: String, workspace: String) -> anyhow::Result<Vec<WorkspaceHead>> {
         let rows =
             GetHeads::query(&self.connections.read_connection, &reponame, &workspace).await?;
         rows.into_iter()
             .map(|(_reponame, commit)| Ok(WorkspaceHead { commit }))
             .collect::<anyhow::Result<Vec<WorkspaceHead>>>()
     }
+}
 
-    async fn delete(
-        &self,
-        reponame: String,
-        workspace: String,
-        extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
-        DeleteHead::query(
-            &self.connections.write_connection,
-            &reponame,
-            &workspace,
-            extra_args
-                .expect("No removed commits list provided")
-                .removed_commits
-                .as_slice(),
-        )
-        .await
-        .map(|res| res.affected_rows() > 0)
-    }
-
+#[async_trait]
+impl Insert<WorkspaceHead> for SqlCommitCloud {
     async fn insert(
         &self,
         reponame: String,
         workspace: String,
         data: WorkspaceHead,
-        _extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         InsertHead::query(
             &self.connections.write_connection,
             &reponame,
             &workspace,
             &data.commit,
         )
-        .await
-        .map(|res| res.affected_rows() > 0)
+        .await?;
+        Ok(())
     }
+}
+
+#[async_trait]
+impl Update<WorkspaceHead> for SqlCommitCloud {
+    type UpdateArgs = ();
 
     async fn update(
         &self,
         _reponame: String,
         _workspace: String,
-        _extra_args: Self::ExtraArgs,
-    ) -> anyhow::Result<bool> {
+        _args: Self::UpdateArgs,
+    ) -> anyhow::Result<()> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
+    }
+}
+
+#[async_trait]
+impl Delete<WorkspaceHead> for SqlCommitCloud {
+    type DeleteArgs = DeleteArgs;
+    async fn delete(
+        &self,
+        reponame: String,
+        workspace: String,
+        args: Self::DeleteArgs,
+    ) -> anyhow::Result<()> {
+        DeleteHead::query(
+            &self.connections.write_connection,
+            &reponame,
+            &workspace,
+            args.removed_commits.as_slice(),
+        )
+        .await?;
+        Ok(())
     }
 }

@@ -1500,7 +1500,11 @@ def copy(ui, repo, pats, opts, rename=False):
             continue
         copylist.append((tfn(pat, dest, srcs), srcs))
     if not copylist and not to_amend:
-        raise error.Abort(_("no files to copy"))
+        hint = _("use '--amend --mark' if you want to amend the current commit")
+        raise error.Abort(
+            _("no files to copy"),
+            hint=hint,
+        )
 
     errors = 0
     for targetpath, srcs in copylist:
