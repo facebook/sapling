@@ -12,6 +12,7 @@
 #include <folly/ThreadLocal.h>
 
 #include "eden/common/telemetry/DurationScope.h"
+#include "eden/common/telemetry/Stats.h"
 #include "eden/common/telemetry/StatsGroup.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
@@ -334,10 +335,6 @@ struct ThriftStats : StatsGroup<ThriftStats> {
 
   Duration streamSelectedChangesSince{
       "thrift.StreamingEdenService.streamSelectedChangesSince.streaming_time_us"};
-};
-
-struct TelemetryStats : StatsGroup<TelemetryStats> {
-  Counter subprocessLoggerFailure{"telemetry.subprocess_logger_failure"};
 };
 
 struct OverlayStats : StatsGroup<OverlayStats> {
