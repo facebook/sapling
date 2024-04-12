@@ -25,6 +25,7 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::HintedMatcher;
+use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
 use pathmatcher::PatternKind;
@@ -322,6 +323,11 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
             let m1 = extract_matcher(py, matcher.getattr(py, "m1")?)?;
             let m2 = extract_matcher(py, matcher.getattr(py, "m2")?)?;
             Ok(Arc::new(XorMatcher::new(m1, m2)))
+        }
+        "intersectionmatcher" => {
+            let m1 = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
+            let m2 = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
+            Ok(Arc::new(IntersectMatcher::new(vec![m1, m2])))
         }
         "alwaysmatcher" => Ok(Arc::new(AlwaysMatcher::new())),
         "nevermatcher" => Ok(Arc::new(NeverMatcher::new())),
