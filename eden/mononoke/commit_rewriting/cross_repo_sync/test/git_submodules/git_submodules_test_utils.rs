@@ -71,7 +71,7 @@ use tests_utils::CreateCommitContext;
 use crate::prepare_repos_mapping_and_config;
 use crate::sync_to_master;
 
-const MASTER_BOOKMARK_NAME: &str = "master";
+pub const MASTER_BOOKMARK_NAME: &str = "master";
 
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) repo_a_info: (TestRepo, BTreeMap<String, ChangesetId>),
@@ -265,6 +265,31 @@ pub(crate) async fn build_repo_b(
 
     let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
     let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, DAG).await?;
+
+    Ok((repo, cs_map))
+}
+
+/// Builds repo B, which will be used as a submodule dependency of repo A.
+pub(crate) async fn build_repo_b_with_c_submodule(
+    fb: FacebookInit,
+    submodule_c_git_hash: GitSha1,
+    submodule_path: &NonRootMPath,
+) -> Result<(TestRepo, BTreeMap<String, ChangesetId>)> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let dag = format!(
+        r#"
+        B_A-B_B
+
+        # message: B_A "first commit in submodule B"
+        # message: B_B "second commit in submodule B"
+        # modify: B_B "{submodule_path}" git-submodule &{submodule_c_git_hash}
+        # bookmark: B_B master
+        "#
+    );
+
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
+    let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, dag.as_str()).await?;
 
     Ok((repo, cs_map))
 }
