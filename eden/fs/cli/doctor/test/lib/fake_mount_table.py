@@ -57,10 +57,14 @@ class FakeMountTable(mtab.MountTable):
             )
 
     def add_stale_mount(
-        self, path: str, uid: Optional[int] = None, dev: Optional[int] = None
+        self,
+        path: str,
+        uid: Optional[int] = None,
+        dev: Optional[int] = None,
+        vfstype: str = "fuse",
     ) -> None:
         # Stale mounts are always edenfs FUSE mounts
-        self.add_mount(path, uid=uid, dev=dev)
+        self.add_mount(path, uid=uid, dev=dev, vfstype=vfstype)
         # Stale mounts still successfully respond to stat() calls for the root
         # directory itself, but fail stat() calls to any other path with
         # ENOTCONN
