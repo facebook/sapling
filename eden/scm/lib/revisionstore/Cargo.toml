@@ -29,6 +29,7 @@ hgtime = { version = "0.1.0", path = "../hgtime" }
 http = "0.2"
 http-client = { version = "0.1.0", path = "../http-client" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
+itertools = "0.11.0"
 lfs_protocol = { version = "0.1.0", path = "../../../mononoke/lfs_protocol" }
 lz4-pyframe = { version = "0.1.0", path = "../lz4-pyframe" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
