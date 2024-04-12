@@ -120,6 +120,9 @@ def _uploadtrees(repo, trees):
 
 def _uploadchangesets(repo, changesets, mutations):
     """Upload changesets"""
+    if not repo.ui.configbool("experimental", "upload-mutations", True):
+        mutations = []
+
     uploaded, failed = [], []
     if not changesets:
         return uploaded, failed
