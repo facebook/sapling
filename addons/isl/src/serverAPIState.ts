@@ -285,6 +285,13 @@ export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
   true /* read-only */,
 );
 
+export const authorString = configBackedAtom<string | null>(
+  'ui.username',
+  null,
+  true /* read-only */,
+  true /* use raw value */,
+);
+
 export const isFetchingCommits = atom(false);
 registerDisposable(
   isFetchingCommits,

@@ -554,6 +554,7 @@ export const allConfigNames = [
   'github.preferred_submit_command',
   'isl.open-file-cmd',
   'isl.generated-files-regex',
+  'ui.username',
 ] as const;
 
 /** sl configs read by ISL */

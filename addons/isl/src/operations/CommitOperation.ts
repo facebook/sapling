@@ -18,6 +18,7 @@ import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
+import {authorString} from '../serverAPIState';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -115,8 +116,9 @@ export class CommitOperation extends Operation {
     // and update bookmarks accordingly.
     const hash = `OPTIMISTIC_COMMIT_${base}`;
     const description = this.message.slice(title.length);
+    const author = readAtom(authorString);
     const info = DagCommitInfo.fromCommitInfo({
-      author: baseInfo?.author ?? '',
+      author: author ?? baseInfo?.author ?? '',
       description,
       title,
       bookmarks: [],
