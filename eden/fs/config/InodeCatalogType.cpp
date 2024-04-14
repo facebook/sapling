@@ -20,7 +20,7 @@ constexpr auto inodeCatalogTypeStr = [] {
   return mapping;
 }();
 
-}
+} // namespace
 
 folly::Expected<InodeCatalogType, std::string> inodeCatalogTypeFromString(
     std::string_view value) {

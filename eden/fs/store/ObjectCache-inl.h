@@ -344,8 +344,8 @@ template <typename ObjectType, ObjectCacheFlavor Flavor>
 void ObjectCache<ObjectType, Flavor>::evictItem(
     State& state,
     const CacheItem& item) noexcept {
-  XLOG(DBG6) << "ObjectCache::evictItem "
-             << "evicting " << item.id << " generation=" << item.generation;
+  XLOG(DBG6) << "ObjectCache::evictItem " << "evicting " << item.id
+             << " generation=" << item.generation;
   auto size = item.object->getSizeBytes();
   // TODO: Releasing this ObjectPtr here can run arbitrary deleters which
   // could, in theory, try to reacquire the ObjectCache's lock. The object

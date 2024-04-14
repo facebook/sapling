@@ -168,8 +168,8 @@ SaplingNativeBackingStore::getBlobMetadata(NodeId node, bool local) {
   if (local) {
     fetch_mode = FetchMode::LocalOnly;
   }
-  XLOG(DBG7) << "Importing blob metadata"
-             << " node=" << folly::hexlify(node) << " from hgcache";
+  XLOG(DBG7) << "Importing blob metadata" << " node=" << folly::hexlify(node)
+             << " from hgcache";
   return folly::makeTryWith([&] {
     auto metadata = sapling_backingstore_get_file_aux(
         *store_.get(),

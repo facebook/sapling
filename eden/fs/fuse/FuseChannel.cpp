@@ -657,9 +657,9 @@ FuseChannel::InvalidationEntry::~InvalidationEntry() {
 
 FuseChannel::InvalidationEntry::
     InvalidationEntry(InvalidationEntry&& other) noexcept(
-        std::is_nothrow_move_constructible_v<PathComponent>&&
-            std::is_nothrow_move_constructible_v<folly::Promise<folly::Unit>>&&
-                std::is_nothrow_move_constructible_v<DataRange>)
+        std::is_nothrow_move_constructible_v<PathComponent> &&
+        std::is_nothrow_move_constructible_v<folly::Promise<folly::Unit>> &&
+        std::is_nothrow_move_constructible_v<DataRange>)
     : type(other.type), inode(other.inode) {
   switch (type) {
     case InvalidationType::INODE:
