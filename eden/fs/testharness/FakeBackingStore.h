@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -22,6 +23,7 @@
 namespace facebook::eden {
 
 class FakeTreeBuilder;
+class ServerState;
 
 /**
  * A BackingStore implementation for test code.
@@ -31,6 +33,7 @@ class FakeBackingStore final : public BackingStore {
   struct TreeEntryData;
 
   explicit FakeBackingStore(
+      std::shared_ptr<ServerState> serverState = nullptr,
       std::optional<std::string> blake3Key = std::nullopt);
   ~FakeBackingStore() override;
 
@@ -195,6 +198,7 @@ class FakeBackingStore final : public BackingStore {
       ObjectId hash,
       Tree::container&& sortedEntries);
 
+  std::shared_ptr<ServerState> serverState_;
   folly::Synchronized<Data> data_;
   std::optional<std::string> blake3Key_;
 };

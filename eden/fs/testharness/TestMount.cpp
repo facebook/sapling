@@ -88,7 +88,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
-  // This sets both testDir_, config_, localStore_, and backingStore_
+  // This sets both testDir_, config_, and localStore_
   initTestDirectory(caseSensitivity);
 
   testConfigSource_ =
@@ -126,6 +126,8 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       nullptr,
       make_shared<CommandNotifier>(reloadableConfig),
       /*enableFaultInjection=*/true);
+
+  backingStore_ = make_shared<FakeBackingStore>(serverState_);
 }
 
 TestMount::TestMount(
@@ -338,9 +340,8 @@ void TestMount::initTestDirectory(CaseSensitivity caseSensitivity) {
   // Create the CheckoutConfig using our newly-populated client directory
   config_ = CheckoutConfig::loadFromClientDirectory(mountPath, clientDirectory);
 
-  // Create localStore_ and backingStore_
+  // Create localStore_
   localStore_ = make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>());
-  backingStore_ = make_shared<FakeBackingStore>();
 
   stats_ = makeRefPtr<EdenStats>();
 }

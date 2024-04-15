@@ -66,7 +66,7 @@ struct ObjectStoreTest : ::testing::Test {
     configWithBlake3Key->blake3Key.setStringValue(
         kBlake3Key, ConfigVariables(), ConfigSourceType::UserConfig);
     fakeBackingStoreWithKeyedBlake3 =
-        std::make_shared<FakeBackingStore>(std::string(kBlake3Key));
+        std::make_shared<FakeBackingStore>(nullptr, std::string(kBlake3Key));
     backingStoreWithKeyedBlake3 =
         std::make_shared<LocalStoreCachedBackingStore>(
             fakeBackingStoreWithKeyedBlake3,

@@ -185,6 +185,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         ":test_util",
         "//eden/common/utils:enum",
+        "//eden/fs/inodes:inodes",
         "//folly:map_util",
         "//folly/futures:core",
         "//folly/logging:logging",

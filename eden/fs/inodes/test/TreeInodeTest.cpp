@@ -782,15 +782,29 @@ TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
 
   auto bar = mount.getFileInode("foo/bar.txt"_relpath);
 
-  // Intentionally drop the result future because we want to trigger the
+  auto executor = mount.getServerExecutor().get();
+
+  // Inject a fault in the getBlobMetadata method because we want to trigger the
   // prefetch logic without actually fetching the metadata for `bar`.
-  (void)bar->stat(ObjectFetchContext::getNullContext());
+  mount.getServerState()->getFaultInjector().injectBlock(
+      "getBlobMetadata", ".*");
+
+  auto statFuture =
+      bar->stat(ObjectFetchContext::getNullContext()).semi().via(executor);
 
   mount.drainServerExecutor();
+
+  EXPECT_FALSE(statFuture.isReady());
 
   auto metadata = mount.getBackingStore()->getMetadataLookups();
   EXPECT_EQ(1, metadata.size());
   EXPECT_EQ(metadata.front().getBytes(), barObjectId.getBytes());
+
+  // Unblock stat
+  mount.getServerState()->getFaultInjector().unblock("getBlobMetadata", ".*");
+
+  auto waitedStatFuture = std::move(statFuture).waitVia(executor);
+  EXPECT_TRUE(waitedStatFuture.isReady());
 }
 
 TEST(TreeInode, readdir_followed_by_stat_on_child_prefetches_parents_children) {
