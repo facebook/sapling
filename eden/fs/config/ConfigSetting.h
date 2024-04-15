@@ -268,7 +268,7 @@ class ConfigSetting final : private ConfigSettingBase {
    *  Get the index of the highest priority source that is populated.
    */
   size_t getHighestPriorityIdx() const {
-    getIdx(getHighestPriorityConfigSource());
+    return getIdx(getHighestPriorityConfigSource());
   }
 
   /**
