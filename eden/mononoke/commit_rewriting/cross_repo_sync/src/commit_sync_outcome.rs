@@ -422,7 +422,7 @@ impl<R: Repo> fmt::Debug for DesiredRelationship<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::AncestorOf(cs_id, _) => {
-                write!(f, "DesiredRelationship::AncsetorOf({})", cs_id.0)
+                write!(f, "DesiredRelationship::AncestorOf({})", cs_id.0)
             }
             Self::DescendantOf(cs_id, _) => {
                 write!(f, "DesiredRelationship::DescendantOf({})", cs_id.0)
