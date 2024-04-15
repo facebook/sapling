@@ -863,7 +863,7 @@ class Submodule:
             self._pullraw(repo, hex(node))
 
     def pullhead(self, repo):
-        self._pullraw("HEAD")
+        self._pullraw(repo, "HEAD")
 
     def _pullraw(self, repo, refspec_lhs):
         repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
