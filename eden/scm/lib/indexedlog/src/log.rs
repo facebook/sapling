@@ -1715,6 +1715,10 @@ impl<'a> LogLookupIter<'a> {
     pub fn into_vec(self) -> crate::Result<Vec<&'a [u8]>> {
         self.collect()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner_iter.is_empty()
+    }
 }
 
 impl<'a> Iterator for LogIter<'a> {

@@ -840,6 +840,17 @@ impl<'a> RotateLogLookupIter<'a> {
             }
         }
     }
+
+    /// Consume iterator, returning whether the iterator has any data.
+    pub fn is_empty(mut self) -> crate::Result<bool> {
+        while !self.end {
+            if !self.inner_iter.is_empty() {
+                return Ok(false);
+            }
+            self.load_next_log()?;
+        }
+        Ok(true)
+    }
 }
 
 impl<'a> Iterator for RotateLogLookupIter<'a> {
@@ -1252,6 +1263,35 @@ mod tests {
         // (on Windows, 'meta' can be deleted, while mmap-ed files cannot)
         assert_eq!(lookup(&rotate2, b"a"), vec![b"a2"]);
         assert_eq!(iter(&rotate2), vec![b"a2"]);
+    }
+
+    #[test]
+    fn test_is_empty() -> crate::Result<()> {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(2)
+            .max_log_count(4)
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)]);
+
+        let mut rotate = open_opts.open(&dir)?;
+        rotate.append(b"a1")?;
+        assert_eq!(rotate.sync()?, 1);
+
+        rotate.append(b"a2")?;
+        assert_eq!(rotate.sync()?, 2);
+
+        rotate.append(b"b1")?;
+        assert_eq!(rotate.sync()?, 3);
+
+        assert_eq!(lookup(&rotate, b"a"), vec![b"a2", b"a1"]);
+        assert_eq!(lookup(&rotate, b"b"), vec![b"b1"]);
+
+        assert!(!rotate.lookup(0, b"a".to_vec())?.is_empty()?);
+        assert!(!rotate.lookup(0, b"b".to_vec())?.is_empty()?);
+        assert!(rotate.lookup(0, b"c".to_vec())?.is_empty()?);
+
+        Ok(())
     }
 
     #[test]
