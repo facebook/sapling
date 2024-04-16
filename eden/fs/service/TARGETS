@@ -100,7 +100,6 @@ cpp_binary(
         "//common/services/cpp:build_values",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
-        "//eden/fs/store:store",
         "//eden/fs/telemetry:activity_recorder",
         "//eden/fs/telemetry:hive_logger",
         "//eden/fs/telemetry/facebook:logview_util",

@@ -22,7 +22,6 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -184,8 +183,7 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
   // TODO: this code caches the root tree, but doesn't have similar code to look
   // it up This should be investigated and either changed or the reasoning
   // should be documented
-  return getUnderlyingBackingStore()
-      ->getRootTree(rootId, context)
+  return backingStore_->getRootTree(rootId, context)
       .thenValue([self = shared_from_this(), localStore = localStore_](
                      BackingStore::GetRootTreeResult result) {
         if (self->shouldCacheOnDisk(LocalStoreCachingPolicy::Anything)) {
@@ -290,8 +288,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                   std::move(tree), ObjectFetchContext::FromDiskCache};
             }
 
-            return ImmediateFuture{
-                self->getUnderlyingBackingStore()->getTree(id, context)}
+            return ImmediateFuture{self->backingStore_->getTree(id, context)}
                 // TODO: This is a good use for toUnsafeFuture to ensure the
                 // tree is cached even if the resulting future is never
                 // consumed.
@@ -396,8 +393,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
 
             // If we didn't find the blob in the LocalStore, then fetch it
             // from the BackingStore.
-            return ImmediateFuture{
-                self->getUnderlyingBackingStore()->getBlob(id, context)}
+            return ImmediateFuture{self->backingStore_->getBlob(id, context)}
                 // TODO: This is a good use for toUnsafeFuture to ensure the
                 // blob is cached even if the resulting future is never
                 // consumed.
@@ -535,7 +531,7 @@ ObjectStore::getBlobMetadataImpl(
             }
 
             return ImmediateFuture{
-                self->getUnderlyingBackingStore()->getBlobMetadata(id, context)}
+                self->backingStore_->getBlobMetadata(id, context)}
                 .thenValue(
                     [self, id, context = context.copy()](
                         BackingStore::GetBlobMetaResult result)
@@ -675,16 +671,6 @@ bool ObjectStore::shouldCacheOnDisk(LocalStoreCachingPolicy object) const {
   return (
       folly::to_underlying(localStoreCachingPolicy_) &
       folly::to_underlying(object));
-}
-
-const std::shared_ptr<BackingStore>& ObjectStore::getUnderlyingBackingStore()
-    const {
-  if (auto* localStoreCachedBackingStore =
-          dynamic_cast<LocalStoreCachedBackingStore*>(backingStore_.get())) {
-    return localStoreCachedBackingStore->getBackingStore();
-  } else {
-    return backingStore_;
-  }
 }
 
 } // namespace facebook::eden

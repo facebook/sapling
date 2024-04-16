@@ -13,7 +13,6 @@
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
-#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -47,13 +46,8 @@ struct ObjectStoreTest : ::testing::Test {
     stats = makeRefPtr<EdenStats>();
     localStore = std::make_shared<MemoryLocalStore>(stats.copy());
     fakeBackingStore = std::make_shared<FakeBackingStore>();
-    backingStore = std::make_shared<LocalStoreCachedBackingStore>(
-        fakeBackingStore,
-        localStore,
-        stats.copy(),
-        ObjectStore::LocalStoreCachingPolicy::Anything);
     objectStore = ObjectStore::create(
-        backingStore,
+        fakeBackingStore,
         localStore,
         ObjectStore::LocalStoreCachingPolicy::Anything,
         treeCache,
@@ -69,14 +63,8 @@ struct ObjectStoreTest : ::testing::Test {
         kBlake3Key, ConfigVariables(), ConfigSourceType::UserConfig);
     fakeBackingStoreWithKeyedBlake3 =
         std::make_shared<FakeBackingStore>(nullptr, std::string(kBlake3Key));
-    backingStoreWithKeyedBlake3 =
-        std::make_shared<LocalStoreCachedBackingStore>(
-            fakeBackingStoreWithKeyedBlake3,
-            localStore,
-            stats.copy(),
-            ObjectStore::LocalStoreCachingPolicy::Anything);
     objectStoreWithBlake3Key = ObjectStore::create(
-        backingStoreWithKeyedBlake3,
+        fakeBackingStoreWithKeyedBlake3,
         localStore,
         ObjectStore::LocalStoreCachingPolicy::Anything,
         treeCache,
@@ -119,7 +107,6 @@ struct ObjectStoreTest : ::testing::Test {
       loggingContext.as<ObjectFetchContext>();
   std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStore;
-  std::shared_ptr<BackingStore> backingStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStoreWithKeyedBlake3;
   std::shared_ptr<BackingStore> backingStoreWithKeyedBlake3;
   std::shared_ptr<TreeCache> treeCache;
@@ -311,7 +298,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   objectStore->getBlobSize(id, context);
   // Clear backing store
   objectStore = ObjectStore::create(
-      backingStore,
+      fakeBackingStore,
       localStore,
       ObjectStore::LocalStoreCachingPolicy::Anything,
       treeCache,

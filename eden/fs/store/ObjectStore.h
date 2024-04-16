@@ -358,15 +358,6 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
-   * This is a temporary helper function to unwrap a
-   * LocalStoreCachedBackingStore and get its underlying BackingStore in order
-   * to avoid double caching during the removal of the
-   * LocalStoreCachedBackingStore class. This can be removed once we've finished
-   * the migration.
-   */
-  const std::shared_ptr<BackingStore>& getUnderlyingBackingStore() const;
-
-  /**
    * During status and checkout, it's common to look up the SHA-1 for a given
    * blob ID. To avoid needing to hit RocksDB, keep a bounded in-memory cache of
    * the sizes and SHA-1s of blobs we've seen. Each node is somewhere around 50

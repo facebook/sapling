@@ -133,10 +133,12 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /**
      * The retrieved blob metadata.
      *
-     * When the BackingStore is wrapped in a LocalStoreCachedBackingStore,
-     * setting this to a nullptr will make the LocalStoreCachedBackingStore
-     * fallback to fetching the blob, computing the blob metadata from it and
-     * store it in the LocalStore.
+     * If either ObjectStore::LocalStoreCachingPolicy::BlobMetadata is not set
+     * or the blob metadata was not found in the LocalStore, setting this to a
+     * nullptr will make ObjectStore::getBlobMetadata fallback to fetching
+     * the blob, either from the LocalStore or from the BackingStore, to compute
+     * the blob metadata. It also may store the fetched blob and calculated blob
+     * metadata in the LocalStore, depending on the current caching policy.
      */
     BlobMetadataPtr blobMeta;
     /** The fetch origin of the blob metadata. */

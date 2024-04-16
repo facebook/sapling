@@ -74,7 +74,6 @@
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
@@ -2002,21 +2001,9 @@ EdenServer::getHgQueuedBackingStores() {
   {
     auto lockedStores = this->backingStores_.rlock();
     for (const auto& entry : *lockedStores) {
-      // TODO: remove these dynamic casts in favor of a QueryInterface method
       if (auto hgQueuedBackingStore =
               std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
         hgBackingStores.emplace(std::move(hgQueuedBackingStore));
-      } else if (
-          auto localStoreCachedBackingStore =
-              std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
-                  entry.second)) {
-        auto inner_store = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-            localStoreCachedBackingStore->getBackingStore());
-        if (inner_store) {
-          // dynamic_pointer_cast returns a copy of the shared pointer, so it is
-          // safe to be moved
-          hgBackingStores.emplace(std::move(inner_store));
-        }
       }
     }
   }

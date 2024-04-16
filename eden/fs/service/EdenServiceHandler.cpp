@@ -74,7 +74,6 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/PathLoader.h"
@@ -1457,27 +1456,17 @@ std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
     AbsolutePathPiece mountPath) {
   std::shared_ptr<HgQueuedBackingStore> hgBackingStore{nullptr};
 
-  // TODO: remove these dynamic casts in favor of a QueryInterface method
-  // BackingStore -> LocalStoreCachedBackingStore
-  auto localStoreCachedBackingStore =
-      std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(backingStore);
-  if (!localStoreCachedBackingStore) {
+  // If FilteredFS is enabled, we'll see a FilteredBackingStore first
+  auto filteredBackingStore =
+      std::dynamic_pointer_cast<FilteredBackingStore>(backingStore);
+  if (filteredBackingStore) {
+    // FilteredBackingStore -> HgQueuedBackingStore
+    hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+        filteredBackingStore->getBackingStore());
+  } else {
     // BackingStore -> HgQueuedBackingStore
     hgBackingStore =
         std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
-  } else {
-    // If FilteredFS is enabled, we'll see a FilteredBackingStore next
-    auto filteredBackingStore = std::dynamic_pointer_cast<FilteredBackingStore>(
-        localStoreCachedBackingStore->getBackingStore());
-    if (filteredBackingStore) {
-      // FilteredBackingStore -> HgQueuedBackingStore
-      hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-          filteredBackingStore->getBackingStore());
-    } else {
-      // LocalStoreCachedBackingStore -> HgQueuedBackingStore
-      hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-          localStoreCachedBackingStore->getBackingStore());
-    }
   }
 
   if (!hgBackingStore) {
@@ -3993,21 +3982,11 @@ void EdenServiceHandler::stopRecordingBackingStoreFetch(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   for (const auto& backingStore : server_->getBackingStores()) {
     auto filePaths = backingStore->stopRecordingFetch();
+
     // recording is only implemented for HgQueuedBackingStore at the moment
-    // TODO: remove these dynamic casts in favor of a QueryInterface method
-    // BackingStore -> LocalStoreCachedBackingStore
-    std::shared_ptr<HgQueuedBackingStore> hgBackingStore{nullptr};
-    auto localStoreCachedBackingStore =
-        std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(backingStore);
-    if (!localStoreCachedBackingStore) {
-      // BackingStore -> HgQueuedBackingStore
-      hgBackingStore =
-          std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
-    } else {
-      // LocalStoreCachedBackingStore -> HgQueuedBackingStore
-      hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-          localStoreCachedBackingStore->getBackingStore());
-    }
+    // BackingStore -> HgQueuedBackingStore
+    auto hgBackingStore =
+        std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
     if (hgBackingStore) {
       (*results.fetchedFilePaths_ref())["HgQueuedBackingStore"].insert(
           filePaths.begin(), filePaths.end());
