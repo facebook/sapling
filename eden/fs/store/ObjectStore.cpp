@@ -470,7 +470,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
   deprioritizeWhenFetchHeavy(*fetchContext);
 
   return ImmediateFuture<BackingStore::GetBlobMetaResult>{
-      backingStore_->getBlobMetadata(id, fetchContext)}
+      getBlobMetadataImpl(id, fetchContext)}
       .thenValue(
           [self = shared_from_this(),
            fetchContext = fetchContext.copy(),
@@ -510,6 +510,92 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
               return *metadata;
             }
           });
+}
+
+folly::SemiFuture<BackingStore::GetBlobMetaResult>
+ObjectStore::getBlobMetadataImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  auto localStoreGetBlobMetadata =
+      ImmediateFuture<BlobMetadataPtr>{std::in_place, nullptr};
+  if (shouldCacheOnDisk(ObjectStore::LocalStoreCachingPolicy::BlobMetadata)) {
+    localStoreGetBlobMetadata = localStore_->getBlobMetadata(id);
+  }
+
+  return std::move(localStoreGetBlobMetadata)
+      .thenValue(
+          [self = shared_from_this(), id = id, context = context.copy()](
+              BlobMetadataPtr metadata) mutable
+          -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
+            if (metadata) {
+              self->stats_->increment(
+                  &ObjectStoreStats::getBlobMetadataFromLocalStore);
+              return BackingStore::GetBlobMetaResult{
+                  std::move(metadata), ObjectFetchContext::FromDiskCache};
+            }
+
+            return ImmediateFuture{
+                self->getUnderlyingBackingStore()->getBlobMetadata(id, context)}
+                .thenValue(
+                    [self, id, context = context.copy()](
+                        BackingStore::GetBlobMetaResult result)
+                        -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
+                      if (result.blobMeta &&
+                          result.blobMeta->sha1 !=
+                              kZeroHash) { // from eden/fs/model/Hash.cpp
+                        if (result.origin ==
+                            ObjectFetchContext::Origin::FromDiskCache) {
+                          self->stats_->increment(
+                              &ObjectStoreStats::
+                                  getLocalBlobMetadataFromBackingStore);
+                        } else {
+                          self->stats_->increment(
+                              &ObjectStoreStats::
+                                  getBlobMetadataFromBackingStore);
+                        }
+
+                        return result;
+                      }
+
+                      return ImmediateFuture{self->getBlobImpl(id, context)}
+                          .thenValue([self,
+                                      backingStoreResult = std::move(result)](
+                                         BackingStore::GetBlobResult result) {
+                            if (result.blob) {
+                              self->stats_->increment(
+                                  &ObjectStoreStats::getBlobMetadataFromBlob);
+
+                              std::optional<Hash32> blake3;
+                              if (backingStoreResult.blobMeta &&
+                                  backingStoreResult.blobMeta->blake3
+                                      .has_value()) {
+                                blake3 =
+                                    backingStoreResult.blobMeta->blake3.value();
+                              }
+
+                              return BackingStore::GetBlobMetaResult{
+                                  std::make_shared<BlobMetadata>(
+                                      Hash20::sha1(result.blob->getContents()),
+                                      std::move(blake3),
+                                      result.blob->getSize()),
+                                  result.origin};
+                            }
+
+                            return BackingStore::GetBlobMetaResult{
+                                nullptr,
+                                ObjectFetchContext::Origin::NotFetched};
+                          });
+                    })
+                .thenValue([self, id](BackingStore::GetBlobMetaResult result) {
+                  if (result.blobMeta &&
+                      self->shouldCacheOnDisk(
+                          ObjectStore::LocalStoreCachingPolicy::BlobMetadata)) {
+                    self->localStore_->putBlobMetadata(id, *result.blobMeta);
+                  }
+                  return result;
+                });
+          })
+      .semi();
 }
 
 ImmediateFuture<uint64_t> ObjectStore::getBlobSize(

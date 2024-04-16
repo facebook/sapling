@@ -353,6 +353,10 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
+  folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadataImpl(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * This is a temporary helper function to unwrap a
    * LocalStoreCachedBackingStore and get its underlying BackingStore in order
