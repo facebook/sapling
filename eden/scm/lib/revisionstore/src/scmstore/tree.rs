@@ -140,14 +140,11 @@ impl TreeStore {
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
             TreeMetadataMode::Never => false,
-            TreeMetadataMode::OptIn => fetch_mode == FetchMode::AllowRemotePrefetch,
+            TreeMetadataMode::OptIn => fetch_mode.contains(FetchMode::PREFETCH),
         };
 
-        let (fetch_local, fetch_remote) = match fetch_mode {
-            FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => (true, true),
-            FetchMode::RemoteOnly => (false, true),
-            FetchMode::LocalOnly => (true, false),
-        };
+        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
+        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
 
         tracing::debug!(
             ?fetch_mode,

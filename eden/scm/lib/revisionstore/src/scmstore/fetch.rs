@@ -111,14 +111,14 @@ impl<T: StoreValue> CommonFetchState<T> {
         for key in self.pending.into_iter() {
             self.found.remove(&key);
             incomplete.entry(key).or_insert_with(|| {
-                let msg = match self.mode {
-                    FetchMode::LocalOnly => "not found locally and not contacting server",
+                let msg = if self.mode.is_local() {
+                    "not found locally and not contacting server"
+                } else if self.mode.is_remote() {
                     // This should really never happen. If a key fails to fetch, it should've been
                     // associated with a keyed error and put in incomplete already.
-                    FetchMode::RemoteOnly => "server did not provide content",
-                    FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => {
-                        "server did not provide content"
-                    }
+                    "server did not provide content"
+                } else {
+                    "server did not provide content"
                 };
                 vec![anyhow!("{}", msg)]
             });

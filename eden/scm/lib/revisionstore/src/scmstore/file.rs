@@ -161,6 +161,7 @@ impl FileStore {
 
         debug!(
             ?attrs,
+            ?fetch_mode,
             num_keys = state.pending_len(),
             first_keys = "fetching"
         );
@@ -178,11 +179,8 @@ impl FileStore {
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
-        let (fetch_local, fetch_remote) = match fetch_mode {
-            FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => (true, true),
-            FetchMode::RemoteOnly => (false, true),
-            FetchMode::LocalOnly => (true, false),
-        };
+        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
+        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
 
         let process_func = move || {
             let start_instant = Instant::now();

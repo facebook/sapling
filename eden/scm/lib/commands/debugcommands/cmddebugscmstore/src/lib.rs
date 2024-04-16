@@ -111,7 +111,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     let fetch_mode = FetchMode::deserialize(StringDeserializer::<value::Error>::new(
         ctx.opts
             .fetch_mode
-            .unwrap_or_else(|| "allow_remote".to_string()),
+            .unwrap_or_else(|| "LOCAL | REMOTE".to_string()),
     ))?;
 
     match mode {

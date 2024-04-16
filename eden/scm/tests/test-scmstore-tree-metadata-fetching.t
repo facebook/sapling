@@ -156,7 +156,7 @@ Fetch a tree with children metadata:
   )
 
 We should also have aux data for the files available as a side effect of tree fetching:
-  $ hg debugscmstore -r $A dir/file1 --mode=file --fetch-mode=local_only
+  $ hg debugscmstore -r $A dir/file1 --mode=file --fetch-mode=LOCAL
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(
@@ -177,7 +177,7 @@ We should also have aux data for the files available as a side effect of tree fe
 
 Fetch mode can also trigger tree metadata fetch:
 
-  $ hg debugscmstore -r $A dir --mode=tree --fetch-mode=allow_remote_prefetch
+  $ hg debugscmstore -r $A dir --mode=tree --fetch-mode='LOCAL|REMOTE|PREFETCH'
   Successfully fetched tree: (
       Key {
           path: RepoPathBuf(
