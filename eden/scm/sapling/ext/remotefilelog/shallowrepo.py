@@ -133,19 +133,21 @@ def wraprepo(repo) -> None:
                     mfctx = ctx.manifestctx()
                     mf = mfctx.read()
 
-                    if base is None and hasattr(mf, "walkfiles"):
-                        # If there is no base, skip diff and use more efficient walk.
-                        files.update(mf.walkfiles(matcher))
-                    else:
-                        for path, (new, _old) in mf.diff(basemf, matcher).items():
-                            if new[0]:
-                                files.add((path, new[0]))
+                    with progress.spinner(self.ui, _("computing files")):
+                        if base is None and hasattr(mf, "walkfiles"):
+                            # If there is no base, skip diff and use more efficient walk.
+                            files.update(mf.walkfiles(matcher))
+                        else:
+                            for path, (new, _old) in mf.diff(basemf, matcher).items():
+                                if new[0]:
+                                    files.add((path, new[0]))
 
                     prog.value += 1
 
             if files:
-                results = [(path, hex(fnode)) for (path, fnode) in files]
-                self.fileservice.prefetch(results, fetchhistory=False)
+                with progress.spinner(self.ui, _("ensuring files fetched")):
+                    results = [(path, hex(fnode)) for (path, fnode) in files]
+                    self.fileservice.prefetch(results, fetchhistory=False)
 
     repo.__class__ = shallowrepository
 
