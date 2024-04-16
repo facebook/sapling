@@ -9,6 +9,7 @@
 
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/ObjectStore.h"
 
 namespace facebook::eden {
 
@@ -33,23 +34,11 @@ class LocalStoreCachedBackingStore
     : public BackingStore,
       public std::enable_shared_from_this<LocalStoreCachedBackingStore> {
  public:
-  /**
-   * Policy describing the kind of data cached in the LocalStore.
-   */
-  enum class CachingPolicy {
-    NoCaching = 0,
-    Trees = 1 << 0,
-    Blobs = 1 << 1,
-    BlobMetadata = 1 << 2,
-    TreesAndBlobMetadata = Trees | BlobMetadata,
-    Everything = Trees | Blobs | BlobMetadata,
-  };
-
   LocalStoreCachedBackingStore(
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
-      CachingPolicy cachingPolicy);
+      ObjectStore::LocalStoreCachingPolicy cachingPolicy);
   ~LocalStoreCachedBackingStore() override;
 
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
@@ -114,12 +103,12 @@ class LocalStoreCachedBackingStore
   /**
    * Test if the object should be cached in the LocalStore.
    */
-  bool shouldCache(CachingPolicy object) const;
+  bool shouldCache(ObjectStore::LocalStoreCachingPolicy object) const;
 
   std::shared_ptr<BackingStore> backingStore_;
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
-  CachingPolicy cachingPolicy_;
+  ObjectStore::LocalStoreCachingPolicy cachingPolicy_;
 };
 
 } // namespace facebook::eden

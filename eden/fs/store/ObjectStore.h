@@ -34,6 +34,7 @@ class EdenStats;
 class ProcessInfoCache;
 class StructuredLogger;
 class TreeCache;
+class LocalStore;
 enum class ObjectComparison : uint8_t;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
@@ -79,8 +80,22 @@ class ObjectStore : public IObjectStore,
                     public ObjectIdCodec,
                     public std::enable_shared_from_this<ObjectStore> {
  public:
+  /**
+   * Policy describing the kind of data cached in the LocalStore.
+   */
+  enum class LocalStoreCachingPolicy {
+    NoCaching = 0,
+    Trees = 1 << 0,
+    Blobs = 1 << 1,
+    BlobMetadata = 1 << 2,
+    TreesAndBlobMetadata = Trees | BlobMetadata,
+    Everything = Trees | Blobs | BlobMetadata,
+  };
+
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<BackingStore> backingStore,
+      std::shared_ptr<LocalStore> localStore,
+      LocalStoreCachingPolicy localStoreCachingPolicy,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -294,6 +309,8 @@ class ObjectStore : public IObjectStore,
   // Forbidden constructor. Use create().
   ObjectStore(
       std::shared_ptr<BackingStore> backingStore,
+      std::shared_ptr<LocalStore> localStore,
+      LocalStoreCachingPolicy localStoreCachingPolicy,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -343,6 +360,21 @@ class ObjectStore : public IObjectStore,
    * Multiple ObjectStores may share the same BackingStore.
    */
   std::shared_ptr<BackingStore> backingStore_;
+
+  /*
+   * The on-disk cache which is used with most of the BackingStore
+   */
+  std::shared_ptr<LocalStore> localStore_;
+
+  /*
+   * BackingStore can turn off on-disk cache by setting this to
+   * LocalStoreCachingPolicy::NoCaching
+   *
+   * TODO: This might be better suited to either live in the BackingStore, or
+   * be determined by querying the BackingStore, as opposed to being a
+   * constructor argument, since this is strongly tied to that class.
+   */
+  [[maybe_unused]] LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   EdenStatsPtr const stats_;
 

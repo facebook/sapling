@@ -174,8 +174,8 @@ void EdenMain::registerStandardBackingStores() {
 
     auto localStoreCaching = reloadableConfig->getEdenConfig()
                                  ->hgEnableBlobMetaLocalStoreCaching.getValue()
-        ? LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata
-        : LocalStoreCachedBackingStore::CachingPolicy::Trees;
+        ? ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata
+        : ObjectStore::LocalStoreCachingPolicy::Trees;
     return std::make_shared<LocalStoreCachedBackingStore>(
         std::move(hgQueuedBackingStore),
         params.localStore,
@@ -191,8 +191,8 @@ void EdenMain::registerStandardBackingStores() {
         auto localStoreCaching =
             reloadableConfig->getEdenConfig()
                 ->hgEnableBlobMetaLocalStoreCaching.getValue()
-            ? LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata
-            : LocalStoreCachedBackingStore::CachingPolicy::Trees;
+            ? ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata
+            : ObjectStore::LocalStoreCachingPolicy::Trees;
         auto hgSparseFilter = std::make_unique<HgSparseFilter>(repoPath);
 
         auto options = std::make_unique<HgBackingStoreOptions>(
@@ -217,7 +217,7 @@ void EdenMain::registerStandardBackingStores() {
             std::make_shared<GitBackingStore>(repoPath),
             params.localStore,
             params.sharedStats.copy(),
-            LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata);
+            ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata);
 #else // EDEN_HAVE_GIT
         (void)params;
         throw std::domain_error(

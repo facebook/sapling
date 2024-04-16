@@ -96,6 +96,8 @@ struct BlobAccessTest : ::testing::Test {
     localStore->open();
     objectStore = ObjectStore::create(
         backingStore,
+        localStore,
+        ObjectStore::LocalStoreCachingPolicy::NoCaching,
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),

@@ -51,9 +51,11 @@ struct ObjectStoreTest : ::testing::Test {
         fakeBackingStore,
         localStore,
         stats.copy(),
-        LocalStoreCachedBackingStore::CachingPolicy::Everything);
+        ObjectStore::LocalStoreCachingPolicy::Everything);
     objectStore = ObjectStore::create(
         backingStore,
+        localStore,
+        ObjectStore::LocalStoreCachingPolicy::Everything,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -72,9 +74,11 @@ struct ObjectStoreTest : ::testing::Test {
             fakeBackingStoreWithKeyedBlake3,
             localStore,
             stats.copy(),
-            LocalStoreCachedBackingStore::CachingPolicy::Everything);
+            ObjectStore::LocalStoreCachingPolicy::Everything);
     objectStoreWithBlake3Key = ObjectStore::create(
         backingStoreWithKeyedBlake3,
+        localStore,
+        ObjectStore::LocalStoreCachingPolicy::Everything,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -209,6 +213,8 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   // Clear backing store
   objectStore = ObjectStore::create(
       backingStore,
+      localStore,
+      ObjectStore::LocalStoreCachingPolicy::Everything,
       treeCache,
       stats.copy(),
       std::make_shared<ProcessInfoCache>(),

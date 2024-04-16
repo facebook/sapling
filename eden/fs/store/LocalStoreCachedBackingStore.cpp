@@ -19,13 +19,12 @@ LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
     std::shared_ptr<BackingStore> backingStore,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
-    LocalStoreCachedBackingStore::CachingPolicy cachingPolicy)
+    ObjectStore::LocalStoreCachingPolicy cachingPolicy)
     : backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       cachingPolicy_{cachingPolicy} {
-  XCHECK_NE(
-      cachingPolicy_, LocalStoreCachedBackingStore::CachingPolicy::NoCaching);
+  XCHECK_NE(cachingPolicy_, ObjectStore::LocalStoreCachingPolicy::NoCaching);
 }
 
 LocalStoreCachedBackingStore::~LocalStoreCachedBackingStore() = default;
@@ -63,7 +62,7 @@ LocalStoreCachedBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   auto localStoreGetTree = ImmediateFuture<TreePtr>{std::in_place, nullptr};
-  if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::Trees)) {
+  if (shouldCache(ObjectStore::LocalStoreCachingPolicy::Trees)) {
     localStoreGetTree = localStore_->getTree(id);
   }
 
@@ -85,13 +84,13 @@ LocalStoreCachedBackingStore::getTree(
                 .thenValue([self](GetTreeResult result) {
                   if (result.tree) {
                     auto batch = self->localStore_->beginWrite();
-                    if (self->shouldCache(LocalStoreCachedBackingStore::
-                                              CachingPolicy::Trees)) {
+                    if (self->shouldCache(
+                            ObjectStore::LocalStoreCachingPolicy::Trees)) {
                       batch->putTree(*result.tree);
                     }
 
-                    if (self->shouldCache(LocalStoreCachedBackingStore::
-                                              CachingPolicy::BlobMetadata)) {
+                    if (self->shouldCache(ObjectStore::LocalStoreCachingPolicy::
+                                              BlobMetadata)) {
                       // Let's cache all the entries in the LocalStore.
                       for (const auto& [name, treeEntry] : *result.tree) {
                         const auto& size = treeEntry.getSize();
@@ -123,7 +122,7 @@ LocalStoreCachedBackingStore::getBlobMetadata(
     const ObjectFetchContextPtr& context) {
   auto localStoreGetBlobMetadata =
       ImmediateFuture<BlobMetadataPtr>{std::in_place, nullptr};
-  if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::BlobMetadata)) {
+  if (shouldCache(ObjectStore::LocalStoreCachingPolicy::BlobMetadata)) {
     localStoreGetBlobMetadata = localStore_->getBlobMetadata(id);
   }
   return std::move(localStoreGetBlobMetadata)
@@ -192,8 +191,8 @@ LocalStoreCachedBackingStore::getBlobMetadata(
                     })
                 .thenValue([self, id](GetBlobMetaResult result) {
                   if (result.blobMeta &&
-                      self->shouldCache(LocalStoreCachedBackingStore::
-                                            CachingPolicy::BlobMetadata)) {
+                      self->shouldCache(
+                          ObjectStore::LocalStoreCachingPolicy::BlobMetadata)) {
                     self->localStore_->putBlobMetadata(id, *result.blobMeta);
                   }
                   return result;
@@ -207,7 +206,7 @@ LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   auto localStoreGetBlob = ImmediateFuture<BlobPtr>{std::in_place, nullptr};
-  if (shouldCache(LocalStoreCachedBackingStore::CachingPolicy::Blobs)) {
+  if (shouldCache(ObjectStore::LocalStoreCachingPolicy::Blobs)) {
     localStoreGetBlob = localStore_->getBlob(id);
   }
   return std::move(localStoreGetBlob)
@@ -227,8 +226,8 @@ LocalStoreCachedBackingStore::getBlob(
                 // consumed.
                 .thenValue([self, id](GetBlobResult result) {
                   if (result.blob) {
-                    if (self->shouldCache(LocalStoreCachedBackingStore::
-                                              CachingPolicy::Blobs)) {
+                    if (self->shouldCache(
+                            ObjectStore::LocalStoreCachingPolicy::Blobs)) {
                       self->localStore_->putBlob(id, result.blob.get());
                     }
                     self->stats_->increment(
@@ -289,7 +288,8 @@ std::optional<folly::StringPiece> LocalStoreCachedBackingStore::getRepoName() {
   return backingStore_->getRepoName();
 }
 
-bool LocalStoreCachedBackingStore::shouldCache(CachingPolicy object) const {
+bool LocalStoreCachedBackingStore::shouldCache(
+    ObjectStore::LocalStoreCachingPolicy object) const {
   auto underlyingObject = folly::to_underlying(object);
   return (folly::to_underlying(cachingPolicy_) & underlyingObject) ==
       underlyingObject;

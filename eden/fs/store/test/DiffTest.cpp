@@ -77,6 +77,8 @@ class DiffTest : public ::testing::Test {
     backingStore_ = make_shared<FakeBackingStore>();
     store_ = ObjectStore::create(
         backingStore_,
+        localStore_,
+        ObjectStore::LocalStoreCachingPolicy::NoCaching,
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),

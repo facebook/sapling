@@ -42,6 +42,8 @@ constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
 
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<BackingStore> backingStore,
+    shared_ptr<LocalStore> localStore,
+    LocalStoreCachingPolicy localStoreCachingPolicy,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -51,6 +53,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
+      std::move(localStore),
+      localStoreCachingPolicy,
       std::move(treeCache),
       std::move(stats),
       processInfoCache,
@@ -62,6 +66,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
 
 ObjectStore::ObjectStore(
     shared_ptr<BackingStore> backingStore,
+    shared_ptr<LocalStore> localStore,
+    LocalStoreCachingPolicy localStoreCachingPolicy,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -72,6 +78,8 @@ ObjectStore::ObjectStore(
     : metadataCache_{std::in_place, edenConfig->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
+      localStore_{std::move(localStore)},
+      localStoreCachingPolicy_{localStoreCachingPolicy},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processInfoCache_(processInfoCache),

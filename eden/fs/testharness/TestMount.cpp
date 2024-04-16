@@ -261,6 +261,8 @@ void TestMount::createMount(
     InodeCatalogOptions inodeCatalogOptions) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       backingStore_,
+      localStore_,
+      ObjectStore::LocalStoreCachingPolicy::NoCaching,
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
@@ -375,6 +377,8 @@ void TestMount::remount() {
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
       backingStore_,
+      localStore_,
+      ObjectStore::LocalStoreCachingPolicy::NoCaching,
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
@@ -417,6 +421,8 @@ void TestMount::remountGracefully() {
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
       backingStore_,
+      localStore_,
+      ObjectStore::LocalStoreCachingPolicy::NoCaching,
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
