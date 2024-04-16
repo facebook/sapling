@@ -239,6 +239,7 @@ export type CommitInfo = {
   totalFileCount: number;
   /** @see {@link DiffId} */
   diffId?: DiffId;
+  isFollower?: boolean;
   stableCommitMetadata?: ReadonlyArray<StableCommitMetadata>;
 };
 export type SuccessorInfo = {

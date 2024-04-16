@@ -41,10 +41,11 @@ export const showDiffNumberConfig = configBackedAtom<boolean>('isl.show-diff-num
  */
 export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions: boolean}) {
   const repo = useAtomValue(codeReviewProvider);
-  const diffId = commit.diffId;
+  const {diffId} = commit;
   if (repo == null || diffId == null) {
     return null;
   }
+
   // Do not show diff info (and "Ship It" button) if there are successors.
   // Users should look at the diff info and buttons from the successor commit instead.
   // But the diff number can still be useful so show it.
@@ -69,6 +70,19 @@ const styles = stylex.create({
       ':hover': 'underline',
     },
   },
+  diffFollower: {
+    alignItems: 'center',
+    display: 'inline-flex',
+    gap: '5px',
+    opacity: '0.9',
+    fontSize: '90%',
+    padding: '0 var(--halfpad)',
+  },
+  diffFollowerIcon: {
+    '::before': {
+      fontSize: '90%',
+    },
+  },
 });
 
 export function DiffBadge({
@@ -90,6 +104,19 @@ export function DiffBadge({
     <Link href={openerUrl} xstyle={styles.diffBadge}>
       <provider.DiffBadgeContent diff={diff} children={children} syncStatus={syncStatus} />
     </Link>
+  );
+}
+
+export function DiffFollower({commit}: {commit: CommitInfo}) {
+  if (!commit.isFollower) {
+    return null;
+  }
+
+  return (
+    <span {...stylex.props(styles.diffFollower)}>
+      <Icon icon="fold-up" size="S" {...stylex.props(styles.diffFollowerIcon)} />
+      <T>follower</T>
+    </span>
   );
 }
 
