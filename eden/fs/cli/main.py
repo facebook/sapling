@@ -2069,7 +2069,7 @@ class RestartCmd(Subcmd):
             "--only-if-running",
             action="store_true",
             default=False,
-            help="Only perform a restart if there is already an EdenFS instance"
+            help="Only perform a restart if there is already an EdenFS instance "
             "running.",
         )
         migration_group = parser.add_mutually_exclusive_group()
