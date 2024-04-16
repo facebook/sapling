@@ -11,15 +11,23 @@ use std::io::Write;
 
 use anyhow::Result;
 use clap::Parser;
+use cloned::cloned;
 use serde::Serialize;
 use source_control as thrift;
 
+use crate::library::summary::run_stress;
+use crate::library::summary::summary_output;
+use crate::library::summary::StressArgs;
 use crate::render::Render;
 use crate::ScscApp;
 
 #[derive(Parser)]
 /// List repositories
-pub(super) struct CommandArgs {}
+pub(super) struct CommandArgs {
+    /// Enable stress test mode
+    #[clap(flatten)]
+    stress: Option<StressArgs>,
+}
 
 #[derive(Serialize)]
 struct ReposOutput {
@@ -46,13 +54,28 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
     let conn = app.get_connection(None)?;
-    let repos = conn.list_repos(&params).await?;
-    app.target
-        .render_one(
-            &args,
-            ReposOutput {
-                repos: repos.into_iter().map(|repo| repo.name).collect(),
-            },
-        )
-        .await
+
+    if let Some(stress) = args.stress {
+        let results = run_stress(stress.count, stress.parallel, || {
+            cloned!(conn, params);
+            Box::pin(async move {
+                conn.list_repos(&params).await?;
+                Ok(())
+            })
+        })
+        .await;
+
+        let output = summary_output(results);
+        app.target.render(&(), output).await
+    } else {
+        let repos = conn.list_repos(&params).await?;
+        app.target
+            .render_one(
+                &args,
+                ReposOutput {
+                    repos: repos.into_iter().map(|repo| repo.name).collect(),
+                },
+            )
+            .await
+    }
 }
