@@ -808,6 +808,40 @@ pub struct RotateLogLookupIter<'a> {
     key: Bytes,
 }
 
+impl<'a> RotateLogLookupIter<'a> {
+    fn load_next_log(&mut self) -> crate::Result<()> {
+        if self.log_index + 1 >= self.log_rotate.logs.len() {
+            self.end = true;
+            Ok(())
+        } else {
+            // Try the next log
+            self.log_index += 1;
+            match self.log_rotate.load_log(self.log_index) {
+                Ok(None) => {
+                    self.end = true;
+                    Ok(())
+                }
+                Err(_err) => {
+                    self.end = true;
+                    // Not fatal (since RotateLog is designed to be able
+                    // to drop data).
+                    Ok(())
+                }
+                Ok(Some(log)) => match log.lookup(self.index_id, &self.key) {
+                    Err(err) => {
+                        self.end = true;
+                        Err(err)
+                    }
+                    Ok(iter) => {
+                        self.inner_iter = iter;
+                        Ok(())
+                    }
+                },
+            }
+        }
+    }
+}
+
 impl<'a> Iterator for RotateLogLookupIter<'a> {
     type Item = crate::Result<&'a [u8]>;
 
@@ -817,35 +851,15 @@ impl<'a> Iterator for RotateLogLookupIter<'a> {
         }
         match self.inner_iter.next() {
             None => {
-                if self.log_index + 1 >= self.log_rotate.logs.len() {
-                    self.end = true;
-                    None
-                } else {
-                    // Try the next log
-                    self.log_index += 1;
-                    match self.log_rotate.load_log(self.log_index) {
-                        Ok(None) => {
-                            self.end = true;
-                            return None;
-                        }
-                        Err(_err) => {
-                            self.end = true;
-                            // Not fatal (since RotateLog is designed to be able
-                            // to drop data).
-                            return None;
-                        }
-                        Ok(Some(log)) => {
-                            self.inner_iter = match log.lookup(self.index_id, &self.key) {
-                                Err(err) => {
-                                    self.end = true;
-                                    return Some(Err(err));
-                                }
-                                Ok(iter) => iter,
-                            }
-                        }
-                    }
-                    self.next()
+                if let Err(err) = self.load_next_log() {
+                    return Some(Err(err));
                 }
+
+                if self.end {
+                    return None;
+                }
+
+                self.next()
             }
             Some(Err(err)) => {
                 self.end = true;
