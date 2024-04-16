@@ -7,7 +7,8 @@
   $ setconfig remotefilelog.reponame=dont/mess/up
   $ setconfig clone.use-rust=true
 
-  $ hg clone -q test:dont/mess/up
+TODO(sggutier): figure out why shallow is necessary here (replacing test with eager renders the same results)
+  $ hg clone test:dont/mess/up --shallow -q
   $ cd up
   $ hg pull -q
   $ ls $TESTTMP/default-hgcache

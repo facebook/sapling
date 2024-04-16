@@ -105,6 +105,12 @@ struct CloneSource {
     default_bookmark: Option<String>,
 }
 
+impl CloneSource {
+    fn is_eager(&self) -> bool {
+        self.scheme == "eager" || self.scheme == "test"
+    }
+}
+
 impl CloneOpts {
     fn source(&self, config: &dyn Config) -> Result<CloneSource> {
         if let Some(local_path) = local_path(&self.source)? {
@@ -485,7 +491,7 @@ fn clone_metadata(
     let shallow = match ctx.opts.shallow {
         Some(shallow) => shallow,
         // Infer non-shallow for eager->eager clone.
-        None => !eager_format || source.scheme != "eager",
+        None => !eager_format || !source.is_eager(),
     };
 
     if shallow {
@@ -496,7 +502,7 @@ fn clone_metadata(
         }
 
         abort_if!(
-            source.scheme != "eager",
+            !source.is_eager(),
             "don't know how to clone {} into eagerepo",
             source.path,
         );

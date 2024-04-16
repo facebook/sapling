@@ -85,3 +85,14 @@ test rust clone
   [1]
   $ [ -f $TESTTMP/hemlo/.hg/hgrc.dynamic ]
   [1]
+
+test rust clone with test instead of eager
+  $ cd $TESTTMP
+  $ hg clone --eden test:e1 testo1 --config remotefilelog.reponame=aname -q
+  $ hg clone --eden test:e1 testo2 -q
+  $ eden list | grep testo
+  $TESTTMP/testo1
+  $TESTTMP/testo2
+  $ ls -a $TESTTMP/.eden-backing-repos
+  aname
+  reponame-default
