@@ -147,6 +147,7 @@ pub struct TestRepoFactory {
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
+    bookmarks_cache: Option<ArcBookmarksCache>,
     live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
     metadata_db: SqlConnections,
     hg_mutation_db: SqlConnections,
@@ -281,6 +282,7 @@ impl TestRepoFactory {
             derived_data_lease: None,
             filenodes_override: None,
             live_commit_sync_config: None,
+            bookmarks_cache: None,
         })
     }
 
@@ -304,6 +306,12 @@ impl TestRepoFactory {
     /// Use a particular blobstore for repos built by this factory.
     pub fn with_blobstore(&mut self, blobstore: Arc<dyn Blobstore>) -> &mut Self {
         self.blobstore = blobstore;
+        self
+    }
+
+    /// Set the bookmarks cache for repos built by this factory.
+    pub fn with_bookmarks_cache(&mut self, bookmarks_cache: ArcBookmarksCache) -> &mut Self {
+        self.bookmarks_cache = Some(bookmarks_cache);
         self
     }
 
@@ -843,15 +851,20 @@ impl TestRepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
-            self.ctx.clone(),
-            bookmarks.clone(),
-            bookmark_update_log.clone(),
-            repo_identity.clone(),
-        );
-        warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
-        warm_bookmarks_cache_builder.wait_until_warmed();
-        Ok(Arc::new(warm_bookmarks_cache_builder.build().await?))
+        match self.bookmarks_cache {
+            Some(ref cache) => Ok(cache.clone()),
+            None => {
+                let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
+                    self.ctx.clone(),
+                    bookmarks.clone(),
+                    bookmark_update_log.clone(),
+                    repo_identity.clone(),
+                );
+                warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
+                warm_bookmarks_cache_builder.wait_until_warmed();
+                Ok(Arc::new(warm_bookmarks_cache_builder.build().await?))
+            }
+        }
     }
 
     /// Commit cloud

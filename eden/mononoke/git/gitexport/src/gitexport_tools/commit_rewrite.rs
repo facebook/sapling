@@ -61,6 +61,7 @@ use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 use tokio::task;
 use unodes::RootUnodeManifestId;
+use warm_bookmarks_cache::NoopBookmarksCache;
 
 pub use crate::git_repo::create_git_repo_on_disk;
 use crate::logging::run_and_log_stats_to_scuba;
@@ -541,8 +542,8 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
         "default".to_string() => derived_data_types_config.clone(),
         "backfilling".to_string() => derived_data_types_config
     };
-
-    let temp_repo = TestRepoFactory::with_sqlite_connection(fb, metadata_conn, hg_mutation_conn)?
+    let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_conn, hg_mutation_conn)?;
+    factory
         .with_blobstore(file_blobstore)
         .with_core_context_that_does_not_override_logger(ctx.clone())
         .with_name(temp_repo_name)
@@ -552,9 +553,12 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
             // If this isn't disabled the master bookmark creation will fail
             // because skeleton manifests derivation is disabled.
             cfg.pushrebase.flags.casefolding_check = false;
-        })
-        .build()
-        .await?;
+        });
+    let bookmarks =
+        factory.bookmarks(&factory.sql_bookmarks(&factory.repo_identity(&factory.repo_config()))?);
+    factory.with_bookmarks_cache(Arc::new(NoopBookmarksCache::new(bookmarks)));
+
+    let temp_repo = factory.build().await?;
     let temp_repo_ctx = RepoContext::new_test(ctx.clone(), temp_repo).await?;
 
     Ok(temp_repo_ctx)

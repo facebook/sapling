@@ -59,6 +59,7 @@ rust_library(
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:fileblob",
+        "//eden/mononoke/bookmarks:warm_bookmarks_cache",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:unodes",
