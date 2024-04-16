@@ -281,6 +281,11 @@ impl IndexedLogHgIdDataStore {
         Entry::from_log(id.as_ref(), &self.store)
     }
 
+    /// Return whether the store contains the given id.
+    pub(crate) fn contains(&self, id: &HgId) -> Result<bool> {
+        self.store.read().contains(0, id.as_ref())
+    }
+
     /// Directly get the local content. Do not ask remote servers.
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
         let entry = match self.get_raw_entry(id)? {

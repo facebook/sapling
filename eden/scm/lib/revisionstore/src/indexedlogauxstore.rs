@@ -162,6 +162,11 @@ impl AuxStore {
         deserialize(bytes).map(|(_hgid, entry)| Some(entry))
     }
 
+    pub fn contains(&self, hgid: HgId) -> Result<bool> {
+        let log = self.0.read();
+        Ok(!log.lookup(0, hgid)?.is_empty()?)
+    }
+
     pub fn put(&self, hgid: HgId, entry: &Entry) -> Result<()> {
         let serialized = serialize(entry, hgid)?;
         self.0.append(&serialized)

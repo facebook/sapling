@@ -441,7 +441,7 @@ impl LfsIndexedLogBlobsStore {
     /// Test whether a blob is in the store. It returns true if at least one chunk is present, and
     /// thus it is possible that one of the chunk is missing.
     pub fn contains(&self, hash: &Sha256) -> Result<bool> {
-        Ok(self.inner.read().lookup(0, hash)?.next().is_some())
+        Ok(!self.inner.read().lookup(0, hash)?.is_empty()?)
     }
 
     fn chunk(mut data: Bytes, chunk_size: usize) -> impl Iterator<Item = (Range<usize>, Bytes)> {
