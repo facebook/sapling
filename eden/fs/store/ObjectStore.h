@@ -345,6 +345,10 @@ class ObjectStore : public IObjectStore,
     localStoreCachingPolicy_ = policy;
   }
 
+  folly::SemiFuture<BackingStore::GetTreeResult> getTreeImpl(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * This is a temporary helper function to unwrap a
    * LocalStoreCachedBackingStore and get its underlying BackingStore in order

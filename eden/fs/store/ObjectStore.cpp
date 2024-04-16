@@ -227,8 +227,6 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
   TaskTraceBlock block{"ObjectStore::getTree"};
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTree};
 
-  // Check in the LocalStore first
-
   // TODO: We should consider checking if we have in flight BackingStore
   // requests on this layer instead of only in the BackingStore. Consider the
   // case in which thread A and thread B both request a Tree at the same time.
@@ -252,7 +250,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
-  return ImmediateFuture{backingStore_->getTree(id, fetchContext)}.thenValue(
+  return ImmediateFuture{getTreeImpl(id, fetchContext)}.thenValue(
       [self = shared_from_this(),
        statScope = std::move(statScope),
        id,
@@ -271,6 +269,66 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         return changeCaseSensitivity(
             std::move(result.tree), self->caseSensitive_);
       });
+}
+
+folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  auto localStoreGetTree = ImmediateFuture<TreePtr>{std::in_place, nullptr};
+  if (shouldCacheOnDisk(ObjectStore::LocalStoreCachingPolicy::Trees)) {
+    // Check Local Store first
+    localStoreGetTree = localStore_->getTree(id);
+  }
+  return std::move(localStoreGetTree)
+      .thenValue(
+          [self = shared_from_this(), id = id, context = context.copy()](
+              TreePtr tree) mutable
+          -> ImmediateFuture<BackingStore::GetTreeResult> {
+            if (tree) {
+              self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
+              return BackingStore::GetTreeResult{
+                  std::move(tree), ObjectFetchContext::FromDiskCache};
+            }
+
+            return ImmediateFuture{
+                self->getUnderlyingBackingStore()->getTree(id, context)}
+                // TODO: This is a good use for toUnsafeFuture to ensure the
+                // tree is cached even if the resulting future is never
+                // consumed.
+                .thenValue([self](BackingStore::GetTreeResult result) {
+                  if (result.tree) {
+                    auto batch = self->localStore_->beginWrite();
+                    if (self->shouldCacheOnDisk(
+                            ObjectStore::LocalStoreCachingPolicy::Trees)) {
+                      batch->putTree(*result.tree);
+                    }
+
+                    if (self->shouldCacheOnDisk(
+                            ObjectStore::LocalStoreCachingPolicy::
+                                BlobMetadata)) {
+                      // Let's cache all the entries in the LocalStore.
+                      for (const auto& [name, treeEntry] : *result.tree) {
+                        const auto& size = treeEntry.getSize();
+                        const auto& sha1 = treeEntry.getContentSha1();
+                        const auto& blake3 = treeEntry.getContentBlake3();
+                        if (treeEntry.getType() ==
+                                TreeEntryType::REGULAR_FILE &&
+                            size && sha1) {
+                          batch->putBlobMetadata(
+                              treeEntry.getHash(),
+                              BlobMetadata{*sha1, blake3, *size});
+                        }
+                      }
+                    }
+                    batch->flush();
+                    self->stats_->increment(
+                        &ObjectStoreStats::getTreeFromBackingStore);
+                  }
+
+                  return result;
+                });
+          })
+      .semi();
 }
 
 ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
