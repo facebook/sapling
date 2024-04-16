@@ -7,7 +7,7 @@
 
 const {default: tsJest} = require('ts-jest');
 
-const transformer = tsJest.createTransformer();
+const transformer = tsJest.createTransformer({diagnostics: false});
 
 /**
  * Replace 'import.meta.hot' with 'undefined' to make Jest happy.

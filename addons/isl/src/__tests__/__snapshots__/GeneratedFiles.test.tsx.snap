@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Generated Files Paginates generated files 1`] = `
-Array [
+[
   "file_001.txt",
   "file_004.txt",
   "file_007.txt",
@@ -506,7 +506,7 @@ Array [
 `;
 
 exports[`Generated Files Paginates generated files 2`] = `
-Array [
+[
   "file_499.txt",
   "file_502.txt",
   "file_505.txt",
@@ -678,7 +678,7 @@ Array [
 `;
 
 exports[`Generated Files Paginates generated files 3`] = `
-Array [
+[
   "file_001.txt",
   "file_004.txt",
   "file_007.txt",
