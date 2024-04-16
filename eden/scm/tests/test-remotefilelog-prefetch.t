@@ -28,10 +28,6 @@ Prefetch (and also check we get counters):
   scmstore.file.fetch.aux.cache.misses: 1
   scmstore.file.fetch.aux.cache.requests: 1
   scmstore.file.fetch.aux.cache.time: * (glob) (?)
-  scmstore.file.fetch.aux.local.keys: 1
-  scmstore.file.fetch.aux.local.misses: 1
-  scmstore.file.fetch.aux.local.requests: 1
-  scmstore.file.fetch.aux.local.time: * (glob) (?)
   scmstore.file.fetch.edenapi.hits: 1
   scmstore.file.fetch.edenapi.keys: 1
   scmstore.file.fetch.edenapi.requests: 1
@@ -144,10 +140,6 @@ Fetching only aux data does not trigger a remote query:
   scmstore.file.fetch.aux.cache.misses: 1
   scmstore.file.fetch.aux.cache.requests: 1
   scmstore.file.fetch.aux.cache.time: * (glob) (?)
-  scmstore.file.fetch.aux.local.keys: 1
-  scmstore.file.fetch.aux.local.misses: 1
-  scmstore.file.fetch.aux.local.requests: 1
-  scmstore.file.fetch.aux.local.time: * (glob) (?)
 
 
 

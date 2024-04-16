@@ -216,21 +216,6 @@ impl<'a> FileStoreBuilder<'a> {
         )?)))
     }
 
-    #[context("failed to build aux local")]
-    pub fn build_aux_local(&self) -> Result<Option<Arc<AuxStore>>> {
-        Ok(if let Some(local_path) = self.local_path.clone() {
-            let local_path = get_local_path(local_path, &self.suffix)?;
-            let local_path = get_indexedlogdatastore_aux_path(local_path)?;
-            Some(Arc::new(AuxStore::new(
-                local_path,
-                self.config,
-                StoreType::Local,
-            )?))
-        } else {
-            None
-        })
-    }
-
     #[context("failed to build aux cache")]
     pub fn build_aux_cache(&self) -> Result<Option<Arc<AuxStore>>> {
         let cache_path = match cache_path(self.config, &self.suffix)? {
@@ -320,7 +305,6 @@ impl<'a> FileStoreBuilder<'a> {
         };
 
         tracing::trace!(target: "revisionstore::filestore", "processing aux data");
-        let aux_local = self.build_aux_local()?;
         let aux_cache = self.build_aux_cache()?;
 
         tracing::trace!(target: "revisionstore::filestore", "processing lfs remote");
@@ -418,7 +402,6 @@ impl<'a> FileStoreBuilder<'a> {
             fetch_logger,
             metrics: FileStoreMetrics::new(),
 
-            aux_local,
             aux_cache,
 
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),

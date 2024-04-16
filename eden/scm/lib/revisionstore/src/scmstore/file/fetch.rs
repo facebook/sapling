@@ -73,9 +73,6 @@ pub struct FetchState {
     /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
     pointer_origin: HashMap<Sha256, StoreType>,
 
-    /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
-    key_origin: HashMap<Key, StoreType>,
-
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Option<Arc<FetchLogger>>,
 
@@ -106,7 +103,6 @@ impl FetchState {
             metrics: FileStoreFetchMetrics::default(),
 
             lfs_pointers: HashMap::new(),
-            key_origin: HashMap::new(),
             pointer_origin: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
@@ -194,10 +190,7 @@ impl FetchState {
         self.lfs_pointers.insert(key, (ptr, write));
     }
 
-    fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<StoreType>) {
-        self.key_origin
-            .insert(key.clone(), typ.unwrap_or(StoreType::Shared));
-
+    fn found_attributes(&mut self, key: Key, sf: StoreFile, _typ: Option<StoreType>) {
         if self.common.found(key.clone(), sf) {
             self.mark_complete(&key);
         }
@@ -929,11 +922,7 @@ impl FetchState {
 
     // TODO(meyer): Improve how local caching works. At the very least do this in the background.
     // TODO(meyer): Log errors here instead of just ignoring.
-    pub(crate) fn derive_computable(
-        &mut self,
-        aux_cache: Option<&AuxStore>,
-        aux_local: Option<&AuxStore>,
-    ) {
+    pub(crate) fn derive_computable(&mut self, aux_cache: Option<&AuxStore>) {
         if !self.compute_aux_data {
             return;
         }
@@ -960,24 +949,11 @@ impl FetchState {
                         if new.attrs().has(self.common.request_attrs) {
                             tracing::debug!("marking complete");
 
-                            match self.key_origin.get(&key).unwrap_or(&StoreType::Shared) {
-                                StoreType::Shared => {
-                                    self.metrics.aux.store(StoreType::Shared).computed(1);
+                            self.metrics.aux.store(StoreType::Shared).computed(1);
 
-                                    if let Some(aux_cache) = aux_cache {
-                                        if let Some(aux_data) = new.aux_data {
-                                            let _ = aux_cache.put(key.hgid, &aux_data);
-                                        }
-                                    }
-                                }
-                                StoreType::Local => {
-                                    self.metrics.aux.store(StoreType::Local).computed(1);
-
-                                    if let Some(aux_local) = aux_local {
-                                        if let Some(aux_data) = new.aux_data {
-                                            let _ = aux_local.put(key.hgid, &aux_data);
-                                        }
-                                    }
+                            if let Some(aux_cache) = aux_cache {
+                                if let Some(aux_data) = new.aux_data {
+                                    let _ = aux_cache.put(key.hgid, &aux_data);
                                 }
                             }
 

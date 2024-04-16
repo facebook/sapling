@@ -135,11 +135,7 @@ impl TreeStore {
 
         let contentstore = self.contentstore.clone();
         let cache_to_local_cache = self.cache_to_local_cache;
-        let (aux_local, aux_cache) = if let Some(ref filestore) = self.filestore {
-            (filestore.aux_local.clone(), filestore.aux_cache.clone())
-        } else {
-            (None, None)
-        };
+        let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
 
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
@@ -241,15 +237,11 @@ impl TreeStore {
                             let key = entry.key.clone();
                             let entry = LazyTree::EdenApi(entry);
 
-                            if let Some(ref aux_local) = aux_local {
+                            if let Some(ref aux_cache) = aux_cache {
                                 let aux_data = entry.aux_data();
                                 for (hgid, aux) in aux_data.into_iter() {
-                                    if let Some(ref aux_cache) = aux_cache {
-                                        tracing::trace!(?hgid, "writing to aux cache");
-                                        aux_cache.put(hgid, &aux)?;
-                                    } else {
-                                        aux_local.put(hgid, &aux)?;
-                                    }
+                                    tracing::trace!(?hgid, "writing to aux cache");
+                                    aux_cache.put(hgid, &aux)?;
                                 }
                             }
                             if indexedlog_cache.is_some() && cache_to_local_cache {

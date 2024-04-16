@@ -322,7 +322,7 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.aux_local = Some(aux);
+        store.aux_cache = Some(aux);
 
         // Attempt fetch.
         let fetched = store
@@ -367,7 +367,7 @@ mod tests {
         // Set up local-only FileStore
         let mut store = FileStore::empty();
         store.indexedlog_local = Some(content);
-        store.aux_local = Some(aux.clone());
+        store.aux_cache = Some(aux.clone());
         store.compute_aux_data = true;
 
         let expected = Entry {

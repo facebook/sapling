@@ -102,8 +102,7 @@ pub struct FileStore {
     // Legacy ContentStore fallback
     pub(crate) contentstore: Option<Arc<ContentStore>>,
 
-    // Aux Data Stores
-    pub(crate) aux_local: Option<Arc<AuxStore>>,
+    // Aux Data Store
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
 
     // Metrics, statistics, debugging
@@ -169,7 +168,6 @@ impl FileStore {
         let keys_len = state.pending_len();
 
         let aux_cache = self.aux_cache.clone();
-        let aux_local = self.aux_local.clone();
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let lfs_cache = self.lfs_cache.clone();
@@ -200,10 +198,6 @@ impl FileStore {
             if fetch_local {
                 if let Some(ref aux_cache) = aux_cache {
                     state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
-                }
-
-                if let Some(ref aux_local) = aux_local {
-                    state.fetch_aux_indexedlog(aux_local, StoreType::Local);
                 }
 
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
@@ -254,10 +248,7 @@ impl FileStore {
                 }
             }
 
-            state.derive_computable(
-                aux_cache.as_ref().map(|s| s.as_ref()),
-                aux_local.as_ref().map(|s| s.as_ref()),
-            );
+            state.derive_computable(aux_cache.as_ref().map(|s| s.as_ref()));
 
             metrics.write().fetch += state.metrics().clone();
             if let Err(err) = state.metrics().update_ods() {
@@ -391,10 +382,6 @@ impl FileStore {
             lfs_cache.flush().map_err(&mut handle_error);
         }
 
-        if let Some(ref aux_local) = self.aux_local {
-            aux_local.flush().map_err(&mut handle_error);
-        }
-
         if let Some(ref aux_cache) = self.aux_cache {
             aux_cache.flush().map_err(&mut handle_error);
         }
@@ -444,7 +431,6 @@ impl FileStore {
             metrics: FileStoreMetrics::new(),
             activity_logger: None,
 
-            aux_local: None,
             aux_cache: None,
 
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
@@ -517,7 +503,6 @@ impl LegacyStore for FileStore {
             metrics: self.metrics.clone(),
             activity_logger: self.activity_logger.clone(),
 
-            aux_local: None,
             aux_cache: None,
 
             lfs_progress: self.lfs_progress.clone(),
