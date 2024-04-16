@@ -78,6 +78,7 @@ const styles = stylex.create({
   },
   author: {
     fontSize: font.small,
+    flexShrink: 0,
   },
   avatar: {
     borderRadius: radius.full,
