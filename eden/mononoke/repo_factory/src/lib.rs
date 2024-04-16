@@ -1505,6 +1505,9 @@ impl RepoFactory {
                     BookmarkCacheDerivedData::HgOnly => {
                         wbc_builder.add_hg_warmers(repo_derived_data, phases)?;
                     }
+                    BookmarkCacheDerivedData::GitOnly => {
+                        wbc_builder.add_git_warmers(repo_derived_data, phases)?;
+                    }
                     BookmarkCacheDerivedData::AllKinds => {
                         wbc_builder.add_all_warmers(repo_derived_data, phases)?;
                     }
