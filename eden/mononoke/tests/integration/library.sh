@@ -1444,7 +1444,7 @@ function wait_for_bookmark_delete() {
 function get_bookmark_value_edenapi {
   local repo="$1"
   local bookmark="$2"
-  REPONAME="$repo" hgedenapi debugapi -e bookmarks -i "[\"$bookmark\"]" | jq ".$bookmark"
+  REPONAME="$repo" hgedenapi debugapi -e bookmarks -i "[\"$bookmark\"]" | jq -r ".$bookmark"
 }
 
 function wait_for_bookmark_move_away_edenapi() {
