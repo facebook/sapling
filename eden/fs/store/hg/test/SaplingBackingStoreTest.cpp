@@ -20,8 +20,8 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
@@ -82,7 +82,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<HgBackingStoreOptions>(
+          std::make_unique<SaplingBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/false),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
@@ -100,7 +100,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<HgBackingStoreOptions>(
+          std::make_unique<SaplingBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/false),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
@@ -118,7 +118,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<HgBackingStoreOptions>(
+          std::make_unique<SaplingBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/true),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),

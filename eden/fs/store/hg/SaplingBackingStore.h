@@ -23,7 +23,7 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/HgBackingStoreOptions.h"
+#include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
 #include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
@@ -138,7 +138,7 @@ class SaplingBackingStore final : public BackingStore {
       EdenStatsPtr stats,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+      std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
@@ -153,7 +153,7 @@ class SaplingBackingStore final : public BackingStore {
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       std::shared_ptr<ReloadableConfig> config,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+      std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
@@ -556,7 +556,7 @@ class SaplingBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       liveBatchedBlobMetaWatches_;
 
-  std::unique_ptr<HgBackingStoreOptions> runtimeOptions_;
+  std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions_;
 
   ActivityBuffer<HgImportTraceEvent> activityBuffer_;
 

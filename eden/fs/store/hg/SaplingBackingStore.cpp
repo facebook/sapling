@@ -109,8 +109,8 @@ sapling::SaplingNativeBackingStoreOptions computeTestSaplingOptions() {
   return options;
 }
 
-std::unique_ptr<HgBackingStoreOptions> computeRuntimeOptions(
-    std::unique_ptr<HgBackingStoreOptions> options) {
+std::unique_ptr<SaplingBackingStoreOptions> computeRuntimeOptions(
+    std::unique_ptr<SaplingBackingStoreOptions> options) {
   options->ignoreFilteredPathsConfig =
       options->ignoreFilteredPathsConfig.value_or(false);
   return options;
@@ -232,7 +232,7 @@ SaplingBackingStore::SaplingBackingStore(
     EdenStatsPtr stats,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
-    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+    std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
@@ -300,7 +300,7 @@ SaplingBackingStore::SaplingBackingStore(
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     std::shared_ptr<ReloadableConfig> config,
-    std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+    std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
@@ -377,7 +377,8 @@ void SaplingBackingStore::processBlobImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
-        stats_->addDuration(&HgBackingStoreStats::fetchBlob, watch.elapsed());
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
         continue;
       }
 
@@ -397,7 +398,7 @@ void SaplingBackingStore::processBlobImportRequests(
                     << request->getRequest<SaplingImportRequest::BlobImport>()
                            ->hash;
                 stats->addDuration(
-                    &HgBackingStoreStats::fetchBlob, watch.elapsed());
+                    &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
                 request
                     ->getPromise<SaplingImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
@@ -434,7 +435,8 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                auto blob = getBlobFromBackingStore(
                    hgInfo, sapling::FetchMode::AllowRemote);
                if (blob.hasValue()) {
-                 stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
+                 stats_->increment(
+                     &SaplingBackingStoreStats::fetchBlobRetrySuccess);
                  result = blob.value();
                } else {
                  // Record miss and return error
@@ -446,16 +448,18 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                        true});
                  }
 
-                 stats_->increment(&HgBackingStoreStats::fetchBlobRetryFailure);
+                 stats_->increment(
+                     &SaplingBackingStoreStats::fetchBlobRetryFailure);
                  auto ew = folly::exception_wrapper{blob.exception()};
                  result = folly::makeFuture<BlobPtr>(std::move(ew));
                }
                stats_->addDuration(
-                   &HgBackingStoreStats::importBlobDuration, watch.elapsed());
+                   &SaplingBackingStoreStats::importBlobDuration,
+                   watch.elapsed());
                return result;
              })
       .thenError([this](folly::exception_wrapper&& ew) {
-        stats_->increment(&HgBackingStoreStats::importBlobError);
+        stats_->increment(&SaplingBackingStoreStats::importBlobError);
         return folly::makeSemiFuture<BlobPtr>(std::move(ew));
       });
 }
@@ -562,7 +566,8 @@ void SaplingBackingStore::processTreeImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<TreePtr>();
       if (promise->isFulfilled()) {
-        stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         continue;
       }
 
@@ -587,7 +592,7 @@ void SaplingBackingStore::processTreeImportRequests(
                     << request->getRequest<SaplingImportRequest::TreeImport>()
                            ->hash;
                 stats->addDuration(
-                    &HgBackingStoreStats::fetchTree, watch.elapsed());
+                    &SaplingBackingStoreStats::fetchTree, watch.elapsed());
                 request
                     ->getPromise<SaplingImportRequest::TreeImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
@@ -787,7 +792,7 @@ void SaplingBackingStore::processBlobMetaImportRequests(
       auto* promise = request->getPromise<BlobMetadataPtr>();
       if (promise->isFulfilled()) {
         stats_->addDuration(
-            &HgBackingStoreStats::fetchBlobMetadata, watch.elapsed());
+            &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
         continue;
       }
 
@@ -985,7 +990,7 @@ std::string SaplingBackingStore::staticRenderObjectId(
 folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getTree};
+  DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getTree};
 
   HgProxyHash proxyHash;
   try {
@@ -1114,7 +1119,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
 folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getBlob};
+  DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getBlob};
 
   HgProxyHash proxyHash;
   try {
@@ -1195,7 +1200,8 @@ folly::SemiFuture<BackingStore::GetBlobMetaResult>
 SaplingBackingStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getBlobMetadata};
+  DurationScope<EdenStats> scope{
+      stats_, &SaplingBackingStoreStats::getBlobMetadata};
 
   HgProxyHash proxyHash;
   try {
@@ -1399,7 +1405,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
   if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from SaplingNativeBackingStore";
-    stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
+    stats_->addDuration(&SaplingBackingStoreStats::fetchTree, watch.elapsed());
     return folly::makeFuture(std::move(tree.value()));
   }
   // retry once if the initial fetch failed
@@ -1436,7 +1442,8 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
   return retryGetTreeImpl(
              manifestNode, edenTreeID, path.copy(), std::move(writeBatch))
       .thenValue([this, watch, config = config_](TreePtr&& result) mutable {
-        stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         return std::move(result);
       });
 }
@@ -1516,7 +1523,8 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                auto tree = getTreeFromBackingStore(
                    path, manifestNode, edenTreeID, /*context*/ nullptr);
                if (tree.hasValue()) {
-                 stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
+                 stats_->increment(
+                     &SaplingBackingStoreStats::fetchTreeRetrySuccess);
                  result = tree.value();
                } else {
                  // Record miss and return error
@@ -1528,16 +1536,18 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                        true});
                  }
 
-                 stats_->increment(&HgBackingStoreStats::fetchTreeRetryFailure);
+                 stats_->increment(
+                     &SaplingBackingStoreStats::fetchTreeRetryFailure);
                  auto ew = folly::exception_wrapper{tree.exception()};
                  result = folly::makeFuture<TreePtr>(std::move(ew));
                }
                stats_->addDuration(
-                   &HgBackingStoreStats::importTreeDuration, watch.elapsed());
+                   &SaplingBackingStoreStats::importTreeDuration,
+                   watch.elapsed());
                return result;
              })
       .thenError([this](folly::exception_wrapper&& ew) {
-        stats_->increment(&HgBackingStoreStats::importTreeError);
+        stats_->increment(&SaplingBackingStoreStats::importTreeError);
         return folly::makeFuture<TreePtr>(std::move(ew));
       });
 }

@@ -65,7 +65,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
-        ":hg_backing_store_options",
+        ":sapling_backing_store_options",
         ":sapling_import_request_queue",
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:ref_ptr",
@@ -87,8 +87,8 @@ cpp_library(
 )
 
 cpp_library(
-    name = "hg_backing_store_options",
-    headers = ["HgBackingStoreOptions.h"],
+    name = "sapling_backing_store_options",
+    headers = ["SaplingBackingStoreOptions.h"],
 )
 
 cpp_library(

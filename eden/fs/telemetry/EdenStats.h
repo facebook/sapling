@@ -24,7 +24,7 @@ struct NfsStats;
 struct PrjfsStats;
 struct ObjectStoreStats;
 struct LocalStoreStats;
-struct HgBackingStoreStats;
+struct SaplingBackingStoreStats;
 struct HgImporterStats;
 struct JournalStats;
 struct ThriftStats;
@@ -72,7 +72,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<PrjfsStats> prjfsStats_;
   ThreadLocal<ObjectStoreStats> objectStoreStats_;
   ThreadLocal<LocalStoreStats> localStoreStats_;
-  ThreadLocal<HgBackingStoreStats> hgBackingStoreStats_;
+  ThreadLocal<SaplingBackingStoreStats> saplingBackingStoreStats_;
   ThreadLocal<HgImporterStats> hgImporterStats_;
   ThreadLocal<JournalStats> journalStats_;
   ThreadLocal<ThriftStats> thriftStats_;
@@ -111,9 +111,9 @@ inline LocalStoreStats& EdenStats::getStatsForCurrentThread<LocalStoreStats>() {
 }
 
 template <>
-inline HgBackingStoreStats&
-EdenStats::getStatsForCurrentThread<HgBackingStoreStats>() {
-  return *hgBackingStoreStats_.get();
+inline SaplingBackingStoreStats&
+EdenStats::getStatsForCurrentThread<SaplingBackingStoreStats>() {
+  return *saplingBackingStoreStats_.get();
 }
 
 template <>
@@ -290,7 +290,7 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
  *   fetch = includes asynchronous retrieval from Mononoke
  *   import = fall back process
  */
-struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
+struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
   Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};

@@ -24,8 +24,8 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
-#include "eden/fs/store/hg/HgBackingStoreOptions.h"
 #include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
 #include "eden/fs/testharness/FakeFilter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -136,8 +136,8 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
 
   FaultInjector faultInjector{/*enabled=*/false};
 
-  std::unique_ptr<HgBackingStoreOptions> runtimeOptions =
-      std::make_unique<HgBackingStoreOptions>(
+  std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions =
+      std::make_unique<SaplingBackingStoreOptions>(
           /*ignoreFilteredPathsConfig=*/false);
 
   std::shared_ptr<SaplingBackingStore> wrappedStore_{
