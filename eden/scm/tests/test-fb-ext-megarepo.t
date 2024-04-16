@@ -82,3 +82,11 @@
   abort: operating on lossily synced commit 57c4b16efbb23b68cbef2f5748e20688a1ebb5f8 disallowed by default
   (perform operation in source-of-truth repo, or specify '--config megarepo.lossy-commit-action=ignore' to bypass)
   [255]
+
+No infinite loop with autopull + titles namespace
+
+  $ hg commit -m 'remote/foo commit' --config ui.allowemptycommit=1
+  $ hg log -r remote/foo
+  pulling 'foo' from 'test:repo1_server'
+  abort: unknown revision 'remote/foo'!
+  [255]
