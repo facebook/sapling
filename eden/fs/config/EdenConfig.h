@@ -1062,6 +1062,18 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls if batches are sent to Sapling with FetchMode::AllowRemote
+   * or batches are sent to Sapling with FetchMode::LocalOnly and then the
+   * failed requests are sent to Sapling again with FetchMode::RemoteOnly.
+   *
+   * This is a temporary option to test metrics on this new way of batching
+   */
+  ConfigSetting<bool> allowRemoteGetBatch{
+      "experimental:allow-remote-get-batch",
+      true,
+      this};
+
   // [blobcache]
 
   /**

@@ -376,15 +376,42 @@ void SaplingBackingStore::processBlobImportRequests(
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
 
-  getBlobBatch(requests);
-
-  {
-    std::vector<folly::SemiFuture<folly::Unit>> futures;
-    futures.reserve(requests.size());
+  std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
+  retryRequest.reserve(requests.size());
+  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+    getBlobBatch(requests, sapling::FetchMode::AllowRemote);
+    retryRequest = std::move(requests);
+  } else {
+    getBlobBatch(requests, sapling::FetchMode::LocalOnly);
 
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
+        XLOG(DBG4)
+            << "Blob found in Sapling local for "
+            << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+      } else {
+        retryRequest.emplace_back(std::move(request));
+      }
+    }
+
+    getBlobBatch(retryRequest, sapling::FetchMode::RemoteOnly);
+  }
+
+  {
+    std::vector<folly::SemiFuture<folly::Unit>> futures;
+    futures.reserve(retryRequest.size());
+
+    for (auto& request : retryRequest) {
+      auto* promise = request->getPromise<BlobPtr>();
+      if (promise->isFulfilled()) {
+        if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+          XLOG(DBG4)
+              << "Blob found in Sapling remote for "
+              << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
+        }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
         continue;
@@ -440,8 +467,18 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
 
                // Retry using datapackStore (SaplingNativeBackingStore).
                auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
-               auto blob = getBlobFromBackingStore(
-                   hgInfo, sapling::FetchMode::AllowRemote);
+
+               auto fetch_mode =
+                   config_->getEdenConfig()->allowRemoteGetBatch.getValue()
+                   ? sapling::FetchMode::AllowRemote
+                   : sapling::FetchMode::LocalOnly;
+               auto blob = getBlobFromBackingStore(hgInfo, fetch_mode);
+               if (!blob.hasValue() &&
+                   fetch_mode == sapling::FetchMode::LocalOnly) {
+                 blob = getBlobFromBackingStore(
+                     hgInfo, sapling::FetchMode::RemoteOnly);
+               }
+
                if (blob.hasValue()) {
                  stats_->increment(
                      &SaplingBackingStoreStats::fetchBlobRetrySuccess);
@@ -473,7 +510,8 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
 }
 
 void SaplingBackingStore::getBlobBatch(
-    const ImportRequestsList& importRequests) {
+    const ImportRequestsList& importRequests,
+    sapling::FetchMode fetchMode) {
   auto preparedRequests =
       prepareRequests<SaplingImportRequest::BlobImport>(importRequests, "Blob");
   auto importRequestsMap = std::move(preparedRequests.first);
@@ -481,7 +519,7 @@ void SaplingBackingStore::getBlobBatch(
 
   store_.getBlobBatch(
       folly::range(requests),
-      false,
+      fetchMode,
       // store_->getBlobBatch is blocking, hence we can take these by reference.
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
         if (content.hasException()) {

@@ -134,13 +134,9 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
 
 void SaplingNativeBackingStore::getBlobBatch(
     SaplingRequestRange requests,
-    bool local,
+    sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
         resolve) {
-  FetchMode fetch_mode = FetchMode::AllowRemote;
-  if (local) {
-    fetch_mode = FetchMode::LocalOnly;
-  }
   auto resolver = std::make_shared<GetBlobBatchResolver>(std::move(resolve));
   auto count = requests.size();
 

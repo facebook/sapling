@@ -356,7 +356,9 @@ class SaplingBackingStore final : public BackingStore {
    * length. Promises passed in will be resolved if a blob is successfully
    * imported. Otherwise the promise will be left untouched.
    */
-  void getBlobBatch(const ImportRequestsList& requests);
+  void getBlobBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetchMode);
 
   /**
    * Fetch a blob from Mercurial.
