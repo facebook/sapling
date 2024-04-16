@@ -324,8 +324,23 @@ bdir/README.md
         self.hg("update", self.initial_commit)
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
-    def test_ods_counters(self) -> None:
+    def test_ods_counters_exist(self) -> None:
         self.set_active_filter("top_level_filter")
         counters = self.get_counters()
-        for c in counters.keys():
-            self.assertNotIn("edenffi", c)
+        expected_counters = [
+            "edenffi.ffs.invalid_repo",
+            "edenffi.ffs.lookup_failures",
+            "edenffi.ffs.lookups",
+            "edenffi.ffs.repo_cache_hits",
+            "edenffi.ffs.repo_cache_misses",
+        ]
+        for ec in expected_counters:
+            self.assertIn(ec, counters)
+
+    def test_lookup_failure_counter(self) -> None:
+        self.set_active_filter("top_level_filter")
+        counters = self.get_counters()
+        self.assertEqual(counters["edenffi.ffs.lookup_failures"], 0)
+        self.set_active_filter("does_not_exist")
+        counters = self.get_counters()
+        self.assertGreaterEqual(counters["edenffi.ffs.lookup_failures"], 1)
