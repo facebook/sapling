@@ -354,8 +354,9 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getBlob};
 
   deprioritizeWhenFetchHeavy(*fetchContext);
+
   return ImmediateFuture<BackingStore::GetBlobResult>{
-      backingStore_->getBlob(id, fetchContext)}
+      getBlobImpl(id, fetchContext)}
       .thenValue(
           [self = shared_from_this(),
            statScope = std::move(statScope),
@@ -372,6 +373,47 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
             fetchContext->didFetch(ObjectFetchContext::Blob, id, result.origin);
             return std::move(result.blob);
           });
+}
+
+folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  auto localStoreGetBlob = ImmediateFuture<BlobPtr>{std::in_place, nullptr};
+  if (shouldCacheOnDisk(ObjectStore::LocalStoreCachingPolicy::Blobs)) {
+    // Check in the LocalStore first
+    localStoreGetBlob = localStore_->getBlob(id);
+  }
+  return std::move(localStoreGetBlob)
+      .thenValue(
+          [self = shared_from_this(), id = id, context = context.copy()](
+              BlobPtr blob) mutable
+          -> ImmediateFuture<BackingStore::GetBlobResult> {
+            if (blob) {
+              self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
+              return BackingStore::GetBlobResult{
+                  std::move(blob), ObjectFetchContext::FromDiskCache};
+            }
+
+            // If we didn't find the blob in the LocalStore, then fetch it
+            // from the BackingStore.
+            return ImmediateFuture{
+                self->getUnderlyingBackingStore()->getBlob(id, context)}
+                // TODO: This is a good use for toUnsafeFuture to ensure the
+                // blob is cached even if the resulting future is never
+                // consumed.
+                .thenValue([self, id](BackingStore::GetBlobResult result) {
+                  if (result.blob) {
+                    if (self->shouldCacheOnDisk(
+                            ObjectStore::LocalStoreCachingPolicy::Blobs)) {
+                      self->localStore_->putBlob(id, result.blob.get());
+                    }
+                    self->stats_->increment(
+                        &ObjectStoreStats::getBlobFromBackingStore);
+                  }
+                  return result;
+                });
+          })
+      .semi();
 }
 
 std::optional<BlobMetadata> ObjectStore::getBlobMetadataFromInMemoryCache(
