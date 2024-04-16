@@ -4957,3 +4957,31 @@ def import_curses():
         curses = False
 
     return curses
+
+
+def no_recursion(func):
+    """Funtion decorator to avoid recursion of a free function.
+    If recursion happens, return None.
+
+    >>> @no_recursion
+    ... def f(x):
+    ...     return x if x < 1 else f(x - 1)
+    >>> f(0)
+    0
+    >>> f(1) is None
+    True
+    """
+    depth = 0
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        nonlocal depth
+        if depth > 0:
+            return None
+        try:
+            depth += 1
+            return func(*args, **kwargs)
+        finally:
+            depth -= 1
+
+    return wrapper
