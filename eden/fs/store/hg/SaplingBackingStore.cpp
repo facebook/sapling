@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
 
 #include <algorithm>
 #include <chrono>
@@ -31,7 +31,6 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
-#include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
@@ -227,7 +226,7 @@ HgImportTraceEvent::HgImportTraceEvent(
   path[hgPath.size()] = 0;
 }
 
-HgQueuedBackingStore::HgQueuedBackingStore(
+SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
@@ -276,12 +275,12 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
     XLOG(WARN)
-        << "HgQueuedBackingStore configured to use 0 threads. Invalid, using one thread instead";
+        << "SaplingBackingStore configured to use 0 threads. Invalid, using one thread instead";
     numberThreads = 1;
   }
   threads_.reserve(numberThreads);
   for (uint16_t i = 0; i < numberThreads; i++) {
-    threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
+    threads_.emplace_back(&SaplingBackingStore::processRequest, this);
   }
 
   hgTraceHandle_ = traceBus_->subscribeFunction(
@@ -292,11 +291,11 @@ HgQueuedBackingStore::HgQueuedBackingStore(
 }
 
 /**
- * Create an HgQueuedBackingStore suitable for use in unit tests. It uses an
+ * Create an SaplingBackingStore suitable for use in unit tests. It uses an
  * inline executor to process loaded objects rather than the thread pools used
  * in production Eden.
  */
-HgQueuedBackingStore::HgQueuedBackingStore(
+SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
@@ -325,12 +324,12 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
     XLOG(WARN)
-        << "HgQueuedBackingStore configured to use 0 threads. Invalid, using one thread instead";
+        << "SaplingBackingStore configured to use 0 threads. Invalid, using one thread instead";
     numberThreads = 1;
   }
   threads_.reserve(numberThreads);
   for (uint16_t i = 0; i < numberThreads; i++) {
-    threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
+    threads_.emplace_back(&SaplingBackingStore::processRequest, this);
   }
 
   hgTraceHandle_ = traceBus_->subscribeFunction(
@@ -340,14 +339,14 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       });
 }
 
-HgQueuedBackingStore::~HgQueuedBackingStore() {
+SaplingBackingStore::~SaplingBackingStore() {
   queue_.stop();
   for (auto& thread : threads_) {
     thread.join();
   }
 }
 
-void HgQueuedBackingStore::processBlobImportRequests(
+void SaplingBackingStore::processBlobImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
@@ -406,7 +405,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
   }
 }
 
-folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
+folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
     HgProxyHash hgInfo) {
   return folly::via(
              retryThreadPool_.get(),
@@ -458,7 +457,7 @@ folly::SemiFuture<BlobPtr> HgQueuedBackingStore::retryGetBlob(
       });
 }
 
-void HgQueuedBackingStore::getBlobBatch(
+void SaplingBackingStore::getBlobBatch(
     const ImportRequestsList& importRequests) {
   auto preparedRequests =
       prepareRequests<HgImportRequest::BlobImport>(importRequests, "Blob");
@@ -516,7 +515,7 @@ void HgQueuedBackingStore::getBlobBatch(
       });
 }
 
-folly::Try<BlobPtr> HgQueuedBackingStore::getBlobFromBackingStore(
+folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     const HgProxyHash& hgInfo,
     sapling::FetchMode fetchMode) {
   auto blob = store_.getBlob(hgInfo.byteHash(), fetchMode);
@@ -531,7 +530,7 @@ folly::Try<BlobPtr> HgQueuedBackingStore::getBlobFromBackingStore(
   }
 }
 
-void HgQueuedBackingStore::processTreeImportRequests(
+void SaplingBackingStore::processTreeImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
@@ -593,7 +592,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
   }
 }
 
-void HgQueuedBackingStore::getTreeBatch(
+void SaplingBackingStore::getTreeBatch(
     const ImportRequestsList& importRequests) {
   auto preparedRequests =
       prepareRequests<HgImportRequest::TreeImport>(importRequests, "Tree");
@@ -603,7 +602,7 @@ void HgQueuedBackingStore::getTreeBatch(
   const auto filteredPaths =
       config_->getEdenConfig()->hgFilteredPaths.getValue();
 
-  faultInjector_.check("HgQueuedBackingStore::getTreeBatch", "");
+  faultInjector_.check("SaplingBackingStore::getTreeBatch", "");
   store_.getTreeBatch(
       folly::range(requests),
       false,
@@ -668,9 +667,9 @@ void HgQueuedBackingStore::getTreeBatch(
 
 template <typename T>
 std::pair<
-    HgQueuedBackingStore::ImportRequestsMap,
+    SaplingBackingStore::ImportRequestsMap,
     std::vector<sapling::SaplingRequest>>
-HgQueuedBackingStore::prepareRequests(
+SaplingBackingStore::prepareRequests(
     const ImportRequestsList& importRequests,
     const std::string& requestType) {
   // TODO: extract each ClientRequestInfo from importRequests into a
@@ -753,7 +752,7 @@ HgQueuedBackingStore::prepareRequests(
   return std::make_pair(std::move(importRequestsMap), std::move(requests));
 }
 
-void HgQueuedBackingStore::processBlobMetaImportRequests(
+void SaplingBackingStore::processBlobMetaImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
@@ -794,7 +793,7 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
   }
 }
 
-void HgQueuedBackingStore::getBlobMetadataBatch(
+void SaplingBackingStore::getBlobMetadataBatch(
     const ImportRequestsList& importRequests) {
   auto preparedRequests = prepareRequests<HgImportRequest::BlobMetaImport>(
       importRequests, "BlobMetadata");
@@ -863,7 +862,7 @@ void HgQueuedBackingStore::getBlobMetadataBatch(
       });
 }
 
-void HgQueuedBackingStore::processRequest() {
+void SaplingBackingStore::processRequest() {
   folly::setThreadName("hgqueue");
   for (;;) {
     auto requests = queue_.dequeue();
@@ -884,7 +883,7 @@ void HgQueuedBackingStore::processRequest() {
   }
 }
 
-ObjectComparison HgQueuedBackingStore::compareObjectsById(
+ObjectComparison SaplingBackingStore::compareObjectsById(
     const ObjectId& one,
     const ObjectId& two) {
   // This is by far the common case, so check it first:
@@ -917,13 +916,13 @@ ObjectComparison HgQueuedBackingStore::compareObjectsById(
   return ObjectComparison::Unknown;
 }
 
-RootId HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {
+RootId SaplingBackingStore::parseRootId(folly::StringPiece rootId) {
   // rootId can be 20-byte binary or 40-byte hex. Canonicalize, unconditionally
   // returning 40-byte hex.
   return RootId{hash20FromThrift(rootId).toString()};
 }
 
-std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {
+std::string SaplingBackingStore::renderRootId(const RootId& rootId) {
   // In memory, root IDs are stored as 40-byte hex. Thrift clients generally
   // expect 20-byte binary for Mercurial commit hashes, so re-encode that way.
   auto& value = rootId.value();
@@ -936,8 +935,7 @@ std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {
   }
 }
 
-ObjectId HgQueuedBackingStore::staticParseObjectId(
-    folly::StringPiece objectId) {
+ObjectId SaplingBackingStore::staticParseObjectId(folly::StringPiece objectId) {
   if (objectId.startsWith("proxy-")) {
     if (objectId.size() != 46) {
       throwf<std::invalid_argument>(
@@ -965,7 +963,7 @@ ObjectId HgQueuedBackingStore::staticParseObjectId(
   return HgProxyHash::makeEmbeddedProxyHash1(hgRevHash, path);
 }
 
-std::string HgQueuedBackingStore::staticRenderObjectId(
+std::string SaplingBackingStore::staticRenderObjectId(
     const ObjectId& objectId) {
   if (auto proxyHash = HgProxyHash::tryParseEmbeddedProxyHash(objectId)) {
     if (proxyHash->path().empty()) {
@@ -977,7 +975,7 @@ std::string HgQueuedBackingStore::staticRenderObjectId(
   return fmt::format("proxy-{}", folly::hexlify(objectId.getBytes()));
 }
 
-folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
+folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getTree};
@@ -1008,7 +1006,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
 }
 
 ImmediateFuture<BackingStore::GetTreeResult>
-HgQueuedBackingStore::getTreeEnqueue(
+SaplingBackingStore::getTreeEnqueue(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
@@ -1056,7 +1054,7 @@ HgQueuedBackingStore::getTreeEnqueue(
       });
 }
 
-TreePtr HgQueuedBackingStore::getTreeLocal(
+TreePtr SaplingBackingStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
   auto tree =
@@ -1078,7 +1076,7 @@ TreePtr HgQueuedBackingStore::getTreeLocal(
   return nullptr;
 }
 
-folly::Try<TreePtr> HgQueuedBackingStore::getTreeRemote(
+folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
@@ -1106,7 +1104,7 @@ folly::Try<TreePtr> HgQueuedBackingStore::getTreeRemote(
   }
 }
 
-folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
+folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getBlob};
@@ -1135,7 +1133,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
       .semi();
 }
 
-ImmediateFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlobImpl(
+ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
@@ -1187,7 +1185,7 @@ ImmediateFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlobImpl(
 }
 
 folly::SemiFuture<BackingStore::GetBlobMetaResult>
-HgQueuedBackingStore::getBlobMetadata(
+SaplingBackingStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &HgBackingStoreStats::getBlobMetadata};
@@ -1219,7 +1217,7 @@ HgQueuedBackingStore::getBlobMetadata(
 }
 
 ImmediateFuture<BackingStore::GetBlobMetaResult>
-HgQueuedBackingStore::getBlobMetadataImpl(
+SaplingBackingStore::getBlobMetadataImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
@@ -1276,7 +1274,7 @@ HgQueuedBackingStore::getBlobMetadataImpl(
       });
 }
 
-folly::Try<BlobMetadataPtr> HgQueuedBackingStore::getLocalBlobMetadata(
+folly::Try<BlobMetadataPtr> SaplingBackingStore::getLocalBlobMetadata(
     const HgProxyHash& hgInfo) {
   auto metadata =
       store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
@@ -1299,7 +1297,7 @@ folly::Try<BlobMetadataPtr> HgQueuedBackingStore::getLocalBlobMetadata(
 }
 
 ImmediateFuture<BackingStore::GetRootTreeResult>
-HgQueuedBackingStore::getRootTree(
+SaplingBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
   ObjectId commitId = hashFromRootId(rootId);
@@ -1336,7 +1334,7 @@ HgQueuedBackingStore::getRootTree(
           });
 }
 
-folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifest(
+folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
     const ObjectId& commitId,
     const ObjectFetchContextPtr& context) {
   return folly::via(
@@ -1358,7 +1356,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifest(
       });
 }
 
-std::optional<Hash20> HgQueuedBackingStore::getManifestNode(
+std::optional<Hash20> SaplingBackingStore::getManifestNode(
     const ObjectId& commitId) {
   auto manifestNode = store_.getManifestNode(commitId.getBytes());
   if (!manifestNode.has_value()) {
@@ -1368,7 +1366,7 @@ std::optional<Hash20> HgQueuedBackingStore::getManifestNode(
   return Hash20(*std::move(manifestNode));
 }
 
-folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifestImpl(
+folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
     Hash20 manifestNode,
     const ObjectFetchContextPtr& context) {
   // Record that we are at the root for this node
@@ -1401,7 +1399,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::importTreeManifestImpl(
   return retryGetTree(manifestNode, objectId, path);
 }
 
-folly::Future<TreePtr> HgQueuedBackingStore::retryGetTree(
+folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
     const Hash20& manifestNode,
     const ObjectId& edenTreeID,
     RelativePathPiece path) {
@@ -1436,7 +1434,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTree(
       });
 }
 
-folly::Try<TreePtr> HgQueuedBackingStore::getTreeFromBackingStore(
+folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
@@ -1479,7 +1477,7 @@ folly::Try<TreePtr> HgQueuedBackingStore::getTreeFromBackingStore(
   }
 }
 
-folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
+folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
     Hash20 manifestNode,
     ObjectId edenTreeID,
     RelativePath path,
@@ -1537,7 +1535,7 @@ folly::Future<TreePtr> HgQueuedBackingStore::retryGetTreeImpl(
       });
 }
 
-folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
+folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
   return HgProxyHash::getBatch(localStore_.get(), ids, *stats_)
@@ -1575,7 +1573,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
       .semi();
 }
 
-void HgQueuedBackingStore::logMissingProxyHash() {
+void SaplingBackingStore::logMissingProxyHash() {
   auto now = std::chrono::steady_clock::now();
 
   bool shouldLog = false;
@@ -1594,7 +1592,7 @@ void HgQueuedBackingStore::logMissingProxyHash() {
   }
 }
 
-void HgQueuedBackingStore::logBackingStoreFetch(
+void SaplingBackingStore::logBackingStoreFetch(
     const ObjectFetchContext& context,
     folly::Range<HgProxyHash*> hashes,
     ObjectFetchContext::ObjectType type) {
@@ -1624,7 +1622,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   }
 }
 
-size_t HgQueuedBackingStore::getImportMetric(
+size_t SaplingBackingStore::getImportMetric(
     RequestMetricsScope::RequestStage stage,
     HgImportObject object,
     RequestMetricsScope::RequestMetric metric) const {
@@ -1633,7 +1631,7 @@ size_t HgQueuedBackingStore::getImportMetric(
 }
 
 RequestMetricsScope::LockedRequestWatchList&
-HgQueuedBackingStore::getImportWatches(
+SaplingBackingStore::getImportWatches(
     RequestMetricsScope::RequestStage stage,
     HgImportObject object) const {
   switch (stage) {
@@ -1646,7 +1644,7 @@ HgQueuedBackingStore::getImportWatches(
 }
 
 RequestMetricsScope::LockedRequestWatchList&
-HgQueuedBackingStore::getPendingImportWatches(HgImportObject object) const {
+SaplingBackingStore::getPendingImportWatches(HgImportObject object) const {
   switch (object) {
     case HgImportObject::BLOB:
     case HgImportObject::BATCHED_BLOB:
@@ -1664,7 +1662,7 @@ HgQueuedBackingStore::getPendingImportWatches(HgImportObject object) const {
 }
 
 RequestMetricsScope::LockedRequestWatchList&
-HgQueuedBackingStore::getLiveImportWatches(HgImportObject object) const {
+SaplingBackingStore::getLiveImportWatches(HgImportObject object) const {
   switch (object) {
     case HgImportObject::BLOB:
       return liveImportBlobWatches_;
@@ -1684,7 +1682,7 @@ HgQueuedBackingStore::getLiveImportWatches(HgImportObject object) const {
   EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
 
-folly::StringPiece HgQueuedBackingStore::stringOfHgImportObject(
+folly::StringPiece SaplingBackingStore::stringOfHgImportObject(
     HgImportObject object) {
   switch (object) {
     case HgImportObject::BLOB:
@@ -1705,18 +1703,18 @@ folly::StringPiece HgQueuedBackingStore::stringOfHgImportObject(
   EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
 
-void HgQueuedBackingStore::startRecordingFetch() {
+void SaplingBackingStore::startRecordingFetch() {
   isRecordingFetch_.store(true, std::memory_order_relaxed);
 }
 
-std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
+std::unordered_set<std::string> SaplingBackingStore::stopRecordingFetch() {
   isRecordingFetch_.store(false, std::memory_order_relaxed);
   std::unordered_set<std::string> paths;
   std::swap(paths, *fetchedFilePaths_.wlock());
   return paths;
 }
 
-ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
+ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
     const RootId& rootId,
     const Hash20& manifestId,
     const ObjectFetchContextPtr& context) {
@@ -1758,7 +1756,7 @@ ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
           });
 }
 
-void HgQueuedBackingStore::periodicManagementTask() {
+void SaplingBackingStore::periodicManagementTask() {
   flush();
 }
 
@@ -1782,7 +1780,7 @@ void dropTreeImportRequest(std::shared_ptr<HgImportRequest>& request) {
 }
 } // namespace
 
-int64_t HgQueuedBackingStore::dropAllPendingRequestsFromQueue() {
+int64_t SaplingBackingStore::dropAllPendingRequestsFromQueue() {
   auto requestVec = queue_.combineAndClearRequestQueues();
   for (auto& request : requestVec) {
     if (request->isType<HgImportRequest::BlobImport>()) {

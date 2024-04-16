@@ -13,7 +13,8 @@ namespace facebook::eden {
 
 enum class HgObjectIdFormat {
   // We used to support a ProxyHash format that indexed through a LocalStore
-  // keyspace in order to map fixed-size IDs onto variable-size HgBackingStore
+  // keyspace in order to map fixed-size IDs onto variable-size
+  // SaplingBackingStore
   // IDs.
   // EdenFS will still read IDs of that format, but will not generate them.
 

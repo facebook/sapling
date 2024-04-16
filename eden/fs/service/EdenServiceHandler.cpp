@@ -80,7 +80,7 @@
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/filter/GlobFilter.h"
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/Clock.h"
@@ -1446,41 +1446,41 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 
 /**
  * Helper function to get a cast a BackingStore shared_ptr to a
- * HgQueuedBackingStore shared_ptr. Returns an error if the type of backingStore
- * provided is not truly an HgQueuedBackingStore. Used in
+ * SaplingBackingStore shared_ptr. Returns an error if the type of backingStore
+ * provided is not truly an SaplingBackingStore. Used in
  * EdenServiceHandler::traceHgEvents and
  * EdenServiceHandler::getRetroactiveHgEvents.
  */
-std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
+std::shared_ptr<SaplingBackingStore> castToSaplingBackingStore(
     std::shared_ptr<BackingStore>& backingStore,
     AbsolutePathPiece mountPath) {
-  std::shared_ptr<HgQueuedBackingStore> hgBackingStore{nullptr};
+  std::shared_ptr<SaplingBackingStore> saplingBackingStore{nullptr};
 
   // If FilteredFS is enabled, we'll see a FilteredBackingStore first
   auto filteredBackingStore =
       std::dynamic_pointer_cast<FilteredBackingStore>(backingStore);
   if (filteredBackingStore) {
-    // FilteredBackingStore -> HgQueuedBackingStore
-    hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+    // FilteredBackingStore -> SaplingBackingStore
+    saplingBackingStore = std::dynamic_pointer_cast<SaplingBackingStore>(
         filteredBackingStore->getBackingStore());
   } else {
-    // BackingStore -> HgQueuedBackingStore
-    hgBackingStore =
-        std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
+    // BackingStore -> SaplingBackingStore
+    saplingBackingStore =
+        std::dynamic_pointer_cast<SaplingBackingStore>(backingStore);
   }
 
-  if (!hgBackingStore) {
+  if (!saplingBackingStore) {
     // typeid() does not evaluate expressions
     auto& r = *backingStore.get();
     throw newEdenError(
         EdenErrorType::GENERIC_ERROR,
         fmt::format(
-            "mount {} must use HgQueuedBackingStore, type is {}",
+            "mount {} must use SaplingBackingStore, type is {}",
             mountPath,
             typeid(r).name()));
   }
 
-  return hgBackingStore;
+  return saplingBackingStore;
 }
 
 /**
@@ -1560,8 +1560,8 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
   auto backingStore = mountHandle.getObjectStore().getBackingStore();
-  std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-      castToHgQueuedBackingStore(
+  std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+      castToSaplingBackingStore(
           backingStore, mountHandle.getEdenMount().getPath());
 
   struct Context {
@@ -1575,7 +1575,7 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
         // on disconnect, release context and the TraceSubscriptionHandle
       });
 
-  context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
+  context->subHandle = saplingBackingStore->getTraceBus().subscribeFunction(
       fmt::format(
           "hgtrace-{}", mountHandle.getEdenMount().getPath().basename()),
       [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
@@ -2996,7 +2996,7 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
     // typeid() does not evaluate expressions
     auto& r = *backingStore.get();
     throw std::runtime_error(folly::to<std::string>(
-        "mount must use HgQueuedBackingStore, type is ", typeid(r).name()));
+        "mount must use SaplingBackingStore, type is ", typeid(r).name()));
   }
 
   auto repo = repo_optional.value();
@@ -3482,13 +3482,13 @@ EdenServiceHandler::semifuture_debugGetBlob(
         "debugGetScmBlob",
         *server_->getServerState()->getStats());
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
-    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        hgBackingStore->getBlobLocal(proxyHash),
+        saplingBackingStore->getBlobLocal(proxyHash),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
@@ -3498,12 +3498,12 @@ EdenServiceHandler::semifuture_debugGetBlob(
         "debugGetScmBlob",
         *server_->getServerState()->getStats());
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
-    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        hgBackingStore->getBlobRemote(proxyHash),
+        saplingBackingStore->getBlobRemote(proxyHash),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
@@ -3568,11 +3568,11 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         "debugGetScmBlob",
         *server_->getServerState()->getStats());
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
-    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     auto metadata =
-        hgBackingStore->getLocalBlobMetadata(proxyHash).value_or(nullptr);
+        saplingBackingStore->getLocalBlobMetadata(proxyHash).value_or(nullptr);
 
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
         edenMount,
@@ -3587,12 +3587,12 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         "debugGetScmBlob",
         *server_->getServerState()->getStats());
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
-    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(
-        ImmediateFuture{
-            hgBackingStore->getBlobMetadataImpl(id, proxyHash, fetchContext)}
+        ImmediateFuture{saplingBackingStore->getBlobMetadataImpl(
+                            id, proxyHash, fetchContext)}
             .thenValue([edenMount, id](BackingStore::GetBlobMetaResult result) {
               return transformToBlobMetadataFromOrigin(
                   edenMount,
@@ -3983,12 +3983,12 @@ void EdenServiceHandler::stopRecordingBackingStoreFetch(
   for (const auto& backingStore : server_->getBackingStores()) {
     auto filePaths = backingStore->stopRecordingFetch();
 
-    // recording is only implemented for HgQueuedBackingStore at the moment
-    // BackingStore -> HgQueuedBackingStore
-    auto hgBackingStore =
-        std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
-    if (hgBackingStore) {
-      (*results.fetchedFilePaths_ref())["HgQueuedBackingStore"].insert(
+    // recording is only implemented for SaplingBackingStore at the moment
+    // BackingStore -> SaplingBackingStore
+    auto saplingBackingStore =
+        std::dynamic_pointer_cast<SaplingBackingStore>(backingStore);
+    if (saplingBackingStore) {
+      (*results.fetchedFilePaths_ref())["SaplingBackingStore"].insert(
           filePaths.begin(), filePaths.end());
     }
   }
@@ -4039,10 +4039,10 @@ void EdenServiceHandler::debugCompactLocalStorage() {
 }
 
 // TODO(T119221752): add more BackingStore subclasses to this command. We
-// currently only support HgQueuedBackingStores
+// currently only support SaplingBackingStores
 int64_t EdenServiceHandler::debugDropAllPendingRequests() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-  auto stores = server_->getHgQueuedBackingStores();
+  auto stores = server_->getSaplingBackingStores();
   int64_t numDropped = 0;
   for (auto& store : stores) {
     numDropped += store->dropAllPendingRequestsFromQueue();
@@ -4418,12 +4418,12 @@ void EdenServiceHandler::getRetroactiveHgEvents(
     std::unique_ptr<GetRetroactiveHgEventsParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   auto backingStore = mountHandle.getObjectStore().getBackingStore();
-  std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
-      castToHgQueuedBackingStore(
+  std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+      castToSaplingBackingStore(
           backingStore, mountHandle.getEdenMount().getPath());
 
   std::vector<HgEvent> thriftEvents;
-  auto bufferEvents = hgBackingStore->getActivityBuffer().getAllEvents();
+  auto bufferEvents = saplingBackingStore->getActivityBuffer().getAllEvents();
   thriftEvents.reserve(bufferEvents.size());
   for (auto const& event : bufferEvents) {
     HgEvent thriftEvent{};

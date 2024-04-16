@@ -720,7 +720,7 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> fetchHgAuxMetadata{"hg:fetch-aux-metadata", true, this};
 
   /**
-   * Which object ID format should the HgBackingStore use?
+   * Which object ID format should the SaplingBackingStore use?
    */
   ConfigSetting<HgObjectIdFormat> hgObjectIdFormat{
       "hg:object-id-format",
@@ -742,12 +742,12 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls the number of blob or prefetch import requests we batch in
-   * HgBackingStore
+   * SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSize{"hg:import-batch-size", 1, this};
 
   /**
-   * Controls the number of tree import requests we batch in HgBackingStore
+   * Controls the number of tree import requests we batch in SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSizeTree{
       "hg:import-batch-size-tree",
@@ -756,7 +756,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls the max number of blob metadata import requests we batch in
-   * HgBackingStore
+   * SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSizeBlobMeta{
       "hg:import-batch-size-blobmeta",

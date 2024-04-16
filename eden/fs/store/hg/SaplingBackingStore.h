@@ -120,19 +120,19 @@ struct HgImportTraceEvent : TraceEventBase {
 };
 
 /**
- * An Hg backing store implementation that will put incoming blob/tree import
- * requests into a job queue, then a pool of workers will work on fulfilling
- * these requests via different methods (reading from hgcache, Mononoke,
- * debugimporthelper, etc.).
+ * A Sapling backing store implementation that will put incoming blob/tree
+ * import requests into a job queue, then a pool of workers will work on
+ * fulfilling these requests via different methods (reading from hgcache,
+ * Mononoke, debugimporthelper, etc.).
  */
-class HgQueuedBackingStore final : public BackingStore {
+class SaplingBackingStore final : public BackingStore {
  public:
   using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
   using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
 
-  HgQueuedBackingStore(
+  SaplingBackingStore(
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
@@ -144,11 +144,11 @@ class HgQueuedBackingStore final : public BackingStore {
       FaultInjector* FOLLY_NONNULL faultInjector);
 
   /**
-   * Create an HgQueuedBackingStore suitable for use in unit tests. It uses an
+   * Create an SaplingBackingStore suitable for use in unit tests. It uses an
    * inline executor to process loaded objects rather than the thread pools used
    * in production Eden.
    */
-  HgQueuedBackingStore(
+  SaplingBackingStore(
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
@@ -158,7 +158,7 @@ class HgQueuedBackingStore final : public BackingStore {
       std::unique_ptr<BackingStoreLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
 
-  ~HgQueuedBackingStore() override;
+  ~SaplingBackingStore() override;
 
   /**
    * Objects that can be imported from Hg
@@ -262,9 +262,9 @@ class HgQueuedBackingStore final : public BackingStore {
 
   /**
    * calculates `metric` for `object` imports that are `stage`.
-   *    ex. HgQueuedBackingStore::getImportMetrics(
+   *    ex. SaplingBackingStore::getImportMetrics(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::HgImportObject::BLOB,
    *          RequestMetricsScope::Metric::COUNT,
    *        )
    *    calculates the number of blob imports that are pending
@@ -292,8 +292,8 @@ class HgQueuedBackingStore final : public BackingStore {
 
  private:
   // Forbidden copy constructor and assignment operator
-  HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;
-  HgQueuedBackingStore& operator=(const HgQueuedBackingStore&) = delete;
+  SaplingBackingStore(const SaplingBackingStore&) = delete;
+  SaplingBackingStore& operator=(const SaplingBackingStore&) = delete;
 
   folly::Future<TreePtr> importTreeManifestImpl(
       Hash20 manifestNode,
@@ -376,7 +376,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * the request at the end of the queue.
    *
    * This is marked as public but don't be fooled, this is not intended to be
-   * used by anybody but HgQueuedBackingStore and debugGetBlobMetadata Thrift
+   * used by anybody but SaplingBackingStore and debugGetBlobMetadata Thrift
    * handler.
    */
   ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
@@ -424,9 +424,9 @@ class HgQueuedBackingStore final : public BackingStore {
 
   /**
    * gets the watches timing `object` imports that are `stage`
-   *    ex. HgQueuedBackingStore::getImportWatches(
+   *    ex. SaplingBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing blob imports that are pending
    */
@@ -436,8 +436,8 @@ class HgQueuedBackingStore final : public BackingStore {
 
   /**
    * Gets the watches timing pending `object` imports
-   *   ex. HgQueuedBackingStore::getPendingImportWatches(
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *   ex. SaplingBackingStore::getPendingImportWatches(
+   *          SaplingBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing pending blob imports
    */
@@ -446,8 +446,8 @@ class HgQueuedBackingStore final : public BackingStore {
 
   /**
    * Gets the watches timing live `object` imports
-   *   ex. HgQueuedBackingStore::getLiveImportWatches(
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *   ex. SaplingBackingStore::getLiveImportWatches(
+   *          SaplingBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing live blob imports
    */
@@ -479,7 +479,7 @@ class HgQueuedBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context);
 
   /**
-   * isRecordingFetch_ indicates if HgQueuedBackingStore is recording paths
+   * isRecordingFetch_ indicates if SaplingBackingStore is recording paths
    * for fetched files. Initially we don't record paths. When
    * startRecordingFetch() is called, isRecordingFetch_ is set to true and
    * recordFetch() will record the input path. When stopRecordingFetch() is

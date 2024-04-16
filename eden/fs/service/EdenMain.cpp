@@ -42,7 +42,7 @@
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -135,12 +135,12 @@ void EdenMain::runServer(const EdenServer& server) {
 }
 
 namespace {
-std::shared_ptr<HgQueuedBackingStore> createHgQueuedBackingStore(
+std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
     const BackingStoreFactory::CreateParams& params,
     const AbsolutePath& repoPath,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::unique_ptr<HgBackingStoreOptions> runtimeOptions) {
-  return std::make_shared<HgQueuedBackingStore>(
+  return std::make_shared<SaplingBackingStore>(
       repoPath,
       params.localStore,
       params.sharedStats.copy(),
@@ -168,7 +168,7 @@ void EdenMain::registerStandardBackingStores() {
 
     auto runtimeOptions = std::make_unique<HgBackingStoreOptions>(
         /*ignoreFilteredPathsConfig=*/false);
-    return createHgQueuedBackingStore(
+    return createSaplingBackingStore(
         params, repoPath, reloadableConfig, std::move(runtimeOptions));
   });
 
@@ -181,10 +181,10 @@ void EdenMain::registerStandardBackingStores() {
 
         auto options = std::make_unique<HgBackingStoreOptions>(
             /*ignoreFilteredPathsConfig=*/true);
-        auto hgQueuedBackingStore = createHgQueuedBackingStore(
+        auto saplingBackingStore = createSaplingBackingStore(
             params, repoPath, reloadableConfig, std::move(options));
         return std::make_shared<FilteredBackingStore>(
-            std::move(hgQueuedBackingStore), std::move(hgSparseFilter));
+            std::move(saplingBackingStore), std::move(hgSparseFilter));
       });
 
   registerBackingStore(

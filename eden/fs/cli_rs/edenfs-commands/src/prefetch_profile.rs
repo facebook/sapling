@@ -207,7 +207,7 @@ impl PrefetchCmd {
             .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))?;
         let fetched_files = files
             .fetchedFilePaths
-            .get("HgQueuedBackingStore")
+            .get("SaplingBackingStore")
             .ok_or_else(|| anyhow!("no Path vector found"))?;
         let mut out_file = File::create(output_path).context("unable to create output file")?;
         for path_bytes in fetched_files {

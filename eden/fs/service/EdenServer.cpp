@@ -79,7 +79,7 @@
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/TreeCache.h"
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
@@ -219,7 +219,7 @@ std::optional<std::string> getUnixDomainSocketPath(
 std::string getCounterNameForImportMetric(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
-    std::optional<HgQueuedBackingStore::HgImportObject> object = std::nullopt) {
+    std::optional<SaplingBackingStore::HgImportObject> object = std::nullopt) {
   if (object.has_value()) {
     // base prefix . stage . object . metric
     return folly::to<std::string>(
@@ -227,7 +227,7 @@ std::string getCounterNameForImportMetric(
         ".",
         RequestMetricsScope::stringOfHgImportStage(stage),
         ".",
-        HgQueuedBackingStore::stringOfHgImportObject(object.value()),
+        SaplingBackingStore::stringOfHgImportObject(object.value()),
         ".",
         RequestMetricsScope::stringOfRequestMetric(metric));
   }
@@ -419,11 +419,11 @@ EdenServer::EdenServer(
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : HgQueuedBackingStore::hgImportObjects) {
+      for (auto object : SaplingBackingStore::hgImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->registerCallback(counterName, [this, stage, object, metric] {
-          auto individual_counters = this->collectHgQueuedBackingStoreCounters(
-              [stage, object, metric](const HgQueuedBackingStore& store) {
+          auto individual_counters = this->collectSaplingBackingStoreCounters(
+              [stage, object, metric](const SaplingBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
               });
           return RequestMetricsScope::aggregateMetricCounters(
@@ -433,9 +433,9 @@ EdenServer::EdenServer(
       auto summaryCounterName = getCounterNameForImportMetric(stage, metric);
       counters->registerCallback(summaryCounterName, [this, stage, metric] {
         std::vector<size_t> individual_counters;
-        for (auto object : HgQueuedBackingStore::hgImportObjects) {
-          auto more_counters = this->collectHgQueuedBackingStoreCounters(
-              [stage, object, metric](const HgQueuedBackingStore& store) {
+        for (auto object : SaplingBackingStore::hgImportObjects) {
+          auto more_counters = this->collectSaplingBackingStoreCounters(
+              [stage, object, metric](const SaplingBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
               });
           individual_counters.insert(
@@ -458,7 +458,7 @@ EdenServer::~EdenServer() {
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : HgQueuedBackingStore::hgImportObjects) {
+      for (auto object : SaplingBackingStore::hgImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->unregisterCallback(counterName);
       }
@@ -1995,25 +1995,26 @@ EdenServer::getBackingStores() {
   return backingStores;
 }
 
-std::unordered_set<shared_ptr<HgQueuedBackingStore>>
-EdenServer::getHgQueuedBackingStores() {
-  std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};
+std::unordered_set<shared_ptr<SaplingBackingStore>>
+EdenServer::getSaplingBackingStores() {
+  std::unordered_set<std::shared_ptr<SaplingBackingStore>>
+      saplingBackingStores{};
   {
     auto lockedStores = this->backingStores_.rlock();
     for (const auto& entry : *lockedStores) {
-      if (auto hgQueuedBackingStore =
-              std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
-        hgBackingStores.emplace(std::move(hgQueuedBackingStore));
+      if (auto saplingBackingStore =
+              std::dynamic_pointer_cast<SaplingBackingStore>(entry.second)) {
+        saplingBackingStores.emplace(std::move(saplingBackingStore));
       }
     }
   }
-  return hgBackingStores;
+  return saplingBackingStores;
 }
 
-std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(
-    std::function<size_t(const HgQueuedBackingStore&)> getCounterFromStore) {
+std::vector<size_t> EdenServer::collectSaplingBackingStoreCounters(
+    std::function<size_t(const SaplingBackingStore&)> getCounterFromStore) {
   std::vector<size_t> counters;
-  for (const auto& store : this->getHgQueuedBackingStores()) {
+  for (const auto& store : this->getSaplingBackingStores()) {
     counters.emplace_back(getCounterFromStore(*store));
   }
   return counters;

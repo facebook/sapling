@@ -175,7 +175,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * recording and return the fetched files since startRecordingFetch() is
    * called and clear the old records.
    *
-   * Currently implemented in HgQueuedBackingStore.
+   * Currently implemented in SaplingBackingStore.
    *
    * Note: Only stopRecordingFetch() clears old records. Calling
    * startRecordingFetch() a second time has no effect.

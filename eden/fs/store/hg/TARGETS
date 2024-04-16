@@ -38,9 +38,9 @@ cpp_library(
 )
 
 cpp_library(
-    name = "hg_queued_backing_store",
-    srcs = ["HgQueuedBackingStore.cpp"],
-    headers = ["HgQueuedBackingStore.h"],
+    name = "sapling_backing_store",
+    srcs = ["SaplingBackingStore.cpp"],
+    headers = ["SaplingBackingStore.h"],
     deps = [
         ":hg_import_request",
         ":hg_proxy_hash",

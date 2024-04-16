@@ -283,7 +283,7 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
 };
 
 /**
- * @see HgBackingStore
+ * @see SaplingBackingStore
  *
  * Terminology:
  *   get = entire lookup process, including both Sapling disk hits and fetches
@@ -314,7 +314,7 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
 
 /**
  * @see HgImporter
- * @see HgBackingStore
+ * @see SaplingBackingStore
  */
 struct HgImporterStats : StatsGroup<HgImporterStats> {
   Counter catFile{"hg_importer.cat_file"};

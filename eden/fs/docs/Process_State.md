@@ -104,8 +104,8 @@ fetched data, and a `LocalStore` to provide on-disk cache RocksDB,
 a `BackingStore` that is responsible for actually fetching data from the repository.
 They are in a chain of responsibility structure - if one of them fails,
 it will send the request to the next layer. The primary `BackingStore`
-implementation used by EdenFS is the `HgBackingStore` class, which fetches data
-from an Sapling repository.  (The name `HgBackingStore` dates back to before Sapling
+implementation used by EdenFS is the `SaplingBackingStore` class, which fetches data
+from an Sapling repository.  (The name `SaplingBackingStore` dates back to before Sapling
 was differentiated from Mercurial.)  EdenFS also has a `GitBackingStore` implementation
 that can fetch data from a git repository.  However, as the git CLI does not currently have
 any knowledge of EdenFS this is not particularly usable in practice: while
