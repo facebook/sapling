@@ -14,6 +14,7 @@ async-trait = "0.1.71"
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
 bytes = { version = "1.6.0", features = ["serde"] }
 clap = { version = "4.5.2", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }

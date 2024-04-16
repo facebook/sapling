@@ -14,6 +14,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarksRef;
+use bookmarks_cache::BookmarksCacheRef;
 use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
@@ -151,7 +152,7 @@ impl RepoContext {
         head: ChangesetId,
         base: ChangesetId,
     ) -> Result<Bytes, GitError> {
-        repo_stack_git_bundle(self.ctx(), self.inner_repo(), head, base).await
+        repo_stack_git_bundle(self.ctx(), self.repo(), head, base).await
     }
 
     /// Upload the packfile base item corresponding to the raw git object with the
@@ -309,6 +310,7 @@ pub trait Repo = RepoIdentityRef
     + BonsaiTagMappingRef
     + RepoDerivedDataRef
     + GitSymbolicRefsRef
+    + BookmarksCacheRef
     + CommitGraphRef
     + Send
     + Sync;

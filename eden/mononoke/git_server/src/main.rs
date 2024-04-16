@@ -23,6 +23,7 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
+use bookmarks_cache::BookmarksCache;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
@@ -133,6 +134,9 @@ pub struct Repo {
 
     #[facet]
     repo_permission_checker: dyn RepoPermissionChecker,
+
+    #[facet]
+    pub warm_bookmarks_cache: dyn BookmarksCache,
 }
 
 /// Mononoke Git Server

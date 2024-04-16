@@ -39,6 +39,7 @@ rust_binary(
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/bookmarks:bookmarks_cache",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
