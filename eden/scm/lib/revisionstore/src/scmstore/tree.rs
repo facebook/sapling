@@ -315,7 +315,7 @@ impl TreeStore {
             common.results(FetchErrors::new());
 
             if let Err(err) = metrics.update_ods() {
-                tracing::error!(?err, "error udpating tree ods counters");
+                tracing::error!(?err, "error updating tree ods counters");
             }
 
             store_metrics.write().fetch += metrics;
