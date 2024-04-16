@@ -16,6 +16,5 @@
   $ hg clone -q --eden test:server client --config clone.eden-sparse-filter=eden-sparse
   $ cd client
 
-FIXME Allow adhoc use of sparse commands to debug sparse profiles:
+Allow adhoc use of sparse commands to debug sparse profiles:
   $ hg debugsparsematch -q --sparse-profile=sparse excluded --config extensions.sparse=
-  excluded
