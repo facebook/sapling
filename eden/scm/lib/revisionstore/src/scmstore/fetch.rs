@@ -83,8 +83,12 @@ impl<T: StoreValue> CommonFetchState<T> {
                 if new.attrs().has(self.request_attrs) {
                     self.found.remove(&key);
                     self.pending.remove(&key);
-                    let new = new.mask(self.request_attrs);
-                    let _ = self.found_tx.send(Ok((key, new)));
+
+                    if !self.mode.ignore_result() {
+                        let new = new.mask(self.request_attrs);
+                        let _ = self.found_tx.send(Ok((key, new)));
+                    }
+
                     return true;
                 } else {
                     *available = new;
@@ -93,8 +97,12 @@ impl<T: StoreValue> CommonFetchState<T> {
             Vacant(entry) => {
                 if value.attrs().has(self.request_attrs) {
                     self.pending.remove(&key);
-                    let value = value.mask(self.request_attrs);
-                    let _ = self.found_tx.send(Ok((key, value)));
+
+                    if !self.mode.ignore_result() {
+                        let value = value.mask(self.request_attrs);
+                        let _ = self.found_tx.send(Ok((key, value)));
+                    }
+
                     return true;
                 } else {
                     entry.insert(value);

@@ -700,7 +700,11 @@ impl LfsStore {
     // TODO(meyer): This is a crappy name, albeit so is blob_impl.
     /// Fetch whatever content is available for the specified StoreKey. Like blob_impl above, but returns just
     /// the LfsPointersEntry when that's all that's found. Mostly copy-pasted from blob_impl above.
-    pub(crate) fn fetch_available(&self, key: &StoreKey) -> Result<Option<LfsStoreEntry>> {
+    pub(crate) fn fetch_available(
+        &self,
+        key: &StoreKey,
+        ignore_result: bool,
+    ) -> Result<Option<LfsStoreEntry>> {
         let pointer = self.pointers.entry(key)?;
 
         match pointer {
@@ -711,12 +715,20 @@ impl LfsStore {
                 // or return NotFound like blob_impl?
                 None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
                 Some(content_hash) => {
-                    match self
-                        .blobs
-                        .get(&content_hash.clone().unwrap_sha256(), entry.size)?
-                    {
-                        None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
-                        Some(blob) => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, blob))),
+                    if ignore_result {
+                        match self.blobs.contains(&content_hash.clone().unwrap_sha256())? {
+                            false => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
+                            // Insert stub entry since the result doesn't matter.
+                            true => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, Bytes::new()))),
+                        }
+                    } else {
+                        match self
+                            .blobs
+                            .get(&content_hash.clone().unwrap_sha256(), entry.size)?
+                        {
+                            None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
+                            Some(blob) => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, blob))),
+                        }
                     }
                 }
             },

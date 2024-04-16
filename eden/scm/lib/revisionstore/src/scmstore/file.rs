@@ -605,7 +605,7 @@ impl RemoteDataStore for FileStore {
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 attrs,
-                FetchMode::AllowRemote,
+                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
             )
             .missing()?
             .into_iter()

@@ -19,6 +19,9 @@ bitflags::bitflags! {
 
         /// The fetch may request extra data from remote server.
         const PREFETCH = 4;
+
+        /// Caller doesn't care about the result data - ok to skip some work.
+        const IGNORE_RESULT = 8;
     }
 }
 
@@ -60,5 +63,9 @@ impl FetchMode {
         } else {
             Self::AllowRemote
         }
+    }
+
+    pub fn ignore_result(self) -> bool {
+        self.contains(Self::IGNORE_RESULT)
     }
 }

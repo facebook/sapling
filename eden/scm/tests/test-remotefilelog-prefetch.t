@@ -5,8 +5,6 @@ FIXME(debugruntest) - "devel.print-metrics" stderr not working
 
   $ newrepo server
   $ drawdag <<EOS
-  > C
-  > |
   > B
   > |
   > A
@@ -140,31 +138,3 @@ Fetching only aux data does not trigger a remote query:
   scmstore.file.fetch.aux.cache.misses: 1
   scmstore.file.fetch.aux.cache.requests: 1
   scmstore.file.fetch.aux.cache.time: * (glob) (?)
-
-
-
-Fetch only content first:
-  $ hg cat -q -r $C C
-  C (no-eol)
-
-Make sure we don't have aux data yet:
-  $ hg debugscmstore -r $C C --fetch-mode=LOCAL --mode=file --config scmstore.compute-aux-data=false | grep aux_data
-      aux_data: None,
-
-Prefetch fills in aux data without a remote query:
-  $ LOG=eagerepo::api=debug hg prefetch -r $C C
-  $ LOG=eagerepo::api=debug hg debugscmstore -r $C C --aux-only --mode=file --config scmstore.compute-aux-data=false
-  Successfully fetched file: StoreFile {
-      content: None,
-      aux_data: Some(
-          FileAuxData {
-              total_size: 1,
-              content_id: ContentId("896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d"),
-              sha1: Sha1("32096c2e0eff33d844ee6d675407ace18289357d"),
-              sha256: Sha256("6b23c0d5f35d1b11f9b683f0b0a617355deb11277d91ae091d399c655b87940d"),
-              seeded_blake3: Some(
-                  Blake3("6fb4c384e79ac0771a483fcf3c46fb4ea8609f79608e8bcbf710f9887a3b9cf6"),
-              ),
-          },
-      ),
-  }

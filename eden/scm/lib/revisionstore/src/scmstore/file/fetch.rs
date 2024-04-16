@@ -21,6 +21,7 @@ use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
 use futures::TryFutureExt;
+use minibytes::Bytes;
 use progress_model::AggregatingProgressBar;
 use tracing::debug;
 use tracing::field;
@@ -86,6 +87,8 @@ pub struct FetchState {
     compute_aux_data: bool,
 
     lfs_enabled: bool,
+
+    fetch_mode: FetchMode,
 }
 
 impl FetchState {
@@ -95,10 +98,10 @@ impl FetchState {
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
-        mode: FetchMode,
+        fetch_mode: FetchMode,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, mode),
+            common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode),
             errors: FetchErrors::new(),
             metrics: FileStoreFetchMetrics::default(),
 
@@ -110,6 +113,7 @@ impl FetchState {
             compute_aux_data: file_store.compute_aux_data,
             lfs_progress: file_store.lfs_progress.clone(),
             lfs_enabled,
+            fetch_mode,
         }
     }
 
@@ -229,7 +233,10 @@ impl FetchState {
                             // pointer store if it isn't already present. This
                             // should only happen when the Python LFS extension
                             // is in play.
-                            if let Ok(None) = lfs_store.fetch_available(&key.clone().into()) {
+                            if let Ok(None) = lfs_store.fetch_available(
+                                &key.clone().into(),
+                                self.fetch_mode.ignore_result(),
+                            ) {
                                 if let Err(err) = lfs_store.add_pointer(ptr) {
                                     self.errors.keyed_error(key, err);
                                 }
@@ -282,7 +289,19 @@ impl FetchState {
 
         self.metrics.indexedlog.store(typ).fetch(pending.len());
         for key in pending.into_iter() {
-            let res = store.get_raw_entry(&key.hgid);
+            let res = if self.fetch_mode.ignore_result() {
+                store.contains(&key.hgid).map(|contains| {
+                    if contains {
+                        // Insert a stub entry if caller is ignoring the results.
+                        Some(Entry::new(key.clone(), Bytes::new(), Metadata::default()))
+                    } else {
+                        None
+                    }
+                })
+            } else {
+                store.get_raw_entry(&key.hgid)
+            };
+
             match res {
                 Ok(Some(entry)) => {
                     self.metrics.indexedlog.store(typ).hit(1);
@@ -354,7 +373,18 @@ impl FetchState {
         self.metrics.aux.store(typ).fetch(pending.len());
 
         for key in pending.into_iter() {
-            let res = store.get(key.hgid);
+            let res = if self.fetch_mode.ignore_result() {
+                store.contains(key.hgid).map(|contains| {
+                    if contains {
+                        // Insert a stub entry if caller is ignoring the results.
+                        Some(FileAuxData::default())
+                    } else {
+                        None
+                    }
+                })
+            } else {
+                store.get(key.hgid)
+            };
             match res {
                 Ok(Some(aux)) => {
                     self.metrics.aux.store(typ).hit(1);
@@ -429,7 +459,7 @@ impl FetchState {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
             );
-            match store.fetch_available(&store_key) {
+            match store.fetch_available(&store_key, self.fetch_mode.ignore_result()) {
                 Ok(Some(entry)) => {
                     // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
                     self.metrics.lfs.store(typ).hit(1);
@@ -927,6 +957,11 @@ impl FetchState {
             return;
         }
 
+        // When ignoring results, we don't reliably have file content, so don't derive.
+        if self.fetch_mode.ignore_result() {
+            return;
+        }
+
         for key in self.common.pending.iter().cloned().collect::<Vec<_>>() {
             if let Some(value) = self.common.found.get_mut(&key) {
                 let span = tracing::debug_span!("checking derivations", %key);
@@ -962,7 +997,11 @@ impl FetchState {
                             self.common.pending.remove(&key);
                             self.common.found.remove(&key);
                             let new = new.mask(self.common.request_attrs);
-                            let _ = self.common.found_tx.send(Ok((key.clone(), new)));
+
+                            if !self.fetch_mode.ignore_result() {
+                                let _ = self.common.found_tx.send(Ok((key.clone(), new)));
+                            }
+
                             if let Some((ptr, _)) = self.lfs_pointers.remove(&key) {
                                 self.pointer_origin.remove(&ptr.sha256());
                             }
