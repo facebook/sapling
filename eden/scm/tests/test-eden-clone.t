@@ -7,7 +7,6 @@ setup backing repo
   $ eagerepo
   $ setconfig clone.use-rust=True
   $ setconfig checkout.use-rust=True
-  $ setconfig remotefilelog.reponame=e1
 
   $ newrepo e1
   $ drawdag << 'EOS'
@@ -53,16 +52,19 @@ test rust clone
   $ hg config edenfs.command
   $TESTTMP/bin/eden (no-windows !)
   $TESTTMP/bin/eden.bat (windows !)
-  $ setconfig edenfs.backing-repos-dir=$TESTTMP
-  $ LOG=cmdclone hg clone --eden test:e1 hemlo --config remotenames.selectivepulldefault='master, stable'
-  Cloning e1 into $TESTTMP/hemlo
+  $ LOG=cmdclone hg clone --eden eager:$TESTTMP/e1 hemlo --config remotenames.selectivepulldefault='master, stable'
+  Cloning reponame-default into $TESTTMP/hemlo
   TRACE cmdclone: performing rust clone
+   INFO clone_metadata{repo="reponame-default"}: cmdclone: enter
+   INFO clone_metadata{repo="reponame-default"}: cmdclone: exit
    INFO get_update_target: cmdclone: enter
    INFO get_update_target: cmdclone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "master"))
    INFO get_update_target: cmdclone: exit
   $ eden list
   $TESTTMP/e2
   $TESTTMP/hemlo
+  $ ls -a $TESTTMP/.eden-backing-repos
+  reponame-default
   $ ls -a hemlo
   .eden
   .hg
@@ -74,7 +76,6 @@ test rust clone
   $ cd hemlo
   $ hg go stable
   update complete
-  (activating bookmark stable)
   $ ls
   A
   B
