@@ -291,7 +291,9 @@ class SaplingBackingStore final : public BackingStore {
     throw std::domain_error("unimplemented");
   }
 
-  void getTreeBatch(const ImportRequestsList& requests);
+  void getTreeBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetch_mode);
 
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,

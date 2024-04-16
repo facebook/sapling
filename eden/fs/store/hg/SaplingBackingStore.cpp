@@ -603,15 +603,40 @@ void SaplingBackingStore::processTreeImportRequests(
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
-  getTreeBatch(requests);
-
-  {
-    std::vector<folly::SemiFuture<folly::Unit>> futures;
-    futures.reserve(requests.size());
-
+  std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
+  retryRequest.reserve(requests.size());
+  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+    getTreeBatch(requests, sapling::FetchMode::AllowRemote);
+    retryRequest = std::move(requests);
+  } else {
+    getTreeBatch(requests, sapling::FetchMode::LocalOnly);
     for (auto& request : requests) {
       auto* promise = request->getPromise<TreePtr>();
       if (promise->isFulfilled()) {
+        XLOG(DBG4)
+            << "Tree found in Sapling local for "
+            << request->getRequest<SaplingImportRequest::TreeImport>()->hash;
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+      } else {
+        retryRequest.emplace_back(std::move(request));
+      }
+    }
+    getTreeBatch(retryRequest, sapling::FetchMode::RemoteOnly);
+  }
+
+  {
+    std::vector<folly::SemiFuture<folly::Unit>> futures;
+    futures.reserve(retryRequest.size());
+
+    for (auto& request : retryRequest) {
+      auto* promise = request->getPromise<TreePtr>();
+      if (promise->isFulfilled()) {
+        if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+          XLOG(DBG4)
+              << "Tree found in Sapling remote for "
+              << request->getRequest<SaplingImportRequest::TreeImport>()->hash;
+        }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         continue;
@@ -650,7 +675,8 @@ void SaplingBackingStore::processTreeImportRequests(
 }
 
 void SaplingBackingStore::getTreeBatch(
-    const ImportRequestsList& importRequests) {
+    const ImportRequestsList& importRequests,
+    sapling::FetchMode fetch_mode) {
   auto preparedRequests =
       prepareRequests<SaplingImportRequest::TreeImport>(importRequests, "Tree");
   auto importRequestsMap = std::move(preparedRequests.first);
@@ -662,8 +688,9 @@ void SaplingBackingStore::getTreeBatch(
   faultInjector_.check("SaplingBackingStore::getTreeBatch", "");
   store_.getTreeBatch(
       folly::range(requests),
-      false,
-      // store_.getTreeBatch is blocking, hence we can take these by reference.
+      fetch_mode,
+      // getTreeBatch is blocking, hence we can take these by
+      // reference.
       [&, filteredPaths = filteredPaths](
           size_t index,
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
@@ -1499,23 +1526,41 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& /*context*/) {
-  // For root trees we will try getting the tree locally first.  This allows
-  // us to catch when Mercurial might have just written a tree to the store,
-  // and refresh the store so that the store can pick it up.  We don't do
-  // this for all trees, as it would cause a lot of additional work on every
-  // cache miss, and just doing it for root trees is sufficient to detect the
-  // scenario where Mercurial just wrote a brand new tree.
-  sapling::FetchMode fetchMode = sapling::FetchMode::AllowRemote;
-  if (path.empty()) {
-    fetchMode = sapling::FetchMode::LocalOnly;
-  }
-  auto tree = store_.getTree(manifestId.getBytes(), fetchMode);
-  if (tree.hasException() && fetchMode == sapling::FetchMode::LocalOnly) {
-    // Mercurial might have just written the tree to the store. Refresh the
-    // store and try again, this time allowing remote fetches.
-    store_.flush();
-    tree =
-        store_.getTree(manifestId.getBytes(), sapling::FetchMode::AllowRemote);
+  folly::Try<std::shared_ptr<sapling::Tree>> tree;
+  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+    // For root trees we will try getting the tree locally first.  This allows
+    // us to catch when Mercurial might have just written a tree to the store,
+    // and refresh the store so that the store can pick it up.  We don't do
+    // this for all trees, as it would cause a lot of additional work on every
+    // cache miss, and just doing it for root trees is sufficient to detect the
+    // scenario where Mercurial just wrote a brand new tree.
+    sapling::FetchMode fetchMode = sapling::FetchMode::AllowRemote;
+    if (path.empty()) {
+      fetchMode = sapling::FetchMode::LocalOnly;
+    }
+    tree = store_.getTree(manifestId.getBytes(), fetchMode);
+    if (tree.hasException() && fetchMode == sapling::FetchMode::LocalOnly) {
+      // Mercurial might have just written the tree to the store. Refresh the
+      // store and try again, this time allowing remote fetches.
+      store_.flush();
+      tree = store_.getTree(
+          manifestId.getBytes(), sapling::FetchMode::AllowRemote);
+    }
+  } else {
+    tree = store_.getTree(manifestId.getBytes(), sapling::FetchMode::LocalOnly);
+    if (tree.hasException()) {
+      if (path.empty()) {
+        // This allows us to catch when Mercurial might have just written a tree
+        // to the store, and refresh the store so that the store can pick it up.
+        // We don't do this for all trees, as it would cause a lot of additional
+        // work on every cache miss, and just doing it for root trees is
+        // sufficient to detect the scenario where Mercurial just wrote a brand
+        // new tree.
+        store_.flush();
+      }
+      tree =
+          store_.getTree(manifestId.getBytes(), sapling::FetchMode::RemoteOnly);
+    }
   }
 
   using GetTreeResult = folly::Try<TreePtr>;

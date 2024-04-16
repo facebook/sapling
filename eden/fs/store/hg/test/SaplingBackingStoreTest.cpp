@@ -233,7 +233,8 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
-    queuedBackingStore->getTreeBatch(std::vector{request});
+    queuedBackingStore->getTreeBatch(
+        std::vector{request}, sapling::FetchMode::LocalOnly);
   });
 
   std::move(tree1fut).get();
@@ -272,7 +273,8 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
     // this will block until we unblock the fault.
-    queuedBackingStore->getTreeBatch(std::vector{request});
+    queuedBackingStore->getTreeBatch(
+        std::vector{request}, sapling::FetchMode::LocalOnly);
   });
 
   // its a bit of a hack, but we need to make sure getTreebatch has hit the

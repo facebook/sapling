@@ -80,7 +80,7 @@ class SaplingNativeBackingStore {
 
   void getTreeBatch(
       SaplingRequestRange requests,
-      bool local,
+      sapling::FetchMode fetch_mode,
       folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
           resolve);
 

@@ -79,14 +79,9 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
 
 void SaplingNativeBackingStore::getTreeBatch(
     SaplingRequestRange requests,
-    bool local,
+    sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
         resolve) {
-  FetchMode fetch_mode = FetchMode::AllowRemote;
-  if (local) {
-    fetch_mode = FetchMode::LocalOnly;
-  }
-
   auto resolver = std::make_shared<GetTreeBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
