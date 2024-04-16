@@ -224,7 +224,7 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
   HgProxyHash proxyHash =
       HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
 
-  auto request = HgImportRequest::makeTreeImportRequest(
+  auto request = SaplingImportRequest::makeTreeImportRequest(
       tree1Hash,
       proxyHash,
       ObjectFetchContext::getNullContext()->getPriority(),
@@ -262,7 +262,7 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
   HgProxyHash proxyHash =
       HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
 
-  auto request = HgImportRequest::makeTreeImportRequest(
+  auto request = SaplingImportRequest::makeTreeImportRequest(
       tree1Hash,
       proxyHash,
       ObjectFetchContext::getNullContext()->getPriority(),

@@ -24,7 +24,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStoreOptions.h"
-#include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
@@ -35,7 +35,7 @@ class ReloadableConfig;
 class LocalStore;
 class UnboundedQueueExecutor;
 class EdenStats;
-class HgImportRequest;
+class SaplingImportRequest;
 class StructuredLogger;
 class FaultInjector;
 template <typename T>
@@ -127,7 +127,7 @@ struct HgImportTraceEvent : TraceEventBase {
  */
 class SaplingBackingStore final : public BackingStore {
  public:
-  using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
+  using ImportRequestsList = std::vector<std::shared_ptr<SaplingImportRequest>>;
   using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
@@ -317,11 +317,11 @@ class SaplingBackingStore final : public BackingStore {
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
 
   void processBlobImportRequests(
-      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
   void processTreeImportRequests(
-      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
   void processBlobMetaImportRequests(
-      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
@@ -511,7 +511,7 @@ class SaplingBackingStore final : public BackingStore {
    * The import request queue. This queue is unbounded. This queue
    * implementation will ensure enqueue operation never blocks.
    */
-  HgImportRequestQueue queue_;
+  SaplingImportRequestQueue queue_;
 
   /**
    * The worker thread pool. These threads will be running `processRequest`

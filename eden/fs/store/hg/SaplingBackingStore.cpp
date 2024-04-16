@@ -42,8 +42,8 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/StoreResult.h"
-#include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/SaplingImportRequest.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"
@@ -347,13 +347,13 @@ SaplingBackingStore::~SaplingBackingStore() {
 }
 
 void SaplingBackingStore::processBlobImportRequests(
-    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
+    std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   XLOG(DBG4) << "Processing blob import batch size=" << requests.size();
 
   for (auto& request : requests) {
-    auto* blobImport = request->getRequest<HgImportRequest::BlobImport>();
+    auto* blobImport = request->getRequest<SaplingImportRequest::BlobImport>();
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
@@ -385,7 +385,7 @@ void SaplingBackingStore::processBlobImportRequests(
       // not found on the server. Let's import the blob through the hg importer.
       // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
       auto fetchSemiFuture = retryGetBlob(
-          request->getRequest<HgImportRequest::BlobImport>()->proxyHash);
+          request->getRequest<SaplingImportRequest::BlobImport>()->proxyHash);
       futures.emplace_back(
           std::move(fetchSemiFuture)
               .defer([request = std::move(request),
@@ -393,10 +393,12 @@ void SaplingBackingStore::processBlobImportRequests(
                       stats = stats_.copy()](auto&& result) mutable {
                 XLOG(DBG4)
                     << "Imported blob from HgImporter for "
-                    << request->getRequest<HgImportRequest::BlobImport>()->hash;
+                    << request->getRequest<SaplingImportRequest::BlobImport>()
+                           ->hash;
                 stats->addDuration(
                     &HgBackingStoreStats::fetchBlob, watch.elapsed());
-                request->getPromise<HgImportRequest::BlobImport::Response>()
+                request
+                    ->getPromise<SaplingImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
     }
@@ -460,7 +462,7 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
 void SaplingBackingStore::getBlobBatch(
     const ImportRequestsList& importRequests) {
   auto preparedRequests =
-      prepareRequests<HgImportRequest::BlobImport>(importRequests, "Blob");
+      prepareRequests<SaplingImportRequest::BlobImport>(importRequests, "Blob");
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
@@ -531,11 +533,11 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
 }
 
 void SaplingBackingStore::processTreeImportRequests(
-    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
+    std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   for (auto& request : requests) {
-    auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
+    auto* treeImport = request->getRequest<SaplingImportRequest::TreeImport>();
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
@@ -565,7 +567,8 @@ void SaplingBackingStore::processTreeImportRequests(
 
       // The trees were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the trees
-      auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
+      auto* treeImport =
+          request->getRequest<SaplingImportRequest::TreeImport>();
       auto treeSemiFuture =
           retryGetTree(
               treeImport->proxyHash
@@ -579,11 +582,13 @@ void SaplingBackingStore::processTreeImportRequests(
                       watch,
                       stats = stats_.copy()](auto&& result) mutable {
                 XLOG(DBG4)
-                    << "Imported tree from HgImporter for "
-                    << request->getRequest<HgImportRequest::TreeImport>()->hash;
+                    << "Imported tree after retry for "
+                    << request->getRequest<SaplingImportRequest::TreeImport>()
+                           ->hash;
                 stats->addDuration(
                     &HgBackingStoreStats::fetchTree, watch.elapsed());
-                request->getPromise<HgImportRequest::TreeImport::Response>()
+                request
+                    ->getPromise<SaplingImportRequest::TreeImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
     }
@@ -595,7 +600,7 @@ void SaplingBackingStore::processTreeImportRequests(
 void SaplingBackingStore::getTreeBatch(
     const ImportRequestsList& importRequests) {
   auto preparedRequests =
-      prepareRequests<HgImportRequest::TreeImport>(importRequests, "Tree");
+      prepareRequests<SaplingImportRequest::TreeImport>(importRequests, "Tree");
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -644,7 +649,7 @@ void SaplingBackingStore::getTreeBatch(
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         for (auto& importRequest : importRequestList) {
           auto* treeRequest =
-              importRequest->getRequest<HgImportRequest::TreeImport>();
+              importRequest->getRequest<SaplingImportRequest::TreeImport>();
           importRequest->getPromise<TreePtr>()->setWith(
               [&]() -> folly::Try<TreePtr> {
                 if (content.hasException()) {
@@ -720,7 +725,8 @@ SaplingBackingStore::prepareRequests(
 
       importRequestList.emplace_back(importRequest);
     } else {
-      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
+      std::vector<std::shared_ptr<SaplingImportRequest>> requests(
+          {importRequest});
       importRequestsMap.emplace(
           nodeId, make_pair(requests, &liveBatchedBlobWatches_));
     }
@@ -753,12 +759,12 @@ SaplingBackingStore::prepareRequests(
 }
 
 void SaplingBackingStore::processBlobMetaImportRequests(
-    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
+    std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   for (auto& request : requests) {
     auto* blobMetaImport =
-        request->getRequest<HgImportRequest::BlobMetaImport>();
+        request->getRequest<SaplingImportRequest::BlobMetaImport>();
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
@@ -795,7 +801,7 @@ void SaplingBackingStore::processBlobMetaImportRequests(
 
 void SaplingBackingStore::getBlobMetadataBatch(
     const ImportRequestsList& importRequests) {
-  auto preparedRequests = prepareRequests<HgImportRequest::BlobMetaImport>(
+  auto preparedRequests = prepareRequests<SaplingImportRequest::BlobMetaImport>(
       importRequests, "BlobMetadata");
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
@@ -873,11 +879,11 @@ void SaplingBackingStore::processRequest() {
 
     const auto& first = requests.at(0);
 
-    if (first->isType<HgImportRequest::BlobImport>()) {
+    if (first->isType<SaplingImportRequest::BlobImport>()) {
       processBlobImportRequests(std::move(requests));
-    } else if (first->isType<HgImportRequest::TreeImport>()) {
+    } else if (first->isType<SaplingImportRequest::TreeImport>()) {
       processTreeImportRequests(std::move(requests));
-    } else if (first->isType<HgImportRequest::BlobMetaImport>()) {
+    } else if (first->isType<SaplingImportRequest::BlobMetaImport>()) {
       processBlobMetaImportRequests(std::move(requests));
     }
   }
@@ -1011,7 +1017,7 @@ SaplingBackingStore::getTreeEnqueue(
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
   auto getTreeFuture = makeImmediateFutureWith([&] {
-    auto request = HgImportRequest::makeTreeImportRequest(
+    auto request = SaplingImportRequest::makeTreeImportRequest(
         id,
         proxyHash,
         context->getPriority(),
@@ -1141,7 +1147,7 @@ ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
     XLOG(DBG4) << "make blob import request for " << proxyHash.path()
                << ", hash is:" << id;
 
-    auto request = HgImportRequest::makeBlobImportRequest(
+    auto request = SaplingImportRequest::makeBlobImportRequest(
         id,
         proxyHash,
         context->getPriority(),
@@ -1230,7 +1236,7 @@ SaplingBackingStore::getBlobMetadataImpl(
     XLOG(DBG4) << "make blob meta import request for " << proxyHash.path()
                << ", hash is:" << id;
 
-    auto request = HgImportRequest::makeBlobMetaImportRequest(
+    auto request = SaplingImportRequest::makeBlobMetaImportRequest(
         id,
         proxyHash,
         context->getPriority(),
@@ -1761,7 +1767,7 @@ void SaplingBackingStore::periodicManagementTask() {
 }
 
 namespace {
-void dropBlobImportRequest(std::shared_ptr<HgImportRequest>& request) {
+void dropBlobImportRequest(std::shared_ptr<SaplingImportRequest>& request) {
   auto* promise = request->getPromise<BlobPtr>();
   if (promise != nullptr) {
     if (!promise->isFulfilled()) {
@@ -1770,7 +1776,7 @@ void dropBlobImportRequest(std::shared_ptr<HgImportRequest>& request) {
   }
 }
 
-void dropTreeImportRequest(std::shared_ptr<HgImportRequest>& request) {
+void dropTreeImportRequest(std::shared_ptr<SaplingImportRequest>& request) {
   auto* promise = request->getPromise<TreePtr>();
   if (promise != nullptr) {
     if (!promise->isFulfilled()) {
@@ -1783,10 +1789,10 @@ void dropTreeImportRequest(std::shared_ptr<HgImportRequest>& request) {
 int64_t SaplingBackingStore::dropAllPendingRequestsFromQueue() {
   auto requestVec = queue_.combineAndClearRequestQueues();
   for (auto& request : requestVec) {
-    if (request->isType<HgImportRequest::BlobImport>()) {
+    if (request->isType<SaplingImportRequest::BlobImport>()) {
       XLOG(DBG7, "Dropping blob request");
       dropBlobImportRequest(request);
-    } else if (request->isType<HgImportRequest::TreeImport>()) {
+    } else if (request->isType<SaplingImportRequest::TreeImport>()) {
       XLOG(DBG7, "Dropping tree request");
       dropTreeImportRequest(request);
     }

@@ -14,7 +14,7 @@
 #include <mutex>
 #include <vector>
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/store/hg/HgImportRequest.h"
+#include "eden/fs/store/hg/SaplingImportRequest.h"
 
 namespace facebook::eden {
 
@@ -22,9 +22,9 @@ template <typename T>
 class ImmediateFuture;
 class ReloadableConfig;
 
-class HgImportRequestQueue {
+class SaplingImportRequestQueue {
  public:
-  explicit HgImportRequestQueue(std::shared_ptr<ReloadableConfig> config)
+  explicit SaplingImportRequestQueue(std::shared_ptr<ReloadableConfig> config)
       : config_(std::move(config)) {}
 
   /**
@@ -33,7 +33,7 @@ class HgImportRequestQueue {
    * Return a future that will complete when the blob request completes.
    */
   ImmediateFuture<BlobPtr> enqueueBlob(
-      std::shared_ptr<HgImportRequest> request);
+      std::shared_ptr<SaplingImportRequest> request);
 
   /**
    * Enqueue a tree request to the queue.
@@ -41,7 +41,7 @@ class HgImportRequestQueue {
    * Return a future that will complete when the blob request completes.
    */
   ImmediateFuture<TreePtr> enqueueTree(
-      std::shared_ptr<HgImportRequest> request);
+      std::shared_ptr<SaplingImportRequest> request);
 
   /**
    * Enqueue an aux data request to the queue.
@@ -49,7 +49,7 @@ class HgImportRequestQueue {
    * Return a future that will complete when the aux data request completes.
    */
   ImmediateFuture<BlobMetadataPtr> enqueueBlobMeta(
-      std::shared_ptr<HgImportRequest> request);
+      std::shared_ptr<SaplingImportRequest> request);
 
   /**
    * Returns a list of requests from the queue. It returns an empty list while
@@ -60,7 +60,7 @@ class HgImportRequestQueue {
    * The number of the returned requests is controlled by `import-batch-size*`
    * options in the config. It may have fewer requests than configured.
    */
-  std::vector<std::shared_ptr<HgImportRequest>> dequeue();
+  std::vector<std::shared_ptr<SaplingImportRequest>> dequeue();
 
   /**
    * Destroy the queue.
@@ -81,7 +81,8 @@ class HgImportRequestQueue {
   /**
    * Combines all requests into 1 vec and clears the contents of the originals.
    */
-  std::vector<std::shared_ptr<HgImportRequest>> combineAndClearRequestQueues();
+  std::vector<std::shared_ptr<SaplingImportRequest>>
+  combineAndClearRequestQueues();
 
  private:
   /**
@@ -89,22 +90,22 @@ class HgImportRequestQueue {
    */
   template <typename T, typename ImportType>
   ImmediateFuture<std::shared_ptr<const T>> enqueue(
-      std::shared_ptr<HgImportRequest> request);
+      std::shared_ptr<SaplingImportRequest> request);
 
-  HgImportRequestQueue(HgImportRequestQueue&&) = delete;
-  HgImportRequestQueue& operator=(HgImportRequestQueue&&) = delete;
+  SaplingImportRequestQueue(SaplingImportRequestQueue&&) = delete;
+  SaplingImportRequestQueue& operator=(SaplingImportRequestQueue&&) = delete;
 
   struct ImportQueue {
-    std::vector<std::shared_ptr<HgImportRequest>> queue;
+    std::vector<std::shared_ptr<SaplingImportRequest>> queue;
 
     /**
      * Map of a ObjectId to an element in the queue. Any changes to this type
      * can have a significant effect on EdenFS performance and thus changes to
      * it needs to be carefully studied and measured. The
-     * store/hg/tests/HgImportRequestQueueBenchmark.cpp is a good way to measure
-     * the potential performance impact.
+     * store/hg/tests/SaplingImportRequestQueueBenchmark.cpp is a good way to
+     * measure the potential performance impact.
      */
-    folly::F14FastMap<ObjectId, std::shared_ptr<HgImportRequest>>
+    folly::F14FastMap<ObjectId, std::shared_ptr<SaplingImportRequest>>
         requestTracker;
   };
 
@@ -119,9 +120,9 @@ class HgImportRequestQueue {
    * Short-hand to map the request type to the appropriate request tracker map.
    */
   template <typename T>
-  HgImportRequestQueue::ImportQueue* getImportQueue(
-      folly::Synchronized<HgImportRequestQueue::State, std::mutex>::LockedPtr&
-          state);
+  SaplingImportRequestQueue::ImportQueue* getImportQueue(
+      folly::Synchronized<SaplingImportRequestQueue::State, std::mutex>::
+          LockedPtr& state);
 
   std::shared_ptr<ReloadableConfig> config_;
   folly::Synchronized<State, std::mutex> state_;
@@ -129,10 +130,10 @@ class HgImportRequestQueue {
 };
 
 template <typename T>
-void HgImportRequestQueue::markImportAsFinished(
+void SaplingImportRequestQueue::markImportAsFinished(
     const ObjectId& id,
     folly::Try<std::shared_ptr<const T>>& importTry) {
-  std::shared_ptr<HgImportRequest> import;
+  std::shared_ptr<SaplingImportRequest> import;
   {
     auto state = state_.lock();
 
@@ -151,17 +152,17 @@ void HgImportRequestQueue::markImportAsFinished(
   std::vector<folly::Promise<std::shared_ptr<T>>>* promises;
 
   if constexpr (std::is_same_v<T, const Tree>) {
-    auto* treeImport = import->getRequest<HgImportRequest::TreeImport>();
+    auto* treeImport = import->getRequest<SaplingImportRequest::TreeImport>();
     promises = &treeImport->promises;
   } else if constexpr (std::is_same_v<T, const BlobMetadata>) {
     auto* blobMetaImport =
-        import->getRequest<HgImportRequest::BlobMetaImport>();
+        import->getRequest<SaplingImportRequest::BlobMetaImport>();
     promises = &blobMetaImport->promises;
   } else {
     static_assert(
         std::is_same_v<T, const Blob>,
         "markImportAsFinished can only be called with Tree, Blob or BlobMetadata types");
-    auto* blobImport = import->getRequest<HgImportRequest::BlobImport>();
+    auto* blobImport = import->getRequest<SaplingImportRequest::BlobImport>();
     promises = &blobImport->promises;
   }
 
@@ -182,9 +183,10 @@ void HgImportRequestQueue::markImportAsFinished(
 }
 
 template <typename T>
-HgImportRequestQueue::ImportQueue* HgImportRequestQueue::getImportQueue(
-    folly::Synchronized<HgImportRequestQueue::State, std::mutex>::LockedPtr&
-        state) {
+SaplingImportRequestQueue::ImportQueue*
+SaplingImportRequestQueue::getImportQueue(folly::Synchronized<
+                                          SaplingImportRequestQueue::State,
+                                          std::mutex>::LockedPtr& state) {
   if constexpr (std::is_same_v<T, const Tree>) {
     return &state->treeQueue;
   } else if constexpr (std::is_same_v<T, const BlobMetadata>) {

@@ -5,18 +5,15 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/HgImportRequest.h"
+#include "eden/fs/store/hg/SaplingImportRequest.h"
 
 #include <folly/Try.h>
-#include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
-
-#include "eden/common/telemetry/RequestMetricsScope.h"
 
 namespace facebook::eden {
 
 template <typename RequestType>
-HgImportRequest::HgImportRequest(
+SaplingImportRequest::SaplingImportRequest(
     RequestType request,
     ImportPriority priority,
     ObjectFetchContext::Cause cause,
@@ -29,13 +26,13 @@ HgImportRequest::HgImportRequest(
       promise_(std::move(promise)) {}
 
 template <typename RequestType, typename... Input>
-std::shared_ptr<HgImportRequest> HgImportRequest::makeRequest(
+std::shared_ptr<SaplingImportRequest> SaplingImportRequest::makeRequest(
     ImportPriority priority,
     ObjectFetchContext::Cause cause,
     OptionalProcessId pid,
     Input&&... input) {
   auto promise = folly::Promise<typename RequestType::Response>{};
-  return std::make_shared<HgImportRequest>(
+  return std::make_shared<SaplingImportRequest>(
       RequestType{std::forward<Input>(input)...},
       priority,
       cause,
@@ -43,7 +40,8 @@ std::shared_ptr<HgImportRequest> HgImportRequest::makeRequest(
       std::move(promise));
 }
 
-std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobImportRequest(
+std::shared_ptr<SaplingImportRequest>
+SaplingImportRequest::makeBlobImportRequest(
     const ObjectId& hash,
     const HgProxyHash& proxyHash,
     ImportPriority priority,
@@ -52,7 +50,8 @@ std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobImportRequest(
   return makeRequest<BlobImport>(priority, cause, pid, hash, proxyHash);
 }
 
-std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
+std::shared_ptr<SaplingImportRequest>
+SaplingImportRequest::makeTreeImportRequest(
     const ObjectId& hash,
     const HgProxyHash& proxyHash,
     ImportPriority priority,
@@ -61,7 +60,8 @@ std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
   return makeRequest<TreeImport>(priority, cause, pid, hash, proxyHash);
 }
 
-std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobMetaImportRequest(
+std::shared_ptr<SaplingImportRequest>
+SaplingImportRequest::makeBlobMetaImportRequest(
     const ObjectId& hash,
     const HgProxyHash& proxyHash,
     ImportPriority priority,

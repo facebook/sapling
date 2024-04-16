@@ -3,9 +3,9 @@ load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 oncall("scm_client_infra")
 
 cpp_library(
-    name = "hg_import_request",
-    srcs = ["HgImportRequest.cpp"],
-    headers = ["HgImportRequest.h"],
+    name = "sapling_import_request",
+    srcs = ["SaplingImportRequest.cpp"],
+    headers = ["SaplingImportRequest.h"],
     deps = [
         "//folly:try",
     ],
@@ -20,16 +20,16 @@ cpp_library(
 )
 
 cpp_library(
-    name = "hg_import_request_queue",
-    srcs = ["HgImportRequestQueue.cpp"],
-    headers = ["HgImportRequestQueue.h"],
+    name = "sapling_import_request_queue",
+    srcs = ["SaplingImportRequestQueue.cpp"],
+    headers = ["SaplingImportRequestQueue.h"],
     deps = [
         "//eden/common/utils:immediate_future",
         "//eden/fs/config:config",
         "//folly:map_util",
     ],
     exported_deps = [
-        ":hg_import_request",
+        ":sapling_import_request",
         "//eden/fs/model:model",
         "//folly:synchronized",
         "//folly:try",
@@ -42,8 +42,8 @@ cpp_library(
     srcs = ["SaplingBackingStore.cpp"],
     headers = ["SaplingBackingStore.h"],
     deps = [
-        ":hg_import_request",
         ":hg_proxy_hash",
+        ":sapling_import_request",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:enum",
         "//eden/common/utils:path",
@@ -66,7 +66,7 @@ cpp_library(
     ],
     exported_deps = [
         ":hg_backing_store_options",
-        ":hg_import_request_queue",
+        ":sapling_import_request_queue",
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:ref_ptr",
         "//eden/fs:config",

@@ -19,13 +19,13 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/HgImportRequest.h"
-#include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/SaplingImportRequest.h"
+#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 
 using namespace facebook::eden;
 
-struct HgImportRequestQueueTest : ::testing::Test {
+struct SaplingImportRequestQueueTest : ::testing::Test {
   std::shared_ptr<ReloadableConfig> edenConfig;
   std::shared_ptr<EdenConfig> rawEdenConfig;
 
@@ -48,14 +48,14 @@ Hash20 uniqueHash() {
   return Hash20{bytes};
 }
 
-std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
-    ImportPriority priority) {
+std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
+makeBlobImportRequest(ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
-      HgImportRequest::makeBlobImportRequest(
+      SaplingImportRequest::makeBlobImportRequest(
           hash,
           std::move(proxyHash),
           priority,
@@ -63,12 +63,12 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
           std::nullopt));
 }
 
-std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
+std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
 makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
   auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
-      HgImportRequest::makeBlobImportRequest(
+      SaplingImportRequest::makeBlobImportRequest(
           hash,
           std::move(proxyHash),
           priority,
@@ -76,14 +76,14 @@ makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
           std::nullopt));
 }
 
-std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
+std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
 makeBlobMetaImportRequestWithHash(
     ImportPriority priority,
     HgProxyHash proxyHash) {
   auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
-      HgImportRequest::makeBlobMetaImportRequest(
+      SaplingImportRequest::makeBlobMetaImportRequest(
           hash,
           std::move(proxyHash),
           priority,
@@ -91,14 +91,14 @@ makeBlobMetaImportRequestWithHash(
           std::nullopt));
 }
 
-std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
-    ImportPriority priority) {
+std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
+makeTreeImportRequest(ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};
   auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
-      HgImportRequest::makeTreeImportRequest(
+      SaplingImportRequest::makeTreeImportRequest(
           hash,
           std::move(proxyHash),
           priority,
@@ -107,7 +107,7 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
 }
 
 ObjectId insertBlobImportRequest(
-    HgImportRequestQueue& queue,
+    SaplingImportRequestQueue& queue,
     ImportPriority priority) {
   auto [hash, request] = makeBlobImportRequest(priority);
   XLOG(INFO) << "enqueuing blob:" << hash;
@@ -116,7 +116,7 @@ ObjectId insertBlobImportRequest(
 }
 
 ObjectId insertTreeImportRequest(
-    HgImportRequestQueue& queue,
+    SaplingImportRequestQueue& queue,
     ImportPriority priority) {
   auto [hash, request] = makeTreeImportRequest(priority);
   XLOG(INFO) << "enqueuing tree:" << hash;
@@ -124,8 +124,8 @@ ObjectId insertTreeImportRequest(
   return hash;
 }
 
-TEST_F(HgImportRequestQueueTest, sameObjectIdDifferentType) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, sameObjectIdDifferentType) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -145,8 +145,8 @@ TEST_F(HgImportRequestQueueTest, sameObjectIdDifferentType) {
   EXPECT_NE(request2, nullptr);
 }
 
-TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, getRequestByPriority) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::vector<ObjectId> enqueued;
 
   for (int i = 0; i < 10; i++) {
@@ -168,31 +168,33 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
     enqueued.pop_back();
     auto request = queue.dequeue().at(0);
     EXPECT_EQ(
-        expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
+        expected,
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
     auto blob = folly::makeTryWith([expected]() {
       return std::make_shared<BlobPtr::element_type>(folly::IOBuf{});
     });
 
     queue.markImportAsFinished<BlobPtr::element_type>(
-        request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash, blob);
   }
 
   auto smallRequestDequeue = queue.dequeue().at(0);
   EXPECT_EQ(
       smallHash,
-      smallRequestDequeue->getRequest<HgImportRequest::BlobImport>()->hash);
+      smallRequestDequeue->getRequest<SaplingImportRequest::BlobImport>()
+          ->hash);
 
   folly::Try<BlobPtr> smallBlob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
 
   queue.markImportAsFinished<BlobPtr::element_type>(
-      smallRequestDequeue->getRequest<HgImportRequest::BlobImport>()->hash,
+      smallRequestDequeue->getRequest<SaplingImportRequest::BlobImport>()->hash,
       smallBlob);
 }
 
-TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, getRequestByPriorityReverse) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::deque<ObjectId> enqueued;
 
   for (int i = 0; i < 10; i++) {
@@ -211,12 +213,12 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
   auto largeHashDequeue = queue.dequeue().at(0);
   EXPECT_EQ(
       largeHash,
-      largeHashDequeue->getRequest<HgImportRequest::BlobImport>()->hash);
+      largeHashDequeue->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
   folly::Try<BlobPtr> largeBlob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
-      largeHashDequeue->getRequest<HgImportRequest::BlobImport>()->hash,
+      largeHashDequeue->getRequest<SaplingImportRequest::BlobImport>()->hash,
       largeBlob);
 
   while (!enqueued.empty()) {
@@ -226,17 +228,18 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
     auto request = queue.dequeue().at(0);
 
     EXPECT_EQ(
-        expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
+        expected,
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
     auto blob = folly::makeTryWith(
         [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
-        request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash, blob);
   }
 }
 
-TEST_F(HgImportRequestQueueTest, mixedPriority) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, mixedPriority) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::set<ObjectId> enqueued_blob;
   std::set<ObjectId> enqueued_tree;
 
@@ -264,21 +267,22 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
     auto dequeuedRequest = dequeuedTree.at(i);
     EXPECT_TRUE(
         enqueued_tree.find(
-            dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash) !=
-        enqueued_tree.end());
+            dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()
+                ->hash) != enqueued_tree.end());
     EXPECT_TRUE(
         dequeuedRequest->getPriority().value() ==
         ImportPriority(ImportPriority::Class::Normal, 10 - i)
             .value()); // assert tree requests of priority 10 and 9
 
     auto tree = folly::makeTryWith(
-        [hash = dequeuedRequest->getRequest<HgImportRequest::TreeImport>()
+        [hash = dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()
                     ->hash]() {
           return std::make_shared<TreePtr::element_type>(
               Tree::container{kPathMapDefaultCaseSensitive}, hash);
         });
     queue.markImportAsFinished<TreePtr::element_type>(
-        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
+        dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()->hash,
+        tree);
   }
 
   // Pre dequeue, queue has tree requests from priority 1 to 8 and blob
@@ -289,8 +293,8 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
     auto dequeuedRequest = dequeuedBlob.at(i);
     EXPECT_TRUE(
         enqueued_blob.find(
-            dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash) !=
-        enqueued_blob.end());
+            dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()
+                ->hash) != enqueued_blob.end());
     EXPECT_TRUE(
         dequeuedRequest->getPriority().value() ==
         ImportPriority(ImportPriority::Class::Normal, 9 - i)
@@ -299,12 +303,13 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
     auto blob = folly::makeTryWith(
         [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
-        dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+        dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash,
+        blob);
   }
 }
 
-TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, getMultipleRequests) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::set<ObjectId> enqueued_blob;
   std::set<ObjectId> enqueued_tree;
 
@@ -328,17 +333,18 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
 
     EXPECT_TRUE(
         enqueued_tree.find(
-            dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash) !=
-        enqueued_tree.end());
+            dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()
+                ->hash) != enqueued_tree.end());
 
     auto tree = folly::makeTryWith(
-        [hash = dequeuedRequest->getRequest<HgImportRequest::TreeImport>()
+        [hash = dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()
                     ->hash]() {
           return std::make_shared<TreePtr::element_type>(
               Tree::container{kPathMapDefaultCaseSensitive}, hash);
         });
     queue.markImportAsFinished<TreePtr::element_type>(
-        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
+        dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()->hash,
+        tree);
   }
 
   rawEdenConfig->importBatchSize.setValue(
@@ -350,18 +356,19 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
 
     EXPECT_TRUE(
         enqueued_blob.find(
-            dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash) !=
-        enqueued_blob.end());
+            dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()
+                ->hash) != enqueued_blob.end());
 
     auto blob = folly::makeTryWith(
         [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
-        dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+        dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash,
+        blob);
   }
 }
 
-TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterEnqueue) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
@@ -382,20 +389,21 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
   auto dequeuedRequest = queue.dequeue().at(0);
   EXPECT_EQ(
       1,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()
           ->promises.size());
   EXPECT_EQ(
       expected,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
   auto blob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash,
+      blob);
 }
 
-TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterDequeue) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
@@ -415,23 +423,24 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
   auto dequeuedRequest = queue.dequeue().at(0);
   EXPECT_EQ(
       expected,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
   queue.enqueueBlob(std::move(request2));
 
   EXPECT_EQ(
       1,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()
           ->promises.size());
 
   auto blob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash,
+      blob);
 }
 
-TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
@@ -451,20 +460,21 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
   auto dequeuedRequest = queue.dequeue().at(0);
   EXPECT_EQ(
       0,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()
           ->promises.size());
   EXPECT_EQ(
       expected,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
   auto blob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash,
+      blob);
 }
 
-TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, multipleDuplicateRequests) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
@@ -492,23 +502,24 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
   auto dequeuedRequest = queue.dequeue().at(0);
   EXPECT_EQ(
       expected,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
   queue.enqueueBlob(std::move(request4));
 
   EXPECT_EQ(
       3,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()
           ->promises.size());
 
   auto blob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+      dequeuedRequest->getRequest<SaplingImportRequest::BlobImport>()->hash,
+      blob);
 }
 
-TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
-  auto queue = HgImportRequestQueue{edenConfig};
+TEST_F(SaplingImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
   std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
@@ -553,23 +564,25 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
     auto request = queue.dequeue().at(0);
 
     EXPECT_EQ(
-        expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
+        expected,
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
     auto blob = folly::makeTryWith(
         [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
-        request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash, blob);
   }
 
   auto expLowPri = queue.dequeue().at(0);
 
   EXPECT_EQ(
-      lowPriHash, expLowPri->getRequest<HgImportRequest::BlobImport>()->hash);
+      lowPriHash,
+      expLowPri->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
   auto blob = folly::makeTryWith(
       [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
   queue.markImportAsFinished<BlobPtr::element_type>(
-      expLowPri->getRequest<HgImportRequest::BlobImport>()->hash, blob);
+      expLowPri->getRequest<SaplingImportRequest::BlobImport>()->hash, blob);
 
   for (int i = 5; i > 0; i--) {
     auto expected = enqueued.back();
@@ -578,11 +591,12 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
     auto request = queue.dequeue().at(0);
 
     EXPECT_EQ(
-        expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
+        expected,
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash);
 
     auto expBlob = folly::makeTryWith(
         [] { return std::make_shared<BlobPtr::element_type>(folly::IOBuf{}); });
     queue.markImportAsFinished<BlobPtr::element_type>(
-        request->getRequest<HgImportRequest::BlobImport>()->hash, expBlob);
+        request->getRequest<SaplingImportRequest::BlobImport>()->hash, expBlob);
   }
 }

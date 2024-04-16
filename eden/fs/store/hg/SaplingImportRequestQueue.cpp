@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include <folly/MapUtil.h>
 #include <algorithm>
 
@@ -14,7 +14,7 @@
 
 namespace facebook::eden {
 
-void HgImportRequestQueue::stop() {
+void SaplingImportRequestQueue::stop() {
   auto state = state_.lock();
   if (state->running) {
     state->running = false;
@@ -22,25 +22,25 @@ void HgImportRequestQueue::stop() {
   }
 }
 
-ImmediateFuture<BlobPtr> HgImportRequestQueue::enqueueBlob(
-    std::shared_ptr<HgImportRequest> request) {
-  return enqueue<Blob, HgImportRequest::BlobImport>(std::move(request));
+ImmediateFuture<BlobPtr> SaplingImportRequestQueue::enqueueBlob(
+    std::shared_ptr<SaplingImportRequest> request) {
+  return enqueue<Blob, SaplingImportRequest::BlobImport>(std::move(request));
 }
 
-ImmediateFuture<TreePtr> HgImportRequestQueue::enqueueTree(
-    std::shared_ptr<HgImportRequest> request) {
-  return enqueue<Tree, HgImportRequest::TreeImport>(std::move(request));
+ImmediateFuture<TreePtr> SaplingImportRequestQueue::enqueueTree(
+    std::shared_ptr<SaplingImportRequest> request) {
+  return enqueue<Tree, SaplingImportRequest::TreeImport>(std::move(request));
 }
 
-ImmediateFuture<BlobMetadataPtr> HgImportRequestQueue::enqueueBlobMeta(
-    std::shared_ptr<HgImportRequest> request) {
-  return enqueue<BlobMetadata, HgImportRequest::BlobMetaImport>(
+ImmediateFuture<BlobMetadataPtr> SaplingImportRequestQueue::enqueueBlobMeta(
+    std::shared_ptr<SaplingImportRequest> request) {
+  return enqueue<BlobMetadata, SaplingImportRequest::BlobMetaImport>(
       std::move(request));
 }
 
 template <typename T, typename ImportType>
-ImmediateFuture<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
-    std::shared_ptr<HgImportRequest> request) {
+ImmediateFuture<std::shared_ptr<const T>> SaplingImportRequestQueue::enqueue(
+    std::shared_ptr<SaplingImportRequest> request) {
   auto state = state_.lock();
   auto* importQueue = getImportQueue<const T>(state);
   auto* requestQueue = &importQueue->queue;
@@ -66,8 +66,8 @@ ImmediateFuture<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
       std::make_heap(
           requestQueue->begin(),
           requestQueue->end(),
-          [](const std::shared_ptr<HgImportRequest>& lhs,
-             const std::shared_ptr<HgImportRequest>& rhs) {
+          [](const std::shared_ptr<SaplingImportRequest>& lhs,
+             const std::shared_ptr<SaplingImportRequest>& rhs) {
             return (*lhs) < (*rhs);
           });
     }
@@ -83,8 +83,8 @@ ImmediateFuture<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
   std::push_heap(
       requestQueue->begin(),
       requestQueue->end(),
-      [](const std::shared_ptr<HgImportRequest>& lhs,
-         const std::shared_ptr<HgImportRequest>& rhs) {
+      [](const std::shared_ptr<SaplingImportRequest>& lhs,
+         const std::shared_ptr<SaplingImportRequest>& rhs) {
         return (*lhs) < (*rhs);
       });
 
@@ -93,8 +93,8 @@ ImmediateFuture<std::shared_ptr<const T>> HgImportRequestQueue::enqueue(
   return promise->getSemiFuture();
 }
 
-std::vector<std::shared_ptr<HgImportRequest>>
-HgImportRequestQueue::combineAndClearRequestQueues() {
+std::vector<std::shared_ptr<SaplingImportRequest>>
+SaplingImportRequestQueue::combineAndClearRequestQueues() {
   auto state = state_.lock();
   auto treeQSz = state->treeQueue.queue.size();
   auto blobQSz = state->blobQueue.queue.size();
@@ -121,9 +121,10 @@ HgImportRequestQueue::combineAndClearRequestQueues() {
   return res;
 }
 
-std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
+std::vector<std::shared_ptr<SaplingImportRequest>>
+SaplingImportRequestQueue::dequeue() {
   size_t count;
-  std::vector<std::shared_ptr<HgImportRequest>>* queue = nullptr;
+  std::vector<std::shared_ptr<SaplingImportRequest>>* queue = nullptr;
 
   auto state = state_.lock();
   while (true) {
@@ -131,7 +132,7 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
       state->treeQueue.queue.clear();
       state->blobQueue.queue.clear();
       state->blobMetaQueue.queue.clear();
-      return std::vector<std::shared_ptr<HgImportRequest>>();
+      return std::vector<std::shared_ptr<SaplingImportRequest>>();
     }
 
     auto highestPriority = ImportPriority::minimumValue();
@@ -172,14 +173,14 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
   }
 
   count = std::min(count, queue->size());
-  std::vector<std::shared_ptr<HgImportRequest>> result;
+  std::vector<std::shared_ptr<SaplingImportRequest>> result;
   result.reserve(count);
   for (size_t i = 0; i < count; i++) {
     std::pop_heap(
         queue->begin(),
         queue->end(),
-        [](const std::shared_ptr<HgImportRequest>& lhs,
-           const std::shared_ptr<HgImportRequest>& rhs) {
+        [](const std::shared_ptr<SaplingImportRequest>& lhs,
+           const std::shared_ptr<SaplingImportRequest>& rhs) {
           return (*lhs) < (*rhs);
         });
 
