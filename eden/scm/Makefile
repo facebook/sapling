@@ -49,6 +49,7 @@ OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
 HGNAME ?= hg
 SL_NAME = sl
+ISL_NAME ?= isl-dist.tar.xz
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
@@ -214,6 +215,9 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 buck:
 	cp $(shell buck2 build $(BUCK_BUILD_MODE) fbcode//eden/scm:hg --show-full-simple-output) $(HGNAME)
+
+buck-isl:
+	cp $(shell buck2 build $(BUCK_BUILD_MODE) fbcode//eden/addons:isl-tar --show-full-simple-output) $(ISL_NAME)
 
 # Packaging targets
 
