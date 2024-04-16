@@ -323,3 +323,9 @@ bdir/README.md
         # filter will not fail; it will simply apply the null filter
         self.hg("update", self.initial_commit)
         self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+    def test_ods_counters(self) -> None:
+        self.set_active_filter("top_level_filter")
+        counters = self.get_counters()
+        for c in counters.keys():
+            self.assertNotIn("edenffi", c)
