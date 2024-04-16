@@ -422,7 +422,9 @@ class SaplingBackingStore final : public BackingStore {
    *
    * This function returns when all the aux data have been fetched.
    */
-  void getBlobMetadataBatch(const ImportRequestsList& requests);
+  void getBlobMetadataBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetch_mode);
 
   /**
    * Reads blob metadata from hg cache.

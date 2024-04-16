@@ -858,12 +858,40 @@ void SaplingBackingStore::processBlobMetaImportRequests(
     XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
   }
 
-  getBlobMetadataBatch(requests);
-
-  {
+  std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
+  retryRequest.reserve(requests.size());
+  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+    getBlobMetadataBatch(requests, sapling::FetchMode::AllowRemote);
+    retryRequest = std::move(requests);
+  } else {
+    getBlobMetadataBatch(requests, sapling::FetchMode::LocalOnly);
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobMetadataPtr>();
       if (promise->isFulfilled()) {
+        XLOG(DBG4) << "BlobMetaData found in Sapling local for "
+                   << request
+                          ->getRequest<SaplingImportRequest::BlobMetaImport>()
+                          ->hash;
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
+
+      } else {
+        retryRequest.emplace_back(std::move(request));
+      }
+    }
+    getBlobMetadataBatch(retryRequest, sapling::FetchMode::RemoteOnly);
+  }
+
+  {
+    for (auto& request : retryRequest) {
+      auto* promise = request->getPromise<BlobMetadataPtr>();
+      if (promise->isFulfilled()) {
+        if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
+          XLOG(DBG4) << "BlobMetaData found in Sapling remote for "
+                     << request
+                            ->getRequest<SaplingImportRequest::BlobMetaImport>()
+                            ->hash;
+        }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
         continue;
@@ -879,7 +907,8 @@ void SaplingBackingStore::processBlobMetaImportRequests(
 }
 
 void SaplingBackingStore::getBlobMetadataBatch(
-    const ImportRequestsList& importRequests) {
+    const ImportRequestsList& importRequests,
+    sapling::FetchMode fetch_mode) {
   auto preparedRequests = prepareRequests<SaplingImportRequest::BlobMetaImport>(
       importRequests, "BlobMetadata");
   auto importRequestsMap = std::move(preparedRequests.first);
@@ -887,7 +916,7 @@ void SaplingBackingStore::getBlobMetadataBatch(
 
   store_.getBlobMetadataBatch(
       folly::range(requests),
-      false,
+      fetch_mode,
       // store_.getBlobMetadataBatch is blocking, hence we can take these by
       // reference.
       [&](size_t index,

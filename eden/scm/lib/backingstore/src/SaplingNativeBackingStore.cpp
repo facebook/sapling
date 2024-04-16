@@ -175,13 +175,9 @@ SaplingNativeBackingStore::getBlobMetadata(NodeId node, bool local) {
 
 void SaplingNativeBackingStore::getBlobMetadataBatch(
     SaplingRequestRange requests,
-    bool local,
+    sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
         resolve) {
-  FetchMode fetch_mode = FetchMode::AllowRemote;
-  if (local) {
-    fetch_mode = FetchMode::LocalOnly;
-  }
   auto resolver = std::make_shared<GetFileAuxBatchResolver>(std::move(resolve));
   auto count = requests.size();
 

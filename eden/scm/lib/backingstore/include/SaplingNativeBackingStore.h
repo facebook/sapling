@@ -100,7 +100,7 @@ class SaplingNativeBackingStore {
 
   void getBlobMetadataBatch(
       SaplingRequestRange requests,
-      bool local,
+      sapling::FetchMode fetch_mode,
       folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
           resolve);
 
