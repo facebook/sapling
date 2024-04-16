@@ -9,6 +9,7 @@ import type {PageFocusTracker} from './PageFocusTracker';
 import type {Logger} from './logger';
 import type {PageVisibility, RepoInfo} from 'isl/src/types';
 
+import {stagedThrottler} from './StagedThrottler';
 import {ONE_MINUTE_MS} from './constants';
 import {Watchman} from './watchman';
 import path from 'path';
@@ -165,12 +166,45 @@ export class WatchForChanges {
       });
       dirstateSubscription.emitter.on('fresh-instance', handleRepositoryStateChange);
 
-      const handleUncommittedChanges = () => {
-        this.changeCallback('uncommitted changes');
+      // In some bad cases, a file may not be getting ignored by watchman properly,
+      // and ends up constantly triggering the watchman subscription.
+      // Incrementally increase the throttling of events to avoid spamming `status`.
+      // This does mean "legit" changes will start being missed.
+      // TODO: can we scan the list of changes and build a list of files that are overfiring, then send those to the UI as a warning?
+      // This would allow a user to know it's happening and possibly fix it for their repo by adding it to a .watchmanconfig.
+      const handleUncommittedChanges = stagedThrottler(
+        [
+          {
+            throttleMs: 0,
+            numToNextStage: 5,
+            resetAfterMs: 5_000,
+            onEnter: () => {
+              this.logger.info('no longer throttling uncommitted changes');
+            },
+          },
+          {
+            throttleMs: 5_000,
+            numToNextStage: 10,
+            resetAfterMs: 20_000,
+            onEnter: () => {
+              this.logger.info('slightly throttling uncommitted changes');
+            },
+          },
+          {
+            throttleMs: 30_000,
+            resetAfterMs: 30_000,
+            onEnter: () => {
+              this.logger.info('aggressively throttling uncommitted changes');
+            },
+          },
+        ],
+        () => {
+          this.changeCallback('uncommitted changes');
 
-        // reset timer for polling
-        this.lastFetch = new Date().valueOf();
-      };
+          // reset timer for polling
+          this.lastFetch = new Date().valueOf();
+        },
+      );
       const uncommittedChangesSubscription = await this.watchman.watchDirectoryRecursive(
         repoRoot,
         FILE_CHANGE_WATCHMAN_SUBSCRIPTION,
