@@ -81,7 +81,8 @@ struct TestRepo {
 class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    wrappedStore_ = std::make_shared<FakeBackingStore>();
+    wrappedStore_ = std::make_shared<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter));
@@ -98,7 +99,8 @@ class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
 class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    wrappedStore_ = std::make_shared<FakeBackingStore>();
+    wrappedStore_ = std::make_shared<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakePrefixFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter));

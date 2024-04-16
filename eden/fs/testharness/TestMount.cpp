@@ -127,7 +127,8 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       make_shared<CommandNotifier>(reloadableConfig),
       /*enableFaultInjection=*/true);
 
-  backingStore_ = make_shared<FakeBackingStore>(serverState_);
+  backingStore_ = make_shared<FakeBackingStore>(
+      BackingStore::LocalStoreCachingPolicy::NoCaching, serverState_);
 }
 
 TestMount::TestMount(
@@ -262,7 +263,6 @@ void TestMount::createMount(
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       backingStore_,
       localStore_,
-      ObjectStore::LocalStoreCachingPolicy::NoCaching,
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
@@ -378,7 +378,6 @@ void TestMount::remount() {
   auto objectStore = ObjectStore::create(
       backingStore_,
       localStore_,
-      ObjectStore::LocalStoreCachingPolicy::NoCaching,
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
@@ -422,7 +421,6 @@ void TestMount::remountGracefully() {
   auto objectStore = ObjectStore::create(
       backingStore_,
       localStore_,
-      ObjectStore::LocalStoreCachingPolicy::NoCaching,
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),

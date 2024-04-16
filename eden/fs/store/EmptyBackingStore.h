@@ -27,6 +27,10 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return localStoreCachingPolicy_;
+  }
+
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {
     XLOG(
@@ -54,6 +58,9 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
+
+  LocalStoreCachingPolicy localStoreCachingPolicy_ =
+      LocalStoreCachingPolicy::NoCaching;
 };
 
 } // namespace facebook::eden

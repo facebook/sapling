@@ -58,6 +58,10 @@ class FilteredBackingStore
 
   std::optional<folly::StringPiece> getRepoName() override;
 
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return backingStore_->getLocalStoreCachingPolicy();
+  }
+
   /**
    * Encodes an underlying RootId in the RootId format used by
    * FilteredBackingStore. This format is as follows:

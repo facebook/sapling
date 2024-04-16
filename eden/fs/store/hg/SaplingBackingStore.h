@@ -248,6 +248,10 @@ class SaplingBackingStore final : public BackingStore {
     return store_.getRepoName();
   }
 
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return localStoreCachingPolicy_;
+  }
+
   int64_t dropAllPendingRequestsFromQueue() override;
 
  private:
@@ -535,6 +539,8 @@ class SaplingBackingStore final : public BackingStore {
   std::unique_ptr<BackingStoreLogger> logger_;
 
   FaultInjector& faultInjector_;
+
+  LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   // The last time we logged a missing proxy hash so the minimum interval is
   // limited to EdenConfig::missingHgProxyHashLogInterval.

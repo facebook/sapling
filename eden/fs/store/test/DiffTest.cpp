@@ -74,11 +74,11 @@ class DiffTest : public ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto treeCache = TreeCache::create(edenConfig);
     localStore_ = make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>());
-    backingStore_ = make_shared<FakeBackingStore>();
+    backingStore_ = make_shared<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::NoCaching);
     store_ = ObjectStore::create(
         backingStore_,
         localStore_,
-        ObjectStore::LocalStoreCachingPolicy::NoCaching,
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),

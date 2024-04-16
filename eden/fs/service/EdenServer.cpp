@@ -1560,33 +1560,9 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto backingStore =
       getBackingStore(bsType, initialConfig->getRepoSource(), *initialConfig);
 
-  // TODO: Once we have a way to define and ship CheckoutConfigs, we should turn
-  // this into a config based on BackingStoreType
-  ObjectStore::LocalStoreCachingPolicy localStoreCachingPolicy =
-      ObjectStore::LocalStoreCachingPolicy::NoCaching;
-  switch (bsType) {
-    case BackingStoreType::HG:
-    case BackingStoreType::FILTEREDHG:
-      localStoreCachingPolicy =
-          config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue()
-          ? ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata
-          : ObjectStore::LocalStoreCachingPolicy::Trees;
-      break;
-    case BackingStoreType::GIT:
-    case BackingStoreType::RECAS:
-    case BackingStoreType::HTTP:
-      localStoreCachingPolicy =
-          ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata;
-      break;
-    case BackingStoreType::EMPTY:
-    default:
-      break;
-  }
-
   auto objectStore = ObjectStore::create(
       backingStore,
       localStore_,
-      localStoreCachingPolicy,
       treeCache_,
       getStats().copy(),
       serverState_->getProcessInfoCache(),

@@ -25,7 +25,8 @@ namespace facebook::eden {
 class FakeBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    store_ = std::make_unique<FakeBackingStore>();
+    store_ = std::make_unique<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::NoCaching);
   }
 
   void TearDown() override {

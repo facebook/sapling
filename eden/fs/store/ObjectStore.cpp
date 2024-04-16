@@ -43,7 +43,6 @@ constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<BackingStore> backingStore,
     shared_ptr<LocalStore> localStore,
-    LocalStoreCachingPolicy localStoreCachingPolicy,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -54,7 +53,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
       std::move(localStore),
-      localStoreCachingPolicy,
       std::move(treeCache),
       std::move(stats),
       processInfoCache,
@@ -67,7 +65,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
 ObjectStore::ObjectStore(
     shared_ptr<BackingStore> backingStore,
     shared_ptr<LocalStore> localStore,
-    LocalStoreCachingPolicy localStoreCachingPolicy,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -79,7 +76,7 @@ ObjectStore::ObjectStore(
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},
-      localStoreCachingPolicy_{localStoreCachingPolicy},
+      localStoreCachingPolicy_{backingStore_->getLocalStoreCachingPolicy()},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processInfoCache_(processInfoCache),
@@ -186,7 +183,8 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
   return backingStore_->getRootTree(rootId, context)
       .thenValue([self = shared_from_this(), localStore = localStore_](
                      BackingStore::GetRootTreeResult result) {
-        if (self->shouldCacheOnDisk(LocalStoreCachingPolicy::Anything)) {
+        if (self->shouldCacheOnDisk(
+                BackingStore::LocalStoreCachingPolicy::Anything)) {
           // TODO: perhaps this callback should use toUnsafeFuture() to
           // ensure the tree is cached whether or not the caller consumes
           // the future. See comments on D39475223
@@ -273,7 +271,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
   auto localStoreGetTree = ImmediateFuture<TreePtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(ObjectStore::LocalStoreCachingPolicy::Trees)) {
+  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Trees)) {
     // Check Local Store first
     localStoreGetTree = localStore_->getTree(id);
   }
@@ -296,12 +294,12 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                   if (result.tree) {
                     auto batch = self->localStore_->beginWrite();
                     if (self->shouldCacheOnDisk(
-                            ObjectStore::LocalStoreCachingPolicy::Trees)) {
+                            BackingStore::LocalStoreCachingPolicy::Trees)) {
                       batch->putTree(*result.tree);
                     }
 
                     if (self->shouldCacheOnDisk(
-                            ObjectStore::LocalStoreCachingPolicy::
+                            BackingStore::LocalStoreCachingPolicy::
                                 BlobMetadata)) {
                       // Let's cache all the entries in the LocalStore.
                       for (const auto& [name, treeEntry] : *result.tree) {
@@ -376,7 +374,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
   auto localStoreGetBlob = ImmediateFuture<BlobPtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(ObjectStore::LocalStoreCachingPolicy::Blobs)) {
+  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
     // Check in the LocalStore first
     localStoreGetBlob = localStore_->getBlob(id);
   }
@@ -400,7 +398,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
                 .thenValue([self, id](BackingStore::GetBlobResult result) {
                   if (result.blob) {
                     if (self->shouldCacheOnDisk(
-                            ObjectStore::LocalStoreCachingPolicy::Blobs)) {
+                            BackingStore::LocalStoreCachingPolicy::Blobs)) {
                       self->localStore_->putBlob(id, result.blob.get());
                     }
                     self->stats_->increment(
@@ -514,7 +512,7 @@ ObjectStore::getBlobMetadataImpl(
     const ObjectFetchContextPtr& context) const {
   auto localStoreGetBlobMetadata =
       ImmediateFuture<BlobMetadataPtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(ObjectStore::LocalStoreCachingPolicy::BlobMetadata)) {
+  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::BlobMetadata)) {
     localStoreGetBlobMetadata = localStore_->getBlobMetadata(id);
   }
 
@@ -585,7 +583,8 @@ ObjectStore::getBlobMetadataImpl(
                 .thenValue([self, id](BackingStore::GetBlobMetaResult result) {
                   if (result.blobMeta &&
                       self->shouldCacheOnDisk(
-                          ObjectStore::LocalStoreCachingPolicy::BlobMetadata)) {
+                          BackingStore::LocalStoreCachingPolicy::
+                              BlobMetadata)) {
                     self->localStore_->putBlobMetadata(id, *result.blobMeta);
                   }
                   return result;
@@ -667,7 +666,8 @@ bool ObjectStore::areObjectsKnownIdentical(
       ObjectComparison::Identical;
 }
 
-bool ObjectStore::shouldCacheOnDisk(LocalStoreCachingPolicy object) const {
+bool ObjectStore::shouldCacheOnDisk(
+    BackingStore::LocalStoreCachingPolicy object) const {
   return (
       folly::to_underlying(localStoreCachingPolicy_) &
       folly::to_underlying(object));

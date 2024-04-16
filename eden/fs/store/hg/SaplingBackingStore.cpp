@@ -264,6 +264,10 @@ SaplingBackingStore::SaplingBackingStore(
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
+      localStoreCachingPolicy_{
+          config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue()
+              ? LocalStoreCachingPolicy::TreesAndBlobMetadata
+              : LocalStoreCachingPolicy::Trees},
       runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
@@ -313,6 +317,10 @@ SaplingBackingStore::SaplingBackingStore(
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
+      localStoreCachingPolicy_{
+          config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue()
+              ? LocalStoreCachingPolicy::TreesAndBlobMetadata
+              : LocalStoreCachingPolicy::Trees},
       runtimeOptions_(std::move(runtimeOptions)),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},

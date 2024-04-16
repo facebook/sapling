@@ -1986,18 +1986,10 @@ EdenServiceHandler::streamSelectedChangesSince(
         std::make_shared<FilteredBackingStore>(
             mountHandle.getEdenMountPtr()->getObjectStore()->getBackingStore(),
             std::move(filter));
-    ObjectStore::LocalStoreCachingPolicy localStoreCachingPolicy =
-        server_->getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->hgEnableBlobMetaLocalStoreCaching.getValue()
-        ? ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata
-        : ObjectStore::LocalStoreCachingPolicy::Trees;
     // pass filtered backing store to object store
     auto objectStore = ObjectStore::create(
         backingStore,
         server_->getLocalStore(),
-        localStoreCachingPolicy,
         server_->getTreeCache(),
         server_->getServerState()->getStats().copy(),
         server_->getServerState()->getProcessInfoCache(),

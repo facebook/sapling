@@ -57,6 +57,20 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   virtual ~BackingStore() = default;
 
   /**
+   * Policy describing the kind of data cached in the LocalStore.
+   */
+  enum class LocalStoreCachingPolicy {
+    NoCaching = 0,
+    Trees = 1 << 0,
+    Blobs = 1 << 1,
+    BlobMetadata = 1 << 2,
+    TreesAndBlobMetadata = Trees | BlobMetadata,
+    Anything = Trees | Blobs | BlobMetadata,
+  };
+
+  virtual LocalStoreCachingPolicy getLocalStoreCachingPolicy() const = 0;
+
+  /**
    * A BackingStore may support multiple object ID encodings. To help EdenFS
    * short-circuit recursive comparisons when IDs aren't identical but identify
    * the same contents, this function allows querying whether two IDs refer to
@@ -103,7 +117,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /**
      * The retrieved blob metadata.
      *
-     * If either ObjectStore::LocalStoreCachingPolicy::BlobMetadata is not set
+     * If either BackingStore::LocalStoreCachingPolicy::BlobMetadata is not set
      * or the blob metadata was not found in the LocalStore, setting this to a
      * nullptr will make ObjectStore::getBlobMetadata fallback to fetching
      * the blob, either from the LocalStore or from the BackingStore, to compute

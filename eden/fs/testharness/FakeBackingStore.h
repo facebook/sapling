@@ -34,6 +34,7 @@ class FakeBackingStore final : public BackingStore {
   struct TreeEntryData;
 
   explicit FakeBackingStore(
+      LocalStoreCachingPolicy localStoreCachingPolicy,
       std::shared_ptr<ServerState> serverState = nullptr,
       std::optional<std::string> blake3Key = std::nullopt);
   ~FakeBackingStore() override;
@@ -56,6 +57,10 @@ class FakeBackingStore final : public BackingStore {
   std::string renderRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
+
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return localStoreCachingPolicy_;
+  }
 
   /**
    * Add a Blob to the backing store
@@ -204,6 +209,7 @@ class FakeBackingStore final : public BackingStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
+  LocalStoreCachingPolicy localStoreCachingPolicy_;
   std::shared_ptr<ServerState> serverState_;
   folly::Synchronized<Data> data_;
   std::optional<std::string> blake3Key_;

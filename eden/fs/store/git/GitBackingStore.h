@@ -45,6 +45,10 @@ class GitBackingStore final : public BijectiveBackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return localStoreCachingPolicy_;
+  }
+
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {
     XLOG(
@@ -85,6 +89,9 @@ class GitBackingStore final : public BijectiveBackingStore {
   static ObjectId oid2Hash(const git_oid* oid);
 
   git_repository* repo_{nullptr};
+
+  LocalStoreCachingPolicy localStoreCachingPolicy_ =
+      LocalStoreCachingPolicy::TreesAndBlobMetadata;
 };
 
 } // namespace facebook::eden

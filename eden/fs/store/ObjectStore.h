@@ -81,22 +81,9 @@ class ObjectStore : public IObjectStore,
                     public ObjectIdCodec,
                     public std::enable_shared_from_this<ObjectStore> {
  public:
-  /**
-   * Policy describing the kind of data cached in the LocalStore.
-   */
-  enum class LocalStoreCachingPolicy {
-    NoCaching = 0,
-    Trees = 1 << 0,
-    Blobs = 1 << 1,
-    BlobMetadata = 1 << 2,
-    TreesAndBlobMetadata = Trees | BlobMetadata,
-    Anything = Trees | Blobs | BlobMetadata,
-  };
-
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<LocalStore> localStore,
-      LocalStoreCachingPolicy localStoreCachingPolicy,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -317,7 +304,6 @@ class ObjectStore : public IObjectStore,
   ObjectStore(
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<LocalStore> localStore,
-      LocalStoreCachingPolicy localStoreCachingPolicy,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -336,12 +322,13 @@ class ObjectStore : public IObjectStore,
    * localStoreCachingPolicy_ is set to NoCaching, this will always return
    * false.
    */
-  bool shouldCacheOnDisk(LocalStoreCachingPolicy object) const;
+  bool shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy object) const;
 
   /*
    * This method should only be used for testing purposes.
    */
-  void setLocalStoreCachingPolicy(LocalStoreCachingPolicy policy) {
+  void setLocalStoreCachingPolicy(
+      BackingStore::LocalStoreCachingPolicy policy) {
     localStoreCachingPolicy_ = policy;
   }
 
@@ -407,7 +394,7 @@ class ObjectStore : public IObjectStore,
    * be determined by querying the BackingStore, as opposed to being a
    * constructor argument, since this is strongly tied to that class.
    */
-  LocalStoreCachingPolicy localStoreCachingPolicy_;
+  BackingStore::LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   EdenStatsPtr const stats_;
 
