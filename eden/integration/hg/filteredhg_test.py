@@ -301,6 +301,21 @@ bdir/README.md
         self.hg("rebase", "--continue")
         self.assertEqual(len(self.repo.log(revset="all()")), 3)
 
+    def test_enable_filter_dne(self) -> None:
+        with self.assertRaises(hgrepo.HgError):
+            self.set_active_filter("does_not_exist")
+
+    def test_checkout_old_commit(self) -> None:
+        self.repo.write_file("new_filter", self.testFilter1)
+        self.repo.commit("Add new filter")
+        self.assert_status_empty()
+
+        # Checking out a commit that's older than the commit that introduced the
+        # filter will fail
+        self.set_active_filter("new_filter")
+        with self.assertRaises(hgrepo.HgError):
+            self.hg("update", self.initial_commit)
+
     # Future test cases:
     # - Reading a filtered file fails
     # - All sorts of filter edgecases
