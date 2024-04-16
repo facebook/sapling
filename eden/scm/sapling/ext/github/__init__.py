@@ -375,7 +375,7 @@ def _getnamespace(_repo) -> namespace:
 
 @autopullpredicate("ghrevset", priority=90, rewritepullrev=True)
 def _autopullghpr(repo, name, rewritepullrev: bool = False) -> Optional[pullattempt]:
-    if repo.ui.plain():
+    if repo.ui.plain(feature="ghrevset"):
         return
 
     if not repo.ui.configbool("ghrevset", "autopull"):
