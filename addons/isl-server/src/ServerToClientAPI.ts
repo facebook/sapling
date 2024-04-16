@@ -167,6 +167,7 @@ export default class ServerToClientAPI {
       );
     }
 
+    repo.ref();
     this.repoDisposables.push(
       repo.subscribeToHeadCommit(head => {
         const allCommits = repo.getSmartlogCommits();
@@ -179,6 +180,7 @@ export default class ServerToClientAPI {
           },
         });
       }),
+      {dispose: () => repo.unref()},
     );
 
     this.processQueuedMessages();

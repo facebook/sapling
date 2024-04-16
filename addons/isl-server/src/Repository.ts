@@ -592,6 +592,20 @@ export class Repository {
     this.initialConnectionContext.tracker.track('FocusChanged', {extras: {state}});
   }
 
+  private refcount = 0;
+  ref() {
+    this.refcount++;
+    if (this.refcount === 1) {
+      this.watchForChanges.setupWatchmanSubscriptions();
+    }
+  }
+  unref() {
+    this.refcount--;
+    if (this.refcount === 0) {
+      this.watchForChanges.disposeWatchmanSubscriptions();
+    }
+  }
+
   /** Return the latest fetched value for UncommittedChanges. */
   getUncommittedChanges(): FetchedUncommittedChanges | null {
     return this.uncommittedChanges;
