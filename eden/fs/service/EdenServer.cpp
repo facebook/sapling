@@ -219,7 +219,8 @@ std::optional<std::string> getUnixDomainSocketPath(
 std::string getCounterNameForImportMetric(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
-    std::optional<SaplingBackingStore::HgImportObject> object = std::nullopt) {
+    std::optional<SaplingBackingStore::SaplingImportObject> object =
+        std::nullopt) {
   if (object.has_value()) {
     // base prefix . stage . object . metric
     return folly::to<std::string>(
@@ -227,7 +228,7 @@ std::string getCounterNameForImportMetric(
         ".",
         RequestMetricsScope::stringOfHgImportStage(stage),
         ".",
-        SaplingBackingStore::stringOfHgImportObject(object.value()),
+        SaplingBackingStore::stringOfSaplingImportObject(object.value()),
         ".",
         RequestMetricsScope::stringOfRequestMetric(metric));
   }
@@ -419,7 +420,7 @@ EdenServer::EdenServer(
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : SaplingBackingStore::hgImportObjects) {
+      for (auto object : SaplingBackingStore::saplingImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->registerCallback(counterName, [this, stage, object, metric] {
           auto individual_counters = this->collectSaplingBackingStoreCounters(
@@ -433,7 +434,7 @@ EdenServer::EdenServer(
       auto summaryCounterName = getCounterNameForImportMetric(stage, metric);
       counters->registerCallback(summaryCounterName, [this, stage, metric] {
         std::vector<size_t> individual_counters;
-        for (auto object : SaplingBackingStore::hgImportObjects) {
+        for (auto object : SaplingBackingStore::saplingImportObjects) {
           auto more_counters = this->collectSaplingBackingStoreCounters(
               [stage, object, metric](const SaplingBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
@@ -458,7 +459,7 @@ EdenServer::~EdenServer() {
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : SaplingBackingStore::hgImportObjects) {
+      for (auto object : SaplingBackingStore::saplingImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->unregisterCallback(counterName);
       }

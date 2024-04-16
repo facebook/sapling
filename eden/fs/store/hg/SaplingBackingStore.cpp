@@ -63,7 +63,7 @@ DEFINE_int32(
     // See benchmarks in the doc linked from D5067763.
     // Note that this number would benefit from occasional revisiting.
     8,
-    "the number of hg import threads per repo");
+    "the number of sapling import threads per repo");
 
 namespace facebook::eden {
 
@@ -382,7 +382,8 @@ void SaplingBackingStore::processBlobImportRequests(
       }
 
       // The blobs were either not found locally, or, when EdenAPI is enabled,
-      // not found on the server. Let's import the blob through the hg importer.
+      // not found on the server. Let's import the blob through the sapling
+      // importer.
       // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
       auto fetchSemiFuture = retryGetBlob(
           request->getRequest<SaplingImportRequest::BlobImport>()->proxyHash);
@@ -1630,7 +1631,7 @@ void SaplingBackingStore::logBackingStoreFetch(
 
 size_t SaplingBackingStore::getImportMetric(
     RequestMetricsScope::RequestStage stage,
-    HgImportObject object,
+    SaplingImportObject object,
     RequestMetricsScope::RequestMetric metric) const {
   return RequestMetricsScope::getMetricFromWatches(
       metric, getImportWatches(stage, object));
@@ -1639,74 +1640,75 @@ size_t SaplingBackingStore::getImportMetric(
 RequestMetricsScope::LockedRequestWatchList&
 SaplingBackingStore::getImportWatches(
     RequestMetricsScope::RequestStage stage,
-    HgImportObject object) const {
+    SaplingImportObject object) const {
   switch (stage) {
     case RequestMetricsScope::RequestStage::PENDING:
       return getPendingImportWatches(object);
     case RequestMetricsScope::RequestStage::LIVE:
       return getLiveImportWatches(object);
   }
-  EDEN_BUG() << "unknown hg import stage " << enumValue(stage);
+  EDEN_BUG() << "unknown sapling import stage " << enumValue(stage);
 }
 
 RequestMetricsScope::LockedRequestWatchList&
-SaplingBackingStore::getPendingImportWatches(HgImportObject object) const {
+SaplingBackingStore::getPendingImportWatches(SaplingImportObject object) const {
   switch (object) {
-    case HgImportObject::BLOB:
-    case HgImportObject::BATCHED_BLOB:
+    case SaplingImportObject::BLOB:
+    case SaplingImportObject::BATCHED_BLOB:
       return pendingImportBlobWatches_;
-    case HgImportObject::TREE:
-    case HgImportObject::BATCHED_TREE:
+    case SaplingImportObject::TREE:
+    case SaplingImportObject::BATCHED_TREE:
       return pendingImportTreeWatches_;
-    case HgImportObject::BLOBMETA:
-    case HgImportObject::BATCHED_BLOBMETA:
+    case SaplingImportObject::BLOBMETA:
+    case SaplingImportObject::BATCHED_BLOBMETA:
       return pendingImportBlobMetaWatches_;
-    case HgImportObject::PREFETCH:
+    case SaplingImportObject::PREFETCH:
       return pendingImportPrefetchWatches_;
   }
-  EDEN_BUG() << "unknown hg import object type " << static_cast<int>(object);
+  EDEN_BUG() << "unknown sapling import object type "
+             << static_cast<int>(object);
 }
 
 RequestMetricsScope::LockedRequestWatchList&
-SaplingBackingStore::getLiveImportWatches(HgImportObject object) const {
+SaplingBackingStore::getLiveImportWatches(SaplingImportObject object) const {
   switch (object) {
-    case HgImportObject::BLOB:
+    case SaplingImportObject::BLOB:
       return liveImportBlobWatches_;
-    case HgImportObject::TREE:
+    case SaplingImportObject::TREE:
       return liveImportTreeWatches_;
-    case HgImportObject::BLOBMETA:
+    case SaplingImportObject::BLOBMETA:
       return liveImportBlobMetaWatches_;
-    case HgImportObject::PREFETCH:
+    case SaplingImportObject::PREFETCH:
       return liveImportPrefetchWatches_;
-    case HgImportObject::BATCHED_BLOB:
+    case SaplingImportObject::BATCHED_BLOB:
       return liveBatchedBlobWatches_;
-    case HgImportObject::BATCHED_TREE:
+    case SaplingImportObject::BATCHED_TREE:
       return liveBatchedTreeWatches_;
-    case HgImportObject::BATCHED_BLOBMETA:
+    case SaplingImportObject::BATCHED_BLOBMETA:
       return liveBatchedBlobMetaWatches_;
   }
-  EDEN_BUG() << "unknown hg import object " << enumValue(object);
+  EDEN_BUG() << "unknown sapling import object " << enumValue(object);
 }
 
-folly::StringPiece SaplingBackingStore::stringOfHgImportObject(
-    HgImportObject object) {
+folly::StringPiece SaplingBackingStore::stringOfSaplingImportObject(
+    SaplingImportObject object) {
   switch (object) {
-    case HgImportObject::BLOB:
+    case SaplingImportObject::BLOB:
       return "blob";
-    case HgImportObject::TREE:
+    case SaplingImportObject::TREE:
       return "tree";
-    case HgImportObject::BLOBMETA:
+    case SaplingImportObject::BLOBMETA:
       return "blobmeta";
-    case HgImportObject::BATCHED_BLOB:
+    case SaplingImportObject::BATCHED_BLOB:
       return "batched_blob";
-    case HgImportObject::BATCHED_TREE:
+    case SaplingImportObject::BATCHED_TREE:
       return "batched_tree";
-    case HgImportObject::BATCHED_BLOBMETA:
+    case SaplingImportObject::BATCHED_BLOBMETA:
       return "batched_blobmeta";
-    case HgImportObject::PREFETCH:
+    case SaplingImportObject::PREFETCH:
       return "prefetch";
   }
-  EDEN_BUG() << "unknown hg import object " << enumValue(object);
+  EDEN_BUG() << "unknown sapling import object " << enumValue(object);
 }
 
 void SaplingBackingStore::startRecordingFetch() {

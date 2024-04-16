@@ -163,7 +163,7 @@ class SaplingBackingStore final : public BackingStore {
   /**
    * Objects that can be imported from Hg
    */
-  enum HgImportObject {
+  enum SaplingImportObject {
     BLOB,
     TREE,
     BLOBMETA,
@@ -172,16 +172,17 @@ class SaplingBackingStore final : public BackingStore {
     BATCHED_BLOBMETA,
     PREFETCH
   };
-  constexpr static std::array<HgImportObject, 7> hgImportObjects{
-      HgImportObject::BLOB,
-      HgImportObject::TREE,
-      HgImportObject::BLOBMETA,
-      HgImportObject::BATCHED_BLOB,
-      HgImportObject::BATCHED_TREE,
-      HgImportObject::BATCHED_BLOBMETA,
-      HgImportObject::PREFETCH};
+  constexpr static std::array<SaplingImportObject, 7> saplingImportObjects{
+      SaplingImportObject::BLOB,
+      SaplingImportObject::TREE,
+      SaplingImportObject::BLOBMETA,
+      SaplingImportObject::BATCHED_BLOB,
+      SaplingImportObject::BATCHED_TREE,
+      SaplingImportObject::BATCHED_BLOBMETA,
+      SaplingImportObject::PREFETCH};
 
-  static folly::StringPiece stringOfHgImportObject(HgImportObject object);
+  static folly::StringPiece stringOfSaplingImportObject(
+      SaplingImportObject object);
 
   ActivityBuffer<HgImportTraceEvent>& getActivityBuffer() {
     return activityBuffer_;
@@ -264,14 +265,14 @@ class SaplingBackingStore final : public BackingStore {
    * calculates `metric` for `object` imports that are `stage`.
    *    ex. SaplingBackingStore::getImportMetrics(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          SaplingBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *          RequestMetricsScope::Metric::COUNT,
    *        )
    *    calculates the number of blob imports that are pending
    */
   size_t getImportMetric(
       RequestMetricsScope::RequestStage stage,
-      HgImportObject object,
+      SaplingImportObject object,
       RequestMetricsScope::RequestMetric metric) const;
 
   void startRecordingFetch() override;
@@ -426,33 +427,33 @@ class SaplingBackingStore final : public BackingStore {
    * gets the watches timing `object` imports that are `stage`
    *    ex. SaplingBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          SaplingBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *        )
    *    gets the watches timing blob imports that are pending
    */
   RequestMetricsScope::LockedRequestWatchList& getImportWatches(
       RequestMetricsScope::RequestStage stage,
-      HgImportObject object) const;
+      SaplingImportObject object) const;
 
   /**
    * Gets the watches timing pending `object` imports
    *   ex. SaplingBackingStore::getPendingImportWatches(
-   *          SaplingBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *        )
    *    gets the watches timing pending blob imports
    */
   RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
-      HgImportObject object) const;
+      SaplingImportObject object) const;
 
   /**
    * Gets the watches timing live `object` imports
    *   ex. SaplingBackingStore::getLiveImportWatches(
-   *          SaplingBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *        )
    *    gets the watches timing live blob imports
    */
   RequestMetricsScope::LockedRequestWatchList& getLiveImportWatches(
-      HgImportObject object) const;
+      SaplingImportObject object) const;
 
   template <typename T>
   std::pair<ImportRequestsMap, std::vector<sapling::SaplingRequest>>
