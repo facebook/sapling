@@ -1556,7 +1556,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   auto bsType = toBackingStoreType(initialConfig->getRepoType());
   XLOGF(
-      DBG4, "Creating backing store of type: {}", toBackingStoreString(bsType));
+      INFO, "Creating backing store of type: {}", toBackingStoreString(bsType));
   auto backingStore =
       getBackingStore(bsType, initialConfig->getRepoSource(), *initialConfig);
 
