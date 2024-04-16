@@ -1655,6 +1655,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
               FinishedMount event;
               event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
+              event.backing_store_type = toBackingStoreString(
+                  edenMount->getCheckoutConfig()->getRepoBackingStoreType());
               event.repo_source =
                   basename(edenMount->getCheckoutConfig()->getRepoSource());
               auto* fsChannel = edenMount->getFsChannel();
