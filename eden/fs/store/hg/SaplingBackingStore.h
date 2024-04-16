@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <gtest/gtest_prod.h>
 #include <sys/types.h>
 #include <atomic>
 #include <memory>
@@ -219,48 +220,6 @@ class SaplingBackingStore final : public BackingStore {
 
   std::optional<Hash20> getManifestNode(const ObjectId& commitId);
 
-  ImmediateFuture<GetRootTreeResult> getRootTree(
-      const RootId& rootId,
-      const ObjectFetchContextPtr& context) override;
-  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
-      const ObjectId& /* objectId */,
-      TreeEntryType /* treeEntryType */,
-      const ObjectFetchContextPtr& /* context */) override {
-    throw std::domain_error("unimplemented");
-  }
-
-  void getTreeBatch(const ImportRequestsList& requests);
-
-  folly::SemiFuture<GetTreeResult> getTree(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobResult> getBlob(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-
-  /**
-   * Reads blob metadata from hg cache.
-   */
-  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
-
-  // Get blob step functions
-  folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
-
-  /**
-   * Import the manifest for the specified revision using mercurial
-   * treemanifest data.
-   */
-  folly::Future<TreePtr> importTreeManifest(
-      const ObjectId& commitId,
-      const ObjectFetchContextPtr& context);
-
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context) override;
-
   /**
    * calculates `metric` for `object` imports that are `stage`.
    *    ex. SaplingBackingStore::getImportMetrics(
@@ -292,13 +251,47 @@ class SaplingBackingStore final : public BackingStore {
   int64_t dropAllPendingRequestsFromQueue() override;
 
  private:
+  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getTree);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
+  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch);
+  FRIEND_TEST(
+      SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,
+      getTreeBatch);
+  friend class EdenServiceHandler;
+
   // Forbidden copy constructor and assignment operator
   SaplingBackingStore(const SaplingBackingStore&) = delete;
   SaplingBackingStore& operator=(const SaplingBackingStore&) = delete;
 
+  /**
+   * Import the manifest for the specified revision using mercurial
+   * treemanifest data.
+   */
+  folly::Future<TreePtr> importTreeManifest(
+      const ObjectId& commitId,
+      const ObjectFetchContextPtr& context);
+
   folly::Future<TreePtr> importTreeManifestImpl(
       Hash20 manifestNode,
       const ObjectFetchContextPtr& context);
+
+  ImmediateFuture<GetRootTreeResult> getRootTree(
+      const RootId& rootId,
+      const ObjectFetchContextPtr& context) override;
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& /* objectId */,
+      TreeEntryType /* treeEntryType */,
+      const ObjectFetchContextPtr& /* context */) override {
+    throw std::domain_error("unimplemented");
+  }
+
+  void getTreeBatch(const ImportRequestsList& requests);
+
+  folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
 
   folly::Try<TreePtr> getTreeFromBackingStore(
       const RelativePath& path,
@@ -317,12 +310,42 @@ class SaplingBackingStore final : public BackingStore {
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
 
-  void processBlobImportRequests(
-      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
-  void processTreeImportRequests(
-      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
-  void processBlobMetaImportRequests(
-      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+  /**
+   * Imports the tree identified by the given hash from the hg cache.
+   * Returns nullptr if not found.
+   */
+  TreePtr getTreeLocal(
+      const ObjectId& edenTreeId,
+      const HgProxyHash& proxyHash);
+
+  /**
+   * Imports the tree identified by the given hash from the remote store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<TreePtr> getTreeRemote(
+      const RelativePath& path,
+      const Hash20& manifestId,
+      const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context);
+
+  /**
+   * Fetch a tree from Mercurial.
+   *
+   * For latency sensitive context, the caller is responsible for checking if
+   * the tree is present locally, as this function will always push the request
+   * at the end of the queue.
+   */
+  ImmediateFuture<GetTreeResult> getTreeEnqueue(
+      const ObjectId& id,
+      const HgProxyHash& proxyHash,
+      const ObjectFetchContextPtr& context);
+
+  folly::SemiFuture<GetBlobResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
+  // Get blob step functions
+  folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
@@ -330,20 +353,6 @@ class SaplingBackingStore final : public BackingStore {
    * imported. Otherwise the promise will be left untouched.
    */
   void getBlobBatch(const ImportRequestsList& requests);
-
-  /**
-   * Fetch multiple aux data at once.
-   *
-   * This function returns when all the aux data have been fetched.
-   */
-  void getBlobMetadataBatch(const ImportRequestsList& requests);
-
-  /**
-   * The worker runloop function.
-   */
-  void processRequest();
-
-  void logMissingProxyHash();
 
   /**
    * Fetch a blob from Mercurial.
@@ -368,25 +377,8 @@ class SaplingBackingStore final : public BackingStore {
       const HgProxyHash& hgInfo,
       sapling::FetchMode fetchMode);
 
- public:
   /**
-   * Fetch the blob metadata from Mercurial.
-   *
-   * For latency sensitive context, the caller is responsible for checking if
-   * the blob metadata is present locally, as this function will always push
-   * the request at the end of the queue.
-   *
-   * This is marked as public but don't be fooled, this is not intended to be
-   * used by anybody but SaplingBackingStore and debugGetBlobMetadata Thrift
-   * handler.
-   */
-  ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
-      const ObjectId& id,
-      const HgProxyHash& proxyHash,
-      const ObjectFetchContextPtr& context);
-
-  /**
-   * Imports the blob identified by the given hash from the local store.
+   * Imports the blob identified by the given hash from the hg cache.
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
@@ -401,18 +393,51 @@ class SaplingBackingStore final : public BackingStore {
     return getBlobFromBackingStore(hgInfo, sapling::FetchMode::RemoteOnly);
   }
 
- private:
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
   /**
-   * Fetch a tree from Mercurial.
+   * Fetch the blob metadata from Mercurial.
    *
    * For latency sensitive context, the caller is responsible for checking if
-   * the tree is present locally, as this function will always push the request
-   * at the end of the queue.
+   * the blob metadata is present locally, as this function will always push
+   * the request at the end of the queue.
    */
-  ImmediateFuture<GetTreeResult> getTreeEnqueue(
+  ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
+
+  /**
+   * Fetch multiple aux data at once.
+   *
+   * This function returns when all the aux data have been fetched.
+   */
+  void getBlobMetadataBatch(const ImportRequestsList& requests);
+
+  /**
+   * Reads blob metadata from hg cache.
+   */
+  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
+
+  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
+      ObjectIdRange ids,
+      const ObjectFetchContextPtr& context) override;
+
+  void processBlobImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+  void processTreeImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+  void processBlobMetaImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+
+  /**
+   * The worker runloop function.
+   */
+  void processRequest();
+
+  void logMissingProxyHash();
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is in the
@@ -460,24 +485,6 @@ class SaplingBackingStore final : public BackingStore {
   prepareRequests(
       const ImportRequestsList& importRequests,
       const std::string& requestType);
-
-  /**
-   * Imports the tree identified by the given hash from the local store.
-   * Returns nullptr if not found.
-   */
-  TreePtr getTreeLocal(
-      const ObjectId& edenTreeId,
-      const HgProxyHash& proxyHash);
-
-  /**
-   * Imports the tree identified by the given hash from the remote store.
-   * Returns nullptr if not found.
-   */
-  folly::Try<TreePtr> getTreeRemote(
-      const RelativePath& path,
-      const Hash20& manifestId,
-      const ObjectId& edenTreeId,
-      const ObjectFetchContextPtr& context);
 
   /**
    * isRecordingFetch_ indicates if SaplingBackingStore is recording paths

@@ -30,9 +30,8 @@
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
 
-namespace {
+namespace facebook::eden {
 
-using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
 using folly::io::Cursor;
 
@@ -113,8 +112,8 @@ class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
   std::shared_ptr<FilteredBackingStore> filteredStore_;
 };
 
-struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
-  HgFilteredBackingStoreTest() = default;
+struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
+  SaplingFilteredBackingStoreTest() = default;
 
   void SetUp() override {
     auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());
@@ -835,7 +834,7 @@ TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
 
 const auto kTestTimeout = 10s;
 
-TEST_F(HgFilteredBackingStoreTest, testMercurialFFI) {
+TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFI) {
   // Set up one commit with a root tree
   auto filterRelPath = RelativePath{"filter"};
   auto rootFuture1 = filteredStoreFFI_->getRootTree(
@@ -874,7 +873,7 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFI) {
   EXPECT_NE(helloFindRes, srcRes->cend());
 }
 
-TEST_F(HgFilteredBackingStoreTest, testMercurialFFINullFilter) {
+TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter) {
   // Set up one commit with a root tree
   auto rootFuture1 = filteredStoreFFI_->getRootTree(
       RootId{
@@ -910,7 +909,7 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFINullFilter) {
   EXPECT_NE(helloFindRes, srcRes->cend());
 }
 
-TEST_F(HgFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
+TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   // Set up one commit with a root tree
   auto filterRelPath = RelativePath{"filter"};
   auto rootFuture1 = filteredStoreFFI_->getRootTree(
@@ -952,4 +951,4 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
   EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
 }
-} // namespace
+} // namespace facebook::eden

@@ -27,6 +27,15 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
+  // TODO(T119221752): Implement for all BackingStore subclasses
+  int64_t dropAllPendingRequestsFromQueue() override {
+    XLOG(
+        WARN,
+        "dropAllPendingRequestsFromQueue() is not implemented for ReCasBackingStores");
+    return 0;
+  }
+
+ private:
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
@@ -45,14 +54,6 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
-
-  // TODO(T119221752): Implement for all BackingStore subclasses
-  int64_t dropAllPendingRequestsFromQueue() override {
-    XLOG(
-        WARN,
-        "dropAllPendingRequestsFromQueue() is not implemented for ReCasBackingStores");
-    return 0;
-  }
 };
 
 } // namespace facebook::eden

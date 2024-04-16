@@ -65,6 +65,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
         ":sapling_backing_store_options",
         ":sapling_import_request_queue",
         "//eden/common/telemetry:telemetry",

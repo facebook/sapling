@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
 #include <initializer_list>
 #include <memory>
 #include <string>
@@ -55,24 +56,6 @@ class FakeBackingStore final : public BackingStore {
   std::string renderRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
-
-  ImmediateFuture<GetRootTreeResult> getRootTree(
-      const RootId& commitID,
-      const ObjectFetchContextPtr& context) override;
-  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
-      const ObjectId& /* commitID */,
-      TreeEntryType /* treeEntryType */,
-      const ObjectFetchContextPtr& /* context */) override;
-
-  folly::SemiFuture<GetTreeResult> getTree(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobResult> getBlob(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
 
   /**
    * Add a Blob to the backing store
@@ -197,6 +180,29 @@ class FakeBackingStore final : public BackingStore {
   std::pair<StoredTree*, bool> maybePutTreeImpl(
       ObjectId hash,
       Tree::container&& sortedEntries);
+
+  FRIEND_TEST(FakeBackingStoreTest, getNonExistent);
+  FRIEND_TEST(FakeBackingStoreTest, getBlob);
+  FRIEND_TEST(FakeBackingStoreTest, getTree);
+  FRIEND_TEST(FakeBackingStoreTest, getRootTree);
+
+  ImmediateFuture<GetRootTreeResult> getRootTree(
+      const RootId& commitID,
+      const ObjectFetchContextPtr& context) override;
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& /* commitID */,
+      TreeEntryType /* treeEntryType */,
+      const ObjectFetchContextPtr& /* context */) override;
+
+  folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+  folly::SemiFuture<GetBlobResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
 
   std::shared_ptr<ServerState> serverState_;
   folly::Synchronized<Data> data_;

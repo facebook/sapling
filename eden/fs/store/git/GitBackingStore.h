@@ -45,6 +45,18 @@ class GitBackingStore final : public BijectiveBackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
+  // TODO(T119221752): Implement for all BackingStore subclasses
+  int64_t dropAllPendingRequestsFromQueue() override {
+    XLOG(
+        WARN,
+        "dropAllPendingRequestsFromQueue() is not implemented for GitBackingStore");
+    return 0;
+  }
+
+ private:
+  GitBackingStore(GitBackingStore const&) = delete;
+  GitBackingStore& operator=(GitBackingStore const&) = delete;
+
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
@@ -63,18 +75,6 @@ class GitBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-
-  // TODO(T119221752): Implement for all BackingStore subclasses
-  int64_t dropAllPendingRequestsFromQueue() override {
-    XLOG(
-        WARN,
-        "dropAllPendingRequestsFromQueue() is not implemented for GitBackingStore");
-    return 0;
-  }
-
- private:
-  GitBackingStore(GitBackingStore const&) = delete;
-  GitBackingStore& operator=(GitBackingStore const&) = delete;
 
   TreePtr getTreeImpl(const ObjectId& id);
   BlobPtr getBlobImpl(const ObjectId& id);

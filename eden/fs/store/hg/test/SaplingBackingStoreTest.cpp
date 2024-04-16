@@ -26,9 +26,9 @@
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 
-using namespace facebook::eden;
 using namespace std::chrono_literals;
 
+namespace facebook::eden {
 namespace {
 const auto kTestTimeout = 10s;
 
@@ -343,3 +343,4 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
             SaplingBackingStore::staticRenderObjectId(hash_only)));
   }
 }
+} // namespace facebook::eden

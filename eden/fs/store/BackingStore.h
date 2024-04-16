@@ -77,18 +77,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   };
 
   /**
-   * Return the root Tree corresponding to the passed in RootId.
-   */
-  virtual ImmediateFuture<GetRootTreeResult> getRootTree(
-      const RootId& rootId,
-      const ObjectFetchContextPtr& context) = 0;
-
-  virtual ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
-      const ObjectId& objectId,
-      TreeEntryType treeEntryType,
-      const ObjectFetchContextPtr& context) = 0;
-
-  /**
    * Return value of the getTree method.
    */
   struct GetTreeResult {
@@ -99,15 +87,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   };
 
   /**
-   * Fetch a tree from the backing store.
-   *
-   * Return the tree and where it was found.
-   */
-  virtual folly::SemiFuture<GetTreeResult> getTree(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) = 0;
-
-  /**
    * Return value of the getBlob method.
    */
   struct GetBlobResult {
@@ -116,15 +95,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /** The fetch origin of the blob. */
     ObjectFetchContext::Origin origin;
   };
-
-  /**
-   * Fetch a blob from the backing store.
-   *
-   * Return the blob and where it was found.
-   */
-  virtual folly::SemiFuture<GetBlobResult> getBlob(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the getBlobMetadata method.
@@ -144,27 +114,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /** The fetch origin of the blob metadata. */
     ObjectFetchContext::Origin origin;
   };
-
-  /**
-   * Fetch the blob metadata from the backing store.
-   *
-   * Return the blob metadata and where it was found.
-   */
-  virtual folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) = 0;
-
-  /**
-   * Prefetch all the blobs represented by the HashRange.
-   *
-   * The caller is responsible for making sure that the HashRange stays valid
-   * for as long as the returned SemiFuture.
-   */
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange /*ids*/,
-      const ObjectFetchContextPtr& /*context*/) {
-    return folly::unit;
-  }
 
   virtual void periodicManagementTask() {}
 
@@ -221,6 +170,69 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;
   BackingStore& operator=(BackingStore const&) = delete;
+
+  /**
+   * ObjectStore should be the only public place to access BackingStore and
+   * LocalStore.
+   */
+  friend class ObjectStore;
+
+  /**
+   * FilteredBackingStore also has underlying BackingStore and should have
+   * access to the following functions to access the underlying BackingStore.
+   */
+  friend class FilteredBackingStore;
+
+  /**
+   * Return the root Tree corresponding to the passed in RootId.
+   */
+  virtual ImmediateFuture<GetRootTreeResult> getRootTree(
+      const RootId& rootId,
+      const ObjectFetchContextPtr& context) = 0;
+
+  virtual ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& objectId,
+      TreeEntryType treeEntryType,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
+   * Fetch a tree from the backing store.
+   *
+   * Return the tree and where it was found.
+   */
+  virtual folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
+   * Fetch a blob from the backing store.
+   *
+   * Return the blob and where it was found.
+   */
+  virtual folly::SemiFuture<GetBlobResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
+   * Fetch the blob metadata from the backing store.
+   *
+   * Return the blob metadata and where it was found.
+   */
+  virtual folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
+   * Prefetch all the blobs represented by the HashRange.
+   *
+   * The caller is responsible for making sure that the HashRange stays valid
+   * for as long as the returned SemiFuture.
+   */
+  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
+      ObjectIdRange /*ids*/,
+      const ObjectFetchContextPtr& /*context*/) {
+    return folly::unit;
+  }
 };
 
 /**

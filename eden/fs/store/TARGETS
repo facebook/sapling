@@ -159,6 +159,7 @@ cpp_library(
         "//folly:varint",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
         ":backing_store_interface",
         "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",

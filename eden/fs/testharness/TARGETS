@@ -192,6 +192,7 @@ cpp_library(
         "//folly/ssl:openssl_hash",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
         ":stored_object",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
