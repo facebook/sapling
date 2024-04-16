@@ -260,17 +260,17 @@ bdir/README.md
 
         # write to a filtered file
         self.set_active_filter("top_level_filter")
-        self.write_file("foo", "a change")
+        self.repo.write_file("foo", "a change")
 
         # Ensure the filtered file isn't reflected in status
         self.assert_status_empty()
 
     def test_filtered_merge(self) -> None:
         # Set up two commits that will conflict when rebased
-        self.write_file("foo", "a separate change\n")
+        self.repo.write_file("foo", "a separate change\n")
         new1 = self.repo.commit("Change contents of foo")
         self.repo.update(self.initial_commit)
-        self.write_file("foo", "completely different change\n")
+        self.repo.write_file("foo", "completely different change\n")
         new2 = self.repo.commit("Change contents of foo again")
 
         # enable the active filter so "foo" is filtered and attempt rebase
@@ -296,7 +296,7 @@ bdir/README.md
             """,
         )
 
-        self.write_file("foo", "completely different change\na separate change")
+        self.repo.write_file("foo", "completely different change\na separate change")
         self.hg("resolve", "--mark", "foo")
         self.hg("rebase", "--continue")
         self.assertEqual(len(self.repo.log(revset="all()")), 3)
@@ -315,7 +315,3 @@ bdir/README.md
         self.set_active_filter("new_filter")
         with self.assertRaises(hgrepo.HgError):
             self.hg("update", self.initial_commit)
-
-    # Future test cases:
-    # - Reading a filtered file fails
-    # - All sorts of filter edgecases
