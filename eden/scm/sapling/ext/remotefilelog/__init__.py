@@ -317,10 +317,6 @@ def onetimeclientsetup(ui):
     else:
         fn = "addchangegroupfiles"  # hg <= 3.5
     wrapfunction(changegroup, fn, shallowbundle.addchangegroupfiles)
-    if hasattr(changegroup, "getchangegroup"):
-        wrapfunction(changegroup, "getchangegroup", shallowbundle.getchangegroup)
-    else:
-        wrapfunction(changegroup, "makechangegroup", shallowbundle.makechangegroup)
 
     def storewrapper(orig, requirements, path, vfstype, *args):
         s = orig(requirements, path, vfstype, *args)
@@ -468,7 +464,7 @@ def onetimeclientsetup(ui):
     # prevent strip from stripping remotefilelogs
     def _collectbrokencsets(orig, repo, files, striprev):
         if shallowrepo.requirement in repo.requirements:
-            files = list([f for f in files if not repo.shallowmatch(f)])
+            files = []
         return orig(repo, files, striprev)
 
     wrapfunction(repair, "_collectbrokencsets", _collectbrokencsets)
@@ -550,10 +546,7 @@ def onetimeclientsetup(ui):
     def filectx(orig, self, path, fileid=None, filelog=None):
         if fileid is None:
             fileid = self.filenode(path)
-        if (
-            shallowrepo.requirement in self._repo.requirements
-            and self._repo.shallowmatch(path)
-        ):
+        if shallowrepo.requirement in self._repo.requirements:
             return remotefilectx.remotefilectx(
                 self._repo, path, fileid=fileid, changectx=self, filelog=filelog
             )
@@ -562,10 +555,7 @@ def onetimeclientsetup(ui):
     wrapfunction(context.changectx, "filectx", filectx)
 
     def workingfilectx(orig, self, path, filelog=None):
-        if (
-            shallowrepo.requirement in self._repo.requirements
-            and self._repo.shallowmatch(path)
-        ):
+        if shallowrepo.requirement in self._repo.requirements:
             return remotefilectx.remoteworkingfilectx(
                 self._repo, path, workingctx=self, filelog=filelog
             )

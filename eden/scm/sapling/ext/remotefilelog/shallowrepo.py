@@ -58,16 +58,10 @@ def wraprepo(repo) -> None:
             if f[0] == "/":
                 f = f[1:]
 
-            if self.shallowmatch(f):
-                return remotefilelog.remotefilelog(self.svfs, f, self)
-            else:
-                return super(shallowrepository, self).file(f)
+            return remotefilelog.remotefilelog(self.svfs, f, self)
 
         def filectx(self, path, changeid=None, fileid=None):
-            if self.shallowmatch(path):
-                return remotefilectx.remotefilectx(self, path, changeid, fileid)
-            else:
-                return super(shallowrepository, self).filectx(path, changeid, fileid)
+            return remotefilectx.remotefilectx(self, path, changeid, fileid)
 
         def close(self):
             result = super(shallowrepository, self).close()
@@ -151,13 +145,4 @@ def wraprepo(repo) -> None:
 
     repo.__class__ = shallowrepository
 
-    repo.shallowmatch = match.always(repo.root, "")
     repo.fileservice = fileserverclient.fileserverclient(repo)
-
-    repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
-    repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)
-
-    if repo.includepattern or repo.excludepattern:
-        repo.shallowmatch = match.match(
-            repo.root, "", None, repo.includepattern, repo.excludepattern
-        )

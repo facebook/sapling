@@ -176,21 +176,7 @@ class shallowcg1packer(changegroup.cg1packer):
         if self._repo.ui.configbool("remotefilelog", "server"):
             caps = self._bundlecaps or []
             if requirement in caps:
-                # only send files that don't match the specified patterns
-                includepattern = None
-                excludepattern = None
-                for cap in self._bundlecaps or []:
-                    if cap.startswith("includepattern="):
-                        includepattern = cap[len("includepattern=") :].split("\0")
-                    elif cap.startswith("excludepattern="):
-                        excludepattern = cap[len("excludepattern=") :].split("\0")
-
-                m = match.always(self._repo.root, "")
-                if includepattern or excludepattern:
-                    m = match.match(
-                        self._repo.root, "", None, includepattern, excludepattern
-                    )
-                changedfiles = list([f for f in changedfiles if not m(f)])
+                changedfiles = []
 
         if requirement in self._repo.requirements:
             repo = self._repo
@@ -208,9 +194,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 return []
             filestosend = self.shouldaddfilegroups(source)
             if filestosend == NoFiles:
-                changedfiles = list(
-                    [f for f in changedfiles if not repo.shallowmatch(f)]
-                )
+                changedfiles = []
             else:
                 files = []
 
@@ -226,9 +210,7 @@ class shallowcg1packer(changegroup.cg1packer):
                     for fnode, cnode in list(pycompat.iteritems(linkrevnodes)):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
-                            if phasecache.phase(
-                                repo, cl.rev(cnode)
-                            ) == phases.public and repo.shallowmatch(fname):
+                            if phasecache.phase(repo, cl.rev(cnode)) == phases.public:
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))
@@ -240,12 +222,11 @@ class shallowcg1packer(changegroup.cg1packer):
                 # Prefetch the revisions that are going to be diffed against
                 prevfiles = []
                 for fname, fnode in files:
-                    if repo.shallowmatch(fname):
-                        fnode = bin(fnode)
-                        filerevlog = repo.file(fname)
-                        p1, p2, linknode, copyfrom = filerevlog.getnodeinfo(fnode)
-                        if p1 != nullid:
-                            prevfiles.append((copyfrom or fname, hex(p1)))
+                    fnode = bin(fnode)
+                    filerevlog = repo.file(fname)
+                    p1, p2, linknode, copyfrom = filerevlog.getnodeinfo(fnode)
+                    if p1 != nullid:
+                        prevfiles.append((copyfrom or fname, hex(p1)))
 
                 repo.fileservice.prefetch(prevfiles)
 
@@ -380,45 +361,6 @@ if hasattr(changegroup, "cg3packer"):
                 yield self._manifestsdone()
 
 
-# Unused except in older versions of Mercurial
-def getchangegroup(orig, repo, source, outgoing, bundlecaps=None, version="01"):
-    def origmakechangegroup(repo, outgoing, version, source):
-        return orig(repo, source, outgoing, bundlecaps=bundlecaps, version=version)
-
-    return makechangegroup(origmakechangegroup, repo, outgoing, version, source)
-
-
-def makechangegroup(orig, repo, outgoing, version, source, *args, **kwargs):
-    if not requirement in repo.requirements:
-        return orig(repo, outgoing, version, source, *args, **kwargs)
-
-    original = repo.shallowmatch
-    try:
-        # if serving, only send files the clients has patterns for
-        if source == "serve":
-            bundlecaps = kwargs.get("bundlecaps")
-            includepattern = None
-            excludepattern = None
-            for cap in bundlecaps or []:
-                if cap.startswith("includepattern="):
-                    raw = cap[len("includepattern=") :]
-                    if raw:
-                        includepattern = raw.split("\0")
-                elif cap.startswith("excludepattern="):
-                    raw = cap[len("excludepattern=") :]
-                    if raw:
-                        excludepattern = raw.split("\0")
-            if includepattern or excludepattern:
-                repo.shallowmatch = match.match(
-                    repo.root, "", None, includepattern, excludepattern
-                )
-            else:
-                repo.shallowmatch = match.always(repo.root, "")
-        return orig(repo, outgoing, version, source, *args, **kwargs)
-    finally:
-        repo.shallowmatch = original
-
-
 def addchangegroupfiles(orig, repo, source, revmap, trp, *args):
     if not requirement in repo.requirements:
         return orig(repo, source, revmap, trp, *args)
@@ -443,12 +385,6 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, *args):
             f = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % f)
             prog.value += 1
-
-            if not repo.shallowmatch(f):
-                fl = repo.file(f)
-                deltas = source.deltaiter()
-                fl.addgroup(deltas, revmap, trp)
-                continue
 
             chain = None
             while True:

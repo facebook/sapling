@@ -100,7 +100,6 @@ def debugindex(orig, ui, repo, file_=None, **opts):
         or opts.get("manifest")
         or opts.get("dir")
         or not shallowrepo.requirement in repo.requirements
-        or not repo.shallowmatch(file_)
     ):
         return orig(ui, repo, file_, **opts)
 
