@@ -531,7 +531,7 @@ impl MatcherTrait for Matcher {
 }
 
 impl Matcher {
-    fn new(matchers: Vec<TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
+    pub fn new(matchers: Vec<TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
         Self {
             matchers,
             rule_origins,

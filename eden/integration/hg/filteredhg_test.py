@@ -302,16 +302,24 @@ bdir/README.md
         self.assertEqual(len(self.repo.log(revset="all()")), 3)
 
     def test_enable_filter_dne(self) -> None:
-        with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("does_not_exist")
+        initial_files = {"foo", "dir2/README", "filtered_out", "dir2/not_filtered"}
+        self.set_active_filter("does_not_exist")
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_checkout_old_commit(self) -> None:
         self.repo.write_file("new_filter", self.testFilter1)
         self.repo.commit("Add new filter")
         self.assert_status_empty()
 
-        # Checking out a commit that's older than the commit that introduced the
-        # filter will fail
+        # Filtering works as normal for a new filter file
+        initial_files = {"foo", "dir2/README", "filtered_out", "dir2/not_filtered"}
+        filtered_files = {"foo", "dir2/README", "filtered_out"}
         self.set_active_filter("new_filter")
-        with self.assertRaises(hgrepo.HgError):
-            self.hg("update", self.initial_commit)
+        self.ensure_filtered_and_unfiltered(
+            filtered_files, initial_files.difference(filtered_files)
+        )
+
+        # Checking out a commit that's older than the commit that introduced the
+        # filter will not fail; it will simply apply the null filter
+        self.hg("update", self.initial_commit)
+        self.ensure_filtered_and_unfiltered(set(), initial_files)

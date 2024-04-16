@@ -22,6 +22,7 @@ use parking_lot::Mutex;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::TreeMatcher;
 use repo::repo::Repo;
+use sparse::Matcher;
 use sparse::Root;
 use types::fetch_mode::FetchMode;
 use types::HgId;
@@ -276,9 +277,20 @@ fn _profile_contents_from_repo(
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
-    })?;
+    });
+
+    // If the result is an error, then the filter file doesn't exist or is
+    // invalid. Return an always matcher instead of erroring out.
+    let sparse_matcher = matcher.unwrap_or_else(|e| {
+        tracing::warn!("Failed to get sparse matcher for active filter: {:?}", e);
+        Matcher::new(
+            vec![TreeMatcher::always()],
+            vec![vec!["always_matcher".to_string()]],
+        )
+    });
+
     Ok(Box::new(MercurialMatcher {
-        matcher: Box::new(matcher),
+        matcher: Box::new(sparse_matcher),
     }))
 }
 
