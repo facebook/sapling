@@ -22,6 +22,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -179,7 +180,22 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) const {
   XLOG(DBG3) << "getRootTree(" << rootId << ")";
-  return backingStore_->getRootTree(rootId, context)
+
+  // TODO: this code caches the root tree, but doesn't have similar code to look
+  // it up This should be investigated and either changed or the reasoning
+  // should be documented
+  return getUnderlyingBackingStore()
+      ->getRootTree(rootId, context)
+      .thenValue([self = shared_from_this(), localStore = localStore_](
+                     BackingStore::GetRootTreeResult result) {
+        if (self->shouldCacheOnDisk(LocalStoreCachingPolicy::Anything)) {
+          // TODO: perhaps this callback should use toUnsafeFuture() to
+          // ensure the tree is cached whether or not the caller consumes
+          // the future. See comments on D39475223
+          localStore->putTree(*result.tree);
+        }
+        return result;
+      })
       .thenValue(
           [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
               BackingStore::GetRootTreeResult result) {
@@ -467,6 +483,22 @@ bool ObjectStore::areObjectsKnownIdentical(
     const ObjectId& two) const {
   return backingStore_->compareObjectsById(one, two) ==
       ObjectComparison::Identical;
+}
+
+bool ObjectStore::shouldCacheOnDisk(LocalStoreCachingPolicy object) const {
+  return (
+      folly::to_underlying(localStoreCachingPolicy_) &
+      folly::to_underlying(object));
+}
+
+const std::shared_ptr<BackingStore>& ObjectStore::getUnderlyingBackingStore()
+    const {
+  if (auto* localStoreCachedBackingStore =
+          dynamic_cast<LocalStoreCachedBackingStore*>(backingStore_.get())) {
+    return localStoreCachedBackingStore->getBackingStore();
+  } else {
+    return backingStore_;
+  }
 }
 
 } // namespace facebook::eden

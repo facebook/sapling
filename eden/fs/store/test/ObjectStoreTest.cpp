@@ -23,10 +23,10 @@
 #include "eden/fs/testharness/LoggingFetchContext.h"
 #include "eden/fs/testharness/StoredObject.h"
 
-using namespace facebook::eden;
 using namespace folly::string_piece_literals;
 using namespace std::chrono_literals;
 
+namespace facebook::eden {
 namespace {
 
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
@@ -51,11 +51,11 @@ struct ObjectStoreTest : ::testing::Test {
         fakeBackingStore,
         localStore,
         stats.copy(),
-        ObjectStore::LocalStoreCachingPolicy::Everything);
+        ObjectStore::LocalStoreCachingPolicy::Anything);
     objectStore = ObjectStore::create(
         backingStore,
         localStore,
-        ObjectStore::LocalStoreCachingPolicy::Everything,
+        ObjectStore::LocalStoreCachingPolicy::Anything,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -74,11 +74,11 @@ struct ObjectStoreTest : ::testing::Test {
             fakeBackingStoreWithKeyedBlake3,
             localStore,
             stats.copy(),
-            ObjectStore::LocalStoreCachingPolicy::Everything);
+            ObjectStore::LocalStoreCachingPolicy::Anything);
     objectStoreWithBlake3Key = ObjectStore::create(
         backingStoreWithKeyedBlake3,
         localStore,
-        ObjectStore::LocalStoreCachingPolicy::Everything,
+        ObjectStore::LocalStoreCachingPolicy::Anything,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -132,7 +132,6 @@ struct ObjectStoreTest : ::testing::Test {
 };
 
 } // namespace
-
 TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());
@@ -142,6 +141,106 @@ TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
+TEST_F(ObjectStoreTest, caching_policies_anything) {
+  objectStore->setLocalStoreCachingPolicy(
+      ObjectStore::LocalStoreCachingPolicy::Anything);
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching));
+}
+
+TEST_F(ObjectStoreTest, caching_policies_no_caching) {
+  objectStore->setLocalStoreCachingPolicy(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching);
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching));
+}
+TEST_F(ObjectStoreTest, caching_policies_blob) {
+  objectStore->setLocalStoreCachingPolicy(
+      ObjectStore::LocalStoreCachingPolicy::Blobs);
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching));
+}
+
+TEST_F(ObjectStoreTest, caching_policies_trees) {
+  objectStore->setLocalStoreCachingPolicy(
+      ObjectStore::LocalStoreCachingPolicy::Trees);
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching));
+}
+
+TEST_F(ObjectStoreTest, caching_policies_blob_metadata) {
+  objectStore->setLocalStoreCachingPolicy(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata);
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching));
+}
+
+TEST_F(ObjectStoreTest, caching_policies_trees_and_blob_metadata) {
+  objectStore->setLocalStoreCachingPolicy(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata);
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::BlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      ObjectStore::LocalStoreCachingPolicy::NoCaching));
+}
 TEST_F(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
   objectStore->getBlob(readyBlobId, context).get(0ms);
@@ -214,7 +313,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   objectStore = ObjectStore::create(
       backingStore,
       localStore,
-      ObjectStore::LocalStoreCachingPolicy::Everything,
+      ObjectStore::LocalStoreCachingPolicy::Anything,
       treeCache,
       stats.copy(),
       std::make_shared<ProcessInfoCache>(),
@@ -418,3 +517,4 @@ TEST_F(
   EXPECT_TRUE(std::move(fut).get(0ms));
   EXPECT_EQ(context->getFetchCount(), 2);
 }
+} // namespace facebook::eden

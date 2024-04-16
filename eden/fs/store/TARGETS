@@ -197,6 +197,7 @@ cpp_library(
         "//folly/lang:bits",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
         ":backing_store_interface",
         ":context",
         "//eden/common/utils:case_sensitivity",

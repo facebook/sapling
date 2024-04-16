@@ -290,9 +290,7 @@ std::optional<folly::StringPiece> LocalStoreCachedBackingStore::getRepoName() {
 
 bool LocalStoreCachedBackingStore::shouldCache(
     ObjectStore::LocalStoreCachingPolicy object) const {
-  auto underlyingObject = folly::to_underlying(object);
-  return (folly::to_underlying(cachingPolicy_) & underlyingObject) ==
-      underlyingObject;
+  return (folly::to_underlying(cachingPolicy_) & folly::to_underlying(object));
 }
 
 } // namespace facebook::eden

@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 #include <folly/logging/xlog.h>
+#include <gtest/gtest_prod.h>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/RefPtr.h"
@@ -89,7 +90,7 @@ class ObjectStore : public IObjectStore,
     Blobs = 1 << 1,
     BlobMetadata = 1 << 2,
     TreesAndBlobMetadata = Trees | BlobMetadata,
-    Everything = Trees | Blobs | BlobMetadata,
+    Anything = Trees | Blobs | BlobMetadata,
   };
 
   static std::shared_ptr<ObjectStore> create(
@@ -306,6 +307,12 @@ class ObjectStore : public IObjectStore,
   }
 
  private:
+  FRIEND_TEST(ObjectStoreTest, caching_policies_anything);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_no_caching);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_blob);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_trees);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_blob_metadata);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_trees_and_blob_metadata);
   // Forbidden constructor. Use create().
   ObjectStore(
       std::shared_ptr<BackingStore> backingStore,
@@ -323,6 +330,29 @@ class ObjectStore : public IObjectStore,
   ObjectStore& operator=(ObjectStore const&) = delete;
 
   Hash32 computeBlake3(const Blob& blob) const;
+
+  /**
+   * Check if the object should be cached in the LocalStore. If
+   * localStoreCachingPolicy_ is set to NoCaching, this will always return
+   * false.
+   */
+  bool shouldCacheOnDisk(LocalStoreCachingPolicy object) const;
+
+  /*
+   * This method should only be used for testing purposes.
+   */
+  void setLocalStoreCachingPolicy(LocalStoreCachingPolicy policy) {
+    localStoreCachingPolicy_ = policy;
+  }
+
+  /**
+   * This is a temporary helper function to unwrap a
+   * LocalStoreCachedBackingStore and get its underlying BackingStore in order
+   * to avoid double caching during the removal of the
+   * LocalStoreCachedBackingStore class. This can be removed once we've finished
+   * the migration.
+   */
+  const std::shared_ptr<BackingStore>& getUnderlyingBackingStore() const;
 
   /**
    * During status and checkout, it's common to look up the SHA-1 for a given
@@ -374,7 +404,7 @@ class ObjectStore : public IObjectStore,
    * be determined by querying the BackingStore, as opposed to being a
    * constructor argument, since this is strongly tied to that class.
    */
-  [[maybe_unused]] LocalStoreCachingPolicy localStoreCachingPolicy_;
+  LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   EdenStatsPtr const stats_;
 
