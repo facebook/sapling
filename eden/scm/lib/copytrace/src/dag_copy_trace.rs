@@ -196,7 +196,10 @@ impl CopyTrace for DagCopyTrace {
                 .await?
             {
                 Some(rename_commit) => rename_commit,
-                None => return self.check_path(&target, curr_path).await,
+                None => {
+                    tracing::trace!(" no rename commit found");
+                    return self.check_path(&target, curr_path).await;
+                }
             };
             tracing::trace!(?rename_commit, " found");
 
