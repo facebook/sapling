@@ -81,7 +81,8 @@ class NullLocalStore final : public LocalStore {
 struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
       : localStore{std::make_shared<NullLocalStore>()},
-        backingStore{std::make_shared<FakeBackingStore>()},
+        backingStore{std::make_shared<FakeBackingStore>(
+            BackingStore::LocalStoreCachingPolicy::NoCaching)},
         blobCache{BlobCache::create(10, 0, makeRefPtr<EdenStats>())} {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
@@ -96,6 +97,7 @@ struct BlobAccessTest : ::testing::Test {
     localStore->open();
     objectStore = ObjectStore::create(
         backingStore,
+        localStore,
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),

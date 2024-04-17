@@ -12,6 +12,7 @@
 #include <folly/ThreadLocal.h>
 
 #include "eden/common/telemetry/DurationScope.h"
+#include "eden/common/telemetry/Stats.h"
 #include "eden/common/telemetry/StatsGroup.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
@@ -23,7 +24,7 @@ struct NfsStats;
 struct PrjfsStats;
 struct ObjectStoreStats;
 struct LocalStoreStats;
-struct HgBackingStoreStats;
+struct SaplingBackingStoreStats;
 struct HgImporterStats;
 struct JournalStats;
 struct ThriftStats;
@@ -71,7 +72,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<PrjfsStats> prjfsStats_;
   ThreadLocal<ObjectStoreStats> objectStoreStats_;
   ThreadLocal<LocalStoreStats> localStoreStats_;
-  ThreadLocal<HgBackingStoreStats> hgBackingStoreStats_;
+  ThreadLocal<SaplingBackingStoreStats> saplingBackingStoreStats_;
   ThreadLocal<HgImporterStats> hgImporterStats_;
   ThreadLocal<JournalStats> journalStats_;
   ThreadLocal<ThriftStats> thriftStats_;
@@ -110,9 +111,9 @@ inline LocalStoreStats& EdenStats::getStatsForCurrentThread<LocalStoreStats>() {
 }
 
 template <>
-inline HgBackingStoreStats&
-EdenStats::getStatsForCurrentThread<HgBackingStoreStats>() {
-  return *hgBackingStoreStats_.get();
+inline SaplingBackingStoreStats&
+EdenStats::getStatsForCurrentThread<SaplingBackingStoreStats>() {
+  return *saplingBackingStoreStats_.get();
 }
 
 template <>
@@ -282,14 +283,14 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
 };
 
 /**
- * @see HgBackingStore
+ * @see SaplingBackingStore
  *
  * Terminology:
  *   get = entire lookup process, including both Sapling disk hits and fetches
  *   fetch = includes asynchronous retrieval from Mononoke
  *   import = fall back process
  */
-struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
+struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
   Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};
@@ -313,7 +314,7 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
 
 /**
  * @see HgImporter
- * @see HgBackingStore
+ * @see SaplingBackingStore
  */
 struct HgImporterStats : StatsGroup<HgImporterStats> {
   Counter catFile{"hg_importer.cat_file"};
@@ -334,10 +335,6 @@ struct ThriftStats : StatsGroup<ThriftStats> {
 
   Duration streamSelectedChangesSince{
       "thrift.StreamingEdenService.streamSelectedChangesSince.streaming_time_us"};
-};
-
-struct TelemetryStats : StatsGroup<TelemetryStats> {
-  Counter subprocessLoggerFailure{"telemetry.subprocess_logger_failure"};
 };
 
 struct OverlayStats : StatsGroup<OverlayStats> {

@@ -317,10 +317,6 @@ def onetimeclientsetup(ui):
     else:
         fn = "addchangegroupfiles"  # hg <= 3.5
     wrapfunction(changegroup, fn, shallowbundle.addchangegroupfiles)
-    if hasattr(changegroup, "getchangegroup"):
-        wrapfunction(changegroup, "getchangegroup", shallowbundle.getchangegroup)
-    else:
-        wrapfunction(changegroup, "makechangegroup", shallowbundle.makechangegroup)
 
     def storewrapper(orig, requirements, path, vfstype, *args):
         s = orig(requirements, path, vfstype, *args)
@@ -341,7 +337,7 @@ def onetimeclientsetup(ui):
             manifest = mctx.manifest()
             files = []
             for f, args, msg in actions["g"]:
-                files.append((f, hex(manifest[f])))
+                files.append((f, manifest[f]))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files, fetchhistory=False)
         return orig(
@@ -359,10 +355,10 @@ def onetimeclientsetup(ui):
                 if sparsematch and not sparsematch(f):
                     continue
                 if m in ("c", "dc", "cm"):
-                    files.append((f, hex(mctx.filenode(f))))
+                    files.append((f, mctx.filenode(f)))
                 elif m == "dg":
                     f2 = actionargs[0]
-                    files.append((f2, hex(mctx.filenode(f2))))
+                    files.append((f2, mctx.filenode(f2)))
             # We need history for the files so we can compute the sha(p1, p2,
             # text) for the files on disk. This will unfortunately fetch all the
             # history for the files, which is excessive. In the future we should
@@ -381,7 +377,7 @@ def onetimeclientsetup(ui):
             m1 = parentctx.manifest()
             for f in removed:
                 if f in m1:
-                    files.append((f, hex(parentctx.filenode(f))))
+                    files.append((f, parentctx.filenode(f)))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
         return orig(repo, matcher, added, removed, *args, **kwargs)
@@ -401,7 +397,7 @@ def onetimeclientsetup(ui):
                 sparseu1 = []
                 for f in u1:
                     if sparsematch1(f):
-                        files.append((f, hex(m1[f])))
+                        files.append((f, m1[f]))
                         sparseu1.append(f)
                 u1 = sparseu1
 
@@ -410,7 +406,7 @@ def onetimeclientsetup(ui):
                 sparseu2 = []
                 for f in u2:
                     if sparsematch2(f):
-                        files.append((f, hex(m2[f])))
+                        files.append((f, m2[f]))
                         sparseu2.append(f)
                 u2 = sparseu2
 
@@ -433,7 +429,7 @@ def onetimeclientsetup(ui):
                 sparsemissing = []
                 for f in missing:
                     if sparsematch(f):
-                        files.append((f, hex(mb[f])))
+                        files.append((f, mb[f]))
                         sparsemissing.append(f)
                 missing = sparsemissing
 
@@ -453,7 +449,7 @@ def onetimeclientsetup(ui):
             # hashes, which can screw up prefetch.
             if ctx.node() is not None:
                 mf = ctx.manifest()
-                repo.fileservice.prefetch(list((f, hex(mf.get(f))) for f in files))
+                repo.fileservice.prefetch(list((f, mf.get(f)) for f in files))
 
         return files
 
@@ -468,7 +464,7 @@ def onetimeclientsetup(ui):
     # prevent strip from stripping remotefilelogs
     def _collectbrokencsets(orig, repo, files, striprev):
         if shallowrepo.requirement in repo.requirements:
-            files = list([f for f in files if not repo.shallowmatch(f)])
+            files = []
         return orig(repo, files, striprev)
 
     wrapfunction(repair, "_collectbrokencsets", _collectbrokencsets)
@@ -550,10 +546,7 @@ def onetimeclientsetup(ui):
     def filectx(orig, self, path, fileid=None, filelog=None):
         if fileid is None:
             fileid = self.filenode(path)
-        if (
-            shallowrepo.requirement in self._repo.requirements
-            and self._repo.shallowmatch(path)
-        ):
+        if shallowrepo.requirement in self._repo.requirements:
             return remotefilectx.remotefilectx(
                 self._repo, path, fileid=fileid, changectx=self, filelog=filelog
             )
@@ -562,10 +555,7 @@ def onetimeclientsetup(ui):
     wrapfunction(context.changectx, "filectx", filectx)
 
     def workingfilectx(orig, self, path, filelog=None):
-        if (
-            shallowrepo.requirement in self._repo.requirements
-            and self._repo.shallowmatch(path)
-        ):
+        if shallowrepo.requirement in self._repo.requirements:
             return remotefilectx.remoteworkingfilectx(
                 self._repo, path, workingctx=self, filelog=filelog
             )
@@ -596,11 +586,11 @@ def onetimeclientsetup(ui):
                     fnode = getfilectx(fname, ctx1).filenode()
                     # fnode can be None if it's a edited working ctx file
                     if fnode:
-                        prefetch.append((fname, hex(fnode)))
+                        prefetch.append((fname, fnode))
                 if fname not in removed:
                     fnode = getfilectx(fname, ctx2).filenode()
                     if fnode:
-                        prefetch.append((fname, hex(fnode)))
+                        prefetch.append((fname, fnode))
 
             repo.fileservice.prefetch(prefetch, fetchhistory=False)
 
@@ -871,7 +861,7 @@ def revert(orig, ui, repo, ctx, parents, *pats, **opts):
         mf = ctx.manifest()
         m.bad = lambda x, y: False
         for path in ctx.walk(m):
-            files.append((path, hex(mf[path])))
+            files.append((path, mf[path]))
         repo.fileservice.prefetch(files)
 
     return orig(ui, repo, ctx, parents, *pats, **opts)
@@ -887,7 +877,7 @@ def _revertprefetch(orig, repo, ctx, *files):
         for f in files:
             for path in f:
                 if (not sparsematch or sparsematch(path)) and path in mf:
-                    allfiles.append((path, hex(mf[path])))
+                    allfiles.append((path, mf[path]))
         repo.fileservice.prefetch(allfiles)
     return orig(repo, ctx, *files)
 

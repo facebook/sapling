@@ -550,6 +550,10 @@ class ChownTest : public ::testing::Test {
     testMount_->startFuseAndWait(fuse_);
   }
 
+  void TearDown() override {
+    testMount_.reset();
+  }
+
   InodeNumber load() {
     auto file = testMount_->getInode("file.txt"_relpath);
     // Load the file into the inode map
@@ -987,9 +991,7 @@ TEST(EdenMount, takeoverFuseFailsIfUnmountWasEverCalled) {
   mount.unmount().within(kTimeout).get();
   auto fuse = std::make_shared<FakeFuse>();
   EXPECT_THROW(
-      {
-        mount.takeoverFuse(FuseChannelData{fuse->start(), {}});
-      },
+      { mount.takeoverFuse(FuseChannelData{fuse->start(), {}}); },
       EdenMountCancelled);
 }
 

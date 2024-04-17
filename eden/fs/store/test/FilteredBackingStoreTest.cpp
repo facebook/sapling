@@ -24,15 +24,14 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
-#include "eden/fs/store/hg/HgBackingStoreOptions.h"
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
 #include "eden/fs/testharness/FakeFilter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
 
-namespace {
+namespace facebook::eden {
 
-using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
 using folly::io::Cursor;
 
@@ -82,7 +81,8 @@ struct TestRepo {
 class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    wrappedStore_ = std::make_shared<FakeBackingStore>();
+    wrappedStore_ = std::make_shared<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter));
@@ -99,7 +99,8 @@ class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
 class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    wrappedStore_ = std::make_shared<FakeBackingStore>();
+    wrappedStore_ = std::make_shared<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakePrefixFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter));
@@ -113,8 +114,8 @@ class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
   std::shared_ptr<FilteredBackingStore> filteredStore_;
 };
 
-struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
-  HgFilteredBackingStoreTest() = default;
+struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
+  SaplingFilteredBackingStoreTest() = default;
 
   void SetUp() override {
     auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());
@@ -136,12 +137,12 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
 
   FaultInjector faultInjector{/*enabled=*/false};
 
-  std::unique_ptr<HgBackingStoreOptions> runtimeOptions =
-      std::make_unique<HgBackingStoreOptions>(
+  std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions =
+      std::make_unique<SaplingBackingStoreOptions>(
           /*ignoreFilteredPathsConfig=*/false);
 
-  std::shared_ptr<HgQueuedBackingStore> wrappedStore_{
-      std::make_shared<HgQueuedBackingStore>(
+  std::shared_ptr<SaplingBackingStore> wrappedStore_{
+      std::make_shared<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
@@ -835,7 +836,7 @@ TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
 
 const auto kTestTimeout = 10s;
 
-TEST_F(HgFilteredBackingStoreTest, testMercurialFFI) {
+TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFI) {
   // Set up one commit with a root tree
   auto filterRelPath = RelativePath{"filter"};
   auto rootFuture1 = filteredStoreFFI_->getRootTree(
@@ -874,7 +875,7 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFI) {
   EXPECT_NE(helloFindRes, srcRes->cend());
 }
 
-TEST_F(HgFilteredBackingStoreTest, testMercurialFFINullFilter) {
+TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter) {
   // Set up one commit with a root tree
   auto rootFuture1 = filteredStoreFFI_->getRootTree(
       RootId{
@@ -910,7 +911,7 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFINullFilter) {
   EXPECT_NE(helloFindRes, srcRes->cend());
 }
 
-TEST_F(HgFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
+TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   // Set up one commit with a root tree
   auto filterRelPath = RelativePath{"filter"};
   auto rootFuture1 = filteredStoreFFI_->getRootTree(
@@ -952,4 +953,4 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
   EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
 }
-} // namespace
+} // namespace facebook::eden

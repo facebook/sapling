@@ -44,9 +44,10 @@ export const FIELDS = {
   filesModified: '{file_mods|json}',
   filesRemoved: '{file_dels|json}',
   successorInfo: '{mutations % "{operation}:{successors % "{node}"},"}',
-  cloesestPredecessors: '{predecessors % "{node},"}',
+  closestPredecessors: '{predecessors % "{node},"}',
   // This would be more elegant as a new built-in template
   diffId: '{if(phabdiff, phabdiff, github_pull_request_number)}',
+  isFollower: '{sapling_pr_follower|json}',
   stableCommitMetadata: Internal.stableCommitConfig?.template ?? '',
   // Description must be last
   description: '{desc}',
@@ -96,12 +97,13 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
         totalFileCount: files.length,
         successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),
-        closestPredecessors: splitLine(lines[FIELD_INDEX.cloesestPredecessors], ','),
+        closestPredecessors: splitLine(lines[FIELD_INDEX.closestPredecessors], ','),
         description: lines
           .slice(FIELD_INDEX.description + 1 /* first field of description is title; skip it */)
           .join('\n')
           .trim(),
         diffId: lines[FIELD_INDEX.diffId] != '' ? lines[FIELD_INDEX.diffId] : undefined,
+        isFollower: JSON.parse(lines[FIELD_INDEX.isFollower]) as boolean,
         stableCommitMetadata:
           lines[FIELD_INDEX.stableCommitMetadata] != ''
             ? Internal.stableCommitConfig?.parse(lines[FIELD_INDEX.stableCommitMetadata])

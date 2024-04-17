@@ -36,6 +36,7 @@ use crate::commit_syncers_lib::get_mover_by_version;
 use crate::commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::strip_removed_parents;
+use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_mapping_change_version;
@@ -119,6 +120,9 @@ pub(crate) struct CommitInMemorySyncer<'a, R: Repo> {
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub mapped_parents: &'a HashMap<ChangesetId, CommitSyncOutcome>,
     pub small_to_large: bool,
+    /// Read-only version of the large repo, which performs any writes in memory.
+    /// This is needed to validate submodule expansion in large repo bonsais.
+    pub large_repo: InMemoryRepo,
 }
 
 impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
@@ -228,12 +232,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+
         let submodule_expansion_data = match self.submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
                 large_repo_id: Large(self.large_repo_id()),
+                large_repo: self.large_repo,
             }),
             SubmoduleDeps::NotNeeded => None,
         };
@@ -339,6 +345,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                         x_repo_submodule_metadata_file_prefix:
                             x_repo_submodule_metadata_file_prefix.as_str(),
                         large_repo_id: Large(self.large_repo_id()),
+                        large_repo: self.large_repo,
                     }),
                     SubmoduleDeps::NotNeeded => None,
                 };
@@ -485,12 +492,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     self.live_commit_sync_config.clone(),
                 )
                 .await?;
+
             let submodule_expansion_data = match self.submodule_deps {
                 SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                     submodule_deps: deps,
                     x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                         .as_str(),
                     large_repo_id: Large(self.large_repo_id()),
+                    large_repo: self.large_repo,
                 }),
                 SubmoduleDeps::NotNeeded => None,
             };

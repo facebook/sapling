@@ -160,8 +160,8 @@ static int to_python_time(const FILETIME* tm) {
   /* conversion factor from 100ns to 1s */
   const __int64 a1 = 10000000;
   /* explicit (int) cast to suspend compiler warnings */
-  return (
-      int)((((__int64)tm->dwHighDateTime << 32) + tm->dwLowDateTime) / a1 - a0);
+  return (int)((((__int64)tm->dwHighDateTime << 32) + tm->dwLowDateTime) / a1 -
+               a0);
 }
 
 #ifdef IS_PY3K

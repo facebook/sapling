@@ -26,12 +26,6 @@ module.exports = {
     '<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}',
   ],
   modulePaths: ['<rootDir>/src'],
-  globals: {
-    'ts-jest': {
-      // don't do type checking in tests
-      diagnostics: false,
-    },
-  },
   transform: {
     '^.+\\.tsx?$': '<rootDir>/jest-transformer-import-meta.cjs',
   },

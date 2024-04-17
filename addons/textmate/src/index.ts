@@ -254,8 +254,8 @@ async function writeGrammarFiles(
    * @param filepath file to write
    * @param contents TypeScript source code to write (will be formatted by Prettier)
    */
-  function createTypeScriptFile(filepath: string, contents: string): Promise<void> {
-    const formattedContents = prettier.format(contents, {
+  async function createTypeScriptFile(filepath: string, contents: string): Promise<void> {
+    const formattedContents = await prettier.format(contents, {
       ...prettierOptions,
       filepath,
     });

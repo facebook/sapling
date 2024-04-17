@@ -128,8 +128,7 @@ class InodeTable {
    */
   template <typename PopFn>
   void populateIfNotSet(InodeNumber ino, PopFn&& populate) {
-    modifyOrInsert<void>(
-        ino, [&](auto&) {}, populate, [&](auto&) {});
+    modifyOrInsert<void>(ino, [&](auto&) {}, populate, [&](auto&) {});
   }
 
   /**

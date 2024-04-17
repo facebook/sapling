@@ -14,6 +14,8 @@
 #include <folly/ssl/OpenSSLHash.h>
 
 #include "eden/common/utils/EnumValue.h"
+#include "eden/common/utils/FaultInjector.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -29,8 +31,13 @@ using std::make_unique;
 using std::unique_ptr;
 
 namespace facebook::eden {
-FakeBackingStore::FakeBackingStore(std::optional<std::string> blake3Key)
-    : blake3Key_(std::move(blake3Key)) {}
+FakeBackingStore::FakeBackingStore(
+    LocalStoreCachingPolicy localStoreCachingPolicy,
+    std::shared_ptr<ServerState> serverState,
+    std::optional<std::string> blake3Key)
+    : localStoreCachingPolicy_{localStoreCachingPolicy},
+      serverState_{std::move(serverState)},
+      blake3Key_(std::move(blake3Key)) {}
 
 FakeBackingStore::~FakeBackingStore() = default;
 
@@ -145,8 +152,16 @@ FakeBackingStore::getBlobMetadata(
     data->metadataLookups.push_back(id);
   }
 
-  return getBlob(id, context)
-      .deferValue([this](BackingStore::GetBlobResult result) {
+  auto fault = ImmediateFuture<folly::Unit>{std::in_place};
+  if (serverState_) {
+    fault = serverState_->getFaultInjector().checkAsync("getBlobMetadata", id);
+  }
+
+  return std::move(fault)
+      .thenValue([this, id, context = context.copy()](auto&&) {
+        return ImmediateFuture{getBlob(id, context)};
+      })
+      .thenValue([this](BackingStore::GetBlobResult result) {
         return BackingStore::GetBlobMetaResult{
             std::make_shared<BlobMetadataPtr::element_type>(
                 Hash20::sha1(result.blob->getContents()),
@@ -157,7 +172,8 @@ FakeBackingStore::getBlobMetadata(
                            : Hash32::blake3(result.blob->getContents()),
                 result.blob->getSize()),
             result.origin};
-      });
+      })
+      .semi();
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {

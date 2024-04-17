@@ -254,7 +254,12 @@ async fn process_land_changesets_request(
             old_bookmark_value: outcome
                 .old_bookmark_value
                 .map(conversion_helpers::convert_changeset_id_to_vec_binary),
-            log_id: Some(outcome.log_id as i64),
+            log_id: Some(
+                outcome
+                    .log_id
+                    .try_into()
+                    .expect("log id should be convertible to i64"),
+            ),
         },
     })
 }

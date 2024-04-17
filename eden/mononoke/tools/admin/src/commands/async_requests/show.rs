@@ -92,7 +92,6 @@ impl<'a> std::fmt::Debug for ParamsWrapper<'a> {
 struct ResultsWrapper(Option<MegarepoAsynchronousRequestResult>);
 impl std::fmt::Debug for ResultsWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let _ = self.0;
         // impl Debug for HexArray here
         match &self.0 {
             Some(res) => match res.thrift() {

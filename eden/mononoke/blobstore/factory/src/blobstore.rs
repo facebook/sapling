@@ -586,22 +586,15 @@ pub fn make_blobstore_unlink_ops<'a>(
                 }
             }
             AwsS3 {
-                aws_account_id,
-                aws_role,
                 bucket,
                 region,
                 num_concurrent_operations,
+                ..
             } => {
                 #[cfg(fbcode_build)]
                 {
-                    let client_backend = AwsS3ClientPool::new(
-                        fb,
-                        aws_account_id,
-                        aws_role,
-                        region,
-                        num_concurrent_operations,
-                    )
-                    .await?;
+                    let client_backend =
+                        AwsS3ClientPool::new(region, num_concurrent_operations).await?;
 
                     S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
                         .watched(logger)
@@ -611,13 +604,7 @@ pub fn make_blobstore_unlink_ops<'a>(
                 }
                 #[cfg(not(fbcode_build))]
                 {
-                    let _ = (
-                        aws_account_id,
-                        aws_role,
-                        bucket,
-                        region,
-                        num_concurrent_operations,
-                    );
+                    let _ = (region, num_concurrent_operations);
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }

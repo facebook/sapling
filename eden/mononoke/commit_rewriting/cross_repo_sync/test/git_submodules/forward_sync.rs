@@ -14,6 +14,8 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use bookmarks::BookmarkKey;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
@@ -22,6 +24,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use tests_utils::CreateCommitContext;
 
 use crate::check_mapping;
@@ -47,7 +50,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -162,6 +165,155 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+/// Tests the basic setup of expanding submodules that contain other submodules.
+#[fbinit::test]
+async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    let master_before_change = large_repo
+        .bookmarks()
+        .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
+        .await?
+        .ok_or(anyhow!(
+            "Failed to get master bookmark changeset id of repo {}",
+            large_repo.repo_identity().name()
+        ))?;
+
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        master_before_change,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/B_B",
+            "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+        ],
+    )
+    .await?;
+
+    // Modify repo_b, update submodule pointer in repo_a, sync this commit
+    // to large repo and check that submodule expansion was updated properly
+    let repo_b_cs_id =
+        CreateCommitContext::new(&ctx, &repo_b, vec![*repo_b_cs_map.get("B_B").unwrap()])
+            .set_message("Add and delete file from repo_b")
+            .add_file("new_dir/new_file", "new file content")
+            .delete_file("B_B")
+            .commit()
+            .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    const MESSAGE: &str = "Update submodule after adding and deleting a file";
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
+
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
+    let expected_cs_id =
+        ChangesetId::from_str("7b95de313bd54b4654e3aae74d5f444cd6db44504f6808cb7f138f42fc61f6e7")
+            .unwrap();
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        expected_cs_id,
+        NonRootMPath::new("repo_a/submodules/.x-repo-submodule-repo_b")?,
+        &repo_b_git_commit_hash,
+    )
+    .await?;
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        expected_cs_id,
+        NonRootMPath::new("repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c")?,
+        &c_master_git_sha1,
+    )
+    .await?;
+
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+            "repo_a/submodules/repo_b/new_dir/new_file",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+        ],
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        repo_a_cs_id,
+        Some(expected_cs_id),
+    )
+    .await;
+
+    Ok(())
+}
 
 // ------------------------- Deletions ----------------------------
 
@@ -174,7 +326,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -250,7 +402,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -328,7 +480,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -448,7 +600,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         mapping,
         live_commit_sync_config,
         test_sync_config_source,
@@ -554,7 +706,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         mapping,
         live_commit_sync_config,
@@ -697,7 +849,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(

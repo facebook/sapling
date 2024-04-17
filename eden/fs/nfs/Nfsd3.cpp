@@ -429,7 +429,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
              return dispatcher_
                  ->getattr(args.what.dir.ino, context.getObjectFetchContext())
                  .thenValue(
-                     [ino = args.what.dir.ino](struct stat && stat)
+                     [ino = args.what.dir.ino](struct stat&& stat)
                          -> std::tuple<InodeNumber, struct stat> {
                        return {ino, std::move(stat)};
                      });
@@ -440,7 +440,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                    return dispatcher_
                        ->getattr(ino, context.getObjectFetchContext())
                        .thenValue(
-                           [ino](struct stat && stat)
+                           [ino](struct stat&& stat)
                                -> std::tuple<InodeNumber, struct stat> {
                              return {ino, std::move(stat)};
                            });

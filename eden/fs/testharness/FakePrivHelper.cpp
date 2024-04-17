@@ -93,7 +93,8 @@ void FakePrivHelper::detachEventBase() {}
 
 Future<File> FakePrivHelper::fuseMount(
     folly::StringPiece mountPath,
-    bool /*readOnly*/) {
+    bool /*readOnly*/,
+    std::optional<folly::StringPiece> /*vfsType*/) {
   return getMountDelegate(mountPath)->fuseMount();
 }
 

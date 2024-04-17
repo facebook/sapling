@@ -23,6 +23,7 @@ use anyhow::Result;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
+use itertools::Itertools;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -82,6 +83,10 @@ pub struct FileStore {
     // Make prefetch() calls request aux data.
     pub(crate) prefetch_aux_data: bool,
 
+    // Largest set of keys prefetch() accepts before chunking.
+    // Configured by scmstore.max-prefetch-size, where 0 means unlimited.
+    pub(crate) max_prefetch_size: usize,
+
     // Record remote fetches
     pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
 
@@ -102,8 +107,7 @@ pub struct FileStore {
     // Legacy ContentStore fallback
     pub(crate) contentstore: Option<Arc<ContentStore>>,
 
-    // Aux Data Stores
-    pub(crate) aux_local: Option<Arc<AuxStore>>,
+    // Aux Data Store
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
 
     // Metrics, statistics, debugging
@@ -146,7 +150,7 @@ impl FileStore {
 
     pub fn fetch(
         &self,
-        keys: impl Iterator<Item = Key>,
+        keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
         fetch_mode: FetchMode,
     ) -> FetchResults<StoreFile> {
@@ -162,6 +166,7 @@ impl FileStore {
 
         debug!(
             ?attrs,
+            ?fetch_mode,
             num_keys = state.pending_len(),
             first_keys = "fetching"
         );
@@ -169,7 +174,6 @@ impl FileStore {
         let keys_len = state.pending_len();
 
         let aux_cache = self.aux_cache.clone();
-        let aux_local = self.aux_local.clone();
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let lfs_cache = self.lfs_cache.clone();
@@ -180,16 +184,19 @@ impl FileStore {
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
-        let (fetch_local, fetch_remote) = match fetch_mode {
-            FetchMode::AllowRemote | FetchMode::AllowRemotePrefetch => (true, true),
-            FetchMode::RemoteOnly => (false, true),
-            FetchMode::LocalOnly => (true, false),
-        };
+        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
+        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
 
         let process_func = move || {
             let start_instant = Instant::now();
 
-            let all_keys: Vec<Key> = state.pending();
+            // Only copy keys for activity logger if we have an activity logger;
+            let activity_logger_keys: Vec<Key> = if activity_logger.is_some() {
+                state.all_keys()
+            } else {
+                Vec::new()
+            };
+
             let span = tracing::span!(
                 tracing::Level::DEBUG,
                 "file fetch",
@@ -200,10 +207,6 @@ impl FileStore {
             if fetch_local {
                 if let Some(ref aux_cache) = aux_cache {
                     state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
-                }
-
-                if let Some(ref aux_local) = aux_local {
-                    state.fetch_aux_indexedlog(aux_local, StoreType::Local);
                 }
 
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
@@ -254,10 +257,7 @@ impl FileStore {
                 }
             }
 
-            state.derive_computable(
-                aux_cache.as_ref().map(|s| s.as_ref()),
-                aux_local.as_ref().map(|s| s.as_ref()),
-            );
+            state.derive_computable(aux_cache.as_ref().map(|s| s.as_ref()));
 
             metrics.write().fetch += state.metrics().clone();
             if let Err(err) = state.metrics().update_ods() {
@@ -266,11 +266,11 @@ impl FileStore {
             state.finish();
 
             if let Some(activity_logger) = activity_logger {
-                if let Err(err) =
-                    activity_logger
-                        .lock()
-                        .log_file_fetch(all_keys, attrs, start_instant.elapsed())
-                {
+                if let Err(err) = activity_logger.lock().log_file_fetch(
+                    activity_logger_keys,
+                    attrs,
+                    start_instant.elapsed(),
+                ) {
                     tracing::error!("Error writing activity log: {}", err);
                 }
             }
@@ -391,10 +391,6 @@ impl FileStore {
             lfs_cache.flush().map_err(&mut handle_error);
         }
 
-        if let Some(ref aux_local) = self.aux_local {
-            aux_local.flush().map_err(&mut handle_error);
-        }
-
         if let Some(ref aux_cache) = self.aux_cache {
             aux_cache.flush().map_err(&mut handle_error);
         }
@@ -429,6 +425,7 @@ impl FileStore {
 
             prefetch_aux_data: false,
             compute_aux_data: false,
+            max_prefetch_size: 0,
 
             indexedlog_local: None,
             lfs_local: None,
@@ -444,7 +441,6 @@ impl FileStore {
             metrics: FileStoreMetrics::new(),
             activity_logger: None,
 
-            aux_local: None,
             aux_cache: None,
 
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
@@ -502,6 +498,7 @@ impl LegacyStore for FileStore {
 
             prefetch_aux_data: self.prefetch_aux_data,
             compute_aux_data: self.compute_aux_data,
+            max_prefetch_size: self.max_prefetch_size,
 
             indexedlog_local: self.indexedlog_cache.clone(),
             lfs_local: self.lfs_cache.clone(),
@@ -517,7 +514,6 @@ impl LegacyStore for FileStore {
             metrics: self.metrics.clone(),
             activity_logger: self.activity_logger.clone(),
 
-            aux_local: None,
             aux_cache: None,
 
             lfs_progress: self.lfs_progress.clone(),
@@ -609,8 +605,8 @@ impl HgIdDataStore for FileStore {
     }
 }
 
-impl RemoteDataStore for FileStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+impl FileStore {
+    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
         self.metrics.write().api.hg_prefetch.call(keys.len());
 
         let mut attrs = FileAttributes::CONTENT;
@@ -618,13 +614,38 @@ impl RemoteDataStore for FileStore {
             attrs |= FileAttributes::AUX;
         }
 
+        let mut missing = Vec::new();
+
+        let max_size = match self.max_prefetch_size {
+            0 => keys.len(),
+            max => max,
+        };
+
+        for chunk in &keys.into_iter().chunks(max_size) {
+            missing.extend_from_slice(
+                &self
+                    .fetch(
+                        chunk,
+                        attrs,
+                        FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+                    )
+                    .missing()?,
+            );
+        }
+
+        Ok(missing)
+    }
+}
+
+impl RemoteDataStore for FileStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let missing = self
-            .fetch(
-                keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
-                attrs,
-                FetchMode::AllowRemote,
-            )
-            .missing()?
+            .prefetch(
+                keys.iter()
+                    .cloned()
+                    .filter_map(|sk| sk.maybe_into_key())
+                    .collect(),
+            )?
             .into_iter()
             .map(StoreKey::HgId)
             .collect();

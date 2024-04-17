@@ -724,6 +724,12 @@ impl<'a> Iterator for LeafValueIter<'a> {
     }
 }
 
+impl<'a> LeafValueIter<'a> {
+    pub fn is_empty(&self) -> bool {
+        self.offset.is_null()
+    }
+}
+
 /// Iterator returned by [`Index::range`].
 /// Provide access to full keys and values (as [`LinkOffset`]), sorted by key.
 pub struct RangeIter<'a> {

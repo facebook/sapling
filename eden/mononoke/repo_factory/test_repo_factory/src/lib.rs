@@ -35,6 +35,8 @@ use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
+use commit_cloud::sql::builder::SqlCommitCloudBuilder;
+use commit_cloud::ArcCommitCloud;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
@@ -145,6 +147,7 @@ pub struct TestRepoFactory {
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
+    bookmarks_cache: Option<ArcBookmarksCache>,
     live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
     metadata_db: SqlConnections,
     hg_mutation_db: SqlConnections,
@@ -257,6 +260,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlCommitGraphStorageBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlCommitCloudBuilder::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(match callbacks {
             Some(callbacks) => Connection::with_sqlite_callbacks(metadata_con, callbacks),
             None => Connection::with_sqlite(metadata_con),
@@ -278,6 +282,7 @@ impl TestRepoFactory {
             derived_data_lease: None,
             filenodes_override: None,
             live_commit_sync_config: None,
+            bookmarks_cache: None,
         })
     }
 
@@ -301,6 +306,12 @@ impl TestRepoFactory {
     /// Use a particular blobstore for repos built by this factory.
     pub fn with_blobstore(&mut self, blobstore: Arc<dyn Blobstore>) -> &mut Self {
         self.blobstore = blobstore;
+        self
+    }
+
+    /// Set the bookmarks cache for repos built by this factory.
+    pub fn with_bookmarks_cache(&mut self, bookmarks_cache: ArcBookmarksCache) -> &mut Self {
+        self.bookmarks_cache = Some(bookmarks_cache);
         self
     }
 
@@ -840,14 +851,26 @@ impl TestRepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
-            self.ctx.clone(),
-            bookmarks.clone(),
-            bookmark_update_log.clone(),
-            repo_identity.clone(),
-        );
-        warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
-        warm_bookmarks_cache_builder.wait_until_warmed();
-        Ok(Arc::new(warm_bookmarks_cache_builder.build().await?))
+        match self.bookmarks_cache {
+            Some(ref cache) => Ok(cache.clone()),
+            None => {
+                let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
+                    self.ctx.clone(),
+                    bookmarks.clone(),
+                    bookmark_update_log.clone(),
+                    repo_identity.clone(),
+                );
+                warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
+                warm_bookmarks_cache_builder.wait_until_warmed();
+                Ok(Arc::new(warm_bookmarks_cache_builder.build().await?))
+            }
+        }
+    }
+
+    /// Commit cloud
+    pub fn commit_cloud(&self, _repo_identity: &RepoIdentity) -> Result<ArcCommitCloud> {
+        Ok(Arc::new(commit_cloud::CommitCloud {
+            storage: SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(),
+        }))
     }
 }

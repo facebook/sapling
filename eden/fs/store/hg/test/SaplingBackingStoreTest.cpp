@@ -20,15 +20,15 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/hg/HgBackingStoreOptions.h"
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 
-using namespace facebook::eden;
 using namespace std::chrono_literals;
 
+namespace facebook::eden {
 namespace {
 const auto kTestTimeout = 10s;
 
@@ -48,7 +48,7 @@ struct TestRepo {
     repo.writeFile("src/hello.txt", "world\n");
     repo.writeFile("foo.txt", "foo\n");
     repo.writeFile("bar.txt", "bar\n");
-    repo.hg("add", "foo", "src");
+    repo.hg("add", "foo/bar.txt", "src/hello.txt", "foo.txt", "bar.txt");
     commit1 = repo.commit("Initial commit");
     manifest1 = repo.getManifestForCommit(commit1);
   }
@@ -58,12 +58,14 @@ std::vector<PathComponent> getTreeNames(
     const std::shared_ptr<const Tree>& tree) {
   std::vector<PathComponent> names;
   for (const auto& entry : *tree) {
-    names.emplace_back(entry.first);
+    if (entry.second.isTree()) {
+      names.emplace_back(entry.first);
+    }
   }
   return names;
 }
 
-struct HgQueuedBackingStoreTestBase : TestRepo, ::testing::Test {
+struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
   std::shared_ptr<ReloadableConfig> edenConfig{
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig())};
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
@@ -71,53 +73,52 @@ struct HgQueuedBackingStoreTestBase : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>(stats.copy())};
 };
 
-struct HgQueuedBackingStoreNoFaultInjectorTest : HgQueuedBackingStoreTestBase {
+struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   FaultInjector faultInjector{/*enabled=*/false};
 
-  std::unique_ptr<HgQueuedBackingStore> queuedBackingStore =
-      std::make_unique<HgQueuedBackingStore>(
+  std::unique_ptr<SaplingBackingStore> queuedBackingStore =
+      std::make_unique<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<HgBackingStoreOptions>(
+          std::make_unique<SaplingBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/false),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
 
-struct HgQueuedBackingStoreWithFaultInjectorTest
-    : HgQueuedBackingStoreTestBase {
+struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
 
-  std::unique_ptr<HgQueuedBackingStore> queuedBackingStore =
-      std::make_unique<HgQueuedBackingStore>(
+  std::unique_ptr<SaplingBackingStore> queuedBackingStore =
+      std::make_unique<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<HgBackingStoreOptions>(
+          std::make_unique<SaplingBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/false),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
-struct HgQueuedBackingStoreWithFaultInjectorIgnoreConfigTest
-    : HgQueuedBackingStoreTestBase {
+struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
+    : SaplingBackingStoreTestBase {
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
 
-  std::unique_ptr<HgQueuedBackingStore> queuedBackingStore =
-      std::make_unique<HgQueuedBackingStore>(
+  std::unique_ptr<SaplingBackingStore> queuedBackingStore =
+      std::make_unique<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<HgBackingStoreOptions>(
+          std::make_unique<SaplingBackingStoreOptions>(
               /*ignoreFilteredPathsConfig=*/true),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
@@ -126,7 +127,7 @@ struct HgQueuedBackingStoreWithFaultInjectorIgnoreConfigTest
 
 } // namespace
 
-TEST_F(HgQueuedBackingStoreNoFaultInjectorTest, getTree) {
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, getTree) {
   auto tree1 = queuedBackingStore
                    ->getRootTree(commit1, ObjectFetchContext::getNullContext())
                    .get(kTestTimeout);
@@ -139,7 +140,7 @@ TEST_F(HgQueuedBackingStoreNoFaultInjectorTest, getTree) {
   EXPECT_TRUE(*tree1.tree == *tree2);
 }
 
-TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTree) {
+TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTree) {
   auto tree1 = queuedBackingStore
                    ->getRootTree(commit1, ObjectFetchContext::getNullContext())
                    .get(kTestTimeout);
@@ -152,7 +153,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTree) {
   EXPECT_TRUE(*tree1.tree == *tree2);
 }
 
-TEST_F(HgQueuedBackingStoreNoFaultInjectorTest, getBlob) {
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, getBlob) {
   auto tree = queuedBackingStore
                   ->getRootTree(commit1, ObjectFetchContext::getNullContext())
                   .get(kTestTimeout);
@@ -179,7 +180,7 @@ TEST_F(HgQueuedBackingStoreNoFaultInjectorTest, getBlob) {
   }
 }
 
-TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getBlob) {
+TEST_F(SaplingBackingStoreWithFaultInjectorTest, getBlob) {
   auto tree = queuedBackingStore
                   ->getRootTree(commit1, ObjectFetchContext::getNullContext())
                   .get(kTestTimeout);
@@ -206,7 +207,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getBlob) {
   }
 }
 
-TEST_F(HgQueuedBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
+TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
   // force a reload
   updateTestEdenConfig(
       testConfigSource,
@@ -223,7 +224,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
   HgProxyHash proxyHash =
       HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
 
-  auto request = HgImportRequest::makeTreeImportRequest(
+  auto request = SaplingImportRequest::makeTreeImportRequest(
       tree1Hash,
       proxyHash,
       ObjectFetchContext::getNullContext()->getPriority(),
@@ -232,7 +233,8 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
-    queuedBackingStore->getTreeBatch(std::vector{request});
+    queuedBackingStore->getTreeBatch(
+        std::vector{request}, sapling::FetchMode::LocalOnly);
   });
 
   std::move(tree1fut).get();
@@ -243,7 +245,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }
 
-TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTreeBatch) {
+TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
   {
     updateTestEdenConfig(
         testConfigSource,
@@ -252,7 +254,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTreeBatch) {
             {"hg:filtered-paths", "['a/b', 'c/d']"},
         });
   }
-  faultInjector.injectBlock("HgQueuedBackingStore::getTreeBatch", ".*");
+  faultInjector.injectBlock("SaplingBackingStore::getTreeBatch", ".*");
   auto tree1Hash = HgProxyHash::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
@@ -261,7 +263,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTreeBatch) {
   HgProxyHash proxyHash =
       HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
 
-  auto request = HgImportRequest::makeTreeImportRequest(
+  auto request = SaplingImportRequest::makeTreeImportRequest(
       tree1Hash,
       proxyHash,
       ObjectFetchContext::getNullContext()->getPriority(),
@@ -271,12 +273,13 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTreeBatch) {
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
     // this will block until we unblock the fault.
-    queuedBackingStore->getTreeBatch(std::vector{request});
+    queuedBackingStore->getTreeBatch(
+        std::vector{request}, sapling::FetchMode::LocalOnly);
   });
 
   // its a bit of a hack, but we need to make sure getTreebatch has hit the
   // fault before we edit the config and unblock it. TODO: We should rewrite
-  // HgQueuedBackingStore with futures so that this is more testable:
+  // SaplingBackingStore with futures so that this is more testable:
   // T171328733.
   /* sleep override */
   sleep(10);
@@ -289,9 +292,9 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTreeBatch) {
           {"hg:filtered-paths", "['e/f', 'g/h']"},
       });
 
-  faultInjector.removeFault("HgQueuedBackingStore::getTreeBatch", ".*");
+  faultInjector.removeFault("SaplingBackingStore::getTreeBatch", ".*");
   ASSERT_EQ(
-      faultInjector.unblock("HgQueuedBackingStore::getTreeBatch", ".*"), 1);
+      faultInjector.unblock("SaplingBackingStore::getTreeBatch", ".*"), 1);
 
   std::move(tree1fut).get(10s);
   auto tree1 = request->getPromise<TreePtr>()->getFuture().get(10s);
@@ -301,7 +304,7 @@ TEST_F(HgQueuedBackingStoreWithFaultInjectorTest, getTreeBatch) {
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }
 
-TEST(HgQueuedBackingStoreObjectId, round_trip_object_IDs) {
+TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testHash{
       folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
@@ -309,12 +312,12 @@ TEST(HgQueuedBackingStoreObjectId, round_trip_object_IDs) {
     ObjectId legacy{testHash.toByteString()};
     EXPECT_EQ(
         "proxy-0123456789abcdef0123456789abcdef01234567",
-        HgQueuedBackingStore::staticRenderObjectId(legacy));
+        SaplingBackingStore::staticRenderObjectId(legacy));
 
     EXPECT_EQ(
         legacy,
-        HgQueuedBackingStore::staticParseObjectId(
-            HgQueuedBackingStore::staticRenderObjectId(legacy)));
+        SaplingBackingStore::staticParseObjectId(
+            SaplingBackingStore::staticRenderObjectId(legacy)));
   }
 
   {
@@ -322,23 +325,24 @@ TEST(HgQueuedBackingStoreObjectId, round_trip_object_IDs) {
         testHash, RelativePathPiece{"foo/bar/baz"})};
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567:foo/bar/baz",
-        HgQueuedBackingStore::staticRenderObjectId(with_path));
+        SaplingBackingStore::staticRenderObjectId(with_path));
 
     EXPECT_EQ(
         with_path,
-        HgQueuedBackingStore::staticParseObjectId(
-            HgQueuedBackingStore::staticRenderObjectId(with_path)));
+        SaplingBackingStore::staticParseObjectId(
+            SaplingBackingStore::staticRenderObjectId(with_path)));
   }
 
   {
     ObjectId hash_only{HgProxyHash::makeEmbeddedProxyHash2(testHash)};
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567",
-        HgQueuedBackingStore::staticRenderObjectId(hash_only));
+        SaplingBackingStore::staticRenderObjectId(hash_only));
 
     EXPECT_EQ(
         hash_only,
-        HgQueuedBackingStore::staticParseObjectId(
-            HgQueuedBackingStore::staticRenderObjectId(hash_only)));
+        SaplingBackingStore::staticParseObjectId(
+            SaplingBackingStore::staticRenderObjectId(hash_only)));
   }
 }
+} // namespace facebook::eden

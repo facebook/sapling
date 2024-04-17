@@ -216,21 +216,6 @@ impl<'a> FileStoreBuilder<'a> {
         )?)))
     }
 
-    #[context("failed to build aux local")]
-    pub fn build_aux_local(&self) -> Result<Option<Arc<AuxStore>>> {
-        Ok(if let Some(local_path) = self.local_path.clone() {
-            let local_path = get_local_path(local_path, &self.suffix)?;
-            let local_path = get_indexedlogdatastore_aux_path(local_path)?;
-            Some(Arc::new(AuxStore::new(
-                local_path,
-                self.config,
-                StoreType::Local,
-            )?))
-        } else {
-            None
-        })
-    }
-
     #[context("failed to build aux cache")]
     pub fn build_aux_cache(&self) -> Result<Option<Arc<AuxStore>>> {
         let cache_path = match cache_path(self.config, &self.suffix)? {
@@ -320,7 +305,6 @@ impl<'a> FileStoreBuilder<'a> {
         };
 
         tracing::trace!(target: "revisionstore::filestore", "processing aux data");
-        let aux_local = self.build_aux_local()?;
         let aux_cache = self.build_aux_cache()?;
 
         tracing::trace!(target: "revisionstore::filestore", "processing lfs remote");
@@ -394,6 +378,13 @@ impl<'a> FileStoreBuilder<'a> {
                 None
             };
 
+        // We want to prefetch lots of files, but prefetching millions of files causes us
+        // to tie up memory for longer and make larger allocations. Let's limit fetch size
+        // to try to cut down on memory usage.
+        let max_prefetch_size = self
+            .config
+            .get_or("scmstore", "max-prefetch-size", || 100_000)?;
+
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             extstored_policy,
@@ -403,6 +394,7 @@ impl<'a> FileStoreBuilder<'a> {
 
             prefetch_aux_data,
             compute_aux_data,
+            max_prefetch_size,
 
             indexedlog_local,
             lfs_local,
@@ -418,7 +410,6 @@ impl<'a> FileStoreBuilder<'a> {
             fetch_logger,
             metrics: FileStoreMetrics::new(),
 
-            aux_local,
             aux_cache,
 
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),

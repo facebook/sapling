@@ -40,6 +40,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::Large;
 use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::SubmoduleDeps;
@@ -237,11 +238,13 @@ async fn rewrite_file_paths(
         let bcs_id = bcs.get_changeset_id();
 
         let large_repo_id = Large(repo.repo_identity().id());
+        let large_in_memory_repo = InMemoryRepo::from_repo(repo)?;
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX,
                 large_repo_id,
+                large_repo: large_in_memory_repo,
             }),
             SubmoduleDeps::NotNeeded => None,
         };

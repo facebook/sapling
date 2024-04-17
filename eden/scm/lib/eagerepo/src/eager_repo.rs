@@ -269,7 +269,7 @@ impl EagerRepo {
     ///
     /// Supported URLs:
     /// - `eager:dir_path`, `eager://dir_path`
-    /// - `test:name`, `test://name`: same as `eager:$TESTTMP/server-repos/name`
+    /// - `test:name`, `test://name`: same as `eager:$TESTTMP/name`
     /// - `/path/to/dir` where the path is a EagerRepo.
     pub fn url_to_dir(value: &str) -> Option<PathBuf> {
         if let Some(path) = value.strip_prefix("eager:") {

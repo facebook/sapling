@@ -159,7 +159,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           <TextField
             width="100%"
             placeholder={
-              supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, ...')
+              supportsDiffDownload ? t('Hash, Diff Number, ...') : t('Hash, revset, pr123, ...')
             }
             value={enteredRevset}
             data-testid="download-commits-input"

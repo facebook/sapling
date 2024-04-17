@@ -342,7 +342,7 @@ def get_thrift_latency(counters: DiagInfoCounters) -> Table2D:
 
 
 @stats_cmd("hg-latency", "Show the latency of hg backing store")
-class HgBackingStoreLatencyCmd(Subcmd):
+class SaplingBackingStoreLatencyCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         return backing_store_latency("hg", args)
 

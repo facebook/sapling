@@ -13,12 +13,10 @@ use async_trait::async_trait;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use hg_metrics::increment_counter;
-use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use pathhistory::RenameTracer;
-use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
@@ -26,6 +24,7 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::error::CopyTraceError;
+use crate::utils::compute_missing_files;
 use crate::CopyTrace;
 use crate::RenameFinder;
 use crate::SearchDirection;
@@ -197,7 +196,10 @@ impl CopyTrace for DagCopyTrace {
                 .await?
             {
                 Some(rename_commit) => rename_commit,
-                None => return self.check_path(&target, curr_path).await,
+                None => {
+                    tracing::trace!(" no rename commit found");
+                    return self.check_path(&target, curr_path).await;
+                }
             };
             tracing::trace!(?rename_commit, " found");
 
@@ -268,11 +270,29 @@ impl CopyTrace for DagCopyTrace {
         dst: Vertex,
         matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
-        // todo(zhaolong): optimize dst.p1() == src case
+        tracing::trace!(?src, ?dst, "path_copies");
         let msrc = self.vertex_to_tree_manifest(&src).await?;
         let mdst = self.vertex_to_tree_manifest(&dst).await?;
-        let missing = compute_missing_files(&msrc, &mdst, matcher)?;
 
+        let dst_parents = self.dag.parent_names(dst.clone()).await?;
+        for parent in dst_parents {
+            if parent == src {
+                return self.rename_finder.find_renames(&msrc, &mdst, matcher).await;
+            }
+        }
+        let src_parents = self.dag.parent_names(src.clone()).await?;
+        for parent in src_parents {
+            if parent == dst {
+                let copies = self
+                    .rename_finder
+                    .find_renames(&mdst, &msrc, matcher)
+                    .await?;
+                let reverse_copies = copies.into_iter().map(|(k, v)| (v, k)).collect();
+                return Ok(reverse_copies);
+            }
+        }
+
+        let missing = compute_missing_files(&msrc, &mdst, matcher)?;
         let mut result = HashMap::new();
         for dst_path in missing {
             let src_path = self
@@ -285,21 +305,4 @@ impl CopyTrace for DagCopyTrace {
 
         Ok(result)
     }
-}
-
-fn compute_missing_files(
-    msrc: &TreeManifest,
-    mdst: &TreeManifest,
-    matcher: Option<Arc<dyn Matcher + Send + Sync>>,
-) -> Result<Vec<RepoPathBuf>> {
-    let mut missing = Vec::new();
-    let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
-    let diff_entries = mdst.diff(msrc, &matcher)?;
-    for entry in diff_entries {
-        let entry = entry?;
-        if let DiffType::LeftOnly(_) = entry.diff_type {
-            missing.push(entry.path);
-        }
-    }
-    Ok(missing)
 }

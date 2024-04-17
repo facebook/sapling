@@ -120,7 +120,7 @@ class HgImporterStatsTest(unittest.TestCase):
         self.assertEqual(table.get("dog_file"), [10, 70, 90, 100])
 
 
-class HgBackingStoreStatsTest(unittest.TestCase):
+class SaplingBackingStoreStatsTest(unittest.TestCase):
     def test_get_stats_from_right_store(self) -> None:
         counters: DiagInfoCounters = {
             "store.mononoke.get_blob.p50": 10,

@@ -23,12 +23,16 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
+use bookmarks_cache::BookmarksCache;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_caching::CachelibSettings;
 use commit_graph::CommitGraph;
 use connection_security_checker::ConnectionSecurityChecker;
+use environment::BookmarkCacheDerivedData;
+use environment::BookmarkCacheKind;
+use environment::BookmarkCacheOptions;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
@@ -51,10 +55,12 @@ use gotham_ext::serve;
 use http::HeaderValue;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
+use mononoke_app::args::McrouterAppExtension;
 use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::TLSArgs;
+use mononoke_app::args::WarmBookmarksCacheExtension;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -128,6 +134,9 @@ pub struct Repo {
 
     #[facet]
     repo_permission_checker: dyn RepoPermissionChecker,
+
+    #[facet]
+    pub warm_bookmarks_cache: dyn BookmarksCache,
 }
 
 /// Mononoke Git Server
@@ -190,6 +199,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let app = MononokeAppBuilder::new(fb)
         .with_default_scuba_dataset("mononoke_git_server")
+        .with_bookmarks_cache(BookmarkCacheOptions {
+            cache_kind: BookmarkCacheKind::Local,
+            derived_data: BookmarkCacheDerivedData::GitOnly,
+        })
+        .with_app_extension(WarmBookmarksCacheExtension {})
+        .with_app_extension(McrouterAppExtension {})
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .with_cachelib_settings(cachelib_settings)

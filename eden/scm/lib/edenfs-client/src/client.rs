@@ -10,6 +10,7 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -99,6 +100,9 @@ impl EdenFsClient {
     ) -> anyhow::Result<BTreeMap<RepoPathBuf, FileStatus>> {
         let thrift_client = block_on(self.get_thrift_client())?;
         let filter_id = self.get_active_filter_id(commit.clone())?;
+
+        let start_time = Instant::now();
+
         let thrift_result = extract_error(block_on(thrift_client.getScmStatusV2(
             &edenfs::GetScmStatusParams {
                 mountPoint: self.root_vec(),
@@ -112,6 +116,9 @@ impl EdenFsClient {
                 ..Default::default()
             },
         )))?;
+
+        tracing::debug!(target: "measuredtimes", edenclientstatus_time=start_time.elapsed().as_millis() as u64);
+
         let mut result = BTreeMap::new();
         for (path_bytes, status) in thrift_result.status.entries {
             let path = match RepoPathBuf::from_utf8(path_bytes) {
@@ -188,12 +195,18 @@ impl EdenFsClient {
         let root_vec = self.root_vec();
         let node_vec = node.into_byte_array().into();
         let thrift_mode = edenfs::CheckoutMode::local_from(mode);
+
+        let start_time = Instant::now();
+
         let thrift_result = extract_error(block_on(thrift_client.checkOutRevision(
             &root_vec,
             &node_vec,
             &thrift_mode,
             &params,
         )))?;
+
+        tracing::debug!(target: "measuredtimes", edenclientcheckout_time=start_time.elapsed().as_millis() as u64);
+
         let result = thrift_result
             .into_iter()
             .filter_map(|c| CheckoutConflict::local_try_from(c).ok())

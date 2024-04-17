@@ -11,6 +11,7 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
+use bookmarks_cache::BookmarksCache;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
@@ -49,6 +50,8 @@ pub struct Repo {
     bonsai_tag_mapping: dyn BonsaiTagMapping,
     #[facet]
     git_symbolic_refs: dyn GitSymbolicRefs,
+    #[facet]
+    bookmark_cache: dyn BookmarksCache,
 }
 
 #[derive(Subcommand)]

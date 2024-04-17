@@ -134,7 +134,11 @@ def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[Tuple[bytes, 
     eden_mounts = set()
     for mount in all_system_mounts:
         if is_edenfs_mount_device(mount.device):
-            if mount.vfstype == b"fuse" or mount.vfstype == b"macfuse_eden":
+            if (
+                mount.vfstype == b"fuse"
+                or mount.vfstype == b"macfuse_eden"
+                or mount.vfstype == b"fuse.edenfs"
+            ):
                 eden_mounts.add((mount.mount_point, b"fuse"))
             elif mount.vfstype == b"nfs" or mount.vfstype == b"edenfs:":
                 eden_mounts.add((mount.mount_point, b"nfs"))

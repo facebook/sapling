@@ -20,7 +20,7 @@ constexpr auto readdirPrefetchStr = [] {
   return mapping;
 }();
 
-}
+} // namespace
 
 folly::Expected<ReaddirPrefetch, std::string>
 FieldConverter<ReaddirPrefetch>::fromString(

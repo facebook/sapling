@@ -127,6 +127,11 @@ impl Inner {
         }
     }
 
+    /// Return whether `key` exists in specified index, without reading log data.
+    pub fn contains(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<bool> {
+        Ok(!self.lookup(index_id, key)?.is_empty()?)
+    }
+
     /// Add the buffer to the store.
     pub fn append(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
         match self {
@@ -193,6 +198,15 @@ impl<'a> Iterator for LookupIter<'a> {
         match self {
             LookupIter::Local(iter) => iter.next().map(|res| res.map_err(Into::into)),
             LookupIter::Shared(iter) => iter.next().map(|res| res.map_err(Into::into)),
+        }
+    }
+}
+
+impl<'a> LookupIter<'a> {
+    pub fn is_empty(self) -> Result<bool> {
+        match self {
+            LookupIter::Local(log) => Ok(log.is_empty()),
+            LookupIter::Shared(log) => Ok(log.is_empty()?),
         }
     }
 }

@@ -22,11 +22,14 @@ use parking_lot::Mutex;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::TreeMatcher;
 use repo::repo::Repo;
+use sparse::Matcher;
 use sparse::Root;
 use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
+
+mod metrics;
 
 use crate::ffi::set_matcher_error;
 use crate::ffi::set_matcher_promise_error;
@@ -34,6 +37,7 @@ use crate::ffi::set_matcher_promise_result;
 use crate::ffi::set_matcher_result;
 use crate::ffi::MatcherPromise;
 use crate::ffi::MatcherWrapper;
+use crate::metrics::FilteredFSMetrics;
 
 static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -203,29 +207,34 @@ fn profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
     promise: UniquePtr<MatcherPromise>,
+    metrics: &mut FilteredFSMetrics,
 ) {
-    match _profile_contents_from_repo(id, abs_repo_path) {
+    match _profile_contents_from_repo(id, abs_repo_path, metrics) {
         Ok(res) => {
             set_matcher_promise_result(promise, res);
         }
         Err(e) => {
             set_matcher_promise_error(promise, format!("Failed to get filter: {:?}", e));
         }
-    }
+    };
 }
 
 // Fetches the content of a filter file and turns it into a MercurialMatcher
 fn _profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
+    metrics: &mut FilteredFSMetrics,
 ) -> Result<Box<MercurialMatcher>, anyhow::Error> {
     let mut repo_map = REPO_HASHMAP.lock();
     if !repo_map.contains_key(&abs_repo_path) {
         // Load the repo and store it for later use
+        metrics.repo_miss();
         let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
         repo_map.insert(abs_repo_path.clone(), repo);
+    } else {
+        metrics.repo_hit();
     }
     let repo = repo_map.get_mut(&abs_repo_path).context("loading repo")?;
 
@@ -276,9 +285,21 @@ fn _profile_contents_from_repo(
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
-    })?;
+    });
+
+    // If the result is an error, then the filter file doesn't exist or is
+    // invalid. Return an always matcher instead of erroring out.
+    let sparse_matcher = matcher.unwrap_or_else(|e| {
+        tracing::warn!("Failed to get sparse matcher for active filter: {:?}", e);
+        metrics.failure();
+        Matcher::new(
+            vec![TreeMatcher::always()],
+            vec![vec!["always_matcher".to_string()]],
+        )
+    });
+
     Ok(Box::new(MercurialMatcher {
-        matcher: Box::new(matcher),
+        matcher: Box::new(sparse_matcher),
     }))
 }
 
@@ -289,14 +310,17 @@ pub fn profile_from_filter_id(
     checkout_path: &str,
     promise: UniquePtr<MatcherPromise>,
 ) -> Result<(), anyhow::Error> {
+    let mut metrics = FilteredFSMetrics::default();
+    metrics.lookup();
+
     // Parse the FilterID
     let filter_id = FilterId::from_str(id)?;
 
-    // TODO(cuev): Is this even worth doing?
     // We need to verify the checkout exists. The passed in checkout_path
     // should correspond to a valid hg/sl repo that Mercurial is aware of.
     let abs_repo_path = PathBuf::from(checkout_path);
     if identity::sniff_dir(&abs_repo_path).is_err() {
+        metrics.invalid_repo();
         return Err(anyhow!(
             "{} is not a valid hg repo",
             abs_repo_path.display()
@@ -306,6 +330,12 @@ pub fn profile_from_filter_id(
     // If we've already loaded a filter from this repo before, we can skip Repo
     // object creation. Otherwise, we need to pay the 1 time cost of creating
     // the Repo object.
-    profile_contents_from_repo(filter_id, abs_repo_path, promise);
+    profile_contents_from_repo(filter_id, abs_repo_path, promise, &mut metrics);
+
+    // Update ODS counters with information about the filter we just loaded
+    if let Err(err) = metrics.update_ods() {
+        tracing::error!(?err, "error updating edenffi ods counters");
+    }
+
     Ok(())
 }

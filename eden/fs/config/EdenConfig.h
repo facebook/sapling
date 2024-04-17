@@ -495,6 +495,12 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint32_t> maximumFuseRequests{"fuse:max-requests", 1000, this};
 
+  /**
+   * The string we use in the vfs type when mounting the fuse mount. Others will
+   * see this in the mount table on the system.
+   */
+  ConfigSetting<std::string> fuseVfsType{"fuse:vfs-type", "fuse", this};
+
   // [nfs]
 
   /**
@@ -720,7 +726,7 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> fetchHgAuxMetadata{"hg:fetch-aux-metadata", true, this};
 
   /**
-   * Which object ID format should the HgBackingStore use?
+   * Which object ID format should the SaplingBackingStore use?
    */
   ConfigSetting<HgObjectIdFormat> hgObjectIdFormat{
       "hg:object-id-format",
@@ -742,12 +748,12 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls the number of blob or prefetch import requests we batch in
-   * HgBackingStore
+   * SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSize{"hg:import-batch-size", 1, this};
 
   /**
-   * Controls the number of tree import requests we batch in HgBackingStore
+   * Controls the number of tree import requests we batch in SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSizeTree{
       "hg:import-batch-size-tree",
@@ -756,7 +762,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls the max number of blob metadata import requests we batch in
-   * HgBackingStore
+   * SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSizeBlobMeta{
       "hg:import-batch-size-blobmeta",
@@ -1060,6 +1066,18 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> runSerialPrefetch{
       "experimental:run-serial-prefetch",
       false,
+      this};
+
+  /**
+   * Controls if batches are sent to Sapling with FetchMode::AllowRemote
+   * or batches are sent to Sapling with FetchMode::LocalOnly and then the
+   * failed requests are sent to Sapling again with FetchMode::RemoteOnly.
+   *
+   * This is a temporary option to test metrics on this new way of batching
+   */
+  ConfigSetting<bool> allowRemoteGetBatch{
+      "experimental:allow-remote-get-batch",
+      true,
       this};
 
   // [blobcache]

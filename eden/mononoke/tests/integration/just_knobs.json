@@ -2,6 +2,7 @@
   "bools": {
     "scm/mononoke:bssm_enable_optimized_derivation": false,
     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": false,
+    "scs/mononoke:defer_to_backsyncer_for_backsync": true,
     "scm/mononoke:derived_data_disable_derivation_workers": false,
     "scm/mononoke:derived_data_disable_remote_derivation": false,
     "scm/mononoke:derived_data_enable_remote_derivation_local_fallback": false,

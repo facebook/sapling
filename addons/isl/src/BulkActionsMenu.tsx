@@ -12,6 +12,7 @@ import {Kbd} from './Kbd';
 import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
+import {Button} from './components/Button';
 import {T} from './i18n';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';

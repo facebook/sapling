@@ -27,8 +27,16 @@
   --vscode-button-height: 26px; /* height of vscode-button */
   --vscode-icon-button-height: 22px; /* height of vscode-button with appearance="icon" */
 
-  --monospace-fontFamily: source-code-pro, SFMono-Regular, Consolas, 'Liberation Mono', Menlo,
-    Courier, monospace;
+  --monospace-fontFamily: var(
+    --vscode-editor-font-family,
+    source-code-pro,
+    SFMono-Regular,
+    Consolas,
+    'Liberation Mono',
+    Menlo,
+    Courier,
+    monospace
+  );
 
   --editor-font-size: var(--vscode-font-size, 13px);
 

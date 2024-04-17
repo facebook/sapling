@@ -59,6 +59,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tokio = { version = "1.36.0", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -42,6 +42,7 @@
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLogger.h"
+#include "eden/common/telemetry/StructuredLoggerFactory.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
@@ -73,18 +74,16 @@
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/TreeCache.h"
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/EdenTaskQueue.h"
@@ -220,7 +219,8 @@ std::optional<std::string> getUnixDomainSocketPath(
 std::string getCounterNameForImportMetric(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
-    std::optional<HgQueuedBackingStore::HgImportObject> object = std::nullopt) {
+    std::optional<SaplingBackingStore::SaplingImportObject> object =
+        std::nullopt) {
   if (object.has_value()) {
     // base prefix . stage . object . metric
     return folly::to<std::string>(
@@ -228,7 +228,7 @@ std::string getCounterNameForImportMetric(
         ".",
         RequestMetricsScope::stringOfHgImportStage(stage),
         ".",
-        HgQueuedBackingStore::stringOfHgImportObject(object.value()),
+        SaplingBackingStore::stringOfSaplingImportObject(object.value()),
         ".",
         RequestMetricsScope::stringOfRequestMetric(metric));
   }
@@ -378,8 +378,9 @@ EdenServer::EdenServer(
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
       mainEventBase_{folly::EventBaseManager::get()->getEventBase()},
-      structuredLogger_{makeDefaultStructuredLogger(
-          *edenConfig,
+      structuredLogger_{makeDefaultStructuredLogger<EdenStatsPtr>(
+          edenConfig->scribeLogger.getValue(),
+          edenConfig->scribeCategory.getValue(),
           std::move(sessionInfo),
           edenStats.copy())},
       serverState_{make_shared<ServerState>(
@@ -419,11 +420,11 @@ EdenServer::EdenServer(
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : HgQueuedBackingStore::hgImportObjects) {
+      for (auto object : SaplingBackingStore::saplingImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->registerCallback(counterName, [this, stage, object, metric] {
-          auto individual_counters = this->collectHgQueuedBackingStoreCounters(
-              [stage, object, metric](const HgQueuedBackingStore& store) {
+          auto individual_counters = this->collectSaplingBackingStoreCounters(
+              [stage, object, metric](const SaplingBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
               });
           return RequestMetricsScope::aggregateMetricCounters(
@@ -433,9 +434,9 @@ EdenServer::EdenServer(
       auto summaryCounterName = getCounterNameForImportMetric(stage, metric);
       counters->registerCallback(summaryCounterName, [this, stage, metric] {
         std::vector<size_t> individual_counters;
-        for (auto object : HgQueuedBackingStore::hgImportObjects) {
-          auto more_counters = this->collectHgQueuedBackingStoreCounters(
-              [stage, object, metric](const HgQueuedBackingStore& store) {
+        for (auto object : SaplingBackingStore::saplingImportObjects) {
+          auto more_counters = this->collectSaplingBackingStoreCounters(
+              [stage, object, metric](const SaplingBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
               });
           individual_counters.insert(
@@ -458,7 +459,7 @@ EdenServer::~EdenServer() {
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
-      for (auto object : HgQueuedBackingStore::hgImportObjects) {
+      for (auto object : SaplingBackingStore::saplingImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->unregisterCallback(counterName);
       }
@@ -1555,12 +1556,13 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   auto bsType = toBackingStoreType(initialConfig->getRepoType());
   XLOGF(
-      DBG4, "Creating backing store of type: {}", toBackingStoreString(bsType));
+      INFO, "Creating backing store of type: {}", toBackingStoreString(bsType));
   auto backingStore =
       getBackingStore(bsType, initialConfig->getRepoSource(), *initialConfig);
 
   auto objectStore = ObjectStore::create(
       backingStore,
+      localStore_,
       treeCache_,
       getStats().copy(),
       serverState_->getProcessInfoCache(),
@@ -1654,6 +1656,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
               FinishedMount event;
               event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
+              event.backing_store_type = toBackingStoreString(
+                  edenMount->getCheckoutConfig()->getRepoBackingStoreType());
               event.repo_source =
                   basename(edenMount->getCheckoutConfig()->getRepoSource());
               auto* fsChannel = edenMount->getFsChannel();
@@ -1968,37 +1972,26 @@ EdenServer::getBackingStores() {
   return backingStores;
 }
 
-std::unordered_set<shared_ptr<HgQueuedBackingStore>>
-EdenServer::getHgQueuedBackingStores() {
-  std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};
+std::unordered_set<shared_ptr<SaplingBackingStore>>
+EdenServer::getSaplingBackingStores() {
+  std::unordered_set<std::shared_ptr<SaplingBackingStore>>
+      saplingBackingStores{};
   {
     auto lockedStores = this->backingStores_.rlock();
     for (const auto& entry : *lockedStores) {
-      // TODO: remove these dynamic casts in favor of a QueryInterface method
-      if (auto hgQueuedBackingStore =
-              std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
-        hgBackingStores.emplace(std::move(hgQueuedBackingStore));
-      } else if (
-          auto localStoreCachedBackingStore =
-              std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
-                  entry.second)) {
-        auto inner_store = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-            localStoreCachedBackingStore->getBackingStore());
-        if (inner_store) {
-          // dynamic_pointer_cast returns a copy of the shared pointer, so it is
-          // safe to be moved
-          hgBackingStores.emplace(std::move(inner_store));
-        }
+      if (auto saplingBackingStore =
+              std::dynamic_pointer_cast<SaplingBackingStore>(entry.second)) {
+        saplingBackingStores.emplace(std::move(saplingBackingStore));
       }
     }
   }
-  return hgBackingStores;
+  return saplingBackingStores;
 }
 
-std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(
-    std::function<size_t(const HgQueuedBackingStore&)> getCounterFromStore) {
+std::vector<size_t> EdenServer::collectSaplingBackingStoreCounters(
+    std::function<size_t(const SaplingBackingStore&)> getCounterFromStore) {
   std::vector<size_t> counters;
-  for (const auto& store : this->getHgQueuedBackingStores()) {
+  for (const auto& store : this->getSaplingBackingStores()) {
     counters.emplace_back(getCounterFromStore(*store));
   }
   return counters;

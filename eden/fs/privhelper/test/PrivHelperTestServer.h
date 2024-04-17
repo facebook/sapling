@@ -42,7 +42,8 @@ class PrivHelperTestServer : public PrivHelperServer {
   // so that we can mark them as unmounted when we unmount things.
   std::vector<std::string> allBindMounts_;
 
-  folly::File fuseMount(const char* mountPath, bool readOnly) override;
+  folly::File
+  fuseMount(const char* mountPath, bool readOnly, const char* vfsType) override;
   void unmount(const char* mountPath) override;
   std::string getPathToMountMarker(folly::StringPiece mountPath) const;
 

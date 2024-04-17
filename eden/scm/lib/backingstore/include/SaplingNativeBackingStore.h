@@ -80,7 +80,7 @@ class SaplingNativeBackingStore {
 
   void getTreeBatch(
       SaplingRequestRange requests,
-      bool local,
+      sapling::FetchMode fetch_mode,
       folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
           resolve);
 
@@ -90,7 +90,7 @@ class SaplingNativeBackingStore {
 
   void getBlobBatch(
       SaplingRequestRange requests,
-      bool local,
+      sapling::FetchMode fetchMode,
       folly::FunctionRef<
           void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)> resolve);
 
@@ -100,7 +100,7 @@ class SaplingNativeBackingStore {
 
   void getBlobMetadataBatch(
       SaplingRequestRange requests,
-      bool local,
+      sapling::FetchMode fetch_mode,
       folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
           resolve);
 

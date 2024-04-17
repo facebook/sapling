@@ -34,6 +34,7 @@ use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::Large;
 use cross_repo_sync::Repo;
 use cross_repo_sync::SubmoduleDeps;
@@ -164,9 +165,11 @@ where
 
         let large_repo = commit_syncer.get_large_repo();
         let large_repo_id = Large(large_repo.repo_identity().id());
+        let large_in_memory_repo = InMemoryRepo::from_repo(target_repo)?;
 
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
+                large_repo: large_in_memory_repo,
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
@@ -174,6 +177,7 @@ where
             }),
             SubmoduleDeps::NotNeeded => None,
         };
+
         rewrite_commit(
             &ctx,
             source_bcs_mut,

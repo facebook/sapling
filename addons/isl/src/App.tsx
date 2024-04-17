@@ -27,6 +27,7 @@ import {TopLevelToast} from './TopLevelToast';
 import {ViewportOverlayRoot} from './ViewportOverlay';
 import {tracker} from './analytics';
 import {enableReactTools, enableReduxTools} from './atoms/debugToolAtoms';
+import {Button} from './components/Button';
 import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';

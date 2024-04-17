@@ -11,6 +11,7 @@ use std::io::Write;
 
 use anyhow::bail;
 use anyhow::Result;
+use cloned::cloned;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -23,6 +24,9 @@ use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
 use crate::connection::Connection;
+use crate::library::summary::run_stress;
+use crate::library::summary::summary_output;
+use crate::library::summary::StressArgs;
 use crate::render::Render;
 use crate::util::byte_count_short;
 use crate::ScscApp;
@@ -55,6 +59,9 @@ pub(super) struct CommandArgs {
     #[clap(long, short)]
     /// Show additional information for each entry
     long: bool,
+    /// Enable stress test mode
+    #[clap(flatten)]
+    stress: Option<StressArgs>,
 }
 
 #[derive(Serialize)]
@@ -273,6 +280,25 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         limit: CHUNK_SIZE,
         ..Default::default()
     };
+    if let Some(stress) = args.stress {
+        let results = run_stress(
+            stress.count,
+            stress.parallel,
+            conn.get_client_corrrelator(),
+            || {
+                cloned!(conn, params, tree);
+                Box::pin(async move {
+                    conn.tree_list(&tree, &params).await?;
+                    Ok(())
+                })
+            },
+        )
+        .await;
+
+        let output = summary_output(results);
+        return app.target.render(&(), output).await;
+    }
+
     let response = conn.tree_list(&tree, &params).await?;
     let count = response.count;
     let long = args.long;

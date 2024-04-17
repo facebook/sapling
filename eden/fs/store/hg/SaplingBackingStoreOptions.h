@@ -11,9 +11,9 @@
 
 namespace facebook::eden {
 
-class HgBackingStoreOptions {
+class SaplingBackingStoreOptions {
  public:
-  /* implicit */ HgBackingStoreOptions(
+  /* implicit */ SaplingBackingStoreOptions(
       std::optional<bool> ignoreFilteredPathsConfig)
       : ignoreFilteredPathsConfig{ignoreFilteredPathsConfig} {}
 

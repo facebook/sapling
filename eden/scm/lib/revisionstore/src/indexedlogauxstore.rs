@@ -162,6 +162,11 @@ impl AuxStore {
         deserialize(bytes).map(|(_hgid, entry)| Some(entry))
     }
 
+    pub fn contains(&self, hgid: HgId) -> Result<bool> {
+        let log = self.0.read();
+        Ok(!log.lookup(0, hgid)?.is_empty()?)
+    }
+
     pub fn put(&self, hgid: HgId, entry: &Entry) -> Result<()> {
         let serialized = serialize(entry, hgid)?;
         self.0.append(&serialized)
@@ -322,7 +327,7 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.aux_local = Some(aux);
+        store.aux_cache = Some(aux);
 
         // Attempt fetch.
         let fetched = store
@@ -367,7 +372,7 @@ mod tests {
         // Set up local-only FileStore
         let mut store = FileStore::empty();
         store.indexedlog_local = Some(content);
-        store.aux_local = Some(aux.clone());
+        store.aux_cache = Some(aux.clone());
         store.compute_aux_data = true;
 
         let expected = Entry {

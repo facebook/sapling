@@ -936,6 +936,11 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     if similarity is None:
         similarity = float(opts.get("similarity") or 0)
 
+    # Is there a better place for this?
+    from . import git
+
+    git.maybe_cleanup_submodule_in_treestate(repo)
+
     rejected = []
 
     def badfn(f, msg):

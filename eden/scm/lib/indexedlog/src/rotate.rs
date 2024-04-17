@@ -808,6 +808,51 @@ pub struct RotateLogLookupIter<'a> {
     key: Bytes,
 }
 
+impl<'a> RotateLogLookupIter<'a> {
+    fn load_next_log(&mut self) -> crate::Result<()> {
+        if self.log_index + 1 >= self.log_rotate.logs.len() {
+            self.end = true;
+            Ok(())
+        } else {
+            // Try the next log
+            self.log_index += 1;
+            match self.log_rotate.load_log(self.log_index) {
+                Ok(None) => {
+                    self.end = true;
+                    Ok(())
+                }
+                Err(_err) => {
+                    self.end = true;
+                    // Not fatal (since RotateLog is designed to be able
+                    // to drop data).
+                    Ok(())
+                }
+                Ok(Some(log)) => match log.lookup(self.index_id, &self.key) {
+                    Err(err) => {
+                        self.end = true;
+                        Err(err)
+                    }
+                    Ok(iter) => {
+                        self.inner_iter = iter;
+                        Ok(())
+                    }
+                },
+            }
+        }
+    }
+
+    /// Consume iterator, returning whether the iterator has any data.
+    pub fn is_empty(mut self) -> crate::Result<bool> {
+        while !self.end {
+            if !self.inner_iter.is_empty() {
+                return Ok(false);
+            }
+            self.load_next_log()?;
+        }
+        Ok(true)
+    }
+}
+
 impl<'a> Iterator for RotateLogLookupIter<'a> {
     type Item = crate::Result<&'a [u8]>;
 
@@ -817,35 +862,15 @@ impl<'a> Iterator for RotateLogLookupIter<'a> {
         }
         match self.inner_iter.next() {
             None => {
-                if self.log_index + 1 >= self.log_rotate.logs.len() {
-                    self.end = true;
-                    None
-                } else {
-                    // Try the next log
-                    self.log_index += 1;
-                    match self.log_rotate.load_log(self.log_index) {
-                        Ok(None) => {
-                            self.end = true;
-                            return None;
-                        }
-                        Err(_err) => {
-                            self.end = true;
-                            // Not fatal (since RotateLog is designed to be able
-                            // to drop data).
-                            return None;
-                        }
-                        Ok(Some(log)) => {
-                            self.inner_iter = match log.lookup(self.index_id, &self.key) {
-                                Err(err) => {
-                                    self.end = true;
-                                    return Some(Err(err));
-                                }
-                                Ok(iter) => iter,
-                            }
-                        }
-                    }
-                    self.next()
+                if let Err(err) = self.load_next_log() {
+                    return Some(Err(err));
                 }
+
+                if self.end {
+                    return None;
+                }
+
+                self.next()
             }
             Some(Err(err)) => {
                 self.end = true;
@@ -1238,6 +1263,35 @@ mod tests {
         // (on Windows, 'meta' can be deleted, while mmap-ed files cannot)
         assert_eq!(lookup(&rotate2, b"a"), vec![b"a2"]);
         assert_eq!(iter(&rotate2), vec![b"a2"]);
+    }
+
+    #[test]
+    fn test_is_empty() -> crate::Result<()> {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(2)
+            .max_log_count(4)
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)]);
+
+        let mut rotate = open_opts.open(&dir)?;
+        rotate.append(b"a1")?;
+        assert_eq!(rotate.sync()?, 1);
+
+        rotate.append(b"a2")?;
+        assert_eq!(rotate.sync()?, 2);
+
+        rotate.append(b"b1")?;
+        assert_eq!(rotate.sync()?, 3);
+
+        assert_eq!(lookup(&rotate, b"a"), vec![b"a2", b"a1"]);
+        assert_eq!(lookup(&rotate, b"b"), vec![b"b1"]);
+
+        assert!(!rotate.lookup(0, b"a".to_vec())?.is_empty()?);
+        assert!(!rotate.lookup(0, b"b".to_vec())?.is_empty()?);
+        assert!(rotate.lookup(0, b"c".to_vec())?.is_empty()?);
+
+        Ok(())
     }
 
     #[test]

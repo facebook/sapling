@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-mod expand;
-mod utils;
-mod validation;
-
-pub use expand::expand_and_validate_all_git_submodule_file_changes;
-pub use expand::SubmoduleExpansionData;
+#[cfg(test)]
+mod backsync;
+#[cfg(test)]
+mod forward_sync;
+mod git_submodules_test_utils;
+#[cfg(test)]
+mod in_memory_repo_tests;

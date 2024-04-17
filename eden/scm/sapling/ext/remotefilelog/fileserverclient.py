@@ -69,22 +69,7 @@ def peersetup(ui, peer):
             else:
                 bundlecaps = []
 
-            # shallow, includepattern, and excludepattern are a hacky way of
-            # carrying over data from the local repo to this getbundle
-            # command. We need to do it this way because bundle1 getbundle
-            # doesn't provide any other place we can hook in to manipulate
-            # getbundle args before it goes across the wire. Once we get rid
-            # of bundle1, we can use bundle2's _pullbundle2extraprepare to
-            # do this more cleanly.
             bundlecaps.append("remotefilelog")
-            if self._localrepo.includepattern:
-                patterns = "\0".join(self._localrepo.includepattern)
-                includecap = "includepattern=" + patterns
-                bundlecaps.append(includecap)
-            if self._localrepo.excludepattern:
-                patterns = "\0".join(self._localrepo.excludepattern)
-                excludecap = "excludepattern=" + patterns
-                bundlecaps.append(excludecap)
             opts["bundlecaps"] = ",".join(bundlecaps)
 
         def _callstream(self, cmd, **opts):
@@ -216,23 +201,12 @@ class fileserverclient:
     def prefetch(self, fileids, force=False, fetchdata=True, fetchhistory=True):
         """downloads the given file versions to the cache"""
         repo = self.repo
-        idstocheck = set()
-        for file, id in fileids:
-            # hack
-            # - we don't use .hgtags
-            # - workingctx produces ids with length 42,
-            #   which we skip since they aren't in any cache
-            if file == ".hgtags" or len(id) == 42 or not repo.shallowmatch(file):
-                continue
-
-            idstocheck.add((file, bin(id)))
 
         batchlfsdownloads = self.ui.configbool(
             "remotefilelog", "_batchlfsdownloads", True
         )
         dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
 
-        idstocheck = list(idstocheck)
         if not force:
             contentstore = repo.fileslog.filestore
             metadatastore = repo.fileslog.metadatastore
@@ -240,10 +214,13 @@ class fileserverclient:
             # TODO(meyer): Convert this to support scmstore.
             contentstore, metadatastore = repo.fileslog.makesharedonlyruststore(repo)
 
+        if type(fileids) is not list:
+            fileids = list(fileids)
+
         if fetchdata:
-            contentstore.prefetch(idstocheck)
+            contentstore.prefetch(fileids)
         if fetchhistory:
-            metadatastore.prefetch(idstocheck)
+            metadatastore.prefetch(fileids)
 
         if batchlfsdownloads and dolfsprefetch:
             self._lfsprefetch(fileids)
@@ -266,8 +243,7 @@ class fileserverclient:
         pointers = []
         filenames = {}
         store = self.repo.svfs.lfslocalblobstore
-        for file, id in fileids:
-            node = bin(id)
+        for file, node in fileids:
             rlog = self.repo.file(file)
             if rlog.flags(node) & revlog.REVIDX_EXTSTORED:
                 text = rlog.revision(node, raw=True)

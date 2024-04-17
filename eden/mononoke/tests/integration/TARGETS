@@ -34,6 +34,7 @@ buck_filegroup(
         "library-commit.sh",
         "library-push-redirector.sh",
         "library-snapshot.sh",
+        "library-xrepo-git-submodule-expansion.sh",
         "library-xrepo-sync-with-git-submodules.sh",
         "raw_text.txt",
     ],

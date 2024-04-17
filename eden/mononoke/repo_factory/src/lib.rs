@@ -70,6 +70,9 @@ use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::CachingChangesets;
 use changesets_impl::SqlChangesetsBuilder;
+use commit_cloud::sql::builder::SqlCommitCloudBuilder;
+use commit_cloud::ArcCommitCloud;
+use commit_cloud::CommitCloud;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
@@ -721,6 +724,9 @@ pub enum RepoFactoryError {
 
     #[error("Error openning deletion log DB")]
     SqlDeletionLog,
+
+    #[error("Error openning commit cloud DB")]
+    SqlCommitCloud,
 }
 
 #[facet::factory(name: String, repo_config_param: RepoConfig, common_config_param: CommonConfig)]
@@ -1499,6 +1505,9 @@ impl RepoFactory {
                     BookmarkCacheDerivedData::HgOnly => {
                         wbc_builder.add_hg_warmers(repo_derived_data, phases)?;
                     }
+                    BookmarkCacheDerivedData::GitOnly => {
+                        wbc_builder.add_git_warmers(repo_derived_data, phases)?;
+                    }
                     BookmarkCacheDerivedData::AllKinds => {
                         wbc_builder.add_all_warmers(repo_derived_data, phases)?;
                     }
@@ -1696,6 +1705,16 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::SqlDeletionLog)?;
         Ok(Arc::new(DeletionLog { sql_deletion_log }))
+    }
+
+    pub async fn commit_cloud(&self, repo_config: &ArcRepoConfig) -> Result<ArcCommitCloud> {
+        let sql_commit_cloud = self
+            .open_sql::<SqlCommitCloudBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::SqlCommitCloud)?;
+        Ok(Arc::new(CommitCloud {
+            storage: sql_commit_cloud.new(),
+        }))
     }
 }
 

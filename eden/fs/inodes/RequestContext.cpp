@@ -27,7 +27,9 @@ RequestContext::~RequestContext() noexcept {
     }
 
     if (requestWatchList_) {
-      { auto temp = std::move(requestMetricsScope_); }
+      {
+        auto temp = std::move(requestMetricsScope_);
+      }
       requestWatchList_.reset();
     }
 

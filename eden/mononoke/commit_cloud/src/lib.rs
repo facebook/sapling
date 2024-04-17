@@ -8,3 +8,8 @@
 #![feature(trait_alias)]
 pub mod sql;
 pub mod workspace;
+use crate::sql::ops::SqlCommitCloud;
+#[facet::facet]
+pub struct CommitCloud {
+    pub storage: SqlCommitCloud,
+}

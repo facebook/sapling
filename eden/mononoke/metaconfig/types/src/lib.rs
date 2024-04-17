@@ -944,10 +944,6 @@ pub enum BlobConfig {
     },
     /// Store in an AWS S3 bucket
     AwsS3 {
-        /// AWS Account ID
-        aws_account_id: String,
-        /// AWS Role
-        aws_role: String,
         /// Bucket to connect to
         bucket: String,
         /// AWS Region
@@ -1091,6 +1087,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub bonsai_blob_mapping: Option<ShardableRemoteDatabaseConfig>,
     /// Database for deletion log
     pub deletion_log: Option<RemoteDatabaseConfig>,
+    /// Database for commit cloud info
+    pub commit_cloud: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database when it is remote.

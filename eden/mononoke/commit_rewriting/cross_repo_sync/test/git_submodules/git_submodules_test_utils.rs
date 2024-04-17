@@ -14,6 +14,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
@@ -24,9 +25,14 @@ use bulk_derivation::BulkDerivation;
 use cacheblob::InProcessLease;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use cross_repo_sync::get_x_repo_submodule_metadata_file_prefx_from_config;
+use cross_repo_sync::validate_all_submodule_expansions;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::InMemoryRepo;
+use cross_repo_sync::Large;
 use cross_repo_sync::SubmoduleDeps;
+use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
@@ -51,6 +57,7 @@ use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
@@ -71,11 +78,11 @@ use tests_utils::CreateCommitContext;
 use crate::prepare_repos_mapping_and_config;
 use crate::sync_to_master;
 
-const MASTER_BOOKMARK_NAME: &str = "master";
+pub const MASTER_BOOKMARK_NAME: &str = "master";
 
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) repo_a_info: (TestRepo, BTreeMap<String, ChangesetId>),
-    pub(crate) large_repo: TestRepo,
+    pub(crate) large_repo_info: (TestRepo, ChangesetId),
     pub(crate) commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
     pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub(crate) test_sync_config_source: TestLiveCommitSyncConfigSource,
@@ -189,25 +196,29 @@ pub(crate) async fn build_submodule_sync_test_data(
 
     rebase_root_on_master(ctx.clone(), &commit_syncer, *repo_a_root).await?;
 
+    println!("Synced A_A to large repo's master");
+
     let _ = sync_to_master(
         ctx.clone(),
         &commit_syncer,
         *repo_a_cs_map.get("A_B").unwrap(),
     )
-    .await?
-    .ok_or(anyhow!("Failed to sync commit A_B"))?;
+    .await
+    .context("Failed to sync commit A_B")?
+    .ok_or(anyhow!("Commit A_B wasn't synced"))?;
 
-    let _ = sync_to_master(
+    let large_repo_master = sync_to_master(
         ctx.clone(),
         &commit_syncer,
         *repo_a_cs_map.get("A_C").unwrap(),
     )
-    .await?
-    .ok_or(anyhow!("Failed to sync commit A_C"))?;
+    .await
+    .context("Failed to sync commit A_C")?
+    .ok_or(anyhow!("Commit A_C wasn't synced"))?;
 
     Ok(SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
         mapping,
         live_commit_sync_config,
@@ -265,6 +276,31 @@ pub(crate) async fn build_repo_b(
 
     let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
     let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, DAG).await?;
+
+    Ok((repo, cs_map))
+}
+
+/// Builds repo B, which will be used as a submodule dependency of repo A.
+pub(crate) async fn build_repo_b_with_c_submodule(
+    fb: FacebookInit,
+    submodule_c_git_hash: GitSha1,
+    submodule_path: &NonRootMPath,
+) -> Result<(TestRepo, BTreeMap<String, ChangesetId>)> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let dag = format!(
+        r#"
+        B_A-B_B
+
+        # message: B_A "first commit in submodule B"
+        # message: B_B "second commit in submodule B"
+        # modify: B_B "{submodule_path}" git-submodule &{submodule_c_git_hash}
+        # bookmark: B_B master
+        "#
+    );
+
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
+    let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, dag.as_str()).await?;
 
     Ok((repo, cs_map))
 }
@@ -650,6 +686,7 @@ pub(crate) async fn assert_working_copy_matches_expected(
     cs_id: ChangesetId,
     expected_files: Vec<&str>,
 ) -> Result<()> {
+    println!("Asserting working copy matches expectation");
     let root_fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -672,4 +709,43 @@ pub(crate) async fn assert_working_copy_matches_expected(
         "Working copy doesn't match expectation"
     );
     Ok(())
+}
+
+/// Test validation of submodule expansion in large repo's bonsai
+pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
+    ctx: CoreContext,
+    bonsai: BonsaiChangeset,
+    large_repo: TestRepo,
+    repo_a: TestRepo,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<BonsaiChangeset> {
+    println!("Validating expansion of bonsai: {0:#?}", bonsai.message());
+
+    let large_repo_id = Large(large_repo.repo_identity().id());
+    let sync_config_version = base_commit_sync_version_name();
+    let mover = commit_syncer
+        .get_mover_by_version(&sync_config_version)
+        .await?;
+    let large_in_memory_repo = InMemoryRepo::from_repo(&large_repo)?;
+    let x_repo_submodule_metadata_file_prefix =
+        get_x_repo_submodule_metadata_file_prefx_from_config(
+            repo_a.repo_identity().id(),
+            &sync_config_version,
+            live_commit_sync_config.clone(),
+        )
+        .await?;
+
+    let submodule_deps = match commit_syncer.get_submodule_deps() {
+        SubmoduleDeps::ForSync(deps) => deps,
+        SubmoduleDeps::NotNeeded => return Err(anyhow!("Submodule deps should have been set!")),
+    };
+
+    let sm_exp_data = SubmoduleExpansionData {
+        submodule_deps,
+        large_repo: large_in_memory_repo,
+        x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix.as_str(),
+        large_repo_id,
+    };
+    validate_all_submodule_expansions(&ctx, sm_exp_data, bonsai, mover).await
 }

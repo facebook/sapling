@@ -14,7 +14,6 @@ python_binary(
         "//configerator/distribution/api/py:configerator_config",
         "//configerator/structs/scm/mononoke/xdb_gc:xdb_gc_structs-py",
         "//dba/asyncio:bulk_dml",
-        "//dsi/logger/configs/MononokeSQLBlobGCKeysLoggerConfig:py3-logger",
         "//libfb/py/asyncio:limit_concurrency",
         "//libfb/py/asyncio:mysql",
     ],

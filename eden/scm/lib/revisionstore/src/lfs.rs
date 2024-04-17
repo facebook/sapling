@@ -64,6 +64,7 @@ use indexedlog::log::IndexOutput;
 use indexedlog::rotate;
 use indexedlog::DefaultOpenOptions;
 use indexedlog::Repair;
+use itertools::Itertools;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
 use lfs_protocol::Operation;
@@ -146,6 +147,7 @@ pub(crate) struct HttpLfsRemote {
     client: Arc<HttpClient>,
     concurrent_fetches: usize,
     download_chunk_size: Option<NonZeroU64>,
+    max_batch_size: usize,
     http_options: Arc<HttpOptions>,
 }
 
@@ -439,7 +441,7 @@ impl LfsIndexedLogBlobsStore {
     /// Test whether a blob is in the store. It returns true if at least one chunk is present, and
     /// thus it is possible that one of the chunk is missing.
     pub fn contains(&self, hash: &Sha256) -> Result<bool> {
-        Ok(self.inner.read().lookup(0, hash)?.next().is_some())
+        Ok(!self.inner.read().lookup(0, hash)?.is_empty()?)
     }
 
     fn chunk(mut data: Bytes, chunk_size: usize) -> impl Iterator<Item = (Range<usize>, Bytes)> {
@@ -698,7 +700,11 @@ impl LfsStore {
     // TODO(meyer): This is a crappy name, albeit so is blob_impl.
     /// Fetch whatever content is available for the specified StoreKey. Like blob_impl above, but returns just
     /// the LfsPointersEntry when that's all that's found. Mostly copy-pasted from blob_impl above.
-    pub(crate) fn fetch_available(&self, key: &StoreKey) -> Result<Option<LfsStoreEntry>> {
+    pub(crate) fn fetch_available(
+        &self,
+        key: &StoreKey,
+        ignore_result: bool,
+    ) -> Result<Option<LfsStoreEntry>> {
         let pointer = self.pointers.entry(key)?;
 
         match pointer {
@@ -709,12 +715,20 @@ impl LfsStore {
                 // or return NotFound like blob_impl?
                 None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
                 Some(content_hash) => {
-                    match self
-                        .blobs
-                        .get(&content_hash.clone().unwrap_sha256(), entry.size)?
-                    {
-                        None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
-                        Some(blob) => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, blob))),
+                    if ignore_result {
+                        match self.blobs.contains(&content_hash.clone().unwrap_sha256())? {
+                            false => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
+                            // Insert stub entry since the result doesn't matter.
+                            true => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, Bytes::new()))),
+                        }
+                    } else {
+                        match self
+                            .blobs
+                            .get(&content_hash.clone().unwrap_sha256(), entry.size)?
+                        {
+                            None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
+                            Some(blob) => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, blob))),
+                        }
                     }
                 }
             },
@@ -1302,19 +1316,11 @@ impl LfsRemoteInner {
 
     fn send_batch_request(
         http: &HttpLfsRemote,
-        objs: &HashSet<(Sha256, usize)>,
+        objects: Vec<RequestObject>,
         operation: Operation,
     ) -> Result<Option<ResponseBatch>> {
         let span = info_span!("LfsRemote::send_batch_inner");
         let _guard = span.enter();
-
-        let objects = objs
-            .iter()
-            .map(|(oid, size)| RequestObject {
-                oid: LfsSha256(oid.into_inner()),
-                size: *size as u64,
-            })
-            .collect::<Vec<_>>();
 
         let batch = RequestBatch {
             operation,
@@ -1477,74 +1483,82 @@ impl LfsRemoteInner {
         mut write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         mut error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
-        let response = LfsRemoteInner::send_batch_request(http, objs, operation)?;
-        let response = match response {
-            None => return Ok(()),
-            Some(response) => response,
-        };
+        let request_objs_iter = objs.iter().map(|(oid, size)| RequestObject {
+            oid: LfsSha256(oid.into_inner()),
+            size: *size as u64,
+        });
 
-        let mut futures = Vec::new();
-        // Fetch ClientRequestInfo from a thread local and pass to async code
-        let maybe_client_request_info = get_client_request_info_thread_local();
-
-        for object in response.objects {
-            let oid = object.object.oid;
-            let actions = match object.status {
-                ObjectStatus::Ok {
-                    authenticated: _,
-                    actions,
-                } => Some(actions),
-                ObjectStatus::Err { error: e } => {
-                    error_handler(
-                        Sha256::from(oid.0),
-                        anyhow!("LFS fetch error {} - {}", e.code, e.message),
-                    );
-                    None
-                }
+        for request_objs_chunk in &request_objs_iter.chunks(http.max_batch_size) {
+            let response =
+                LfsRemoteInner::send_batch_request(http, request_objs_chunk.collect(), operation)?;
+            let response = match response {
+                None => return Ok(()),
+                Some(response) => response,
             };
 
-            for (op, action) in actions.into_iter().flat_map(|h| h.into_iter()) {
-                let oid = Sha256::from(oid.0);
+            let mut futures = Vec::new();
+            // Fetch ClientRequestInfo from a thread local and pass to async code
+            let maybe_client_request_info = get_client_request_info_thread_local();
 
-                let fut = match op {
-                    Operation::Upload => LfsRemoteInner::process_upload(
-                        http.client.clone(),
-                        action,
-                        oid,
-                        object.object.size,
-                        read_from_store.clone(),
-                        http.http_options.clone(),
-                    )
-                    .map(|_| None)
-                    .left_future(),
-                    Operation::Download => LfsRemoteInner::process_download(
-                        http.client.clone(),
-                        http.download_chunk_size,
-                        action,
-                        oid,
-                        object.object.size,
-                        http.http_options.clone(),
-                    )
-                    .map(Some)
-                    .right_future(),
+            for object in response.objects {
+                let oid = object.object.oid;
+                let actions = match object.status {
+                    ObjectStatus::Ok {
+                        authenticated: _,
+                        actions,
+                    } => Some(actions),
+                    ObjectStatus::Err { error: e } => {
+                        error_handler(
+                            Sha256::from(oid.0),
+                            anyhow!("LFS fetch error {} - {}", e.code, e.message),
+                        );
+                        None
+                    }
                 };
 
-                futures.push(with_client_request_info_scope(
-                    maybe_client_request_info.clone(),
-                    fut,
-                ));
+                for (op, action) in actions.into_iter().flat_map(|h| h.into_iter()) {
+                    let oid = Sha256::from(oid.0);
+
+                    let fut = match op {
+                        Operation::Upload => LfsRemoteInner::process_upload(
+                            http.client.clone(),
+                            action,
+                            oid,
+                            object.object.size,
+                            read_from_store.clone(),
+                            http.http_options.clone(),
+                        )
+                        .map(|_| None)
+                        .left_future(),
+                        Operation::Download => LfsRemoteInner::process_download(
+                            http.client.clone(),
+                            http.download_chunk_size,
+                            action,
+                            oid,
+                            object.object.size,
+                            http.http_options.clone(),
+                        )
+                        .map(Some)
+                        .right_future(),
+                    };
+
+                    futures.push(with_client_request_info_scope(
+                        maybe_client_request_info.clone(),
+                        fut,
+                    ));
+                }
             }
-        }
 
-        // Request blobs concurrently.
-        let stream = stream_to_iter(iter(futures).buffer_unordered(http.concurrent_fetches));
+            // Request blobs concurrently.
+            let stream = stream_to_iter(iter(futures).buffer_unordered(http.concurrent_fetches));
 
-        // It's awkward that the futures are shared for uploading and downloading. We use Some(_)
-        // to indicate if the result came from the download path, and 'flatten' filters out the
-        // Nones.
-        for result in stream.flatten() {
-            let (sha, data) = result?;
-            write_to_store(sha, data)?;
+            // It's awkward that the futures are shared for uploading and downloading. We use Some(_)
+            // to indicate if the result came from the download path, and 'flatten' filters out the
+            // Nones.
+            for result in stream.flatten() {
+                let (sha, data) = result?;
+                write_to_store(sha, data)?;
+            }
         }
 
         Ok(())
@@ -1667,6 +1681,9 @@ impl LfsRemote {
                 .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
                 .transpose()?;
 
+            // Pick something relatively low. Doesn't seem like we need many concurrent LFS downloads to saturate available BW.
+            let max_batch_size = config.get_or("lfs", "max-batch-size", || 100)?;
+
             let client = http_client("lfs", http_config(config, &url)?);
 
             Ok(Self {
@@ -1679,6 +1696,7 @@ impl LfsRemote {
                     client: Arc::new(client),
                     concurrent_fetches,
                     download_chunk_size,
+                    max_batch_size,
                     http_options: Arc::new(HttpOptions {
                         accept_zstd,
                         http_version,

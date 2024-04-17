@@ -9,6 +9,7 @@ import type {PageFocusTracker} from './PageFocusTracker';
 import type {Logger} from './logger';
 import type {PageVisibility, RepoInfo} from 'isl/src/types';
 
+import {stagedThrottler} from './StagedThrottler';
 import {ONE_MINUTE_MS} from './constants';
 import {Watchman} from './watchman';
 import path from 'path';
@@ -34,7 +35,8 @@ export class WatchForChanges {
   static WATCHMAN_DEFER = `hg.update`; // TODO: update to sl
   public watchman: Watchman;
 
-  private disposables: Array<() => unknown> = [];
+  private dirstateDisposables: Array<() => unknown> = [];
+  private watchmanDisposables: Array<() => unknown> = [];
 
   constructor(
     private repoInfo: RepoInfo,
@@ -45,7 +47,8 @@ export class WatchForChanges {
   ) {
     this.watchman = watchman ?? new Watchman(logger);
 
-    this.setupWatchmanSubscriptions();
+    // Watch dirstate right away for commit changes
+    this.setupDirstateSubscriptions();
     this.setupPolling();
     this.pageFocusTracker.onChange(this.poll.bind(this));
     // poll right away so we get data immediately, without waiting for timeout on startup
@@ -110,23 +113,18 @@ export class WatchForChanges {
     }
   };
 
-  private async setupWatchmanSubscriptions() {
+  private async setupDirstateSubscriptions() {
     if (this.repoInfo.type !== 'success') {
       return;
     }
     const {repoRoot, dotdir} = this.repoInfo;
 
     if (repoRoot == null || dotdir == null) {
-      this.logger.error(`skipping watchman subscription since ${repoRoot} is not a repository`);
+      this.logger.error(`skipping dirstate subscription since ${repoRoot} is not a repository`);
       return;
     }
     const relativeDotdir = path.relative(repoRoot, dotdir);
-    // if working from a git clone, the dotdir lives in .git/sl,
-    // but we need to ignore changes in .git in our watchman subscriptions
-    const outerDotDir =
-      relativeDotdir.indexOf(path.sep) >= 0 ? path.dirname(relativeDotdir) : relativeDotdir;
 
-    const FILE_CHANGE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-file-change';
     const DIRSTATE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-dirstate-change';
     try {
       const handleRepositoryStateChange = debounce(() => {
@@ -165,12 +163,78 @@ export class WatchForChanges {
       });
       dirstateSubscription.emitter.on('fresh-instance', handleRepositoryStateChange);
 
-      const handleUncommittedChanges = () => {
-        this.changeCallback('uncommitted changes');
+      this.dirstateDisposables.push(() => {
+        this.logger.log('unsubscribe dirstate watcher');
+        this.watchman.unwatch(repoRoot, DIRSTATE_WATCHMAN_SUBSCRIPTION);
+      });
+    } catch (err) {
+      this.logger.error('failed to setup dirstate subscriptions', err);
+    }
+  }
 
-        // reset timer for polling
-        this.lastFetch = new Date().valueOf();
-      };
+  /**
+   * Some Watchmans subscriptions should only activate when ISL is actually opened.
+   * On platforms like vscode, it's possible to create a Repository without actually opening ISL.
+   * In those cases, we only want the minimum set of subscriptions to be active.
+   * We care about the dirstate watcher, but not the watchman subscriptions in that case.
+   */
+  public async setupWatchmanSubscriptions() {
+    if (this.repoInfo.type !== 'success') {
+      return;
+    }
+    const {repoRoot, dotdir} = this.repoInfo;
+
+    if (repoRoot == null || dotdir == null) {
+      this.logger.error(`skipping watchman subscription since ${repoRoot} is not a repository`);
+      return;
+    }
+    const relativeDotdir = path.relative(repoRoot, dotdir);
+    // if working from a git clone, the dotdir lives in .git/sl,
+    // but we need to ignore changes in .git in our watchman subscriptions
+    const outerDotDir =
+      relativeDotdir.indexOf(path.sep) >= 0 ? path.dirname(relativeDotdir) : relativeDotdir;
+
+    const FILE_CHANGE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-file-change';
+    try {
+      // In some bad cases, a file may not be getting ignored by watchman properly,
+      // and ends up constantly triggering the watchman subscription.
+      // Incrementally increase the throttling of events to avoid spamming `status`.
+      // This does mean "legit" changes will start being missed.
+      // TODO: can we scan the list of changes and build a list of files that are overfiring, then send those to the UI as a warning?
+      // This would allow a user to know it's happening and possibly fix it for their repo by adding it to a .watchmanconfig.
+      const handleUncommittedChanges = stagedThrottler(
+        [
+          {
+            throttleMs: 0,
+            numToNextStage: 5,
+            resetAfterMs: 5_000,
+            onEnter: () => {
+              this.logger.info('no longer throttling uncommitted changes');
+            },
+          },
+          {
+            throttleMs: 5_000,
+            numToNextStage: 10,
+            resetAfterMs: 20_000,
+            onEnter: () => {
+              this.logger.info('slightly throttling uncommitted changes');
+            },
+          },
+          {
+            throttleMs: 30_000,
+            resetAfterMs: 30_000,
+            onEnter: () => {
+              this.logger.info('aggressively throttling uncommitted changes');
+            },
+          },
+        ],
+        () => {
+          this.changeCallback('uncommitted changes');
+
+          // reset timer for polling
+          this.lastFetch = new Date().valueOf();
+        },
+      );
       const uncommittedChangesSubscription = await this.watchman.watchDirectoryRecursive(
         repoRoot,
         FILE_CHANGE_WATCHMAN_SUBSCRIPTION,
@@ -197,9 +261,8 @@ export class WatchForChanges {
       uncommittedChangesSubscription.emitter.on('change', handleUncommittedChanges);
       uncommittedChangesSubscription.emitter.on('fresh-instance', handleUncommittedChanges);
 
-      this.disposables.push(() => {
+      this.watchmanDisposables.push(() => {
         this.logger.log('unsubscribe watchman');
-        this.watchman.unwatch(repoRoot, DIRSTATE_WATCHMAN_SUBSCRIPTION);
         this.watchman.unwatch(repoRoot, FILE_CHANGE_WATCHMAN_SUBSCRIPTION);
       });
     } catch (err) {
@@ -207,8 +270,13 @@ export class WatchForChanges {
     }
   }
 
+  public disposeWatchmanSubscriptions() {
+    this.watchmanDisposables.forEach(dispose => dispose());
+  }
+
   public dispose() {
-    this.disposables.forEach(dispose => dispose());
+    this.dirstateDisposables.forEach(dispose => dispose());
+    this.disposeWatchmanSubscriptions();
     if (this.timeout) {
       clearTimeout(this.timeout);
       this.timeout = undefined;

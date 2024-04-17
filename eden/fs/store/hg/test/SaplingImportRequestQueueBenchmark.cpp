@@ -10,8 +10,8 @@
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/ImportPriority.h"
-#include "eden/fs/store/hg/HgImportRequest.h"
-#include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/store/hg/SaplingImportRequest.h"
+#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 
 namespace {
 
@@ -24,12 +24,12 @@ Hash20 uniqueHash() {
   return Hash20{bytes};
 }
 
-std::shared_ptr<HgImportRequest> makeBlobImportRequest(
+std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   std::string proxyHashString = proxyHash.getValue();
-  return HgImportRequest::makeBlobImportRequest(
+  return SaplingImportRequest::makeBlobImportRequest(
       ObjectId{proxyHashString},
       std::move(proxyHash),
       priority,
@@ -42,9 +42,9 @@ void enqueue(benchmark::State& state) {
   auto edenConfig = std::make_shared<ReloadableConfig>(
       rawEdenConfig, ConfigReloadBehavior::NoReload);
 
-  auto queue = HgImportRequestQueue{edenConfig};
+  auto queue = SaplingImportRequestQueue{edenConfig};
 
-  std::vector<std::shared_ptr<HgImportRequest>> requests;
+  std::vector<std::shared_ptr<SaplingImportRequest>> requests;
   requests.reserve(state.max_iterations);
   for (size_t i = 0; i < state.max_iterations; i++) {
     requests.emplace_back(makeBlobImportRequest(kDefaultImportPriority));
@@ -62,7 +62,7 @@ void dequeue(benchmark::State& state) {
   auto edenConfig = std::make_shared<ReloadableConfig>(
       rawEdenConfig, ConfigReloadBehavior::NoReload);
 
-  auto queue = HgImportRequestQueue{edenConfig};
+  auto queue = SaplingImportRequestQueue{edenConfig};
 
   for (size_t i = 0; i < state.max_iterations; i++) {
     queue.enqueueBlob(makeBlobImportRequest(kDefaultImportPriority));

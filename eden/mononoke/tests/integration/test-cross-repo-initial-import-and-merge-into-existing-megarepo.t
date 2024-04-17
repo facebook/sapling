@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
+#require slow
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
@@ -10,10 +11,18 @@
   $ LARGE_REPO_ID="0"
   $ SMALL_REPO_ID="1"
   $ IMPORTED_REPO_ID="2"
+  $ ANOTHER_REPO_ID="3"
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase =
   > globalrevs =
+  > EOF
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": true
+  >   }
+  > }
   > EOF
 
   $ setup_configerator_configs
@@ -27,10 +36,20 @@
   >   "2": {
   >      "draft_push": false,
   >      "public_push": false
+  >    },
+  >   "3": {
+  >      "draft_push": false,
+  >      "public_push": false
   >    }
   >   }
   > }
   > EOF
+
+-- Init the imported repos
+  $ IMPORTED_REPO_NAME="imported_repo"
+  $ REPOID="$IMPORTED_REPO_ID" REPONAME="$IMPORTED_REPO_NAME" setup_common_config "blob_files"
+  $ ANOTHER_REPO_NAME="another_repo"
+  $ REPOID="$ANOTHER_REPO_ID" REPONAME="$ANOTHER_REPO_NAME" setup_common_config "blob_files"
 
 -- Init large and small repos
   $ GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark GLOBALREVS_SMALL_REPO_ID=$SMALL_REPO_ID REPOID=$LARGE_REPO_ID INFINITEPUSH_ALLOW_WRITES=true REPONAME=large-mon setup_common_config blob_files
@@ -41,9 +60,6 @@
   $ start_large_small_repo
   Starting Mononoke server
   $ init_local_large_small_clones
--- Init the impoorted repo
-  $ IMPORTED_REPO_NAME="imported_repo"
-  $ REPOID="$IMPORTED_REPO_ID" REPONAME="$IMPORTED_REPO_NAME" setup_common_config "blob_files"
 
 -- Start up the backsyncer in the background
   $ backsync_large_to_small_forever
@@ -271,3 +287,98 @@ Before config change
   o  after mapping change from small [public;globalrev=1000157976;54bd67a132c8]
   │
   ~
+
+-- The rest of this repo merges in another repo into large repo
+-- this covers the scenario where we have to do a merge and mapping change in large
+-- repo while there's forward sync going on.
+  $ testtool_drawdag -R "$ANOTHER_REPO_NAME" --no-default-files <<EOF
+  > AA-AB-AC
+  > # modify: AA "foo/a.txt" "creating foo directory"
+  > # modify: AA "bar/b.txt" "creating bar directory"
+  > # modify: AB "bar/c.txt" "random change"
+  > # modify: AB "foo/d" "another random change"
+  > # copy: AC "foo/b.txt" "copying file from bar into foo" AB "bar/b.txt"
+  > # bookmark: AC heads/master_bookmark
+  > EOF
+  AA=be49ffcb679bb0485fd5cf5a05013e8554065d19796407d5ab97b556c951cd35
+  AB=1bb09eba8700dd4438bf66006b0f70cce454b32adb9a168f1e8a2d04c19c0cd3
+  AC=156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
+
+  $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$AC" --version-name "another_noop"
+  Starting session with id * (glob)
+  Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
+  syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
+  Found 3 unsynced ancestors
+  changeset 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb synced as 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 in *ms (glob)
+  successful sync of head 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
+
+  $ mononoke_newadmin fetch -R large-mon  -i 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 --json | jq .parents
+  [
+    "7b877236dc63b9df21954f78b6c8ce8b69a844e786fe58a2932de04ac685075d"
+  ]
+
+-- use gradual merge to merge in just one commit (usually this one does sequence of merges)
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
+  $ COMMIT_DATE="2006-05-03T22:38:01.00Z"
+  $ with_stripped_logs quiet_grep merging -- megarepo_tool gradual-merge \
+  > test_user \
+  > "another merge" \
+  > --pre-deletion-commit 7b877236dc63b9df21954f78b6c8ce8b69a844e786fe58a2932de04ac685075d \
+  > --last-deletion-commit 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 \
+  > --bookmark master_bookmark \
+  > --limit 1 \
+  > --commit-date-rfc3339 "$COMMIT_DATE"
+  merging 1 commits
+
+-- wait a second to give backsyncer some time to catch up
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
+
+-- check that merge has made into large repo
+  $ cd "$TESTTMP"/large-hg-client
+  $ REPONAME=large-mon hgmn -q pull
+  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ log_globalrev -r master_bookmark
+  @    [MEGAREPO GRADUAL MERGE] another merge (0) [public;globalrev=1000157980;c58d6329efff] default/master_bookmark
+  ├─╮
+  │ │
+  ~ ~
+
+  $ testtool_drawdag -R "$ANOTHER_REPO_NAME" <<EOF
+  > AC-AD
+  > # exists: AC $AC
+  > # bookmark: AD master_bookmark
+  > EOF
+  AC=156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
+  AD=1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
+
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
+  $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" once --commit "$AD" --unsafe-change-version-to "another_version" --target-bookmark master_bookmark
+  Starting session with id * (glob)
+  changeset resolved as: ChangesetId(Blake2(1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9))
+  Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
+  1 unsynced ancestors of 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
+  syncing 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 via pushrebase for master_bookmark
+  changeset 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 synced as 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e in *ms (glob)
+  successful sync
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
+
+  $ testtool_drawdag -R "$IMPORTED_REPO_NAME" <<EOF
+  > IG-IH-II
+  > # exists: IG $IG
+  > # bookmark: II heads/master_bookmark
+  > EOF
+  IG=2daec24778b88c326d1ba0f830d43a2d24d471dc22c48c8307096d0f60c9477f
+  IH=f5d5d65c2f874454ddf7b1b5da1e029ba0fc9258ded48c9cca73fb0d7c2df3cc
+  II=09b37e2f0429911d6b00d1b129471b6da45b71b5f0ef4ba720ee7e97cea909a8
+
+  $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/master_bookmark" --catch-up-once 
+  Starting session with id * (glob)
+  queue size is 1
+  processing log entry #5
+  2 unsynced ancestors of 09b37e2f0429911d6b00d1b129471b6da45b71b5f0ef4ba720ee7e97cea909a8
+  force using mapping another_version to rewrite 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e
+  syncing f5d5d65c2f874454ddf7b1b5da1e029ba0fc9258ded48c9cca73fb0d7c2df3cc via pushrebase for master_bookmark
+  Syncing f5d5d65c2f874454ddf7b1b5da1e029ba0fc9258ded48c9cca73fb0d7c2df3cc failed in *ms: Pushrebase of synced commit failed - check config for overlaps: Error(version mismatch for forward synced commit: expected new_version, got another_version) (glob)
+  failed to sync bookmark update log #5, Pushrebase of synced commit failed - check config for overlaps: Error(version mismatch for forward synced commit: expected new_version, got another_version)
+  Execution error: Pushrebase of synced commit failed - check config for overlaps: Error(version mismatch for forward synced commit: expected new_version, got another_version)
+  Error: Execution failed

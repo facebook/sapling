@@ -81,8 +81,8 @@ const auto tree4 = std::make_shared<const Tree>(
     tree4_id);
 
 const auto entrySize = sizeof(entry0);
-const auto smallTreeSize = tree0 -> getSizeBytes();
-const auto bigTreeSize = tree4 -> getSizeBytes();
+const auto smallTreeSize = tree0->getSizeBytes();
+const auto bigTreeSize = tree4->getSizeBytes();
 const auto cacheMaxSize = smallTreeSize * 3 + 1; // cache fits 3 small trees
 const auto cacheMinEntries = 1; // must keep at least one tree in cache
 

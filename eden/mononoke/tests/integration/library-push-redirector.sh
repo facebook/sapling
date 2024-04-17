@@ -309,6 +309,21 @@ function update_commit_sync_map_for_new_repo_import {
           "common_pushrebase_bookmarks": ["master_bookmark"],
           "small_repos": [
             {
+              "repoid": 3,
+              "bookmark_prefix": "another_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "another_repoo",
+              "direction": "large_to_small",
+              "mapping": {}
+            }
+          ],
+          "version_name": "another_noop"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
               "repoid": 1,
               "bookmark_prefix": "bookprefix/",
               "default_action": "prepend_prefix",
@@ -328,6 +343,39 @@ function update_commit_sync_map_for_new_repo_import {
             }
           ],
           "version_name": "new_version"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            },
+            {
+              "repoid": 2,
+              "bookmark_prefix": "imported_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "imported_repo",
+              "direction": "large_to_small",
+              "mapping": {}
+            },
+            {
+              "repoid": 3,
+              "bookmark_prefix": "another_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "another_repo",
+              "direction": "large_to_small",
+              "mapping": {}
+            }
+          ],
+          "version_name": "another_version"
         }
       ],
       "common": {
@@ -339,6 +387,10 @@ function update_commit_sync_map_for_new_repo_import {
           },
           2: {
             "bookmark_prefix": "imported_repo/",
+            "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+          },
+          3: {
+            "bookmark_prefix": "another_repo/",
             "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
           }
         }

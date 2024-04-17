@@ -127,11 +127,14 @@ class deferredpullattempt(pullattempt):
         return None
 
 
+@util.no_recursion
 def calculate_attempts(repo, xs):
-    """Calculate the "pullattempt"s for the given names."""
+    """Calculate the "pullattempt"s for the given names.
+    This function might return None or a list.
+    """
     # If paths.default is not set. Do not attempt to pull.
     if repo.ui.paths.get("default") is None:
-        return False
+        return
 
     def sortkey(tup):
         name, func = tup

@@ -24,12 +24,12 @@
 namespace facebook::eden {
 
 /**
- * Represents an Hg import request. This class contains all the necessary
+ * Represents an Sapling import request. This class contains all the necessary
  * information needed to fulfill the request as well as a promise that will be
  * resolved after the requested data is imported. Blobs and Trees also contain
  * a vector of promises to fulfill, corresponding to duplicate requests
  */
-class HgImportRequest {
+class SaplingImportRequest {
  public:
   template <typename ResponseT>
   struct BaseImport {
@@ -52,7 +52,7 @@ class HgImportRequest {
   /**
    * Allocate a blob request.
    */
-  static std::shared_ptr<HgImportRequest> makeBlobImportRequest(
+  static std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
@@ -62,14 +62,14 @@ class HgImportRequest {
   /**
    * Allocate a tree request.
    */
-  static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
+  static std::shared_ptr<SaplingImportRequest> makeTreeImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid);
 
-  static std::shared_ptr<HgImportRequest> makeBlobMetaImportRequest(
+  static std::shared_ptr<SaplingImportRequest> makeBlobMetaImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
@@ -81,17 +81,17 @@ class HgImportRequest {
    * use directly.
    */
   template <typename RequestType>
-  HgImportRequest(
+  SaplingImportRequest(
       RequestType request,
       ImportPriority priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid,
       folly::Promise<typename RequestType::Response>&& promise);
 
-  ~HgImportRequest() = default;
+  ~SaplingImportRequest() = default;
 
-  HgImportRequest(HgImportRequest&&) = default;
-  HgImportRequest& operator=(HgImportRequest&&) = default;
+  SaplingImportRequest(SaplingImportRequest&&) = default;
+  SaplingImportRequest& operator=(SaplingImportRequest&&) = default;
 
   template <typename T>
   T* getRequest() noexcept {
@@ -146,14 +146,14 @@ class HgImportRequest {
    * Implementation detail of the various make*Request functions.
    */
   template <typename Request, typename... Input>
-  static std::shared_ptr<HgImportRequest> makeRequest(
+  static std::shared_ptr<SaplingImportRequest> makeRequest(
       ImportPriority priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid,
       Input&&... input);
 
-  HgImportRequest(const HgImportRequest&) = delete;
-  HgImportRequest& operator=(const HgImportRequest&) = delete;
+  SaplingImportRequest(const SaplingImportRequest&) = delete;
+  SaplingImportRequest& operator=(const SaplingImportRequest&) = delete;
 
   using Request = std::variant<BlobImport, TreeImport, BlobMetaImport>;
   using Response = std::variant<
@@ -171,8 +171,8 @@ class HgImportRequest {
       std::chrono::steady_clock::now();
 
   friend bool operator<(
-      const HgImportRequest& lhs,
-      const HgImportRequest& rhs) {
+      const SaplingImportRequest& lhs,
+      const SaplingImportRequest& rhs) {
     return lhs.priority_ < rhs.priority_;
   }
 };

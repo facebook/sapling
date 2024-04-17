@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
+
 #include "eden/common/utils/PathMap.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/store/BackingStore.h"
@@ -38,31 +40,6 @@ class FilteredBackingStore
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 
-  ImmediateFuture<GetRootTreeResult> getRootTree(
-      const RootId& rootId,
-      const ObjectFetchContextPtr& context) override;
-
-  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
-      const ObjectId& objectId,
-      TreeEntryType treeEntryType,
-      const ObjectFetchContextPtr& context) override;
-
-  folly::SemiFuture<GetTreeResult> getTree(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-
-  folly::SemiFuture<GetBlobResult> getBlob(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context) override;
-
   void periodicManagementTask() override;
 
   void startRecordingFetch() override;
@@ -80,6 +57,10 @@ class FilteredBackingStore
   std::string renderObjectId(const ObjectId& objectId) override;
 
   std::optional<folly::StringPiece> getRepoName() override;
+
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return backingStore_->getLocalStoreCachingPolicy();
+  }
 
   /**
    * Encodes an underlying RootId in the RootId format used by
@@ -126,6 +107,45 @@ class FilteredBackingStore
   // paths. This returns true if the given path is filtered in the given
   // filterId
   std::unique_ptr<Filter> filter_;
+
+  FRIEND_TEST(
+      FakeSubstringFilteredBackingStoreTest,
+      testCompareBlobObjectsById);
+  FRIEND_TEST(
+      FakeSubstringFilteredBackingStoreTest,
+      testCompareTreeObjectsById);
+  FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFI);
+  FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter);
+  FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID);
+  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getNonExistent);
+  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getBlob);
+  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getTree);
+  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getRootTree);
+
+  ImmediateFuture<GetRootTreeResult> getRootTree(
+      const RootId& rootId,
+      const ObjectFetchContextPtr& context) override;
+
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& objectId,
+      TreeEntryType treeEntryType,
+      const ObjectFetchContextPtr& context) override;
+
+  folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
+  folly::SemiFuture<GetBlobResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
+      ObjectIdRange ids,
+      const ObjectFetchContextPtr& context) override;
 
   /*
    * Does the actual filtering logic for tree and root-tree objects.

@@ -134,6 +134,7 @@ struct FinishedCheckout {
 struct FinishedMount {
   static constexpr const char* type = "mount";
 
+  std::string backing_store_type;
   std::string repo_type;
   std::string repo_source;
   std::string fs_channel_type;

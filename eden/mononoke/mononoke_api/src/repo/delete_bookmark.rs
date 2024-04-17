@@ -63,7 +63,7 @@ impl RepoContext {
             let old_target = redirector
                 .get_small_to_large_commit_equivalent(ctx, old_target)
                 .await?;
-            make_delete_op(&large_bookmark, old_target, pushvars)
+            let log_id = make_delete_op(&large_bookmark, old_target, pushvars)
                 .run(
                     self.ctx(),
                     self.authorization_context(),
@@ -71,7 +71,7 @@ impl RepoContext {
                 )
                 .await?;
             // Wait for bookmark to catch up on small repo
-            redirector.backsync_latest(ctx).await?;
+            redirector.ensure_backsynced(ctx, log_id).await?;
         } else {
             make_delete_op(bookmark, old_target, pushvars)
                 .run(self.ctx(), self.authorization_context(), self.inner_repo())

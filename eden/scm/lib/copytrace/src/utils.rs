@@ -5,10 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use manifest::DiffType;
+use manifest_tree::Diff;
+use manifest_tree::TreeManifest;
+use pathmatcher::AlwaysMatcher;
+use pathmatcher::Matcher;
 use types::RepoPath;
+use types::RepoPathBuf;
 
 /// Content similarity threhold for rename detection. The definition of "similarity"
 /// between file a and file b is: (len(a.lines()) - edit_cost(a, b)) / len(a.lines())
@@ -108,6 +116,24 @@ pub fn content_similarity(
         // the acutal similarity score.
         Ok((false, 0.0))
     }
+}
+
+/// Compute the missing files in the source manifest.
+pub(crate) fn compute_missing_files(
+    old_tree: &TreeManifest,
+    new_tree: &TreeManifest,
+    matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+) -> Result<Vec<RepoPathBuf>> {
+    let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
+    let diff_entries = Diff::new(old_tree, new_tree, &matcher)?;
+    let mut missing = Vec::new();
+    for entry in diff_entries {
+        let entry = entry?;
+        if let DiffType::RightOnly(_) = entry.diff_type {
+            missing.push(entry.path);
+        }
+    }
+    Ok(missing)
 }
 
 #[cfg(test)]

@@ -108,7 +108,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   void sanityCheckMountPoint(const std::string& mountPoint);
 
   // These methods are virtual so we can override them during unit tests
-  virtual folly::File fuseMount(const char* mountPath, bool readOnly);
+  virtual folly::File
+  fuseMount(const char* mountPath, bool readOnly, const char* vfsType);
   virtual void nfsMount(
       std::string mountPath,
       folly::SocketAddress mountdPort,

@@ -30,7 +30,7 @@ import {
   diffSummary,
   latestCommitMessageTitle,
 } from './codeReview/CodeReviewInfo';
-import {DiffInfo} from './codeReview/DiffBadge';
+import {DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {t, T} from './i18n';
@@ -376,6 +376,7 @@ export const Commit = memo(
               <SuccessorInfoToDisplay successorInfo={commit.successorInfo} />
             ) : null}
             {inlineProgress && <InlineProgressSpan message={inlineProgress} />}
+            {commit.isFollower ? <DiffFollower commit={commit} /> : null}
           </DivIfChildren>
           {!isNarrow ? commitActions : null}
         </div>

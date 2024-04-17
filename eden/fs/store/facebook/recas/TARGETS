@@ -23,6 +23,7 @@ cpp_library(
         "//remote_execution/lib/if:common-cpp2-types",
     ],
     exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/utils:path",
         "//eden/fs/store:backing_store_interface",
         "//remote_execution/lib/cpp:cas_daemon_client_builder",

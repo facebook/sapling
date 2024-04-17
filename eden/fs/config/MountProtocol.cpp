@@ -19,7 +19,7 @@ constexpr auto mountProtocolStr = [] {
   return mapping;
 }();
 
-}
+} // namespace
 
 folly::Expected<MountProtocol, std::string>
 FieldConverter<MountProtocol>::fromString(

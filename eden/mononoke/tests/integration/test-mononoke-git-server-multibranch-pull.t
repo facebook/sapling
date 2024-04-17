@@ -58,7 +58,8 @@
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
 # Verify that we get the same Git repo back that we started with
-  $ cd $REPONAME  
+  $ cd $REPONAME
+  $ current_head=$(git rev-parse HEAD)
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
 
@@ -87,6 +88,8 @@
   $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
+# Wait for the warm bookmark cache to catch up with the latest changes
+  $ wait_for_git_bookmark_move HEAD $current_head
   $ quiet git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list

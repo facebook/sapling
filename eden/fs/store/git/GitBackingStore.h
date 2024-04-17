@@ -45,6 +45,22 @@ class GitBackingStore final : public BijectiveBackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return localStoreCachingPolicy_;
+  }
+
+  // TODO(T119221752): Implement for all BackingStore subclasses
+  int64_t dropAllPendingRequestsFromQueue() override {
+    XLOG(
+        WARN,
+        "dropAllPendingRequestsFromQueue() is not implemented for GitBackingStore");
+    return 0;
+  }
+
+ private:
+  GitBackingStore(GitBackingStore const&) = delete;
+  GitBackingStore& operator=(GitBackingStore const&) = delete;
+
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
       const ObjectFetchContextPtr& context) override;
@@ -64,18 +80,6 @@ class GitBackingStore final : public BijectiveBackingStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
-  // TODO(T119221752): Implement for all BackingStore subclasses
-  int64_t dropAllPendingRequestsFromQueue() override {
-    XLOG(
-        WARN,
-        "dropAllPendingRequestsFromQueue() is not implemented for GitBackingStore");
-    return 0;
-  }
-
- private:
-  GitBackingStore(GitBackingStore const&) = delete;
-  GitBackingStore& operator=(GitBackingStore const&) = delete;
-
   TreePtr getTreeImpl(const ObjectId& id);
   BlobPtr getBlobImpl(const ObjectId& id);
 
@@ -85,6 +89,9 @@ class GitBackingStore final : public BijectiveBackingStore {
   static ObjectId oid2Hash(const git_oid* oid);
 
   git_repository* repo_{nullptr};
+
+  LocalStoreCachingPolicy localStoreCachingPolicy_ =
+      LocalStoreCachingPolicy::TreesAndBlobMetadata;
 };
 
 } // namespace facebook::eden

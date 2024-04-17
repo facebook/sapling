@@ -27,9 +27,12 @@ Create a repo to be cloned
   x/file: 0120666 0 * EXIST_P1 EXIST_NEXT * (glob)
 
 Clone the repo with symlinks disabled and verify that files are regular
+TODO(sggutier): figure out why shallow is necessary here (replacing test with eager renders the same results)
   $ cd
-  $ hg clone --enable-profile all.sparse test:e1 cloned --config experimental.windows-symlinks=False -q
+  $ hg clone --enable-profile all.sparse test:e1 cloned --config experimental.windows-symlinks=False --shallow -q
   $ cd cloned
+  $ hg st
+  $ hg go master -q
   $ hg st
   $ hg debugtreestate list | grep x
   x/dir: 0666 6 * EXIST_P1 EXIST_NEXT * (glob)

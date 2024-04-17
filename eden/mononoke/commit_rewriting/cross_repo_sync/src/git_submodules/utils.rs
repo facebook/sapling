@@ -7,11 +7,13 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use blobstore::Blobstore;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -29,7 +31,11 @@ use mononoke_types::hash::RichGitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::git_submodules::expand::SubmodulePath;
 use crate::types::Repo;
@@ -40,23 +46,41 @@ pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
     ctx: &'a CoreContext,
     repo: &'a R,
     submodule_file_content_id: ContentId,
-    submodule_path: &'a SubmodulePath,
 ) -> Result<GitSha1> {
     let blobstore = repo.repo_blobstore_arc();
 
     let bytes = filestore::fetch_concat_exact(&blobstore, ctx, submodule_file_content_id, 20)
-      .await
-      .with_context(|| {
-          format!(
-              "Failed to fetch content of submodule {} file containing the submodule's git commit hash",
-              &submodule_path
-          )
-      })?;
+        .await
+        .with_context(
+            || "Failed to fetch content of file containing the submodule's git commit hash",
+        )?;
 
     let git_submodule_hash = RichGitSha1::from_bytes(&bytes, ObjectKind::Commit.as_str(), 0)?;
     let git_submodule_sha1 = git_submodule_hash.sha1();
 
     anyhow::Ok(git_submodule_sha1)
+}
+
+/// Get the git hash from a submodule file, which represents the commit from the
+/// given submodule that the source repo depends on at that revision.
+pub(crate) async fn git_hash_from_submodule_metadata_file<'a, B: Blobstore>(
+    ctx: &'a CoreContext,
+    blobstore: &'a B,
+    submodule_file_content_id: ContentId,
+) -> Result<GitSha1> {
+    let bytes = filestore::fetch_concat_exact(&blobstore, ctx, submodule_file_content_id, 40)
+      .await
+      .with_context(|| {
+          format!(
+              "Failed to fetch content from content id {} file containing the submodule's git commit hash",
+              &submodule_file_content_id
+          )
+      })?;
+
+    let git_hash_string = std::str::from_utf8(bytes.as_ref())?;
+    let git_sha1 = GitSha1::from_str(git_hash_string)?;
+
+    anyhow::Ok(git_sha1)
 }
 
 pub(crate) fn get_submodule_repo<'a, 'b, R: Repo>(
@@ -80,6 +104,16 @@ pub(crate) async fn is_path_git_submodule(
         .is_some())
 }
 
+pub(crate) fn x_repo_submodule_metadata_file_basename<S: std::fmt::Display>(
+    submodule_basename: &S,
+    x_repo_submodule_metadata_file_prefix: &str,
+) -> Result<MPathElement> {
+    MPathElement::new(
+        format!(".{x_repo_submodule_metadata_file_prefix}-{submodule_basename}")
+            .to_string()
+            .into_bytes(),
+    )
+}
 /// Builds the full path of the x-repo submodule metadata file for a given
 /// submodule.
 pub(crate) fn get_x_repo_submodule_metadata_file_path(
@@ -90,15 +124,14 @@ pub(crate) fn get_x_repo_submodule_metadata_file_path(
 ) -> Result<NonRootMPath> {
     let (mb_sm_parent_dir, sm_basename) = submodule_file_path.0.split_dirname();
 
-    let x_repo_sm_metadata_file: NonRootMPath = NonRootMPath::new(
-        format!(".{x_repo_submodule_metadata_file_prefix}-{sm_basename}")
-            .to_string()
-            .into_bytes(),
+    let x_repo_sm_metadata_file = x_repo_submodule_metadata_file_basename(
+        &sm_basename,
+        x_repo_submodule_metadata_file_prefix,
     )?;
 
     let x_repo_sm_metadata_path = match mb_sm_parent_dir {
         Some(sm_parent_dir) => sm_parent_dir.join(&x_repo_sm_metadata_file),
-        None => x_repo_sm_metadata_file,
+        None => x_repo_sm_metadata_file.into(),
     };
     Ok(x_repo_sm_metadata_path)
 }
@@ -184,12 +217,15 @@ pub(crate) async fn list_all_paths(
         .map_ok(|(path, _)| path))
 }
 
-pub(crate) async fn list_non_submodule_files_under(
+pub(crate) async fn list_non_submodule_files_under<R>(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    repo: &R,
     cs_id: ChangesetId,
     submodule_path: SubmodulePath,
-) -> Result<impl Stream<Item = Result<NonRootMPath>>> {
+) -> Result<impl Stream<Item = Result<NonRootMPath>>>
+where
+    R: RepoDerivedDataRef + RepoBlobstoreArc,
+{
     let fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -207,4 +243,31 @@ pub(crate) async fn list_non_submodule_files_under(
                 (*fsnode_file.file_type() != FileType::GitSubmodule).then_some(path)
             ))
         }))
+}
+
+/// Gets the root directory's fsnode id from a submodule commit provided as
+/// as a git hash. This is used for working copy validation of submodule
+/// expansion.
+pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    git_hash: GitSha1,
+) -> Result<FsnodeId> {
+    let cs_id: ChangesetId = repo
+        .bonsai_git_mapping()
+        .get_bonsai_from_git_sha1(ctx, git_hash)
+        .await?
+        .ok_or_else(|| {
+            anyhow!(
+                "Failed to get changeset id from git submodule commit hash {} in repo {}",
+                &git_hash,
+                &repo.repo_identity().name()
+            )
+        })?;
+    let submodule_root_fsnode_id: RootFsnodeId = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?;
+
+    Ok(submodule_root_fsnode_id.into_fsnode_id())
 }

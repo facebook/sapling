@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <gtest/gtest_prod.h>
 #include <sys/types.h>
 #include <atomic>
 #include <memory>
@@ -23,8 +24,8 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/HgBackingStoreOptions.h"
-#include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
+#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
@@ -35,7 +36,7 @@ class ReloadableConfig;
 class LocalStore;
 class UnboundedQueueExecutor;
 class EdenStats;
-class HgImportRequest;
+class SaplingImportRequest;
 class StructuredLogger;
 class FaultInjector;
 template <typename T>
@@ -120,50 +121,50 @@ struct HgImportTraceEvent : TraceEventBase {
 };
 
 /**
- * An Hg backing store implementation that will put incoming blob/tree import
- * requests into a job queue, then a pool of workers will work on fulfilling
- * these requests via different methods (reading from hgcache, Mononoke,
- * debugimporthelper, etc.).
+ * A Sapling backing store implementation that will put incoming blob/tree
+ * import requests into a job queue, then a pool of workers will work on
+ * fulfilling these requests via different methods (reading from hgcache,
+ * Mononoke, debugimporthelper, etc.).
  */
-class HgQueuedBackingStore final : public BackingStore {
+class SaplingBackingStore final : public BackingStore {
  public:
-  using ImportRequestsList = std::vector<std::shared_ptr<HgImportRequest>>;
+  using ImportRequestsList = std::vector<std::shared_ptr<SaplingImportRequest>>;
   using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
 
-  HgQueuedBackingStore(
+  SaplingBackingStore(
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+      std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
 
   /**
-   * Create an HgQueuedBackingStore suitable for use in unit tests. It uses an
+   * Create an SaplingBackingStore suitable for use in unit tests. It uses an
    * inline executor to process loaded objects rather than the thread pools used
    * in production Eden.
    */
-  HgQueuedBackingStore(
+  SaplingBackingStore(
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       std::shared_ptr<ReloadableConfig> config,
-      std::unique_ptr<HgBackingStoreOptions> runtimeOptions,
+      std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger,
       FaultInjector* FOLLY_NONNULL faultInjector);
 
-  ~HgQueuedBackingStore() override;
+  ~SaplingBackingStore() override;
 
   /**
    * Objects that can be imported from Hg
    */
-  enum HgImportObject {
+  enum SaplingImportObject {
     BLOB,
     TREE,
     BLOBMETA,
@@ -172,16 +173,17 @@ class HgQueuedBackingStore final : public BackingStore {
     BATCHED_BLOBMETA,
     PREFETCH
   };
-  constexpr static std::array<HgImportObject, 7> hgImportObjects{
-      HgImportObject::BLOB,
-      HgImportObject::TREE,
-      HgImportObject::BLOBMETA,
-      HgImportObject::BATCHED_BLOB,
-      HgImportObject::BATCHED_TREE,
-      HgImportObject::BATCHED_BLOBMETA,
-      HgImportObject::PREFETCH};
+  constexpr static std::array<SaplingImportObject, 7> saplingImportObjects{
+      SaplingImportObject::BLOB,
+      SaplingImportObject::TREE,
+      SaplingImportObject::BLOBMETA,
+      SaplingImportObject::BATCHED_BLOB,
+      SaplingImportObject::BATCHED_TREE,
+      SaplingImportObject::BATCHED_BLOBMETA,
+      SaplingImportObject::PREFETCH};
 
-  static folly::StringPiece stringOfHgImportObject(HgImportObject object);
+  static folly::StringPiece stringOfSaplingImportObject(
+      SaplingImportObject object);
 
   ActivityBuffer<HgImportTraceEvent>& getActivityBuffer() {
     return activityBuffer_;
@@ -218,60 +220,18 @@ class HgQueuedBackingStore final : public BackingStore {
 
   std::optional<Hash20> getManifestNode(const ObjectId& commitId);
 
-  ImmediateFuture<GetRootTreeResult> getRootTree(
-      const RootId& rootId,
-      const ObjectFetchContextPtr& context) override;
-  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
-      const ObjectId& /* objectId */,
-      TreeEntryType /* treeEntryType */,
-      const ObjectFetchContextPtr& /* context */) override {
-    throw std::domain_error("unimplemented");
-  }
-
-  void getTreeBatch(const ImportRequestsList& requests);
-
-  folly::SemiFuture<GetTreeResult> getTree(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobResult> getBlob(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
-
-  /**
-   * Reads blob metadata from hg cache.
-   */
-  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
-
-  // Get blob step functions
-  folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
-
-  /**
-   * Import the manifest for the specified revision using mercurial
-   * treemanifest data.
-   */
-  folly::Future<TreePtr> importTreeManifest(
-      const ObjectId& commitId,
-      const ObjectFetchContextPtr& context);
-
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      ObjectIdRange ids,
-      const ObjectFetchContextPtr& context) override;
-
   /**
    * calculates `metric` for `object` imports that are `stage`.
-   *    ex. HgQueuedBackingStore::getImportMetrics(
+   *    ex. SaplingBackingStore::getImportMetrics(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *          RequestMetricsScope::Metric::COUNT,
    *        )
    *    calculates the number of blob imports that are pending
    */
   size_t getImportMetric(
       RequestMetricsScope::RequestStage stage,
-      HgImportObject object,
+      SaplingImportObject object,
       RequestMetricsScope::RequestMetric metric) const;
 
   void startRecordingFetch() override;
@@ -288,16 +248,56 @@ class HgQueuedBackingStore final : public BackingStore {
     return store_.getRepoName();
   }
 
+  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
+    return localStoreCachingPolicy_;
+  }
+
   int64_t dropAllPendingRequestsFromQueue() override;
 
  private:
+  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getTree);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
+  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch);
+  FRIEND_TEST(
+      SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,
+      getTreeBatch);
+  friend class EdenServiceHandler;
+
   // Forbidden copy constructor and assignment operator
-  HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;
-  HgQueuedBackingStore& operator=(const HgQueuedBackingStore&) = delete;
+  SaplingBackingStore(const SaplingBackingStore&) = delete;
+  SaplingBackingStore& operator=(const SaplingBackingStore&) = delete;
+
+  /**
+   * Import the manifest for the specified revision using mercurial
+   * treemanifest data.
+   */
+  folly::Future<TreePtr> importTreeManifest(
+      const ObjectId& commitId,
+      const ObjectFetchContextPtr& context);
 
   folly::Future<TreePtr> importTreeManifestImpl(
       Hash20 manifestNode,
       const ObjectFetchContextPtr& context);
+
+  ImmediateFuture<GetRootTreeResult> getRootTree(
+      const RootId& rootId,
+      const ObjectFetchContextPtr& context) override;
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& /* objectId */,
+      TreeEntryType /* treeEntryType */,
+      const ObjectFetchContextPtr& /* context */) override {
+    throw std::domain_error("unimplemented");
+  }
+
+  void getTreeBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetch_mode);
+
+  folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
 
   folly::Try<TreePtr> getTreeFromBackingStore(
       const RelativePath& path,
@@ -316,33 +316,51 @@ class HgQueuedBackingStore final : public BackingStore {
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
 
-  void processBlobImportRequests(
-      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
-  void processTreeImportRequests(
-      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
-  void processBlobMetaImportRequests(
-      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+  /**
+   * Imports the tree identified by the given hash from the hg cache.
+   * Returns nullptr if not found.
+   */
+  TreePtr getTreeLocal(
+      const ObjectId& edenTreeId,
+      const HgProxyHash& proxyHash);
+
+  /**
+   * Imports the tree identified by the given hash from the remote store.
+   * Returns nullptr if not found.
+   */
+  folly::Try<TreePtr> getTreeRemote(
+      const RelativePath& path,
+      const Hash20& manifestId,
+      const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context);
+
+  /**
+   * Fetch a tree from Mercurial.
+   *
+   * For latency sensitive context, the caller is responsible for checking if
+   * the tree is present locally, as this function will always push the request
+   * at the end of the queue.
+   */
+  ImmediateFuture<GetTreeResult> getTreeEnqueue(
+      const ObjectId& id,
+      const HgProxyHash& proxyHash,
+      const ObjectFetchContextPtr& context);
+
+  folly::SemiFuture<GetBlobResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
+  // Get blob step functions
+  folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
    * length. Promises passed in will be resolved if a blob is successfully
    * imported. Otherwise the promise will be left untouched.
    */
-  void getBlobBatch(const ImportRequestsList& requests);
-
-  /**
-   * Fetch multiple aux data at once.
-   *
-   * This function returns when all the aux data have been fetched.
-   */
-  void getBlobMetadataBatch(const ImportRequestsList& requests);
-
-  /**
-   * The worker runloop function.
-   */
-  void processRequest();
-
-  void logMissingProxyHash();
+  void getBlobBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetchMode);
 
   /**
    * Fetch a blob from Mercurial.
@@ -367,25 +385,8 @@ class HgQueuedBackingStore final : public BackingStore {
       const HgProxyHash& hgInfo,
       sapling::FetchMode fetchMode);
 
- public:
   /**
-   * Fetch the blob metadata from Mercurial.
-   *
-   * For latency sensitive context, the caller is responsible for checking if
-   * the blob metadata is present locally, as this function will always push
-   * the request at the end of the queue.
-   *
-   * This is marked as public but don't be fooled, this is not intended to be
-   * used by anybody but HgQueuedBackingStore and debugGetBlobMetadata Thrift
-   * handler.
-   */
-  ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
-      const ObjectId& id,
-      const HgProxyHash& proxyHash,
-      const ObjectFetchContextPtr& context);
-
-  /**
-   * Imports the blob identified by the given hash from the local store.
+   * Imports the blob identified by the given hash from the hg cache.
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
@@ -400,18 +401,53 @@ class HgQueuedBackingStore final : public BackingStore {
     return getBlobFromBackingStore(hgInfo, sapling::FetchMode::RemoteOnly);
   }
 
- private:
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
   /**
-   * Fetch a tree from Mercurial.
+   * Fetch the blob metadata from Mercurial.
    *
    * For latency sensitive context, the caller is responsible for checking if
-   * the tree is present locally, as this function will always push the request
-   * at the end of the queue.
+   * the blob metadata is present locally, as this function will always push
+   * the request at the end of the queue.
    */
-  ImmediateFuture<GetTreeResult> getTreeEnqueue(
+  ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
+
+  /**
+   * Fetch multiple aux data at once.
+   *
+   * This function returns when all the aux data have been fetched.
+   */
+  void getBlobMetadataBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetch_mode);
+
+  /**
+   * Reads blob metadata from hg cache.
+   */
+  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
+
+  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
+      ObjectIdRange ids,
+      const ObjectFetchContextPtr& context) override;
+
+  void processBlobImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+  void processTreeImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+  void processBlobMetaImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+
+  /**
+   * The worker runloop function.
+   */
+  void processRequest();
+
+  void logMissingProxyHash();
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is in the
@@ -424,35 +460,35 @@ class HgQueuedBackingStore final : public BackingStore {
 
   /**
    * gets the watches timing `object` imports that are `stage`
-   *    ex. HgQueuedBackingStore::getImportWatches(
+   *    ex. SaplingBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *        )
    *    gets the watches timing blob imports that are pending
    */
   RequestMetricsScope::LockedRequestWatchList& getImportWatches(
       RequestMetricsScope::RequestStage stage,
-      HgImportObject object) const;
+      SaplingImportObject object) const;
 
   /**
    * Gets the watches timing pending `object` imports
-   *   ex. HgQueuedBackingStore::getPendingImportWatches(
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *   ex. SaplingBackingStore::getPendingImportWatches(
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *        )
    *    gets the watches timing pending blob imports
    */
   RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
-      HgImportObject object) const;
+      SaplingImportObject object) const;
 
   /**
    * Gets the watches timing live `object` imports
-   *   ex. HgQueuedBackingStore::getLiveImportWatches(
-   *          HgQueuedBackingStore::HgImportObject::BLOB,
+   *   ex. SaplingBackingStore::getLiveImportWatches(
+   *          SaplingBackingStore::SaplingImportObject::BLOB,
    *        )
    *    gets the watches timing live blob imports
    */
   RequestMetricsScope::LockedRequestWatchList& getLiveImportWatches(
-      HgImportObject object) const;
+      SaplingImportObject object) const;
 
   template <typename T>
   std::pair<ImportRequestsMap, std::vector<sapling::SaplingRequest>>
@@ -461,25 +497,7 @@ class HgQueuedBackingStore final : public BackingStore {
       const std::string& requestType);
 
   /**
-   * Imports the tree identified by the given hash from the local store.
-   * Returns nullptr if not found.
-   */
-  TreePtr getTreeLocal(
-      const ObjectId& edenTreeId,
-      const HgProxyHash& proxyHash);
-
-  /**
-   * Imports the tree identified by the given hash from the remote store.
-   * Returns nullptr if not found.
-   */
-  folly::Try<TreePtr> getTreeRemote(
-      const RelativePath& path,
-      const Hash20& manifestId,
-      const ObjectId& edenTreeId,
-      const ObjectFetchContextPtr& context);
-
-  /**
-   * isRecordingFetch_ indicates if HgQueuedBackingStore is recording paths
+   * isRecordingFetch_ indicates if SaplingBackingStore is recording paths
    * for fetched files. Initially we don't record paths. When
    * startRecordingFetch() is called, isRecordingFetch_ is set to true and
    * recordFetch() will record the input path. When stopRecordingFetch() is
@@ -511,7 +529,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * The import request queue. This queue is unbounded. This queue
    * implementation will ensure enqueue operation never blocks.
    */
-  HgImportRequestQueue queue_;
+  SaplingImportRequestQueue queue_;
 
   /**
    * The worker thread pool. These threads will be running `processRequest`
@@ -527,6 +545,8 @@ class HgQueuedBackingStore final : public BackingStore {
   std::unique_ptr<BackingStoreLogger> logger_;
 
   FaultInjector& faultInjector_;
+
+  LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   // The last time we logged a missing proxy hash so the minimum interval is
   // limited to EdenConfig::missingHgProxyHashLogInterval.
@@ -555,7 +575,7 @@ class HgQueuedBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       liveBatchedBlobMetaWatches_;
 
-  std::unique_ptr<HgBackingStoreOptions> runtimeOptions_;
+  std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions_;
 
   ActivityBuffer<HgImportTraceEvent> activityBuffer_;
 

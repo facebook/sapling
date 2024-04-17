@@ -672,6 +672,29 @@ def parsesubmodules(ctx):
     return submodules
 
 
+def maybe_cleanup_submodule_in_treestate(repo):
+    """Remove treestate submodule entries, based on '.gitmodules' in the working copy.
+
+    By the current design, treestate should not track submodules. However,
+    those entries sometimes (mistakenly?) got in the treestate. This function
+    cleans them up.
+    """
+    if (
+        "treestate" not in repo.requirements
+        or GIT_FORMAT_REQUIREMENT not in repo.storerequirements
+    ):
+        # No need to cleanup if treestate is not used (ex. dotgit), or if Git format is not used.
+        return
+
+    data = repo.wvfs.tryread(".gitmodules")
+    if not data:
+        return
+
+    remove = repo.dirstate._map._tree.remove
+    for _name, _url, path in bindings.workingcopy.parsegitsubmodules(data):
+        remove(path)
+
+
 def submodulecheckout(ctx, match=None, force=False, mctx=None):
     """Checkout commits specified in submodules
 
@@ -863,7 +886,7 @@ class Submodule:
             self._pullraw(repo, hex(node))
 
     def pullhead(self, repo):
-        self._pullraw("HEAD")
+        self._pullraw(repo, "HEAD")
 
     def _pullraw(self, repo, refspec_lhs):
         repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)

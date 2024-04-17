@@ -48,7 +48,7 @@ impl RepoContext {
             let target = redirector
                 .get_small_to_large_commit_equivalent(ctx, target)
                 .await?;
-            make_create_op(&large_bookmark, target, pushvars)
+            let log_id = make_create_op(&large_bookmark, target, pushvars)
                 .run(
                     self.ctx(),
                     self.authorization_context(),
@@ -57,7 +57,7 @@ impl RepoContext {
                 )
                 .await?;
             // Wait for bookmark to catch up on small repo
-            redirector.backsync_latest(ctx).await?;
+            redirector.ensure_backsynced(ctx, log_id).await?;
         } else {
             make_create_op(bookmark, target, pushvars)
                 .run(

@@ -61,10 +61,14 @@ class PrivHelper {
    *
    * Returns a folly::File object with the file descriptor containing the fuse
    * connection.
+   *
+   * VFS type should be set, it should only be nullopt in tests where we want
+   * to test old behavior.
    */
   FOLLY_NODISCARD virtual folly::Future<folly::File> fuseMount(
       folly::StringPiece mountPath,
-      bool readOnly) = 0;
+      bool readOnly,
+      std::optional<folly::StringPiece> vfsType) = 0;
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,

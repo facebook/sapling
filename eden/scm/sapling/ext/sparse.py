@@ -1002,8 +1002,7 @@ class SparseMixin:
 
         includetemp = kwargs.get("includetemp", True)
 
-        # Don't allow overrides for edensparse checkouts
-        rawconfig = kwargs.get("config") if not _isedensparse(self) else None
+        rawconfig = kwargs.get("config")
 
         cachekey = self._cachekey(revs, includetemp=includetemp)
 

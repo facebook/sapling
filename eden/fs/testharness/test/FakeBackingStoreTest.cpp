@@ -18,15 +18,15 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/testharness/TestUtil.h"
 
-using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
 using folly::io::Cursor;
 
-namespace {
+namespace facebook::eden {
 class FakeBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    store_ = std::make_unique<FakeBackingStore>();
+    store_ = std::make_unique<FakeBackingStore>(
+        BackingStore::LocalStoreCachingPolicy::NoCaching);
   }
 
   void TearDown() override {
@@ -46,7 +46,6 @@ std::string blobContents(const Blob& blob) {
   Cursor c(&blob.getContents());
   return c.readFixedString(blob.getContents().computeChainDataLength());
 }
-} // namespace
 
 TEST_F(FakeBackingStoreTest, getNonExistent) {
   // getRootTree()/getTree()/getBlob() should throw immediately
@@ -347,3 +346,4 @@ TEST_F(FakeBackingStoreTest, maybePutTree) {
   EXPECT_FALSE(dir2.second);
   EXPECT_EQ(dir1.first, dir2.first);
 }
+} // namespace facebook::eden
