@@ -779,13 +779,20 @@ def mkdir(args: List[str], fs: ShellFS):
 
 
 @command
-def chdir(args: List[str], env: Env, fs: ShellFS):
+def chdir(args: List[str], env: Env, stderr: BinaryIO, fs: ShellFS):
     if args:
         path = args[-1]
     else:
         path = env.getenv("HOME")
-    if path:
+    if not path:
+        stderr.write(f"cd: HOME not set\n".encode())
+        return 1
+    if fs.isdir(path):
         fs.chdir(path)
+        return 0
+    else:
+        stderr.write(f"cd: {path}: No such file or directory\n".encode())
+        return 1
 
 
 @command
