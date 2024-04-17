@@ -6,26 +6,6 @@
 
 # pyre-strict
 
-# _______ _________ _______  _______  _
-# (  ____ \\__   __/(  ___  )(  ____ )( )
-# | (    \/   ) (   | (   ) || (    )|| |
-# | (_____    | |   | |   | || (____)|| |
-# (_____  )   | |   | |   | ||  _____)| |
-#      ) |   | |   | |   | || (      (_)
-# /\____) |   | |   | (___) || )       _
-# \_______)   )_(   (_______)|/       (_)
-#
-#          _______  _______  _        _______    _______ _________ _        _______
-# |\     /|(  ____ )(  ___  )( (    /|(  ____ \  (  ____ \\__   __/( \      (  ____ \
-# | )   ( || (    )|| (   ) ||  \  ( || (    \/  | (    \/   ) (   | (      | (    \/
-# | | _ | || (____)|| |   | ||   \ | || |        | (__       | |   | |      | (__
-# | |( )| ||     __)| |   | || (\ \) || | ____   |  __)      | |   | |      |  __)
-# | || || || (\ (   | |   | || | \   || | \_  )  | (         | |   | |      | (
-# | () () || ) \ \__| (___) || )  \  || (___) |  | )      ___) (___| (____/\| (____/\
-# (_______)|/   \__/(_______)|/    )_)(_______)  |/       \_______/(_______/(_______/
-
-# Redirect has been oxidized! Check redirect.rs instead
-# This file contains the bare minimum to support the remaning Python code.
 
 import argparse
 import enum
@@ -46,7 +26,9 @@ from thrift.Thrift import TApplicationException
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
 
 from .buck import is_buckd_running_for_path, stop_buckd_for_path, stop_buckd_for_repo
-from .config import EdenCheckout, EdenInstance, load_toml_config
+from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
+from .prompt import prompt_confirmation
+from .subcmd import Subcmd
 from .util import mkscratch_bin
 
 
@@ -756,6 +738,26 @@ def run_cmd_quietly(args, check: bool = True) -> int:
     return proc.returncode
 
 
+def apply_redirection_configs_to_checkout_config(
+    checkout: EdenCheckout, redirs: Iterable[Redirection]
+) -> CheckoutConfig:
+    """Translate the redirections into a new CheckoutConfig"""
+
+    config = checkout.get_config()
+    redirections = {}
+    for r in redirs:
+        if r.source != REPO_SOURCE:
+            normalized = os.fsdecode(r.repo_path)
+            if sys.platform == "win32":
+                # TODO: on Windows we replace backslash \ with / since
+                # python-toml doesn't escape them correctly when used as key
+                normalized = normalized.replace("\\", "/")
+            redirections[normalized] = r.type
+    return config._replace(
+        redirections=redirections,
+    )
+
+
 def is_empty_dir(path: Path) -> bool:
     for ent in path.iterdir():
         if ent not in (".", ".."):
@@ -767,6 +769,12 @@ def prepare_redirection_list(checkout: EdenCheckout, instance: EdenInstance) -> 
     mount_table = mtab.new()
     redirs = get_effective_redirections(checkout, mount_table, instance)
     return create_redirection_configs(checkout, redirs.values(), False)
+
+
+def print_redirection_configs(
+    checkout: EdenCheckout, redirs: Iterable[Redirection], use_json: bool
+) -> None:
+    print(create_redirection_configs(checkout, redirs, use_json))
 
 
 def create_redirection_configs(
@@ -782,21 +790,459 @@ def create_redirection_configs(
         return tabulate.tabulate(columns, data)
 
 
-# This function is used by "eden stop", so we can't remove it yet.
-def unmount(args: argparse.Namespace, mount_point: str) -> int:
-    instance, checkout, _rel_path = cmd_util.require_checkout(args, mount_point)
-    mount_table = mtab.new()
-    redirs = get_effective_redirections(checkout, mount_table, instance)
+@redirect_cmd("list", "List redirections")
+class ListCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
+        parser.add_argument(
+            "--json",
+            help="output in json rather than human readable text",
+            action="store_true",
+        )
 
-    for redir in redirs.values():
-        redir.remove_existing(checkout)
-        if redir.type == RedirectionType.UNKNOWN:
-            continue
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
 
-    # recompute
-    redirs = get_effective_redirections(checkout, mount_table, instance)
-    ok = True
-    for redir in redirs.values():
-        if redir.state == RedirectionState.MATCHES_CONFIGURATION:
-            ok = False
-    return 0 if ok else 1
+        mount_table = mtab.new()
+        redirs = get_effective_redirections(checkout, mount_table, instance)
+        print_redirection_configs(checkout, redirs.values(), args.json)
+        return 0
+
+
+@redirect_cmd("cleanup-apfs", "Delete stale apfs volumes")
+class CleanupApfsCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        if sys.platform != "darwin" or not have_apfs_helper():
+            raise Exception(f"Unsupported platform {sys.platform}")
+
+        instance = cmd_util.get_eden_instance(args)
+        mounts = instance.get_mounts()
+
+        stdout = subprocess.check_output(
+            [
+                APFS_HELPER,
+                "list-stale-volumes",
+            ]
+            + [str(path) for path in mounts]
+            + ["--json"]
+        ).decode("utf-8")
+        stale_volumes = json.loads(stdout)
+
+        if not stale_volumes:
+            print("No stale volumes detected")
+            return 0
+
+        if sys.stdin.isatty():
+            volumes_str = "\n  ".join(stale_volumes)
+            print(
+                f"""\
+Warning: this operation will permanently delete the following volumes:
+  {volumes_str}
+"""
+            )
+            if not prompt_confirmation("Proceed?"):
+                print("Not deleting volumes")
+                return 2
+
+        return_code = 0
+        for vol in stale_volumes:
+            result = subprocess.run(
+                [
+                    APFS_HELPER,
+                    "delete-volume",
+                    vol,
+                ],
+            )
+            if result.returncode:
+                print(f"Failed to delete volume {vol} due to {result.stderr}")
+                return_code = 1
+            else:
+                print(f"Deleted volume: {vol}")
+
+        return return_code
+
+
+@redirect_cmd(
+    "unmount",
+    (
+        "Unmount all effective redirection configuration, but preserve "
+        "the configuration so that a subsequent fixup will restore it"
+    ),
+)
+class UnmountCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+        mount_table = mtab.new()
+        redirs = get_effective_redirections(checkout, mount_table, instance)
+
+        for redir in redirs.values():
+            redir.remove_existing(checkout)
+            if redir.type == RedirectionType.UNKNOWN:
+                continue
+
+        # recompute and display the current state
+        redirs = get_effective_redirections(checkout, mount_table, instance)
+        ok = True
+        for redir in redirs.values():
+            if redir.state == RedirectionState.MATCHES_CONFIGURATION:
+                ok = False
+        return 0 if ok else 1
+
+
+@redirect_cmd(
+    "fixup",
+    (
+        "Fixup redirection configuration; redirect things that "
+        "should be redirected and remove things that should not be redirected"
+    ),
+)
+class FixupCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
+        parser.add_argument(
+            "--force-remount-bind-mounts",
+            help=(
+                "Unmount and re-bind mount any bind mount redirections "
+                "to ensure that they are pointing to the right place.  "
+                "This is not the default behavior in the interest of "
+                "preserving kernel caches"
+            ),
+            action="store_true",
+        )
+        parser.add_argument(
+            "--only-repo-source",
+            help=(
+                "By default, paths from all sources are fixed. Setting this "
+                "flag to true will fix paths only from the .eden-redirections "
+                "source."
+            ),
+            default=False,
+            action="store_true",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+        mount_table = mtab.new()
+        redirs = get_effective_redirections(checkout, mount_table, instance)
+        for redir in redirs.values():
+            if redir.state == RedirectionState.MATCHES_CONFIGURATION and not (
+                args.force_remount_bind_mounts and redir.type == RedirectionType.BIND
+            ):
+                continue
+
+            if args.only_repo_source and redir.source != REPO_SOURCE:
+                continue
+
+            print(f"Fixing {redir.repo_path}", file=sys.stderr)
+            redir.remove_existing(checkout)
+            if redir.type == RedirectionType.UNKNOWN:
+                continue
+            redir.apply(checkout)
+
+        # recompute and display the current state
+        redirs = get_effective_redirections(checkout, mount_table, instance)
+        ok = True
+        for redir in redirs.values():
+            if redir.state != RedirectionState.MATCHES_CONFIGURATION:
+                # When --only-repo-source is passed, we may fail to fixup some
+                # redirections. This scenario is ok and should not be
+                # considered a failure.
+                if not args.only_repo_source or redir.source == REPO_SOURCE:
+                    ok = False
+        return 0 if ok else 1
+
+
+def resolve_repo_relative_path(checkout_path: Path, repo_rel_path: Path) -> Path:
+    """Given a path, verify that it is an appropriate repo-root-relative path
+    and return the resolved form of that path.
+    The ideal is that they pass in `foo` and we return `foo`, but we also
+    allow for the path to be absolute path to `foo`, in which case we resolve
+    it and verify that it falls with the repo and then return the relative
+    path to `foo`."""
+
+    if repo_rel_path.is_absolute():
+        # Well, the original intent was to only interpret paths as relative
+        # to the repo root, but it's a bit burdensome to require the caller
+        # to correctly relativize for that case, so we'll allow an absolute
+        # path to be specified.
+        try:
+            canonical_repo_path = repo_rel_path.resolve()
+            return canonical_repo_path.relative_to(checkout_path)
+        except ValueError:
+            raise RuntimeError(
+                (
+                    f"The redirection path `{repo_rel_path}` doesn't resolve "
+                    f"to a path inside the repo `{checkout_path}`"
+                )
+            )
+
+    # Otherwise, the path must be interpreted as being relative to the repo
+    # root, so let's resolve that and verify that it lies within the repo
+    candidate = (checkout_path / repo_rel_path).resolve()
+    try:
+        relative = candidate.relative_to(checkout_path)
+    except ValueError:
+        raise RuntimeError(
+            (
+                f"The repo-root-relative redirection path `{repo_rel_path}` "
+                f"doesn't resolve to a path inside the repo `{checkout_path}`. "
+                "Specify either a canonical absolute path to the redirection, or "
+                "a canonical (without `..` components) path relative to the "
+                f"repository root at `{checkout_path}`."
+            )
+        )
+
+    # If the resolved and relativized path doesn't match the user-specified
+    # path then it means that they either used `..` or a path that resolved
+    # through a symlink.  The former is ambiguous, especially because it likely
+    # implies that the user is assuming that the path is current working directory
+    # relative instead of repo root relative, and the latter is problematic for
+    # all of the usual symlink reasons.
+    if relative != repo_rel_path:
+        raise RuntimeError(
+            (
+                f"The redirection path `{repo_rel_path}` resolves to `{relative}` "
+                "but must be a canonical repo-root-relative path. Specify either a "
+                "canonical absolute path to the redirection, or a canonical "
+                "(without `..` components) path "
+                f"relative to the repository root at `{checkout_path}`."
+            )
+        )
+
+    return repo_rel_path
+
+
+@redirect_cmd("add", "Add or change a redirection")
+class AddCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
+        parser.add_argument(
+            "repo_path", help="The path in the repo which should be redirected"
+        )
+        parser.add_argument(
+            "redir_type",
+            help="The type of the redirection",
+            choices=["bind", "symlink"],
+        )
+        parser.add_argument(
+            "--force-remount-bind-mounts",
+            help=(
+                "Unmount and re-bind mount any bind mount redirections "
+                "to ensure that they are pointing to the right place.  "
+                "This is not the default behavior in the interest of "
+                "preserving kernel caches"
+            ),
+            action="store_true",
+        )
+        parser.add_argument(
+            "--strict",
+            help=(
+                "force bind mount to fail if it would overwrite an "
+                "existing directory"
+            ),
+            action="store_true",
+        )
+
+    def _should_return_success_early(
+        self,
+        redir_type: RedirectionType,
+        configured_redirections: Dict[str, Redirection],
+        checkout_path: Path,
+        repo_path: Path,
+    ) -> bool:
+        """We should return success early iff:
+        1) we're adding a symlink redirection
+        2) the symlink already exists
+        3) the symlink is already a redirection that's managed by EdenFS
+        """
+        if redir_type == RedirectionType.SYMLINK:
+            # We cannot use resolve_repo_relative_path() because it will essentially
+            # attempt to resolve any existing symlinks twice. This causes us to never
+            # return the correct path for existing symlinks. Instead, we skip resolving
+            # and simply check if the absolute path is relative to the checkout path
+            # and if any relative paths are pre-existing configured redirections.
+            relative_path = repo_path
+            if repo_path.is_absolute():
+                try:
+                    canonical_repo_path = repo_path
+                    relative_path = canonical_repo_path.relative_to(checkout_path)
+                except ValueError:
+                    raise RuntimeError(
+                        (
+                            f"The redirection  path `{repo_path}` doesn't resolve "
+                            f"to a path inside the repo `{checkout_path}`"
+                        )
+                    )
+
+            existing_redir = configured_redirections.get(str(relative_path), None)
+            if (
+                existing_redir
+                and existing_redir.type == RedirectionType.SYMLINK
+                and existing_redir.repo_path == relative_path
+            ):
+                return True
+        return False
+
+    def run(self, args: argparse.Namespace) -> int:
+        redir_type = RedirectionType.from_arg_str(args.redir_type)
+
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+
+        # Get only the explicitly configured entries for the purposes of the
+        # add command, so that we avoid writing out any of the effective list
+        # of redirections to the local configuration.  That doesn't matter so
+        # much at this stage, but when we add loading in profile(s) later we
+        # don't want to scoop those up and write them out to this branch of
+        # the configuration.
+        redirs = get_configured_redirections(checkout)
+
+        # We are only checking for pre-existing symlinks in this method, so we
+        # can use the configured mounts instead of the effective mounts. This is
+        # because the symlinks contained in these lists should be the same. I.e.
+        # if a symlink is configured, it is also effective.
+        if self._should_return_success_early(
+            redir_type, redirs, checkout.path, Path(args.repo_path)
+        ):
+            print("EdenFS managed symlink redirection already exists.")
+            return 0
+
+        # We need to query the status of the mounts to catch things like
+        # a redirect being configured but unmounted.  This improves the
+        # UX in the case where eg: buck is adding a redirect.  Without this
+        # we'd hit the skip case below because it is configured, but we wouldn't
+        # bring the redirection back online.
+        # However, we keep this separate from the `redirs` list below for
+        # the reasons stated in the comment above.
+        effective_redirs = get_effective_redirections(checkout, mtab.new(), instance)
+
+        try:
+            args.repo_path = str(
+                resolve_repo_relative_path(checkout.path, Path(args.repo_path))
+            )
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        redir = Redirection(
+            Path(args.repo_path), redir_type, None, USER_REDIRECTION_SOURCE
+        )
+        existing_redir = effective_redirs.get(args.repo_path, None)
+        if (
+            existing_redir
+            and existing_redir == redir
+            and not args.force_remount_bind_mounts
+            and existing_redir.state != RedirectionState.NOT_MOUNTED
+        ):
+            print(
+                f"Skipping {redir.repo_path}; it is already configured "
+                "(use --force-remount-bind-mounts to force reconfiguring "
+                "this redirection)",
+                file=sys.stderr,
+            )
+            return 0
+
+        # We should prevent users from accidentally overwriting existing
+        # directories. We only need to check this condition for bind mounts
+        # because symlinks should already fail if the target dir exists.
+        if redir_type == RedirectionType.BIND and redir.repo_path.is_dir():
+            print(
+                f"WARNING: {redir.repo_path} already exists.\nMounting over "
+                "an existing directory will overwrite its contents.\nYou can "
+                "use --strict to prevent overwriting existing directories.\n"
+            )
+            with instance.get_telemetry_logger().new_sample(
+                "redirection_overwrite"
+            ) as tel_logger:
+                tel_logger.add_string("existing_dir", str(redir.repo_path))
+                tel_logger.add_string("checkout", str(checkout.path))
+            if args.strict:
+                print(
+                    f"Not adding redirection {redir.repo_path} because "
+                    "the --strict option was used.\nIf you would like "
+                    "to add this redirection (not recommended), then "
+                    "rerun this command without --strict.",
+                    file=sys.stderr,
+                )
+                return 1
+
+        redir.apply(checkout)
+
+        # We expressly allow replacing an existing configuration in order to
+        # support a user with a local ad-hoc override for global- or profile-
+        # specified configuration.
+        redirs[args.repo_path] = redir
+        config = apply_redirection_configs_to_checkout_config(checkout, redirs.values())
+
+        # and persist the configuration so that we can re-apply it in a subsequent
+        # call to `edenfsctl redirect fixup`
+        checkout.save_config(config)
+        return 0
+
+
+@redirect_cmd("del", "Delete a redirection")
+class DelCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
+        parser.add_argument(
+            "repo_path",
+            help="The path in the repo which should no longer be redirected",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+
+        redirs = get_configured_redirections(checkout)
+        # Note that we're deliberately not using the same validation logic
+        # for args.repo_path that we do for the add case for now so that we
+        # provide a way to remove bogus redirection paths.  After we've deployed
+        # the improved `add` validation for a while, we can use it here also.
+        redir = redirs.get(args.repo_path)
+        if redir:
+            redir.remove_existing(checkout)
+            del redirs[args.repo_path]
+            config = apply_redirection_configs_to_checkout_config(
+                checkout, redirs.values()
+            )
+            checkout.save_config(config)
+            return 0
+
+        redirs = get_effective_redirections(checkout, mtab.new(), instance)
+        redir = redirs.get(args.repo_path)
+        if redir:
+            # This path isn't possible to trigger until we add profiles,
+            # but let's be ready for it anyway.
+            print(
+                f"error: {args.repo_path} is defined by {redir.source} and "
+                "cannot be removed using `edenfsctl redirect del {args.repo_path}",
+                file=sys.stderr,
+            )
+            return 1
+
+        print(f"{args.repo_path} is not a known redirection", file=sys.stderr)
+        return 1
+
+
+class RedirectCmd(Subcmd):
+    NAME = "redirect"
+    HELP = "List and manipulate redirected paths"
+    ALIASES = ["redir"]
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        self.add_subcommands(parser, redirect_cmd.commands)
+
+    def run(self, args: argparse.Namespace) -> int:
+        # FIXME: I'd rather just show the help here automatically
+        print("Specify a subcommand! See `eden redirect --help`", file=sys.stderr)
+        return 1

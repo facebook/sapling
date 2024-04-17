@@ -1976,10 +1976,10 @@ class StartCmd(Subcmd):
 def unmount_redirections_for_path(
     repo_path: str, complain_about_failing_to_unmount_redirs: bool
 ) -> None:
-    parser = create_parser()  # This parser comes preloaded with args, don't remove it.
-    args = parser.parse_args()
+    parser = create_parser()
+    args = parser.parse_args(["redirect", "unmount", "--mount", repo_path])
     try:
-        redirect_mod.unmount(args, repo_path)
+        args.func(args)
     except Exception as exc:
         if complain_about_failing_to_unmount_redirs:
             print(
@@ -2551,6 +2551,7 @@ def create_parser() -> argparse.ArgumentParser:
         subcmd_mod.HelpCmd,
         stats_mod.StatsCmd,
         trace_mod.TraceCmd,
+        redirect_mod.RedirectCmd,
         prefetch_mod.GlobCmd,
         prefetch_mod.PrefetchCmd,
     ]
