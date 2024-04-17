@@ -56,13 +56,18 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let conn = app.get_connection(None)?;
 
     if let Some(stress) = args.stress {
-        let results = run_stress(stress.count, stress.parallel, || {
-            cloned!(conn, params);
-            Box::pin(async move {
-                conn.list_repos(&params).await?;
-                Ok(())
-            })
-        })
+        let results = run_stress(
+            stress.count,
+            stress.parallel,
+            conn.get_client_corrrelator(),
+            || {
+                cloned!(conn, params);
+                Box::pin(async move {
+                    conn.list_repos(&params).await?;
+                    Ok(())
+                })
+            },
+        )
         .await;
 
         let output = summary_output(results);

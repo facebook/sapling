@@ -29,6 +29,7 @@ const RECV_TIMEOUT_MS: u32 = 30_000;
 #[derive(Clone)]
 pub(crate) struct Connection {
     client: Arc<dyn SourceControlService + Sync>,
+    correlator: Option<String>,
 }
 
 impl Connection {
@@ -46,7 +47,10 @@ impl Connection {
             with_recv_timeout = RECV_TIMEOUT_MS,
             with_secure = true
         )?;
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            correlator: None,
+        })
     }
 
     /// Build a connection from a `host:port` string.
@@ -69,33 +73,31 @@ impl Connection {
         use srclient::ClientParams;
 
         let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
+        let correlator = client_info
+            .request_info
+            .as_ref()
+            .map(|request_info| request_info.correlator.clone());
         let headers = hashmap! {
             String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
         };
-        let conn_config = hashmap! {
-            String::from("client_id") => client_id,
-        };
 
-        let client = if let Some(shardmanager_domain) = shardmanager_domain {
-            let client_params = ClientParams::new()
-                .with_shard_manager_domain(encode_repo_name(shardmanager_domain));
-            make_SourceControlService_srclient!(
-                fb,
-                tiername = tier.as_ref(),
-                with_conn_config = &conn_config,
-                with_persistent_headers = headers,
-                with_client_params = client_params,
-            )?
-        } else {
-            make_SourceControlService_srclient!(
-                fb,
-                tiername = tier.as_ref(),
-                with_conn_config = &conn_config,
-                with_persistent_headers = headers,
-            )?
-        };
+        let client_params = ClientParams::new()
+            .with_client_id(client_id)
+            .maybe_with(correlator.clone(), |c, correlator| {
+                c.with_logging_context(correlator)
+            })
+            .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
+                c.with_shard_manager_domain(encode_repo_name(shardmanager_domain))
+            });
 
-        Ok(Self { client })
+        let client = make_SourceControlService_srclient!(
+            fb,
+            tiername = tier.as_ref(),
+            with_persistent_headers = headers,
+            with_client_params = client_params,
+        )?;
+
+        Ok(Self { client, correlator })
     }
 
     /// Build a connection from a tier name via servicerouter.
@@ -139,7 +141,10 @@ impl Connection {
             )?
         };
 
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            correlator: None,
+        })
     }
 
     /// Build a connection from a tier name.
@@ -158,6 +163,11 @@ impl Connection {
             }
             other_env => Err(anyhow!("{} not supported", other_env)),
         }
+    }
+
+    /// Return the correlator for this connection.
+    pub fn get_client_corrrelator(&self) -> Option<String> {
+        self.correlator.clone()
     }
 }
 
@@ -192,5 +202,32 @@ impl std::ops::Deref for Connection {
     type Target = dyn SourceControlService + Sync;
     fn deref(&self) -> &Self::Target {
         &*self.client
+    }
+}
+
+trait MaybeWith {
+    fn maybe_with<S>(
+        self,
+        optional: Option<S>,
+        f: impl FnOnce(srclient::ClientParams, S) -> Self,
+    ) -> Self
+    where
+        S: ToString;
+}
+
+impl MaybeWith for srclient::ClientParams {
+    fn maybe_with<S>(
+        self,
+        optional: Option<S>,
+        f: impl FnOnce(srclient::ClientParams, S) -> Self,
+    ) -> Self
+    where
+        S: ToString,
+    {
+        if let Some(s) = optional {
+            f(self, s)
+        } else {
+            self
+        }
     }
 }

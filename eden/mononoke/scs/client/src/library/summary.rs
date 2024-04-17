@@ -56,11 +56,19 @@ impl Render for SummaryOutput {
 pub(crate) async fn run_stress<F>(
     count: usize,
     parallel: usize,
+    client_correlator: Option<String>,
     fun: F,
 ) -> impl Iterator<Item = Result<(), Error>>
 where
     F: Fn() -> ::futures::future::BoxFuture<'static, Result<(), Error>>,
 {
+    println!(
+        "running stress test with count: {} parallel: {}.{}",
+        count,
+        parallel,
+        client_correlator.map_or("".to_string(), |c| format!(" client correlator: {}", c))
+    );
+
     stream::iter(0..count)
         .map(|_| fun())
         .buffer_unordered(parallel)
