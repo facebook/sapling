@@ -71,9 +71,6 @@ pub struct FetchState {
     /// LFS pointers we've discovered corresponding to a request Key.
     lfs_pointers: HashMap<Key, (LfsPointersEntry, bool)>,
 
-    /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
-    pointer_origin: HashMap<Sha256, StoreType>,
-
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Option<Arc<FetchLogger>>,
 
@@ -106,7 +103,6 @@ impl FetchState {
             metrics: FileStoreFetchMetrics::default(),
 
             lfs_pointers: HashMap::new(),
-            pointer_origin: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
@@ -174,30 +170,12 @@ impl FetchState {
         }
     }
 
-    fn mark_complete(&mut self, key: &Key) {
-        if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
-            self.pointer_origin.remove(&ptr.sha256());
-        }
-    }
-
-    fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: StoreType, write: bool) {
-        let sha256 = ptr.sha256();
-        // Overwrite StoreType::Local with StoreType::Shared, but not vice versa
-        match typ {
-            StoreType::Shared => {
-                self.pointer_origin.insert(sha256, typ);
-            }
-            StoreType::Local => {
-                self.pointer_origin.entry(sha256).or_insert(typ);
-            }
-        }
+    fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, write: bool) {
         self.lfs_pointers.insert(key, (ptr, write));
     }
 
-    fn found_attributes(&mut self, key: Key, sf: StoreFile, _typ: Option<StoreType>) {
-        if self.common.found(key.clone(), sf) {
-            self.mark_complete(&key);
-        }
+    fn found_attributes(&mut self, key: Key, sf: StoreFile) {
+        self.common.found(key.clone(), sf);
     }
 
     fn evict_to_cache(
@@ -245,14 +223,14 @@ impl FetchState {
                             // If we don't have somewhere to upgrade pointer,
                             // track as a "found" pointer so it will be fetched
                             // from the remote store subsequently.
-                            self.found_pointer(key, ptr, typ, true)
+                            self.found_pointer(key, ptr, true)
                         }
                     }
                     Err(err) => self.errors.keyed_error(key, err),
                 }
             }
         } else {
-            self.found_attributes(key, LazyFile::IndexedLog(entry).into(), Some(typ))
+            self.found_attributes(key, LazyFile::IndexedLog(entry).into())
         }
     }
 
@@ -346,7 +324,7 @@ impl FetchState {
 
     fn found_aux_indexedlog(&mut self, key: Key, entry: AuxDataEntry, typ: StoreType) {
         let aux_data: FileAuxData = entry;
-        self.found_attributes(key, aux_data.into(), Some(typ));
+        self.found_attributes(key, aux_data.into());
     }
 
     pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, typ: StoreType) {
@@ -423,12 +401,12 @@ impl FetchState {
         }
     }
 
-    fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: StoreType) {
+    fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
-                self.found_attributes(key, LazyFile::Lfs(blob, ptr).into(), Some(typ))
+                self.found_attributes(key, LazyFile::Lfs(blob, ptr).into())
             }
-            LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, typ, false),
+            LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, false),
         }
     }
 
@@ -468,7 +446,7 @@ impl FetchState {
                     } else {
                         found += 1;
                     }
-                    self.found_lfs(key, entry, typ)
+                    self.found_lfs(key, entry)
                 }
                 Ok(None) => {
                     self.metrics.lfs.store(typ).miss(1);
@@ -659,11 +637,11 @@ impl FetchState {
                 Ok((file, maybe_lfsptr)) => {
                     if let Some(lfsptr) = maybe_lfsptr {
                         found_pointers += 1;
-                        self.found_pointer(key.clone(), lfsptr, StoreType::Shared, false);
+                        self.found_pointer(key.clone(), lfsptr, false);
                     } else {
                         found += 1;
                     }
-                    self.found_attributes(key, file, Some(StoreType::Shared));
+                    self.found_attributes(key, file);
                 }
                 Err(err) => {
                     errors += 1;
@@ -782,20 +760,10 @@ impl FetchState {
             |sha256, data| -> Result<()> {
                 prog.increase_position(1);
 
-                match self.pointer_origin.get(&sha256).ok_or_else(|| {
-                    anyhow!(
-                        "no source found for Sha256; received unexpected Sha256 from LFS server"
-                    )
-                })? {
-                    StoreType::Local => local
-                        .as_ref()
-                        .expect("no lfs_local present when handling local LFS pointer")
-                        .add_blob(&sha256, data.clone())?,
-                    StoreType::Shared => cache
-                        .as_ref()
-                        .expect("no lfs_cache present when handling cache LFS pointer")
-                        .add_blob(&sha256, data.clone())?,
-                };
+                cache
+                    .as_ref()
+                    .expect("no lfs_cache present when handling cache LFS pointer")
+                    .add_blob(&sha256, data.clone())?;
 
                 // Unwrap is safe because the only place sha256 could come from is
                 // `pending` and all of its entries were put in `key_map`.
@@ -805,9 +773,8 @@ impl FetchState {
                         ..Default::default()
                     };
 
-                    // It's important to do this after the self.pointer_origin.get() above, since
-                    // found_attributes removes the key from pointer_origin.
-                    self.found_attributes(key.clone(), file, Some(StoreType::Shared));
+                    self.found_attributes(key.clone(), file);
+                    self.lfs_pointers.remove(&key);
                 }
 
                 Ok(())
@@ -856,7 +823,7 @@ impl FetchState {
                 meta,
             );
             self.metrics.contentstore.hit(1);
-            self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into(), None)
+            self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into())
         }
     }
 
@@ -995,9 +962,6 @@ impl FetchState {
 
                         if !self.fetch_mode.ignore_result() {
                             let _ = self.common.found_tx.send(Ok((key.clone(), new)));
-                        }
-                        if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
-                            self.pointer_origin.remove(&ptr.sha256());
                         }
 
                         // Remove this entry from `pending`.
