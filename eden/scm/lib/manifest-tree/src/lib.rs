@@ -820,6 +820,16 @@ mod tests {
     }
 
     #[test]
+    fn test_contain_file() {
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("foo/bar"), make_meta("10"))
+            .unwrap();
+        assert!(tree.contain_file(repo_path("foo/bar")).unwrap());
+        assert!(!tree.contain_file(repo_path("foo")).unwrap());
+        assert!(!tree.contain_file(repo_path("baz")).unwrap());
+    }
+
+    #[test]
     fn test_durable_link() {
         let store = TestStore::new();
         let root_entry = store::Entry::from_elements_hg(vec![
