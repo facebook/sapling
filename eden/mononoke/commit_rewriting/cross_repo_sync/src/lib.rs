@@ -45,6 +45,7 @@ pub use commit_syncers_lib::rewrite_commit;
 pub use commit_syncers_lib::update_mapping_with_version;
 pub use commit_syncers_lib::CommitSyncRepos;
 pub use commit_syncers_lib::Syncers;
+pub use git_submodules::InMemoryRepo;
 pub use git_submodules::SubmoduleExpansionData;
 pub use reporting::CommitSyncContext;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;

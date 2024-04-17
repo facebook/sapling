@@ -20,6 +20,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
@@ -28,6 +29,7 @@ use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
 use changesets::Changesets;
+use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
@@ -175,6 +177,7 @@ pub trait Repo = BookmarksArc
     + BookmarkUpdateLogRef
     + RepoBlobstoreArc
     + BonsaiHgMappingRef
+    + BonsaiHgMappingArc
     + BonsaiGlobalrevMappingArc
     + RepoCrossRepoRef
     + PushrebaseMutationMappingRef
@@ -183,6 +186,7 @@ pub trait Repo = BookmarksArc
     + BonsaiGitMappingArc
     + FilestoreConfigRef
     + ChangesetsRef
+    + ChangesetsArc
     + RepoIdentityRef
     + MutableCountersArc
     + PhasesRef
