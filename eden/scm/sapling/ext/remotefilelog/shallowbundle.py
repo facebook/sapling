@@ -213,20 +213,19 @@ class shallowcg1packer(changegroup.cg1packer):
                             if phasecache.phase(repo, cl.rev(cnode)) == phases.public:
                                 del linkrevnodes[fnode]
                             else:
-                                files.append((fname, hex(fnode)))
+                                files.append((fname, fnode))
                         else:
-                            files.append((fname, hex(fnode)))
+                            files.append((fname, fnode))
 
                 repo.fileservice.prefetch(files)
 
                 # Prefetch the revisions that are going to be diffed against
                 prevfiles = []
                 for fname, fnode in files:
-                    fnode = bin(fnode)
                     filerevlog = repo.file(fname)
                     p1, p2, linknode, copyfrom = filerevlog.getnodeinfo(fnode)
                     if p1 != nullid:
-                        prevfiles.append((copyfrom or fname, hex(p1)))
+                        prevfiles.append((copyfrom or fname, p1))
 
                 repo.fileservice.prefetch(prevfiles)
 
@@ -432,7 +431,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, *args):
         for dependent in dependents:
             if dependent == nullid or (f, dependent) in revisiondatas:
                 continue
-            prefetchfiles.append((f, hex(dependent)))
+            prefetchfiles.append((f, dependent))
 
     repo.fileservice.prefetch(prefetchfiles)
 

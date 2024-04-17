@@ -412,7 +412,7 @@ class remotefilectx(context.filectx):
         logmsg = ""
         start = time.time()
         try:
-            repo.fileservice.prefetch([(path, hex(fnode))], force=True, fetchdata=False)
+            repo.fileservice.prefetch([(path, fnode)], force=True, fetchdata=False)
 
             # Now that we've downloaded a new blob from the server,
             # we need to rebuild the ancestor map to recompute the
@@ -566,7 +566,7 @@ class remotefilectx(context.filectx):
             if current.filenode() != self.filenode():
                 # this is a "joint point". fastannotate needs contents of
                 # "joint point"s to calculate diffs for side branches.
-                fetch.append((current.path(), hex(current.filenode())))
+                fetch.append((current.path(), current.filenode()))
             if prefetchskip and current in prefetchskip:
                 continue
             for parent in current.parents():

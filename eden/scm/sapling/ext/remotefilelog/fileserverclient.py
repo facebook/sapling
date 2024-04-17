@@ -201,22 +201,12 @@ class fileserverclient:
     def prefetch(self, fileids, force=False, fetchdata=True, fetchhistory=True):
         """downloads the given file versions to the cache"""
         repo = self.repo
-        idstocheck = set()
-        for file, id in fileids:
-            # hack
-            # - workingctx produces ids with length 42,
-            #   which we skip since they aren't in any cache
-            if len(id) == 42:
-                continue
-
-            idstocheck.add((file, bin(id)))
 
         batchlfsdownloads = self.ui.configbool(
             "remotefilelog", "_batchlfsdownloads", True
         )
         dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
 
-        idstocheck = list(idstocheck)
         if not force:
             contentstore = repo.fileslog.filestore
             metadatastore = repo.fileslog.metadatastore
@@ -224,10 +214,13 @@ class fileserverclient:
             # TODO(meyer): Convert this to support scmstore.
             contentstore, metadatastore = repo.fileslog.makesharedonlyruststore(repo)
 
+        if type(fileids) is not list:
+            fileids = list(fileids)
+
         if fetchdata:
-            contentstore.prefetch(idstocheck)
+            contentstore.prefetch(fileids)
         if fetchhistory:
-            metadatastore.prefetch(idstocheck)
+            metadatastore.prefetch(fileids)
 
         if batchlfsdownloads and dolfsprefetch:
             self._lfsprefetch(fileids)
@@ -250,8 +243,7 @@ class fileserverclient:
         pointers = []
         filenames = {}
         store = self.repo.svfs.lfslocalblobstore
-        for file, id in fileids:
-            node = bin(id)
+        for file, node in fileids:
             rlog = self.repo.file(file)
             if rlog.flags(node) & revlog.REVIDX_EXTSTORED:
                 text = rlog.revision(node, raw=True)

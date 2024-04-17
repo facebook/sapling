@@ -209,7 +209,7 @@ def fixdirstate(repo, oldctx, newctx, status) -> None:
     # The renamed() call below requires file history. Let's fetch it in bulk
     # instead of one-by-one.
     if hasattr(repo, "fileservice"):
-        keys = list((f, hex(oldctx[f].filenode())) for f in s.modified + s.added)
+        keys = list((f, oldctx[f].filenode()) for f in s.modified + s.added)
         repo.fileservice.prefetch(keys, fetchdata=False, fetchhistory=True)
 
     # Merge old parent and old working dir copies

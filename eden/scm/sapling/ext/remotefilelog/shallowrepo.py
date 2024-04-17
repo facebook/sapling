@@ -87,7 +87,7 @@ def wraprepo(repo) -> None:
                 for f in ctx.modified() + ctx.added():
                     fparent1 = m1.get(f, nullid)
                     if fparent1 != nullid:
-                        files.append((f, hex(fparent1)))
+                        files.append((f, fparent1))
                 self.fileservice.prefetch(files)
             return super(shallowrepository, self).commitctx(ctx, error=error)
 
@@ -116,7 +116,12 @@ def wraprepo(repo) -> None:
         def _prefetch(self, revs, base=None, matcher=None):
             # Copy the skip set to start large and avoid constant resizing,
             # and since it's likely to be very similar to the prefetch set.
-            files = set()
+
+            if len(revs) > 1:
+                files = set()
+            else:
+                files = []
+
             basemf = self[base or nullid].manifest()
             with progress.bar(self.ui, _("prefetching"), total=len(revs)) as prog:
                 for rev in sorted(revs):
@@ -130,18 +135,25 @@ def wraprepo(repo) -> None:
                     with progress.spinner(self.ui, _("computing files")):
                         if base is None and hasattr(mf, "walkfiles"):
                             # If there is no base, skip diff and use more efficient walk.
-                            files.update(mf.walkfiles(matcher))
+                            walked = mf.walkfiles(matcher)
+                            if type(files) is set:
+                                files.update(walked)
+                            elif type(files) is list:
+                                # we know len(revs) == 1, so avoid copy and assign
+                                files = walked
                         else:
                             for path, (new, _old) in mf.diff(basemf, matcher).items():
                                 if new[0]:
-                                    files.add((path, new[0]))
+                                    if type(files) is set:
+                                        files.add((path, new[0]))
+                                    elif type(files) is list:
+                                        files.append((path, new[0]))
 
                     prog.value += 1
 
             if files:
                 with progress.spinner(self.ui, _("ensuring files fetched")):
-                    results = [(path, hex(fnode)) for (path, fnode) in files]
-                    self.fileservice.prefetch(results, fetchhistory=False)
+                    self.fileservice.prefetch(files, fetchhistory=False)
 
     repo.__class__ = shallowrepository
 
