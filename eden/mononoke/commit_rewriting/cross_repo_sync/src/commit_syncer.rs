@@ -69,6 +69,7 @@ use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
+use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting;
 use crate::reporting::log_rewrite;
@@ -809,6 +810,8 @@ where
 
         let submodule_deps = self.get_submodule_deps();
 
+        let large_in_memory_repo = InMemoryRepo::from_repo(self.get_target_repo())?;
+
         CommitInMemorySyncer {
             ctx,
             source_repo: Source(self.get_source_repo()),
@@ -817,6 +820,7 @@ where
             live_commit_sync_config: Arc::clone(&self.live_commit_sync_config),
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
             submodule_deps,
+            large_repo: large_in_memory_repo,
         }
         .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
         .await?
@@ -860,9 +864,12 @@ where
             .await?;
         let large_repo = self.get_large_repo();
         let large_repo_id = Large(large_repo.repo_identity().id());
+
+        let large_in_memory_repo = InMemoryRepo::from_repo(&target_repo)?;
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
+                large_repo: large_in_memory_repo,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
                 large_repo_id,
@@ -975,18 +982,22 @@ where
                 self.live_commit_sync_config.clone(),
             )
             .await?;
+
         let large_repo = self.get_large_repo();
         let large_repo_id = Large(large_repo.repo_identity().id());
+        let large_in_memory_repo = InMemoryRepo::from_repo(&target_repo)?;
 
         let submodule_expansion_data = match &source_repo_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
+                large_repo: large_in_memory_repo,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
                 large_repo_id,
             }),
             SubmoduleDeps::NotNeeded => None,
         };
+
         let rewritten = rewrite_commit(
             ctx,
             source_cs_mut,

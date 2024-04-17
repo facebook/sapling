@@ -54,6 +54,7 @@ use crate::git_submodules::utils::submodule_diff;
 use crate::git_submodules::validation::validate_all_submodule_expansions;
 use crate::types::Large;
 use crate::types::Repo;
+use crate::InMemoryRepo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.
@@ -80,7 +81,11 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     /// Used to ensure that trying to backsync from large to small repos that
     /// have submodule expansion enabled crashes while backsync is not supported.
     pub large_repo_id: Large<RepositoryId>,
+    /// Read-only version of the large repo, which performs any writes in memory.
+    /// This is needed to validate submodule expansion in large repo bonsais.
+    pub large_repo: InMemoryRepo,
 }
+
 pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     bonsai: BonsaiChangesetMut,
