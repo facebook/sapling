@@ -121,8 +121,6 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
 
     let rewritten_bonsai = rewritten_bonsai.freeze()?;
 
-    // TODO(T179533620): validate that all changes are consistent with submodule
-    // metadata file.
     let validated_bonsai =
         validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover).await?;
 
@@ -218,7 +216,31 @@ async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
         ..cs
     };
 
-    Ok(new_cs)
+    // Upload all file changes to the large repo's InMemory blobstore. The file
+    // changes are needed to derive fsnodes for validation and are not persisted
+    // to the large repo's real blobstore.
+    let files_to_sync = new_cs
+        .file_changes
+        .values()
+        .filter_map(|change| match change {
+            FileChange::Change(tc) => Some(tc.content_id()),
+            FileChange::UntrackedChange(uc) => Some(uc.content_id()),
+            FileChange::Deletion | FileChange::UntrackedDeletion => None,
+        })
+        .collect::<HashSet<_>>();
+
+    copy_file_contents(
+        ctx,
+        small_repo,
+        &sm_exp_data.large_repo,
+        files_to_sync,
+        |_| {},
+    )
+    .await?;
+
+    let new_cs = new_cs.freeze()?;
+
+    Ok(new_cs.into_mut())
 }
 
 /// Expand a single file change from a git submodule.
@@ -319,7 +341,12 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
             // repos need to be copied to the source repo.
             copy_file_contents(ctx, submodule_repo, small_repo, content_ids_to_copy, |_| {})
                 .await
-                .with_context(|| format!("Failed to copy file blobs from submodule {}", &sm_path.0))
+                .with_context(|| {
+                    format!(
+                        "Failed to copy file blobs from submodule {} to source repo",
+                        &sm_path.0
+                    )
+                })
         })
         .try_collect()
         .await?;
@@ -784,13 +811,25 @@ async fn generate_additional_file_changes<'a, R: Repo>(
     // hash of the git commit from the submodule that's being expanded.
     let metadata_file_content = FileContents::new_bytes(git_submodule_sha1.to_string());
     let metadata_file_size = metadata_file_content.size();
+
     let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;
 
     // Store this metadata file content in the submodule repo's blobstore, so
     // it can be copied to the small repo's blobstore afterwards.
     let metadata_file_content_id = metadata_file_content
+        .clone()
         .into_blob()
         .store(ctx, submodule_repo.repo_blobstore())
+        .await?;
+
+    // The submodule metadata file content has to be in the large repo's
+    // blobstore for validation. All these writes only happen in memory and are
+    // not persisted to the large repo's blobstore until the bonsai is actually
+    // synced and committed there.
+    let _ = metadata_file_content
+        .clone()
+        .into_blob()
+        .store(ctx, sm_exp_data.large_repo.repo_blobstore())
         .await?;
 
     // The metadata file will have the same content as the submodule file

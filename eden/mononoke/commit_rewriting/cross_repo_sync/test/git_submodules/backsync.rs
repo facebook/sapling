@@ -189,9 +189,8 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
     .await;
     println!("Validation result: {0:#?}", &validation_res);
 
-    // TODO(T179533620): fail because git commit isn't found in repo_b
-    // let expected_err_msg = "Failed to get changeset id from git submodule commit hash 76ba5635bc159cfa5ac555d95974116bc94473f0 in repo repo_b";
-    // assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
+    let expected_err_msg = "Failed to get changeset id from git submodule commit hash 76ba5635bc159cfa5ac555d95974116bc94473f0 in repo repo_b";
+    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
 
     Ok(())
 }

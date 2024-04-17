@@ -14,6 +14,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
@@ -195,21 +196,25 @@ pub(crate) async fn build_submodule_sync_test_data(
 
     rebase_root_on_master(ctx.clone(), &commit_syncer, *repo_a_root).await?;
 
+    println!("Synced A_A to large repo's master");
+
     let _ = sync_to_master(
         ctx.clone(),
         &commit_syncer,
         *repo_a_cs_map.get("A_B").unwrap(),
     )
-    .await?
-    .ok_or(anyhow!("Failed to sync commit A_B"))?;
+    .await
+    .context("Failed to sync commit A_B")?
+    .ok_or(anyhow!("Commit A_B wasn't synced"))?;
 
     let large_repo_master = sync_to_master(
         ctx.clone(),
         &commit_syncer,
         *repo_a_cs_map.get("A_C").unwrap(),
     )
-    .await?
-    .ok_or(anyhow!("Failed to sync commit A_C"))?;
+    .await
+    .context("Failed to sync commit A_C")?
+    .ok_or(anyhow!("Commit A_C wasn't synced"))?;
 
     Ok(SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),

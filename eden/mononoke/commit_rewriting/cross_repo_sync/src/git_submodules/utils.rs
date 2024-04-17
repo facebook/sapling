@@ -7,11 +7,13 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use blobstore::Blobstore;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -29,6 +31,7 @@ use mononoke_types::hash::RichGitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
+use mononoke_types::FsnodeId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -59,6 +62,28 @@ pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
     let git_submodule_sha1 = git_submodule_hash.sha1();
 
     anyhow::Ok(git_submodule_sha1)
+}
+
+/// Get the git hash from a submodule file, which represents the commit from the
+/// given submodule that the source repo depends on at that revision.
+pub(crate) async fn git_hash_from_submodule_metadata_file<'a, B: Blobstore>(
+    ctx: &'a CoreContext,
+    blobstore: &'a B,
+    submodule_file_content_id: ContentId,
+) -> Result<GitSha1> {
+    let bytes = filestore::fetch_concat_exact(&blobstore, ctx, submodule_file_content_id, 40)
+      .await
+      .with_context(|| {
+          format!(
+              "Failed to fetch content from content id {} file containing the submodule's git commit hash",
+              &submodule_file_content_id
+          )
+      })?;
+
+    let git_hash_string = std::str::from_utf8(bytes.as_ref())?;
+    let git_sha1 = GitSha1::from_str(git_hash_string)?;
+
+    anyhow::Ok(git_sha1)
 }
 
 pub(crate) fn get_submodule_repo<'a, 'b, R: Repo>(
@@ -212,4 +237,31 @@ where
                 (*fsnode_file.file_type() != FileType::GitSubmodule).then_some(path)
             ))
         }))
+}
+
+/// Gets the root directory's fsnode id from a submodule commit provided as
+/// as a git hash. This is used for working copy validation of submodule
+/// expansion.
+pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    git_hash: GitSha1,
+) -> Result<FsnodeId> {
+    let cs_id: ChangesetId = repo
+        .bonsai_git_mapping()
+        .get_bonsai_from_git_sha1(ctx, git_hash)
+        .await?
+        .ok_or_else(|| {
+            anyhow!(
+                "Failed to get changeset id from git submodule commit hash {} in repo {}",
+                &git_hash,
+                &repo.repo_identity().name()
+            )
+        })?;
+    let submodule_root_fsnode_id: RootFsnodeId = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?;
+
+    Ok(submodule_root_fsnode_id.into_fsnode_id())
 }
