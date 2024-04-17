@@ -28,7 +28,6 @@ struct SaplingBackingStoreStats;
 struct HgImporterStats;
 struct JournalStats;
 struct ThriftStats;
-struct TelemetryStats;
 struct OverlayStats;
 struct InodeMapStats;
 struct InodeMetadataTableStats;
