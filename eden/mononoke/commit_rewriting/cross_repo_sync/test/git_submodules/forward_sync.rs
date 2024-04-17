@@ -170,18 +170,16 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
-    let c_master_git_sha1 = repo_c
+    let c_master_mapped_git_commit = repo_c
         .repo_derived_data()
         .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
         .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
 
     let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
-    let (repo_b, repo_b_cs_map) = build_repo_b_with_c_submodule(
-        fb,
-        *c_master_git_sha1.oid(),
-        &repo_c_submodule_path_in_repo_b,
-    )
-    .await?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
 
     let repo_c_submodule_path =
         NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
@@ -221,8 +219,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
             "repo_a/submodules/.x-repo-submodule-repo_b",
             "repo_a/submodules/repo_b/B_A",
             "repo_a/submodules/repo_b/B_B",
-            // TODO(T174902563): expect metadata file for recursive submodule
-            // "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+            "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
             "repo_a/submodules/repo_b/submodules/repo_c/C_A",
             "repo_a/submodules/repo_b/submodules/repo_c/C_B",
         ],
@@ -262,11 +259,12 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
         .ok_or(anyhow!("Failed to sync commit"))?;
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
 
     derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     let expected_cs_id =
-        ChangesetId::from_str("f2da69f7deabd3e04683344884cb786a8adc625663074d24566258855e8767ce")
+        ChangesetId::from_str("7b95de313bd54b4654e3aae74d5f444cd6db44504f6808cb7f138f42fc61f6e7")
             .unwrap();
 
     check_submodule_metadata_file_in_large_repo(
@@ -278,20 +276,14 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
     )
     .await?;
 
-    // TODO(T174902563): check for repo_c submodule metadata file.
-    assert!(
-        check_submodule_metadata_file_in_large_repo(
-            &ctx,
-            &large_repo,
-            expected_cs_id,
-            NonRootMPath::new("repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c")?,
-            &repo_b_git_commit_hash,
-        )
-        .await
-        .is_err_and(|e| e
-            .to_string()
-            .contains("No fsnode entry for x-repo submodule metadata"))
-    );
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        expected_cs_id,
+        NonRootMPath::new("repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c")?,
+        &c_master_git_sha1,
+    )
+    .await?;
 
     assert_working_copy_matches_expected(
         &ctx,
@@ -304,9 +296,8 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
             "repo_a/A_C",
             "repo_a/submodules/.x-repo-submodule-repo_b",
             "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
             "repo_a/submodules/repo_b/new_dir/new_file",
-            // TODO(T174902563): expect metadata file for recursive submodule
-            // "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
             "repo_a/submodules/repo_b/submodules/repo_c/C_A",
             "repo_a/submodules/repo_b/submodules/repo_c/C_B",
         ],

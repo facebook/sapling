@@ -125,56 +125,58 @@ Merge repo A into the large repo
   
   NOTE: Creating gradual merge commit
   using repo "large_repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655))
-  changeset resolved as: ChangesetId(Blake2(e7ba6c7472c561619cf7fbe392ab881eec075f443e671a45c2f6a5f4effa9865))
+  changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
+  changeset resolved as: ChangesetId(Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba))
   Finding all commits to merge...
   2 total commits to merge
   Finding commits that haven't been merged yet...
   changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
   merging 1 commits
-  Preparing to merge bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655
+  Preparing to merge 9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf
   changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
-  Created merge changeset c8c3a69055051bf32202e36013cdebbdeb75ca20d798cd50328fb12f8e29e150
-  Generated hg changeset eae90b3bbae442f600e8903e5e3ce648e8c8c59e
+  Created merge changeset 671ade4dbbb1c68e733c4e2fb59a2cd39cf72ea66f898f092e128e9dce1b135f
+  Generated hg changeset 6a66af335e25a2fbbe762dd9de5253bfdf973fb5
   Now running pushrebase...
-  Pushrebased to c8c3a69055051bf32202e36013cdebbdeb75ca20d798cd50328fb12f8e29e150
+  Pushrebased to 671ade4dbbb1c68e733c4e2fb59a2cd39cf72ea66f898f092e128e9dce1b135f
   
-  SYNCHED_HEAD: bdf369cd5851a09ea0ff89c4df2f61254de3b2f33197a0e56f0ccdbcc2773655
+  SYNCHED_HEAD: 9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf
   
-  @    eae90b3bbae4 [MEGAREPO GRADUAL MERGE] gradual merge (0)
-  ├─╮   smallrepofolder1/.gitmodules                   |  6 ++++++
-  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b  |  1 +
-  │ │   smallrepofolder1/.x-repo-submodule-repo_c      |  1 +
-  │ │   smallrepofolder1/duplicates/x                  |  1 +
-  │ │   smallrepofolder1/duplicates/y                  |  1 +
-  │ │   smallrepofolder1/duplicates/z                  |  1 +
-  │ │   smallrepofolder1/git-repo-b/.gitmodules        |  3 +++
-  │ │   smallrepofolder1/git-repo-b/bar/zoo            |  1 +
-  │ │   smallrepofolder1/git-repo-b/foo                |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo    |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 +
-  │ │   smallrepofolder1/regular_dir/aardvar           |  1 +
-  │ │   smallrepofolder1/repo_c/choo                   |  1 +
-  │ │   smallrepofolder1/repo_c/hoo/qux                |  1 +
-  │ │   smallrepofolder1/root_file                     |  1 +
-  │ │   15 files changed, 22 insertions(+), 0 deletions(-)
+  @    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  ├─╮   smallrepofolder1/.gitmodules                             |  6 ++++++
+  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b            |  1 +
+  │ │   smallrepofolder1/.x-repo-submodule-repo_c                |  1 +
+  │ │   smallrepofolder1/duplicates/x                            |  1 +
+  │ │   smallrepofolder1/duplicates/y                            |  1 +
+  │ │   smallrepofolder1/duplicates/z                            |  1 +
+  │ │   smallrepofolder1/git-repo-b/.gitmodules                  |  3 +++
+  │ │   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 +
+  │ │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 +
+  │ │   smallrepofolder1/git-repo-b/foo                          |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo              |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux           |  1 +
+  │ │   smallrepofolder1/regular_dir/aardvar                     |  1 +
+  │ │   smallrepofolder1/repo_c/choo                             |  1 +
+  │ │   smallrepofolder1/repo_c/hoo/qux                          |  1 +
+  │ │   smallrepofolder1/root_file                               |  1 +
+  │ │   16 files changed, 23 insertions(+), 0 deletions(-)
   │ │
-  │ o  c1e1c514c4c2 Added git repo C as submodule directly in A
+  │ o  93d781922882 Added git repo C as submodule directly in A
   │ │   smallrepofolder1/.gitmodules              |  3 +++
   │ │   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
   │ │   smallrepofolder1/repo_c/choo              |  1 +
   │ │   smallrepofolder1/repo_c/hoo/qux           |  1 +
   │ │   4 files changed, 6 insertions(+), 0 deletions(-)
   │ │
-  │ o  72a5410557a9 Added git repo B as submodule in A
-  │ │   smallrepofolder1/.gitmodules                   |  3 +++
-  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b  |  1 +
-  │ │   smallrepofolder1/git-repo-b/.gitmodules        |  3 +++
-  │ │   smallrepofolder1/git-repo-b/bar/zoo            |  1 +
-  │ │   smallrepofolder1/git-repo-b/foo                |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo    |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 +
-  │ │   7 files changed, 11 insertions(+), 0 deletions(-)
+  │ o  1f9d3769f8c2 Added git repo B as submodule in A
+  │ │   smallrepofolder1/.gitmodules                             |  3 +++
+  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b            |  1 +
+  │ │   smallrepofolder1/git-repo-b/.gitmodules                  |  3 +++
+  │ │   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 +
+  │ │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 +
+  │ │   smallrepofolder1/git-repo-b/foo                          |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo              |  1 +
+  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux           |  1 +
+  │ │   8 files changed, 12 insertions(+), 0 deletions(-)
   │ │
   │ o  e2c69ce8cc11 Add regular_dir/aardvar
   │ │   smallrepofolder1/regular_dir/aardvar |  1 +
@@ -211,6 +213,7 @@ Merge repo A into the large repo
       |   `-- z
       |-- git-repo-b
       |   |-- .gitmodules
+      |   |-- .x-repo-submodule-git-repo-c
       |   |-- bar
       |   |   `-- zoo
       |   |-- foo
@@ -226,7 +229,7 @@ Merge repo A into the large repo
       |       `-- qux
       `-- root_file
   
-  9 directories, 16 files
+  9 directories, 17 files
 
 Make changes to submodule and make sure they're synced properly
   $ make_changes_to_git_repos_a_b_c
@@ -301,17 +304,17 @@ forward synced to the large repo
   $ hg co -q master
 
   $ hg log --graph -T '{node|short} {desc}\n' -r "all()"
-  @  6983801de625 Remove repo C submodule from repo A
+  @  3fafe9ae1f32 Remove repo C submodule from repo A
   │
-  o  ebb491080818 Update submodule B in repo A
+  o  966d27bdf05c Update submodule B in repo A
   │
-  o  8dac396dd939 Change directly in A
+  o  e21dab0d1f38 Change directly in A
   │
-  o    eae90b3bbae4 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
   ├─╮
-  │ o  c1e1c514c4c2 Added git repo C as submodule directly in A
+  │ o  93d781922882 Added git repo C as submodule directly in A
   │ │
-  │ o  72a5410557a9 Added git repo B as submodule in A
+  │ o  1f9d3769f8c2 Added git repo B as submodule in A
   │ │
   │ o  e2c69ce8cc11 Add regular_dir/aardvar
   │ │
@@ -323,7 +326,7 @@ forward synced to the large repo
 Check that deletions were made properly, i.e. submodule in repo_c was entirely
 deleted and the files deleted in repo B were deleted inside its copy.
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .
-  commit: 6983801de6259a0d33ce2984ba828ebdac2dcecd
+  commit: 3fafe9ae1f322ab664bdf968b4678085a110c55f
   Remove repo C submodule from repo A
    smallrepofolder1/.gitmodules              |  3 ---
    smallrepofolder1/.x-repo-submodule-repo_c |  1 -
@@ -350,6 +353,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
       |   `-- z                                                          |   `-- z
       |-- git-repo-b                                                     |-- git-repo-b
       |   |-- .gitmodules                                                |   |-- .gitmodules
+      |   |-- .x-repo-submodule-git-repo-c                               |   |-- .x-repo-submodule-git-repo-c
       |   |-- bar                                                 <
       |   |   `-- zoo                                             <
       |   |-- foo                                                 <
@@ -367,23 +371,24 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
       |       `-- qux                                             <
       `-- root_file                                                      `-- root_file
   
-  9 directories, 16 files                                         |  6 directories, 13 files
+  9 directories, 17 files                                         |  6 directories, 14 files
   [1]
 
 Check that the diff that updates the submodule generates the correct delta
 (i.e. instead of copying the entire working copy of the submodule every time)
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
-  commit: ebb49108081816413472ab4f46848efcb3ee9859
+  commit: 966d27bdf05c9c50d2e6e52390ef539e7ed88347
   Update submodule B in repo A
-   smallrepofolder1/.x-repo-submodule-git-repo-b |  2 +-
-   smallrepofolder1/.x-repo-submodule-repo_c     |  2 +-
-   smallrepofolder1/git-repo-b/bar/zoo           |  1 -
-   smallrepofolder1/git-repo-b/foo               |  1 -
-   smallrepofolder1/git-repo-b/git-repo-c/choo3  |  1 +
-   smallrepofolder1/git-repo-b/git-repo-c/choo4  |  1 +
-   smallrepofolder1/repo_c/choo3                 |  1 +
-   smallrepofolder1/repo_c/choo4                 |  1 +
-   8 files changed, 6 insertions(+), 4 deletions(-)
+   smallrepofolder1/.x-repo-submodule-git-repo-b            |  2 +-
+   smallrepofolder1/.x-repo-submodule-repo_c                |  2 +-
+   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  2 +-
+   smallrepofolder1/git-repo-b/bar/zoo                      |  1 -
+   smallrepofolder1/git-repo-b/foo                          |  1 -
+   smallrepofolder1/git-repo-b/git-repo-c/choo3             |  1 +
+   smallrepofolder1/git-repo-b/git-repo-c/choo4             |  1 +
+   smallrepofolder1/repo_c/choo3                            |  1 +
+   smallrepofolder1/repo_c/choo4                            |  1 +
+   9 files changed, 7 insertions(+), 5 deletions(-)
   
   $ cat smallrepofolder1/.x-repo-submodule-git-repo-b
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)

@@ -675,6 +675,7 @@ pub(crate) async fn assert_working_copy_matches_expected(
     cs_id: ChangesetId,
     expected_files: Vec<&str>,
 ) -> Result<()> {
+    println!("Asserting working copy matches expectation");
     let root_fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
