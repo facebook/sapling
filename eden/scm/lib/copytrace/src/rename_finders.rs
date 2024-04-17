@@ -25,6 +25,7 @@ use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::Matcher;
 use storemodel::FileStore;
 use types::fetch_mode::FetchMode;
 use types::Key;
@@ -243,7 +244,7 @@ impl RenameFinderInner {
         }
 
         let (mut added_files, mut deleted_files) =
-            self.get_added_and_deleted_files(old_tree, new_tree)?;
+            self.get_added_and_deleted_files(old_tree, new_tree, Option::None)?;
         let batch_mv_candidates = detect_batch_move(&mut added_files, &mut deleted_files);
 
         if batch_mv_candidates.is_empty() {
@@ -285,10 +286,11 @@ impl RenameFinderInner {
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
+        matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<(Vec<Key>, Vec<Key>)> {
         let mut added_files = Vec::new();
         let mut deleted_files = Vec::new();
-        let matcher = AlwaysMatcher::new();
+        let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
         let diff = Diff::new(old_tree, new_tree, &matcher)?;
         for entry in diff {
             let entry = entry?;
