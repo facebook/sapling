@@ -121,7 +121,9 @@ int main(int argc, char** argv) {
   evbt.getEventBase()->runInEventBaseThreadAndWait(
       [&] { privHelper->attachEventBase(evbt.getEventBase()); });
   auto fuseDevice =
-      privHelper->fuseMount(mountPath.value(), /* readOnly= */ false)
+      privHelper
+          ->fuseMount(
+              mountPath.value(), /* readOnly= */ false, /*vfsName*/ "fuse")
           .get(100ms);
 
   EdenStatsPtr stats;

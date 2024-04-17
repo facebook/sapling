@@ -53,25 +53,41 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
  public:
   Promise<File> setFuseMountResult(StringPiece path) {
     Promise<File> promise;
-    data_.wlock()->fuseMountResults.emplace(path.str(), promise.getFuture());
+    auto results = data_.wlock()->fuseMountResults.emplace(
+        path.str(), std::list<Future<File>>{});
+    results.first->second.emplace_back(promise.getFuture());
+    return promise;
+  }
+
+  Promise<File> setFuseRetryMountResult(StringPiece path) {
+    Promise<File> promise;
+    data_.wlock()
+        ->fuseMountResults.find(path.str())
+        ->second.emplace_back(promise.getFuture());
     return promise;
   }
 
   Promise<Unit> setFuseUnmountResult(StringPiece path) {
     Promise<Unit> promise;
-    data_.wlock()->fuseUnmountResults.emplace(path.str(), promise.getFuture());
+    auto results = data_.wlock()->fuseUnmountResults.emplace(
+        path.str(), std::list<Future<Unit>>{});
+    results.first->second.emplace_back(promise.getFuture());
     return promise;
   }
 
   Promise<Unit> setBindMountResult(StringPiece path) {
     Promise<Unit> promise;
-    data_.wlock()->bindMountResults.emplace(path.str(), promise.getFuture());
+    auto results = data_.wlock()->bindMountResults.emplace(
+        path.str(), std::list<Future<Unit>>{});
+    results.first->second.emplace_back(promise.getFuture());
     return promise;
   }
 
   Promise<Unit> setBindUnmountResult(StringPiece path) {
     Promise<Unit> promise;
-    data_.wlock()->bindUnmountResults.emplace(path.str(), promise.getFuture());
+    auto results = data_.wlock()->bindUnmountResults.emplace(
+        path.str(), std::list<Future<Unit>>{});
+    results.first->second.emplace_back(promise.getFuture());
     return promise;
   }
 
@@ -88,32 +104,41 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     return std::move(data->logFiles);
   }
 
+  std::vector<std::string> getRequestedVfsTypes() {
+    auto data = data_.wlock();
+    return std::move(data->requestedVfsTypes);
+  }
+
  private:
   struct Data {
-    std::unordered_map<string, Future<File>> fuseMountResults;
-    std::unordered_map<string, Future<Unit>> fuseUnmountResults;
-    std::unordered_map<string, Future<Unit>> bindMountResults;
-    std::unordered_map<string, Future<Unit>> bindUnmountResults;
+    std::unordered_map<string, std::list<Future<File>>> fuseMountResults;
+    std::vector<std::string> requestedVfsTypes;
+    std::unordered_map<string, std::list<Future<Unit>>> fuseUnmountResults;
+    std::unordered_map<string, std::list<Future<Unit>>> bindMountResults;
+    std::unordered_map<string, std::list<Future<Unit>>> bindUnmountResults;
     std::vector<File> logFiles;
   };
 
   template <typename T>
   folly::Future<T> getResultFuture(
-      std::unordered_map<string, Future<T>>& map,
+      std::unordered_map<string, std::list<Future<T>>>& map,
       StringPiece path) {
     auto iter = map.find(path.str());
     if (iter == map.end()) {
       throw std::runtime_error(
           folly::to<string>("no result available for ", path));
     }
-    auto future = std::move(iter->second);
-    map.erase(iter);
+    auto future = std::move(iter->second.front());
+    iter->second.pop_front();
+    if (iter->second.empty()) {
+      map.erase(iter);
+    }
     return future;
   }
 
   template <typename T>
   std::vector<string> getUnusedResults(
-      const std::unordered_map<std::string, Future<T>>& map) {
+      const std::unordered_map<std::string, std::list<Future<T>>>& map) {
     std::vector<string> results;
     for (const auto& entry : map) {
       results.push_back(entry.first);
@@ -121,8 +146,16 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     return results;
   }
 
-  folly::File fuseMount(const char* mountPath, bool /*readOnly*/) override {
-    auto future = getResultFuture(data_.wlock()->fuseMountResults, mountPath);
+  folly::File fuseMount(
+      const char* mountPath,
+      bool /*readOnly*/,
+      const char* vfsType) override {
+    Future<folly::File> future = Future<folly::File>::makeEmpty();
+    {
+      auto data = data_.wlock();
+      data->requestedVfsTypes.push_back(std::string(vfsType));
+      future = getResultFuture(data->fuseMountResults, mountPath);
+    }
     return std::move(future).get(1s);
   }
 
@@ -208,7 +241,7 @@ TEST_F(PrivHelperTest, fuseMount) {
 
   // Call fuseMount() this should return a future that is not ready yet,
   // since we have not fulfilled the promise.
-  auto result = client_->fuseMount(path, false);
+  auto result = client_->fuseMount(path, false, "fuse");
   EXPECT_FALSE(result.isReady());
 
   // Create a temporary file to respond with
@@ -233,6 +266,161 @@ TEST_F(PrivHelperTest, fuseMount) {
   EXPECT_EQ(origStat.st_dev, resultStat.st_dev);
   EXPECT_EQ(origStat.st_ino, resultStat.st_ino);
 
+  auto vfsTypes = server_.getRequestedVfsTypes();
+  EXPECT_EQ(1, vfsTypes.size());
+  EXPECT_EQ("fuse", vfsTypes.at(0));
+
+  // When we shut down the privhelper server it remembers that /foo/bar was
+  // unmounted and will try to unmount it.  This will fail since we have not
+  // registered a response for the unmount.  This will cause an error message to
+  // be logged, but this is fine.
+  //
+  // We could register a result for the unmount operation here, but seems nice
+  // for now to test that the privhelper server gracefully handles the exception
+  // from the unmount operation.
+}
+
+TEST_F(PrivHelperTest, fuseMountCustomVfsType) {
+  auto mountPoint = makeTempDir("bar");
+  auto path = mountPoint.path().string();
+
+  // Prepare a promise to use as the result for trying to mount mountPoint
+  auto filePromise = server_.setFuseMountResult(path);
+
+  // Call fuseMount() this should return a future that is not ready yet,
+  // since we have not fulfilled the promise.
+  auto result = client_->fuseMount(path, false, "fuse.edenfs");
+  EXPECT_FALSE(result.isReady());
+
+  // Create a temporary file to respond with
+  TemporaryFile tempFile;
+  struct stat origStat;
+  checkUnixError(
+      fstat(tempFile.fd(), &origStat), "failed to stat temporary file");
+
+  // Fulfill the response.
+  filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+
+  // The response should complete quickly now.
+  auto resultFile = std::move(result).get(1s);
+
+  // The resulting file object should refer to the same underlying file,
+  // even though the file descriptor should different since it was passed over
+  // a Unix socket.
+  EXPECT_NE(tempFile.fd(), resultFile.fd());
+  struct stat resultStat;
+  checkUnixError(
+      fstat(resultFile.fd(), &resultStat), "failed to stat result file");
+  EXPECT_EQ(origStat.st_dev, resultStat.st_dev);
+  EXPECT_EQ(origStat.st_ino, resultStat.st_ino);
+
+  auto vfsTypes = server_.getRequestedVfsTypes();
+  EXPECT_EQ(1, vfsTypes.size());
+  EXPECT_EQ("fuse.edenfs", vfsTypes.at(0));
+
+  // When we shut down the privhelper server it remembers that /foo/bar was
+  // unmounted and will try to unmount it.  This will fail since we have not
+  // registered a response for the unmount.  This will cause an error message to
+  // be logged, but this is fine.
+  //
+  // We could register a result for the unmount operation here, but seems nice
+  // for now to test that the privhelper server gracefully handles the exception
+  // from the unmount operation.
+}
+
+TEST_F(PrivHelperTest, fuseMountEvolutionMockOldClient) {
+  auto mountPoint = makeTempDir("bar");
+  auto path = mountPoint.path().string();
+
+  // Prepare a promise to use as the result for trying to mount mountPoint
+  auto filePromise = server_.setFuseMountResult(path);
+
+  // Call fuseMount() this should return a future that is not ready yet,
+  // since we have not fulfilled the promise.
+  auto result = client_->fuseMount(path, false, std::nullopt);
+  EXPECT_FALSE(result.isReady());
+
+  // Create a temporary file to respond with
+  TemporaryFile tempFile;
+  struct stat origStat;
+  checkUnixError(
+      fstat(tempFile.fd(), &origStat), "failed to stat temporary file");
+
+  // Fulfill the response.
+  filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+
+  // The response should complete quickly now.
+  auto resultFile = std::move(result).get(1s);
+
+  // The resulting file object should refer to the same underlying file,
+  // even though the file descriptor should different since it was passed over
+  // a Unix socket.
+  EXPECT_NE(tempFile.fd(), resultFile.fd());
+  struct stat resultStat;
+  checkUnixError(
+      fstat(resultFile.fd(), &resultStat), "failed to stat result file");
+  EXPECT_EQ(origStat.st_dev, resultStat.st_dev);
+  EXPECT_EQ(origStat.st_ino, resultStat.st_ino);
+
+  auto vfsTypes = server_.getRequestedVfsTypes();
+  EXPECT_EQ(1, vfsTypes.size());
+  EXPECT_EQ("fuse", vfsTypes.at(0));
+
+  // When we shut down the privhelper server it remembers that /foo/bar was
+  // unmounted and will try to unmount it.  This will fail since we have not
+  // registered a response for the unmount.  This will cause an error message to
+  // be logged, but this is fine.
+  //
+  // We could register a result for the unmount operation here, but seems nice
+  // for now to test that the privhelper server gracefully handles the exception
+  // from the unmount operation.
+}
+
+TEST_F(PrivHelperTest, fuseMountEvolutionMockOldServer) {
+  auto mountPoint = makeTempDir("bar");
+  auto path = mountPoint.path().string();
+
+  // Prepare a promise to use as the result for trying to mount mountPoint
+  auto filePromise = server_.setFuseMountResult(path);
+  auto secondPromise = server_.setFuseRetryMountResult(path);
+
+  // Call fuseMount() this should return a future that is not ready yet,
+  // since we have not fulfilled the promise.
+  auto result = client_->fuseMount(path, false, "fuse.edenfs");
+  EXPECT_FALSE(result.isReady());
+
+  // Create a temporary file to respond with
+  TemporaryFile tempFile;
+  struct stat origStat;
+  checkUnixError(
+      fstat(tempFile.fd(), &origStat), "failed to stat temporary file");
+
+  // Fulfill the response.
+  filePromise.setException(std::runtime_error("test exception"));
+  // should attempt one more time with out the vfstype set, so the result
+  // should not be ready yet.
+  EXPECT_FALSE(result.isReady());
+
+  secondPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+
+  // The response should complete quickly now.
+  auto resultFile = std::move(result).get(1s);
+
+  // The resulting file object should refer to the same underlying file,
+  // even though the file descriptor should different since it was passed over
+  // a Unix socket.
+  EXPECT_NE(tempFile.fd(), resultFile.fd());
+  struct stat resultStat;
+  checkUnixError(
+      fstat(resultFile.fd(), &resultStat), "failed to stat result file");
+  EXPECT_EQ(origStat.st_dev, resultStat.st_dev);
+  EXPECT_EQ(origStat.st_ino, resultStat.st_ino);
+
+  auto vfsTypes = server_.getRequestedVfsTypes();
+  EXPECT_EQ(2, vfsTypes.size());
+  EXPECT_EQ("fuse.edenfs", vfsTypes.at(0));
+  EXPECT_EQ("fuse", vfsTypes.at(1));
+
   // When we shut down the privhelper server it remembers that /foo/bar was
   // unmounted and will try to unmount it.  This will fail since we have not
   // registered a response for the unmount.  This will cause an error message to
@@ -247,7 +435,7 @@ TEST_F(PrivHelperTest, fuseMountPermissions) {
   if (getuid() != 0) {
     auto path = folly::kIsApple ? "/var/root/bar" : "/root/bar";
     EXPECT_THROW_RE(
-        client_->fuseMount(path, false).get(),
+        client_->fuseMount(path, false, "fuse").get(),
         std::exception,
         folly::to<std::string>(
             "User:",
@@ -265,7 +453,7 @@ TEST_F(PrivHelperTest, fuseMountError) {
   // This will throw an error in the privhelper server thread.  Make sure the
   // error message is raised in the client correctly.
   EXPECT_THROW_RE(
-      client_->fuseMount(path, false).get(),
+      client_->fuseMount(path, false, "fuse").get(),
       std::exception,
       fmt::format("no result available for {}", path));
 }
@@ -290,9 +478,9 @@ TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
   server_.setFuseUnmountResult(barPath).setValue();
 
   // Make several fuseMount() calls
-  auto abcResult = client_->fuseMount(abcPath, false);
-  auto defResult = client_->fuseMount(defPath, false);
-  auto foobarResult = client_->fuseMount(barPath, false);
+  auto abcResult = client_->fuseMount(abcPath, false, "fuse");
+  auto defResult = client_->fuseMount(defPath, false, "fuse");
+  auto foobarResult = client_->fuseMount(barPath, false, "fuse");
   EXPECT_FALSE(abcResult.isReady());
   EXPECT_FALSE(defResult.isReady());
   EXPECT_FALSE(foobarResult.isReady());
@@ -361,14 +549,14 @@ TEST_F(PrivHelperTest, bindMounts) {
   server_.setBindUnmountResult("/bind/never/actually/mounted").setValue();
 
   // Mount everything
-  client_->fuseMount(userPath + "/somerepo", false).get(1s);
+  client_->fuseMount(userPath + "/somerepo", false, "fuse").get(1s);
   client_->bindMount("/bind/mount/source", userPath + "/somerepo/buck-out")
       .get(1s);
 
-  client_->fuseMount(abcPath, false).get(1s);
+  client_->fuseMount(abcPath, false, "fuse").get(1s);
   client_->bindMount("/bind/mount/source", abcPath + "/buck-out").get(1s);
   client_->bindMount("/bind/mount/source", abcPath + "/foo/buck-out").get(1s);
-  client_->fuseMount(userPath + "/somerepo2", false).get(1s);
+  client_->fuseMount(userPath + "/somerepo2", false, "fuse").get(1s);
   client_->bindMount("/bind/mount/source", abcPath + "/bar/buck-out").get(1s);
 
   // Manually unmount /somerepo
@@ -432,12 +620,12 @@ TEST_F(PrivHelperTest, takeoverShutdown) {
   server_.setBindUnmountResult(userPath + "/somerepo2/buck-out").setValue();
 
   // Mount everything
-  client_->fuseMount(abcPath, false).get(1s);
+  client_->fuseMount(abcPath, false, "fuse").get(1s);
   client_->bindMount("/bind/mount/source", abcPath + "/buck-out").get(1s);
   client_->bindMount("/bind/mount/source", abcPath + "/foo/buck-out").get(1s);
   client_->bindMount("/bind/mount/source", abcPath + "/bar/buck-out").get(1s);
-  client_->fuseMount(userPath + "/somerepo", false).get(1s);
-  client_->fuseMount(userPath + "/somerepo2", false).get(1s);
+  client_->fuseMount(userPath + "/somerepo", false, "fuse").get(1s);
+  client_->fuseMount(userPath + "/somerepo2", false, "fuse").get(1s);
   client_->bindMount("/bind/mount/source", userPath + "/somerepo2/buck-out")
       .get(1s);
 
@@ -490,7 +678,7 @@ TEST_F(PrivHelperTest, takeoverStartup) {
   auto xyzPath = xyzMountPoint.path().string();
   server_.setFuseMountResult(xyzPath).setValue(File(tempFile.fd(), false));
   server_.setBindMountResult(xyzPath + "/buck-out").setValue();
-  client_->fuseMount(xyzPath, false).get(1s);
+  client_->fuseMount(xyzPath, false, "fuse").get(1s);
   client_->bindMount("/bind/mount/source", xyzPath + "/buck-out").get(1s);
 
   // Manually unmount /mnt/repo_x
@@ -528,7 +716,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
   // Perform one call using the current EventBase
   TemporaryFile tempFile;
   auto filePromise = server_.setFuseMountResult(barPath);
-  auto result = client_->fuseMount(barPath, false);
+  auto result = client_->fuseMount(barPath, false, "fuse");
   EXPECT_FALSE(result.isReady());
   filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
   auto resultFile = std::move(result).get(1s);
@@ -547,7 +735,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
 
     filePromise = server_.setFuseMountResult(newPath);
     server_.setFuseUnmountResult(newPath).setValue();
-    result = client_->fuseMount(newPath, false);
+    result = client_->fuseMount(newPath, false, "fuse");
     // The result should not be immediately ready since we have not fulfilled
     // the promise yet.  It will only be ready if something unexpected failed.
     if (result.isReady()) {

@@ -495,6 +495,12 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint32_t> maximumFuseRequests{"fuse:max-requests", 1000, this};
 
+  /**
+   * The string we use in the vfs type when mounting the fuse mount. Others will
+   * see this in the mount table on the system.
+   */
+  ConfigSetting<std::string> fuseVfsType{"fuse:vfs-type", "fuse", this};
+
   // [nfs]
 
   /**
