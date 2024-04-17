@@ -14,3 +14,4 @@ mod validation;
 pub use expand::expand_and_validate_all_git_submodule_file_changes;
 pub use expand::SubmoduleExpansionData;
 pub use in_memory_repo::InMemoryRepo;
+pub use validation::validate_all_submodule_expansions;

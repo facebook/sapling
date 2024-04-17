@@ -50,7 +50,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -185,7 +185,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
         NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -326,7 +326,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -402,7 +402,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -480,7 +480,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(
@@ -600,7 +600,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         mapping,
         live_commit_sync_config,
         test_sync_config_source,
@@ -706,7 +706,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         mapping,
         live_commit_sync_config,
@@ -849,7 +849,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
 
     let SubmoduleSyncTestData {
         repo_a_info: (repo_a, repo_a_cs_map),
-        large_repo,
+        large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
         ..
     } = build_submodule_sync_test_data(

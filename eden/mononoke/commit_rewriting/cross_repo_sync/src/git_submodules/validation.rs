@@ -25,12 +25,14 @@ use crate::types::Repo;
 
 /// Validate that a given bonsai **from the large repo** keeps all submodule
 /// expansions valid.
-pub(crate) async fn validate_all_submodule_expansions<'a, R: Repo>(
+pub async fn validate_all_submodule_expansions<'a, R: Repo>(
     ctx: &'a CoreContext,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     // Bonsai from the large repo that should have all submodule expansions
     // validated
     bonsai: BonsaiChangeset,
+    // TODO(T179533620): fetch mover from commit sync config, instead of
+    // requiring it to be provided by callers.
     mover: Mover,
 ) -> Result<BonsaiChangeset> {
     // For every submodule dependency, get all changes in their directories.
