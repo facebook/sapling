@@ -9,11 +9,14 @@ use std::clone::Clone;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::TryStreamExt;
+use futures::StreamExt;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
 use slog::debug;
@@ -21,6 +24,7 @@ use slog::debug;
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
+use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::types::Repo;
 
 /// Validate that a given bonsai **from the large repo** keeps all submodule
@@ -131,12 +135,12 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         &synced_submodule_path,
         sm_exp_data.x_repo_submodule_metadata_file_prefix,
     )?;
-    let _synced_submodule_path = synced_submodule_path.0;
+    let synced_submodule_path = synced_submodule_path.0;
 
     let fc_map = bonsai.file_changes_map();
     let mb_metadata_file_fc = fc_map.get(&metadata_file_path);
 
-    let _metadata_file_fc = match mb_metadata_file_fc {
+    let metadata_file_fc = match mb_metadata_file_fc {
         Some(fc) => fc,
         None => {
             // This means that the metadata file wasn't modified
@@ -150,6 +154,22 @@ async fn validate_submodule_expansion<'a, R: Repo>(
             // Metadata file didn't change but its submodule expansion also wasn't
             // changed.
             return Ok(bonsai);
+        }
+    };
+
+    let _metadata_file_content_id = match metadata_file_fc {
+        FileChange::Change(tfc) => tfc.content_id(),
+        FileChange::UntrackedChange(bfc) => bfc.content_id(),
+        FileChange::Deletion | FileChange::UntrackedDeletion => {
+            // Metadata file is being deleted, so the entire submodule expansion
+            // has to deleted as well.
+            return ensure_submodule_expansion_deletion(
+                ctx,
+                sm_exp_data,
+                bonsai,
+                synced_submodule_path,
+            )
+            .await;
         }
     };
 
@@ -173,6 +193,86 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 
     // TODO(T179533620): derive fsnode for the bonsai and compare it with
     // the fsnode from the submodule commit.
+
+    Ok(bonsai)
+}
+
+/// Ensures that, when the x-repo submodule metadata file was deleted, the
+/// entire submodule expansion is deleted as well.
+///
+/// The submodule expansion can be deleted in two ways:
+/// 1. Manually deleting the entire directory, in which case there must be
+/// `FileChange::Deletion` for all the files in the expansion.
+/// 2. Implicitly deleted by adding a file in the path of the expansion
+/// directory.
+async fn ensure_submodule_expansion_deletion<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
+    // Bonsai from the large repo
+    bonsai: BonsaiChangeset,
+    // Path of the submodule expansion in the large repo
+    synced_submodule_path: NonRootMPath,
+) -> Result<BonsaiChangeset> {
+    let fc_map = bonsai.file_changes_map();
+
+    // First check if the submodule was deleted implicitly, because it's quicker
+    // than checking the deletion of the entire expansion directory.
+    let was_expansion_deleted_implicitly = fc_map
+        .get(&synced_submodule_path)
+        .and_then(|fc| {
+            match fc {
+                // Submodule expansion is being implicitly deleted by adding a file
+                // in the exact same place as the expansion
+                FileChange::Change(_) | FileChange::UntrackedChange(_) => Some(fc),
+                FileChange::Deletion | FileChange::UntrackedDeletion => None,
+            }
+        })
+        .is_some();
+
+    if was_expansion_deleted_implicitly {
+        // Submodule expansion was deleted implicit, so bonsai should be valid
+        return Ok(bonsai);
+    }
+
+    // Get all the files under the submodule expansion path in the parent
+    // changesets.
+    // A `FileChange::Deletion` should exist in the bonsai for all of these
+    // paths.
+    let entire_submodule_expansion_was_deleted = stream::iter(bonsai.parents())
+        .then(|parent_cs_id| {
+            cloned!(synced_submodule_path);
+            let large_repo = sm_exp_data.large_repo.clone();
+            async move {
+                list_non_submodule_files_under(
+                    ctx,
+                    &large_repo,
+                    parent_cs_id,
+                    SubmodulePath(synced_submodule_path),
+                )
+                .await
+            }
+        })
+        .boxed()
+        .try_flatten()
+        .try_all(|path| {
+            borrowed!(fc_map);
+            async move {
+                // Check if the path is being deleted in the bonsai
+                if let Some(fc) = fc_map.get(&path) {
+                    return fc.is_removed();
+                }
+                // Submodule expansion wasn't entirely deleted because at least
+                // one file in it wasn't deleted.
+                false
+            }
+        })
+        .await?;
+
+    if !entire_submodule_expansion_was_deleted {
+        return Err(anyhow!(
+            "Submodule metadata file is being deleted without removing the entire submodule expansion"
+        ));
+    }
 
     Ok(bonsai)
 }

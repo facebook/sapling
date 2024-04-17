@@ -30,6 +30,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::git_submodules::expand::SubmodulePath;
 use crate::types::Repo;
@@ -184,12 +186,15 @@ pub(crate) async fn list_all_paths(
         .map_ok(|(path, _)| path))
 }
 
-pub(crate) async fn list_non_submodule_files_under(
+pub(crate) async fn list_non_submodule_files_under<R>(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    repo: &R,
     cs_id: ChangesetId,
     submodule_path: SubmodulePath,
-) -> Result<impl Stream<Item = Result<NonRootMPath>>> {
+) -> Result<impl Stream<Item = Result<NonRootMPath>>>
+where
+    R: RepoDerivedDataRef + RepoBlobstoreArc,
+{
     let fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)

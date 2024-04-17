@@ -43,6 +43,7 @@ use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
+use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_file_content_id;
 use crate::git_submodules::utils::get_submodule_repo;
@@ -54,7 +55,6 @@ use crate::git_submodules::utils::submodule_diff;
 use crate::git_submodules::validation::validate_all_submodule_expansions;
 use crate::types::Large;
 use crate::types::Repo;
-use crate::InMemoryRepo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.

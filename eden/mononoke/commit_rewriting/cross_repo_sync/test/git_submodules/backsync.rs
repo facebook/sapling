@@ -239,12 +239,11 @@ async fn test_deleting_submodule_metadata_file_without_expansion_fails_validatio
     )
     .await;
 
-    // TODO(T179533620): ensure that expansion is always deleted when metadata
-    // file is deleted
-    // let expected_err_msg =
-    //     "Submodule metadata file is being deleted without removing the entire submodule expansion";
-    // assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
-    assert!(validation_res.is_ok());
+    println!("Validation result: {0:#?}", &validation_res);
+
+    let expected_err_msg =
+        "Submodule metadata file is being deleted without removing the entire submodule expansion";
+    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
 
     Ok(())
 }
