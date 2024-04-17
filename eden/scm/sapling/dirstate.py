@@ -149,7 +149,6 @@ class dirstate:
         self._pendingfilename: str = "%s.pending" % self._filename
         self._plchangecallbacks: "Dict[str, ParentChangeCallback]" = {}
         self._origpl: "Optional[Tuple[bytes, bytes]]" = None
-        self._updatedfiles: "Set[str]" = set()
 
         self._initfs()
 
@@ -428,7 +427,6 @@ class dirstate:
                 delattr(self, a)
         self._lastnormaltime = 0
         self._dirty = False
-        self._updatedfiles.clear()
         self._parentwriters = 0
         self._origpl = None
 
@@ -497,7 +495,6 @@ class dirstate:
                 if entry is not None and entry[0] not in "r?":
                     raise error.Abort(_("file %r in dirstate clashes with %r") % (d, f))
         self._dirty = True
-        self._updatedfiles.add(f)
         self._map.addfile(f, oldstate, state, mode, size, mtime)
 
     def normal(self, f: str) -> None:
@@ -564,7 +561,6 @@ class dirstate:
                     size = -1
                 elif entry[0] == "n" and entry[2] == -2:  # other parent
                     size = -2
-        self._updatedfiles.add(f)
         self._map.removefile(f, oldstate, size)
 
     def merge(self, f: str) -> None:
@@ -671,7 +667,6 @@ class dirstate:
     def clear(self) -> None:
         self._map.clear()
         self._lastnormaltime = 0
-        self._updatedfiles.clear()
         self._dirty = True
 
     def rebuild(
@@ -739,11 +734,10 @@ class dirstate:
 
         # emulate dropping timestamp in 'parsers.pack_dirstate'
         now = _getfsnow(self._opener)
-        self._map.clearambiguoustimes(self._updatedfiles, now)
+        self._map.clearambiguoustimes(now)
 
         # emulate that all 'dirstate.normal' results are written out
         self._lastnormaltime = 0
-        self._updatedfiles.clear()
 
         # delay writing in-memory changes out
         tr.addfilegenerator(
