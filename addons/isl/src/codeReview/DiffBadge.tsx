@@ -113,10 +113,12 @@ export function DiffFollower({commit}: {commit: CommitInfo}) {
   }
 
   return (
-    <span {...stylex.props(styles.diffFollower)}>
-      <Icon icon="fold-up" size="S" {...stylex.props(styles.diffFollowerIcon)} />
-      <T>follower</T>
-    </span>
+    <Tooltip title={t('This commit follows the Pull Request of its nearest descendant above')}>
+      <span {...stylex.props(styles.diffFollower)}>
+        <Icon icon="fold-up" size="S" {...stylex.props(styles.diffFollowerIcon)} />
+        <T>follower</T>
+      </span>
+    </Tooltip>
   );
 }
 
