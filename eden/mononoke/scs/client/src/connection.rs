@@ -156,7 +156,11 @@ impl Connection {
     ) -> Result<Self, Error> {
         match x2pclient::get_env(fb) {
             x2pclient::Environment::Prod => {
-                Self::from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain)
+                if cfg!(target_os = "linux") {
+                    Self::from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain)
+                } else {
+                    Self::from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
+                }
             }
             x2pclient::Environment::Corp => {
                 Self::from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
