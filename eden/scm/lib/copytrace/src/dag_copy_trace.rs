@@ -267,11 +267,29 @@ impl CopyTrace for DagCopyTrace {
         dst: Vertex,
         matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
-        // todo(zhaolong): optimize dst.p1() == src case
+        tracing::trace!(?src, ?dst, "path_copies");
         let msrc = self.vertex_to_tree_manifest(&src).await?;
         let mdst = self.vertex_to_tree_manifest(&dst).await?;
-        let missing = compute_missing_files(&msrc, &mdst, matcher)?;
 
+        let dst_parents = self.dag.parent_names(dst.clone()).await?;
+        for parent in dst_parents {
+            if parent == src {
+                return self.rename_finder.find_renames(&msrc, &mdst, matcher).await;
+            }
+        }
+        let src_parents = self.dag.parent_names(src.clone()).await?;
+        for parent in src_parents {
+            if parent == dst {
+                let copies = self
+                    .rename_finder
+                    .find_renames(&mdst, &msrc, matcher)
+                    .await?;
+                let reverse_copies = copies.into_iter().map(|(k, v)| (v, k)).collect();
+                return Ok(reverse_copies);
+            }
+        }
+
+        let missing = compute_missing_files(&msrc, &mdst, matcher)?;
         let mut result = HashMap::new();
         for dst_path in missing {
             let src_path = self

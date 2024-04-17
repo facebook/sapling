@@ -33,6 +33,7 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::error::CopyTraceError;
+use crate::utils::compute_missing_files;
 use crate::utils::file_path_similarity;
 use crate::utils::is_content_similar;
 use crate::SearchDirection;
@@ -65,6 +66,14 @@ pub trait RenameFinder {
         new_path: &RepoPath,
         new_vertex: &Vertex,
     ) -> Result<Option<RepoPathBuf>>;
+
+    /// Find {x@new_tree: y@old_tree} rename mapping for directed compare
+    async fn find_renames(
+        &self,
+        old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+        matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>>;
 }
 
 /// Rename finder based on the copy information in the file header metadata
@@ -170,6 +179,30 @@ impl RenameFinder for MetadataRenameFinder {
         emit_content_similarity_fallback_metric(found.is_some());
         Ok(found)
     }
+
+    async fn find_renames(
+        &self,
+        old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+        matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+        let missing = compute_missing_files(old_tree, new_tree, matcher)?;
+        tracing::trace!(missing_len = missing.len(), " find_renames");
+        let keys: Vec<_> = missing
+            .into_iter()
+            .map(|p| self.inner.get_key_from_path(new_tree, &p))
+            .filter_map(|k| k.ok())
+            .collect();
+        tracing::trace!(keys_len = keys.len(), " find_renames");
+        block_in_place(move || {
+            let renames = self.inner.file_reader.get_rename_iter(keys)?;
+            let renames = renames
+                .filter_map(|x| x.ok())
+                .map(|(k, v)| (k.path, v.path))
+                .collect();
+            Ok(renames)
+        })
+    }
 }
 
 impl ContentSimilarityRenameFinder {
@@ -223,6 +256,42 @@ impl RenameFinder for ContentSimilarityRenameFinder {
                 SearchDirection::Backward,
             )
             .await
+    }
+
+    async fn find_renames(
+        &self,
+        old_tree: &TreeManifest,
+        new_tree: &TreeManifest,
+        matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+        let (mut added, mut deleted) = self
+            .inner
+            .get_added_and_deleted_files(old_tree, new_tree, matcher)?;
+        tracing::trace!(
+            added_len = added.len(),
+            deleted_len = deleted.len(),
+            " find_renames"
+        );
+        let batch_mv_candidates = detect_batch_move(&mut added, &mut deleted);
+        let mut renames = HashMap::new();
+        if batch_mv_candidates.is_empty() {
+            for to in added {
+                let candidates =
+                    select_rename_candidates(deleted.clone(), &to.path, &self.inner.config)?;
+                let renamed_path = self.inner.find_similar_file(candidates, to.clone()).await;
+                if let Ok(Some(p)) = renamed_path {
+                    renames.insert(to.path, p);
+                }
+            }
+        } else {
+            for (to, from) in batch_mv_candidates {
+                let renamed_path = self.inner.find_similar_file(vec![from], to.clone()).await;
+                if let Ok(Some(p)) = renamed_path {
+                    renames.insert(to.path, p);
+                }
+            }
+        }
+        Ok(renames)
     }
 }
 
