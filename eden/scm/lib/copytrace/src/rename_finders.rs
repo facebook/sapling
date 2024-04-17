@@ -198,6 +198,7 @@ impl RenameFinder for MetadataRenameFinder {
             let renames = self.inner.file_reader.get_rename_iter(keys)?;
             let renames = renames
                 .filter_map(|x| x.ok())
+                .filter(|(_, v)| old_tree.contain_file(&v.path).unwrap_or(false))
                 .map(|(k, v)| (k.path, v.path))
                 .collect();
             Ok(renames)
