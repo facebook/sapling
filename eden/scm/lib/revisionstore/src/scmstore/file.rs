@@ -185,7 +185,7 @@ impl FileStore {
         let process_func = move || {
             let start_instant = Instant::now();
 
-            let all_keys: Vec<Key> = state.pending();
+            let all_keys: Vec<Key> = state.all_keys();
             let span = tracing::span!(
                 tracing::Level::DEBUG,
                 "file fetch",

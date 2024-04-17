@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fmt;
 
 use anyhow::anyhow;
@@ -22,13 +20,10 @@ use crate::scmstore::value::StoreValue;
 
 pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.
-    pub pending: HashSet<Key>,
+    pub pending: HashMap<Key, T>,
 
     /// Which attributes were requested
     pub request_attrs: T::Attrs,
-
-    /// All attributes which have been found so far
-    pub found: HashMap<Key, T>,
 
     pub found_tx: Sender<Result<(Key, T), KeyFetchError>>,
 
@@ -43,9 +38,8 @@ impl<T: StoreValue> CommonFetchState<T> {
         mode: FetchMode,
     ) -> Self {
         Self {
-            pending: keys.into_iter().collect(),
+            pending: keys.into_iter().map(|key| (key, T::default())).collect(),
             request_attrs: attrs,
-            found: HashMap::new(),
             found_tx,
             mode,
         }
@@ -60,7 +54,7 @@ impl<T: StoreValue> CommonFetchState<T> {
         fetchable: T::Attrs,
         with_computable: bool,
     ) -> impl Iterator<Item = (&'a Key, T::Attrs)> + 'a {
-        self.pending.iter().filter_map(move |key| {
+        self.pending.iter().filter_map(move |(key, _)| {
             let actionable = self.actionable(key, fetchable, with_computable);
             if actionable.any() {
                 Some((key, actionable))
@@ -71,53 +65,34 @@ impl<T: StoreValue> CommonFetchState<T> {
     }
 
     pub(crate) fn found(&mut self, key: Key, value: T) -> bool {
-        use hash_map::Entry::*;
-        match self.found.entry(key.clone()) {
-            Occupied(mut entry) => {
-                tracing::debug!("merging into previously fetched attributes");
-                // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
-                // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
-                let available = entry.get_mut();
-                let new = value | std::mem::take(available);
+        if let Some(available) = self.pending.get_mut(&key) {
+            // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
+            // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
+            let new = value | std::mem::take(available);
 
-                if new.attrs().has(self.request_attrs) {
-                    self.found.remove(&key);
-                    self.pending.remove(&key);
+            if new.attrs().has(self.request_attrs) {
+                self.pending.remove(&key);
 
-                    if !self.mode.ignore_result() {
-                        let new = new.mask(self.request_attrs);
-                        let _ = self.found_tx.send(Ok((key, new)));
-                    }
-
-                    return true;
-                } else {
-                    *available = new;
+                if !self.mode.ignore_result() {
+                    let new = new.mask(self.request_attrs);
+                    let _ = self.found_tx.send(Ok((key, new)));
                 }
-            }
-            Vacant(entry) => {
-                if value.attrs().has(self.request_attrs) {
-                    self.pending.remove(&key);
 
-                    if !self.mode.ignore_result() {
-                        let value = value.mask(self.request_attrs);
-                        let _ = self.found_tx.send(Ok((key, value)));
-                    }
-
-                    return true;
-                } else {
-                    entry.insert(value);
-                }
+                return true;
+            } else {
+                *available = new;
             }
-        };
+        } else {
+            tracing::warn!(?key, "found something but key is already done");
+        }
 
         false
     }
 
-    pub(crate) fn results(mut self, errors: FetchErrors) {
+    pub(crate) fn results(self, errors: FetchErrors) {
         // Combine and collect errors
         let mut incomplete = errors.fetch_errors;
-        for key in self.pending.into_iter() {
-            self.found.remove(&key);
+        for (key, _value) in self.pending.into_iter() {
             incomplete.entry(key).or_insert_with(|| {
                 let msg = if self.mode.is_local() {
                     "not found locally and not contacting server"
@@ -130,11 +105,6 @@ impl<T: StoreValue> CommonFetchState<T> {
                 };
                 vec![anyhow!("{}", msg)]
             });
-        }
-
-        for (key, _) in self.found.iter_mut() {
-            // Don't return errors for keys we eventually found.
-            incomplete.remove(key);
         }
 
         for (key, errors) in incomplete {
@@ -158,7 +128,7 @@ impl<T: StoreValue> CommonFetchState<T> {
             return T::Attrs::NONE;
         }
 
-        let available = self.found.get(key).map_or(T::Attrs::NONE, |f| f.attrs());
+        let available = self.pending.get(key).map_or(T::Attrs::NONE, |f| f.attrs());
         let (available, fetchable) = if with_computable {
             (available.with_computable(), fetchable.with_computable())
         } else {

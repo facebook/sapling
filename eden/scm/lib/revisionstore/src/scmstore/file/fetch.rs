@@ -121,8 +121,8 @@ impl FetchState {
         self.common.pending_len()
     }
 
-    pub(crate) fn pending(&self) -> Vec<Key> {
-        self.common.pending.iter().cloned().collect()
+    pub(crate) fn all_keys(&self) -> Vec<Key> {
+        self.common.pending.keys().cloned().collect()
     }
 
     pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
@@ -962,56 +962,55 @@ impl FetchState {
             return;
         }
 
-        for key in self.common.pending.iter().cloned().collect::<Vec<_>>() {
-            if let Some(value) = self.common.found.get_mut(&key) {
-                let span = tracing::debug_span!("checking derivations", %key);
-                let _guard = span.enter();
+        self.common.pending.retain(|key, value| {
+            let span = tracing::debug_span!("checking derivations", %key);
+            let _guard = span.enter();
 
-                let existing_attrs = value.attrs();
-                let missing = self.common.request_attrs - existing_attrs;
-                let actionable = existing_attrs.with_computable() & missing;
+            let existing_attrs = value.attrs();
+            let missing = self.common.request_attrs - existing_attrs;
+            let actionable = existing_attrs.with_computable() & missing;
 
-                if actionable.aux_data {
-                    let mut new = std::mem::take(value);
+            if actionable.aux_data {
+                let mut new = std::mem::take(value);
 
-                    tracing::debug!("computing aux data");
-                    if let Err(err) = new.compute_aux_data() {
-                        self.errors.keyed_error(key.clone(), err);
-                    } else {
-                        tracing::debug!("computed aux data");
+                tracing::debug!("computing aux data");
+                if let Err(err) = new.compute_aux_data() {
+                    self.errors.keyed_error(key.clone(), err);
+                } else {
+                    tracing::debug!("computed aux data");
 
-                        // mark complete if applicable
-                        if new.attrs().has(self.common.request_attrs) {
-                            tracing::debug!("marking complete");
+                    // mark complete if applicable
+                    if new.attrs().has(self.common.request_attrs) {
+                        tracing::debug!("marking complete");
 
-                            self.metrics.aux.store(StoreType::Shared).computed(1);
+                        self.metrics.aux.store(StoreType::Shared).computed(1);
 
-                            if let Some(aux_cache) = aux_cache {
-                                if let Some(aux_data) = new.aux_data {
-                                    let _ = aux_cache.put(key.hgid, &aux_data);
-                                }
+                        if let Some(aux_cache) = aux_cache {
+                            if let Some(aux_data) = new.aux_data {
+                                let _ = aux_cache.put(key.hgid, &aux_data);
                             }
-
-                            // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
-                            // to share a "mark complete" implementation while holding a mutable reference to self.found.
-                            self.common.pending.remove(&key);
-                            self.common.found.remove(&key);
-                            let new = new.mask(self.common.request_attrs);
-
-                            if !self.fetch_mode.ignore_result() {
-                                let _ = self.common.found_tx.send(Ok((key.clone(), new)));
-                            }
-
-                            if let Some((ptr, _)) = self.lfs_pointers.remove(&key) {
-                                self.pointer_origin.remove(&ptr.sha256());
-                            }
-                        } else {
-                            *value = new;
                         }
+
+                        let new = new.mask(self.common.request_attrs);
+
+                        if !self.fetch_mode.ignore_result() {
+                            let _ = self.common.found_tx.send(Ok((key.clone(), new)));
+                        }
+                        if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
+                            self.pointer_origin.remove(&ptr.sha256());
+                        }
+
+                        // Remove this entry from `pending`.
+                        return false;
+                    } else {
+                        *value = new;
                     }
                 }
             }
-        }
+
+            // Don't remove this entry from `pending`.
+            true
+        });
     }
 
     pub(crate) fn finish(self) {
