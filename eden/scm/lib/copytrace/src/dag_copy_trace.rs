@@ -13,12 +13,10 @@ use async_trait::async_trait;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use hg_metrics::increment_counter;
-use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use pathhistory::RenameTracer;
-use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
@@ -26,6 +24,7 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::error::CopyTraceError;
+use crate::utils::compute_missing_files;
 use crate::CopyTrace;
 use crate::RenameFinder;
 use crate::SearchDirection;
@@ -285,21 +284,4 @@ impl CopyTrace for DagCopyTrace {
 
         Ok(result)
     }
-}
-
-fn compute_missing_files(
-    msrc: &TreeManifest,
-    mdst: &TreeManifest,
-    matcher: Option<Arc<dyn Matcher + Send + Sync>>,
-) -> Result<Vec<RepoPathBuf>> {
-    let mut missing = Vec::new();
-    let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
-    let diff_entries = mdst.diff(msrc, &matcher)?;
-    for entry in diff_entries {
-        let entry = entry?;
-        if let DiffType::LeftOnly(_) = entry.diff_type {
-            missing.push(entry.path);
-        }
-    }
-    Ok(missing)
 }
