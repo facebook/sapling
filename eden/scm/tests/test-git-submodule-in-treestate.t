@@ -42,16 +42,12 @@ Force insert a non-empty 'sub1' state to treestate
 
   $ sl status
 
-`commit --addremove` is not okay:
-BUG: It removes the submodule.
+`commit --addremove` is okay:
 
   $ touch x
   $ sl commit -m 'add x' --addremove
-  removing mod1
   adding x
 
   $ sl status --change .
   A x
-  R mod1
   $ sl status
-  A mod1
