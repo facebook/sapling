@@ -185,7 +185,13 @@ impl FileStore {
         let process_func = move || {
             let start_instant = Instant::now();
 
-            let all_keys: Vec<Key> = state.all_keys();
+            // Only copy keys for activity logger if we have an activity logger;
+            let activity_logger_keys: Vec<Key> = if activity_logger.is_some() {
+                state.all_keys()
+            } else {
+                Vec::new()
+            };
+
             let span = tracing::span!(
                 tracing::Level::DEBUG,
                 "file fetch",
@@ -255,11 +261,11 @@ impl FileStore {
             state.finish();
 
             if let Some(activity_logger) = activity_logger {
-                if let Err(err) =
-                    activity_logger
-                        .lock()
-                        .log_file_fetch(all_keys, attrs, start_instant.elapsed())
-                {
+                if let Err(err) = activity_logger.lock().log_file_fetch(
+                    activity_logger_keys,
+                    attrs,
+                    start_instant.elapsed(),
+                ) {
                     tracing::error!("Error writing activity log: {}", err);
                 }
             }
