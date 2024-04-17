@@ -23,6 +23,7 @@ use anyhow::Result;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
+use itertools::Itertools;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -81,6 +82,10 @@ pub struct FileStore {
     pub(crate) compute_aux_data: bool,
     // Make prefetch() calls request aux data.
     pub(crate) prefetch_aux_data: bool,
+
+    // Largest set of keys prefetch() accepts before chunking.
+    // Configured by scmstore.max-prefetch-size, where 0 means unlimited.
+    pub(crate) max_prefetch_size: usize,
 
     // Record remote fetches
     pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
@@ -420,6 +425,7 @@ impl FileStore {
 
             prefetch_aux_data: false,
             compute_aux_data: false,
+            max_prefetch_size: 0,
 
             indexedlog_local: None,
             lfs_local: None,
@@ -492,6 +498,7 @@ impl LegacyStore for FileStore {
 
             prefetch_aux_data: self.prefetch_aux_data,
             compute_aux_data: self.compute_aux_data,
+            max_prefetch_size: self.max_prefetch_size,
 
             indexedlog_local: self.indexedlog_cache.clone(),
             lfs_local: self.lfs_cache.clone(),
@@ -607,12 +614,26 @@ impl FileStore {
             attrs |= FileAttributes::AUX;
         }
 
-        self.fetch(
-            keys,
-            attrs,
-            FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
-        )
-        .missing()
+        let mut missing = Vec::new();
+
+        let max_size = match self.max_prefetch_size {
+            0 => keys.len(),
+            max => max,
+        };
+
+        for chunk in &keys.into_iter().chunks(max_size) {
+            missing.extend_from_slice(
+                &self
+                    .fetch(
+                        chunk,
+                        attrs,
+                        FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+                    )
+                    .missing()?,
+            );
+        }
+
+        Ok(missing)
     }
 }
 
