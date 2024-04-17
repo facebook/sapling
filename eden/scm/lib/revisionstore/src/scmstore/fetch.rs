@@ -64,6 +64,47 @@ impl<T: StoreValue> CommonFetchState<T> {
         })
     }
 
+    // Combine `pending()` and `found()` into a single operation. This allows the caller
+    // to avoid copying the keys returned by `pending()`.
+    pub(crate) fn iter_pending(
+        &mut self,
+        fetchable: T::Attrs,
+        with_computable: bool,
+        cb: impl Fn(&Key) -> Option<T>,
+    ) {
+        self.pending.retain(|key, available| {
+            let actionable = Self::actionable_attrs(
+                self.request_attrs,
+                available.attrs(),
+                fetchable,
+                with_computable,
+            );
+
+            if actionable.any() {
+                if let Some(value) = cb(key) {
+                    let new = value | std::mem::take(available);
+
+                    // Check if the newly fetched attributes fulfill all what was originally requested.
+                    if new.attrs().has(self.request_attrs) {
+                        if !self.mode.ignore_result() {
+                            let new = new.mask(self.request_attrs);
+                            let _ = self.found_tx.send(Ok((key.clone(), new)));
+                        }
+
+                        // This item has been fulfilled - don't retain it.
+                        return false;
+                    } else {
+                        // Not fulfilled yet - update value with new attributes.
+                        *available = new;
+                    }
+                }
+            }
+
+            // No change - retain value in `pending`.
+            true
+        });
+    }
+
     pub(crate) fn found(&mut self, key: Key, value: T) -> bool {
         if let Some(available) = self.pending.get_mut(&key) {
             // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
@@ -129,12 +170,26 @@ impl<T: StoreValue> CommonFetchState<T> {
         }
 
         let available = self.pending.get(key).map_or(T::Attrs::NONE, |f| f.attrs());
+
+        Self::actionable_attrs(self.request_attrs, available, fetchable, with_computable)
+    }
+
+    fn actionable_attrs(
+        // What the original fetch() request wants to fetch.
+        requested: T::Attrs,
+        // What is already available for this key.
+        available: T::Attrs,
+        // What the current data source is able to provide.
+        fetchable: T::Attrs,
+        // Whether we want to consider which attributes are computable.
+        with_computable: bool,
+    ) -> T::Attrs {
         let (available, fetchable) = if with_computable {
             (available.with_computable(), fetchable.with_computable())
         } else {
             (available, fetchable)
         };
-        let missing = self.request_attrs - available;
+        let missing = requested - available;
 
         missing & fetchable
     }
