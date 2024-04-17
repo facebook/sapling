@@ -35,7 +35,6 @@ use crate::datastore::RemoteDataStore;
 use crate::error::ClonableError;
 use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
-use crate::indexedlogauxstore::Entry as AuxDataEntry;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogutil::StoreType;
@@ -123,17 +122,6 @@ impl FetchState {
 
     pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
         &self.metrics
-    }
-
-    /// Return all incomplete requested Keys for which additional attributes may be gathered by querying a store which provides the specified attributes.
-    fn pending_all(&self, fetchable: FileAttributes) -> Vec<Key> {
-        if fetchable.none() {
-            return vec![];
-        }
-        self.common
-            .pending(fetchable, self.compute_aux_data)
-            .map(|(key, _attrs)| key.clone())
-            .collect()
     }
 
     /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and for which additional attributes may be gathered by querying a store which provides the specified attributes.
@@ -322,18 +310,55 @@ impl FetchState {
         }
     }
 
-    fn found_aux_indexedlog(&mut self, key: Key, entry: AuxDataEntry, typ: StoreType) {
-        let aux_data: FileAuxData = entry;
-        self.found_attributes(key, aux_data.into());
-    }
-
     pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, typ: StoreType) {
-        let pending = self.pending_all(FileAttributes::AUX);
-        if pending.is_empty() {
+        let fetch_start = std::time::Instant::now();
+
+        let mut found = 0;
+        let mut errors = 0;
+        let mut count = 0;
+        let mut error: Option<String> = None;
+
+        self.common
+            .iter_pending(FileAttributes::AUX, self.compute_aux_data, |key| {
+                count += 1;
+
+                let res = if self.fetch_mode.ignore_result() {
+                    store.contains(key.hgid).map(|contains| {
+                        if contains {
+                            // Insert a stub entry if caller is ignoring the results.
+                            Some(FileAuxData::default())
+                        } else {
+                            None
+                        }
+                    })
+                } else {
+                    store.get(key.hgid)
+                };
+                match res {
+                    Ok(Some(aux)) => {
+                        self.metrics.aux.store(typ).hit(1);
+                        found += 1;
+                        return Some(aux.into());
+                    }
+                    Ok(None) => {
+                        self.metrics.aux.store(typ).miss(1);
+                    }
+                    Err(err) => {
+                        self.metrics.aux.store(typ).err(1);
+                        errors += 1;
+                        if error.is_none() {
+                            error.replace(format!("{}: {}", key, err));
+                        }
+                        self.errors.keyed_error(key.clone(), err)
+                    }
+                }
+
+                None
+            });
+
+        if count == 0 {
             return;
         }
-
-        let fetch_start = std::time::Instant::now();
 
         debug!(
             "Checking store AUX ({cache}) - Count = {count}",
@@ -341,47 +366,9 @@ impl FetchState {
                 StoreType::Shared => "cache",
                 StoreType::Local => "local",
             },
-            count = pending.len()
         );
 
-        let mut found = 0;
-        let mut errors = 0;
-        let mut error: Option<String> = None;
-
-        self.metrics.aux.store(typ).fetch(pending.len());
-
-        for key in pending.into_iter() {
-            let res = if self.fetch_mode.ignore_result() {
-                store.contains(key.hgid).map(|contains| {
-                    if contains {
-                        // Insert a stub entry if caller is ignoring the results.
-                        Some(FileAuxData::default())
-                    } else {
-                        None
-                    }
-                })
-            } else {
-                store.get(key.hgid)
-            };
-            match res {
-                Ok(Some(aux)) => {
-                    self.metrics.aux.store(typ).hit(1);
-                    found += 1;
-                    self.found_aux_indexedlog(key, aux, typ)
-                }
-                Ok(None) => {
-                    self.metrics.aux.store(typ).miss(1);
-                }
-                Err(err) => {
-                    self.metrics.aux.store(typ).err(1);
-                    errors += 1;
-                    if error.is_none() {
-                        error.replace(format!("{}: {}", key, err));
-                    }
-                    self.errors.keyed_error(key, err)
-                }
-            }
-        }
+        self.metrics.aux.store(typ).fetch(count);
 
         self.metrics
             .aux

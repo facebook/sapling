@@ -70,7 +70,7 @@ impl<T: StoreValue> CommonFetchState<T> {
         &mut self,
         fetchable: T::Attrs,
         with_computable: bool,
-        cb: impl Fn(&Key) -> Option<T>,
+        mut cb: impl FnMut(&Key) -> Option<T>,
     ) {
         self.pending.retain(|key, available| {
             let actionable = Self::actionable_attrs(
