@@ -375,13 +375,8 @@ async fn expand_git_submodule<'a, R: Repo>(
     debug!(ctx.logger(), "Expanding submodule {}", &submodule_path);
 
     let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;
-    let git_submodule_sha1 = get_git_hash_from_submodule_file(
-        ctx,
-        small_repo,
-        submodule_file_content_id,
-        &submodule_path,
-    )
-    .await?;
+    let git_submodule_sha1 =
+        get_git_hash_from_submodule_file(ctx, small_repo, submodule_file_content_id).await?;
 
     debug!(
         ctx.logger(),
@@ -641,7 +636,6 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
                             &ctx,
                             small_repo,
                             submodule_file_content_id,
-                            &submodule_path,
                         )
                         .await?;
 
@@ -799,13 +793,8 @@ async fn generate_additional_file_changes<'a, R: Repo>(
         sm_exp_data.x_repo_submodule_metadata_file_prefix,
     )?;
 
-    let git_submodule_sha1 = get_git_hash_from_submodule_file(
-        ctx,
-        small_repo,
-        submodule_file_content_id,
-        &submodule_path,
-    )
-    .await?;
+    let git_submodule_sha1 =
+        get_git_hash_from_submodule_file(ctx, small_repo, submodule_file_content_id).await?;
 
     // Create the x-repo submodule metadata file change, containing the decoded
     // hash of the git commit from the submodule that's being expanded.

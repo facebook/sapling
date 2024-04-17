@@ -32,6 +32,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -45,18 +46,14 @@ pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
     ctx: &'a CoreContext,
     repo: &'a R,
     submodule_file_content_id: ContentId,
-    submodule_path: &'a SubmodulePath,
 ) -> Result<GitSha1> {
     let blobstore = repo.repo_blobstore_arc();
 
     let bytes = filestore::fetch_concat_exact(&blobstore, ctx, submodule_file_content_id, 20)
-      .await
-      .with_context(|| {
-          format!(
-              "Failed to fetch content of submodule {} file containing the submodule's git commit hash",
-              &submodule_path
-          )
-      })?;
+        .await
+        .with_context(
+            || "Failed to fetch content of file containing the submodule's git commit hash",
+        )?;
 
     let git_submodule_hash = RichGitSha1::from_bytes(&bytes, ObjectKind::Commit.as_str(), 0)?;
     let git_submodule_sha1 = git_submodule_hash.sha1();
@@ -107,6 +104,16 @@ pub(crate) async fn is_path_git_submodule(
         .is_some())
 }
 
+pub(crate) fn x_repo_submodule_metadata_file_basename<S: std::fmt::Display>(
+    submodule_basename: &S,
+    x_repo_submodule_metadata_file_prefix: &str,
+) -> Result<MPathElement> {
+    MPathElement::new(
+        format!(".{x_repo_submodule_metadata_file_prefix}-{submodule_basename}")
+            .to_string()
+            .into_bytes(),
+    )
+}
 /// Builds the full path of the x-repo submodule metadata file for a given
 /// submodule.
 pub(crate) fn get_x_repo_submodule_metadata_file_path(
@@ -117,15 +124,14 @@ pub(crate) fn get_x_repo_submodule_metadata_file_path(
 ) -> Result<NonRootMPath> {
     let (mb_sm_parent_dir, sm_basename) = submodule_file_path.0.split_dirname();
 
-    let x_repo_sm_metadata_file: NonRootMPath = NonRootMPath::new(
-        format!(".{x_repo_submodule_metadata_file_prefix}-{sm_basename}")
-            .to_string()
-            .into_bytes(),
+    let x_repo_sm_metadata_file = x_repo_submodule_metadata_file_basename(
+        &sm_basename,
+        x_repo_submodule_metadata_file_prefix,
     )?;
 
     let x_repo_sm_metadata_path = match mb_sm_parent_dir {
         Some(sm_parent_dir) => sm_parent_dir.join(&x_repo_sm_metadata_file),
-        None => x_repo_sm_metadata_file,
+        None => x_repo_sm_metadata_file.into(),
     };
     Ok(x_repo_sm_metadata_path)
 }
