@@ -183,42 +183,31 @@ impl FetchState {
         Ok(LazyFile::IndexedLog(mmap_entry))
     }
 
-    fn found_indexedlog(
-        &mut self,
-        key: Key,
-        entry: Entry,
-        typ: StoreType,
-        lfs_store: Option<&LfsStore>,
-    ) {
-        if entry.metadata().is_lfs() && self.lfs_enabled {
-            if self.extstored_policy == ExtStoredPolicy::Use {
-                match entry.try_into() {
-                    Ok(ptr) => {
-                        if let Some(lfs_store) = lfs_store {
-                            // Promote this indexedlog LFS pointer to the
-                            // pointer store if it isn't already present. This
-                            // should only happen when the Python LFS extension
-                            // is in play.
-                            if let Ok(None) = lfs_store.fetch_available(
-                                &key.clone().into(),
-                                self.fetch_mode.ignore_result(),
-                            ) {
-                                if let Err(err) = lfs_store.add_pointer(ptr) {
-                                    self.errors.keyed_error(key, err);
-                                }
+    fn ugprade_lfs_pointers(&mut self, entries: Vec<(Key, Entry)>, lfs_store: Option<&LfsStore>) {
+        for (key, entry) in entries {
+            match entry.try_into() {
+                Ok(ptr) => {
+                    if let Some(lfs_store) = lfs_store {
+                        // Promote this indexedlog LFS pointer to the
+                        // pointer store if it isn't already present. This
+                        // should only happen when the Python LFS extension
+                        // is in play.
+                        if let Ok(None) = lfs_store
+                            .fetch_available(&key.clone().into(), self.fetch_mode.ignore_result())
+                        {
+                            if let Err(err) = lfs_store.add_pointer(ptr) {
+                                self.errors.keyed_error(key, err);
                             }
-                        } else {
-                            // If we don't have somewhere to upgrade pointer,
-                            // track as a "found" pointer so it will be fetched
-                            // from the remote store subsequently.
-                            self.found_pointer(key, ptr, true)
                         }
+                    } else {
+                        // If we don't have somewhere to upgrade pointer,
+                        // track as a "found" pointer so it will be fetched
+                        // from the remote store subsequently.
+                        self.found_pointer(key, ptr, true)
                     }
-                    Err(err) => self.errors.keyed_error(key, err),
                 }
+                Err(err) => self.errors.keyed_error(key, err),
             }
-        } else {
-            self.found_attributes(key, LazyFile::IndexedLog(entry).into())
         }
     }
 
@@ -250,43 +239,64 @@ impl FetchState {
         );
 
         let mut found = 0;
+        let mut count = 0;
         let mut errors = 0;
         let mut error: Option<String> = None;
+        let mut lfs_pointers_to_upgrade = Vec::new();
 
         self.metrics.indexedlog.store(typ).fetch(pending.len());
-        for key in pending.into_iter() {
-            let res = if self.fetch_mode.ignore_result() {
-                store.contains(&key.hgid).map(|contains| {
-                    if contains {
-                        // Insert a stub entry if caller is ignoring the results.
-                        Some(Entry::new(key.clone(), Bytes::new(), Metadata::default()))
-                    } else {
-                        None
-                    }
-                })
-            } else {
-                store.get_raw_entry(&key.hgid)
-            };
 
-            match res {
-                Ok(Some(entry)) => {
-                    self.metrics.indexedlog.store(typ).hit(1);
-                    found += 1;
-                    self.found_indexedlog(key, entry, typ, lfs_store)
-                }
-                Ok(None) => {
-                    self.metrics.indexedlog.store(typ).miss(1);
-                }
-                Err(err) => {
-                    self.metrics.indexedlog.store(typ).err(1);
-                    errors += 1;
-                    if error.is_none() {
-                        error.replace(format!("{}: {}", key, err));
+        self.common
+            .iter_pending(FileAttributes::CONTENT, self.compute_aux_data, |key| {
+                count += 1;
+
+                let res = if self.fetch_mode.ignore_result() {
+                    store.contains(&key.hgid).map(|contains| {
+                        if contains {
+                            // Insert a stub entry if caller is ignoring the results.
+                            Some(Entry::new(key.clone(), Bytes::new(), Metadata::default()))
+                        } else {
+                            None
+                        }
+                    })
+                } else {
+                    store.get_raw_entry(&key.hgid)
+                };
+
+                match res {
+                    Ok(Some(entry)) => {
+                        self.metrics.indexedlog.store(typ).hit(1);
+                        found += 1;
+
+                        if entry.metadata().is_lfs() && self.lfs_enabled {
+                            // This is mainly for tests. We are handling the transition
+                            // from the Python lfs extension (which stored pointers in the
+                            // regular file store), the remotefilelog lfs implementation
+                            // (which stores pointers in a separate store).
+                            if self.extstored_policy == ExtStoredPolicy::Use {
+                                lfs_pointers_to_upgrade.push((key.clone(), entry));
+                            }
+                        } else {
+                            return Some(LazyFile::IndexedLog(entry).into());
+                        }
                     }
-                    self.errors.keyed_error(key, err)
+                    Ok(None) => {
+                        self.metrics.indexedlog.store(typ).miss(1);
+                    }
+                    Err(err) => {
+                        self.metrics.indexedlog.store(typ).err(1);
+                        errors += 1;
+                        if error.is_none() {
+                            error.replace(format!("{}: {}", key, err));
+                        }
+                        self.errors.keyed_error(key.clone(), err);
+                    }
                 }
-            }
-        }
+
+                None
+            });
+
+        self.ugprade_lfs_pointers(lfs_pointers_to_upgrade, lfs_store);
 
         self.metrics
             .indexedlog
@@ -761,7 +771,7 @@ impl FetchState {
                     };
 
                     self.found_attributes(key.clone(), file);
-                    self.lfs_pointers.remove(&key);
+                    self.lfs_pointers.remove(key);
                 }
 
                 Ok(())
