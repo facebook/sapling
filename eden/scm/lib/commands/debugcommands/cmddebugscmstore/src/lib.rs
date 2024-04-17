@@ -142,7 +142,7 @@ fn fetch_files(
 
     let mut fetch_and_display_successes =
         |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Vec<Error>> {
-            let fetch_result = store.fetch(keys.into_iter(), attrs, fetch_mode);
+            let fetch_result = store.fetch(keys, attrs, fetch_mode);
 
             let (found, missing, _errors) = fetch_result.consume();
             for (_, file) in found.into_iter() {

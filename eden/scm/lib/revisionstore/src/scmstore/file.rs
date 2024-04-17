@@ -145,7 +145,7 @@ impl FileStore {
 
     pub fn fetch(
         &self,
-        keys: impl Iterator<Item = Key>,
+        keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
         fetch_mode: FetchMode,
     ) -> FetchResults<StoreFile> {
@@ -592,8 +592,8 @@ impl HgIdDataStore for FileStore {
     }
 }
 
-impl RemoteDataStore for FileStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+impl FileStore {
+    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
         self.metrics.write().api.hg_prefetch.call(keys.len());
 
         let mut attrs = FileAttributes::CONTENT;
@@ -601,13 +601,24 @@ impl RemoteDataStore for FileStore {
             attrs |= FileAttributes::AUX;
         }
 
+        self.fetch(
+            keys,
+            attrs,
+            FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+        )
+        .missing()
+    }
+}
+
+impl RemoteDataStore for FileStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let missing = self
-            .fetch(
-                keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
-                attrs,
-                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
-            )
-            .missing()?
+            .prefetch(
+                keys.iter()
+                    .cloned()
+                    .filter_map(|sk| sk.maybe_into_key())
+                    .collect(),
+            )?
             .into_iter()
             .map(StoreKey::HgId)
             .collect();

@@ -17,7 +17,6 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Error;
 use configmodel::Config;
-use configmodel::ConfigExt;
 use cpython::*;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
@@ -1248,7 +1247,14 @@ py_class!(pub class filescmstore |py| {
 
     def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.prefetch_py(py, keys)
+
+        let keys = keys
+            .iter(py)
+            .map(|tuple| from_tuple_to_key(py, &tuple))
+            .collect::<PyResult<Vec<Key>>>()?;
+        py.allow_threads(|| FileStore::prefetch(store, keys)).map_pyerr(py)?;
+
+        Ok(Python::None(py))
     }
 
     def markforrefresh(&self) -> PyResult<PyNone> {

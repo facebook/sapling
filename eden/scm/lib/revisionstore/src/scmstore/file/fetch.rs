@@ -93,7 +93,7 @@ pub struct FetchState {
 
 impl FetchState {
     pub(crate) fn new(
-        keys: impl Iterator<Item = Key>,
+        keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,

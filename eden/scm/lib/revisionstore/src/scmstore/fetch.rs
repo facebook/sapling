@@ -37,13 +37,13 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
 
 impl<T: StoreValue> CommonFetchState<T> {
     pub(crate) fn new(
-        keys: impl Iterator<Item = Key>,
+        keys: impl IntoIterator<Item = Key>,
         attrs: T::Attrs,
         found_tx: Sender<Result<(Key, T), KeyFetchError>>,
         mode: FetchMode,
     ) -> Self {
         Self {
-            pending: keys.collect(),
+            pending: keys.into_iter().collect(),
             request_attrs: attrs,
             found: HashMap::new(),
             found_tx,
