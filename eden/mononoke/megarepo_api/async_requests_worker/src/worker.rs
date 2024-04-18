@@ -96,7 +96,7 @@ impl AsyncMethodRequestWorker {
         );
 
         request_stream
-            .try_for_each_concurrent(Some(concurrency_limit), async move |(req_id, params)| {
+            .try_for_each_concurrent(Some(concurrency_limit), |(req_id, params)| async move {
                 let worker = self.clone();
                 let ctx = ctx.clone();
                 let _updated = tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params))

@@ -428,7 +428,7 @@ async fn run_one(
         cloned!(command, job_params.quiet, sub_params.progress_state,);
         move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
             cloned!(ctx, repo_params.scheduled_max);
-            async move |walk_output, _run_start, _chunk_num, _checkpoint_name| {
+            move |walk_output, _run_start, _chunk_num, _checkpoint_name| async move {
                 cloned!(ctx, sizing_progress_state);
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
 

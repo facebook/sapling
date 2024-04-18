@@ -42,7 +42,7 @@ impl DarkstormVerifier {
     pub async fn upload(&self, ctx: &CoreContext, blobs: &[(Sha256, u64)]) -> Result<(), Error> {
         stream::iter(blobs.iter().copied())
             .map(Ok)
-            .try_for_each_concurrent(50, async move |(key, size)| -> Result<(), Error> {
+            .try_for_each_concurrent(50, |(key, size)| async move {
                 let blob = filestore::fetch_stream(
                     self.origin_blobstore.clone(),
                     ctx,
@@ -58,7 +58,7 @@ impl DarkstormVerifier {
                 )
                 .await
                 .with_context(|| format!("while syncing LFS entry {:?}", key))?;
-                Ok(())
+                Ok::<(), Error>(())
             })
             .await?;
         Ok(())

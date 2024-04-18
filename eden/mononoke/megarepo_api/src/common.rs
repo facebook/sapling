@@ -337,7 +337,7 @@ pub trait MegarepoOp {
             .await?
             .map_err(MegarepoError::internal)
             .try_for_each({
-                async move |path_context| {
+                |path_context| async move {
                     Result::<(), _>::Err(MegarepoError::request(anyhow!(
                         "path {} cannot be added to the target - it's already present",
                         &path_context.path()
@@ -464,7 +464,7 @@ pub trait MegarepoOp {
             .await
             .map_err(MegarepoError::internal)?
             .map_err(MegarepoError::internal)
-            .and_then(async move |path| {
+            .and_then(|path| async move {
                 Ok(mover(&path.into_optional_non_root_path().ok_or_else(
                     || MegarepoError::internal(anyhow!("mpath can't be null")),
                 )?)?)

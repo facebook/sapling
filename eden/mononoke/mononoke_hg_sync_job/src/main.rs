@@ -1539,7 +1539,7 @@ async fn run<'a>(
             })
             .try_buffered(bundle_buffer_size)
             .fuse()
-            .try_next_step(async move |bundles: Vec<CombinedBookmarkUpdateLogEntry>| {
+            .try_next_step(|bundles: Vec<CombinedBookmarkUpdateLogEntry>| async move {
                 for bundle in bundles {
                     if !can_continue() {
                         break;

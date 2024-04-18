@@ -331,15 +331,15 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         let parent_tree_unodes: Vec<(ManifestUnode, Vec<ChangesetId>)> =
             stream::iter(parents_unode_ids.iter_all())
                 .map(Ok::<_, Error>)
-                .try_filter_map(
-                    async move |(unode_entry, parent_cs_ids)| match unode_entry {
+                .try_filter_map(|(unode_entry, parent_cs_ids)| async move {
+                    match unode_entry {
                         UnodeEntry::Directory(mf_unode) => Ok(Some((
                             mf_unode.load(ctx, blobstore).await?,
                             parent_cs_ids.clone(),
                         ))),
                         _ => Ok::<_, Error>(None),
-                    },
-                )
+                    }
+                })
                 .try_collect()
                 .await?;
 
@@ -981,7 +981,7 @@ mod test {
         borrowed!(ctx, commits);
         let blobstore: &Arc<dyn Blobstore> = &blobstore;
 
-        let derive = async move |stack: Vec<&'static str>| {
+        let derive = |stack: Vec<&'static str>| async move {
             let bonsais = future::try_join_all(stack.iter().map(|c| {
                 commits
                     .get(*c)

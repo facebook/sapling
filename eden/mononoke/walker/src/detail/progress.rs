@@ -439,7 +439,7 @@ where
 {
     let (seen, loaded) = s
         .try_fold((0_usize, 0_usize), {
-            async move |(mut seen, mut loaded), (_n, nd, _ss)| {
+            |(mut seen, mut loaded), (_n, nd, _ss)| async move {
                 seen += 1;
                 if nd.is_some() {
                     loaded += 1;

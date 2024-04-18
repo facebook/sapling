@@ -918,7 +918,7 @@ async fn run_one(
     let make_sink = move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
         cloned!(ctx);
         validate_progress_state.set_sample_builder(repo_params.scuba_builder.clone());
-        async move |walk_output, _run_start, _chunk_num, _checkpoint_name| {
+        move |walk_output, _run_start, _chunk_num, _checkpoint_name| async move {
             cloned!(ctx, progress_state, validate_progress_state);
             let walk_progress =
                 progress_stream(quiet, &progress_state, walk_output).map_ok(|(n, d, s)| {

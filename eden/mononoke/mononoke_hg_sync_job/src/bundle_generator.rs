@@ -240,7 +240,7 @@ async fn create_bundle_impl(
                 }
             })
             .buffered(100)
-            .and_then(async move |(hg_cs_id, cs)| {
+            .and_then(|(hg_cs_id, cs)| async move {
                 let revlogcs = RevlogChangeset::new_from_parts(
                     cs.parents().clone(),
                     cs.manifestid().clone(),
@@ -374,7 +374,7 @@ async fn find_commits_to_push<'a>(
             hg_server_heads.into_iter().collect(),
         )
         .await?
-        .map_ok(async move |bcs_id| {
+        .map_ok(move |bcs_id| async move {
             let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
             Ok((bcs_id, hg_cs_id))
         })
