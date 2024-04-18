@@ -709,7 +709,7 @@ function ActionsBar({
               disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
               runOperation={async () => {
                 let amendOrCommitOp;
-                if (anythingToCommit) {
+                if (commit.isDot && anythingToCommit) {
                   // TODO: we should also amend if there are pending commit message changes, and change the button
                   // to amend message & submit.
                   // Or just remove the submit button if you start editing since we'll update the remote message anyway...
