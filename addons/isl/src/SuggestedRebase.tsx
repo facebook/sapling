@@ -10,7 +10,7 @@ import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
-import {findCurrentPublicBase} from './getCommitTree';
+import {findPublicBaseAncestor} from './getCommitTree';
 import {T, t} from './i18n';
 import {atomFamilyWeak, readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
@@ -66,7 +66,7 @@ export const showSuggestedRebaseForStack = atomFamilyWeak((hash: Hash) =>
 
 export const suggestedRebaseDestinations = atom(get => {
   const dag = get(latestDag);
-  const publicBase = findCurrentPublicBase(get(dagWithPreviews));
+  const publicBase = findPublicBaseAncestor(get(dagWithPreviews));
   const destinations = dag
     .getBatch(dag.public_().toArray())
     .filter(

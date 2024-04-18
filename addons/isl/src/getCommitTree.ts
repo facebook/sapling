@@ -6,7 +6,7 @@
  */
 
 import type {CommitPreview, Dag, WithPreviewType} from './previews';
-import type {CommitInfo} from './types';
+import type {CommitInfo, Hash} from './types';
 
 export type CommitTree = {
   info: CommitInfo;
@@ -120,8 +120,9 @@ export function isTreeLinear(tree: CommitTreeWithPreviews): boolean {
   return tree.children.every(t => isTreeLinear(t));
 }
 
-export function findCurrentPublicBase(dag?: Dag): CommitInfo | undefined {
-  let commit = dag?.resolve('.');
+/** Finds the public ancestor by walking up parents, either from a starting hash or from `.` if none provided. */
+export function findPublicBaseAncestor(dag?: Dag, from?: Hash): CommitInfo | undefined {
+  let commit = dag?.resolve(from ?? '.');
   while (commit) {
     if (commit.phase === 'public') {
       return commit;

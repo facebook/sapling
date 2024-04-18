@@ -14,7 +14,7 @@ import {Tooltip} from './Tooltip';
 import {Checkbox} from './components/Checkbox';
 import {Divider} from './components/Divider';
 import {TextField} from './components/TextField';
-import {findCurrentPublicBase} from './getCommitTree';
+import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
 import {GotoOperation} from './operations/GotoOperation';
@@ -127,7 +127,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       const dest =
         rebaseType === 'rebase_ontop'
           ? '.'
-          : nullthrows(findCurrentPublicBase(readAtom(dagWithPreviews))?.hash);
+          : nullthrows(findPublicBaseAncestor(readAtom(dagWithPreviews))?.hash);
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
       runOperation(new Op(exactRevset(enteredRevset), succeedableRevset(dest)));
