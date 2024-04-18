@@ -91,4 +91,6 @@ export interface UICodeReviewProvider {
   supportsComparingSinceLastSubmit: boolean;
 
   supportsRenderingMarkup: boolean;
+
+  gotoDistanceWarningAgeCutoff: number;
 }

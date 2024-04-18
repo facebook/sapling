@@ -118,9 +118,9 @@ describe('hide operation', () => {
     expect(screen.queryByTestId('commit-e')).not.toBeInTheDocument();
   });
 
-  it('does not show uninteresting public base during optimistic hide', () => {
+  it('does not show uninteresting public base during optimistic hide', async () => {
     // Go to another branch so head is not being hidden.
-    CommitTreeListTestUtils.clickGoto('z');
+    await CommitTreeListTestUtils.clickGoto('z');
     rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
 
     const runHideButton = screen.getByText('Hide');

@@ -9,7 +9,7 @@ import type {Hash} from '../types';
 
 import App from '../App';
 import platform from '../platform';
-import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
+import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -1126,22 +1126,17 @@ describe('CommitInfoView', () => {
       });
 
       describe('optimistic state', () => {
-        const clickGotoCommit = (hash: Hash) => {
-          const gotoButton = within(screen.getByTestId(`commit-${hash}`)).getByText('Goto');
-          fireEvent.click(gotoButton);
-        };
-
-        it('takes previews into account when rendering head', () => {
-          clickGotoCommit('a');
+        it('takes previews into account when rendering head', async () => {
+          await CommitTreeListTestUtils.clickGoto('a');
           // while optimistic state happening...
           // show new commit in commit info without clicking it (because head is auto-selected)
           expect(withinCommitInfo().queryByText('My Commit')).toBeInTheDocument();
           expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
-        it('shows new head when running goto', () => {
+        it('shows new head when running goto', async () => {
           clickToSelectCommit('b'); // explicitly select
-          clickGotoCommit('a');
+          await CommitTreeListTestUtils.clickGoto('a');
 
           expect(withinCommitInfo().queryByText('My Commit')).toBeInTheDocument();
           expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();

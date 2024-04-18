@@ -19,11 +19,13 @@ export const CommitTreeListTestUtils = {
     return within(screen.getByTestId('commit-tree-root'));
   },
 
-  clickGoto(commit: Hash) {
+  async clickGoto(commit: Hash) {
     const myCommit = screen.queryByTestId(`commit-${commit}`);
     const gotoButton = myCommit?.querySelector('.goto-button button');
     expect(gotoButton).toBeDefined();
-    fireEvent.click(gotoButton as Element);
+    await act(async () => {
+      fireEvent.click(gotoButton as Element);
+    });
   },
 };
 

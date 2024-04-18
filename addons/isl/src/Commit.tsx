@@ -16,6 +16,7 @@ import {Row} from './ComponentUtils';
 import {DragToRebase} from './DragToRebase';
 import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
+import {Internal} from './Internal';
 import {SubmitSelectionButton} from './SubmitSelectionButton';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -33,6 +34,7 @@ import {
 import {DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {FoldButton, useRunFoldPreview} from './fold';
+import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {readAtom, writeAtom} from './jotaiUtils';
@@ -45,8 +47,9 @@ import {
   useRunPreviewedOperation,
   inlineProgressByHash,
 } from './operationsState';
+import platform from './platform';
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
-import {RelativeDate} from './relativeDate';
+import {RelativeDate, relativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitCallbacks} from './selection';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
@@ -62,6 +65,7 @@ import React, {memo} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
+import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty} from 'shared/utils';
 
@@ -290,18 +294,22 @@ export const Commit = memo(
             <VSCodeButton
               appearance="secondary"
               aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
-              onClick={event => {
-                runOperation(
-                  new GotoOperation(
-                    // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                    // and works better with optimistic state
-                    commit.remoteBookmarks.length > 0
-                      ? succeedableRevset(commit.remoteBookmarks[0])
-                      : latestSuccessorUnlessExplicitlyObsolete(commit),
-                  ),
-                );
+              onClick={async event => {
                 event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
-                // Instead, ensure we remove the selection, so we view the new head commit by default
+
+                const dest =
+                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+                  // and works better with optimistic state
+                  commit.remoteBookmarks.length > 0
+                    ? succeedableRevset(commit.remoteBookmarks[0])
+                    : latestSuccessorUnlessExplicitlyObsolete(commit);
+                const shouldContinue = await maybeWarnAboutOldDestination(commit);
+                if (!shouldContinue) {
+                  return;
+                }
+                runOperation(new GotoOperation(dest));
+
+                // Instead of propagating, ensure we remove the selection, so we view the new head commit by default
                 // (since the head commit is the default thing shown in the sidebar)
                 writeAtom(selectedCommits, new Set());
               }}>
@@ -543,6 +551,41 @@ function ObsoleteTipInner(props: {isSuccessorPublic?: boolean}) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<boolean> {
+  const provider = readAtom(codeReviewProvider);
+  // Cutoff age is determined by the code review provider since internal repos have different requirements than GitHub-backed repos.
+  const MAX_AGE_CUTOFF_MS = provider?.gotoDistanceWarningAgeCutoff ?? 30 * MS_PER_DAY;
+
+  const dag = readAtom(dagWithPreviews);
+  const currentBase = findPublicBaseAncestor(dag);
+  const destBase = findPublicBaseAncestor(dag, dest.hash);
+  if (!currentBase || !destBase) {
+    // can't determine if we can show warning
+    return Promise.resolve(true);
+  }
+
+  const ageDiff = currentBase.date.valueOf() - destBase.date.valueOf();
+  if (ageDiff < MAX_AGE_CUTOFF_MS) {
+    // Either destination base is within time limit or destination base is newer than the current base.
+    // No need to warn.
+    return Promise.resolve(true);
+  }
+
+  return platform.confirm(
+    t(
+      Internal.warnAboutOldGotoReason ??
+        'The destination commit is $age older than the current commit. ' +
+          "Going here may be slow. It's often faster to rebase the commit to a newer base before going. " +
+          'Do you want to `goto` anyway?',
+      {
+        replace: {
+          $age: relativeDate(destBase.date, {reference: currentBase.date, useRelativeForm: true}),
+        },
+      },
+    ),
   );
 }
 

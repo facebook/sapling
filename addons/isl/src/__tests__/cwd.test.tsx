@@ -90,8 +90,8 @@ describe('cwd', () => {
     });
   });
 
-  it('clears out saved state when changing repos', () => {
-    clickGoto('a');
+  it('clears out saved state when changing repos', async () => {
+    await clickGoto('a');
 
     expect(screen.getByText('sl goto --rev a')).toBeInTheDocument();
 
