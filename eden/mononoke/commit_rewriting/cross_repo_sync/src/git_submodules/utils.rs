@@ -13,7 +13,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobstore::Blobstore;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -38,6 +37,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
 use crate::git_submodules::expand::SubmodulePath;
+use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::types::Repo;
 
 /// Get the git hash from a submodule file, which represents the commit from the
@@ -63,12 +63,12 @@ pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
 
 /// Get the git hash from a submodule file, which represents the commit from the
 /// given submodule that the source repo depends on at that revision.
-pub(crate) async fn git_hash_from_submodule_metadata_file<'a, B: Blobstore>(
+pub(crate) async fn git_hash_from_submodule_metadata_file<'a>(
     ctx: &'a CoreContext,
-    blobstore: &'a B,
+    large_repo: &'a InMemoryRepo,
     submodule_file_content_id: ContentId,
 ) -> Result<GitSha1> {
-    let bytes = filestore::fetch_concat_exact(&blobstore, ctx, submodule_file_content_id, 40)
+    let bytes = filestore::fetch_concat_exact(large_repo.repo_blobstore(), ctx, submodule_file_content_id, 40)
       .await
       .with_context(|| {
           format!(

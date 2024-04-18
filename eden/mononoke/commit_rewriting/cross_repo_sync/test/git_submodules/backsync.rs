@@ -128,9 +128,8 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
     )
     .await;
 
-    // TODO(T179533620): ensure that expansion matches submodule pointer working
-    // copy
-    assert!(validation_res.is_ok());
+    let expected_err_msg = "Files present in the expansion are unaccounted for";
+    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
 
     Ok(())
 }

@@ -6,33 +6,48 @@
  */
 
 use std::clone::Clone;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::anyhow;
+use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
+use async_recursion::async_recursion;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::macro_export::BonsaiDerivable;
+use either::Either;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
+use itertools::Itertools;
 use manifest::Entry;
 use manifest::ManifestOps;
+use mononoke_types::fsnode::Fsnode;
+use mononoke_types::fsnode::FsnodeDirectory;
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
 use slog::debug;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
+use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
+use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::types::Repo;
 
 /// Validate that a given bonsai **from the large repo** keeps all submodule
@@ -55,26 +70,7 @@ pub async fn validate_all_submodule_expansions<'a, R: Repo>(
     let bonsai: BonsaiChangeset = stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))
         .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
             cloned!(mover, sm_exp_data);
-
-            // We only need to create a submodule metadata file for the expansion
-            // of the submodules used directly by the small repo. i.e. we don't
-            // need to create one for the recursive submodules, because changing
-            // them means changing the submodule that contains it.
-            //
-            // So before calling the validation function for a submodule, let's
-            // check if it's a recursive one by counting the number of submodule
-            // paths in the submodule deps map that are prefix of this submodule.
-            let is_recursive_submodule = sm_exp_data
-                .submodule_deps
-                .keys()
-                .filter(|sm_path| sm_path.is_prefix_of(submodule_path))
-                .count()
-                > 1;
-
             async move {
-                if is_recursive_submodule {
-                    return Ok(bonsai);
-                };
                 validate_submodule_expansion(
                     ctx,
                     sm_exp_data,
@@ -201,11 +197,8 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 
     let large_repo = sm_exp_data.large_repo.clone();
 
-    let large_repo_blobstore = large_repo.repo_blobstore_arc();
-
     let git_hash =
-        git_hash_from_submodule_metadata_file(ctx, &large_repo_blobstore, metadata_file_content_id)
-            .await?;
+        git_hash_from_submodule_metadata_file(ctx, &large_repo, metadata_file_content_id).await?;
 
     // This is the root fsnode from the submodule at the commit the submodule
     // metadata file points to.
@@ -216,8 +209,10 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     // ------------------------------------------------------------------------
     // STEP 3: Get the fsnode from the expansion of the submodule in the large
     // repo and compare it with the fsnode from the submodule commit.
+
     let expansion_fsnode_id =
-        get_submodule_expansion_fsnode_id(ctx, sm_exp_data, &bonsai, synced_submodule_path).await?;
+        get_submodule_expansion_fsnode_id(ctx, sm_exp_data.clone(), &bonsai, synced_submodule_path)
+            .await?;
 
     if submodule_fsnode_id == expansion_fsnode_id {
         // If fsnodes are an exact match, there are no recursive submodules and the
@@ -225,9 +220,29 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         return Ok(bonsai);
     };
 
-    // If the fsnodes are not an exact match, it could be because of a recursive
-    // submodule, so validation can't fail yet.
-    // TODO(T179533620): validate recursive submodules
+    // Build a new submodule deps map, removing the prefix of the submodule path
+    // being validated, so it can be used to validate any recursive submodule
+    // being expanded in it.
+    let adjusted_submodule_deps: HashMap<NonRootMPath, R> = sm_exp_data
+        .submodule_deps
+        .iter()
+        .filter_map(|(p, repo)| {
+            p.remove_prefix_component(submodule_path)
+                .map(|relative_p| (relative_p, repo.clone()))
+        })
+        .collect();
+
+    // The submodule roots fsnode and the fsnode from its expansion in the large
+    // repo should be exactly the same.
+    validate_working_copy_of_expansion_with_recursive_submodules(
+        ctx,
+        sm_exp_data,
+        adjusted_submodule_deps,
+        submodule_repo,
+        expansion_fsnode_id,
+        submodule_fsnode_id,
+    )
+    .await?;
 
     Ok(bonsai)
 }
@@ -380,4 +395,369 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
     };
 
     Ok(expansion_fsnode_id)
+}
+
+/// This will take the fsnode of a submodule expansion and the fsnode from the
+/// commit that it's expanding from the submodule repo and will assert that
+/// they're equivalent, accounting for expansion of any submodules.
+#[async_recursion]
+async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
+    // Small repo submodule dependencies, but with their paths adjusted to
+    // account for recursive submodules.
+    adjusted_submodule_deps: HashMap<NonRootMPath, R>,
+    submodule_repo: &'a R,
+    expansion_fsnode_id: FsnodeId,
+    submodule_fsnode_id: FsnodeId,
+) -> Result<()> {
+    debug!(
+        ctx.logger(),
+        "Validating expansion working copy of submodule repo {0}",
+        submodule_repo.repo_identity().id()
+    );
+    let large_repo = sm_exp_data.large_repo.clone();
+    let large_repo_blobstore = large_repo.repo_blobstore_arc();
+    let submodule_blobstore = submodule_repo.repo_blobstore_arc();
+
+    let submodule_fsnode: Fsnode = submodule_fsnode_id.load(ctx, &submodule_blobstore).await?;
+    let expansion_fsnode: Fsnode = expansion_fsnode_id.load(ctx, &large_repo_blobstore).await?;
+
+    // STEP 1: get all the entries in each fsnode.
+    let all_expansion_entries: HashSet<(MPathElement, FsnodeEntry)> =
+        expansion_fsnode.into_subentries().into_iter().collect();
+
+    let all_submodule_entries: HashSet<(MPathElement, FsnodeEntry)> =
+        submodule_fsnode.into_subentries().into_iter().collect();
+
+    // Remove all the entries that are exact match in both sides, which means
+    // they pass validation.
+    let submodule_only_entries = all_submodule_entries
+        .difference(&all_expansion_entries)
+        .cloned();
+
+    let expansion_only_entries: HashMap<MPathElement, FsnodeEntry> = all_expansion_entries
+        .difference(&all_submodule_entries)
+        .cloned()
+        .collect();
+
+    // At this point we only have the entries that are not exact match
+
+    // STEP 2: assert that there are no paths are in the submodule manifest
+    // that are NOT in the expansion's manifest. This should never happen.
+    // In the process, split all the submodule manifest entries into files and
+    // directories, because the validation is different for each one.
+    let (submodule_dirs, submodule_files): (HashMap<_, _>, HashMap<_, _>) = submodule_only_entries
+        .into_iter()
+        .map(|(path, entry)| {
+            if !expansion_only_entries.contains_key(&path) {
+                return Err(anyhow!(
+                    "Path {path} is in submodule manifest but not in expansion"
+                ));
+            };
+            Ok((path, entry))
+        })
+        .process_results(|iter| {
+            iter.partition_map(|(path, entry)| match entry {
+                FsnodeEntry::Directory(fsnode_dir) => Either::Left((path, fsnode_dir)),
+                FsnodeEntry::File(fsnode_file) => Either::Right((path, fsnode_file)),
+            })
+        })?;
+
+    // STEP 3: split expansion entries from paths that are present in submodule
+    // manifest from the ones that aren't.
+    let (should_contain_submodule_expansions, should_be_metadata_files): (
+        Vec<(MPathElement, FsnodeEntry)>,
+        Vec<(MPathElement, FsnodeEntry)>,
+    ) = expansion_only_entries
+        .into_iter()
+        .partition(|(path, _entry)| {
+            submodule_dirs.contains_key(path) || submodule_files.contains_key(path)
+        });
+
+    // The paths that are NOT in the submodule's manifest CAN ONLY BE submodule
+    // metadata files.
+    let expected_metadata_files = should_be_metadata_files
+        .into_iter()
+        .map(|(path, entry)| match entry {
+            FsnodeEntry::File(fsnode_file) => Ok((path, fsnode_file)),
+            FsnodeEntry::Directory(_) => Err(anyhow!(
+                "Paths in expansion and not in submodules should be metadata files"
+            )),
+        })
+        .collect::<Result<HashMap<_, _>>>()?;
+
+    // The paths are are present in both, but their content doesn't match can be
+    // either a submodule expansion or a directory that contains an expansion.
+    // Either way, these paths can't be files.
+    let expansion_directories = should_contain_submodule_expansions
+        .into_iter()
+        .map(|(path, entry)| match entry {
+            FsnodeEntry::Directory(fsnode_file) => Ok((path, fsnode_file)),
+            FsnodeEntry::File(_) => Err(anyhow!(
+                "Path present in submodule manifest can't be a file in expansion"
+            )),
+        })
+        .collect::<Result<HashMap<_, _>>>()?;
+
+    // STEP 4: iterate over the expansion directories that don't match with the
+    // the submodule and ensure that they fall in one of two expected scenarios:
+    //
+    // 1. They are submodule expansions
+    // In this case we load the submodule repo being expanded, get its manifest
+    // and call this function to validate its working copy.
+    //
+    // 2. They are a normal directory that contains an expansion
+    // In this case, we just call this function passing that path, to repeat the
+    // process until we get to the submodule expansion.
+    //
+    // In this process, every submodule expansion should have its metadata file,
+    // so we keep track of all the files in the expansion that were not yet
+    // processed.
+    //
+    // **All the files and directories from both the expansion and the submodule
+    // manifest should be consumed (thus accounted for) in this step**.
+    let EntryValidationData {
+        remaining_sm_dirs: final_submodule_dirs,
+        remaining_sm_files: final_submodule_files,
+        remaining_md_files: final_expansion_only_files,
+        entries_to_validate,
+    } = stream::iter(expansion_directories.into_iter().map(anyhow::Ok))
+        .try_fold(
+            EntryValidationData {
+                remaining_sm_dirs: submodule_dirs,
+                remaining_sm_files: submodule_files,
+                remaining_md_files: expected_metadata_files,
+                entries_to_validate: Vec::new(),
+            },
+            |iteration_data: EntryValidationData<R>,
+             (exp_path, exp_directory): (MPathElement, FsnodeDirectory)| {
+                cloned!(sm_exp_data, adjusted_submodule_deps);
+                borrowed!(submodule_repo);
+
+                async move {
+                    validate_expansion_directory_against_submodule_manifest_entry(
+                        ctx,
+                        sm_exp_data,
+                        submodule_repo,
+                        adjusted_submodule_deps,
+                        iteration_data,
+                        exp_path,
+                        exp_directory,
+                    )
+                    .await
+                }
+            },
+        )
+        .await?;
+
+    // STEP 5: ensure that all the paths in the submodule manifest were accounted
+    // for.
+    ensure!(
+        final_submodule_dirs.is_empty(),
+        "Some directories present in submodule manifest are unaccounted for"
+    );
+    ensure!(
+        final_submodule_files.is_empty(),
+        "Some files present in submodule manifest are unaccounted for"
+    );
+
+    // Do the same for all the files in the expansion that don't exist in
+    // the submodule manifest, because they should be metadata files that were
+    // fetched to expand their submodule.
+    ensure!(
+        final_expansion_only_files.is_empty(),
+        "Files present in the expansion are unaccounted for"
+    );
+
+    // STEP 6: actually perform the recursive validation calls
+    stream::iter(entries_to_validate)
+        .map(|entry_to_validate| {
+            cloned!(sm_exp_data);
+            let EntriesToValidate {
+                rec_submodule_repo_deps,
+                submodule_repo,
+                expansion_fsnode_id,
+                submodule_repo_fsnode_id,
+            } = entry_to_validate;
+
+            async move {
+                validate_working_copy_of_expansion_with_recursive_submodules(
+                    ctx,
+                    sm_exp_data,
+                    rec_submodule_repo_deps,
+                    &submodule_repo,
+                    expansion_fsnode_id,
+                    submodule_repo_fsnode_id,
+                )
+                .await
+            }
+        })
+        .buffer_unordered(100)
+        .try_collect()
+        .await?;
+
+    Ok(())
+}
+
+// All the entries need to be processed sequentially, but we can store all
+// the necessary arguments for a recursive validation call in this struct,
+// so the actual validation calls can be done concurrently.
+// Doing this means that any unnaccounted file will be flagged right away,
+// without having to do the recursive calls.
+struct EntriesToValidate<R: Repo> {
+    rec_submodule_repo_deps: HashMap<NonRootMPath, R>,
+    submodule_repo: R,
+    expansion_fsnode_id: FsnodeId,
+    submodule_repo_fsnode_id: FsnodeId,
+}
+
+/// Stores all the data for an iteration of the validation fold.
+/// The data consits of the files and directories from expansion or submodule
+/// manifest that haven't been matched yet and the recursive validation calls
+/// that have to be made.
+struct EntryValidationData<R: Repo> {
+    /// Submodule directory entries that haven't been matched yet.
+    remaining_sm_dirs: HashMap<MPathElement, FsnodeDirectory>,
+    /// Submodule file entries that haven't been matched yet.
+    remaining_sm_files: HashMap<MPathElement, FsnodeFile>,
+    /// Expansion file entries that haven't been matched yet **and should be
+    /// submodule metadata files**.
+    remaining_md_files: HashMap<MPathElement, FsnodeFile>,
+    /// Result of the manifest validation: recursive calls that should be made
+    /// to validate either a recursive submodule or go further down in a
+    /// directory to find a recursive submodule.
+    entries_to_validate: Vec<EntriesToValidate<R>>,
+}
+
+// Extracted this to a separate function to avoid making the closure inside
+// the fold statement too nested.
+/// Validate a directory from the submodule expansion's manifest.
+async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
+    submodule_repo: &'a R,
+    // Small repo submodule dependencies, but with their paths adjusted to
+    // account for recursive submodules.
+    adjusted_submodule_deps: HashMap<NonRootMPath, R>,
+    entry_validation_res: EntryValidationData<R>,
+    exp_path: MPathElement,
+    exp_directory: FsnodeDirectory,
+) -> Result<EntryValidationData<R>> {
+    let EntryValidationData {
+        mut remaining_sm_dirs,
+        mut remaining_sm_files,
+        mut remaining_md_files,
+        mut entries_to_validate,
+    } = entry_validation_res;
+
+    let rec_submodule_repo_deps: HashMap<NonRootMPath, R> = adjusted_submodule_deps
+        .iter()
+        .filter_map(|(p, repo)| {
+            p.remove_prefix_component(&exp_path)
+                .map(|relative_p| (relative_p, repo.clone()))
+        })
+        .collect();
+
+    let exp_dir_fsnode_id = *exp_directory.id();
+
+    if let Some(submodule_dir) = remaining_sm_dirs.remove(&exp_path) {
+        // This path in the expansion corresponds to a directory
+        // in the submodule manifest.
+        // This means that it must contain an expansion inside it,
+        // so we just call the validation for it.
+        entries_to_validate.push(EntriesToValidate {
+            rec_submodule_repo_deps,
+            submodule_repo: submodule_repo.clone(),
+            expansion_fsnode_id: exp_dir_fsnode_id,
+            submodule_repo_fsnode_id: *submodule_dir.id(),
+        });
+
+        return Ok(EntryValidationData {
+            remaining_sm_dirs,
+            remaining_sm_files,
+            remaining_md_files,
+            entries_to_validate,
+        });
+    };
+
+    // If the path wasn't a directory in the submodule manifest,
+    // it MUST be a file of type GitSubmodule.
+    // This means that this path is a recursive submodule expansion,
+    // so we load this submodule repo, get its manifest and
+    // call the working copy validation for its expansion.
+    let submodule_file = remaining_sm_files.remove(&exp_path).ok_or(anyhow!(
+        "Path should be a GitSubmodule file in tha submodule's manifest"
+    ))?;
+
+    // The file has to be of type GitSubmodule
+    if *submodule_file.file_type() != FileType::GitSubmodule {
+        return Err(anyhow!(
+            "Submodule entry for the same path has to be a submodule file"
+        ));
+    };
+
+    // If this path is an expansion, there MUST BE a submodule
+    // metadata file for it. This would be its basename.
+    let expected_metadata_basename: MPathElement = x_repo_submodule_metadata_file_basename(
+        &exp_path,
+        sm_exp_data.x_repo_submodule_metadata_file_prefix,
+    )?;
+
+    let metadata_file = remaining_md_files
+        .remove(&expected_metadata_basename)
+        .ok_or(
+            anyhow!(
+                "Metadata file {expected_metadata_basename} not found in path {exp_path} where expansion should be"
+            ),
+        )?;
+
+    // Get the git hash from the metata file , which represents
+    // a pointer to the recursive submodule's commit being expanded.
+    let exp_metadata_git_hash = git_hash_from_submodule_metadata_file(
+        ctx,
+        &sm_exp_data.large_repo,
+        *metadata_file.content_id(),
+    )
+    .await?;
+
+    // Get the git hash from the submodule file change and
+    // ensure that it matches the one stored in the metadata file.
+    let git_hash_from_sm_entry =
+        get_git_hash_from_submodule_file(ctx, submodule_repo, *submodule_file.content_id()).await?;
+
+    assert_eq!(
+        exp_metadata_git_hash, git_hash_from_sm_entry,
+        "Hash from submodule metadata file doesn't match the one in git submodule file in submodule repo"
+    );
+
+    let non_root_path: NonRootMPath = Into::<NonRootMPath>::into(exp_path.clone());
+
+    let recursive_submodule_repo = adjusted_submodule_deps
+        .get(&non_root_path)
+        .ok_or(anyhow!("Recursive submodule not loaded"))?
+        .clone();
+
+    let rec_submodule_fsnode_id: FsnodeId = root_fsnode_id_from_submodule_git_commit(
+        ctx,
+        &recursive_submodule_repo,
+        exp_metadata_git_hash,
+    )
+    .await?;
+
+    // Validate the expansion of the recursive submodule
+    entries_to_validate.push(EntriesToValidate {
+        rec_submodule_repo_deps,
+        submodule_repo: recursive_submodule_repo,
+        expansion_fsnode_id: exp_dir_fsnode_id,
+        submodule_repo_fsnode_id: rec_submodule_fsnode_id,
+    });
+
+    let result = EntryValidationData {
+        remaining_sm_dirs,
+        remaining_sm_files,
+        remaining_md_files,
+        entries_to_validate,
+    };
+    Ok(result)
 }
