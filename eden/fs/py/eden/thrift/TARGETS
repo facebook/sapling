@@ -24,6 +24,7 @@ python_library(
     srcs = ["windows_thrift.py"],
     base_module = "eden.thrift",
     deps = [
+        "fbsource//third-party/pypi/typing-extensions:typing-extensions",
         "//thrift/lib/py:server_base",
     ],
 )
