@@ -24,6 +24,71 @@ use crate::git_submodules::git_submodules_test_utils::*;
 
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 
+// ------------------ Submodule expansion validation ------------------
+
+/// Test that if a submodule expansion is updated to match a certain commit from
+/// the submodule repo and the metadata file has that git commit, validation
+/// passes.
+#[fbinit::test]
+async fn test_changing_submodule_expansion_validation_passes_when_working_copy_matches(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_b, repo_b_cs_map) = build_repo_b(fb).await.context("Failed to build repo_b")?;
+
+    let SubmoduleSyncTestData {
+        large_repo_info: (large_repo, large_repo_master),
+        commit_syncer,
+        repo_a_info: (repo_a, _repo_a_cs_map),
+        live_commit_sync_config,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+    )
+    .await
+    .context("Failed to build test data")?;
+    let b_a_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"])
+        .await?;
+
+    let b_a_git_hash = *b_a_mapped_git_commit.oid();
+    const MESSAGE: &str = "Update git commit in submodule metadata file";
+    let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
+        .set_message(MESSAGE)
+        .add_file(
+            "repo_a/submodules/.x-repo-submodule-repo_b",
+            b_a_git_hash.to_string(),
+        )
+        // Delete the file added in commit B_B, to achieve working copy
+        // equivalence with B_A
+        .delete_file("repo_a/submodules/repo_b/B_B")
+        .commit()
+        .await
+        .context("Failed to create commit modifying repo_a directory")?;
+    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
+
+    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
+        ctx,
+        bonsai,
+        large_repo,
+        repo_a,
+        commit_syncer,
+        live_commit_sync_config,
+    )
+    .await;
+
+    assert!(
+        validation_res.is_ok(),
+        "Validation failed when working copy matches submodule pointer"
+    );
+
+    Ok(())
+}
+
 /// Test that backsync will crash for small repos with submodule expansion
 /// enabled while backsyncing submodule changes is not properly supported.
 #[fbinit::test]
@@ -297,5 +362,3 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
 
     Ok(())
 }
-
-// ------------------ Unexpected state / Error handling ------------------

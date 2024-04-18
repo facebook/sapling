@@ -165,6 +165,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
 /// Tests the basic setup of expanding submodules that contain other submodules.
 #[fbinit::test]
 async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
@@ -900,6 +901,202 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
     // And confirm that nothing was synced, i.e. all changesets are from the basic
     // setup.
     compare_expected_changesets_from_basic_setup(&large_repo_changesets, &[])?;
+
+    Ok(())
+}
+
+/// Tests that validation fails if a user adds a file in the original repo
+/// matching the path of a submodule metadata file.
+///
+/// It's an unlikely scenario, but we want to be certain of what would happen,
+/// because users might, for example, manually copy directories from the large
+/// repo to the git repo.
+#[fbinit::test]
+async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_small_repo(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+    )
+    .await?;
+
+    const MESSAGE_CS_1: &str =
+        "Add file with same path as a submodule metadata file with random content";
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE_CS_1)
+        .add_file(
+            "submodules/.x-repo-submodule-repo_b",
+            "File that should only exist in the large repo",
+        )
+        .commit()
+        .await?;
+
+    println!("Trying to sync changeset #1!");
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await
+        .context("sync_to_master failed")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("sync_result from changeset #1: {0:#?}", &sync_result);
+
+    // TODO(T174902563): fail EXPANSION because of path overlap
+    // Currently we're failing VALIDATION because the content is not a valid
+    // git hash, but ideally we want submodule EXPANSION to fail.
+    // let expected_err_msg =
+    //     "User file changes clash paths with generated changes for submodule expansion";
+    // assert!(sync_result.is_err_and(|err| {
+    //     err.chain()
+    //         .any(|e| e.to_string().contains(expected_err_msg))
+    // }));
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
+
+    // When this is fixed, the commit sync should fail, instead of validation.
+    // check_mapping(ctx.clone(), &commit_syncer, repo_a_cs_id, None).await;
+
+    // Do the same thing, but adding a valid git commit has in the file
+    // To see what happens if a user tries updating a submodule in a weird
+    // unexpected way.
+    const MESSAGE_CS_2: &str =
+        "Add file with same path as a submodule metadata file with valid git commit hash";
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"])
+        .await?;
+
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE_CS_2)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    println!("Trying to sync changeset #2!");
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await
+        .context("sync_to_master failed")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("sync_result from changeset #2: {0:#?}", &sync_result);
+
+    // TODO(T174902563): fail expansion because of path overlap
+    // let expected_err_msg =
+    //     "User file changes clash paths with generated changes for submodule expansion";
+    // assert!(sync_result.is_err_and(|err| {
+    //     err.chain()
+    //         .any(|e| e.to_string().contains(expected_err_msg))
+    // }));
+
+    // When this is fixed, the commit sync should fail, instead of validation.
+    // check_mapping(ctx.clone(), &commit_syncer, repo_a_cs_id, None).await;
+
+    Ok(())
+}
+
+/// Similar to the test above, but adding a file that maps to a submodule
+/// metadata file path of a recursive submodule.
+#[fbinit::test]
+async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recursive_submodule(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (_large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    // Modify repo_b, adding a file that when synced to the large repo will have
+    // the same path as the submodule metadata file for repo_c submodule.
+    let repo_b_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_map["B_B"]])
+        .set_message("Add file with same path as a submodule metadata file")
+        .add_file(
+            "submodules/.x-repo-submodule-repo_c",
+            "File that should only exist in the large repo",
+        )
+        .commit()
+        .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    const MESSAGE: &str =
+        "Update repo_b submodule after adding a file in the same place as a metadata file";
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await
+        .context("sync_to_master failed")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("sync_result: {0:#?}", &sync_result);
+
+    // TODO(T174902563): fail EXPANSION because of path overlap
+    // Currently we're failing VALIDATION because the content is not a valid
+    // git hash, but ideally we want submodule EXPANSION to fail.
+    // let expected_err_msg =
+    //     "User file changes clash paths with generated changes for submodule expansion";
+    // assert!(sync_result.is_err_and(|err| {
+    //     err.chain()
+    //         .any(|e| e.to_string().contains(expected_err_msg))
+    // }));
+
+    // When this is fixed, the commit sync should fail, instead of validation.
+    // check_mapping(ctx.clone(), &commit_syncer, repo_a_cs_id, None).await;
 
     Ok(())
 }
