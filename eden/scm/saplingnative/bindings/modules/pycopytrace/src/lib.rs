@@ -26,6 +26,7 @@ use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use pypathmatcher::extract_matcher;
+use storemodel::types::RepoPathBuf;
 use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
@@ -87,6 +88,26 @@ py_class!(pub class dagcopytrace |py| {
             config,
         ).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(copytrace))
+    }
+
+    /// trace_renames(src: node, dst: node, src_paths: list[str]) -> dict[dst_path, src_path]
+    ///
+    /// Find the renamed-to paths of `src_paths` from `src` commit to `dst` commit.
+    def trace_renames(
+        &self,
+        src: PyBytes,
+        dst: PyBytes,
+        src_paths: Vec<PyPathBuf>,
+    ) -> PyResult<HashMap<String, String>> {
+        let src = Vertex::copy_from(src.data(py));
+        let dst = Vertex::copy_from(dst.data(py));
+        let src_paths = src_paths
+            .into_iter()
+            .map(|p| p.to_repo_path_buf().map_pyerr(py))
+            .collect::<PyResult<Vec<_>>>()?;
+        let inner = self.inner(py).clone();
+        let result = py.allow_threads(|| block_on(trace_renames(inner, src, dst, src_paths))).map_pyerr(py)?;
+        Ok(result)
     }
 
     /// trace_rename(src: node, dst: node, src_path: str) -> Optional[dst_path]
@@ -179,4 +200,22 @@ fn content_similarity(
     let config = config.into();
     py.allow_threads(|| copytrace::content_similarity(a, b, &config, threshold))
         .map_pyerr(py)
+}
+
+async fn trace_renames(
+    dagcopytrace: Arc<DagCopyTrace>,
+    src: Vertex,
+    dst: Vertex,
+    src_paths: Vec<RepoPathBuf>,
+) -> Result<HashMap<String, String>, std::io::Error> {
+    let mut renames = HashMap::new();
+    for src_path in src_paths {
+        let dst_path = dagcopytrace
+            .trace_rename(src.clone(), dst.clone(), src_path.clone())
+            .await;
+        if let Ok(TraceResult::Renamed(dst_path)) = dst_path {
+            renames.insert(dst_path.to_string(), src_path.to_string());
+        }
+    }
+    Ok(renames)
 }
