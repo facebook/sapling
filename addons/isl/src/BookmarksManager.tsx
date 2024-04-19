@@ -6,25 +6,31 @@
  */
 
 import type {BookmarkKind} from './Bookmark';
-import type {StableInfo} from './types';
+import type {TypeaheadResult} from './CommitInfoView/types';
+import type {Result, StableInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Banner, BannerKind} from './Banner';
 import {Bookmark} from './Bookmark';
 import {bookmarksDataStorage, fetchedStablesAtom, remoteBookmarks} from './BookmarksData';
-import {Column, ScrollY} from './ComponentUtils';
+import serverAPI from './ClientToServerAPI';
+import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
+import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
+import {Typeahead} from './components/Typeahead';
 import {T} from './i18n';
+import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
 import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
+import {useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {notEmpty} from 'shared/utils';
@@ -129,7 +135,75 @@ function StableLocationsSection() {
         }
         kind="stable"
       />
+      {stableLocations?.repoSupportsCustomStables === true && <AddStableLocation />}
     </Section>
+  );
+}
+
+let typeaheadOptionsPromise: Promise<Result<Array<TypeaheadResult>>> | undefined;
+const getStableLocationsTypeaheadOptions = () => {
+  if (typeaheadOptionsPromise != null) {
+    return typeaheadOptionsPromise;
+  }
+  typeaheadOptionsPromise = (async () => {
+    serverAPI.postMessage({type: 'fetchStableLocationAutocompleteOptions'});
+    const result = await serverAPI.nextMessageMatching(
+      'fetchedStableLocationAutocompleteOptions',
+      () => true,
+    );
+    return result.result;
+  })();
+  return typeaheadOptionsPromise;
+};
+
+const stableLocationsTypeaheadOptions = atom(getStableLocationsTypeaheadOptions);
+
+function AddStableLocation() {
+  const [showingInput, setShowingInput] = useState(false);
+  const [query, setQuery] = useState('');
+  return (
+    <div style={{paddingTop: 'var(--pad)'}}>
+      {showingInput ? (
+        <Row>
+          <Typeahead
+            tokenString={query}
+            setTokenString={setQuery}
+            fetchTokens={async (query: string) => {
+              const fetchStartTimestamp = Date.now();
+              const options = await readAtom(stableLocationsTypeaheadOptions);
+              const normalized = query.toLowerCase();
+              return {
+                fetchStartTimestamp,
+                values:
+                  options.value?.filter(
+                    opt =>
+                      opt.value.toLowerCase().includes(normalized) ||
+                      opt.label.toLowerCase().includes(normalized),
+                  ) ?? [],
+              };
+            }}
+            autoFocus
+            maxTokens={1}
+          />
+          <Button primary>
+            <T>Add</T>
+          </Button>
+        </Row>
+      ) : (
+        <Button
+          icon
+          onClick={e => {
+            e.stopPropagation();
+            setShowingInput(true);
+
+            // Start fetching options as soon as we show the typeahead
+            getStableLocationsTypeaheadOptions();
+          }}>
+          <Icon icon="plus" />
+          <T>Add Stable Location</T>
+        </Button>
+      )}
+    </div>
   );
 }
 

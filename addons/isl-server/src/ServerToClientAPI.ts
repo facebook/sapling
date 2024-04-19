@@ -11,6 +11,7 @@ import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 import type {RepositoryContext} from './serverTypes';
+import type {TypeaheadResult} from 'isl/src/CommitInfoView/types';
 import type {Serializable} from 'isl/src/serialize';
 import type {
   ServerToClientMessage,
@@ -833,6 +834,14 @@ export default class ServerToClientAPI {
             .filter(notEmpty);
           repo.fetchSmartlogCommits();
         });
+        break;
+      }
+      case 'fetchStableLocationAutocompleteOptions': {
+        Internal.fetchStableLocationAutocompleteOptions?.(ctx).then(
+          (result: Result<Array<TypeaheadResult>>) => {
+            this.postMessage({type: 'fetchedStableLocationAutocompleteOptions', result});
+          },
+        );
         break;
       }
       case 'generateAICommitMessage': {
