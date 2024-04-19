@@ -105,10 +105,10 @@ pub struct WireTreeChildEntry {
     file_metadata: Option<WireFileMetadata>,
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
-    directory_metadata: Option<WireDirectoryMetadata>,
-
-    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
     error: Option<WireEdenApiServerError>,
+
+    #[serde(rename = "5", default, skip_serializing_if = "is_default")]
+    directory_metadata: Option<WireDirectoryMetadata>,
 }
 
 impl ToWire for Result<TreeChildEntry, EdenApiServerError> {
