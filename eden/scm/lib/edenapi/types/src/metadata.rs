@@ -34,16 +34,12 @@ pub struct FileMetadata {
     // #[id(1)] # deprecated
     // #[id(2)] # deprecated
     #[id(3)]
-    #[wire_option]
     pub size: u64,
     #[id(4)]
-    #[wire_option]
     pub content_sha1: Sha1,
     #[id(5)]
-    #[wire_option]
     pub content_sha256: Sha256,
     #[id(6)]
-    #[wire_option]
     pub content_blake3: Blake3,
 }
 

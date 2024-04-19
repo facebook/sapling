@@ -75,7 +75,6 @@ pub struct FileAuxData {
     #[id(3)]
     pub sha256: Sha256,
     #[id(4)]
-    #[wire_option]
     pub blake3: Blake3,
 }
 
