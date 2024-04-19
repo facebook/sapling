@@ -94,6 +94,7 @@ pub use crate::flags::RevFlags;
 pub use crate::fsencode::fncache_fsencode;
 pub use crate::fsencode::simple_fsencode;
 pub use crate::manifest::Type;
+pub use crate::nodehash::HgAugmentedManifestId;
 pub use crate::nodehash::HgChangesetId;
 pub use crate::nodehash::HgChangesetIdPrefix;
 pub use crate::nodehash::HgChangesetIdsResolvedFromPrefix;

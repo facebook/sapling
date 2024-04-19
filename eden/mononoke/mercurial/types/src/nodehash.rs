@@ -456,6 +456,63 @@ impl Display for HgManifestId {
 }
 
 #[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct HgAugmentedManifestId(HgNodeHash);
+
+impl HgAugmentedManifestId {
+    pub fn into_nodehash(self) -> HgNodeHash {
+        self.0
+    }
+
+    pub const fn new(hash: HgNodeHash) -> Self {
+        HgAugmentedManifestId(hash)
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        HgNodeHash::from_bytes(bytes).map(HgAugmentedManifestId)
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
+    #[inline]
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
+    }
+
+    /// Produce a key suitable for using in a blobstore.
+    #[inline]
+    pub fn blobstore_key(&self) -> String {
+        format!("hgaugmentedmanifest.sha1.{}", self.0)
+    }
+
+    #[inline]
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
+}
+
+impl From<HgManifestId> for HgAugmentedManifestId {
+    fn from(manifest_id: HgManifestId) -> Self {
+        HgAugmentedManifestId::new(manifest_id.into_nodehash())
+    }
+}
+
+impl FromStr for HgAugmentedManifestId {
+    type Err = <HgNodeHash as FromStr>::Err;
+
+    fn from_str(s: &str) -> result::Result<HgAugmentedManifestId, Self::Err> {
+        HgNodeHash::from_str(s).map(HgAugmentedManifestId)
+    }
+}
+
+impl Display for HgAugmentedManifestId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
+}
+
+#[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, mysql::OptTryFromRowField)]
 pub struct HgFileNodeId(HgNodeHash);
 
@@ -610,5 +667,6 @@ macro_rules! impl_hash {
 impl_hash!(HgNodeHash);
 impl_hash!(HgChangesetId);
 impl_hash!(HgManifestId);
+impl_hash!(HgAugmentedManifestId);
 impl_hash!(HgFileNodeId);
 impl_hash!(HgEntryId);
