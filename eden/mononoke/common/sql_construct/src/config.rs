@@ -104,7 +104,7 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
                 Self::with_remote_metadata_database_config(fb, remote, mysql_options, readonly)
             }
             MetadataDatabaseConfig::OssRemote(ossremote) => {
-                Self::with_oss_remote_metadata_database_config(fb, ossremote, readonly).await
+                Self::with_oss_remote_metadata_database_config(ossremote, readonly).await
             }
         }
     }
@@ -121,7 +121,6 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
     }
 
     async fn with_oss_remote_metadata_database_config(
-        fb: FacebookInit,
         remote: &OssRemoteMetadataDatabaseConfig,
         readonly: bool,
     ) -> Result<Self> {
@@ -129,11 +128,9 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
             .ok_or_else(|| anyhow!("no configuration available"))?;
 
         Self::with_oss_mysql(
-            fb,
             config.host.clone(),
             config.port,
             config.database.clone(),
-            config.secret_group.clone(),
             config.user_secret.clone(),
             config.password_secret.clone(),
             readonly,
@@ -175,7 +172,7 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
                 Self::with_remote_metadata_database_config(fb, remote, mysql_options, readonly)
             }
             MetadataDatabaseConfig::OssRemote(remote) => {
-                Self::with_oss_remote_metadata_database_config(fb, remote, readonly).await
+                Self::with_oss_remote_metadata_database_config(remote, readonly).await
             }
         }
     }
@@ -203,7 +200,6 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
     }
 
     async fn with_oss_remote_metadata_database_config(
-        fb: FacebookInit,
         remote: &OssRemoteMetadataDatabaseConfig,
         readonly: bool,
     ) -> Result<Self> {
@@ -211,11 +207,9 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
             .ok_or_else(|| anyhow!("no configuration available"))?;
 
         Self::with_oss_mysql(
-            fb,
             config.host.clone(),
             config.port,
             config.database.clone(),
-            config.secret_group.clone(),
             config.user_secret.clone(),
             config.password_secret.clone(),
             readonly,

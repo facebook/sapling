@@ -276,7 +276,6 @@ impl Convert for RawOssDbRemote {
             host: self.host,
             port: self.port,
             database: self.database,
-            secret_group: self.secret_group,
             user_secret: self.user_secret,
             password_secret: self.password_secret,
         })

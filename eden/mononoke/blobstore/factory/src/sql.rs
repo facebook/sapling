@@ -126,8 +126,7 @@ impl MetadataSqlFactory {
                 self.readonly.0,
             ),
             MetadataSqlConnectionsFactory::OssRemote { remote_config } => {
-                T::with_oss_remote_metadata_database_config(self.fb, remote_config, self.readonly.0)
-                    .await
+                T::with_oss_remote_metadata_database_config(remote_config, self.readonly.0).await
             }
         }
     }
@@ -166,8 +165,7 @@ impl MetadataSqlFactory {
                 .await?
             }
             MetadataSqlConnectionsFactory::OssRemote { remote_config } => {
-                T::with_oss_remote_metadata_database_config(self.fb, remote_config, self.readonly.0)
-                    .await
+                T::with_oss_remote_metadata_database_config(remote_config, self.readonly.0).await
             }
         }
     }

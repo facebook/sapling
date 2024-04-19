@@ -1016,8 +1016,6 @@ pub struct OssRemoteDatabaseConfig {
     pub port: i16,
     /// Name of the database
     pub database: String,
-    /// Keychain group where user and password are stored
-    pub secret_group: String,
     /// Name of the user secret
     pub user_secret: String,
     /// Name of the password secret

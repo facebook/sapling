@@ -39,6 +39,8 @@ rust_library(
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:aws-config",
+        "fbsource//third-party/rust:aws-sdk-secretsmanager",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:vec1",
@@ -46,10 +48,7 @@ rust_library(
         "//common/rust/shed/stats:stats",
         "fbsource//third-party/rust:mysql_async",
         "//eden/mononoke/common/time_measuring:time_measuring",
-        "//crypto/keychain_service:if-rust",
-        "//crypto/keychain_service:if-rust-srclients",
     ])) + [
-        "//crypto/keychain_service:if-rust-clients",
         "//dba/myadmin/if:if-myadmin-rust-clients",
     ],
 )
