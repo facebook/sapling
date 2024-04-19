@@ -44,12 +44,10 @@ pub struct DirectoryMetadata {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
-    #[id(0)]
-    pub revisionstore_flags: Option<u64>,
+    // #[id(0)] # deprecated
     #[id(1)]
     pub content_id: Option<ContentId>,
-    #[id(2)]
-    pub file_type: Option<FileType>,
+    // #[id(2)] # deprecated
     #[id(3)]
     pub size: Option<u64>,
     #[id(4)]

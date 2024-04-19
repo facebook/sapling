@@ -38,7 +38,6 @@ use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
 use manifest::Entry;
 use manifest::Manifest;
-use mercurial_types::FileType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
@@ -189,9 +188,9 @@ async fn fetch_child_metadata_entries<'a>(
                 move |(name, entry)| async move {
                     let name = RepoPathBuf::from_string(name.to_string())?;
                     Ok(match entry {
-                        Entry::Leaf((file_type, child_id)) => {
+                        Entry::Leaf((_, child_id)) => {
                             let child_key = Key::new(name, child_id.into_nodehash().into());
-                            fetch_child_file_metadata(repo, file_type, child_key.clone()).await?
+                            fetch_child_file_metadata(repo, child_key.clone()).await?
                         }
                         Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(Key::new(
                             name,
@@ -205,7 +204,6 @@ async fn fetch_child_metadata_entries<'a>(
 
 async fn fetch_child_file_metadata(
     repo: &HgRepoContext,
-    file_type: FileType,
     child_key: Key,
 ) -> Result<TreeChildEntry, Error> {
     let metadata = repo
@@ -217,13 +215,11 @@ async fn fetch_child_file_metadata(
     Ok(TreeChildEntry::new_file_entry(
         child_key,
         FileMetadata {
-            file_type: Some(file_type.try_into()?),
             size: Some(metadata.total_size),
             content_sha1: Some(metadata.sha1.into()),
             content_sha256: Some(metadata.sha256.into()),
             content_id: Some(metadata.content_id.into()),
             content_seeded_blake3: Some(metadata.seeded_blake3.into()),
-            ..Default::default()
         },
     ))
 }

@@ -47,7 +47,6 @@ use edenapi::types::FileEntry;
 use edenapi::types::FileMetadata;
 use edenapi::types::FileResponse;
 use edenapi::types::FileSpec;
-use edenapi::types::FileType as EdenFileType;
 use edenapi::types::HgChangesetContent;
 use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
@@ -81,7 +80,6 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
-use manifest_tree::FileType as ManifestFileType;
 use manifest_tree::Flag;
 use minibytes::Bytes;
 use mutationstore::MutationEntry;
@@ -284,7 +282,7 @@ impl EdenApi for EagerRepo {
                     };
 
                     match child.flag {
-                        Flag::File(file_type) => {
+                        Flag::File(_) => {
                             let file_with_parents =
                                 self.get_sha1_blob_for_api(child.hgid, "trees (aux)")?;
                             let file_body = extract_body(&file_with_parents);
@@ -295,19 +293,10 @@ impl EdenApi for EagerRepo {
                                 key: Key::new(key.path.join(child.component.as_ref()), child.hgid),
                                 file_metadata: Some(FileMetadata {
                                     content_id: Some(aux_data.content_id),
-                                    file_type: Some(match file_type {
-                                        ManifestFileType::Regular => EdenFileType::Regular,
-                                        ManifestFileType::Executable => EdenFileType::Executable,
-                                        ManifestFileType::Symlink => EdenFileType::Symlink,
-                                        ManifestFileType::GitSubmodule => {
-                                            panic!("git submodule when serving hg manifest?")
-                                        }
-                                    }),
                                     size: Some(aux_data.total_size),
                                     content_sha1: Some(aux_data.sha1),
                                     content_sha256: Some(aux_data.sha256),
                                     content_seeded_blake3: aux_data.seeded_blake3,
-                                    ..Default::default()
                                 }),
                             })));
                         }

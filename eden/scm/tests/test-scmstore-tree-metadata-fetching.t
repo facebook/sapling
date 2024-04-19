@@ -88,12 +88,8 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  revisionstore_flags: None,
                                                   content_id: Some(
                                                       ContentId("e814695438c861a0def69866f1d28b57827961b6dfc31c66e6ba16c517eeb9e0"),
-                                                  ),
-                                                  file_type: Some(
-                                                      Regular,
                                                   ),
                                                   size: Some(
                                                       5,
@@ -123,12 +119,8 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  revisionstore_flags: None,
                                                   content_id: Some(
                                                       ContentId("233fc5ebc2502409036b103a972af95424dfd522d9e41089125c7925432b11f9"),
-                                                  ),
-                                                  file_type: Some(
-                                                      Regular,
                                                   ),
                                                   size: Some(
                                                       5,
@@ -214,12 +206,8 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  revisionstore_flags: None,
                                                   content_id: Some(
                                                       ContentId("e814695438c861a0def69866f1d28b57827961b6dfc31c66e6ba16c517eeb9e0"),
-                                                  ),
-                                                  file_type: Some(
-                                                      Regular,
                                                   ),
                                                   size: Some(
                                                       5,
@@ -249,12 +237,8 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  revisionstore_flags: None,
                                                   content_id: Some(
                                                       ContentId("233fc5ebc2502409036b103a972af95424dfd522d9e41089125c7925432b11f9"),
-                                                  ),
-                                                  file_type: Some(
-                                                      Regular,
                                                   ),
                                                   size: Some(
                                                       5,
