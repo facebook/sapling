@@ -4,7 +4,6 @@
 
 
   $ eagerepo
-  $ setconfig experimental.copytrace=on
 https://bz.mercurial-scm.org/672
 
 # 0-2-4
@@ -32,12 +31,6 @@ https://bz.mercurial-scm.org/672
   $ hg ci -m unrelated1 # 2
 
   $ hg merge --debug 'desc(rename)'
-    searching for copies back to c12dcd37c90a
-    unmatched files in other:
-     1a
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: '1' -> dst: '1a' 
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 81f4b099af3d, local: c64f439569a9+, remote: c12dcd37c90a
@@ -59,46 +52,52 @@ https://bz.mercurial-scm.org/672
   $ hg co -C 'desc(merge1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
+  $ hg log -G -T '{node|short} {desc}'
+  o  746e9549ea96 unrelated2
+  │
+  │ @  e327dca35ac8 merge1
+  ╭─┤
+  o │  c64f439569a9 unrelated1
+  │ │
+  │ o  c12dcd37c90a rename
+  ├─╯
+  o  81f4b099af3d init
+  $ hg log -r 'p1(e327dca35ac8)' -T '{node|short} {desc}\n'
+  c64f439569a9 unrelated1
+
+# dagcopytrace does not support merge commits (it only searches p1)
+
   $ hg merge -y --debug 'desc(unrelated2)'
-    searching for copies back to c12dcd37c90a
-    unmatched files in local:
-     1a
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: '1' -> dst: '1a' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: c64f439569a9, local: e327dca35ac8+, remote: 746e9549ea96
-   preserving 1a for resolve of 1a
-   1a: local copied/moved from 1 -> m (premerge)
-  picktool() hgmerge internal:merge
-  picked tool ':merge' for path=1a binary=False symlink=False changedelete=False
-  merging 1a and 1 to 1a
-  my 1a@e327dca35ac8+ other 1@746e9549ea96 ancestor 1@c64f439569a9
-   premerge successful
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+   1: prompt deleted/changed -> m (premerge)
+  picktool() hgmerge :prompt internal:merge
+  picked tool ':prompt' for path=1 binary=False symlink=False changedelete=True
+  other [merge rev] changed 1 which local [working copy] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  [1]
+
+# dagcopytrace does not support merge commits (it only searches p1)
 
   $ hg co -C 'desc(unrelated2)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg merge -y --debug 'desc(merge1)'
-    searching for copies back to c12dcd37c90a
-    unmatched files in other:
-     1a
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: '1' -> dst: '1a' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: c64f439569a9, local: 746e9549ea96+, remote: e327dca35ac8
-   preserving 1 for resolve of 1a
-  removing 1
-   1a: remote moved from 1 -> m (premerge)
-  picktool() hgmerge internal:merge
-  picked tool ':merge' for path=1a binary=False symlink=False changedelete=False
-  merging 1 and 1a to 1a
-  my 1a@746e9549ea96+ other 1a@e327dca35ac8 ancestor 1@c64f439569a9
-   premerge successful
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+   preserving 1 for resolve of 1
+   1a: remote created -> g
+  getting 1a
+   1: prompt changed/deleted -> m (premerge)
+  picktool() hgmerge :prompt internal:merge
+  picked tool ':prompt' for path=1 binary=False symlink=False changedelete=True
+  local [working copy] changed 1 which other [merge rev] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  [1]

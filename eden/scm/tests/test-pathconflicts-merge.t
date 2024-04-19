@@ -7,7 +7,6 @@ Path conflict checking is currently disabled by default because of issue5716.
 Turn it on for this test.
 
   $ setconfig experimental.merge.checkpathconflicts=True
-  $ setconfig experimental.copytrace=on
 
   $ eagerepo
 
@@ -120,11 +119,10 @@ Merge - local directory conflicts with remote file or link
   (no more unresolved files)
   $ hg commit -m "merge dir and file (move file into dir)"
   $ hg merge file2
-  merging a/b/old-b and a/b to a/b/old-b
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat a/b/old-b
-  2
+  1
   $ hg commit -m "merge file2 (copytrace tracked rename)"
   $ hg merge link
   a/b: path conflict - a file or link has the same name as a directory
