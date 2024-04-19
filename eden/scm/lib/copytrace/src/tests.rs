@@ -288,7 +288,7 @@ macro_rules! assert_path_copies {
         let src = vertex_from_str(stringify!($src));
         let dst = vertex_from_str(stringify!($dst));
         let result = $copy_trace
-            .path_copies(src, dst, Option::None)
+            .path_copies(src, dst, None)
             .await
             .unwrap()
             .into_iter()

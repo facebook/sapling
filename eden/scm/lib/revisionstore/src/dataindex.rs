@@ -266,8 +266,8 @@ impl DataIndex {
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), hgid)?;
         let start = start + self.index_start;
         let end = match end {
-            Option::None => self.mmap.len(),
-            Option::Some(pos) => pos + self.index_start,
+            None => self.mmap.len(),
+            Some(pos) => pos + self.index_start,
         };
 
         let entry_offset = match self.binary_search(hgid, &self.mmap[start..end]) {

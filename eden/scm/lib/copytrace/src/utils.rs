@@ -63,7 +63,7 @@ pub(crate) fn file_path_similarity(p1: &RepoPath, p2: &RepoPath) -> f64 {
 
 /// Check if two contents are considered similar based on the given config.
 pub fn is_content_similar(a: &[u8], b: &[u8], config: &dyn Config) -> Result<bool> {
-    let (similar, _) = content_similarity(a, b, config, Option::None)?;
+    let (similar, _) = content_similarity(a, b, config, None)?;
     Ok(similar)
 }
 

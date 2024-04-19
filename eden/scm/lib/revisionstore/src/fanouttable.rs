@@ -50,11 +50,11 @@ impl FanoutTable {
         let start = cur.read_u32::<BigEndian>()? as usize;
 
         // Find the end bound by scanning forward for the first different entry.
-        let mut end: Option<usize> = Option::None;
+        let mut end: Option<usize> = None;
         while cur.position() < table.len() as u64 {
             let candidate = cur.read_u32::<BigEndian>()? as usize;
             if candidate != start {
-                end = Option::Some(candidate);
+                end = Some(candidate);
                 break;
             }
         }
