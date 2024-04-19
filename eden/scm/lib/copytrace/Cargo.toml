@@ -11,7 +11,6 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 async-trait = "0.1.71"
 configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
-git2 = "0.14"
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 lru-cache = "0.1.2"
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }

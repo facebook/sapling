@@ -181,19 +181,6 @@ def _backwardrenames(a, b):
     return r
 
 
-def _gitfindcopies(repo, oldnode, newnode):
-    if not oldnode or not newnode:
-        return {}
-
-    if not repo.ui.configbool("experimental", "gitcopytrace"):
-        return {}
-
-    try:
-        return repo._gitcopytrace.findcopies(oldnode, newnode)
-    except error.UncategorizedNativeError:
-        return {}
-
-
 def _reverse_copies(copies):
     """reverse the direction of the copies"""
     # For 1:n rename situations (e.g. hg cp a b; hg mv a c), we
@@ -203,10 +190,6 @@ def _reverse_copies(copies):
 
 def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
-    # we use git2 Rust library to do the actual work for git repo.
-    if git.isgitformat(x.repo()):
-        return _gitfindcopies(x.repo(), x.node(), y.node())
-
     if x == y or not x or not y:
         return {}
 

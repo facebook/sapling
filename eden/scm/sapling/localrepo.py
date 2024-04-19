@@ -1379,11 +1379,6 @@ class localrepository:
             self.ui._rcfg,
         )
 
-    @util.propertycache
-    def _gitcopytrace(self):
-        gitdir = git.readgitdir(self)
-        return bindings.copytrace.gitcopytrace(gitdir)
-
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
         # manifestlog. It allows bundlerepo to intercept the manifest creation.

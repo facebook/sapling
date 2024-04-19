@@ -10,8 +10,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ::copytrace::GitCopyTrace;
-use ::types::HgId;
 use async_runtime::try_block_unless_interrupted as block_on;
 use configmodel::Config;
 use copytrace::ContentSimilarityRenameFinder;
@@ -23,12 +21,10 @@ use copytrace::TraceResult;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
-use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::Vertex;
-use parking_lot::Mutex;
 use pypathmatcher::extract_matcher;
 use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
@@ -38,7 +34,6 @@ use storemodel::TreeStore;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "copytrace"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add_class::<gitcopytrace>(py)?;
     m.add_class::<dagcopytrace>(py)?;
     m.add(
         py,
@@ -61,24 +56,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
     Ok(m)
 }
-
-py_class!(pub class gitcopytrace |py| {
-    data inner: Arc<Mutex<GitCopyTrace>>;
-
-    def __new__(_cls, gitdir: &PyPath) -> PyResult<Self> {
-        let copytrace = GitCopyTrace::open(gitdir.as_path()).map_pyerr(py)?;
-        Self::create_instance(py, Arc::new(Mutex::new(copytrace)))
-    }
-
-    /// Find copies between old and new commits, the result is a {newpath: oldpath} map.
-    def findcopies(
-        &self, oldnode: Serde<HgId>, newnode: Serde<HgId>
-    ) -> PyResult<HashMap<String, String>> {
-        let copytrace = self.inner(py).lock();
-        let copies = copytrace.find_copies(oldnode.0, newnode.0).map_pyerr(py)?;
-        Ok(copies)
-    }
-});
 
 py_class!(pub class dagcopytrace |py| {
     data inner: Arc<DagCopyTrace>;
