@@ -82,7 +82,7 @@ def _interestingfiles(repo, matcher, maxfiles):
     added = stat[1]
     removed = stat[2]
 
-    copy = copies._forwardcopies(repo["."], repo[None], matcher)
+    copy = copies.pathcopies(repo["."], repo[None], matcher)
     # remove the copy files for which we already have copy info
     added = [f for f in added if f not in copy]
 

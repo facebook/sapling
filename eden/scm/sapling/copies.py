@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import collections
 import os
 
-from . import error, git, match as matchmod, node, pathutil, pycompat, scmutil, util
+from . import git, node, pathutil, pycompat, util
 from .i18n import _
 
 
@@ -79,24 +79,6 @@ def _chain(src, dst, a, b):
     return t
 
 
-def _tracefile(fctx, am, limit=-1):
-    """return file context that is the ancestor of fctx present in ancestor
-    manifest am, stopping after the first ancestor lower than limit"""
-
-    repo = fctx.repo()
-    invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
-    for f in fctx.topologicalancestors():
-        if am.get(f.path(), None) == f.filenode():
-            return f
-        if invalidatelinkrev:
-            continue
-        lkr = f.linkrev()
-        if lkr is None:
-            continue
-        if limit >= 0 and lkr is not None and lkr < limit and f.rev() < limit:
-            return None
-
-
 def _dirstatecopies(d, match=None):
     ds = d._repo.dirstate
     c = ds.copies().copy()
@@ -104,81 +86,6 @@ def _dirstatecopies(d, match=None):
         if ds[k] not in "anm" or (match and not match(k)):
             del c[k]
     return c
-
-
-def _computeforwardmissing(a, b, match=None):
-    """Computes which files are in b but not a.
-    This is its own function so extensions can easily wrap this call to see what
-    files _forwardcopies is about to process.
-    """
-    ma = a.manifest()
-    mb = b.manifest()
-    return mb.filesnotin(ma, matcher=match)
-
-
-def _committedforwardcopies(a, b, match):
-    """Like _forwardcopies(), but b.rev() cannot be None (working copy)"""
-    # files might have to be traced back to the fctx parent of the last
-    # one-side-only changeset, but not further back than that
-    limit = _findlimit(a._repo, a.rev(), b.rev())
-    if limit is None:
-        limit = -1
-    am = a.manifest()
-
-    # find where new files came from
-    # we currently don't try to find where old files went, too expensive
-    # this means we can miss a case like 'hg rm b; hg cp a b'
-    cm = {}
-
-    # Computing the forward missing is quite expensive on large manifests, since
-    # it compares the entire manifests. We can optimize it in the common use
-    # case of computing what copies are in a commit versus its parent (like
-    # during a rebase or histedit). Note, we exclude merge commits from this
-    # optimization, since the ctx.files() for a merge commit is not correct for
-    # this comparison.
-    forwardmissingmatch = match
-    if b.p1() == a and b.p2().node() == node.nullid:
-        filesmatcher = scmutil.matchfiles(a._repo, b.files())
-        forwardmissingmatch = matchmod.intersectmatchers(match, filesmatcher)
-    missing = _computeforwardmissing(a, b, match=forwardmissingmatch)
-
-    ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
-    for f in missing:
-        fctx = b[f]
-        fctx._ancestrycontext = ancestrycontext
-        ofctx = _tracefile(fctx, am, limit)
-        if ofctx:
-            cm[f] = ofctx.path()
-    return cm
-
-
-def _forwardcopies(a, b, match=None):
-    """find {dst@b: src@a} copy mapping where a is an ancestor of b"""
-
-    # check for working copy
-    if b.rev() is None:
-        if a == b.p1():
-            # short-circuit to avoid issues with merge states
-            return _dirstatecopies(b, match)
-
-        cm = _committedforwardcopies(a, b.p1(), match)
-        # combine copies from dirstate if necessary
-        return _chain(a, b, cm, _dirstatecopies(b, match))
-    return _committedforwardcopies(a, b, match)
-
-
-def _backwardrenames(a, b):
-    # Even though we're not taking copies into account, 1:n rename situations
-    # can still exist (e.g. hg cp a b; hg mv a c). In those cases we
-    # arbitrarily pick one of the renames.
-    f = _forwardcopies(b, a)
-    r = {}
-    for k, v in sorted(pycompat.iteritems(f)):
-        # remove copies
-        if v in a:
-            continue
-        r[v] = k
-    return r
 
 
 def _reverse_copies(copies):
@@ -681,7 +588,7 @@ def _heuristicscopytracing(repo, c1, c2, base):
         changedfiles.update(ctx.files())
         ctx = ctx.p1()
 
-    cp = _forwardcopies(base, c2)
+    cp = pathcopies(base, c2)
     for dst, src in pycompat.iteritems(cp):
         if src in m1:
             copies[dst] = src

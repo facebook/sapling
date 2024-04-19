@@ -416,29 +416,6 @@ def onetimeclientsetup(ui):
 
     wrapfunction(copies, "_computenonoverlap", computenonoverlap)
 
-    # prefetch files before pathcopies check
-    def computeforwardmissing(orig, a, b, match=None):
-        missing = list(orig(a, b, match=match))
-        repo = a._repo
-        if shallowrepo.requirement in repo.requirements:
-            mb = b.manifest()
-
-            files = []
-            sparsematch = repo.maybesparsematch(b.rev())
-            if sparsematch:
-                sparsemissing = []
-                for f in missing:
-                    if sparsematch(f):
-                        files.append((f, mb[f]))
-                        sparsemissing.append(f)
-                missing = sparsemissing
-
-            # batch fetch the needed files from the server
-            repo.fileservice.prefetch(files)
-        return missing
-
-    wrapfunction(copies, "_computeforwardmissing", computeforwardmissing)
-
     # prefetch files before archiving
     def computefiles(orig, ctx, matchfn):
         files = orig(ctx, matchfn)
