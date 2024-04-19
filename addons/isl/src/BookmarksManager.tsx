@@ -25,6 +25,7 @@ import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {InlineErrorBadge} from './ErrorNotice';
 import {useCommandEvent} from './ISLShortcuts';
+import {Internal} from './Internal';
 import {Kbd} from './Kbd';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
@@ -47,6 +48,8 @@ const styles = stylex.create({
   container: {
     alignItems: 'flex-start',
     gap: spacing.double,
+    width: 500,
+    maxWidth: 500,
   },
   bookmarkGroup: {
     alignItems: 'flex-start',
@@ -229,47 +232,50 @@ function AddStableLocation() {
   return (
     <div style={{paddingTop: 'var(--pad)'}}>
       {showingInput ? (
-        <Row>
-          <Typeahead
-            tokenString={query}
-            setTokenString={setQuery}
-            fetchTokens={async (query: string) => {
-              const fetchStartTimestamp = Date.now();
-              const options = await readAtom(stableLocationsTypeaheadOptions);
-              const normalized = query.toLowerCase();
-              return {
-                fetchStartTimestamp,
-                values:
-                  options.value?.filter(
-                    opt =>
-                      opt.value.toLowerCase().includes(normalized) ||
-                      opt.label.toLowerCase().includes(normalized),
-                  ) ?? [],
-              };
-            }}
-            onSaveNewToken={() => {
-              addRef?.current?.focus();
-            }}
-            autoFocus
-            maxTokens={1}
-          />
-          <Button
-            ref={addRef}
-            primary
-            onClick={e => {
-              // only expect one token
-              const [[token]] = extractTokens(query);
-              const stable = token.trim();
-              if (stable) {
-                addManualStable(stable);
-                setQuery('');
-                setShowingInput(false);
-              }
-              e.stopPropagation();
-            }}>
-            <T>Add</T>
-          </Button>
-        </Row>
+        <div>
+          <Subtle>{Internal.StableLocationAddInformation?.()}</Subtle>
+          <Row>
+            <Typeahead
+              tokenString={query}
+              setTokenString={setQuery}
+              fetchTokens={async (query: string) => {
+                const fetchStartTimestamp = Date.now();
+                const options = await readAtom(stableLocationsTypeaheadOptions);
+                const normalized = query.toLowerCase();
+                return {
+                  fetchStartTimestamp,
+                  values:
+                    options.value?.filter(
+                      opt =>
+                        opt.value.toLowerCase().includes(normalized) ||
+                        opt.label.toLowerCase().includes(normalized),
+                    ) ?? [],
+                };
+              }}
+              onSaveNewToken={() => {
+                addRef?.current?.focus();
+              }}
+              autoFocus
+              maxTokens={1}
+            />
+            <Button
+              ref={addRef}
+              primary
+              onClick={e => {
+                // only expect one token
+                const [[token]] = extractTokens(query);
+                const stable = token.trim();
+                if (stable) {
+                  addManualStable(stable);
+                  setQuery('');
+                  setShowingInput(false);
+                }
+                e.stopPropagation();
+              }}>
+              <T>Add</T>
+            </Button>
+          </Row>
+        </div>
       ) : (
         <Button
           icon
