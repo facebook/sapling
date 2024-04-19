@@ -64,6 +64,7 @@ use crate::types::LsRefsRequest;
 use crate::types::LsRefsResponse;
 use crate::types::PackItemStreamRequest;
 use crate::types::PackItemStreamResponse;
+use crate::types::PackfileConcurrency;
 use crate::types::PackfileItemInclusion;
 use crate::types::RefTarget;
 use crate::types::RequestedRefs;
@@ -77,9 +78,6 @@ const REF_PREFIX: &str = "refs/";
 
 // The threshold in bytes below which we consider a future cheap enough to have a weight of 1
 const THRESHOLD_BYTES: usize = 6000;
-// The upper bound on the RSS bytes beyond which we will pause executing futures until the process
-// is below the threshold. This prevents us from OOMing in case of high number of parallel clone requests
-const MEMORY_BOUND: u64 = 38_000_000_000;
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -711,7 +709,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     target_commits: BoxStream<'a, Result<ChangesetId>>,
     delta_inclusion: DeltaInclusion,
     packfile_item_inclusion: PackfileItemInclusion,
-    concurrency: usize,
+    concurrency: PackfileConcurrency,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
     // efficiently in the packfile/bundle
@@ -724,7 +722,7 @@ async fn blob_and_tree_packfile_stream<'a>(
             let ctx = ctx.clone();
             blob_and_tree_packfile_items(ctx, blobstore, derived_data, changeset_id)
         })
-        .try_buffered(concurrency * 2)
+        .try_buffered(concurrency.trees_and_blobs * 2)
         .try_flatten()
         // We use map + buffered instead of map_ok + try_buffered since weighted buffering for futures
         // currently exists only for Stream and not for TryStream
@@ -796,7 +794,7 @@ async fn blob_and_tree_packfile_stream<'a>(
                 }
             }
         })
-        .buffered_weighted_bounded(concurrency, MEMORY_BOUND)
+        .buffered_weighted_bounded(concurrency.trees_and_blobs, concurrency.memory_bound)
         .boxed();
     Ok(packfile_item_stream)
 }
@@ -1026,7 +1024,7 @@ pub async fn generate_pack_item_stream<'a>(
         to_commit_stream(target_commits.clone()),
         request.delta_inclusion,
         request.packfile_item_inclusion,
-        request.concurrency.trees_and_blobs,
+        request.concurrency,
     )
     .await
     .context("Error while generating blob and tree packfile item stream")?;
@@ -1140,7 +1138,7 @@ pub async fn fetch_response<'a>(
         to_commit_stream(target_commits.clone()),
         delta_inclusion,
         packfile_item_inclusion,
-        request.concurrency.trees_and_blobs,
+        request.concurrency,
     )
     .await
     .context("Error while generating blob and tree packfile item stream during fetch")?;

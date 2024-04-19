@@ -53,6 +53,7 @@ use gotham_ext::middleware::TimerMiddleware;
 use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
 use http::HeaderValue;
+use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
 use mononoke_app::args::McrouterAppExtension;
@@ -187,6 +188,10 @@ impl GitRepos {
 
     pub(crate) fn get(&self, repo_name: &str) -> Option<Arc<Repo>> {
         self.repo_mgr.repos().get_by_name(repo_name)
+    }
+
+    pub(crate) fn repo_configs(&self) -> Arc<RepoConfigs> {
+        self.repo_mgr.configs().repo_configs()
     }
 }
 

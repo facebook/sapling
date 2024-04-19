@@ -40,6 +40,7 @@ gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
+metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 packetline = { version = "0.1.0", path = "../git/packetline" }

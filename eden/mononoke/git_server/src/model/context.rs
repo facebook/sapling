@@ -14,6 +14,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::request_context::RequestContext;
+use metaconfig_parser::RepoConfigs;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
@@ -28,6 +29,7 @@ use crate::Repo;
 pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: Arc<Repo>,
+    pub repo_configs: Arc<RepoConfigs>,
 }
 
 impl RepositoryRequestContext {
@@ -84,13 +86,13 @@ impl GitServerContext {
         ctx: CoreContext,
         method_info: GitMethodInfo,
     ) -> Result<RepositoryRequestContext, GitServerContextErrorKind> {
-        let (repo, enforce_authorization) = {
+        let (repo, enforce_authorization, repo_configs) = {
             let inner = self
                 .inner
                 .read()
                 .expect("poisoned lock in git server context");
             match inner.repos.get(&method_info.repo) {
-                Some(repo) => (repo, inner.enforce_auth),
+                Some(repo) => (repo, inner.enforce_auth, inner.repos.repo_configs()),
                 None => {
                     return Err(GitServerContextErrorKind::RepositoryDoesNotExist(
                         method_info.repo.to_string(),
@@ -99,7 +101,11 @@ impl GitServerContext {
             }
         };
         acl_check(&ctx, &repo, enforce_authorization, method_info.method).await?;
-        Ok(RepositoryRequestContext { ctx, repo })
+        Ok(RepositoryRequestContext {
+            ctx,
+            repo,
+            repo_configs,
+        })
     }
 }
 

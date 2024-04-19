@@ -21,6 +21,9 @@ use packfile::types::PackfileItem;
 use tokio::io::AsyncWrite;
 
 const SYMREF_HEAD: &str = "HEAD";
+// The upper bound on the RSS bytes beyond which we will pause executing futures until the process
+// is below the threshold. This prevents us from OOMing in case of high number of parallel clone requests
+const MEMORY_BOUND: u64 = 38_000_000_000;
 
 /// Struct representing concurrency settings used during packfile generation
 #[derive(Debug, Clone, Copy)]
@@ -31,14 +34,22 @@ pub struct PackfileConcurrency {
     pub commits: usize,
     /// The concurrency to be used for fetching tags as part of packfile stream
     pub tags: usize,
+    /// The upper limit on the size of process RSS allowed for streaming the packfile
+    pub memory_bound: u64,
 }
 
 impl PackfileConcurrency {
-    pub fn new(trees_and_blobs: usize, commits: usize, tags: usize) -> Self {
+    pub fn new(
+        trees_and_blobs: usize,
+        commits: usize,
+        tags: usize,
+        memory_bound: Option<u64>,
+    ) -> Self {
         Self {
             trees_and_blobs,
             commits,
             tags,
+            memory_bound: memory_bound.unwrap_or(MEMORY_BOUND),
         }
     }
 
@@ -47,6 +58,7 @@ impl PackfileConcurrency {
             trees_and_blobs: 18_000,
             commits: 20_000,
             tags: 20_000,
+            memory_bound: MEMORY_BOUND,
         }
     }
 }

@@ -52,6 +52,7 @@ rust_binary(
         "//eden/mononoke/git/protocol:protocol",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/gotham_ext:gotham_ext",
+        "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
