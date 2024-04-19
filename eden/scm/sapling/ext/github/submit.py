@@ -710,7 +710,7 @@ async def get_repo(hostname: str, owner: str, name: str) -> Repository:
 
 async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
     ctx = repo[node]
-    pr_id = get_pull_request_for_context(store, ctx)
+    pr_id = get_pull_request_for_context(store, repo, ctx)
     pr = await get_pull_request_details_or_throw(pr_id) if pr_id else None
     msg = None
     if pr:

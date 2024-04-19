@@ -69,7 +69,7 @@ def get_pull_request_url_for_rev(repo, ctx, **args) -> Optional[PullRequestId]:
         return pull_request_url
 
     store = get_pull_request_store(repo, args["cache"])
-    pull_request_url = get_pull_request_for_context(store, ctx)
+    pull_request_url = get_pull_request_for_context(store, repo, ctx)
 
     revcache[_GITHUB_PULL_REQUEST_URL_REVCACHE_KEY] = (
         pull_request_url if pull_request_url is not None else _NO_ENTRY
