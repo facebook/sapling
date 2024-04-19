@@ -105,7 +105,7 @@ function TooltipErrorDetails(error: Error, title?: ReactNode) {
   return function Component() {
     return (
       <div className="inline-error-tooltip">
-        <ErrorNotice title={title ?? error.message} error={error} />
+        <ErrorNotice title={title ?? error.message} error={error} startExpanded />
       </div>
     );
   };
