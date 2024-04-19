@@ -37,7 +37,12 @@ export function TokensList({
             }>
             {token}
             {onClickX == null ? null : (
-              <VSCodeButton appearance="icon" onClick={() => onClickX?.(token)}>
+              <VSCodeButton
+                appearance="icon"
+                onClick={e => {
+                  onClickX?.(token);
+                  e.stopPropagation();
+                }}>
                 <Icon icon="x" />
               </VSCodeButton>
             )}
