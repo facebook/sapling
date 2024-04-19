@@ -20,6 +20,9 @@ pub struct GitStore {
 
     git: RunGitOptions,
 
+    /// If set, fetch missing objects on demand from the URL.
+    fetch_url: Option<String>,
+
     // Makes `odb` valid. Last field drops last.
     // No need to use this field. Just need to keep it alive.
     // Use `Opaque` to forbid access to the underlying repo.
@@ -39,6 +42,8 @@ impl GitStore {
         let mut git = RunGitOptions::from_config(config);
         git.git_dir = Some(git_repo.path().to_owned());
 
+        let fetch_url = config.get("paths", "default").map(|s| s.to_string());
+
         struct UnsafeForceSync<T: ?Sized>(T);
         unsafe impl<T: ?Sized> Send for UnsafeForceSync<T> {}
         unsafe impl<T: ?Sized> Sync for UnsafeForceSync<T> {}
@@ -53,6 +58,7 @@ impl GitStore {
         let store = GitStore {
             odb,
             git,
+            fetch_url,
             opaque_repo,
         };
         Ok(store)
