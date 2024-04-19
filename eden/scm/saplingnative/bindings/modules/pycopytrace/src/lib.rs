@@ -72,8 +72,10 @@ py_class!(pub class dagcopytrace |py| {
         let tree_store = tree_store.into();
         let config = config.into();
         let rename_finder: Arc<dyn RenameFinder + Send + Sync> = match tree_store.format() {
-            SerializationFormat::Hg => Arc::new(MetadataRenameFinder::new(file_reader.into(), config).map_pyerr(py)?),
-            SerializationFormat::Git => Arc::new(ContentSimilarityRenameFinder::new(file_reader.into(), config).map_pyerr(py)?),
+            SerializationFormat::Hg => Arc::new(
+                MetadataRenameFinder::new(file_reader.into(), config.clone()).map_pyerr(py)?),
+            SerializationFormat::Git => Arc::new(
+                ContentSimilarityRenameFinder::new(file_reader.into(), config.clone()).map_pyerr(py)?),
         };
         let dag = dag.into();
 
@@ -82,6 +84,7 @@ py_class!(pub class dagcopytrace |py| {
             tree_store,
             rename_finder,
             dag,
+            config,
         ).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(copytrace))
     }

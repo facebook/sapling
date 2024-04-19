@@ -123,14 +123,22 @@ pub(crate) fn compute_missing_files(
     old_tree: &TreeManifest,
     new_tree: &TreeManifest,
     matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    limit: Option<usize>,
 ) -> Result<Vec<RepoPathBuf>> {
     let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
     let diff_entries = Diff::new(old_tree, new_tree, &matcher)?;
     let mut missing = Vec::new();
+    let limit = limit.unwrap_or(usize::MAX);
+    if limit == 0 {
+        return Ok(missing);
+    }
     for entry in diff_entries {
         let entry = entry?;
         if let DiffType::RightOnly(_) = entry.diff_type {
             missing.push(entry.path);
+            if missing.len() >= limit {
+                return Ok(missing);
+            }
         }
     }
     Ok(missing)

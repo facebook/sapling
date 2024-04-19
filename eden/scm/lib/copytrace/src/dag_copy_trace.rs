@@ -7,10 +7,14 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use dag::DagAlgorithm;
+use dag::NameSet;
 use dag::Vertex;
 use hg_metrics::increment_counter;
 use manifest::Manifest;
@@ -30,6 +34,11 @@ use crate::RenameFinder;
 use crate::SearchDirection;
 use crate::TraceResult;
 
+/// limits the number of commits in path_copies
+const DEFAULT_PATH_COPIES_COMMIT_LIMIT: usize = 100;
+/// limits the missing files we will check
+const DEFAULT_MAX_MISSING_FILES: usize = 1000;
+
 pub struct DagCopyTrace {
     /* Input */
     /// Resolve commit ids to trees in batch.
@@ -43,6 +52,9 @@ pub struct DagCopyTrace {
 
     /// Commit graph algorithms
     dag: Arc<dyn DagAlgorithm + Send + Sync>,
+
+    // Read configs
+    config: Arc<dyn Config + Send + Sync>,
 }
 
 impl DagCopyTrace {
@@ -51,12 +63,14 @@ impl DagCopyTrace {
         tree_store: Arc<dyn TreeStore>,
         rename_finder: Arc<dyn RenameFinder + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
+        config: Arc<dyn Config + Send + Sync>,
     ) -> Result<Self> {
         let dag_copy_trace = Self {
             root_tree_reader,
             tree_store,
             rename_finder,
             dag,
+            config,
         };
         Ok(dag_copy_trace)
     }
@@ -132,6 +146,19 @@ impl DagCopyTrace {
         } else {
             Ok(TraceResult::NotFound)
         }
+    }
+
+    async fn compute_distance(&self, src: Vertex, dst: Vertex) -> Result<usize> {
+        let src: NameSet = src.into();
+        let dst: NameSet = dst.into();
+        let distance = self
+            .dag
+            .only(src.clone(), dst.clone())
+            .await?
+            .count()
+            .await?
+            + self.dag.only(dst, src).await?.count().await?;
+        Ok(distance)
     }
 }
 
@@ -264,6 +291,14 @@ impl CopyTrace for DagCopyTrace {
     }
 
     /// find {x@dst: y@src} copy mapping for directed compare
+    ///
+    /// Assuming m = len(added_files) and n = len(deleted_files), then the time complexity is:
+    ///   1. if src and dst are adjacent:
+    ///     * Sapling backend: O(added files)
+    ///     * Git backend: O(m * min(n, max_rename_candidates))
+    ///   2. else:
+    ///     * O(min(m, max_missing_files) * min(n, max_rename_candidates) * rename_times)
+    ///         * rename_times should be a small number (usually 1)
     async fn path_copies(
         &self,
         src: Vertex,
@@ -271,13 +306,22 @@ impl CopyTrace for DagCopyTrace {
         matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
         tracing::trace!(?src, ?dst, "path_copies");
+
+        let start_time = Instant::now();
         let msrc = self.vertex_to_tree_manifest(&src).await?;
         let mdst = self.vertex_to_tree_manifest(&dst).await?;
+
+        // 1. src and dst are adjacent
 
         let dst_parents = self.dag.parent_names(dst.clone()).await?;
         for parent in dst_parents {
             if parent == src {
-                return self.rename_finder.find_renames(&msrc, &mdst, matcher).await;
+                let copies = self.rename_finder.find_renames(&msrc, &mdst, matcher).await;
+                tracing::debug!(
+                    duration = start_time.elapsed().as_millis() as u64,
+                    "path_copies - src is parent of dst"
+                );
+                return copies;
             }
         }
         let src_parents = self.dag.parent_names(src.clone()).await?;
@@ -291,12 +335,32 @@ impl CopyTrace for DagCopyTrace {
                     .collect::<Vec<_>>();
                 copies.sort_unstable();
                 let reverse_copies = copies.into_iter().map(|(k, v)| (v, k)).collect();
+                tracing::debug!(
+                    duration = start_time.elapsed().as_millis() as u64,
+                    "path_copies - dst is parent of src"
+                );
                 return Ok(reverse_copies);
             }
         }
 
-        let missing = compute_missing_files(&msrc, &mdst, matcher)?;
+        // 2. src and dst are not adjacent
+
         let mut result = HashMap::new();
+        let distance = self.compute_distance(src.clone(), dst.clone()).await?;
+        let max_commit_limit = get_path_copies_commit_limit(&self.config)?;
+        tracing::trace!(?distance, ?max_commit_limit, "distance between src and dst");
+        if distance > max_commit_limit {
+            // skip calculating path copies if too many commits
+            tracing::debug!(
+                duration = start_time.elapsed().as_millis() as u64,
+                "path_copies - distance > max_commit_limit"
+            );
+            return Ok(result);
+        }
+
+        let find_count_limit = get_max_missing_files(&self.config)?;
+        let missing = compute_missing_files(&msrc, &mdst, matcher, Some(find_count_limit))?;
+        tracing::trace!(missing_len = missing.len(), "missing files");
         for dst_path in missing {
             let src_path = self
                 .trace_rename(dst.clone(), src.clone(), dst_path.clone())
@@ -306,6 +370,24 @@ impl CopyTrace for DagCopyTrace {
             }
         }
 
+        tracing::debug!(
+            duration = start_time.elapsed().as_millis() as u64,
+            "path_copies - src and dst are not adjacent"
+        );
         Ok(result)
     }
+}
+
+fn get_path_copies_commit_limit(config: &dyn Config) -> Result<usize> {
+    let v = config
+        .get_opt::<usize>("copytrace", "pathcopiescommitlimit")?
+        .unwrap_or(DEFAULT_PATH_COPIES_COMMIT_LIMIT);
+    Ok(v)
+}
+
+fn get_max_missing_files(config: &dyn Config) -> Result<usize> {
+    let v = config
+        .get_opt::<usize>("copytrace", "maxmissingfiles")?
+        .unwrap_or(DEFAULT_MAX_MISSING_FILES);
+    Ok(v)
 }

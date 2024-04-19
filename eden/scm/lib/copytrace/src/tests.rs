@@ -109,14 +109,16 @@ impl CopyTraceTestCase {
     pub async fn copy_trace(&self) -> Arc<dyn CopyTrace + Send + Sync> {
         let file_reader = Arc::new(self.clone());
         let config = Arc::new(self.inner.config.clone());
-        let rename_finder = Arc::new(MetadataRenameFinder::new(file_reader, config).unwrap());
+        let rename_finder =
+            Arc::new(MetadataRenameFinder::new(file_reader, config.clone()).unwrap());
 
         let root_tree_reader = Arc::new(self.clone());
         let tree_store = self.inner.tree_store.clone();
         let dagalgo = self.inner.dagalgo.clone();
 
         let copy_trace =
-            DagCopyTrace::new(root_tree_reader, tree_store, rename_finder, dagalgo).unwrap();
+            DagCopyTrace::new(root_tree_reader, tree_store, rename_finder, dagalgo, config)
+                .unwrap();
         Arc::new(copy_trace)
     }
 

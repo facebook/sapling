@@ -194,7 +194,7 @@ impl RenameFinder for MetadataRenameFinder {
         new_tree: &TreeManifest,
         matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
-        let missing = compute_missing_files(old_tree, new_tree, matcher)?;
+        let missing = compute_missing_files(old_tree, new_tree, matcher, Option::None)?;
         tracing::trace!(missing_len = missing.len(), " find_renames");
         let keys: Vec<_> = missing
             .into_iter()
