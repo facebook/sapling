@@ -8,8 +8,8 @@
 import type * as vscode from 'vscode';
 
 // don't want to mock vscode.Uri, so use library for it
-import * as vscodeUri from 'vscode-uri';
-export const Uri = vscodeUri.URI;
+import {URI} from 'vscode-uri';
+export const Uri = URI;
 
 export const workspace = proxyMissingFieldsWithJestFn({
   workspaceFolders: undefined,
