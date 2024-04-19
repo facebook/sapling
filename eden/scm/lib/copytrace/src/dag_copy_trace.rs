@@ -283,10 +283,13 @@ impl CopyTrace for DagCopyTrace {
         let src_parents = self.dag.parent_names(src.clone()).await?;
         for parent in src_parents {
             if parent == dst {
-                let copies = self
+                let mut copies = self
                     .rename_finder
                     .find_renames(&mdst, &msrc, matcher)
-                    .await?;
+                    .await?
+                    .into_iter()
+                    .collect::<Vec<_>>();
+                copies.sort_unstable();
                 let reverse_copies = copies.into_iter().map(|(k, v)| (v, k)).collect();
                 return Ok(reverse_copies);
             }
