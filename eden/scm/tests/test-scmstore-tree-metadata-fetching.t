@@ -88,18 +88,10 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  size: Some(
-                                                      5,
-                                                  ),
-                                                  content_sha1: Some(
-                                                      Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
-                                                  ),
-                                                  content_sha256: Some(
-                                                      Sha256("c147efcfc2d7ea666a9e4f5187b115c90903f0fc896a56df9a6ef5d8f3fc9f31"),
-                                                  ),
-                                                  content_seeded_blake3: Some(
-                                                      Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
-                                                  ),
+                                                  size: 5,
+                                                  content_sha1: Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
+                                                  content_sha256: Sha256("c147efcfc2d7ea666a9e4f5187b115c90903f0fc896a56df9a6ef5d8f3fc9f31"),
+                                                  content_blake3: Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
                                               },
                                           ),
                                       },
@@ -116,18 +108,10 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  size: Some(
-                                                      5,
-                                                  ),
-                                                  content_sha1: Some(
-                                                      Sha1("cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523"),
-                                                  ),
-                                                  content_sha256: Some(
-                                                      Sha256("3377870dfeaaa7adf79a374d2702a3fdb13e5e5ea0dd8aa95a802ad39044a92f"),
-                                                  ),
-                                                  content_seeded_blake3: Some(
-                                                      Blake3("aab0b64d0a516f16e06cd7571dece3e6cc6f57ca2462ce69872d3d7e6664e7da"),
-                                                  ),
+                                                  size: 5,
+                                                  content_sha1: Sha1("cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523"),
+                                                  content_sha256: Sha256("3377870dfeaaa7adf79a374d2702a3fdb13e5e5ea0dd8aa95a802ad39044a92f"),
+                                                  content_blake3: Blake3("aab0b64d0a516f16e06cd7571dece3e6cc6f57ca2462ce69872d3d7e6664e7da"),
                                               },
                                           ),
                                       },
@@ -197,18 +181,10 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  size: Some(
-                                                      5,
-                                                  ),
-                                                  content_sha1: Some(
-                                                      Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
-                                                  ),
-                                                  content_sha256: Some(
-                                                      Sha256("c147efcfc2d7ea666a9e4f5187b115c90903f0fc896a56df9a6ef5d8f3fc9f31"),
-                                                  ),
-                                                  content_seeded_blake3: Some(
-                                                      Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
-                                                  ),
+                                                  size: 5,
+                                                  content_sha1: Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
+                                                  content_sha256: Sha256("c147efcfc2d7ea666a9e4f5187b115c90903f0fc896a56df9a6ef5d8f3fc9f31"),
+                                                  content_blake3: Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
                                               },
                                           ),
                                       },
@@ -225,18 +201,10 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  size: Some(
-                                                      5,
-                                                  ),
-                                                  content_sha1: Some(
-                                                      Sha1("cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523"),
-                                                  ),
-                                                  content_sha256: Some(
-                                                      Sha256("3377870dfeaaa7adf79a374d2702a3fdb13e5e5ea0dd8aa95a802ad39044a92f"),
-                                                  ),
-                                                  content_seeded_blake3: Some(
-                                                      Blake3("aab0b64d0a516f16e06cd7571dece3e6cc6f57ca2462ce69872d3d7e6664e7da"),
-                                                  ),
+                                                  size: 5,
+                                                  content_sha1: Sha1("cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523"),
+                                                  content_sha256: Sha256("3377870dfeaaa7adf79a374d2702a3fdb13e5e5ea0dd8aa95a802ad39044a92f"),
+                                                  content_blake3: Blake3("aab0b64d0a516f16e06cd7571dece3e6cc6f57ca2462ce69872d3d7e6664e7da"),
                                               },
                                           ),
                                       },

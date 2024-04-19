@@ -707,10 +707,10 @@ impl TreeEntry for ScmStoreTreeEntry {
                 let file_metadata = file_entry.file_metadata?;
                 // For easier coding, we simply skip incomplete data here.
                 let aux = FileAuxData {
-                    total_size: file_metadata.size?,
-                    sha1: file_metadata.content_sha1?,
-                    sha256: file_metadata.content_sha256?,
-                    blake3: file_metadata.content_seeded_blake3?,
+                    total_size: file_metadata.size,
+                    sha1: file_metadata.content_sha1,
+                    sha256: file_metadata.content_sha256,
+                    blake3: file_metadata.content_blake3,
                 };
                 Some(Ok((file_entry.key.hgid, aux)))
             });

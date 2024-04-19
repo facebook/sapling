@@ -158,6 +158,7 @@ pub enum WireToApiConversionError {
     CannotPopulateRequiredField(&'static str),
     PathValidationError(RepoPathParseError),
     InvalidUploadTokenType(&'static str),
+    MissingField(&'static str),
 }
 
 impl From<Infallible> for WireToApiConversionError {

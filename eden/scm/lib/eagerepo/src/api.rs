@@ -287,15 +287,14 @@ impl EdenApi for EagerRepo {
                                 self.get_sha1_blob_for_api(child.hgid, "trees (aux)")?;
                             let file_body = extract_body(&file_with_parents);
 
-                            // The client currently extracts only file aux data fields from the file metadata.
                             let aux_data = FileAuxData::from_content(&file_body);
                             children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
                                 key: Key::new(key.path.join(child.component.as_ref()), child.hgid),
                                 file_metadata: Some(FileMetadata {
-                                    size: Some(aux_data.total_size),
-                                    content_sha1: Some(aux_data.sha1),
-                                    content_sha256: Some(aux_data.sha256),
-                                    content_seeded_blake3: aux_data.seeded_blake3,
+                                    size: aux_data.total_size,
+                                    content_sha1: aux_data.sha1,
+                                    content_sha256: aux_data.sha256,
+                                    content_blake3: aux_data.blake3,
                                 }),
                             })));
                         }

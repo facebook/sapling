@@ -49,6 +49,6 @@ Check files in response.
                                   "hg_file_blob": b"\x01\ncopy: test.txt\ncopyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca\n\x01\ntest content\n"},
                       "parents": None,
                       "aux_data": {"sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
+                                   "blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                    "sha256": bin("a1fff0ffefb9eace7230c24e50731f0a91c62f9cefdfe77121c2f607125dffae"),
-                                   "total_size": 13,
-                                   "seeded_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a")}}}}]
+                                   "total_size": 13}}}}]

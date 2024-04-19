@@ -75,7 +75,8 @@ pub struct FileAuxData {
     #[id(3)]
     pub sha256: Sha256,
     #[id(4)]
-    pub seeded_blake3: Option<Blake3>,
+    #[wire_option]
+    pub blake3: Blake3,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
@@ -94,9 +95,7 @@ impl TryFrom<FileAuxData> for FileAuxDataV2 {
             total_size: v.total_size,
             sha1: v.sha1,
             sha256: v.sha256,
-            blake3: v
-                .seeded_blake3
-                .ok_or_else(|| anyhow::anyhow!("seeded_blake3 is missing in FileAuxDataV2"))?,
+            blake3: v.blake3,
         })
     }
 }
@@ -196,7 +195,7 @@ impl FileAuxData {
             total_size: file_aux2.total_size,
             sha1: file_aux2.sha1,
             sha256: file_aux2.sha256,
-            seeded_blake3: Some(file_aux2.blake3),
+            blake3: file_aux2.blake3,
         }
     }
 }

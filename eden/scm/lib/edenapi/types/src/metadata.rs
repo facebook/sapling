@@ -14,6 +14,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
 
+use crate::FileAuxData;
 use crate::ServerError;
 
 /// Directory entry metadata
@@ -33,13 +34,39 @@ pub struct FileMetadata {
     // #[id(1)] # deprecated
     // #[id(2)] # deprecated
     #[id(3)]
-    pub size: Option<u64>,
+    #[wire_option]
+    pub size: u64,
     #[id(4)]
-    pub content_sha1: Option<Sha1>,
+    #[wire_option]
+    pub content_sha1: Sha1,
     #[id(5)]
-    pub content_sha256: Option<Sha256>,
+    #[wire_option]
+    pub content_sha256: Sha256,
     #[id(6)]
-    pub content_seeded_blake3: Option<Blake3>,
+    #[wire_option]
+    pub content_blake3: Blake3,
+}
+
+impl From<FileMetadata> for FileAuxData {
+    fn from(val: FileMetadata) -> Self {
+        FileAuxData {
+            total_size: val.size,
+            sha1: val.content_sha1,
+            sha256: val.content_sha256,
+            blake3: val.content_blake3,
+        }
+    }
+}
+
+impl From<FileAuxData> for FileMetadata {
+    fn from(aux: FileAuxData) -> Self {
+        Self {
+            size: aux.total_size,
+            content_sha1: aux.sha1,
+            content_sha256: aux.sha256,
+            content_blake3: aux.blake3,
+        }
+    }
 }
 
 sized_hash!(Sha1, 20);

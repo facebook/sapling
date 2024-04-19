@@ -16,8 +16,13 @@ use syn::spanned::Spanned;
 use syn::*;
 
 const ID: &str = "id";
+const WIRE_OPTION: &str = "wire_option";
 
 /// Derive a default implementation for a wire type for this type
+/// Supports: 'wire_option' attribute. Wire impl will wrap it in Option,
+//             and fail when deserializing if it's not present.
+// This is useful fo safe migration off Option types in Api types.
+//
 // TODO: Future improvements
 // - Support fields that do not implement Default on Api obj
 //    - add "no_default" attribute to field. Wire impl will wrap it in Option,
@@ -121,6 +126,18 @@ fn extract_no_default(attrs: &mut Vec<Attribute>) -> bool {
     no_default
 }
 
+fn extract_wire_option(attrs: &mut Vec<Attribute>) -> bool {
+    let mut wire_option = false;
+    attrs.retain(|a| match a.path.get_ident() {
+        Some(id) if *id == WIRE_OPTION => {
+            wire_option = true;
+            false
+        }
+        _ => true,
+    });
+    wire_option
+}
+
 fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
     let mut item = original.clone();
     let ident = item.ident.clone();
@@ -129,15 +146,23 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
 
     let mut fields = vec![];
     let mut has_no_default_field = false;
+    let mut wire_option_fields = HashSet::new();
 
     let mut ids = HashSet::new();
     match &mut item.fields {
         Fields::Named(ref mut fs) => fs.named.iter_mut().try_for_each(|ref mut field| {
-            fields.push(field.ident.clone().unwrap());
+            let name = field.ident.clone().unwrap();
+            fields.push(name.clone());
             let (id, other_attrs) = extract_id(std::mem::take(&mut field.attrs), &field, &mut ids)?;
             field.attrs = other_attrs;
             let ty = &field.ty;
-            field.ty = parse_quote!( <#ty as crate::ToWire>::Wire );
+            if extract_wire_option(&mut field.attrs) {
+                field.ty = parse_quote!( <Option<#ty> as crate::ToWire>::Wire );
+                wire_option_fields.insert(name);
+            }
+            else {
+                field.ty = parse_quote!( <#ty as crate::ToWire>::Wire );
+            }
             let name = format!("{}", id);
 
             if extract_no_default(&mut field.attrs) {
@@ -175,13 +200,18 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
         Fields::Named(ref mut fs) => fs.named.iter_mut().for_each(|ref mut field| {
             remove_id(&mut field.attrs);
             extract_no_default(&mut field.attrs);
+            extract_wire_option(&mut field.attrs);
         }),
         _ => unreachable!(),
     }
 
-    let fields_to_wire = fields
-        .iter()
-        .map(|name| quote! { #name: self.#name.to_wire() });
+    let fields_to_wire = fields.iter().map(|name| {
+        if wire_option_fields.contains(name) {
+            quote! { #name: Some(self.#name.to_wire()) }
+        } else {
+            quote! { #name: self.#name.to_wire() }
+        }
+    });
 
     let generics = &original.generics;
 
@@ -197,9 +227,13 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
         }
     };
 
-    let fields_to_api = fields
-        .iter()
-        .map(|name| quote! { #name: self.#name.to_api()? });
+    let fields_to_api = fields.iter().map(|name| {
+        if wire_option_fields.contains(name) {
+            quote! { #name: self.#name.to_api()?.ok_or_else(|| crate::WireToApiConversionError::MissingField(stringify!(#name)))? }
+        } else {
+            quote! { #name: self.#name.to_api()? }
+        }
+    });
 
     let to_api_impl = quote! {
         impl #generics crate::ToApi for #wire_ident #generics {
