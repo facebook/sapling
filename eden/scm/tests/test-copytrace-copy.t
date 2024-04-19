@@ -17,9 +17,9 @@ should merge changes of a into the copy file b
   >     # drawdag.defaultfiles=false
   > EOS
 
-tofix: should merging a and b to b
-
   $ hg rebase -r $P -d $Y
   rebasing bd0f2fa014aa "P"
+  merging a and b to b
   $ hg cat b -r tip
+  a
   a

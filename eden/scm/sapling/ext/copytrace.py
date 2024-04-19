@@ -434,7 +434,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
             return orig(repo, cdst, csrc, base)
 
     cp = copiesmod.pathcopies(base, csrc)
-    for dst, src in pycompat.iteritems(cp):
+    for dst, src in _filtercopies(cp, base, cdst).items():
         if src in mdst:
             copies[dst] = src
 
@@ -448,26 +448,27 @@ def _mergecopies(orig, repo, cdst, csrc, base):
     repo.ui.metrics.gauge("copytrace_missingfiles", len(missingfiles))
     if missingfiles and _dagcopytraceenabled(repo.ui):
         dag_copy_trace = repo._dagcopytrace
-        for f in missingfiles:
-            dst_file = dag_copy_trace.trace_rename(csrc.node(), cdst.node(), f)
-            if dst_file:
-                copies[dst_file] = f
+        dst_copies = dag_copy_trace.trace_renames(
+            csrc.node(), cdst.node(), missingfiles
+        )
+        copies.update(_filtercopies(dst_copies, base, csrc))
 
     if repo.ui.configbool("copytrace", "enableamendcopytrace"):
         # Look for additional amend-copies.
         amend_copies = _getamendcopies(repo, cdst, base.p1())
         if amend_copies:
             repo.ui.debug("Loaded amend copytrace for %s" % cdst)
-            for dst, src in pycompat.iteritems(amend_copies):
+            for dst, src in _filtercopies(amend_copies, base, csrc).items():
                 if dst not in copies:
                     copies[dst] = src
 
     repo.ui.metrics.gauge("copytrace_copies", len(copies))
-    return _filtercopies(copies, cdst, csrc, base), {}, {}, {}, {}
+    return copies, {}, {}, {}, {}
 
 
-def _filtercopies(copies, cdst, csrc, base):
-    """Remove uninteresting copies if files are not changed.
+def _filtercopies(copies, base, otherctx):
+    """Remove uninteresting copies if a file is renamed in one side but not changed
+    in the other side.
 
     The mergecopies function is expected to report cases where one side renames
     a file, while the other side changed the file before the rename.
@@ -483,8 +484,7 @@ def _filtercopies(copies, cdst, csrc, base):
     newcopies = {}
     if copies:
         # Warm-up manifests
-        cdst.manifest()
-        csrc.manifest()
+        otherctx.manifest()
         base.manifest()
         for fdst, fsrc in copies.items():
             if fsrc not in base:
@@ -492,9 +492,7 @@ def _filtercopies(copies, cdst, csrc, base):
                 # wrong.
                 continue
             basenode = base[fsrc].filenode()
-            if fsrc in cdst and cdst[fsrc].filenode() == basenode:
-                continue
-            if fsrc in csrc and csrc[fsrc].filenode() == basenode:
+            if fsrc in otherctx and otherctx[fsrc].filenode() == basenode:
                 continue
             newcopies[fdst] = fsrc
     return newcopies
