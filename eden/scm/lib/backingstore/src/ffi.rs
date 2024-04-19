@@ -99,7 +99,6 @@ pub(crate) mod ffi {
     pub struct FileAuxData {
         total_size: u64,
         content_sha1: [u8; 20],
-        content_sha256: [u8; 32],
         content_blake3: [u8; 32],
     }
 

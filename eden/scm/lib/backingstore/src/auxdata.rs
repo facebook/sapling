@@ -14,7 +14,6 @@ impl From<ScmStoreFileAuxData> for FileAuxData {
         FileAuxData {
             total_size: v.total_size,
             content_sha1: v.sha1.into(),
-            content_sha256: v.sha256.into_byte_array(),
             content_blake3: v.blake3.into_byte_array(),
         }
     }
