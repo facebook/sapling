@@ -21,22 +21,7 @@ use crate::ServerError;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct DirectoryMetadata {
-    #[id(0)]
-    pub fsnode_id: Option<FsnodeId>,
-    #[id(1)]
-    pub simple_format_sha1: Option<Sha1>,
-    #[id(2)]
-    pub simple_format_sha256: Option<Sha256>,
-    #[id(3)]
-    pub child_files_count: Option<u64>,
-    #[id(4)]
-    pub child_files_total_size: Option<u64>,
-    #[id(5)]
-    pub child_dirs_count: Option<u64>,
-    #[id(6)]
-    pub descendant_files_count: Option<u64>,
-    #[id(7)]
-    pub descendant_files_total_size: Option<u64>,
+    // not used
 }
 
 /// File entry metadata
