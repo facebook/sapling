@@ -433,20 +433,10 @@ def _mergecopies(orig, repo, cdst, csrc, base):
         if sourcecommitnum > sourcecommitlimit:
             return orig(repo, cdst, csrc, base)
 
-    if _dagcopytraceenabled(repo.ui) and git.isgitformat(repo):
-        dag_copy_trace = repo._dagcopytrace
-        srcmissingfiles = [
-            f for f in changedfiles if f not in csrc and f in base and f in mdst
-        ]
-        for f in srcmissingfiles:
-            src_file = dag_copy_trace.trace_rename(base.node(), csrc.node(), f)
-            if src_file:
-                copies[src_file] = f
-    else:
-        cp = copiesmod._forwardcopies(base, csrc)
-        for dst, src in pycompat.iteritems(cp):
-            if src in mdst:
-                copies[dst] = src
+    cp = copiesmod.pathcopies(base, csrc)
+    for dst, src in pycompat.iteritems(cp):
+        if src in mdst:
+            copies[dst] = src
 
     # file is missing if it isn't present in the destination, but is present in
     # the base and present in the source.
