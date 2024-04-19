@@ -77,6 +77,9 @@ const REF_PREFIX: &str = "refs/";
 
 // The threshold in bytes below which we consider a future cheap enough to have a weight of 1
 const THRESHOLD_BYTES: usize = 6000;
+// The upper bound on the RSS bytes beyond which we will pause executing futures until the process
+// is below the threshold. This prevents us from OOMing in case of high number of parallel clone requests
+const MEMORY_BOUND: u64 = 38_000_000_000;
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -793,7 +796,7 @@ async fn blob_and_tree_packfile_stream<'a>(
                 }
             }
         })
-        .buffered_weighted(concurrency)
+        .buffered_weighted_bounded(concurrency, MEMORY_BOUND)
         .boxed();
     Ok(packfile_item_stream)
 }
