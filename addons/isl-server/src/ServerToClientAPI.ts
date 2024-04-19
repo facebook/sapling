@@ -168,20 +168,7 @@ export default class ServerToClientAPI {
     }
 
     repo.ref();
-    this.repoDisposables.push(
-      repo.subscribeToHeadCommit(head => {
-        const allCommits = repo.getSmartlogCommits();
-        const ancestor = findPublicAncestor(allCommits?.commits.value, head);
-        this.tracker.track('HeadCommitChanged', {
-          extras: {
-            hash: head.hash,
-            public: ancestor?.hash,
-            bookmarks: ancestor?.remoteBookmarks,
-          },
-        });
-      }),
-      {dispose: () => repo.unref()},
-    );
+    this.repoDisposables.push({dispose: () => repo.unref()});
 
     this.processQueuedMessages();
   }

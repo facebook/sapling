@@ -72,7 +72,12 @@ import {
   parseCommitInfoOutput,
   parseShelvedCommitsOutput,
 } from './templates';
-import {handleAbortSignalOnProcess, isExecaError, serializeAsyncCall} from './utils';
+import {
+  findPublicAncestor,
+  handleAbortSignalOnProcess,
+  isExecaError,
+  serializeAsyncCall,
+} from './utils';
 import execa from 'execa';
 import {
   settableConfigNames,
@@ -294,6 +299,19 @@ export class Repository {
     this.disposables.push(() => subscription.dispose());
 
     this.applyConfigInBackground(ctx);
+
+    const headTracker = this.subscribeToHeadCommit(head => {
+      const allCommits = this.getSmartlogCommits();
+      const ancestor = findPublicAncestor(allCommits?.commits.value, head);
+      this.initialConnectionContext.tracker.track('HeadCommitChanged', {
+        extras: {
+          hash: head.hash,
+          public: ancestor?.hash,
+          bookmarks: ancestor?.remoteBookmarks,
+        },
+      });
+    });
+    this.disposables.push(headTracker.dispose);
   }
 
   public nextVisibleCommitRangeInDays(): number | undefined {
