@@ -88,9 +88,6 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: Some(
-                                                      ContentId("e814695438c861a0def69866f1d28b57827961b6dfc31c66e6ba16c517eeb9e0"),
-                                                  ),
                                                   size: Some(
                                                       5,
                                                   ),
@@ -119,9 +116,6 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: Some(
-                                                      ContentId("233fc5ebc2502409036b103a972af95424dfd522d9e41089125c7925432b11f9"),
-                                                  ),
                                                   size: Some(
                                                       5,
                                                   ),
@@ -152,14 +146,11 @@ We should also have aux data for the files available as a side effect of tree fe
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(
-          FileAuxData {
+          FileAuxDataV2 {
               total_size: 5,
-              content_id: ContentId("e814695438c861a0def69866f1d28b57827961b6dfc31c66e6ba16c517eeb9e0"),
               sha1: Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
               sha256: Sha256("c147efcfc2d7ea666a9e4f5187b115c90903f0fc896a56df9a6ef5d8f3fc9f31"),
-              seeded_blake3: Some(
-                  Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
-              ),
+              blake3: Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
           },
       ),
   }
@@ -206,9 +197,6 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: Some(
-                                                      ContentId("e814695438c861a0def69866f1d28b57827961b6dfc31c66e6ba16c517eeb9e0"),
-                                                  ),
                                                   size: Some(
                                                       5,
                                                   ),
@@ -237,9 +225,6 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: Some(
-                                                      ContentId("233fc5ebc2502409036b103a972af95424dfd522d9e41089125c7925432b11f9"),
-                                                  ),
                                                   size: Some(
                                                       5,
                                                   ),

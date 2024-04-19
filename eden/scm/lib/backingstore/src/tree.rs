@@ -55,7 +55,7 @@ impl TreeEntry {
                         hgid,
                         Some(aux_data.total_size),
                         Some(aux_data.sha1),
-                        aux_data.seeded_blake3,
+                        Some(aux_data.blake3),
                     )
                 } else {
                     (entry_type, hgid, None, None, None)

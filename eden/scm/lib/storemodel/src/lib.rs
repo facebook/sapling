@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use edenapi_trait::EdenApi;
-pub use edenapi_types::FileAuxData;
+pub use edenapi_types::FileAuxDataV2 as FileAuxData;
 pub use futures;
 use metalog::MetaLog;
 pub use minibytes;

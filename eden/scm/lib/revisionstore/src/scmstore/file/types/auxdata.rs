@@ -5,4 +5,4 @@
  * GNU General Public License version 2.
  */
 
-pub use edenapi_types::FileAuxData;
+pub use edenapi_types::FileAuxDataV2 as FileAuxData;

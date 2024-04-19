@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
-use edenapi_types::FileAuxData;
+use edenapi_types::FileAuxDataV2 as FileAuxData;
 use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
 use storemodel::BoxIterator;
@@ -159,11 +159,7 @@ impl storemodel::FileStore for ArcFileStore {
         Ok(Box::new(iter))
     }
 
-    fn get_local_aux(
-        &self,
-        path: &RepoPath,
-        id: HgId,
-    ) -> anyhow::Result<Option<edenapi_types::FileAuxData>> {
+    fn get_local_aux(&self, path: &RepoPath, id: HgId) -> anyhow::Result<Option<FileAuxData>> {
         // PERF: This could be made faster by changes like D50935733.
         let key = Key::new(path.to_owned(), id);
         let fetched = self.0.fetch(

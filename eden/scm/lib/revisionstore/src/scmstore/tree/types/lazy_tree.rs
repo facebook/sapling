@@ -97,14 +97,13 @@ impl LazyTree {
                                         file_entry.key.hgid,
                                         FileAuxData {
                                             total_size: file_metadata.size.unwrap(),
-                                            content_id: file_metadata.content_id.unwrap(),
                                             sha1: file_metadata.content_sha1.unwrap(),
                                             sha256: file_metadata
                                                 .content_sha256
                                                 .unwrap()
                                                 .into_byte_array()
                                                 .into(),
-                                            seeded_blake3: file_metadata.content_seeded_blake3,
+                                            blake3: file_metadata.content_seeded_blake3.unwrap(),
                                         },
                                     )
                                 })

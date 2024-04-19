@@ -80,6 +80,29 @@ pub struct FileAuxData {
     pub seeded_blake3: Option<Blake3>,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct FileAuxDataV2 {
+    pub total_size: u64,
+    pub sha1: Sha1,
+    pub sha256: Sha256,
+    pub blake3: Blake3,
+}
+
+impl TryFrom<FileAuxData> for FileAuxDataV2 {
+    type Error = anyhow::Error;
+    fn try_from(v: FileAuxData) -> Result<Self, Self::Error> {
+        Ok(FileAuxDataV2 {
+            total_size: v.total_size,
+            sha1: v.sha1,
+            sha256: v.sha256,
+            blake3: v
+                .seeded_blake3
+                .ok_or_else(|| anyhow::anyhow!("seeded_blake3 is missing in FileAuxDataV2"))?,
+        })
+    }
+}
+
 /// File content
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FileContent {
@@ -170,13 +193,6 @@ pub struct FileEntry {
 impl FileAuxData {
     /// Calculate `FileAuxData` from file content.
     pub fn from_content(data: &[u8]) -> Self {
-        let sha256 = {
-            use sha2::Digest;
-            let mut hash = sha2::Sha256::new();
-            hash.update(data);
-            let bytes: [u8; Sha256::len()] = hash.finalize().into();
-            Sha256::from(bytes)
-        };
         let content_id = {
             use blake2::digest::FixedOutput;
             use blake2::digest::Mac;
@@ -187,6 +203,27 @@ impl FileAuxData {
             hash.finalize_into((&mut ret).into());
             ContentId::from_byte_array(ret)
         };
+        let file_aux2 = FileAuxDataV2::from_content(data);
+        Self {
+            total_size: file_aux2.total_size,
+            content_id,
+            sha1: file_aux2.sha1,
+            sha256: file_aux2.sha256,
+            seeded_blake3: Some(file_aux2.blake3),
+        }
+    }
+}
+
+impl FileAuxDataV2 {
+    /// Calculate `FileAuxDataV2` from file content.
+    pub fn from_content(data: &[u8]) -> Self {
+        let sha256 = {
+            use sha2::Digest;
+            let mut hash = sha2::Sha256::new();
+            hash.update(data);
+            let bytes: [u8; Sha256::len()] = hash.finalize().into();
+            Sha256::from(bytes)
+        };
         let sha1 = {
             use sha1::Digest;
             let mut hash = sha1::Sha1::new();
@@ -194,7 +231,7 @@ impl FileAuxData {
             let bytes: [u8; Sha1::len()] = hash.finalize().into();
             Sha1::from(bytes)
         };
-        let seeded_blake3 = {
+        let blake3 = {
             use blake3::Hasher;
             #[cfg(not(fbcode_build))]
             let key = "20220728-2357111317192329313741#".as_bytes();
@@ -210,10 +247,9 @@ impl FileAuxData {
         let total_size = data.len() as _;
         Self {
             total_size,
-            content_id,
             sha1,
             sha256,
-            seeded_blake3: Some(seeded_blake3),
+            blake3,
         }
     }
 }

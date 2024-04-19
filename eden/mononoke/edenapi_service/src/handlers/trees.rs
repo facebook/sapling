@@ -218,7 +218,6 @@ async fn fetch_child_file_metadata(
             size: Some(metadata.total_size),
             content_sha1: Some(metadata.sha1.into()),
             content_sha256: Some(metadata.sha256.into()),
-            content_id: Some(metadata.content_id.into()),
             content_seeded_blake3: Some(metadata.seeded_blake3.into()),
         },
     ))

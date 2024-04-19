@@ -958,13 +958,10 @@ void SaplingBackingStore::getBlobMetadataBatch(
           result = folly::Try<BlobMetadataPtr>{auxTry.exception()};
         } else {
           auto& aux = auxTry.value();
-          std::optional<Hash32> blake3;
-          if (aux->has_blake3) {
-            blake3.emplace(Hash32{std::move(aux->content_blake3)});
-          }
-
           result = folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
-              Hash20{std::move(aux->content_sha1)}, blake3, aux->total_size)};
+              Hash20{std::move(aux->content_sha1)},
+              Hash32{std::move(aux->content_blake3)},
+              aux->total_size)};
         }
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobMetadataPtr>()->setWith(
@@ -1397,14 +1394,10 @@ folly::Try<BlobMetadataPtr> SaplingBackingStore::getLocalBlobMetadata(
   using GetBlobMetadataResult = folly::Try<BlobMetadataPtr>;
 
   if (metadata.hasValue()) {
-    std::optional<Hash32> blake3;
-    if (metadata.value()->has_blake3) {
-      blake3.emplace(Hash32{std::move(metadata.value()->content_blake3)});
-    }
     return GetBlobMetadataResult{
         std::make_shared<BlobMetadataPtr::element_type>(BlobMetadata{
             Hash20{std::move(metadata.value()->content_sha1)},
-            blake3,
+            Hash32{std::move(metadata.value()->content_blake3)},
             metadata.value()->total_size})};
   } else {
     return GetBlobMetadataResult{metadata.exception()};

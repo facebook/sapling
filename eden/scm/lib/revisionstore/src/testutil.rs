@@ -20,6 +20,7 @@ use edenapi::ResponseMeta;
 use edenapi::Stats;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::FileAttributes;
+use edenapi_types::FileAuxData;
 use edenapi_types::FileContent;
 use edenapi_types::FileEntry;
 use edenapi_types::FileResponse;
@@ -46,7 +47,6 @@ use crate::historystore::HgIdMutableHistoryStore;
 use crate::historystore::RemoteHistoryStore;
 use crate::localstore::LocalStore;
 use crate::remotestore::HgIdRemoteStore;
-use crate::scmstore::file::LazyFile;
 use crate::types::StoreKey;
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
@@ -268,9 +268,7 @@ impl FakeEdenApi {
                 };
 
                 if spec.attrs.aux_data {
-                    // TODO(meyer): Compute aux data directly.
-                    let mut file = LazyFile::EdenApi(entry.clone().with_content(content.clone()));
-                    let aux = file.aux_data().ok()?;
+                    let aux = FileAuxData::from_content(&content.hg_file_blob);
                     entry = entry.with_aux_data(aux);
                 }
 

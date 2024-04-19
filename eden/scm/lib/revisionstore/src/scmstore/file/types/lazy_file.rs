@@ -55,9 +55,9 @@ impl LazyFile {
         let aux_data = match self {
             LazyFile::Lfs(content, _) => FileAuxData::from_content(content),
             LazyFile::EdenApi(entry) if entry.aux_data.is_some() => {
-                entry.aux_data().cloned().ok_or_else(|| {
+                FileAuxData::try_from(entry.aux_data().cloned().ok_or_else(|| {
                     anyhow::anyhow!("Invalid EdenAPI entry in LazyFile. Aux data is empty")
-                })?
+                })?)?
             }
             _ => {
                 let content = self.file_content()?;

@@ -74,14 +74,11 @@ Now we do have aux data locally:
           ),
       ),
       aux_data: Some(
-          FileAuxData {
+          FileAuxDataV2 {
               total_size: 1,
-              content_id: ContentId("eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9"),
               sha1: Sha1("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
               sha256: Sha256("559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"),
-              seeded_blake3: Some(
-                  Blake3("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
-              ),
+              blake3: Blake3("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
           },
       ),
   }
@@ -122,14 +119,11 @@ Fetching only aux data does not trigger a remote query:
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(
-          FileAuxData {
+          FileAuxDataV2 {
               total_size: 1,
-              content_id: ContentId("55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f"),
               sha1: Sha1("ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec"),
               sha256: Sha256("df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c"),
-              seeded_blake3: Some(
-                  Blake3("5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48"),
-              ),
+              blake3: Blake3("5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48"),
           },
       ),
   }

@@ -292,7 +292,6 @@ impl EdenApi for EagerRepo {
                             children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
                                 key: Key::new(key.path.join(child.component.as_ref()), child.hgid),
                                 file_metadata: Some(FileMetadata {
-                                    content_id: Some(aux_data.content_id),
                                     size: Some(aux_data.total_size),
                                     content_sha1: Some(aux_data.sha1),
                                     content_sha256: Some(aux_data.sha256),

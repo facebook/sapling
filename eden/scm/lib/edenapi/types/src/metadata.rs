@@ -45,8 +45,7 @@ pub struct DirectoryMetadata {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
     // #[id(0)] # deprecated
-    #[id(1)]
-    pub content_id: Option<ContentId>,
+    // #[id(1)] # deprecated
     // #[id(2)] # deprecated
     #[id(3)]
     pub size: Option<u64>,

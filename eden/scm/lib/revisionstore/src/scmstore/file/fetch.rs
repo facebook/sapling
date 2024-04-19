@@ -496,7 +496,7 @@ impl FetchState {
         let mut lfsptr = None;
 
         if let Some(aux_data) = entry.aux_data() {
-            let aux_data: FileAuxData = aux_data.clone();
+            let aux_data: FileAuxData = FileAuxData::try_from(aux_data.clone())?;
             if let Some(aux_cache) = aux_cache.as_ref() {
                 aux_cache.put(key.hgid, &aux_data)?;
             }
@@ -711,7 +711,7 @@ impl FetchState {
     pub(crate) fn fetch_lfs_remote(
         &mut self,
         store: &LfsRemoteInner,
-        local: Option<Arc<LfsStore>>,
+        _local: Option<Arc<LfsStore>>,
         cache: Option<Arc<LfsStore>>,
     ) {
         let errors = &mut self.errors;
