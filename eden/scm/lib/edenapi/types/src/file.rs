@@ -281,9 +281,7 @@ pub struct FileSpec {
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileRequest {
-    // Deprecated!!!
-    #[id(0)]
-    pub keys: Vec<Key>,
+    // #[id(0)] # deprecated
     #[id(1)]
     pub reqs: Vec<FileSpec>,
 }

@@ -510,7 +510,7 @@ impl Client {
             self.config().max_files_per_batch,
             min_batch_size,
             |reqs| {
-                let req = FileRequest { reqs, keys: vec![] };
+                let req = FileRequest { reqs };
                 self.log_request(&req, "files");
                 req
             },
