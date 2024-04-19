@@ -11,6 +11,7 @@
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
+#include <optional>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/OverlayFile.h"
