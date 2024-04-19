@@ -194,6 +194,13 @@ def _gitfindcopies(repo, oldnode, newnode):
         return {}
 
 
+def _reverse_copies(copies):
+    """reverse the direction of the copies"""
+    # For 1:n rename situations (e.g. hg cp a b; hg mv a c), we
+    # arbitrarily pick one of the renames.
+    return {v: k for k, v in copies.items()}
+
+
 def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
     # we use git2 Rust library to do the actual work for git repo.
@@ -202,12 +209,23 @@ def pathcopies(x, y, match=None):
 
     if x == y or not x or not y:
         return {}
-    a = y.ancestor(x)
-    if a == x:
-        return _forwardcopies(x, y, match=match)
-    if a == y:
-        return _backwardrenames(x, y)
-    return _chain(x, y, _backwardrenames(x, a), _forwardcopies(a, y, match=match))
+
+    dagcopytrace = y.repo()._dagcopytrace
+    if y.rev() is None:
+        dirstate_copies = _dirstatecopies(y, match)
+        if x == y.p1():
+            return dirstate_copies
+        committed_copies = dagcopytrace.path_copies(x.node(), y.p1().node(), match)
+        return _chain(x, y, committed_copies, dirstate_copies)
+
+    if x.rev() is None:
+        dirstate_copies = _reverse_copies(_dirstatecopies(x, match))
+        if y == x.p1():
+            return dirstate_copies
+        committed_copies = dagcopytrace.path_copies(x.p1().node(), y.node(), match)
+        return _chain(x, y, dirstate_copies, committed_copies)
+
+    return dagcopytrace.path_copies(x.node(), y.node(), match)
 
 
 def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2, baselabel=""):

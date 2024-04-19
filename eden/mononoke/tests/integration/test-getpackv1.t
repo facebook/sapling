@@ -127,7 +127,7 @@ Rename a file and then prefetch it
   \x01 (esc)
   AA
   $ hgedenapi up -q 4 --config paths.default=badpath
-  $ hg st --change . -C --config paths.default=badpath
+  $ hg st --change . -C 
   A AA
     A
   R A
