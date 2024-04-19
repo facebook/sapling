@@ -79,12 +79,8 @@ pub trait Manifest {
         Ok(result)
     }
 
-    fn contain_file(&self, file_path: &RepoPath) -> Result<bool> {
-        if let Some(FsNodeMetadata::File(_)) = self.get(file_path)? {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+    fn contains_file(&self, file_path: &RepoPath) -> Result<bool> {
+        Ok(self.get_file(file_path)?.is_some())
     }
 
     /// Returns an iterator over all the files in the Manifest that satisfy the given Matcher.

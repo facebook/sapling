@@ -820,13 +820,13 @@ mod tests {
     }
 
     #[test]
-    fn test_contain_file() {
+    fn test_contains_file() {
         let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar"), make_meta("10"))
             .unwrap();
-        assert!(tree.contain_file(repo_path("foo/bar")).unwrap());
-        assert!(!tree.contain_file(repo_path("foo")).unwrap());
-        assert!(!tree.contain_file(repo_path("baz")).unwrap());
+        assert!(tree.contains_file(repo_path("foo/bar")).unwrap());
+        assert!(!tree.contains_file(repo_path("foo")).unwrap());
+        assert!(!tree.contains_file(repo_path("baz")).unwrap());
     }
 
     #[test]
