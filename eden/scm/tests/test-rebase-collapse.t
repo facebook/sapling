@@ -3,7 +3,6 @@
 #require no-eden
 
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig experimental.copytrace=on
 
   $ configure mutation
   $ enable rebase strip

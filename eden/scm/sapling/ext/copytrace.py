@@ -403,6 +403,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
     if csrc.node() is None and cdst.node() == repo.dirstate.p1():
         return repo.dirstate.copies(), {}, {}, {}, {}
 
+    orig_cdst = cdst
     if cdst.rev() is None:
         cdst = cdst.p1()
     if csrc.rev() is None:
@@ -435,7 +436,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
 
     cp = copiesmod.pathcopies(base, csrc)
     for dst, src in _filtercopies(cp, base, cdst).items():
-        if src in mdst:
+        if src in orig_cdst:
             copies[dst] = src
 
     # file is missing if it isn't present in the destination, but is present in
