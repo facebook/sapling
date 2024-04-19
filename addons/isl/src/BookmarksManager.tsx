@@ -38,7 +38,7 @@ import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
-import {useState} from 'react';
+import React, {useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {firstLine, notEmpty} from 'shared/utils';
@@ -225,6 +225,7 @@ const stableLocationsTypeaheadOptions = atom(getStableLocationsTypeaheadOptions)
 function AddStableLocation() {
   const [showingInput, setShowingInput] = useState(false);
   const [query, setQuery] = useState('');
+  const addRef = React.useRef<HTMLButtonElement>(null);
   return (
     <div style={{paddingTop: 'var(--pad)'}}>
       {showingInput ? (
@@ -246,10 +247,14 @@ function AddStableLocation() {
                   ) ?? [],
               };
             }}
+            onSaveNewToken={() => {
+              addRef?.current?.focus();
+            }}
             autoFocus
             maxTokens={1}
           />
           <Button
+            ref={addRef}
             primary
             onClick={e => {
               // only expect one token

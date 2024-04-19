@@ -111,6 +111,7 @@ export function Typeahead({
             event.preventDefault();
           } else if (event.key === 'Enter') {
             saveNewValue(values[selectedSuggestionIndex].value);
+            event.preventDefault();
           }
         }}>
         <TokensList
