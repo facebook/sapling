@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.48
+
+### Apr 19 2024
+
+- Fix wrong avatar briefly showing when making a new commit
+- Throttle Watchman subscription if it's firing too often
+- Only subscribe to Watchman while ISL is open
+- Show "Follower" on commits marked as followers via `sl pr follow` (Thanks to [@rejc2](https://github.com/rejc2)!)
+
 ## 0.1.47
 
 ### Apr 11 2024
