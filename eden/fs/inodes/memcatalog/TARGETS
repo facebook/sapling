@@ -13,7 +13,6 @@ cpp_library(
             "MemInodeCatalog.h",
         ],
     deps = [
-        "//eden/fs/config:config",
         "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
     ],
     exported_deps = [
