@@ -31,6 +31,10 @@ pub struct WarmBookmarksCacheArgs {
     /// Specify Host:Port pair to connect to derived data service
     #[clap(long, value_name = "HOST:PORT", group = "Bookmark Cache Address")]
     pub remote_bookmark_cache_host_port: Option<String>,
+
+    /// Skip bookmark cache warming (local development only)
+    #[clap(long)]
+    pub disable_bookmark_cache_warming: bool,
 }
 
 pub struct WarmBookmarksCacheExtension;
@@ -74,6 +78,10 @@ impl AppExtension for WarmBookmarksCacheExtension {
             if let BookmarkCacheKind::Remote(address) = &mut env.bookmark_cache_options.cache_kind {
                 *address = new_address;
             }
+        }
+        // Bookmark cache warming is super slow and sometime not needed for local development
+        if args.disable_bookmark_cache_warming {
+            env.bookmark_cache_options.cache_kind = BookmarkCacheKind::Disabled;
         }
         Ok(())
     }
