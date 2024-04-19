@@ -8,7 +8,7 @@
 import type {StableLocationData} from './types';
 
 import serverAPI from './ClientToServerAPI';
-import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
+import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 import {atom} from 'jotai';
@@ -16,9 +16,12 @@ import {atom} from 'jotai';
 type BookmarksData = {
   /** These bookmarks should be hidden from the automatic set of remote bookmarks */
   hiddenRemoteBookmarks: Array<string>;
+  /** These stables should be requested by the server to fetch additional stables */
+  additionalStables?: Array<string>;
 };
 export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.bookmarks', {
   hiddenRemoteBookmarks: [],
+  additionalStables: [],
 });
 export const hiddenRemoteBookmarksAtom = atom(get => {
   return new Set(get(bookmarksDataStorage).hiddenRemoteBookmarks);
@@ -26,6 +29,41 @@ export const hiddenRemoteBookmarksAtom = atom(get => {
 
 /** Result of fetch from the server. Stables are automatically included in list of commits */
 export const fetchedStablesAtom = atom<StableLocationData | undefined>(undefined);
+
+export function addManualStable(stable: string) {
+  // save this as a persisted stable we'd like to always fetch going forward
+  writeAtom(bookmarksDataStorage, data => ({
+    ...data,
+    additionalStables: [...(data.additionalStables ?? []), stable],
+  }));
+  // write the stable to the fetched state, so it shows a loading spinner
+  writeAtom(fetchedStablesAtom, last =>
+    last
+      ? {
+          ...last,
+          manual: {...(last?.manual ?? {}), [stable]: null},
+        }
+      : undefined,
+  );
+  // refetch using the new manual stable
+  fetchStableLocations();
+}
+
+export function removeManualStable(stable: string) {
+  writeAtom(bookmarksDataStorage, data => ({
+    ...data,
+    additionalStables: (data.additionalStables ?? []).filter(s => s !== stable),
+  }));
+  writeAtom(fetchedStablesAtom, last => {
+    if (last) {
+      const manual = {...(last.manual ?? {})};
+      delete manual[stable];
+      return {...last, manual};
+    }
+  });
+  // refetch without this stable, so it's excluded from `sl log`
+  fetchStableLocations();
+}
 
 registerDisposable(
   serverAPI,
@@ -37,7 +75,9 @@ registerDisposable(
 fetchStableLocations(); // fetch on startup
 
 export function fetchStableLocations() {
-  serverAPI.postMessage({type: 'fetchAndSetStables'});
+  const data = readAtom(bookmarksDataStorage);
+  const additionalStables = data.additionalStables ?? [];
+  serverAPI.postMessage({type: 'fetchAndSetStables', additionalStables});
 }
 
 export const remoteBookmarks = atom(get => {

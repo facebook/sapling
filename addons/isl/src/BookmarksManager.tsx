@@ -12,10 +12,18 @@ import type {ReactNode} from 'react';
 
 import {Banner, BannerKind} from './Banner';
 import {Bookmark} from './Bookmark';
-import {bookmarksDataStorage, fetchedStablesAtom, remoteBookmarks} from './BookmarksData';
+import {
+  addManualStable,
+  bookmarksDataStorage,
+  fetchedStablesAtom,
+  remoteBookmarks,
+  removeManualStable,
+} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
+import {extractTokens} from './CommitInfoView/Tokens';
 import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
+import {InlineErrorBadge} from './ErrorNotice';
 import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {Subtle} from './Subtle';
@@ -23,7 +31,7 @@ import {Tooltip} from './Tooltip';
 import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
 import {Typeahead} from './components/Typeahead';
-import {T} from './i18n';
+import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
 import {spacing} from './tokens.stylex';
@@ -33,7 +41,7 @@ import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
-import {notEmpty} from 'shared/utils';
+import {firstLine, notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
   container: {
@@ -102,6 +110,15 @@ const latestPublicCommitAtom = atom(get => {
   return latestHash ? dag.get(latestHash) : undefined;
 });
 
+function stableIsNewerThanMainWarning(latestPublicDate?: Date, info?: Result<StableInfo>) {
+  const isNewerThanLatest = info?.value && latestPublicDate && info.value.date > latestPublicDate;
+  return isNewerThanLatest ? (
+    <Banner kind={BannerKind.warning}>
+      <T>Stable is newer than latest pulled commit. Pull to fetch latest.</T>
+    </Banner>
+  ) : undefined;
+}
+
 function StableLocationsSection() {
   const stableLocations = useAtomValue(fetchedStablesAtom);
   const latestPublic = useAtomValue(latestPublicCommitAtom);
@@ -121,20 +138,67 @@ function StableLocationsSection() {
               if (info.value == null) {
                 return undefined;
               }
-              const isNewerThanLatest = latestPublic && info.value.date > latestPublic.date;
               return {
                 ...info.value,
-                extra: isNewerThanLatest ? (
-                  <Banner kind={BannerKind.warning}>
-                    <T>Stable is newer than latest pulled commit. Pull to fetch latest.</T>
-                  </Banner>
-                ) : undefined,
+                extra: stableIsNewerThanMainWarning(latestPublic?.date, info),
               };
             })
             .filter(notEmpty) ?? []
         }
         kind="stable"
       />
+      {stableLocations?.manual && (
+        <BookmarksList
+          bookmarks={Object.entries(stableLocations.manual)?.map(([name, info]) => {
+            const deleteButton = (
+              <Tooltip title={t('Remove this stable location')}>
+                <Button
+                  icon
+                  onClick={e => {
+                    removeManualStable(name);
+                    e.stopPropagation();
+                  }}>
+                  <Icon icon="trash" />
+                </Button>
+              </Tooltip>
+            );
+            if (info == null) {
+              return {
+                kind: 'custom',
+                custom: (
+                  <Row>
+                    {name}: <Icon icon="loading" />
+                  </Row>
+                ),
+              };
+            }
+            if (info.error) {
+              return {
+                kind: 'custom',
+                custom: (
+                  <Row>
+                    {name}:{' '}
+                    <InlineErrorBadge error={info.error}>
+                      {firstLine(info.error.toString())}
+                    </InlineErrorBadge>
+                    {deleteButton}
+                  </Row>
+                ),
+              };
+            }
+            return {
+              ...info.value,
+              extra: (
+                <Row>
+                  {deleteButton}
+                  {stableIsNewerThanMainWarning(latestPublic?.date, info)}
+                </Row>
+              ),
+            };
+          })}
+          kind="stable"
+        />
+      )}
       {stableLocations?.repoSupportsCustomStables === true && <AddStableLocation />}
     </Section>
   );
@@ -185,7 +249,19 @@ function AddStableLocation() {
             autoFocus
             maxTokens={1}
           />
-          <Button primary>
+          <Button
+            primary
+            onClick={e => {
+              // only expect one token
+              const [[token]] = extractTokens(query);
+              const stable = token.trim();
+              if (stable) {
+                addManualStable(stable);
+                setQuery('');
+                setShowingInput(false);
+              }
+              e.stopPropagation();
+            }}>
             <T>Add</T>
           </Button>
         </Row>
@@ -229,7 +305,11 @@ function BookmarksList({
   bookmarks,
   kind,
 }: {
-  bookmarks: Array<string | (StableInfo & {extra?: ReactNode})>;
+  bookmarks: Array<
+    | string
+    | (StableInfo & {extra?: ReactNode; kind?: undefined})
+    | {kind: 'custom'; custom: ReactNode}
+  >;
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
@@ -238,36 +318,37 @@ function BookmarksList({
   }
 
   return (
-    <Column xstyle={styles.bookmarkGroup}>
-      <ScrollY maxSize={300}>
-        <Column xstyle={styles.bookmarkGroup}>
-          {bookmarks.map(bookmark => {
-            const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
-            const tooltip = typeof bookmark === 'string' ? undefined : bookmark.info;
-            const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
-            return (
-              <Checkbox
-                key={name}
-                checked={!bookmarksData.hiddenRemoteBookmarks.includes(name)}
-                onChange={checked => {
-                  const shouldBeDeselected = !checked;
-                  let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
-                  if (shouldBeDeselected) {
-                    hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, name];
-                  } else {
-                    hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== name);
-                  }
-                  setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
-                }}>
-                <Bookmark fullLength key={name} kind={kind} tooltip={tooltip}>
-                  {name}
-                </Bookmark>
-                {extra}
-              </Checkbox>
-            );
-          })}
-        </Column>
-      </ScrollY>
-    </Column>
+    <ScrollY maxSize={300}>
+      <Column xstyle={styles.bookmarkGroup}>
+        {bookmarks.map(bookmark => {
+          if (typeof bookmark !== 'string' && bookmark.kind === 'custom') {
+            return bookmark.custom;
+          }
+          const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
+          const tooltip = typeof bookmark === 'string' ? undefined : bookmark.info;
+          const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
+          return (
+            <Checkbox
+              key={name}
+              checked={!bookmarksData.hiddenRemoteBookmarks.includes(name)}
+              onChange={checked => {
+                const shouldBeDeselected = !checked;
+                let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
+                if (shouldBeDeselected) {
+                  hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, name];
+                } else {
+                  hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== name);
+                }
+                setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
+              }}>
+              <Bookmark fullLength key={name} kind={kind} tooltip={tooltip}>
+                {name}
+              </Bookmark>
+              {extra}
+            </Checkbox>
+          );
+        })}
+      </Column>
+    </ScrollY>
   );
 }

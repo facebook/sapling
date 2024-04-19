@@ -188,8 +188,8 @@ export type StableLocationData = {
   stables: Array<Result<StableInfo>>;
   /** Stables that enabled automatically for certain users */
   special: Array<Result<StableInfo>>;
-  /** Stables entered in the UI */
-  manual: Array<Result<StableInfo>>;
+  /** Stables entered in the UI. Map of provided name to a Result. null means the stable is loading. */
+  manual: Record<string, Result<StableInfo> | null>;
   /** Whether this repo supports entering custom stables via input. */
   repoSupportsCustomStables: boolean;
 };
@@ -632,7 +632,7 @@ export type ClientToServerMessage =
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchDiffComments'; diffId: DiffId}
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
-  | {type: 'fetchAndSetStables'}
+  | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
   | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}

@@ -823,17 +823,23 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchAndSetStables': {
-        Internal.fetchStableLocations?.(ctx).then((stables: StableLocationData | undefined) => {
-          this.logger.info('fetched stable locations', stables);
-          if (stables == null) {
-            return;
-          }
-          this.postMessage({type: 'fetchedStables', stables});
-          repo.stableLocations = [...stables.stables, ...stables.special, ...stables.manual]
-            .map(stable => stable.value)
-            .filter(notEmpty);
-          repo.fetchSmartlogCommits();
-        });
+        Internal.fetchStableLocations?.(ctx, data.additionalStables).then(
+          (stables: StableLocationData | undefined) => {
+            this.logger.info('fetched stable locations', stables);
+            if (stables == null) {
+              return;
+            }
+            this.postMessage({type: 'fetchedStables', stables});
+            repo.stableLocations = [
+              ...stables.stables,
+              ...stables.special,
+              ...Object.values(stables.manual),
+            ]
+              .map(stable => stable?.value)
+              .filter(notEmpty);
+            repo.fetchSmartlogCommits();
+          },
+        );
         break;
       }
       case 'fetchStableLocationAutocompleteOptions': {
