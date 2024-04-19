@@ -11,7 +11,9 @@ use std::sync::Arc;
 
 use ::gitstore::git2;
 use ::gitstore::GitStore;
+use configmodel::Config;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
@@ -30,8 +32,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(pub class gitstore |py| {
     data inner: Arc<GitStore>;
 
-    def __new__(_cls, gitdir: &PyPath) -> PyResult<Self> {
-        let store = GitStore::open(gitdir.as_path()).map_pyerr(py)?;
+    def __new__(_cls, gitdir: &PyPath, config: ImplInto<Arc<dyn Config>>) -> PyResult<Self> {
+        let store = GitStore::open(gitdir.as_path(), &config.into()).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(store))
     }
 

@@ -345,7 +345,7 @@ def openstore(repo):
     """Obtain a gitstore object to access git odb"""
     gitdir = readgitdir(repo)
     if gitdir:
-        return bindings.gitstore.gitstore(gitdir)
+        return bindings.gitstore.gitstore(gitdir, repo.ui._rcfg)
 
 
 @cached

@@ -9,12 +9,16 @@
 
 use std::path::Path;
 
+use configmodel::Config;
+use gitcompat::rungit::RunGitOptions;
 use types::HgId;
 
 type Git2Result<T> = Result<T, git2::Error>;
 
 pub struct GitStore {
     odb: git2::Odb<'static>,
+
+    git: RunGitOptions,
 
     // Makes `odb` valid. Last field drops last.
     // No need to use this field. Just need to keep it alive.
@@ -28,9 +32,12 @@ trait Opaque {}
 
 impl GitStore {
     /// `open` a Git bare repo at `git_dir`. Gain access to its odb (object database).
-    pub fn open(git_dir: &Path) -> Git2Result<Self> {
+    pub fn open(git_dir: &Path, config: &dyn Config) -> Git2Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
         let odb = git_repo.odb()?;
+
+        let mut git = RunGitOptions::from_config(config);
+        git.git_dir = Some(git_repo.path().to_owned());
 
         struct UnsafeForceSync<T: ?Sized>(T);
         unsafe impl<T: ?Sized> Send for UnsafeForceSync<T> {}
@@ -43,7 +50,11 @@ impl GitStore {
         // Cast to `Opaque` and prevents access to `git_repo`.
         let opaque_repo: Box<dyn Opaque + Send + Sync> = Box::new(UnsafeForceSync(git_repo));
 
-        let store = GitStore { odb, opaque_repo };
+        let store = GitStore {
+            odb,
+            git,
+            opaque_repo,
+        };
         Ok(store)
     }
 
