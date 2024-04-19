@@ -432,6 +432,10 @@ fn parse_common_config(
     let scuba_censored_table = common.scuba_censored_table;
     let scuba_censored_local_path = common.scuba_local_path_censored;
     let internal_identity = common.internal_identity.convert()?;
+    let git_memory_upper_bound = common
+        .git_memory_upper_bound
+        .map(|bound| bound.try_into())
+        .transpose()?;
 
     let censored_scuba_params = CensoredScubaParams {
         table: scuba_censored_table,
@@ -471,6 +475,7 @@ fn parse_common_config(
         censored_scuba_params,
         redaction_config,
         internal_identity,
+        git_memory_upper_bound,
     })
 }
 
@@ -955,6 +960,7 @@ mod test {
             scuba_censored_table="censored_table"
             scuba_local_path_censored="censored_local_path"
             trusted_parties_hipster_tier="tier1"
+            git_memory_upper_bound=100
 
             [internal_identity]
             identity_type = "SERVICE_IDENTITY"
@@ -1426,7 +1432,8 @@ mod test {
                 internal_identity: Identity {
                     id_type: "SERVICE_IDENTITY".to_string(),
                     id_data: "internal".to_string(),
-                }
+                },
+                git_memory_upper_bound: Some(100),
             }
         );
         assert_eq!(

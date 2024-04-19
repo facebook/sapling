@@ -131,6 +131,9 @@ pub struct CommonConfig {
     pub redaction_config: RedactionConfig,
     /// Service identity for interal Mononoke services.
     pub internal_identity: Identity,
+    /// Upper bound in bytes for the RSS memory that can be utilized by Mononoke GRit
+    /// server for serving packfile stream
+    pub git_memory_upper_bound: Option<u64>,
 }
 
 /// Configuration for logging of censored blobstore accesses
