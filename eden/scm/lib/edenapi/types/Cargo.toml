@@ -11,7 +11,6 @@ path = "test/basic_test.rs"
 
 [dependencies]
 anyhow = "1.0.75"
-blake2 = "0.10"
 blake3 = { version = "=1.5.0", features = ["traits-preview"] }
 bytes = { version = "1.6.0", features = ["serde"] }
 dag-types = { version = "0.1.0", path = "../../dag/dag-types", features = ["for-tests"] }

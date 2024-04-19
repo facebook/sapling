@@ -20,7 +20,6 @@ use types::key::Key;
 use types::parents::Parents;
 
 use crate::Blake3;
-use crate::ContentId;
 use crate::InvalidHgId;
 use crate::ServerError;
 use crate::Sha1;
@@ -70,8 +69,7 @@ impl FileError {
 pub struct FileAuxData {
     #[id(0)]
     pub total_size: u64,
-    #[id(1)]
-    pub content_id: ContentId,
+    // #[id(1)] # deprecated
     #[id(2)]
     pub sha1: Sha1,
     #[id(3)]
@@ -193,20 +191,9 @@ pub struct FileEntry {
 impl FileAuxData {
     /// Calculate `FileAuxData` from file content.
     pub fn from_content(data: &[u8]) -> Self {
-        let content_id = {
-            use blake2::digest::FixedOutput;
-            use blake2::digest::Mac;
-            use blake2::Blake2bMac;
-            let mut hash = Blake2bMac::new_from_slice(b"content").expect("key < 32 bytes");
-            hash.update(data);
-            let mut ret = [0; ContentId::len()];
-            hash.finalize_into((&mut ret).into());
-            ContentId::from_byte_array(ret)
-        };
         let file_aux2 = FileAuxDataV2::from_content(data);
         Self {
             total_size: file_aux2.total_size,
-            content_id,
             sha1: file_aux2.sha1,
             sha256: file_aux2.sha256,
             seeded_blake3: Some(file_aux2.blake3),
@@ -375,24 +362,4 @@ pub struct UploadHgFilenodeRequest {
 pub struct UploadTokensResponse {
     #[id(2)]
     pub token: UploadToken,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn snapshot_blake2() {
-        let aux = FileAuxData::from_content(b"abc");
-        #[rustfmt::skip]
-        assert_eq!(
-            aux.content_id.as_ref(),
-            &[
-                0x22, 0x8d, 0x7e, 0xfd, 0x5e, 0x3c, 0x1a, 0xcd,
-                0xf4, 0x0e, 0x52, 0x43, 0x3f, 0x72, 0x8f, 0x53,
-                0x78, 0x90, 0x0e, 0x41, 0xd4, 0xea, 0xe7, 0x14,
-                0x64, 0x1f, 0x6f, 0x04, 0x0d, 0xee, 0x69, 0x3e,
-            ]
-        );
-    }
 }

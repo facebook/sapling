@@ -30,7 +30,6 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:blake2",
         "fbsource//third-party/rust:blake3",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:paste",

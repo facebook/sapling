@@ -194,7 +194,6 @@ async fn fetch_file(
     if let Some(content_metadata) = aux_data {
         file = file.with_aux_data(FileAuxData {
             total_size: content_metadata.total_size,
-            content_id: content_metadata.content_id.into(),
             sha1: content_metadata.sha1.into(),
             sha256: content_metadata.sha256.into(),
             seeded_blake3: Some(content_metadata.seeded_blake3.into()),
