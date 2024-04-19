@@ -807,7 +807,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
     else:
         hg.clean(repo, node, show_stats=False)
         repo.dirstate.setbranch(branch)
-        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents(), forcecopytracing=True)
+        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
         # Ensure reverse-renames are preserved during the backout. In theory
         # cmdutil.revert() should handle this, but it's extremely complex, so
         # let's just double check it here.

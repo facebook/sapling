@@ -4551,7 +4551,6 @@ def revert(ui, repo, ctx, parents, *pats, match=None, **opts):
                 actions,
                 interactive,
                 tobackup,
-                forcecopytracing=opts.get("forcecopytracing"),
             )
 
 
@@ -4566,7 +4565,6 @@ def _performrevert(
     actions,
     interactive=False,
     tobackup=None,
-    forcecopytracing=False,
 ):
     """function that actually perform all the actions computed for revert
 
@@ -4701,15 +4699,10 @@ def _performrevert(
         checkout(f)
         normal(f)
 
-    if forcecopytracing or repo.ui.config("experimental", "copytrace") != "off":
-        # When reverting a change, always enable copy tracing so we don't
-        # accidentally lose any data.
-        with repo.ui.configoverride({("experimental", "copytrace"): "on"}):
-            copied = copies.pathcopies(repo[parent], ctx)
-
-        for f in actions["add"][0] + actions["undelete"][0] + actions["revert"][0]:
-            if f in copied:
-                repo.dirstate.copy(copied[f], f)
+    copied = copies.pathcopies(repo[parent], ctx)
+    for f in actions["add"][0] + actions["undelete"][0] + actions["revert"][0]:
+        if f in copied:
+            repo.dirstate.copy(copied[f], f)
 
 
 class command(registrar.command):
