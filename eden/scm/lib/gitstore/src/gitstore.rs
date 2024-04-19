@@ -7,7 +7,10 @@
 
 //! A simple store implementation to access a local git repo's odb.
 
+use std::io::BufWriter;
+use std::io::Write;
 use std::path::Path;
+use std::process::Stdio;
 
 use configmodel::Config;
 use gitcompat::rungit::RunGitOptions;
@@ -22,6 +25,7 @@ pub struct GitStore {
 
     /// If set, fetch missing objects on demand from the URL.
     fetch_url: Option<String>,
+    fetch_filter: String,
 
     // Makes `odb` valid. Last field drops last.
     // No need to use this field. Just need to keep it alive.
@@ -42,7 +46,27 @@ impl GitStore {
         let mut git = RunGitOptions::from_config(config);
         git.git_dir = Some(git_repo.path().to_owned());
 
+        // Git's negotiation algorithm works on commit reference level and can add significant
+        // overhead if we simply want to fetch trees or blobs.
+        // See also Git's promisor-remote which sets the same config:
+        // https://github.com/git/git/blob/b3d1c85d4833aef546f11e4d37516a1ececaefc3/promisor-remote.c#L30
+        git.extra_git_configs
+            .push("fetch.negotiationAlgorithm=noop".to_string());
+
         let fetch_url = config.get("paths", "default").map(|s| s.to_string());
+
+        // "filter" passed to `git fetch`. "blob:none" is used by Git's promisor-remote but that
+        // does not deduplicate trees. "tree:0" more aggressively deduplicates trees but might
+        // cause more network round trips.
+        let fetch_filter = {
+            let config = config.get("git", "filter");
+            let config = match &config {
+                Some(v) => v.as_ref(),
+                // PERF: Ideally this is "tree:0" but the tree diff is currently sequential...
+                None => "blob:none",
+            };
+            format!("--filter={}", config)
+        };
 
         struct UnsafeForceSync<T: ?Sized>(T);
         unsafe impl<T: ?Sized> Send for UnsafeForceSync<T> {}
@@ -59,6 +83,7 @@ impl GitStore {
             odb,
             git,
             fetch_url,
+            fetch_filter,
             opaque_repo,
         };
         Ok(store)
@@ -103,6 +128,64 @@ impl GitStore {
         let oid = self.odb.write(kind, data)?;
         let id = git_oid_to_hgid(oid);
         Ok(id)
+    }
+
+    /// Fetch the oids from fetch_remote. Existing oids will be skipped.
+    /// If every oid exists locally, then no `git fetch` process is spawned.
+    /// Otherwise, block until the `git fetch` command completes.
+    /// Currently, does not check the exit code of `git fetch`.
+    pub fn fetch_objs(&self, ids: &[HgId]) -> anyhow::Result<()> {
+        let mut missing_ids = ids.iter().filter(|id| {
+            let id = hgid_to_git_oid(**id);
+            // For performance, disable refresh here.
+            !self.odb.exists_ext(id, git2::OdbLookupFlags::NO_REFRESH)
+        });
+
+        let first_missing_id = match missing_ids.next() {
+            // No need to fetch.
+            None => return Ok(()),
+            Some(id) => id,
+        };
+        let missing_ids = std::iter::once(first_missing_id).chain(missing_ids);
+
+        let url = match self.fetch_url.as_ref() {
+            Some(url) => url,
+            None => anyhow::bail!("paths.default is not set to fetch remotely"),
+        };
+
+        // See also git/promisor-remote.c
+        let args = [
+            url,
+            "--no-tags",
+            // TODO: Upgrade Git so it supports this flag.
+            #[cfg(not(windows))]
+            "--no-write-fetch-head",
+            "--recurse-submodules=no",
+            &self.fetch_filter,
+            "--stdin",
+        ];
+        let mut child = self
+            .git
+            .git_cmd("fetch", &args)
+            .stdin(Stdio::piped())
+            .spawn()?;
+        if let Some(stdin) = child.stdin.take() {
+            let mut stdin = BufWriter::new(stdin);
+            for id in missing_ids {
+                let hex = id.to_hex();
+                stdin.write_all(hex.as_bytes())?;
+                stdin.write_all(b"\n")?;
+            }
+            drop(stdin);
+        }
+
+        child.wait()?;
+        Ok(())
+    }
+
+    /// Returns true if `fetch_url` is set.
+    pub fn has_fetch_url(&self) -> bool {
+        self.fetch_url.is_some()
     }
 }
 
