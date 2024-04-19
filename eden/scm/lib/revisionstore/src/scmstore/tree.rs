@@ -22,7 +22,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use crossbeam::channel::unbounded;
-use edenapi_types::FileAuxDataV2 as FileAuxData;
+use edenapi_types::FileAuxData;
 use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -704,15 +704,7 @@ impl TreeEntry for ScmStoreTreeEntry {
                     TreeChildEntry::File(v) => v,
                     _ => return None,
                 };
-                let file_metadata = file_entry.file_metadata?;
-                // For easier coding, we simply skip incomplete data here.
-                let aux = FileAuxData {
-                    total_size: file_metadata.size,
-                    sha1: file_metadata.content_sha1,
-                    sha256: file_metadata.content_sha256,
-                    blake3: file_metadata.content_blake3,
-                };
-                Some(Ok((file_entry.key.hgid, aux)))
+                Some(Ok((file_entry.key.hgid, file_entry.file_metadata?.into())))
             });
             Some(Box::new(iter))
         })();

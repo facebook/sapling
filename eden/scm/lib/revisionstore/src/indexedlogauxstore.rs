@@ -29,7 +29,7 @@ use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
 use crate::scmstore::FileAuxData;
 
-/// See edenapi_types::FileAuxDataV2 and mononoke_types::ContentMetadataV2
+/// See edenapi_types::FileAuxData and mononoke_types::ContentMetadataV2
 pub(crate) type Entry = FileAuxData;
 
 /// Serialize the Entry to Bytes.

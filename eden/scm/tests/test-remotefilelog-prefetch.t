@@ -74,7 +74,7 @@ Now we do have aux data locally:
           ),
       ),
       aux_data: Some(
-          FileAuxDataV2 {
+          FileAuxData {
               total_size: 1,
               sha1: Sha1("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
               sha256: Sha256("559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"),
@@ -119,7 +119,7 @@ Fetching only aux data does not trigger a remote query:
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(
-          FileAuxDataV2 {
+          FileAuxData {
               total_size: 1,
               sha1: Sha1("ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec"),
               sha256: Sha256("df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c"),

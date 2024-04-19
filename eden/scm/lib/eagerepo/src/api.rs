@@ -290,12 +290,7 @@ impl EdenApi for EagerRepo {
                             let aux_data = FileAuxData::from_content(&file_body);
                             children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
                                 key: Key::new(key.path.join(child.component.as_ref()), child.hgid),
-                                file_metadata: Some(FileMetadata {
-                                    size: aux_data.total_size,
-                                    content_sha1: aux_data.sha1,
-                                    content_sha256: aux_data.sha256,
-                                    content_blake3: aux_data.blake3,
-                                }),
+                                file_metadata: Some(FileMetadata::from(aux_data)),
                             })));
                         }
                         // The client currently ignores directory metadata, so don't bother.

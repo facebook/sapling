@@ -130,7 +130,7 @@ We should also have aux data for the files available as a side effect of tree fe
   Successfully fetched file: StoreFile {
       content: None,
       aux_data: Some(
-          FileAuxDataV2 {
+          FileAuxData {
               total_size: 5,
               sha1: Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
               sha256: Sha256("c147efcfc2d7ea666a9e4f5187b115c90903f0fc896a56df9a6ef5d8f3fc9f31"),

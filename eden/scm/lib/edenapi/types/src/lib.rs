@@ -114,7 +114,6 @@ pub use crate::commitid::GitSha1;
 pub use crate::errors::ServerError;
 pub use crate::file::FileAttributes;
 pub use crate::file::FileAuxData;
-pub use crate::file::FileAuxDataV2;
 pub use crate::file::FileContent;
 pub use crate::file::FileEntry;
 pub use crate::file::FileError;
