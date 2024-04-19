@@ -4,7 +4,6 @@
 
 
   $ eagerepo
-  $ setconfig experimental.copytrace=on
 Turn on treestate
 
 

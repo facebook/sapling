@@ -6,7 +6,6 @@
 https://bz.mercurial-scm.org/1175
 
   $ setconfig commands.update.check=none
-  $ setconfig experimental.copytrace=on
 
   $ newrepo repo
   $ touch a
@@ -21,9 +20,6 @@ https://bz.mercurial-scm.org/1175
 
   $ hg mv a a2
   $ hg up 'desc(1)'
-  note: possible conflict - a was renamed multiple times to:
-   a2
-   a1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg ci -m2
