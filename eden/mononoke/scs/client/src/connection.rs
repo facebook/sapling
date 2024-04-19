@@ -209,6 +209,7 @@ impl std::ops::Deref for Connection {
     }
 }
 
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 trait MaybeWith {
     fn maybe_with<S>(
         self,
@@ -219,6 +220,7 @@ trait MaybeWith {
         S: ToString;
 }
 
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 impl MaybeWith for srclient::ClientParams {
     fn maybe_with<S>(
         self,
