@@ -11,7 +11,7 @@ lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d17
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "6f0e9da1ee836179fcb8d481eebce0d4e7cb864d" }
+riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "288d02328b4bc2ac966ba3dda5c5032e8a712dff" }
 
 [workspace]
 members = [
