@@ -86,6 +86,8 @@ def find_github_repo(repo) -> Result[GitHubRepo, NotGitHubRepoError]:
         test_url = os.environ.get("SL_TEST_GH_URL")
         if test_url:
             url = util.url(test_url)
+        elif hasattr(repo, "get_github_url"):
+            url = util.url(repo.get_github_url())
         else:
             url = repo.ui.paths.get("default", "default-push").url
     except AttributeError:  # ex. paths.default is not set

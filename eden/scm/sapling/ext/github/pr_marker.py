@@ -91,7 +91,7 @@ def _get_draft_commits(repo) -> t.Dict[PullRequestId, t.Set[Node]]:
 
 def _get_pr_for_context(repo, ctx) -> t.Optional[PullRequestId]:
     store = PullRequestStore(repo)
-    return get_pull_request_for_context(store, ctx)
+    return get_pull_request_for_context(store, repo, ctx)
 
 
 def _get_landed_commits(
