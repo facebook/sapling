@@ -83,7 +83,7 @@ define_flags! {
         exclude: String,
 
         /// use EdenFS (EXPERIMENTAL)
-        eden: bool,
+        eden: Option<bool>,
 
         /// location of the backing repo to be used or created (EXPERIMENTAL)
         eden_backing_repo: String,
@@ -142,6 +142,13 @@ impl CloneOpts {
             default_bookmark: frag,
         })
     }
+
+    fn eden(&self, config: &ConfigSet) -> Result<bool> {
+        if let Some(eden) = self.eden {
+            return Ok(eden);
+        }
+        Ok(config.get_or_default("clone", "use-eden")?)
+    }
 }
 
 fn local_path(s: &str) -> Result<Option<PathBuf>> {
@@ -197,23 +204,25 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         }
     }
 
+    let use_eden = ctx.opts.eden(&config)?;
+
     abort_if!(
-        !ctx.opts.eden && !ctx.opts.eden_backing_repo.is_empty(),
+        !use_eden && !ctx.opts.eden_backing_repo.is_empty(),
         "--eden-backing-repo requires --eden",
     );
 
     abort_if!(
-        !ctx.opts.enable_profile.is_empty() && ctx.opts.eden,
+        !ctx.opts.enable_profile.is_empty() && use_eden,
         "--enable-profile is not compatible with --eden",
     );
 
     abort_if!(
-        ctx.opts.eden && ctx.opts.noupdate,
+        use_eden && ctx.opts.noupdate,
         "--noupdate is not compatible with --eden",
     );
 
     abort_if!(
-        ctx.opts.eden && ctx.opts.shallow == Some(false),
+        use_eden && ctx.opts.shallow == Some(false),
         "--shallow is required with --eden",
     );
 
@@ -222,10 +231,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         .contains(&"clone".to_owned());
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
-        abort_if!(
-            ctx.opts.eden,
-            "--eden requires --config clone.use-rust=True"
-        );
+        abort_if!(use_eden, "--eden requires --config clone.use-rust=True");
 
         logger.verbose("Falling back to Python clone (config not enabled)");
         fallback!("clone.use-rust not set to True");
@@ -247,7 +253,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         || (!ctx.opts.updaterev.is_empty() && !config.get_or_default("experimental", "rust-clone-updaterev")?)
     {
         abort_if!(
-            ctx.opts.eden,
+            use_eden,
             "some specified options are not compatible with --eden"
         );
 
@@ -305,7 +311,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         destination.display(),
     ));
 
-    let clone_type_str = if ctx.opts.eden {
+    let clone_type_str = if use_eden {
         if config.get_or_default::<bool>("clone", "use-eden-sparse")?
             || config
                 .must_get::<String>("clone", "eden-sparse-filter")
@@ -334,7 +340,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         );
     }
 
-    if ctx.opts.eden {
+    if use_eden {
         let backing_path = if !ctx.opts.eden_backing_repo.is_empty() {
             PathBuf::from(&ctx.opts.eden_backing_repo)
         } else if let Some(dir) = clone::get_default_eden_backing_directory(&config)? {
