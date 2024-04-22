@@ -130,6 +130,10 @@ export class GeneratedFilesDetector {
       ...checkResult,
     ]);
   }
+
+  public clear() {
+    this.cache.clear();
+  }
 }
 
 export const generatedFilesDetector = new GeneratedFilesDetector();

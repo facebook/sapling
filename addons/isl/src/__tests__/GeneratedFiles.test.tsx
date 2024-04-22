@@ -178,4 +178,49 @@ describe('Generated Files', () => {
 
     expect(readAtom(__TEST__.generatedFilesInitiallyExpanded)).toEqual(true);
   });
+
+  it('clears generated files cache on refresh click', async () => {
+    act(() => {
+      simulateUncommittedChangedFiles({
+        value: [
+          {
+            path: 'file.txt',
+            status: 'M',
+          },
+        ],
+      });
+    });
+    await waitFor(() => {
+      expectMessageSentToServer({
+        type: 'fetchGeneratedStatuses',
+        paths: ['file.txt'],
+      });
+    });
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedGeneratedStatuses',
+        results: Object.fromEntries([['file.txt', GeneratedStatus.Manual]]),
+      });
+    });
+
+    expect(screen.queryByText('Generated Files')).not.toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('refresh-button'));
+    });
+    await waitFor(() => {
+      expectMessageSentToServer({
+        type: 'fetchGeneratedStatuses',
+        paths: ['file.txt'],
+      });
+    });
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedGeneratedStatuses',
+        results: Object.fromEntries([['file.txt', GeneratedStatus.Generated]]),
+      });
+    });
+
+    expect(screen.getByText('Generated Files')).toBeInTheDocument();
+  });
 });

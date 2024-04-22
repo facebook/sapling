@@ -568,6 +568,7 @@ export default class ServerToClientAPI {
         repo.fetchSmartlogCommits();
         repo.fetchUncommittedChanges();
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        generatedFilesDetector.clear(); // allow generated files to be rechecked
         break;
       }
       case 'pageVisibility': {

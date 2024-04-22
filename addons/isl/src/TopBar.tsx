@@ -12,6 +12,7 @@ import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
 import {FocusModeToggle} from './FocusMode';
+import {genereatedFileCache} from './GeneratedFile';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {ShelvedChangesMenu} from './ShelvedChanges';
@@ -74,6 +75,7 @@ function RefreshButton() {
           tracker.track('ClickedRefresh');
           clearOptimisticState();
           maybeRemoveForgottenOperation();
+          genereatedFileCache.clear(); // allow generated files to be rechecked
           serverAPI.postMessage({type: 'refresh'});
           clearTrackedCache();
         }}
