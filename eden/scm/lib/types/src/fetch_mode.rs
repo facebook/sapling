@@ -8,7 +8,7 @@
 use serde::Deserialize;
 
 bitflags::bitflags! {
-    #[derive(Debug, Copy, Clone, PartialEq, Deserialize)]
+    #[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
     #[serde(transparent)]
     pub struct FetchMode: u16 {
         /// The fetch may hit remote servers.
