@@ -436,7 +436,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
 
     cp = copiesmod.pathcopies(base, csrc)
     for dst, src in _filtercopies(cp, base, cdst).items():
-        if src in orig_cdst:
+        if src in orig_cdst or dst in orig_cdst:
             copies[dst] = src
 
     # file is missing if it isn't present in the destination, but is present in
