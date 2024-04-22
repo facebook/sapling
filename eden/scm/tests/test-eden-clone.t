@@ -52,7 +52,7 @@ test rust clone
   $ hg config edenfs.command
   $TESTTMP/bin/eden (no-windows !)
   $TESTTMP/bin/eden.bat (windows !)
-  $ LOG=cmdclone hg clone --eden eager:$TESTTMP/e1 hemlo --config remotenames.selectivepulldefault='master, stable'
+  $ LOG=cmdclone hg clone eager:$TESTTMP/e1 hemlo --config remotenames.selectivepulldefault='master, stable'
   Cloning reponame-default into $TESTTMP/hemlo
   TRACE cmdclone: performing rust clone
    INFO clone_metadata{repo="reponame-default"}: cmdclone: enter
@@ -88,8 +88,8 @@ test rust clone
 
 test rust clone with test instead of eager
   $ cd $TESTTMP
-  $ hg clone --eden test:e1 testo1 --config remotefilelog.reponame=aname -q
-  $ hg clone --eden test:e1 testo2 -q
+  $ hg clone test:e1 testo1 --config remotefilelog.reponame=aname -q
+  $ hg clone test:e1 testo2 -q
   $ eden list | grep testo
   $TESTTMP/testo1
   $TESTTMP/testo2

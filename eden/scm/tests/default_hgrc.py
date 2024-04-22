@@ -102,6 +102,9 @@ fallback-on-watchman-exception=false
 [edenfs]
 command={edenpath + ('.bat' if os.name == "nt" else '')}
 backing-repos-dir=$TESTTMP/.eden-backing-repos
+
+[clone]
+use-eden=True
 """
 
     return content
