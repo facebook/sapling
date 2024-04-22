@@ -40,8 +40,8 @@ impl KeyStore for GitStore {
         keys: Vec<types::Key>,
         fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(types::Key, minibytes::Bytes)>>> {
-        let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
         if self.has_fetch_url() && fetch_mode.contains(FetchMode::REMOTE) {
+            let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
             self.fetch_objs(&ids)?
         }
         if fetch_mode.contains(FetchMode::IGNORE_RESULT) {
@@ -52,6 +52,15 @@ impl KeyStore for GitStore {
             Ok((k, data.into()))
         });
         Ok(Box::new(iter))
+    }
+
+    // This is an old API but still critical for BFS tree fetching.
+    fn prefetch(&self, keys: Vec<types::Key>) -> anyhow::Result<()> {
+        if self.has_fetch_url() {
+            let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
+            self.fetch_objs(&ids)?;
+        }
+        Ok(())
     }
 
     fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
