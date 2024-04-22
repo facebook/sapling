@@ -666,7 +666,7 @@ export class Repository {
       if (isExecaError(err)) {
         if (err.stderr.includes('checkout is currently in progress')) {
           this.initialConnectionContext.logger.info(
-            'Ignoring `hg status` error caused by in-progress checkout',
+            'Ignoring `sl status` error caused by in-progress checkout',
           );
           return;
         }
