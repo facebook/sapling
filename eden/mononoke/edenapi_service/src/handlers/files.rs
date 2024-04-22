@@ -195,7 +195,6 @@ async fn fetch_file(
         file = file.with_aux_data(FileAuxData {
             total_size: content_metadata.total_size,
             sha1: content_metadata.sha1.into(),
-            sha256: content_metadata.sha256.into(),
             blake3: content_metadata.seeded_blake3.into(),
         });
     }

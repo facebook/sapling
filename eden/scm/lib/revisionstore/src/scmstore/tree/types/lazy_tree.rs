@@ -98,10 +98,6 @@ impl LazyTree {
                                         FileAuxData {
                                             total_size: file_metadata.size,
                                             sha1: file_metadata.content_sha1,
-                                            sha256: file_metadata
-                                                .content_sha256
-                                                .into_byte_array()
-                                                .into(),
                                             blake3: file_metadata.content_blake3,
                                         },
                                     )

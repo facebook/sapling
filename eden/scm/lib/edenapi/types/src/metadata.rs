@@ -37,8 +37,7 @@ pub struct FileMetadata {
     pub size: u64,
     #[id(4)]
     pub content_sha1: Sha1,
-    #[id(5)]
-    pub content_sha256: Sha256,
+    // #[id(5)] # deprecated
     #[id(6)]
     pub content_blake3: Blake3,
 }
@@ -48,7 +47,6 @@ impl From<FileMetadata> for FileAuxData {
         FileAuxData {
             total_size: val.size,
             sha1: val.content_sha1,
-            sha256: val.content_sha256,
             blake3: val.content_blake3,
         }
     }
@@ -59,7 +57,6 @@ impl From<FileAuxData> for FileMetadata {
         Self {
             size: aux.total_size,
             content_sha1: aux.sha1,
-            content_sha256: aux.sha256,
             content_blake3: aux.blake3,
         }
     }

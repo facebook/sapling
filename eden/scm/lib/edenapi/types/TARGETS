@@ -38,7 +38,6 @@ rust_library(
         "fbsource//third-party/rust:serde_bytes",
         "fbsource//third-party/rust:serde_derive",
         "fbsource//third-party/rust:sha1",
-        "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:thiserror",
         ":type_macros",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",

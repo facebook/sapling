@@ -217,7 +217,6 @@ async fn fetch_child_file_metadata(
         FileMetadata {
             size: metadata.total_size,
             content_sha1: metadata.sha1.into(),
-            content_sha256: metadata.sha256.into(),
             content_blake3: metadata.seeded_blake3.into(),
         },
     ))

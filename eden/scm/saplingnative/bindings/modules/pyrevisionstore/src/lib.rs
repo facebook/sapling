@@ -1176,7 +1176,7 @@ py_class!(pub class filescmstore |py| {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def fetch_contentsha256(&self, keys: PyList) -> PyResult<PyList> {
+    def fetch_content_blake3(&self, keys: PyList) -> PyResult<PyList> {
         let keys = keys
             .iter(py)
             .map(|tuple| from_tuple_to_key(py, &tuple))
@@ -1196,13 +1196,13 @@ py_class!(pub class filescmstore |py| {
         }
         for (key, storefile) in found.into_iter() {
             let key_tuple = from_key_to_tuple(py, &key).into_object();
-            let content_sha256 = storefile.aux_data().map_pyerr(py)?.sha256;
-            let content_sha256 = PyBytes::new(py, content_sha256.as_ref());
+            let content_blake3 = storefile.aux_data().map_pyerr(py)?.blake3;
+            let content_blake3 = PyBytes::new(py, content_blake3.as_ref());
             let result_tuple = PyTuple::new(
                 py,
                 &[
                     key_tuple,
-                    content_sha256.into_object(),
+                    content_blake3.into_object(),
                 ],
             );
             results.append(py, result_tuple.into_object());

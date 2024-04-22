@@ -23,7 +23,6 @@ use crate::Blake3;
 use crate::InvalidHgId;
 use crate::ServerError;
 use crate::Sha1;
-use crate::Sha256;
 use crate::UploadToken;
 
 /// Tombstone string that replaces the content of redacted files.
@@ -72,8 +71,7 @@ pub struct FileAuxData {
     // #[id(1)] # deprecated
     #[id(2)]
     pub sha1: Sha1,
-    #[id(3)]
-    pub sha256: Sha256,
+    // #[id(3)] # deprecated
     #[id(4)]
     pub blake3: Blake3,
 }
@@ -168,13 +166,6 @@ pub struct FileEntry {
 impl FileAuxData {
     /// Calculate `FileAuxData` from file content.
     pub fn from_content(data: &[u8]) -> Self {
-        let sha256 = {
-            use sha2::Digest;
-            let mut hash = sha2::Sha256::new();
-            hash.update(data);
-            let bytes: [u8; Sha256::len()] = hash.finalize().into();
-            Sha256::from(bytes)
-        };
         let sha1 = {
             use sha1::Digest;
             let mut hash = sha1::Sha1::new();
@@ -199,7 +190,6 @@ impl FileAuxData {
         Self {
             total_size,
             sha1,
-            sha256,
             blake3,
         }
     }

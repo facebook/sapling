@@ -39,15 +39,13 @@ pub(crate) type Entry = FileAuxData;
 /// - Version <1 byte> (for compatibility)
 /// - total_size <u64 VLQ, 1-9 bytes>
 /// - content sha1 <20 bytes>
-/// - content sha256 <32 bytes>
-/// - content blake3 <32 OR 0 bytes>
+/// - content blake3 <32 bytes>
 pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
     let mut buf = Vec::new();
     buf.write_all(hgid.as_ref())?;
-    buf.write_u8(1)?; // write version
+    buf.write_u8(2)?; // write version
     buf.write_vlq(this.total_size)?;
     buf.write_all(this.sha1.as_ref())?;
-    buf.write_all(this.sha256.as_ref())?;
     buf.write_all(this.blake3.as_ref())?;
     Ok(buf.into())
 }
@@ -59,7 +57,7 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
     let hgid = cur.read_hgid()?;
 
     let version = cur.read_u8()?;
-    if version > 1 {
+    if version > 2 {
         bail!("unsupported auxstore entry version {}", version);
     }
 
@@ -90,7 +88,6 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
             FileAuxData {
                 total_size,
                 sha1: sha1.into(),
-                sha256: sha256.into(),
                 blake3,
             },
         )))
@@ -100,8 +97,11 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
         let mut sha1 = [0u8; 20];
         cur.read_exact(&mut sha1)?;
 
-        let mut sha256 = [0u8; 32];
-        cur.read_exact(&mut sha256)?;
+        if version == 1 {
+            // deprecated from version #2
+            let mut sha256 = [0u8; 32];
+            cur.read_exact(&mut sha256)?;
+        }
 
         let mut blake3 = [0u8; 32];
         cur.read_exact(&mut blake3)?;
@@ -110,7 +110,6 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
             FileAuxData {
                 total_size,
                 sha1: sha1.into(),
-                sha256: sha256.into(),
                 blake3: blake3.into(),
             },
         )))
@@ -396,9 +395,6 @@ mod tests {
         let expected = Entry {
             total_size: 4,
             sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
-            sha256: Sha256::from_str(
-                "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-            )?,
             blake3: Blake3::from_str(
                 "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?,
@@ -454,7 +450,7 @@ mod tests {
 
     #[test]
     /// Test that we can deserialize old entries stored in the cache (older format with version 0)
-    fn test_deserialize_old_format_entry() -> Result<()> {
+    fn test_deserialize_old_format_entry_v0() -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(
             key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")
@@ -475,6 +471,36 @@ mod tests {
         )?;
         buf.write_vlq(4)?;
         buf.write_u8(1)?; // A value of 1 indicates the blake3 hash is present
+        buf.write_all(
+            Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?
+                .as_ref(),
+        )?;
+
+        assert!(
+            deserialize(buf.into())
+                .expect("Failed to deserialize old format entry")
+                .is_some(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    /// Test that we can deserialize old entries stored in the cache (older format with version 1)
+    fn test_deserialize_old_format_entry_v1() -> Result<()> {
+        let mut buf = Vec::new();
+        buf.write_all(
+            key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")
+                .hgid
+                .as_ref(),
+        )?;
+        buf.write_u8(1)?; // write version
+        buf.write_vlq(4)?;
+        buf.write_all(Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?.as_ref())?;
+        buf.write_all(
+            Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?
+                .as_ref(),
+        )?;
         buf.write_all(
             Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?
                 .as_ref(),
