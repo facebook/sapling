@@ -821,6 +821,7 @@ class Submodule:
                 pullnames=[],
             )
         repo.submodule = weakref.proxy(self)
+        self._inherit_git_config(repo)
         return repo
 
     @util.propertycache
@@ -856,7 +857,14 @@ class Submodule:
                 backingrepo.ui, backingrepo.root, repopath, update=False, relative=True
             )
         repo.submodule = weakref.proxy(self)
+        self._inherit_git_config(repo)
         return repo
+
+    def _inherit_git_config(self, subrepo):
+        """Inherit [git] configs from parentrepo to subrepo"""
+        for name, value in self.parentrepo.ui.configitems("git"):
+            if subrepo.ui.config("git", name) is None:
+                subrepo.ui.setconfig("git", name, value, "parent")
 
     @util.propertycache
     def gitmodulesvfs(self):
