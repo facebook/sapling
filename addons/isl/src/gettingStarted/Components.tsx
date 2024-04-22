@@ -132,14 +132,16 @@ export function Callout({
   alt,
 }: {
   title: React.ReactNode;
-  imgLight: string;
-  imgDark: string;
+  imgLight?: string;
+  imgDark?: string;
   alt: string;
 }) {
   const theme = useAtomValue(themeState);
   return (
     <div className="callout">
-      <img src={theme === 'light' ? imgLight : imgDark} alt={alt} className="callout-image" />
+      {imgLight && imgDark && (
+        <img src={theme === 'light' ? imgLight : imgDark} alt={alt} className="callout-image" />
+      )}
       <span>{title}</span>
     </div>
   );
