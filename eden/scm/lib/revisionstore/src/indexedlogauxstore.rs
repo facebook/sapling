@@ -34,13 +34,32 @@ pub(crate) type Entry = FileAuxData;
 
 /// Serialize the Entry to Bytes.
 ///
-/// The serialization format is as follows:
+/// The serialization format (v2) is as follows:
 /// - HgId <20 bytes>
 /// - Version <1 byte> (for compatibility)
 /// - total_size <u64 VLQ, 1-9 bytes>
 /// - content sha1 <20 bytes>
 /// - content blake3 <32 bytes>
+///
+/// Note: (v1) was the same but containing also sha256 hash
+///       (v0) also contained content_id hash and blake3 hash was optional,
+///       also, size field was close to the end, just before the blake3
 pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
+    // Write an original format for the migration period.
+    // version 0
+    let mut buf = Vec::new();
+    buf.write_all(hgid.as_ref())?;
+    buf.write_u8(0)?; // write version
+    buf.write_all(edenapi_types::ContentId::default().as_ref())?;
+    buf.write_all(this.sha1.as_ref())?;
+    buf.write_all(edenapi_types::Sha256::default().as_ref())?;
+    buf.write_vlq(this.total_size)?;
+    buf.write_u8(1)?; // A value of 1 indicates the blake3 hash is present
+    buf.write_all(this.blake3.as_ref())?;
+    Ok(buf.into())
+
+    // TODO(liubovd): finish roll out of the new format after 05-22-2024
+    /* New format (tested)
     let mut buf = Vec::new();
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(2)?; // write version
@@ -48,6 +67,7 @@ pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
     buf.write_all(this.sha1.as_ref())?;
     buf.write_all(this.blake3.as_ref())?;
     Ok(buf.into())
+    */
 }
 
 fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
@@ -501,6 +521,32 @@ mod tests {
             Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?
                 .as_ref(),
         )?;
+        buf.write_all(
+            Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?
+                .as_ref(),
+        )?;
+
+        assert!(
+            deserialize(buf.into())
+                .expect("Failed to deserialize old format entry")
+                .is_some(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    /// Test that we can deserialize correctly the v2 format
+    fn test_deserialize_old_entry_v2() -> Result<()> {
+        let mut buf = Vec::new();
+        buf.write_all(
+            key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")
+                .hgid
+                .as_ref(),
+        )?;
+        buf.write_u8(2)?; // write version
+        buf.write_vlq(4)?;
+        buf.write_all(Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?.as_ref())?;
         buf.write_all(
             Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?
                 .as_ref(),
