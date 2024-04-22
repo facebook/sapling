@@ -40,6 +40,7 @@ use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_mapping_change_version;
+use crate::sync_config_version_utils::get_mapping_change_version_from_hg_extra;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::get_version_for_merge;
 use crate::types::ErrorKind;
@@ -384,8 +385,9 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
     /// See more details about the algorithm in https://fb.quip.com/s8fYAOxEohtJ
     /// A few important notes:
     /// 1) Merges are synced only in LARGE -> SMALL direction.
-    /// 2) If a large repo merge has any parent after big merge, then this merge will appear
-    ///    in all small repos
+    /// 2) If a large repo merge has more than one parent or is introducing any changes on its own
+    ///    in the small repo it will always be synced. If not we sync only if the large repo is
+    ///    source of truth otherwise it would break forward syncer.
     async fn sync_merge_in_memory(
         self,
         cs: BonsaiChangeset,
@@ -503,6 +505,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 }),
                 SubmoduleDeps::NotNeeded => None,
             };
+            let is_mapping_change = get_mapping_change_version_from_hg_extra(
+                cs.hg_extra.iter().map(|(k, v)| (k.as_str(), v.as_slice())),
+            )?
+            .is_some();
+            let is_backsync_when_small_is_source_of_truth = !self.small_to_large
+                && !self
+                    .live_commit_sync_config
+                    .push_redirector_enabled_for_public(self.target_repo_id.0);
             match rewrite_commit(
                 self.ctx,
                 cs,
@@ -515,14 +525,24 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             )
             .await?
             {
-                Some(rewritten) => Ok(CommitSyncInMemoryResult::Rewritten {
-                    source_cs_id,
-                    rewritten,
-                    version,
-                }),
-                None => {
+                Some(rewritten)
+                    // We sync the merge commit if-and-only-if:
+
+                    if rewritten.parents.len() > 1 // it rewrites into actual merge commit in target repo OR
+                        || !rewritten.file_changes.is_empty() // is bringing changes into target repo by itself OR
+                        || !is_backsync_when_small_is_source_of_truth // the target repo is not source of truth OR
+                        || is_mapping_change => // the commit is changing the xrepo mappings
+                {
+                    Ok(CommitSyncInMemoryResult::Rewritten {
+                        source_cs_id,
+                        rewritten,
+                        version,
+                    })
+                }
+                Some(_) | None => {
                     // We should end up in this branch only if we have a single
-                    // parent, because merges are never skipped during rewriting
+                    // parent or the merge or only one merge parent rewrites into target repo - making
+                    // it non-merge commit there.
                     let parent_cs_id = new_parents
                         .values()
                         .next()
@@ -572,11 +592,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         maybe_mapping_change_version: &Option<CommitSyncConfigVersion>,
         commit_sync_context: CommitSyncContext,
     ) -> CommitRewrittenToEmpty {
+        let pushredirection_disabled = !self
+            .live_commit_sync_config
+            .push_redirector_enabled_for_public(self.target_repo_id.0);
         // If a commit is changing mapping let's always rewrite it to
         // small repo regardless if outcome is empty. This is to ensure
         // that efter changing mapping there's a commit in small repo
         // with new mapping on top.
-        if maybe_mapping_change_version.is_some()
+        if (maybe_mapping_change_version.is_some() && !pushredirection_disabled)
              ||
              // Initial imports only happen from small to large and might remove
              // file changes to git submodules, which would lead to empty commits.

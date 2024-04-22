@@ -362,23 +362,47 @@ Before config change
   successful sync
   $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
 
-  $ testtool_drawdag -R "$IMPORTED_REPO_NAME" <<EOF
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi "$IMPORTED_REPO_NAME" heads/master_bookmark)
+  $ testtool_drawdag  --print-hg-hashes -R "$IMPORTED_REPO_NAME" <<EOF
   > IG-IH-II
   > # exists: IG $IG
   > # bookmark: II heads/master_bookmark
   > EOF
-  IG=2daec24778b88c326d1ba0f830d43a2d24d471dc22c48c8307096d0f60c9477f
-  IH=f5d5d65c2f874454ddf7b1b5da1e029ba0fc9258ded48c9cca73fb0d7c2df3cc
-  II=09b37e2f0429911d6b00d1b129471b6da45b71b5f0ef4ba720ee7e97cea909a8
+  IG=8ab5c12e737d5da736082a535ed0fc66b234e957
+  IH=390213545a07b8f0b3452f97e862443d56b58375
+  II=6738aefcbd6e1d868fa73a489b55aab543fd0c53
+  $ wait_for_bookmark_move_away_edenapi "$IMPORTED_REPO_NAME" heads/master_bookmark  "$PREV_BOOK_VALUE"
+  $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/master_bookmark" --catch-up-once 
 
-  $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/master_bookmark" --catch-up-once 
-  Starting session with id * (glob)
-  queue size is 1
-  processing log entry #5
-  2 unsynced ancestors of 09b37e2f0429911d6b00d1b129471b6da45b71b5f0ef4ba720ee7e97cea909a8
-  force using mapping another_version to rewrite 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e
-  syncing f5d5d65c2f874454ddf7b1b5da1e029ba0fc9258ded48c9cca73fb0d7c2df3cc via pushrebase for master_bookmark
-  Syncing f5d5d65c2f874454ddf7b1b5da1e029ba0fc9258ded48c9cca73fb0d7c2df3cc failed in *ms: Pushrebase of synced commit failed - check config for overlaps: Error(version mismatch for forward synced commit: expected new_version, got another_version) (glob)
-  failed to sync bookmark update log #5, Pushrebase of synced commit failed - check config for overlaps: Error(version mismatch for forward synced commit: expected new_version, got another_version)
-  Execution error: Pushrebase of synced commit failed - check config for overlaps: Error(version mismatch for forward synced commit: expected new_version, got another_version)
-  Error: Execution failed
+  $ FINAL_BOOK_VALUE=$(x_repo_lookup $IMPORTED_REPO_NAME large-mon $II)
+
+  $ mononoke_newadmin changelog -R large-mon graph -i $FINAL_BOOK_VALUE -M
+  o  message: II
+  │
+  o  message: IH
+  │
+  o  message: AD
+  │
+  o    message: [MEGAREPO GRADUAL MERGE] another merge (0)
+  ├─╮
+  o │  message: IG
+  │ │
+  o │  message: IF
+  │ │
+  o │  message: IE
+  │ │
+  o │  message: after mapping change from small
+  │ │
+  o │  message: ID
+  │ │
+  o │  message: after merge from small
+  │ │
+  o │  message: after merge
+  │ │
+  ~ │
+    │
+    o  message: AC
+    │
+    o  message: AB
+    │
+    o  message: AA

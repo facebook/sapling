@@ -63,9 +63,7 @@ Setup configuration
   $ REPONAME=small-mon hgmn pull -q
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg log -G -T '{desc}'
-  @  merging
-  │
-  o  first post-move commit
+  @  first post-move commit
   │
   o  pre-move commit
   
@@ -112,8 +110,6 @@ Setup configuration
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg log -G -T '{desc}'
   @  Add new file in small repo
-  │
-  o  merging
   │
   o  first post-move commit
   │

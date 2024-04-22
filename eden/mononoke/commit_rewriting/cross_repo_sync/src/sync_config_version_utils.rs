@@ -126,7 +126,7 @@ fn get_version_impl<'a>(
     }
 }
 
-fn get_mapping_change_version_from_hg_extra<'a>(
+pub fn get_mapping_change_version_from_hg_extra<'a>(
     mut hg_extra: impl Iterator<Item = (&'a str, &'a [u8])>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     if justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None)
