@@ -53,9 +53,12 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
  public:
   Promise<File> setFuseMountResult(StringPiece path) {
     Promise<File> promise;
-    auto results = data_.wlock()->fuseMountResults.emplace(
-        path.str(), std::list<Future<File>>{});
-    results.first->second.emplace_back(promise.getFuture());
+    {
+      auto data = data_.wlock();
+      auto results =
+          data->fuseMountResults.emplace(path.str(), std::list<Future<File>>{});
+      results.first->second.emplace_back(promise.getFuture());
+    }
     return promise;
   }
 
@@ -69,25 +72,34 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
 
   Promise<Unit> setFuseUnmountResult(StringPiece path) {
     Promise<Unit> promise;
-    auto results = data_.wlock()->fuseUnmountResults.emplace(
-        path.str(), std::list<Future<Unit>>{});
-    results.first->second.emplace_back(promise.getFuture());
+    {
+      auto data = data_.wlock();
+      auto results = data->fuseUnmountResults.emplace(
+          path.str(), std::list<Future<Unit>>{});
+      results.first->second.emplace_back(promise.getFuture());
+    }
     return promise;
   }
 
   Promise<Unit> setBindMountResult(StringPiece path) {
     Promise<Unit> promise;
-    auto results = data_.wlock()->bindMountResults.emplace(
-        path.str(), std::list<Future<Unit>>{});
-    results.first->second.emplace_back(promise.getFuture());
+    {
+      auto data = data_.wlock();
+      auto results =
+          data->bindMountResults.emplace(path.str(), std::list<Future<Unit>>{});
+      results.first->second.emplace_back(promise.getFuture());
+    }
     return promise;
   }
 
   Promise<Unit> setBindUnmountResult(StringPiece path) {
     Promise<Unit> promise;
-    auto results = data_.wlock()->bindUnmountResults.emplace(
-        path.str(), std::list<Future<Unit>>{});
-    results.first->second.emplace_back(promise.getFuture());
+    {
+      auto data = data_.wlock();
+      auto results = data->bindUnmountResults.emplace(
+          path.str(), std::list<Future<Unit>>{});
+      results.first->second.emplace_back(promise.getFuture());
+    }
     return promise;
   }
 
