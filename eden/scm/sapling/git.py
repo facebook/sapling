@@ -597,7 +597,9 @@ def pullrefspecs(repo, url, refspecs):
         return 0
     args = ["fetch", "--no-tags", "--prune"]
     if repo.ui.configbool("git", "shallow"):
-        args.append("--filter=tree:0")
+        filter_config = repo.ui.config("git", "filter")
+        if filter_config:
+            args.append(f"--filter={filter_config}")
     if _supportwritefetchhead(repo):
         args.append("--no-write-fetch-head")
     args += [url] + refspecs

@@ -44,6 +44,9 @@ status.modified=blue bold
 status.removed=red bold
 status.unknown=magenta bold underline
 
+[git]
+filter=blob:none
+
 [unsafe]
 filtersuspectsymlink=true
 
