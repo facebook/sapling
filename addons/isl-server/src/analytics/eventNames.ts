@@ -88,6 +88,7 @@ export type TrackEventName =
   | 'RebaseOperation'
   | 'ConfirmDragAndDropRebase'
   | 'ResolveOperation'
+  | 'ResolveInExternalMergeToolOperation'
   | 'RevertOperation'
   | 'SetConfigOperation'
   | 'ShelveOperation'

@@ -38,7 +38,9 @@ import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
+import {Button} from './components/Button';
 import {islDrawerState} from './drawerState';
+import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
 import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
@@ -48,6 +50,7 @@ import {getCommitOperation} from './operations/CommitOperation';
 import {ContinueOperation} from './operations/ContinueMergeOperation';
 import {DiscardOperation, PartialDiscardOperation} from './operations/DiscardOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
+import {ResolveInExternalMergeToolOperation} from './operations/ResolveInExternalMergeToolOperation';
 import {RevertOperation} from './operations/RevertOperation';
 import {getShelveOperation} from './operations/ShelveOperation';
 import {operationList, useRunOperation} from './operationsState';
@@ -771,8 +774,17 @@ function MergeConflictButtons({
     lastRunOperation?.operation instanceof AbortMergeOperation && lastRunOperation.exitCode === 0;
   const isRunningContinue = !!useIsOperationRunningOrQueued(ContinueOperation);
   const isRunningAbort = !!useIsOperationRunningOrQueued(AbortMergeOperation);
+  const isRunningResolveExternal = !!useIsOperationRunningOrQueued(
+    ResolveInExternalMergeToolOperation,
+  );
   const shouldDisableButtons =
-    isRunningContinue || isRunningAbort || justFinishedContinue || justFinishedAbort;
+    isRunningContinue ||
+    isRunningAbort ||
+    isRunningResolveExternal ||
+    justFinishedContinue ||
+    justFinishedAbort;
+
+  const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
   return (
     <>
@@ -797,6 +809,33 @@ function MergeConflictButtons({
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
       </VSCodeButton>
+      {externalMergeTool == null ? null : (
+        <Tooltip
+          title={
+            <div>
+              <T replace={{$tool: <code>{externalMergeTool}</code>, $br: <br />}}>
+                Open your configured external merge tool $tool to resolve all the conflicts.$br
+                Waits for the merge tool to exit before continuing.
+              </T>
+              {allConflictsResolved ? (
+                <>
+                  <br />
+                  <T>Disabled since all conflicts have been resolved.</T>
+                </>
+              ) : null}
+            </div>
+          }>
+          <Button
+            icon
+            disabled={allConflictsResolved || shouldDisableButtons}
+            onClick={() => {
+              runOperation(new ResolveInExternalMergeToolOperation(externalMergeTool));
+            }}>
+            <Icon icon="link-external" />
+            <T>Open External Merge Tool</T>
+          </Button>
+        </Tooltip>
+      )}
     </>
   );
 }
