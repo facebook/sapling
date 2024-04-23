@@ -8,6 +8,7 @@
 import {useCommand} from './ISLShortcuts';
 import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
+import {registerDisposable} from './utils';
 import {atom} from 'jotai';
 
 import './themeLight.css';
@@ -23,11 +24,16 @@ const localThemeState = localStorageBackedAtom<ThemeColor | null>(THEME_LOCAL_ST
 // platform theme. `null` means not supported.
 const theme = platform.theme;
 const platformThemeState = atom<ThemeColor | undefined>(theme?.getTheme());
-theme?.onDidChangeTheme(themeColor => {
-  writeAtom(platformThemeState, themeColor);
-  // reset local theme state so the user can notice the theme change
-  writeAtom(localThemeState, null);
-});
+registerDisposable(
+  platform,
+  theme?.onDidChangeTheme(themeColor => {
+    writeAtom(platformThemeState, themeColor);
+    // reset local theme state so the user can notice the theme change
+    writeAtom(localThemeState, null);
+    theme.getThemeName && writeAtom(themeNameState, theme.getThemeName());
+  }) ?? {dispose: () => null},
+  import.meta.hot,
+);
 
 // combined state
 // - read: nullable local theme -> platform theme -> 'dark'
@@ -36,6 +42,13 @@ export const themeState = atom<ThemeColor, [ThemeColor], void>(
   get => get(localThemeState) ?? get(platformThemeState) ?? 'dark',
   (_get, set, themeColor) => set(localThemeState, themeColor),
 );
+
+/**
+ * The specific theme name, like "Default Light Modern".
+ * Typically, you'd rather use `themeState` to get simply "light" / "dark".
+ * Theme name is useful for dynamically updating stylex styles for specific themes.
+ */
+export const themeNameState = atom<string | undefined>(theme?.getThemeName?.());
 
 export function useThemeShortcut() {
   useCommand('ToggleTheme', () => {

@@ -70,6 +70,7 @@ export interface Platform {
 
   theme?: {
     getTheme(): ThemeColor;
+    getThemeName?(): string | undefined;
     onDidChangeTheme(callback: (theme: ThemeColor) => unknown): Disposable;
     resetCSS?: string;
   };
