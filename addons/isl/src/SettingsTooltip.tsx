@@ -9,7 +9,7 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
-import {Row} from './ComponentUtils';
+import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
@@ -25,6 +25,7 @@ import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
 import {Dropdown} from './components/Dropdown';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
+import {externalMergeToolAtom} from './externalMergeTool';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {SetConfigOperation} from './operations/SetConfigOperation';
@@ -175,7 +176,10 @@ function SettingsDropdown({
       </Setting>
       {platform.canCustomizeFileOpener && (
         <Setting title={<T>Environment</T>}>
-          <OpenFilesCmdSetting />
+          <Column style={{alignItems: 'flex-start'}}>
+            <OpenFilesCmdSetting />
+            <ExternalMergeToolSetting />
+          </Column>
         </Setting>
       )}
       <DebugToolsField />
@@ -257,7 +261,46 @@ function OpenFilesCmdSetting() {
         </div>
       )}>
       <Row>
-        <T replace={{$cmd: cmdEl}}>Open files in $cmd</T>
+        <T replace={{$cmd: cmdEl}}>Open files in: $cmd</T>
+        <Subtle>
+          <T>How to configure?</T>
+        </Subtle>
+        <Icon icon="question" />
+      </Row>
+    </Tooltip>
+  );
+}
+
+function ExternalMergeToolSetting() {
+  const mergeTool = useAtomValue(externalMergeToolAtom);
+  const cmdEl = mergeTool == null ? <T>None</T> : <code>{mergeTool}</code>;
+  return (
+    <Tooltip
+      component={() => (
+        <div>
+          <div style={{alignItems: 'flex-start', maxWidth: 400}}>
+            <T
+              replace={{
+                $help: <code>sl help config.merge-tools</code>,
+                $configedit: <code>sl config --edit</code>,
+                $mymergetool: <code>merge-tools.mymergetool</code>,
+                $uimerge: <code>ui.merge = mymergetool</code>,
+                $br: (
+                  <>
+                    <br />
+                    <br />
+                  </>
+                ),
+              }}>
+              You can configure Sapling and ISL to use a custom external merge tool, which is used
+              when a merge conflict is detected.$br Define your tool with $configedit, by setting
+              $mymergetool and $uimerge$br For more information, see: $help
+            </T>
+          </div>
+        </div>
+      )}>
+      <Row>
+        <T replace={{$cmd: cmdEl}}>External Merge Tool: $cmd</T>
         <Subtle>
           <T>How to configure?</T>
         </Subtle>

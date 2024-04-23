@@ -558,6 +558,7 @@ export const allConfigNames = [
   'isl.open-file-cmd',
   'isl.generated-files-regex',
   'ui.username',
+  'ui.merge',
 ] as const;
 
 /** sl configs read by ISL */
@@ -586,6 +587,7 @@ export const settableConfigNames = [
   'isl.generated-files-regex',
   'github.preferred_submit_command',
   'ui.allowemptycommit',
+  'ui.merge',
   'amend.autorestack',
 ] as const;
 
