@@ -15,10 +15,10 @@ import App from '../src/App';
 import mockedClientMessagebus from '../src/MessageBus';
 import * as internalLogger from '../src/logger';
 import {render} from '@testing-library/react';
-import fs from 'fs';
+import fs from 'node:fs';
 import {runCommand} from 'isl-server/src/commands';
-import os from 'os';
-import path from 'path';
+import os from 'node:os';
+import path from 'node:path';
 import React from 'react';
 
 const mockLogger = internalLogger.logger;

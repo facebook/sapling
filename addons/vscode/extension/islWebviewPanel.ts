@@ -14,9 +14,9 @@ import {Internal} from './Internal';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';
-import crypto from 'crypto';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
+import crypto from 'node:crypto';
 import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
 

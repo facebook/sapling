@@ -7,7 +7,7 @@
 
 import type {ChildProcessResponse} from './child';
 import type {StartServerArgs, StartServerResult} from './server';
-import type {IOType} from 'child_process';
+import type {IOType} from 'node:child_process';
 import type {PlatformName} from 'isl/src/types';
 
 import {
@@ -16,11 +16,11 @@ import {
   writeExistingServerFile,
 } from './existingServerStateFiles';
 import * as lifecycle from './serverLifecycle';
-import child_process from 'child_process';
-import crypto from 'crypto';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import child_process from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const DEFAULT_PORT = '3001';
 

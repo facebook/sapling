@@ -7,8 +7,8 @@
 
 import type * as vscode from 'vscode';
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import {tryJsonParse} from 'shared/utils';
 
 // VS Code requires a restart if you change the configured language,

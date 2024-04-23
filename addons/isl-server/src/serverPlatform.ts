@@ -13,8 +13,8 @@ import type {
   ServerToClientMessage,
 } from 'isl/src/types';
 
-import {spawn} from 'child_process';
-import pathModule from 'path';
+import {spawn} from 'node:child_process';
+import pathModule from 'node:path';
 import {nullthrows} from 'shared/utils';
 
 /**

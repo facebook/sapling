@@ -14,12 +14,12 @@ import type {Comparison} from 'shared/Comparison';
 import {encodeDeletedFileUri} from './DeletedFileContentProvider';
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
-import fs from 'fs';
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {findPublicAncestor} from 'isl-server/src/utils';
 import {RevertOperation} from 'isl/src/operations/RevertOperation';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import {ComparisonType, labelForComparison} from 'shared/Comparison';
 import * as vscode from 'vscode';
 

@@ -10,7 +10,7 @@ import type {AbsolutePath, MergeConflicts} from 'isl/src/types';
 
 import {isExecaError} from './utils';
 import execa from 'execa';
-import os from 'os';
+import os from 'node:os';
 
 export const MAX_FETCHED_FILES_PER_COMMIT = 25;
 export const MAX_SIMULTANEOUS_CAT_CALLS = 4;

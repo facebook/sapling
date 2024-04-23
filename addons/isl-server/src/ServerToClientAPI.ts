@@ -37,9 +37,9 @@ import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
 import {findPublicAncestor, parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
+import {Readable} from 'node:stream';
 import {revsetForComparison} from 'shared/Comparison';
 import {randomId, nullthrows, notEmpty} from 'shared/utils';
-import {Readable} from 'stream';
 
 export type IncomingMessage = ClientToServerMessage;
 type IncomingMessageWithPayload = ClientToServerMessageWithPayload;

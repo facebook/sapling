@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 
 /**
  * Check if file path exists.

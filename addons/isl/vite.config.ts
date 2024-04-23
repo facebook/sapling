@@ -6,8 +6,8 @@
  */
 
 import react from '@vitejs/plugin-react';
-import fs from 'fs';
-import path, {resolve} from 'path';
+import fs from 'node:fs';
+import path, {resolve} from 'node:path';
 import {defineConfig} from 'vite';
 import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';

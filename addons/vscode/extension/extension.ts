@@ -21,7 +21,7 @@ import {ensureTranslationsLoaded} from './i18n';
 import {registerISLCommands} from './islWebviewPanel';
 import {getVSCodePlatform} from './vscodePlatform';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
-import * as util from 'util';
+import * as util from 'node:util';
 import * as vscode from 'vscode';
 
 export async function activate(context: vscode.ExtensionContext) {

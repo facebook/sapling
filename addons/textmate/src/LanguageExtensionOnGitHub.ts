@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExecFileOptions} from 'child_process';
+import type {ExecFileOptions} from 'node:child_process';
 
 import AbstractLanguageExtension from './AbstractLanguageExtension.js';
-import child_process, {execFile} from 'child_process';
-import {promises as fs} from 'fs';
-import osMod from 'os';
-import pathMod from 'path';
+import child_process, {execFile} from 'node:child_process';
+import {promises as fs} from 'node:fs';
+import osMod from 'node:os';
+import pathMod from 'node:path';
 
 type ConstructorArgs = {
   /** GitHub organization for repo. */

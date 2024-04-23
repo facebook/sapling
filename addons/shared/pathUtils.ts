@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import path from 'path';
+import path from 'node:path';
 
 /**
  * Add a trailing path sep (/ or \) if one does not exist

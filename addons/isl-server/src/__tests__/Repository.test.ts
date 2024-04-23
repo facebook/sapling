@@ -15,8 +15,8 @@ import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {extractRepoInfoFromUrl, setConfigOverrideForTests} from '../commands';
 import * as execa from 'execa';
 import {CommandRunner, type MergeConflicts, type ValidatedRepoInfo} from 'isl/src/types';
-import os from 'os';
-import path from 'path';
+import os from 'node:os';
+import path from 'node:path';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
 

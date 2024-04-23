@@ -10,9 +10,9 @@ import type {RepositoryContext} from './serverTypes';
 import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 
 import {Internal} from './Internal';
-import {promises as fs} from 'fs';
 import {GeneratedStatus} from 'isl/src/types';
-import pathMod from 'path';
+import {promises as fs} from 'node:fs';
+import pathMod from 'node:path';
 import {LRU} from 'shared/LRU';
 import {group} from 'shared/utils';
 

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {timingSafeEqual} from 'crypto';
+import {timingSafeEqual} from 'node:crypto';
 
 /**
  * Timing safe comparison of tokens coming from strings.

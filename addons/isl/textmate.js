@@ -20,7 +20,7 @@
 
 import * as child_process from 'node:child_process';
 import * as fs from 'node:fs';
-import * as url from 'url';
+import * as url from 'node:url';
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 

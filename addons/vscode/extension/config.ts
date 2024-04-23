@@ -6,7 +6,7 @@
  */
 
 import {Internal} from 'isl-server/src/Internal';
-import os from 'os';
+import os from 'node:os';
 import * as vscode from 'vscode';
 
 /**

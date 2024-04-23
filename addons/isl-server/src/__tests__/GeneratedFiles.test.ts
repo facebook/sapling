@@ -8,13 +8,13 @@
 import type {Repository} from '../Repository';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
-import type {PathLike} from 'fs';
-import type {FileHandle} from 'fs/promises';
+import type {PathLike} from 'node:fs';
+import type {FileHandle} from 'node:fs/promises';
 
 import {GeneratedFilesDetector} from '../GeneratedFiles';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
-import {promises} from 'fs';
 import {GeneratedStatus} from 'isl/src/types';
+import {promises} from 'node:fs';
 import {mockLogger} from 'shared/testUtils';
 
 /* eslint-disable require-await */

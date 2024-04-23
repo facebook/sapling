@@ -17,7 +17,7 @@ import type {Json} from 'shared/typeUtils';
 
 import {executeVSCodeCommand} from './commands';
 import {t} from './i18n';
-import * as pathModule from 'path';
+import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
 
 const IMAGE_EXTENSIONS = new Set(['.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.png', '.webp']);

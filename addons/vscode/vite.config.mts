@@ -8,8 +8,8 @@
 import type {Plugin} from 'vite';
 
 import react from '@vitejs/plugin-react';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import {defineConfig} from 'vite';
 import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';

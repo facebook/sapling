@@ -13,7 +13,7 @@ import {stagedThrottler} from './StagedThrottler';
 import {ONE_MINUTE_MS} from './constants';
 import {Watchman} from './watchman';
 import fs from 'node:fs/promises';
-import path from 'path';
+import path from 'node:path';
 import {debounce} from 'shared/debounce';
 
 const DEFAULT_POLL_INTERVAL = 5 * ONE_MINUTE_MS;

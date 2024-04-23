@@ -8,9 +8,9 @@
 import type {Logger} from './logger';
 
 import {firstOfIterable, serializeAsyncCall, sleep} from './utils';
-import {EventEmitter} from 'events';
 import watchman from 'fb-watchman';
-import path from 'path';
+import {EventEmitter} from 'node:events';
+import path from 'node:path';
 
 export type WatchmanSubscriptionOptions = {
   fields?: Array<string>;

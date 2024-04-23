@@ -17,7 +17,7 @@
 
 import type {StartServerArgs, StartServerResult} from './server';
 
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 
 /**
  * This defines the shape of the messages that the parent process accepts.

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import fs from 'fs';
-import util from 'util';
+import fs from 'node:fs';
+import util from 'node:util';
 
 export interface Logger {
   info(...args: Parameters<typeof console.info>): void;

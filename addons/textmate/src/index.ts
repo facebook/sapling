@@ -17,10 +17,10 @@ import type {LanguageExtensionAmendment} from './languageExtensionAmendments.js'
 import LanguageExtensionOnDisk from './LanguageExtensionOnDisk.js';
 import builtInExtensions from './extensions.js';
 import languageExtensionAmendments from './languageExtensionAmendments.js';
-import assert from 'assert';
-import {promises as fs} from 'fs';
 import minimist from 'minimist';
-import pathMod from 'path';
+import assert from 'node:assert';
+import {promises as fs} from 'node:fs';
+import pathMod from 'node:path';
 import prettier from 'prettier';
 
 const GENERATED_SIGIL = '\x40generated';

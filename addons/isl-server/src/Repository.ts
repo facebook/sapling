@@ -85,7 +85,7 @@ import {
   CommitCloudBackupStatus,
   CommandRunner,
 } from 'isl/src/types';
-import path from 'path';
+import path from 'node:path';
 import {revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import {RateLimiter} from 'shared/RateLimiter';

@@ -9,7 +9,7 @@ import type execa from 'execa';
 import type {ExecaChildProcess, ExecaError} from 'execa';
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
 
-import os from 'os';
+import os from 'node:os';
 import {truncate} from 'shared/utils';
 
 export function sleep(timeMs: number): Promise<void> {

@@ -9,7 +9,7 @@ import {readExistingServerFile} from '../existingServerStateFiles';
 import * as startServer from '../server';
 import * as lifecycle from '../serverLifecycle';
 import {runProxyMain, parseArgs} from '../startServer';
-import * as util from 'util';
+import * as util from 'node:util';
 
 /* eslint-disable require-await */
 
