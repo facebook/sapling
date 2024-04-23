@@ -47,12 +47,33 @@ def create_pull_request_title_and_body(
     * __->__ #42
     * #4
 
+    Add trailing whitespace to commit_msg and ensure it is preserved.
+    >>> commit_msg += '\n\n'
+    >>> title, body = create_pull_request_title_and_body(
+    ...     commit_msg,
+    ...     pr_numbers_and_num_commits,
+    ...     pr_numbers_index,
+    ...     contributor_repo,
+    ... )
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    The original commit message.
+    Second line of message.
+    <BLANKLINE>
+    ---
+    [//]: # (BEGIN SAPLING FOOTER)
+    Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
+    * #1
+    * #2 (2 commits)
+    * __->__ #42
+    * #4
+
     Disable reviewstack message:
     >>> title, body = create_pull_request_title_and_body(commit_msg, pr_numbers_and_num_commits,
     ...     pr_numbers_index, contributor_repo, reviewstack=False)
     >>> print(body)
     The original commit message.
     Second line of message.
+    <BLANKLINE>
     ---
     [//]: # (BEGIN SAPLING FOOTER)
     * #1
@@ -84,7 +105,9 @@ def create_pull_request_title_and_body(
         )
         extra.append(bulleted_list)
     if extra:
-        body = "\n".join([body, _HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER] + extra)
+        if not body.endswith("\n"):
+            body += "\n"
+        body += "\n".join([_HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER] + extra)
     return title, body
 
 
