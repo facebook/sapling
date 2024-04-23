@@ -86,21 +86,45 @@ const styles = stylex.create({
 export const Button = forwardRef(
   (
     {
-      icon,
-      primary,
+      icon: iconProp,
+      primary: primaryProp,
       disabled,
       onClick,
       children,
       xstyle,
+      kind,
       ...rest
     }: {
       children?: ReactNode;
       disabled?: boolean;
       xstyle?: stylex.StyleXStyles;
+      primary?: boolean;
+      icon?: boolean;
     } & Omit<ReactProps<HTMLButtonElement>, 'className'> &
-      ExclusiveOr<{primary?: boolean}, {icon?: boolean}>,
+      ExclusiveOr<
+        ExclusiveOr<
+          {
+            /**
+             * Render as a bright button, encouraged the primary confirmation action.
+             * Equivalent to kind='primary'.
+             */
+            primary?: boolean;
+          },
+          {
+            /**
+             * Render as a smaller, more subtle button. Useful in toolbars or when using an icon instead of a label.
+             * Equivalent to kind='icon'.
+             */
+            icon?: boolean;
+          }
+        >,
+        /** How to display the button. Can also provide `primary` or `icon` shorthand bool props instead. */
+        {kind?: 'primary' | 'icon' | undefined}
+      >,
     ref: ForwardedRef<HTMLButtonElement>,
   ) => {
+    const primary = kind === 'primary' || primaryProp === true;
+    const icon = kind === 'icon' || iconProp === true;
     return (
       <button
         tabIndex={disabled ? -1 : 0}

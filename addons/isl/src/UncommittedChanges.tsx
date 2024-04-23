@@ -788,8 +788,8 @@ function MergeConflictButtons({
 
   return (
     <>
-      <VSCodeButton
-        appearance={allConflictsResolved ? 'primary' : 'icon'}
+      <Button
+        kind={allConflictsResolved ? 'primary' : 'icon'}
         key="continue"
         disabled={!allConflictsResolved || shouldDisableButtons}
         data-testid="conflict-continue-button"
@@ -798,9 +798,9 @@ function MergeConflictButtons({
         }}>
         <Icon slot="start" icon={isRunningContinue ? 'loading' : 'debug-continue'} />
         <T>Continue</T>
-      </VSCodeButton>
-      <VSCodeButton
-        appearance="icon"
+      </Button>
+      <Button
+        icon
         key="abort"
         disabled={shouldDisableButtons}
         onClick={() => {
@@ -808,7 +808,7 @@ function MergeConflictButtons({
         }}>
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
-      </VSCodeButton>
+      </Button>
       {externalMergeTool == null ? null : (
         <Tooltip
           title={
