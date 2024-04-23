@@ -17,10 +17,13 @@ import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {Tooltip} from './Tooltip';
 import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
+import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
+import {readAtom} from './jotaiUtils';
 import {AddOperation} from './operations/AddOperation';
 import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
+import {ResolveInExternalMergeToolOperation} from './operations/ResolveInExternalMergeToolOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
 import {useRunOperation} from './operationsState';
@@ -93,6 +96,8 @@ export function File({
     return options;
   });
 
+  const runOperation = useRunOperation();
+
   // Hold "alt" key to show full file paths instead of short form.
   // This is a quick way to see where a file comes from without
   // needing to go through the menu to change the rendering type.
@@ -101,6 +106,17 @@ export function File({
   const tooltip = [file.tooltip, generatedStatusDescription(generatedStatus)]
     .filter(notEmpty)
     .join('\n\n');
+
+  const openFile = () => {
+    if (file.visualStatus === 'U') {
+      const tool = readAtom(externalMergeToolAtom);
+      if (tool != null) {
+        runOperation(new ResolveInExternalMergeToolOperation(tool, file.path));
+        return;
+      }
+    }
+    platform.openFile(file.path);
+  };
 
   return (
     <>
@@ -112,15 +128,11 @@ export function File({
         tabIndex={0}
         onKeyPress={e => {
           if (e.key === 'Enter') {
-            platform.openFile(file.path);
+            openFile();
           }
         }}>
         <FileSelectionCheckbox file={file} selection={selection} />
-        <span
-          className="changed-file-path"
-          onClick={() => {
-            platform.openFile(file.path);
-          }}>
+        <span className="changed-file-path" onClick={openFile}>
           <Icon icon={icon} />
           <Tooltip title={tooltip} delayMs={2_000} placement="right">
             <span
