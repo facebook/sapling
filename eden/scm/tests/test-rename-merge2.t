@@ -2,7 +2,6 @@
 
   $ configure modernclient
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.copytrace=on
   $ cat <<EOF > merge
   > import sys, os
   > f = open(sys.argv[1], "wb")
@@ -74,12 +73,6 @@ $4 = expected result
   --------------
   test L:up a   R:nc a b W:       - 1  get local a to b
   --------------
-    searching for copies back to 4ce40f5aca24
-    unmatched files in other:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
@@ -120,25 +113,10 @@ $4 = expected result
   --------------
   test L:nc a b R:up a   W:       - 2  get rem change to a and b
   --------------
-    searching for copies back to f4db7e329e71
-    unmatched files in local:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: f4db7e329e71
-   preserving b for resolve of b
    preserving rev for resolve of rev
-   b: local copied/moved from a -> m (premerge)
-  picktool() ignoring eval error ('invalid token', *) (glob)
-  merge tool script: * ../merge (glob)
-  picktool() forcemerge toolpath not found * ../merge (glob)
-  picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
-  merging b and a to b
-  my b@86a2aa42fc76+ other a@f4db7e329e71 ancestor a@924404dff337
-   premerge successful
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -154,24 +132,17 @@ $4 = expected result
   my rev@86a2aa42fc76+ other rev@f4db7e329e71 ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  1 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------
   M a
-  M b
-    a
+  C b
   --------------
   
   $ tm "up a  " "nm a b" "      " "3  get local a change to b, remove a"
   --------------
   test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
   --------------
-    searching for copies back to bdb19105162a
-    unmatched files in other:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: bdb19105162a
@@ -212,12 +183,6 @@ $4 = expected result
   --------------
   test L:nm a b R:up a   W:       - 4  get remote change to b
   --------------
-    searching for copies back to f4db7e329e71
-    unmatched files in local:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
@@ -257,12 +222,6 @@ $4 = expected result
   --------------
   test L:       R:nc a b W:       - 5  get b
   --------------
-    searching for copies back to 4ce40f5aca24
-    unmatched files in other:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' 
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: 4ce40f5aca24
@@ -293,12 +252,6 @@ $4 = expected result
   --------------
   test L:nc a b R:       W:       - 6  nothing
   --------------
-    searching for copies back to 97c705ade336
-    unmatched files in local:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' 
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 97c705ade336
@@ -329,12 +282,6 @@ $4 = expected result
   --------------
   test L:       R:nm a b W:       - 7  get b
   --------------
-    searching for copies back to bdb19105162a
-    unmatched files in other:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' 
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: bdb19105162a
@@ -364,12 +311,6 @@ $4 = expected result
   --------------
   test L:nm a b R:       W:       - 8  nothing
   --------------
-    searching for copies back to 97c705ade336
-    unmatched files in local:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' 
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 97c705ade336
@@ -399,9 +340,6 @@ $4 = expected result
   --------------
   test L:um a b R:um a b W:       - 9  do merge with ancestor in a
   --------------
-    searching for copies back to 49b6d8032493
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
@@ -450,21 +388,9 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nm a b R:nm a c W:       - 11 get c, keep b
   --------------
-    searching for copies back to fe905ef2c33e
-    unmatched files in local:
-     b
-    unmatched files in other:
-     c
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' !
-     src: 'a' -> dst: 'c' !
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: fe905ef2c33e
-  note: possible conflict - a was renamed multiple times to:
-   b
-   c
    preserving rev for resolve of rev
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
@@ -492,9 +418,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nc a b R:up b   W:       - 12 merge b no ancestor
   --------------
-    searching for copies back to af30c7647fc7
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
@@ -541,9 +464,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up b   R:nm a b W:       - 13 merge b no ancestor
   --------------
-    searching for copies back to bdb19105162a
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
@@ -589,9 +509,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nc a b R:up a b W:       - 14 merge b no ancestor
   --------------
-    searching for copies back to 8dbce441892a
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
@@ -638,9 +555,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
   --------------
-    searching for copies back to bdb19105162a
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
@@ -686,9 +600,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
   --------------
-    searching for copies back to 8dbce441892a
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
@@ -735,21 +646,19 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
   --------------
-    searching for copies back to 4ce40f5aca24
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
    preserving b for resolve of b
    preserving rev for resolve of rev
-   b: both created -> m (premerge)
+   b: both renamed from a -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
   picktool() forcemerge toolpath not found * ../merge (glob)
   picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
   merging b
-  my b@0b76e65c8289+ other b@4ce40f5aca24 ancestor b@000000000000
+  my b@0b76e65c8289+ other b@4ce40f5aca24 ancestor a@924404dff337
+   premerge successful
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -757,14 +666,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   picked tool '* ../merge' for path=rev binary=False symlink=False changedelete=False (glob)
   merging rev
   my rev@0b76e65c8289+ other rev@4ce40f5aca24 ancestor rev@924404dff337
-   b: both created -> m (merge)
-  picktool() ignoring eval error ('invalid token', *) (glob)
-  merge tool script: * ../merge (glob)
-  picktool() forcemerge toolpath not found * ../merge (glob)
-  picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
-  my b@0b76e65c8289+ other b@4ce40f5aca24 ancestor b@000000000000
-  launching merge tool: * ../merge *$TESTTMP/*/b* * * (glob)
-  merge tool returned: 0
    rev: versions differ -> m (merge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -784,29 +685,19 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nm a b R:up a b W:       - 18 merge b no ancestor
   --------------
-    searching for copies back to 8dbce441892a
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
    preserving b for resolve of b
    preserving rev for resolve of rev
-   a: prompt deleted/changed -> m (premerge)
-  picktool() ignoring eval error ('invalid token', *) (glob)
-  merge tool script: * ../merge (glob)
-  picktool() forcemerge :prompt
-  picked tool ':prompt' for path=a binary=False symlink=False changedelete=True
-  other [merge rev] changed a which local [working copy] is missing
-  hint: if this is due to a renamed file, you can manually input the renamed path
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
-   b: both created -> m (premerge)
+   b: both renamed from a -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
   picktool() forcemerge toolpath not found * ../merge (glob)
   picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
   merging b
-  my b@02963e448370+ other b@8dbce441892a ancestor b@000000000000
+  my b@02963e448370+ other b@8dbce441892a ancestor a@924404dff337
+   premerge successful
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -814,14 +705,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   picked tool '* ../merge' for path=rev binary=False symlink=False changedelete=False (glob)
   merging rev
   my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
-   b: both created -> m (merge)
-  picktool() ignoring eval error ('invalid token', *) (glob)
-  merge tool script: * ../merge (glob)
-  picktool() forcemerge toolpath not found * ../merge (glob)
-  picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
-  my b@02963e448370+ other b@8dbce441892a ancestor b@000000000000
-  launching merge tool: * ../merge *$TESTTMP/*/b* * * (glob)
-  merge tool returned: 0
    rev: versions differ -> m (merge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -830,43 +713,29 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   --------------
-  M a
   M b
-  abort: unresolved merge state
-  (use 'hg resolve' to continue or
-       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   --------------
   
   $ tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
   --------------
   test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
   --------------
-    searching for copies back to bdb19105162a
-    unmatched files new in both:
-     b
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
-   preserving a for resolve of a
    preserving b for resolve of b
    preserving rev for resolve of rev
-   a: prompt changed/deleted -> m (premerge)
-  picktool() ignoring eval error ('invalid token', *) (glob)
-  merge tool script: * ../merge (glob)
-  picktool() forcemerge :prompt
-  picked tool ':prompt' for path=a binary=False symlink=False changedelete=True
-  local [working copy] changed a which other [merge rev] deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? u
-   b: both created -> m (premerge)
+   b: both renamed from a -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
   picktool() forcemerge toolpath not found * ../merge (glob)
   picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
   merging b
-  my b@0b76e65c8289+ other b@bdb19105162a ancestor b@000000000000
+  my b@0b76e65c8289+ other b@bdb19105162a ancestor a@924404dff337
+   premerge successful
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -874,14 +743,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   picked tool '* ../merge' for path=rev binary=False symlink=False changedelete=False (glob)
   merging rev
   my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
-   b: both created -> m (merge)
-  picktool() ignoring eval error ('invalid token', *) (glob)
-  merge tool script: * ../merge (glob)
-  picktool() forcemerge toolpath not found * ../merge (glob)
-  picked tool '* ../merge' for path=b binary=False symlink=False changedelete=False (glob)
-  my b@0b76e65c8289+ other b@bdb19105162a ancestor b@000000000000
-  launching merge tool: * ../merge *$TESTTMP/*/b* * * (glob)
-  merge tool returned: 0
    rev: versions differ -> m (merge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -890,26 +751,17 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   --------------
   M b
   C a
-  abort: unresolved merge state
-  (use 'hg resolve' to continue or
-       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   --------------
   
   $ tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"
   --------------
   test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
   --------------
-    searching for copies back to 49b6d8032493
-    unmatched files in other:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 49b6d8032493
@@ -957,12 +809,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:um a b R:up a   W:       - 21 merge a and b to b
   --------------
-    searching for copies back to f4db7e329e71
-    unmatched files in local:
-     b
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
@@ -1012,14 +858,6 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
   --------------
   test L:nm a b R:up a c W:       - 23 get c, keep b
   --------------
-    searching for copies back to 2b958612230f
-    unmatched files in local:
-     b
-    unmatched files in other:
-     c
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 2b958612230f
@@ -1099,23 +937,6 @@ Expected result:
   $ echo m > 7/f
   $ echo m > 8/f
   $ hg merge -f --tool internal:dump -v --debug -r'desc(m2)' 2>&1 | sed '/^resolving manifests/,$d' 2> /dev/null
-    searching for copies back to * (glob)
-    unmatched files in local:
-     5/g
-     6/g
-    unmatched files in other:
-     3/g
-     4/g
-     7/f
-    unmatched files new in both:
-     0/f
-     1/g
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: '3/f' -> dst: '3/g' *
-     src: '4/f' -> dst: '4/g' *
-     src: '5/f' -> dst: '5/g' *
-     src: '6/f' -> dst: '6/g' *
-    checking for directory renames
   $ hg mani
   0/f
   1/g
@@ -1197,14 +1018,6 @@ Expected result:
   m2
   5/g:
   m1
-  5/g.base:
-  a
-  5/g.local:
-  m1
-  5/g.orig:
-  m1
-  5/g.other:
-  m2
   6/g:
   m1
   6/g.base:

@@ -4,7 +4,6 @@
 
 
   $ enable rebase
-  $ setconfig experimental.copytrace=on
   $ readconfig <<EOF
   > [alias]
   > tlog  = log --template "{node|short} '{desc}' {branches}\n"
@@ -77,17 +76,16 @@ Rebase the revision containing the rename:
 Rename is not lost:
 
   $ hg tlog -p --git -r tip
-  590329d80e55 'rename A' 
+  afa7984ba6cb 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
-  diff --git a/d-renamed/x b/d-renamed/x
+  diff --git a/d/x b/d/x
   new file mode 100644
   --- /dev/null
-  +++ b/d-renamed/x
+  +++ b/d/x
   @@ -0,0 +1,1 @@
   +x
-  
 
 Rebased revision does not contain information about b (issue3739)
 
@@ -97,14 +95,12 @@ Rebased revision does not contain information about b (issue3739)
   manifest:    * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  files+:      a-renamed d-renamed/x
+  files+:      a-renamed d/x
   files-:      a
   extra:       branch=default
   extra:       rebase_source=* (glob)
   description:
   rename A
-  
-  
 
   $ cd ..
 
@@ -296,7 +292,7 @@ copy records collapse correctly.
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo more >> unrelated
   $ hg ci -m 'unrelated commit is unrelated'
-  $ hg rebase -s 68bf06433839d77af722d7baaeecff7c8883c506 --dest 'max(desc(unrelated))' --collapse
+  $ hg rebase -s 68bf06433839 --dest 'max(desc(unrelated))' --collapse
   rebasing 68bf06433839 "File b created as copy of a and modified"
   rebasing af74b229bc02 "File c created as copy of b and modified"
   merging b and c to c
