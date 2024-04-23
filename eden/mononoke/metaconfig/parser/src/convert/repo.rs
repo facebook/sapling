@@ -747,6 +747,7 @@ impl Convert for RawMetadataLoggerConfig {
                 .into_iter()
                 .map(BookmarkKey::new)
                 .collect::<Result<_>>()?,
+            sleep_interval_secs: self.sleep_interval_secs.try_into()?,
         })
     }
 }

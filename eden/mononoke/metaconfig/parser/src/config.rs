@@ -930,6 +930,10 @@ mod test {
             [commit_graph_config]
             scuba_table = "commit_graph"
 
+            [metadata_logger_config]
+            bookmarks = ["master", "release"]
+            sleep_interval_secs = 100
+            
             [deep_sharding_config.status]
         "#;
         let fbsource_repo_def = r#"
@@ -1329,7 +1333,13 @@ mod test {
                     commits: 1000,
                     tags: 1000,
                 }),
-                metadata_logger_config: MetadataLoggerConfig::default(),
+                metadata_logger_config: MetadataLoggerConfig {
+                    bookmarks: vec![
+                        BookmarkKey::new("master").unwrap(),
+                        BookmarkKey::new("release").unwrap(),
+                    ],
+                    sleep_interval_secs: 100,
+                },
             },
         );
 

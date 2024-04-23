@@ -1872,6 +1872,9 @@ pub struct CommitGraphConfig {
 pub struct MetadataLoggerConfig {
     /// Bookmarks to log repo metadata for
     pub bookmarks: Vec<BookmarkKey>,
+    /// The interval time in secs for which the repo metadata logger sleeps between
+    /// successive iterations of its incremental mode execution
+    pub sleep_interval_secs: u64,
 }
 
 /// Information on a loaded config
