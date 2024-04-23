@@ -26,7 +26,7 @@ export function Icon({
       slot={slot}
       className={`codicon codicon-${icon} icon-size-${size ?? 'S'} ${
         color == null ? '' : `icon-${color}`
-      } ${className}`}
+      } ${className ?? ''}`}
       {...other}
     />
   );

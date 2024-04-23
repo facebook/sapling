@@ -5,17 +5,68 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ButtonAppearance} from '@vscode/webview-ui-toolkit';
 import type {ReactNode} from 'react';
 
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {Button} from './components/Button';
+import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'shared/Icon';
 
 import './VSCodeButtonDropdown.css';
 
-export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
+const styles = stylex.create({
+  container: {
+    display: 'flex',
+    alignItems: 'stretch',
+    position: 'relative',
+    '::before': {
+      content: '',
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+      pointerEvents: 'none',
+    },
+  },
+  button: {
+    borderBottomRightRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  chevron: {
+    color: 'var(--button-secondary-foreground)',
+    position: 'absolute',
+    top: 'calc(50% - 0.5em)',
+    right: 'calc(var(--halfpad) - 1px)',
+    pointerEvents: 'none',
+  },
+  select: {
+    backgroundColor: {
+      default: 'var(--button-secondary-background)',
+      ':hover': 'var(--button-secondary-hover-background)',
+    },
+    color: 'var(--button-secondary-foreground)',
+    cursor: {
+      default: 'pointer',
+      ':disabled': 'not-allowed',
+    },
+    width: '24px',
+    borderRadius: '0px 2px 2px 0px; /* meet with button *',
+    outline: {
+      default: 'none',
+      ':focus': '1px solid var(--focus-border)',
+    },
+    outlineOffset: '2px',
+    verticalAlign: 'bottom',
+    appearance: 'none',
+    lineHeight: '0',
+    border: '1px solid var(--button-border)',
+    borderLeft: '1px solid var(--button-secondary-foreground)',
+  },
+});
+
+export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   options,
-  appearance,
+  kind,
   onClick,
   selected,
   onChangeSelected,
@@ -24,7 +75,7 @@ export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
   icon,
 }: {
   options: ReadonlyArray<T>;
-  appearance: Exclude<ButtonAppearance, 'icon'>; // icon-type buttons don't have a natrual spot for the dropdown
+  kind?: 'primary' | undefined; // icon-type buttons don't have a natrual spot for the dropdown
   onClick: (selected: T) => unknown;
   selected: T;
   onChangeSelected: (newSelected: T) => unknown;
@@ -35,14 +86,16 @@ export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
 }) {
   const selectedOption = options.find(opt => opt.id === selected.id) ?? options[0];
   return (
-    <div className="vscode-button-dropdown">
-      <VSCodeButton
-        appearance={appearance}
+    <div {...stylex.props(styles.container)}>
+      <Button
+        kind={kind}
         onClick={buttonDisabled ? undefined : () => onClick(selected)}
-        disabled={buttonDisabled}>
+        disabled={buttonDisabled}
+        xstyle={styles.button}>
         {icon ?? null} {selectedOption.label}
-      </VSCodeButton>
+      </Button>
       <select
+        {...stylex.props(styles.select)}
         disabled={pickerDisabled}
         value={selectedOption.id}
         onClick={e => e.stopPropagation()}
@@ -58,7 +111,7 @@ export function VSCodeButtonDropdown<T extends {label: ReactNode; id: string}>({
           </option>
         ))}
       </select>
-      <Icon icon="chevron-down" />
+      <Icon icon="chevron-down" {...stylex.props(styles.chevron)} />
     </div>
   );
 }

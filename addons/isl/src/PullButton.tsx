@@ -10,7 +10,7 @@ import type {Operation} from './operations/Operation';
 import {fetchStableLocations} from './BookmarksData';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
-import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
+import {ButtonDropdown} from './VSCodeButtonDropdown';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {PullOperation} from './operations/PullOperation';
@@ -77,8 +77,7 @@ export function PullButton() {
     <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={tooltip}>
       <div className="pull-info">
         {pullButtonOptions.length > 1 ? (
-          <VSCodeButtonDropdown
-            appearance="secondary"
+          <ButtonDropdown
             buttonDisabled={!!isRunningPull || disabledFromUncommittedChanges}
             options={pullButtonOptions}
             onClick={() => {
