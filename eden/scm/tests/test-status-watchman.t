@@ -36,7 +36,6 @@
   $ mkdir excluded
   $ touch excluded/file
 
-FIXME: we shouldn't need to fetch the "excluded" tree
+Make sure we don't have tree fetches for the "excluded/" directory:
   $ LOG=manifest_tree=trace hg st --config devel.watchman-reset-clock=true 2>&1 | grep f2b0dbe6584d49d20752468d0c644fb6f117e76a
-  DEBUG tree::store::get{id="f2b0dbe6584d49d20752468d0c644fb6f117e76a"}: manifest_tree::store: enter
-  DEBUG tree::store::get{id="f2b0dbe6584d49d20752468d0c644fb6f117e76a"}: manifest_tree::store: exit
+  [1]

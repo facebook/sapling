@@ -428,7 +428,7 @@ impl WorkingCopy {
         // not match an ignored file that has been previously committed.
         let mut ignore_matcher: DynMatcher = Arc::new(DifferenceMatcher::new(
             self.ignore_matcher.clone(),
-            UnionMatcher::new(manifest_matchers),
+            UnionMatcher::new_or_single(manifest_matchers),
         ));
 
         // If we have been asked to report ignored files, don't skip them in the matcher.
@@ -439,8 +439,9 @@ impl WorkingCopy {
         // Treat files outside sparse profile as ignored.
         if let Some(sparse) = sparse_matcher.clone() {
             ignore_matcher = Arc::new(UnionMatcher::new(vec![
-                ignore_matcher,
+                // Check sparse matcher first. It is cheaper than ignore matcher.
                 Arc::new(NegateMatcher::new(sparse)),
+                ignore_matcher,
             ]));
         }
 
