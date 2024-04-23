@@ -437,7 +437,6 @@ export class Repository {
       ]),
     ]);
     const pathsDefault = configs.get('paths.default') ?? '';
-    const pullRequestDomain = configs.get('github.pull_request_domain');
     const preferredSubmitCommand = configs.get('github.preferred_submit_command');
 
     if (repoRoot instanceof Error) {
@@ -458,6 +457,7 @@ export class Repository {
     }
 
     let codeReviewSystem: CodeReviewSystem;
+    let pullRequestDomain;
     if (Internal.isMononokePath?.(pathsDefault)) {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
@@ -480,6 +480,7 @@ export class Repository {
       } else {
         codeReviewSystem = {type: 'unknown', path: pathsDefault};
       }
+      pullRequestDomain = configs.get('github.pull_request_domain');
     }
 
     const result: RepoInfo = {
