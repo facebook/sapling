@@ -395,6 +395,8 @@ def _mergecopies(orig, repo, cdst, csrc, base):
 
     """
 
+    # todo: make copy tracing support directory move detection
+
     if repo.ui.config("experimental", "copytrace") == "on":
         # user explicitly enabled copytracing - use it
         return orig(repo, cdst, csrc, base)
