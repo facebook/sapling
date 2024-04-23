@@ -61,14 +61,16 @@ cpp_library(
         "PrivHelperServerSanityCheck.cpp",
     ],
     headers = ["PrivHelperServer.h"],
-    os_deps = [(
-        "macos",
-        [
-            "fbsource//third-party/osxfuse:osxfuse",
-            "fbsource//third-party/toolchains/macos:CoreFoundation",
-            "fbsource//third-party/toolchains/macos:IOKit",
-        ],
-    )],
+    os_deps = [
+        (
+            "macos",
+            [
+                "fbsource//third-party/osxfuse:osxfuse",
+                "fbsource//third-party/toolchains/macos:CoreFoundation",
+                "fbsource//third-party/toolchains/macos:IOKit",
+            ],
+        ),
+    ],
     deps = [
         ":nfs_rpc",
         "//eden/common/utils:path",

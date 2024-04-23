@@ -401,7 +401,7 @@ Future<File> PrivHelperClientImpl::fuseMount(
                   .thenValue([](UnixSocket::Message&& retry_response) {
                     PrivHelperConn::parseEmptyResponse(
                         PrivHelperConn::REQ_MOUNT_FUSE, retry_response);
-                    return retry_response;
+                    return std::move(retry_response);
                   });
             }
           })
