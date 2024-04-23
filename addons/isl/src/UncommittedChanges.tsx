@@ -619,13 +619,22 @@ export function UncommittedChanges({place}: {place: Place}) {
                         selectedFiles,
                         file => file.status !== '?', // only untracked, not missing
                       );
+                      // Added files should be first reverted, then purged, so they are not tracked and also deleted.
+                      // This way, the partial selection discard matches the non-partial discard.
+                      const addedFilesToAlsoPurge = selectedFiles.filter(
+                        file => file.status === 'A',
+                      );
                       if (selectedTrackedFiles.length > 0) {
                         // only a subset of files selected -> we need to revert selected tracked files individually
                         runOperation(new RevertOperation(selectedTrackedFiles.map(f => f.path)));
                       }
-                      if (selectedUntrackedFiles.length > 0) {
-                        // untracked files must be purged separately to delete from disk
-                        runOperation(new PurgeOperation(selectedUntrackedFiles.map(f => f.path)));
+                      if (selectedUntrackedFiles.length > 0 || addedFilesToAlsoPurge.length > 0) {
+                        // untracked files must be purged separately to delete from disk.
+                        runOperation(
+                          new PurgeOperation(
+                            [...selectedUntrackedFiles, ...addedFilesToAlsoPurge].map(f => f.path),
+                          ),
+                        );
                       }
                     }
                   });

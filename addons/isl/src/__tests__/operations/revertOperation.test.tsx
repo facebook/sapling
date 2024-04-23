@@ -237,6 +237,59 @@ describe('RevertOperation', () => {
       expect(confirmSpy).toHaveBeenCalled();
     });
 
+    it('uses purge for added and renamed files for selected changes', async () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: [
+            {path: 'myFile1.txt', status: 'A'},
+            {path: 'myFile2.txt', status: 'A'},
+            {path: 'movedFrom.txt', status: 'R'},
+            {path: 'movedTo.txt', status: 'A', copy: 'movedFrom.txt'},
+          ],
+        });
+      });
+      const commitTree = screen.getByTestId('commit-tree-root');
+      await clickCheckboxForFile(commitTree, 'myFile2.txt');
+
+      await act(async () => {
+        fireEvent.click(
+          within(screen.getByTestId('commit-tree-root')).getByTestId('discard-all-selected-button'),
+        );
+      });
+
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: {
+          args: [
+            'revert',
+            {type: 'repo-relative-file', path: 'myFile1.txt'},
+            {type: 'repo-relative-file', path: 'movedFrom.txt'},
+            {type: 'repo-relative-file', path: 'movedTo.txt'},
+          ],
+          id: expect.anything(),
+          runner: CommandRunner.Sapling,
+          trackEventName: 'RevertOperation',
+        },
+      });
+
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: {
+          args: [
+            'purge',
+            '--files',
+            {type: 'repo-relative-file', path: 'myFile1.txt'},
+            {type: 'repo-relative-file', path: 'movedTo.txt'},
+          ],
+          id: expect.anything(),
+          runner: CommandRunner.Sapling,
+          trackEventName: 'PurgeOperation',
+        },
+      });
+
+      expect(confirmSpy).toHaveBeenCalled();
+    });
+
     it('no need to run purge if no files are untracked', async () => {
       const commitTree = screen.getByTestId('commit-tree-root');
       await clickCheckboxForFile(commitTree, 'untracked1.txt');
