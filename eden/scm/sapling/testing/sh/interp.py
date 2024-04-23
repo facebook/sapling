@@ -480,7 +480,7 @@ def interpremovelargestprefix(v, env: Env) -> InterpResult:
 # interp based on tree node type
 #
 # see enum variant names in conch-parser's ast.rs
-# use 'b.shparser.parse(code)' in debugshell to view parsed dict for code.
+# use 'b.conchparser.parse(code)' in debugshell to view parsed dict for code.
 # None means not yet implemented.
 INTERP_TYPE_TABLE = {
     # Command
