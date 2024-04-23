@@ -463,10 +463,10 @@ def popen3(cmd, env=None, newlines=False):
     return stdin, stdout, stderr
 
 
-def popen4(cmd, env=None, newlines=False, bufsize=-1):
+def popen4(cmd, env=None, newlines=False, bufsize=-1, shell=True):
     p = subprocess.Popen(
         cmd,
-        shell=True,
+        shell=shell,
         bufsize=bufsize,
         close_fds=closefds,
         stdin=subprocess.PIPE,

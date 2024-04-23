@@ -1863,15 +1863,13 @@ def _logupdatedistance(ui, repo, node):
 def querywatchmanrecrawls(repo):
     try:
         path = repo.root
-        x, x, x, p = util.popen4("watchman debug-status")
+        x, x, x, p = util.popen4(["watchman", "debug-root-status", path], shell=False)
         stdout, stderr = p.communicate()
-        data = json.loads(stdout)
-        for root in data["roots"]:
-            if root["path"] == path:
-                count = root["recrawl_info"]["count"]
-                if root["recrawl_info"]["should-recrawl"] is True:
-                    count += 1
-                return count
+        info = json.loads(stdout)["root_status"]["recrawl_info"]
+        count = info["count"]
+        if info["should-recrawl"] is True:
+            count += 1
+            return count
         return 0
     except Exception:
         return 0
