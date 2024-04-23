@@ -7,7 +7,13 @@
 
 import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
-import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
+import type {
+  ChangedFile,
+  ChangedFileType,
+  MergeConflicts,
+  PlatformName,
+  RepoRelativePath,
+} from './types';
 import type {MutableRefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
@@ -809,7 +815,40 @@ function MergeConflictButtons({
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
       </Button>
-      {externalMergeTool == null ? null : (
+      {externalMergeTool == null ? (
+        platform.upsellExternalMergeTool ? (
+          <Tooltip
+            title={
+              <div>
+                <T replace={{$tool: <code>{externalMergeTool}</code>, $br: <br />}}>
+                  You can configure an external merge tool to use for resolving conflicts.$br
+                </T>
+              </div>
+            }>
+            <Button
+              icon
+              disabled={allConflictsResolved || shouldDisableButtons}
+              onClick={() => {
+                const link = Internal.externalMergeToolDocsLink;
+                if (link) {
+                  platform.openExternalLink(link);
+                  return;
+                }
+                platform.confirm(
+                  t('Configuring External Merge Tools'),
+                  t(
+                    'You can configure ISL to use an external merge tool for resovling conflicts.\n' +
+                      'Set both `ui.merge = mymergetool` and `merge-tool.mymergetool`.\n' +
+                      'See `sl help config.merge-tools` for more information about setting up merge tools.\n',
+                  ),
+                );
+              }}>
+              <Icon icon="gear" />
+              <T>Configure External Merge Tool</T>
+            </Button>
+          </Tooltip>
+        ) : null
+      ) : (
         <Tooltip
           title={
             <div>

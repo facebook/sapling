@@ -97,6 +97,7 @@ export const vscodeWebviewPlatform: Platform = {
   openExternalLink: url => {
     window.clientToServerAPI?.postMessage({type: 'platform/openExternal', url});
   },
+  upsellExternalMergeTool: false,
 
   clipboardCopy: browserPlatformImpl.clipboardCopy,
 

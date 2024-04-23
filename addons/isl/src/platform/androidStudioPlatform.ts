@@ -36,6 +36,7 @@ const androidStudioPlatform: Platform = {
     window.__IdeBridge.openFileInAndroidStudio(_path);
   },
   canCustomizeFileOpener: false,
+  upsellExternalMergeTool: false,
 
   openExternalLink(_url: string): void {
     window.open(_url, '_blank');

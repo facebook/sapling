@@ -21,6 +21,7 @@ export const browserPlatformImpl = {
     window.clientToServerAPI?.postMessage({type: 'platform/openFile', path, options});
   },
   canCustomizeFileOpener: true,
+  upsellExternalMergeTool: true,
 
   openContainingFolder: (path: RepoRelativePath) => {
     window.clientToServerAPI?.postMessage({type: 'platform/openContainingFolder', path});

@@ -15,6 +15,7 @@ import {browserPlatformImpl} from './browerPlatformImpl';
 const androidStudioRemotePlatform: Platform = {
   ...browserPlatformImpl, // just act like the browser platform by default, since the remote use case is almost identical.
   platformName: 'androidStudioRemote',
+  upsellExternalMergeTool: false,
 };
 
 window.islPlatform = androidStudioRemotePlatform;
