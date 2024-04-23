@@ -771,6 +771,7 @@ impl Convert for RawShardedService {
             RawShardedService::ALIAS_VERIFY => ShardedService::AliasVerify,
             RawShardedService::DRAFT_COMMIT_DELETION => ShardedService::DraftCommitDeletion,
             RawShardedService::MONONOKE_GIT_SERVER => ShardedService::MononokeGitServer,
+            RawShardedService::REPO_METADATA_LOGGER => ShardedService::RepoMetadataLogger,
             v => return Err(anyhow!("Invalid value {} for enum ShardedService", v)),
         };
         Ok(service)

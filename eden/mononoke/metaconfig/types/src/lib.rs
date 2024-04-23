@@ -281,6 +281,8 @@ pub enum ShardedService {
     DraftCommitDeletion,
     /// Mononoke Git Server
     MononokeGitServer,
+    /// Repo Metadata Logger,
+    RepoMetadataLogger,
 }
 
 /// Indicates types of commit hashes used in a repo context.
