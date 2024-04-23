@@ -4521,6 +4521,7 @@ The following config sections control the behavior of automerge::
   # the following algorithms:
   #   - adjacent-changes
   #   - subset-changes
+  #   - sort-inserts
   #   - word-merge (advanced)
   # See the `Merge Algorithms` section for more information.
   merge-algos = adjacent-changes,subset-changes
@@ -4632,4 +4633,22 @@ word-merge (advanced)
 
           That is a first line.
 
+sort-inserts
+    If both sides insert items in the same position of a "sorted array"
+    (e.g.: import statements, buck dependencies), then union them and sort them.
+
+    Here is an example of the conflict::
+
+          import a
+        <<<<<<< dest
+        + import b
+        ======= base
+        + import c
+        >>>>>>> source
+
+    It will be resolved to::
+
+          import a
+          import b
+          import c
 """
