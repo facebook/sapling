@@ -266,7 +266,9 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         }
         _ => None,
     };
-    let globalrevs_store = Arc::new(globalrevs_store_builder.build(blobrepo.repo_identity().id()));
+    let globalrevs_store = Arc::new(
+        globalrevs_store_builder.build(env.rendezvous_options, blobrepo.repo_identity().id()),
+    );
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
     async move {

@@ -902,7 +902,7 @@ impl RepoFactory {
             .open_sql::<SqlBonsaiGlobalrevMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiGlobalrevMapping)?
-            .build(repo_identity.id());
+            .build(self.env.rendezvous_options, repo_identity.id());
         if let Some(cache_handler_factory) =
             self.cache_handler_factory("bonsai_globalrev_mapping")?
         {

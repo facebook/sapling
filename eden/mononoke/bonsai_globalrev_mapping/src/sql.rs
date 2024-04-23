@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use ::sql::Connection;
 use ::sql::Transaction;
@@ -19,6 +20,10 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
+use rendezvous::ConfigurableRendezVousController;
+use rendezvous::RendezVous;
+use rendezvous::RendezVousOptions;
+use rendezvous::RendezVousStats;
 use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -235,9 +240,32 @@ impl BonsaiGlobalrevMappingEntries {
     }
 }
 
+#[derive(Clone)]
+struct RendezVousConnection {
+    conn: Connection,
+    fetch_globalrev: RendezVous<ChangesetId, Globalrev>,
+}
+
+impl RendezVousConnection {
+    fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
+        Self {
+            conn,
+            fetch_globalrev: RendezVous::new(
+                ConfigurableRendezVousController::new(opts),
+                Arc::new(RendezVousStats::new(format!(
+                    "bonsai_globalrev_mapping.fetch_globalrev.{}",
+                    name
+                ))),
+            ),
+        }
+    }
+}
+
 pub struct SqlBonsaiGlobalrevMapping {
-    connections: SqlConnections,
     repo_id: RepositoryId,
+    write_connection: Connection,
+    read_connection: RendezVousConnection,
+    read_master_connection: RendezVousConnection,
 }
 
 #[derive(Clone)]
@@ -259,10 +287,24 @@ impl SqlConstruct for SqlBonsaiGlobalrevMappingBuilder {
 impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGlobalrevMappingBuilder {}
 
 impl SqlBonsaiGlobalrevMappingBuilder {
-    pub fn build(self, repo_id: RepositoryId) -> SqlBonsaiGlobalrevMapping {
+    pub fn build(
+        self,
+        opts: RendezVousOptions,
+        repo_id: RepositoryId,
+    ) -> SqlBonsaiGlobalrevMapping {
         SqlBonsaiGlobalrevMapping {
-            connections: self.connections,
             repo_id,
+            write_connection: self.connections.write_connection,
+            read_connection: RendezVousConnection::new(
+                self.connections.read_connection,
+                "read",
+                opts,
+            ),
+            read_master_connection: RendezVousConnection::new(
+                self.connections.read_master_connection,
+                "read_master",
+                opts,
+            ),
         }
     }
 }
@@ -288,7 +330,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .collect();
 
         DangerouslyAddGlobalrevs::maybe_traced_query(
-            &self.connections.write_connection,
+            &self.write_connection,
             ctx.client_request_info(),
             &entries[..],
         )
@@ -305,13 +347,8 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let mut mappings = select_mapping(
-            ctx,
-            &self.connections.read_connection,
-            self.repo_id,
-            &objects,
-        )
-        .await?;
+        let mut mappings =
+            select_mapping(ctx, &self.read_connection, self.repo_id, &objects).await?;
 
         let left_to_fetch = mappings.left_to_fetch(objects);
 
@@ -324,7 +361,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
 
         let master_mappings = select_mapping(
             ctx,
-            &self.connections.read_master_connection,
+            &self.read_master_connection,
             self.repo_id,
             &left_to_fetch,
         )
@@ -342,7 +379,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let row = SelectClosestGlobalrev::maybe_traced_query(
-            &self.connections.read_connection,
+            &self.read_connection.conn,
             ctx.client_request_info(),
             &self.repo_id,
             &globalrev,
@@ -367,7 +404,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
         let row = SelectMaxEntry::maybe_traced_query(
-            &self.connections.read_master_connection,
+            &self.read_master_connection.conn,
             ctx.client_request_info(),
             repo_id,
         )
@@ -381,7 +418,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
 
 async fn select_mapping(
     ctx: &CoreContext,
-    connection: &Connection,
+    connection: &RendezVousConnection,
     repo_id: RepositoryId,
     objects: &BonsaisOrGlobalrevs,
 ) -> Result<BonsaiGlobalrevMappingEntries, Error> {
@@ -389,35 +426,60 @@ async fn select_mapping(
         return Ok(BonsaiGlobalrevMappingEntries::empty());
     }
 
-    let rows = match objects {
+    match objects {
         BonsaisOrGlobalrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::maybe_traced_query(
-                connection,
-                ctx.client_request_info(),
-                &repo_id,
-                &bcs_ids[..],
-            )
-            .await?
+            let res = connection
+                .fetch_globalrev
+                .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
+                    let conn = connection.conn.clone();
+                    let cri = ctx.client_request_info().cloned();
+
+                    move |bcs_ids| async move {
+                        let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
+
+                        Ok(SelectMappingByBonsai::maybe_traced_query(
+                            &conn,
+                            cri.as_ref(),
+                            &repo_id,
+                            &bcs_ids[..],
+                        )
+                        .await?
+                        .into_iter()
+                        .collect())
+                    }
+                })
+                .await?;
+
+            let mappings = res
+                .into_iter()
+                .filter_map(|(bcs_id, maybe_globalrev)| {
+                    maybe_globalrev.map(|globalrev| (bcs_id, globalrev))
+                })
+                .collect();
+
+            Ok(BonsaiGlobalrevMappingEntries::from_db_query(
+                repo_id, objects, mappings,
+            ))
         }
         BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
             let max_globalrev = globalrevs
                 .iter()
                 .max()
                 .expect("We already returned earlier if objects.is_empty()");
-            SelectMappingByGlobalrevCacheFriendly::maybe_traced_query(
-                connection,
+            let rows = SelectMappingByGlobalrevCacheFriendly::maybe_traced_query(
+                &connection.conn,
                 ctx.client_request_info(),
                 &repo_id,
                 max_globalrev,
                 &globalrevs[..],
             )
-            .await?
-        }
-    };
+            .await?;
 
-    Ok(BonsaiGlobalrevMappingEntries::from_db_query(
-        repo_id, objects, rows,
-    ))
+            Ok(BonsaiGlobalrevMappingEntries::from_db_query(
+                repo_id, objects, rows,
+            ))
+        }
+    }
 }
 
 /// This method is for importing Globalrevs in bulk from a set of BonsaiChangesets where you know

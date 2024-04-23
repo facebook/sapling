@@ -489,7 +489,7 @@ impl TestRepoFactory {
     ) -> Result<ArcBonsaiGlobalrevMapping> {
         Ok(Arc::new(
             SqlBonsaiGlobalrevMappingBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(repo_identity.id()),
+                .build(RendezVousOptions::for_test(), repo_identity.id()),
         ))
     }
 
