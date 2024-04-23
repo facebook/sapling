@@ -33,6 +33,13 @@ pub fn compute_status(
     pending_changes: impl Iterator<Item = Result<PendingChange>>,
     matcher: DynMatcher,
 ) -> Result<StatusBuilder> {
+    let span = tracing::info_span!(
+        "compute_status",
+        pending_changes_count = tracing::field::Empty,
+        manifest_files_count = tracing::field::Empty
+    );
+    let _enter = span.enter();
+
     let mut modified = vec![];
     let mut added = vec![];
     let mut removed = vec![];
@@ -49,7 +56,10 @@ pub fn compute_status(
 
     // Changed files that don't exist in the TreeState. Maps to (is_deleted, in_manifest).
     let mut manifest_files = HashMap::<RepoPathBuf, (bool, bool)>::new();
+    let mut pending_count = 0;
     for change in pending_changes {
+        pending_count += 1;
+
         let (path, is_deleted) = match change {
             Ok(PendingChange::Changed(path)) => (path, false),
             Ok(PendingChange::Deleted(path)) => (path, true),
@@ -131,18 +141,25 @@ pub fn compute_status(
             }
         }
     }
+
+    span.record("pending_changes_count", pending_count);
+    span.record("manifest_files_count", manifest_files.len());
+
     // Handle changed files we didn't find in the TreeState.
-    p1_manifest
-        .files(ExactMatcher::new(
-            manifest_files.keys(),
-            true, // case_sensitive = true
-        ))
-        .filter_map(Result::ok)
-        .for_each(|file| {
-            if let Some(entry) = manifest_files.get_mut(&file.path) {
-                entry.1 = true;
-            }
-        });
+    if !manifest_files.is_empty() {
+        p1_manifest
+            .files(ExactMatcher::new(
+                manifest_files.keys(),
+                true, // case_sensitive = true
+            ))
+            .filter_map(Result::ok)
+            .for_each(|file| {
+                if let Some(entry) = manifest_files.get_mut(&file.path) {
+                    entry.1 = true;
+                }
+            });
+    }
+
     for (path, (is_deleted, in_manifest)) in manifest_files {
         // `exist_parent = in_manifest`. Also, `exist_parent = in_manifest`:
         // If a file existed in the manifest but didn't EXIST_NEXT,
