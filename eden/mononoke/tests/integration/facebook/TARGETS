@@ -378,3 +378,13 @@ dott_test(
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
+
+dott_test(
+    name = "repo_metadata_logger",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-repo-metadata-logger-*.t"]),
+    deps = [
+        "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)

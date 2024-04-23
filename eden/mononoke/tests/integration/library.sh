@@ -444,6 +444,13 @@ function mononoke_backfill_bonsai_blob_mapping {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
+function repo_metadata_logger {
+  GLOG_minloglevel=5 "$REPO_METADATA_LOGGER" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function mononoke_admin_source_target {
   local source_repo_id=$1
   shift
@@ -1038,6 +1045,11 @@ regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
 only_fast_forward=true
 CONFIG
 fi
+
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+[metadata_logger_config]
+bookmarks=["master"]
+CONFIG
 
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [pushrebase]
