@@ -198,7 +198,8 @@ export function getExecParams(
     SL_AUTOMATION: 'true',
     // allow looking up diff numbers even in plain mode.
     // allow constructing the `.git/sl` repo regardless of the identity.
-    SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,sniff',
+    // allow automatically setting ui.username.
+    SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,sniff,username',
     // Prevent user-specified merge tools from attempting to
     // open interactive editors.
     HGMERGE: ':merge3',
