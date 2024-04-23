@@ -8,10 +8,10 @@
 import type {ReactNode} from 'react';
 
 import {Button} from './components/Button';
+import {themeNameState} from './theme';
 import * as stylex from '@stylexjs/stylex';
+import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
-
-import './VSCodeButtonDropdown.css';
 
 const styles = stylex.create({
   container: {
@@ -62,6 +62,9 @@ const styles = stylex.create({
     border: '1px solid var(--button-border)',
     borderLeft: '1px solid var(--button-secondary-foreground)',
   },
+  builtinButtonBorder: {
+    borderLeft: 'unset',
+  },
 });
 
 export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
@@ -85,6 +88,11 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   icon?: React.ReactNode;
 }) {
   const selectedOption = options.find(opt => opt.id === selected.id) ?? options[0];
+  const themeName = useAtomValue(themeNameState);
+  // Slightly hacky: in these themes, the border is too strong. Use the button border instead.
+  const useBuiltinBorder = ['Default Light Modern', 'Default Dark Modern'].includes(
+    themeName as string,
+  );
   return (
     <div {...stylex.props(styles.container)}>
       <Button
@@ -95,7 +103,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
         {icon ?? null} {selectedOption.label}
       </Button>
       <select
-        {...stylex.props(styles.select)}
+        {...stylex.props(styles.select, useBuiltinBorder && styles.builtinButtonBorder)}
         disabled={pickerDisabled}
         value={selectedOption.id}
         onClick={e => e.stopPropagation()}
