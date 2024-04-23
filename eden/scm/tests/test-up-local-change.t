@@ -4,7 +4,6 @@
 
   $ setconfig experimental.allowfilepeer=True
   $ setconfig commands.update.check=none
-  $ setconfig experimental.copytrace=on
 
   $ HGMERGE=true; export HGMERGE
 
@@ -50,9 +49,6 @@
   summary:     1
 
   $ hg --debug up 'desc(2)' --merge
-    searching for copies back to c19d34741b0a
-    unmatched files in other:
-     b
   resolving manifests
    branchmerge: False, force: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
@@ -77,9 +73,6 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   $ hg --debug up 'desc(1)' --merge
-    searching for copies back to c19d34741b0a
-    unmatched files in local (from topological common ancestor):
-     b
   resolving manifests
    branchmerge: False, force: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
@@ -103,9 +96,6 @@
   summary:     1
   
   $ hg --debug up tip
-    searching for copies back to c19d34741b0a
-    unmatched files in other:
-     b
   resolving manifests
    branchmerge: False, force: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
@@ -229,20 +219,38 @@ test a local add
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
 
-test updating backwards through a rename
+test updating backwards through a rename is not supported yet. `update` is not a
+common use case for copy tracing, and enable copy tracing can impact the performance
+for long distance update. Time will tell if we really need it.
 
   $ hg mv a b
   $ hg ci -m b
   $ echo b > b
+  $ hg log -G -T '{node|short} {desc}' -p --git
+  @  fdbc53b96b17 bdiff --git a/a b/b
+  │  rename from a
+  │  rename to b
+  │
+  o  cb9a9f314b8b adiff --git a/a b/a
+     new file mode 100644
+     --- /dev/null
+     +++ b/a
+     @@ -0,0 +1,1 @@
+     +a
+
+For update, base=fdbc53b96b17, src=cb9a9f314b8b, dst=fdbc53b96b17
+
   $ hg up -q 'desc(a)'
+  local [working copy] changed b which other [destination] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  [1]
   $ hg st
-  M a
+  A b
   $ hg diff --nodates
-  diff -r cb9a9f314b8b a
-  --- a/a
-  +++ b/a
-  @@ -1,1 +1,1 @@
-  -a
+  diff -r cb9a9f314b8b b
+  --- /dev/null
+  +++ b/b
+  @@ -0,0 +1,1 @@
   +b
 
 test for superfluous filemerge of clean files renamed in the past
