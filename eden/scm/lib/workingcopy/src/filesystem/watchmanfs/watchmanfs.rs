@@ -646,6 +646,11 @@ pub(crate) fn detect_changes(
                 pending_changes.push(Ok(PendingChange::Ignored(wm_needs_check.path.clone())));
             }
             if !track_ignored && ignored {
+                if wm_needs_check.ts_state.is_some() {
+                    // We have an ignored file in treestate - clear it out.
+                    needs_clear.push((wm_needs_check.path, None));
+                }
+
                 continue;
             }
         }

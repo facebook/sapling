@@ -23,9 +23,7 @@
   $ hg go -q $A
   $ hg sparse enable sparse
   $ hg st
-FIXME: should not be tracking excluded/file:
   $ hg debugtreestate list
   .gitignore: * (glob)
-  excluded/file: * (glob)
   included/file: * (glob)
   sparse: * (glob)
