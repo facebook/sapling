@@ -12,6 +12,7 @@ import type {PageVisibility, RepoInfo} from 'isl/src/types';
 import {stagedThrottler} from './StagedThrottler';
 import {ONE_MINUTE_MS} from './constants';
 import {Watchman} from './watchman';
+import fs from 'node:fs/promises';
 import path from 'path';
 import {debounce} from 'shared/debounce';
 
@@ -194,6 +195,8 @@ export class WatchForChanges {
     const outerDotDir =
       relativeDotdir.indexOf(path.sep) >= 0 ? path.dirname(relativeDotdir) : relativeDotdir;
 
+    await this.maybeModifyGitignore(repoRoot, outerDotDir);
+
     const FILE_CHANGE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-file-change';
     try {
       // In some bad cases, a file may not be getting ignored by watchman properly,
@@ -267,6 +270,28 @@ export class WatchForChanges {
       });
     } catch (err) {
       this.logger.error('failed to setup watchman subscriptions', err);
+    }
+  }
+
+  /**
+   * Modify gitignore to ignore watchman cookie files. This is needed when using ISL
+   * with git repos. `git status` does not exclude watchman cookie files by default.
+   * `sl` does not use watchman in dotgit mode.
+   */
+  private async maybeModifyGitignore(repoRoot: string, outerDotDir: string) {
+    if (outerDotDir !== '.git') {
+      return;
+    }
+    const gitIgnorePath = path.join(repoRoot, outerDotDir, 'info', 'exclude');
+    // https://github.com/facebook/watchman/blob/76bd924b1169dae9cb9f5371845ab44ea1f836bf/watchman/Cookie.h#L15
+    const rule = '/.watchman-cookie-*';
+    try {
+      const gitIgnoreContent = await fs.readFile(gitIgnorePath, 'utf8');
+      if (!gitIgnoreContent.includes(rule)) {
+        await fs.appendFile(gitIgnorePath, `\n${rule}\n`, 'utf8');
+      }
+    } catch (err) {
+      this.logger.error(`failed to read or write ${gitIgnorePath}`, err);
     }
   }
 
