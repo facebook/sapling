@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
-use edenfs_commands::is_command_enabled;
+use edenfs_commands::is_command_enabled_in_rust;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
@@ -217,7 +217,7 @@ where
         .find(|a| !a.starts_with('-'))
         .ok_or(anyhow!("missing subcommand"))?;
 
-    Ok(is_command_enabled(
+    Ok(is_command_enabled_in_rust(
         &subcommand_name,
         &etc_eden_dir_override.map(Path::to_owned),
         experimental_commands_override,

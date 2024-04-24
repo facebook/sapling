@@ -224,7 +224,7 @@ impl MainCommand {
 
     /// For experimental commands, we should check whether Chef enabled the command for our shard. If not, fall back to python cli
     pub fn is_enabled(&self) -> bool {
-        is_command_enabled(self.subcommand.name(), &self.etc_eden_dir, &None)
+        is_command_enabled_in_rust(self.subcommand.name(), &self.etc_eden_dir, &None)
     }
 
     pub fn run(self) -> Result<ExitCode> {
@@ -255,7 +255,7 @@ impl MainCommand {
     }
 }
 
-pub fn is_command_enabled(
+pub fn is_command_enabled_in_rust(
     name: &str,
     etc_eden_dir_override: &Option<PathBuf>,
     experimental_commands_override: &Option<Vec<&str>>,
