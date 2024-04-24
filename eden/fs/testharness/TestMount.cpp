@@ -23,6 +23,7 @@
 #include "eden/common/utils/Guid.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
@@ -53,7 +54,6 @@
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/NotImplemented.h"
-#include "eden/fs/utils/UserInfo.h"
 
 using folly::Unit;
 using namespace std::chrono_literals;

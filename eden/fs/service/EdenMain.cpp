@@ -28,6 +28,7 @@
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -45,7 +46,6 @@
 #include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
-#include "eden/fs/utils/UserInfo.h"
 #include "eden/fs/utils/WinStackTrace.h"
 
 #ifdef EDEN_HAVE_GIT

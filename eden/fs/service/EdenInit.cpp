@@ -10,10 +10,10 @@
 #include <boost/filesystem.hpp>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/utils/UserInfo.h"
 
 using folly::StringPiece;
 

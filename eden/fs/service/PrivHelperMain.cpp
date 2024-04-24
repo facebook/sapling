@@ -12,9 +12,9 @@
 #include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/privhelper/PrivHelperFlags.h"
 #include "eden/fs/privhelper/PrivHelperServer.h"
-#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 

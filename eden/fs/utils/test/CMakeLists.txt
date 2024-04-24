@@ -11,20 +11,9 @@ target_link_libraries(
   PUBLIC
     eden_inodes
     eden_utils
-    eden_utils_test_lib
     eden_testharness
     Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
     edencommon::edencommon_utils
 )
 gtest_discover_tests(eden_utils_test)
-
-add_library(
-  eden_utils_test_lib STATIC
-    ScopedEnvVar.h
-    ScopedEnvVar.cpp
-)
-target_link_libraries(
-  eden_utils_test_lib
-    Folly::folly
-)

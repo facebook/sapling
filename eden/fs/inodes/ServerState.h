@@ -11,9 +11,9 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
-#include "eden/fs/utils/UserInfo.h"
 
 // For ConfigReloadBehavior
 #include "eden/fs/config/gen-cpp2/eden_config_types.h"

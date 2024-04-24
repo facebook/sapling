@@ -13,6 +13,7 @@
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
-#include "eden/fs/utils/UserInfo.h"
 
 namespace facebook::eden {
 

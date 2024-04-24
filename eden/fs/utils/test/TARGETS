@@ -1,5 +1,4 @@
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
-load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("scm_client_infra")
@@ -76,19 +75,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "user_info",
-    srcs = ["UserInfoTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        ":scoped_env_var",
-        "//eden/fs/utils:user_info",
-        "//folly/portability:gtest",
-        "//folly/portability:stdlib",
-        "//folly/test:test_utils",
-    ],
-)
-
-cpp_unittest(
     name = "glob_test",
     srcs = ["GlobMatcherTest.cpp"],
     supports_static_listing = False,
@@ -109,19 +95,6 @@ cpp_benchmark(
         "//eden/common/utils:process_info_cache",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/utils:process_access_log",
-    ],
-)
-
-cpp_library(
-    name = "scoped_env_var",
-    srcs = ["ScopedEnvVar.cpp"],
-    headers = ["ScopedEnvVar.h"],
-    deps = [
-        "//folly:exception",
-        "//folly/portability:stdlib",
-    ],
-    exported_deps = [
-        "//folly:range",
     ],
 )
 

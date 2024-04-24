@@ -250,33 +250,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "user_info",
-    srcs = ["UserInfo.cpp"],
-    headers = ["UserInfo.h"],
-    os_deps = [
-        (
-            "linux",
-            ["third-party//libselinux:libselinux"],
-        ),
-        (
-            "windows",
-            ["fbsource//third-party/toolchains/win:advapi32.lib"],
-        ),
-    ],
-    deps = [
-        "//eden/common/utils:handle",
-        "//eden/common/utils:win_error",
-        "//folly:exception",
-        "//folly/logging:logging",
-    ],
-    exported_deps = [
-        "fbsource//third-party/googletest:gtest_headers",
-        "//eden/common/utils:path",
-        "//folly/portability:sys_types",
-    ],
-)
-
-cpp_library(
     name = "clock",
     srcs = ["Clock.cpp"],
     headers = ["Clock.h"],

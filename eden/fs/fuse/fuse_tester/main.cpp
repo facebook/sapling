@@ -21,13 +21,13 @@
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

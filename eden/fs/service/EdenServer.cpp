@@ -50,6 +50,7 @@
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/TimeUtil.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
@@ -91,7 +92,6 @@
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
-#include "eden/fs/utils/UserInfo.h"
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
 #include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual

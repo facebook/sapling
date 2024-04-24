@@ -20,11 +20,11 @@
 #include <unordered_map>
 
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/privhelper/test/PrivHelperTestServer.h"
-#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

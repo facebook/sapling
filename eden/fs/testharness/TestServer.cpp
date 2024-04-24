@@ -11,6 +11,7 @@
 
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
@@ -18,7 +19,6 @@
 #include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
-#include "eden/fs/utils/UserInfo.h"
 
 using std::make_shared;
 using std::make_unique;

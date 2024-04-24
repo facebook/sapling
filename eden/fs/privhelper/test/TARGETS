@@ -17,11 +17,11 @@ cpp_unittest(
     deps = [
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:system_error",
+        "//eden/common/utils:user_info",
         "//eden/fs/privhelper:conn",
         "//eden/fs/privhelper:interface",
         "//eden/fs/privhelper:privhelper",
         "//eden/fs/privhelper:server",
-        "//eden/fs/utils:user_info",
         "//folly:conv",
         "//folly:exception",
         "//folly:file",
@@ -48,7 +48,7 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
-        "//eden/fs/utils:user_info",
+        "//eden/common/utils:user_info",
         "//folly/init:init",
         "//folly/logging:init",
         "//folly/logging:logging",

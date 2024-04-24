@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/config/ConfigVariables.h"
-#include "eden/fs/utils/UserInfo.h"
+#include "eden/common/utils/UserInfo.h"
 
 namespace facebook::eden {
 
