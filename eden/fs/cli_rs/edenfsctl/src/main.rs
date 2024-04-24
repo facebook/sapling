@@ -26,6 +26,11 @@ use edenfs_utils::strip_unc_prefix;
 use fbinit::FacebookInit;
 use tracing_subscriber::filter::EnvFilter;
 
+#[cfg(not(fbcode_build))]
+// For non-fbcode builds, CliUsageSample is not defined. Let's give it a dummy
+// value so we can pass CliUsageSample through wrapper_main() and fallback().
+struct CliUsageSample;
+
 /// Value used in Python to indicate a command failed to parse
 pub const PYTHON_EDENFSCTL_EX_USAGE: i32 = 64;
 
@@ -102,6 +107,7 @@ fn fallback(reason: Option<clap::Error>) -> Result<i32> {
     let status = cmd
         .status()
         .with_context(|| format!("failed to execute: {:?}", cmd))?;
+
     Ok(status.code().unwrap_or(1))
 }
 
@@ -131,7 +137,7 @@ fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
 
 /// This function takes care of the fallback logic, hijack supported subcommand
 /// to Rust implementation and forward the rest to Python.
-fn wrapper_main() -> Result<i32> {
+fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
         let cmd = edenfs_commands::MainCommand::parse();
         rust_main(cmd)
@@ -150,8 +156,25 @@ fn wrapper_main() -> Result<i32> {
                         // parse error, we should see if the Rust version
                         // exists. This helps prevent cases where rollouts
                         // are not working correctly.
-                        Ok(PYTHON_EDENFSCTL_EX_USAGE) => rust_main(cmd),
-                        res => res,
+                        Ok(PYTHON_EDENFSCTL_EX_USAGE) => {
+                            #[cfg(fbcode_build)]
+                            {
+                                // We expected to use Python but we were forced
+                                // to fall back to Rust. Something is wrong.
+                                telemetry_sample.set_rust_fallback(true);
+                            }
+                            eprintln!(
+                                "Failed to find Python implementation; falling back to Rust."
+                            );
+                            rust_main(cmd)
+                        }
+                        res => {
+                            #[cfg(fbcode_build)]
+                            {
+                                telemetry_sample.set_rust_fallback(false);
+                            }
+                            res
+                        }
                     }
                 }
             }
@@ -208,7 +231,7 @@ fn main(_fb: FacebookInit) -> Result<()> {
     #[cfg(fbcode_build)]
     let mut sample = CliUsageSample::build();
 
-    let code = match wrapper_main() {
+    let code = match wrapper_main(&mut sample) {
         Ok(code) => Ok(code),
         Err(e) => {
             #[cfg(fbcode_build)]

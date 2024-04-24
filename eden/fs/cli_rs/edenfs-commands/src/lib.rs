@@ -139,7 +139,7 @@ impl TopLevelSubcommand {
         }
     }
 
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         // TODO: Is there a way to extract the subcommand's name from clap?
         // Otherwise, there is a risk of divergence with clap's own attributes.
         match self {
