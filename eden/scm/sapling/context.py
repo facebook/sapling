@@ -2795,6 +2795,27 @@ class memctx(committablectx):
             self._repo.savecommitmessage(self._text)
 
     @classmethod
+    def mirrorformutation(
+        cls,
+        ctx,
+        op,
+        parents=None,
+    ):
+
+        extra = ctx.extra().copy()
+        extra[op + "_source"] = ctx.hex()
+        mutinfo = mutation.record(ctx.repo(), extra, [ctx.node()], op)
+        loginfo = {"predecessors": ctx.hex(), "mutation": op}
+
+        return cls.mirror(
+            ctx,
+            parents=parents,
+            mutinfo=mutinfo,
+            loginfo=loginfo,
+            extra=extra,
+        )
+
+    @classmethod
     def mirror(
         cls,
         ctx,
