@@ -55,3 +55,35 @@ Check result:
   $ hg status --change . -AC C
   A C
     A
+
+Test behavior in middle of stack:
+  $ newrepo
+  $ drawdag <<EOS
+  > C  # C/bar = bar
+  > |
+  > |
+  > B  # B/bar = foo
+  > |  # B/foo = (removed)
+  > |
+  > A  # A/foo = foo
+  >    # drawdag.defaultfiles=false
+  > EOS
+
+  $ hg go -q $B
+  $ tglog
+  o  0dfdb4eecd4e 'C'
+  │
+  @  f9f49b656be4 'B'
+  │
+  o  84d740d4dbe5 'A'
+
+FIXME: old B not obsoleted
+  $ hg mv --mark --amend foo bar
+  $ tglog
+  @  eae398dea4ce 'B'
+  │
+  │ o  0dfdb4eecd4e 'C'
+  │ │
+  │ o  f9f49b656be4 'B'
+  ├─╯
+  o  84d740d4dbe5 'A'
