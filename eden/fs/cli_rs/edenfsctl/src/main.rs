@@ -139,8 +139,18 @@ fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
 /// to Rust implementation and forward the rest to Python.
 fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
-        let cmd = edenfs_commands::MainCommand::parse();
-        rust_main(cmd)
+        let cmd = edenfs_commands::MainCommand::try_parse();
+        match cmd {
+            Ok(cmd) => rust_main(cmd),
+            // We failed to parse the command. We should exit with the same
+            // exit code that Python exits with for parse failures.
+            Err(e) if e.kind() == clap::ErrorKind::UnknownArgument => {
+                std::process::exit(PYTHON_EDENFSCTL_EX_USAGE)
+            }
+            // Some other error occurred during parsing. Let's exit like normal
+            // since we can't confirm it was due to an invalid command/arg.
+            Err(e) => e.exit(),
+        }
     } else if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
         fallback(None)
     } else {
