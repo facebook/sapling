@@ -72,23 +72,6 @@ EdenStatsPtr getGlobalEdenStats() {
   return EdenStatsPtr::singleton(*gEdenStats);
 }
 
-SessionInfo makeSessionInfo(
-    const UserInfo& userInfo,
-    std::string hostname,
-    std::string appVersion) {
-  SessionInfo env;
-  env.username = userInfo.getUsername();
-  env.hostname = std::move(hostname);
-  env.ciInstanceId = getCiInstanceId();
-  env.os = getOperatingSystemName();
-  env.osVersion = getOperatingSystemVersion();
-  env.appVersion = std::move(appVersion);
-#if defined(__APPLE__)
-  env.systemArchitecture = getOperatingSystemArchitecture();
-#endif
-  return env;
-}
-
 constexpr int kExitCodeSuccess = 0;
 constexpr int kExitCodeError = 1;
 constexpr int kExitCodeUsage = 2;
