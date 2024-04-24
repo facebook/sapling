@@ -1860,21 +1860,6 @@ def _logupdatedistance(ui, repo, node):
         pass
 
 
-def querywatchmanrecrawls(repo):
-    try:
-        path = repo.root
-        x, x, x, p = util.popen4(["watchman", "debug-root-status", path], shell=False)
-        stdout, stderr = p.communicate()
-        info = json.loads(stdout)["root_status"]["recrawl_info"]
-        count = info["count"]
-        if info["should-recrawl"] is True:
-            count += 1
-            return count
-        return 0
-    except Exception:
-        return 0
-
-
 def _prefetchlazychildren(repo, node):
     """Prefetch children for ``node`` for lazy changelog.
 
@@ -1993,7 +1978,6 @@ def goto(
                     p2,
                     force,
                     wc,
-                    querywatchmanrecrawls(repo),
                 )
                 if git.isgitformat(repo):
                     git.submodulecheckout(p2, force=force)
@@ -2101,8 +2085,6 @@ def _update(
         repo.ui.debug("falling back to non-eden update code path: merge\n")
 
     with repo.wlock():
-        prerecrawls = querywatchmanrecrawls(repo)
-
         if wc is None:
             wc = repo[None]
         pl = wc.parents()
@@ -2304,8 +2286,6 @@ def _update(
 
     # Log the number of files updated.
     repo.ui.log("update_size", update_filecount=sum(stats))
-    postrecrawls = querywatchmanrecrawls(repo)
-    repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
 
     return stats
 
@@ -2364,7 +2344,7 @@ def makenativecheckoutplan(repo, p1, p2, updateprogresspath=None):
 
 
 @util.timefunction("donativecheckout", 0, "ui")
-def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
+def donativecheckout(repo, p1, p2, force, wc):
     repo.ui.debug("Using native checkout\n")
     repo.ui.log(
         "nativecheckout",
@@ -2460,8 +2440,6 @@ def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
                 repo._persistprofileconfigs()
 
     repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
-    postrecrawls = querywatchmanrecrawls(repo)
-    repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
     return stats
 
 
