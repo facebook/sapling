@@ -15,7 +15,7 @@ import * as util from 'node:util';
 
 // to prevent permission issues and races, mock FS read/writes in memory.
 let mockFsData: {[key: string]: string} = {};
-jest.mock('fs', () => {
+jest.mock('node:fs', () => {
   return {
     promises: {
       writeFile: jest.fn(async (path: string, data: string) => {
