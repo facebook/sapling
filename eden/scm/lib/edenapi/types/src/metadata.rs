@@ -19,7 +19,7 @@ use crate::ServerError;
 
 /// Directory entry metadata
 #[auto_wire]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct DirectoryMetadata {
     // not used
@@ -27,7 +27,7 @@ pub struct DirectoryMetadata {
 
 /// File entry metadata
 #[auto_wire]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
     // #[id(0)] # deprecated

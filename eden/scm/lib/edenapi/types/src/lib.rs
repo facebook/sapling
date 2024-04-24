@@ -50,6 +50,7 @@ pub use dag_types::Location as CommitLocation;
 pub use dag_types::PreparedFlatSegments;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
+use serde::Serialize;
 use thiserror::Error;
 pub use types::hgid::HgId;
 pub use types::key::Key;
@@ -171,7 +172,7 @@ pub struct InvalidHgId {
     parents: Parents,
 }
 
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[derive(Clone, Debug, Error, Eq, PartialEq, Serialize)]
 #[error("Error fetching key {key:?}: {err}")]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct EdenApiServerError {
@@ -215,7 +216,7 @@ impl EdenApiServerError {
     }
 }
 
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[derive(Clone, Debug, Error, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum EdenApiServerErrorKind {
     #[error("EdenAPI server returned an error with message: {0}")]

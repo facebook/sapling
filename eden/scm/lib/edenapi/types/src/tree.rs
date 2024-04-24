@@ -56,12 +56,11 @@ impl TreeError {
 /// Structure representing source control tree entry on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
-    #[serde(skip)]
     pub children: Option<Vec<Result<TreeChildEntry, EdenApiServerError>>>,
 }
 
@@ -142,21 +141,21 @@ impl TreeEntry {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum TreeChildEntry {
     File(TreeChildFileEntry),
     Directory(TreeChildDirectoryEntry),
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildFileEntry {
     pub key: Key,
     pub file_metadata: Option<FileMetadata>,
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildDirectoryEntry {
     pub key: Key,
