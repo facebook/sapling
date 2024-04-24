@@ -36,7 +36,9 @@ class ExpectLine:
     body: str = ""
 
     def __init__(
-        self, rawline: str, hasfeature: Optional[Callable[[str], bool]] = None
+        self,
+        rawline: str,
+        hasfeature: Optional[Callable[[str], bool]] = None,
     ):
         optional = False
         excluded = False
@@ -199,13 +201,27 @@ class MultiLineMatcher:
         >>> m.normalize('a\ne\n')[0]
         'a\n...\ne\n'
 
+    "fallback_match" provides alternative fallback match function:
+
+        >>> m = MultiLineMatcher('aBc\n')
+        >>> m.match('AbC\n')
+        False
+
+        >>> m = MultiLineMatcher('aBc\n', fallback_match=lambda a, b: a.lower() == b.lower())
+        >>> m.match('AbC\n')
+        True
+
     """
 
     def __init__(
-        self, expected: str, hasfeature: Optional[Callable[[str], bool]] = None
+        self,
+        expected: str,
+        hasfeature: Optional[Callable[[str], bool]] = None,
+        fallback_match: Optional[Callable[[str, str], bool]] = None,
     ):
         self.blines = blines = splitlines(expected.rstrip("\n"))
         self.elines: List[ExpectLine] = [ExpectLine(l, hasfeature) for l in blines]
+        self.fallback_match = fallback_match
         self._cache = {}
 
     def match(self, actual: str) -> bool:
@@ -221,6 +237,12 @@ class MultiLineMatcher:
         # pyre-fixme[7]: Expected `Tuple[str, str]` but got `Tuple[Union[bool, str],
         #  ...]`.
         return self._matchandnormalizecached(actual)[1:]
+
+    def _match_line(self, lhs: ExpectLine, rhs: str) -> bool:
+        result = lhs.match(rhs)
+        if not result and self.fallback_match is not None:
+            result = self.fallback_match(lhs.rawline, rhs)
+        return result
 
     def _matchandnormalizecached(self, actual: str) -> Tuple[bool, str, str]:
         result = self._cache.get(actual)
@@ -260,11 +282,13 @@ class MultiLineMatcher:
                         glines.append(blines[j])
                         j += 1
                     while (
-                        j < j2 and not elines[j].match(alines[i]) and elines[j].optional
+                        j < j2
+                        and not self._match_line(elines[j], alines[i])
+                        and elines[j].optional
                     ):
                         glines.append(blines[j])
                         j += 1
-                    if j < j2 and elines[j].match(alines[i]):
+                    if j < j2 and self._match_line(elines[j], alines[i]):
                         glines.append(blines[j])
                     else:
                         glines.append(alines[i])
