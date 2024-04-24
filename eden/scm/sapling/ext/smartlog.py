@@ -29,6 +29,7 @@ from __future__ import absolute_import
 
 import datetime
 import re
+import sys
 import time
 
 import bindings
@@ -41,6 +42,7 @@ from sapling import (
     error,
     extensions,
     graphmod,
+    hintutil,
     node as nodemod,
     phases,
     pycompat,
@@ -78,6 +80,7 @@ configitem("smartlog", "max-commit-threshold", default=1000)
 
 templatekeyword = registrar.templatekeyword()
 templatefunc = registrar.templatefunc()
+hint = registrar.hint()
 
 
 @templatekeyword("shelveenabled")
@@ -430,6 +433,11 @@ def smartdate(context, mapping, args):
         return templater.evalstring(context, mapping, args[3])
 
 
+@hint("smartlog-default-command")
+def hintsmartlogdefaultcommand():
+    return _("you can run smartlog with simply `@prog@`")
+
+
 @command(
     "smartlog|sl|slog|sm|sma|smar|smart|smartl|smartlo",
     [
@@ -468,6 +476,9 @@ def smartlog(ui, repo, *pats, **opts):
 
     ``--stat` shows ``diff --stat``-like file changes for all drafts.
     """
+
+    maybe_hint_about_default_command(ui)
+
     overrides = {}
     if opts.get("commit_info"):
         if ui.verbose:
@@ -477,6 +488,18 @@ def smartlog(ui, repo, *pats, **opts):
         overrides[("templatealias", "sl_show_file_change_summary")] = config
     with ui.configoverride(overrides):
         return _smartlog(ui, repo, *pats, **opts)
+
+
+def maybe_hint_about_default_command(ui):
+    # Make sure the default command is configured to run smartlog.
+    if ui.config("commands", "naked-default.in-repo") != "sl":
+        return
+
+    # Make sure the user typed "... sl" or "... smartlog".
+    if len(sys.argv) < 2 or sys.argv[-1] not in {"sl", "smartlog"}:
+        return
+
+    hintutil.trigger("smartlog-default-command")
 
 
 def getrevs(ui, repo, masterstring, headrevs):
