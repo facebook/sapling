@@ -75,14 +75,14 @@ EdenStatsPtr getGlobalEdenStats() {
 SessionInfo makeSessionInfo(
     const UserInfo& userInfo,
     std::string hostname,
-    std::string edenVersion) {
+    std::string appVersion) {
   SessionInfo env;
   env.username = userInfo.getUsername();
   env.hostname = std::move(hostname);
-  env.sandcastleInstanceId = getSandcastleInstanceId();
+  env.ciInstanceId = getCiInstanceId();
   env.os = getOperatingSystemName();
   env.osVersion = getOperatingSystemVersion();
-  env.edenVersion = std::move(edenVersion);
+  env.appVersion = std::move(appVersion);
 #if defined(__APPLE__)
   env.systemArchitecture = getOperatingSystemArchitecture();
 #endif
