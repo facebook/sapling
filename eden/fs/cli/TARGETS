@@ -199,10 +199,12 @@ python_library(
         "proc_utils.py",
         "proc_utils_win.py",
     ],
-    os_deps = [(
-        "linux",
-        ["//common/base/pid_info/py:build_info_lib"],
-    )],
+    os_deps = [
+        (
+            "linux",
+            ["//common/base/pid_info/py:build_info_lib"],
+        ),
+    ],
     deps = [
         "//eden/fs/py/eden/thrift:legacy",
     ],

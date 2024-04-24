@@ -32,10 +32,12 @@ cpp_library(
     headers = [
         "WinStackTrace.h",
     ],
-    os_deps = [(
-        "windows",
-        ["fbsource//third-party/toolchains/win:dbghelp.lib"],
-    )],
+    os_deps = [
+        (
+            "windows",
+            ["fbsource//third-party/toolchains/win:dbghelp.lib"],
+        ),
+    ],
     deps = [
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",

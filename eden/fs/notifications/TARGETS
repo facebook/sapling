@@ -49,13 +49,15 @@ cpp_library(
         "NullNotifier.h",
         "WindowsNotifier.h",
     ],
-    os_deps = [(
-        "windows",
-        [
-            "fbsource//third-party/toolchains/win:ComCtl32.Lib",
-            "fbsource//third-party/toolchains/win:shell32.lib",
-        ],
-    )],
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/toolchains/win:ComCtl32.Lib",
+                "fbsource//third-party/toolchains/win:shell32.lib",
+            ],
+        ),
+    ],
     os_linker_flags = [
         (
             "windows",

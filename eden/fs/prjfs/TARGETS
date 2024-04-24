@@ -15,10 +15,12 @@ cpp_library(
         "PrjfsDispatcher.h",
         "PrjfsRequestContext.h",
     ],
-    os_deps = [(
-        "windows",
-        ["fbsource//third-party/toolchains/win:ProjectedFSLib.lib"],
-    )],
+    os_deps = [
+        (
+            "windows",
+            ["fbsource//third-party/toolchains/win:ProjectedFSLib.lib"],
+        ),
+    ],
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/telemetry:structured_logger",

@@ -12,10 +12,12 @@ rust_binary(
     features = [
         "fb",
     ],
-    os_deps = [(
-        "macos",
-        ["fbsource//third-party/rust:serde"],
-    )],
+    os_deps = [
+        (
+            "macos",
+            ["fbsource//third-party/rust:serde"],
+        ),
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:libc",

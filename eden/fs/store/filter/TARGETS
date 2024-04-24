@@ -51,10 +51,12 @@ cpp_library(
     name = "hg_sparse_filter",
     srcs = ["HgSparseFilter.cpp"],
     headers = ["HgSparseFilter.h"],
-    os_deps = [(
-        "windows",
-        ["fbsource//third-party/rust:cxx"],
-    )],
+    os_deps = [
+        (
+            "windows",
+            ["fbsource//third-party/rust:cxx"],
+        ),
+    ],
     preferred_linkage = "static",
     undefined_symbols = True,
     deps = [
