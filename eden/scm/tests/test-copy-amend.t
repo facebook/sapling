@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ enable rebase amend
 
   $ newrepo
   $ drawdag << 'EOS'
@@ -77,13 +78,23 @@ Test behavior in middle of stack:
   │
   o  84d740d4dbe5 'A'
 
-FIXME: old B not obsoleted
+Old B not obsoleted:
   $ hg mv --mark --amend foo bar
   $ tglog
-  @  eae398dea4ce 'B'
+  @  3354b93fbdbf 'B'
   │
   │ o  0dfdb4eecd4e 'C'
   │ │
-  │ o  f9f49b656be4 'B'
+  │ x  f9f49b656be4 'B'
   ├─╯
+  o  84d740d4dbe5 'A'
+
+Can restack:
+  $ hg rebase -q --restack
+
+  $ tglog
+  o  1a2db52f05ac 'C'
+  │
+  @  3354b93fbdbf 'B'
+  │
   o  84d740d4dbe5 'A'

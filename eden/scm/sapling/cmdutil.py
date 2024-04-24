@@ -1573,7 +1573,7 @@ def amend_copy(repo, to_amend, rename, force):
         # Actual amend
         from . import context
 
-        mctx = context.memctx.mirror(ctx)
+        mctx = context.memctx.mirrorformutation(ctx, "amend")
         for src_path, dst_path in to_amend:
             mctx[dst_path] = context.overlayfilectx(
                 mctx[dst_path], copied=(src_path, pctx.node())
