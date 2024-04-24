@@ -155,6 +155,7 @@ class EdenFS:
         capture_stderr: bool = False,
         encoding: str = "utf-8",
         config_dir: bool = True,
+        env: Optional[Dict[str, str]] = None,
     ) -> str:
         """
         Run the specified eden command.
@@ -163,18 +164,27 @@ class EdenFS:
         Usage example: run_cmd('mount', 'my_eden_client')
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         """
-        cmd, env = self.get_edenfsctl_cmd_env(command, *args, config_dir=config_dir)
+        cmd, cmd_env = self.get_edenfsctl_cmd_env(command, *args, config_dir=config_dir)
+
+        # Merge explicit env with env vars supplied by the test harness.
+        # Explicitly provided env vars take precedence.
+        merged_env = {}
+        if env is not None:
+            merged_env = cmd_env | env
+        else:
+            merged_env = cmd_env
+
         try:
             stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
             # TODO(T37669726): Re-enable LSAN.
-            env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
+            merged_env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
             completed_process = subprocess.run(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=stderr,
                 check=True,
                 cwd=cwd,
-                env=env,
+                env=merged_env,
                 encoding=encoding,
             )
         except subprocess.CalledProcessError as ex:
