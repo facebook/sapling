@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import subprocess
 import time
 from pathlib import Path
 
@@ -164,3 +165,50 @@ reload-interval = "{reload_interval}"
         write_user_config("bogus value")
         time.sleep(0.200)
         assert_current_interval(default_interval)
+
+
+@testcase.eden_repo_test
+class RustRolloutConfigTest(testcase.EdenRepoTest):
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    def test_fallback_to_rust(self) -> None:
+        # Testing the case where we fallback to Rust because a command marked
+        # as "experimental" doesn't actually exist in Python.
+        self.set_rust_rollout_config({"prefetch-profile": False})
+        res = self.eden.run_cmd(
+            "prefetch-profile", "list", "--checkout", f"{self.mount}"
+        )
+        self.assertIn("No active prefetch profiles.", res)
+
+        # If EDENFSCTL_SKIP_RUST is set, we shouldn't try to fallback to Rust
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.eden.run_cmd(
+                "prefetch-profile",
+                "list",
+                "--checkout",
+                f"{self.mount}",
+                env={"EDENFSCTL_SKIP_RUST": "1"},
+            )
+
+        # If EDENFSCTL_ONLY_RUST is set, ignore the rollout config
+        res = self.eden.run_cmd(
+            "prefetch-profile",
+            "list",
+            "--checkout",
+            f"{self.mount}",
+            env={"EDENFSCTL_ONLY_RUST": "1"},
+        )
+        self.assertIn("No active prefetch profiles.", res)
+
+        # If EDENFSCTL_SKIP_RUST is set, ignore the rollout config
+        self.set_rust_rollout_config({"prefetch-profile": True})
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.eden.run_cmd(
+                "prefetch-profile",
+                "list",
+                "--checkout",
+                f"{self.mount}",
+                env={"EDENFSCTL_SKIP_RUST": "1"},
+            )

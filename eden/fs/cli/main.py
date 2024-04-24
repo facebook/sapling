@@ -1326,7 +1326,7 @@ class MinitopCmd(Subcmd):
 class PrefetchProfileCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         print_stderr("This is not implemented for python edenfsctl.")
-        return 1
+        return EX_USAGE
 
 
 @subcmd("fsck", "Perform a filesystem check for EdenFS")
