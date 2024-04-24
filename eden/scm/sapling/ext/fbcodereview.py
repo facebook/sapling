@@ -205,8 +205,8 @@ def memoize(f):
     [4, 5, 6]
 
     As expected, we have 4 entries in the cache for a call like f(a, b, c, d)
-    >>> pp(three._phabstatuscache)
-    {(3, 1): [4], (3, 1, 2, 3): [4, 5, 6], (3, 2): [5], (3, 3): [6]}
+    >>> print(three._phabstatuscache)
+    {(3, 1, 2, 3): [4, 5, 6], (3, 1): [4], (3, 2): [5], (3, 3): [6]}
     """
 
     def helper(*args):
