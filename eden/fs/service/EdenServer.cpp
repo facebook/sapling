@@ -41,7 +41,6 @@
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/SessionInfo.h"
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/telemetry/StructuredLoggerFactory.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
@@ -83,6 +82,7 @@
 #include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/EdenStructuredLogger.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
@@ -380,11 +380,12 @@ EdenServer::EdenServer(
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
       mainEventBase_{folly::EventBaseManager::get()->getEventBase()},
-      structuredLogger_{makeDefaultStructuredLogger<EdenStatsPtr>(
-          edenConfig->scribeLogger.getValue(),
-          edenConfig->scribeCategory.getValue(),
-          std::move(sessionInfo),
-          edenStats.copy())},
+      structuredLogger_{
+          makeDefaultStructuredLogger<EdenStructuredLogger, EdenStatsPtr>(
+              edenConfig->scribeLogger.getValue(),
+              edenConfig->scribeCategory.getValue(),
+              std::move(sessionInfo),
+              edenStats.copy())},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),

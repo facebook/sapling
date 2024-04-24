@@ -101,3 +101,18 @@ cpp_library(
         "//folly:synchronized",
     ],
 )
+
+cpp_library(
+    name = "structured_logger",
+    srcs = [
+        "EdenStructuredLogger.cpp",
+    ],
+    headers = [
+        "EdenStructuredLogger.h",
+    ],
+    exported_deps = [
+        "//eden/common/telemetry:log_info",
+        "//eden/common/telemetry:scribe_logger",
+        "//eden/common/telemetry:structured_logger",
+    ],
+)
