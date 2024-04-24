@@ -64,10 +64,13 @@ impl SqlBookmarksSubscription {
             .await
             .context("Failed to start bookmarks read transaction")?;
 
-        let (txn, log_id_rows) =
-            GetLargestLogId::query_with_transaction(txn, &sql_bookmarks.repo_id)
-                .await
-                .context("Failed to read log id")?;
+        let (txn, log_id_rows) = GetLargestLogId::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            &sql_bookmarks.repo_id,
+        )
+        .await
+        .context("Failed to read log id")?;
 
         // Our ids start at 1 so we can default log_id to zero if it's missing.
         let log_id = log_id_rows
@@ -78,8 +81,9 @@ impl SqlBookmarksSubscription {
             .unwrap_or(0);
 
         let tok: i32 = rand::thread_rng().gen();
-        let (txn, bookmarks) = SelectAllUnordered::query_with_transaction(
+        let (txn, bookmarks) = SelectAllUnordered::maybe_traced_query_with_transaction(
             txn,
+            ctx.client_request_info(),
             &sql_bookmarks.repo_id,
             &std::u64::MAX,
             &tok,
@@ -138,12 +142,14 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
 
         let conn = self.sql_bookmarks.connection(ctx, self.freshness);
 
-        let changes =
-            SelectUpdatedBookmarks::query(conn, &self.sql_bookmarks.repo_id, &self.log_id)
-                .await
-                .with_context(|| {
-                    format!("Failed to select updated bookmarks after {}", self.log_id)
-                })?;
+        let changes = SelectUpdatedBookmarks::maybe_traced_query(
+            conn,
+            ctx.client_request_info(),
+            &self.sql_bookmarks.repo_id,
+            &self.log_id,
+        )
+        .await
+        .with_context(|| format!("Failed to select updated bookmarks after {}", self.log_id))?;
 
         let mut max_log_id = None;
         let mut updates = HashMap::new();

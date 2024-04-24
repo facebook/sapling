@@ -212,11 +212,16 @@ impl SqlBookmarksTransactionPayload {
     }
 
     async fn find_next_update_log_id(
+        ctx: &CoreContext,
         txn: SqlTransaction,
         repo_id: RepositoryId,
     ) -> Result<(SqlTransaction, u64)> {
-        let (txn, max_id_entries) =
-            FindMaxBookmarkLogId::query_with_transaction(txn, &repo_id).await?;
+        let (txn, max_id_entries) = FindMaxBookmarkLogId::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            &repo_id,
+        )
+        .await?;
 
         let next_id = match &max_id_entries[..] {
             [(None,)] => 1,
@@ -233,6 +238,7 @@ impl SqlBookmarksTransactionPayload {
 
     async fn store_log<'a>(
         &'a self,
+        ctx: &CoreContext,
         mut txn: SqlTransaction,
         log: &'a TransactionLogUpdates<'a>,
     ) -> Result<SqlTransaction> {
@@ -249,15 +255,20 @@ impl SqlBookmarksTransactionPayload {
                 &log_entry.reason,
                 &timestamp,
             )];
-            txn = AddBookmarkLog::query_with_transaction(txn, &data[..])
-                .await?
-                .0;
+            txn = AddBookmarkLog::maybe_traced_query_with_transaction(
+                txn,
+                ctx.client_request_info(),
+                &data[..],
+            )
+            .await?
+            .0;
         }
         Ok(txn)
     }
 
     async fn store_force_sets<'op, 'log: 'op>(
         &'log self,
+        ctx: &CoreContext,
         txn: SqlTransaction,
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
@@ -278,12 +289,18 @@ impl SqlBookmarksTransactionPayload {
                 )
             })
             .collect::<Vec<_>>();
-        let (txn, _) = ReplaceBookmarks::query_with_transaction(txn, data.as_slice()).await?;
+        let (txn, _) = ReplaceBookmarks::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            data.as_slice(),
+        )
+        .await?;
         Ok(txn)
     }
 
     async fn store_creates<'op, 'log: 'op>(
         &'log self,
+        ctx: &CoreContext,
         txn: SqlTransaction,
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
@@ -308,7 +325,12 @@ impl SqlBookmarksTransactionPayload {
             })
             .collect::<Vec<_>>();
         let rows_to_insert = data.len() as u64;
-        let (txn, result) = InsertBookmarks::query_with_transaction(txn, data.as_slice()).await?;
+        let (txn, result) = InsertBookmarks::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            data.as_slice(),
+        )
+        .await?;
         if result.affected_rows() != rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
@@ -317,6 +339,7 @@ impl SqlBookmarksTransactionPayload {
 
     async fn store_updates<'op, 'log: 'op>(
         &'log self,
+        ctx: &CoreContext,
         mut txn: SqlTransaction,
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
@@ -329,8 +352,9 @@ impl SqlBookmarksTransactionPayload {
                 // This is a no-op update.  Check if the bookmark already points to the correct
                 // commit.  If it doesn't, abort the transaction. We need to make this a select
                 // query instead of an update, since affected_rows() woud otherwise return 0.
-                let (txn_, result) = SelectBookmark::query_with_transaction(
+                let (txn_, result) = SelectBookmark::maybe_traced_query_with_transaction(
                     txn,
+                    ctx.client_request_info(),
                     &self.repo_id,
                     bookmark.name(),
                     bookmark.category(),
@@ -341,8 +365,9 @@ impl SqlBookmarksTransactionPayload {
                     return Err(BookmarkTransactionError::LogicError);
                 }
             } else {
-                let (txn_, result) = UpdateBookmark::query_with_transaction(
+                let (txn_, result) = UpdateBookmark::maybe_traced_query_with_transaction(
                     txn,
+                    ctx.client_request_info(),
                     &self.repo_id,
                     &log_id,
                     bookmark.name(),
@@ -363,13 +388,15 @@ impl SqlBookmarksTransactionPayload {
 
     async fn store_force_deletes<'op, 'log: 'op>(
         &'log self,
+        ctx: &CoreContext,
         mut txn: SqlTransaction,
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         for (bookmark, log_entry) in self.force_deletes.iter() {
             log.push_log_entry(bookmark, log_entry);
-            let (txn_, _) = DeleteBookmark::query_with_transaction(
+            let (txn_, _) = DeleteBookmark::maybe_traced_query_with_transaction(
                 txn,
+                ctx.client_request_info(),
                 &self.repo_id,
                 bookmark.name(),
                 bookmark.category(),
@@ -382,6 +409,7 @@ impl SqlBookmarksTransactionPayload {
 
     async fn store_deletes<'op, 'log: 'op>(
         &'log self,
+        ctx: &CoreContext,
         mut txn: SqlTransaction,
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
@@ -389,8 +417,9 @@ impl SqlBookmarksTransactionPayload {
             maybe_log_entry
                 .as_ref()
                 .map(|log_entry| log.push_log_entry(bookmark, log_entry));
-            let (txn_, result) = DeleteBookmarkIf::query_with_transaction(
+            let (txn_, result) = DeleteBookmarkIf::maybe_traced_query_with_transaction(
                 txn,
+                ctx.client_request_info(),
                 &self.repo_id,
                 bookmark.name(),
                 bookmark.category(),
@@ -409,19 +438,20 @@ impl SqlBookmarksTransactionPayload {
     /// Returns the db transaction and the id of this entry in the bookmark update log.
     async fn attempt_write(
         &self,
+        ctx: &CoreContext,
         txn: SqlTransaction,
     ) -> Result<(SqlTransaction, u64), BookmarkTransactionError> {
-        let (mut txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
+        let (mut txn, next_id) = Self::find_next_update_log_id(ctx, txn, self.repo_id).await?;
 
         let mut log = TransactionLogUpdates::new(next_id);
 
-        txn = self.store_force_sets(txn, &mut log).await?;
-        txn = self.store_creates(txn, &mut log).await?;
-        txn = self.store_updates(txn, &mut log).await?;
-        txn = self.store_force_deletes(txn, &mut log).await?;
-        txn = self.store_deletes(txn, &mut log).await?;
+        txn = self.store_force_sets(ctx, txn, &mut log).await?;
+        txn = self.store_creates(ctx, txn, &mut log).await?;
+        txn = self.store_updates(ctx, txn, &mut log).await?;
+        txn = self.store_force_deletes(ctx, txn, &mut log).await?;
+        txn = self.store_deletes(ctx, txn, &mut log).await?;
         txn = self
-            .store_log(txn, &log)
+            .store_log(ctx, txn, &log)
             .await
             .map_err(BookmarkTransactionError::RetryableError)?;
 
@@ -628,7 +658,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     Err(err) => break Err(err),
                 };
 
-                match payload.attempt_write(txn).await {
+                match payload.attempt_write(&ctx, txn).await {
                     Err(BookmarkTransactionError::RetryableError(_))
                         if attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT =>
                     {
