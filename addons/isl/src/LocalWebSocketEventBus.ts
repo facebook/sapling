@@ -54,7 +54,8 @@ export class LocalWebSocketEventBus {
     if (this.disposed || this.opening || this.status.type === 'open') {
       return this.websocket;
     }
-    const wsUrl = new URL(`ws://${this.host}/ws`);
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = new URL(`${wsProtocol}//${this.host}/ws`);
     const token = initialParams.get('token');
     if (token) {
       wsUrl.searchParams.append('token', token);
