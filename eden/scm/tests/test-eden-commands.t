@@ -7,7 +7,7 @@ test eden commands help
   $ eden --help > /dev/null
   $ eden du --help > /dev/null
   $ eden imnotacommandiswear --help > /dev/null 2>&1
-  [2]
+  [64]
 
 Test a few simple eden commands
 

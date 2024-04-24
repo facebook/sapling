@@ -26,6 +26,9 @@ use edenfs_utils::strip_unc_prefix;
 use fbinit::FacebookInit;
 use tracing_subscriber::filter::EnvFilter;
 
+/// Value used in Python to indicate a command failed to parse
+pub const PYTHON_EDENFSCTL_EX_USAGE: i32 = 64;
+
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
         // We might get a command starting with python.exe here instead of a simple path.
@@ -142,7 +145,14 @@ fn wrapper_main() -> Result<i32> {
                 if cmd.is_enabled() {
                     rust_main(cmd)
                 } else {
-                    fallback(None)
+                    match fallback(None) {
+                        // If the Python version of edenfsctl exited with a
+                        // parse error, we should see if the Rust version
+                        // exists. This helps prevent cases where rollouts
+                        // are not working correctly.
+                        Ok(PYTHON_EDENFSCTL_EX_USAGE) => rust_main(cmd),
+                        res => res,
+                    }
                 }
             }
             // If the command is defined in Rust, then --help will cause

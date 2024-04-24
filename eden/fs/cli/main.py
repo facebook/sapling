@@ -107,14 +107,16 @@ subcmd = subcmd_mod.Decorator()
 # For a non-unix system (like Windows), we will define our own error codes.
 try:
     EX_OK: int = os.EX_OK
-    EX_USAGE: int = os.EX_USAGE
     EX_SOFTWARE: int = os.EX_SOFTWARE
     EX_OSFILE: int = os.EX_OSFILE
 except AttributeError:  # On a non-unix system
     EX_OK: int = 0
-    EX_USAGE: int = 64
     EX_SOFTWARE: int = 70
     EX_OSFILE: int = 72
+
+# The Rust CLI depends on this value staying constant. Instead of fetching it
+# from the os library, let's just define it here.
+EX_USAGE: int = 64
 
 
 # We have different mitigations on different platforms due to cmd differences
@@ -2690,7 +2692,14 @@ def main() -> int:
     # Increase how often it's sampled.
     par_telemetry.set_sample_rate(automation=10000)
     parser = create_parser()
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        # For some reason argparse calls sys.exit(2) when it encounters a parse
+        # error... This makes it hard for us to distinguish between edenfsctl
+        # failing w/ exit code 2 and a parse error. Let's catch the parse
+        # error and return a more appropriate exit code.
+        return EX_USAGE
 
     # The default event loop on 3.8+ will cause an ugly backtrace when
     # edenfsctl is interrupted. Switching back to the selector event loop.
