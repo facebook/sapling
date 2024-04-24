@@ -142,8 +142,17 @@ def _get_unmount_timeout_suggestions(path: str) -> str:
 def do_version(
     args: argparse.Namespace, format_json: bool = False, verbose: bool = False
 ) -> int:
+    def notNone(x: Optional[str], y: str) -> str:
+        return y if x is None else x
+
     instance = get_eden_instance(args)
-    versions_info = version_mod.get_version_info(instance)
+    running_version = None
+    try:
+        running_version = instance.get_running_version()
+    except EdenNotRunningError:
+        pass
+
+    versions_info = version_mod.get_version_info(running_version)
 
     if format_json:
         if versions_info.installed_version == "-":
@@ -162,19 +171,29 @@ def do_version(
             )
 
         if verbose:
-            print(
-                f"Installed: {versions_info.installed_version}{f' ({versions_info.installed_version_age} days old)' if versions_info.installed_version_age else ''}"
+            inst_days_old = (
+                None
+                if versions_info.installed_version_age is None
+                else f" ({versions_info.installed_version_age} days old)"
             )
             print(
-                f"Running:   {versions_info.running_version}{f' ({versions_info.running_version_age} days old)' if versions_info.running_version_age else ''}"
+                f"Installed: {versions_info.installed_version}{notNone(inst_days_old, '')}"
+            )
+            running_days_old = (
+                None
+                if versions_info.running_version_age is None
+                else f" ({versions_info.running_version_age} days old)"
+            )
+            print(
+                f"Running:   {versions_info.running_version}{notNone(running_days_old, '')}"
             )
             if versions_info.ages_deltas:
                 print(
                     f"Running version is {versions_info.ages_deltas} days older than installed"
                 )
         else:
-            print(f"Installed: {versions_info.installed_version}")
-            print(f"Running:   {versions_info.running_version}")
+            print(f"Installed: {notNone(versions_info.installed_version, '-')}")
+            print(f"Running:   {notNone(versions_info.running_version, '-')}")
 
         if versions_info.is_dev:
             print("(Dev version of EdenFS seems to be running)")
