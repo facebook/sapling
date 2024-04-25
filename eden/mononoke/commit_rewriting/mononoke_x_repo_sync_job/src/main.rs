@@ -46,12 +46,14 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
 use clientinfo::ClientEntryPoint;
@@ -59,6 +61,8 @@ use clientinfo::ClientInfo;
 use cmdlib::helpers;
 use cmdlib_cross_repo::create_commit_syncers_from_app_unredacted;
 use context::CoreContext;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::PushrebaseRewriteDates;
@@ -286,6 +290,31 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
 
                 if !synced_something {
                     log_noop_iteration(scuba_sample);
+                    // Maintain the working copy equivalence mapping so we don't build up a backlog
+                    for target_bookmark in common_pushrebase_bookmarks.iter() {
+                        let target_bookmark_value = commit_syncer
+                            .get_large_repo()
+                            .bookmarks()
+                            .get(ctx.clone(), target_bookmark)
+                            .await?
+                            .ok_or_else(|| {
+                                anyhow!(
+                                    "Bookmark {} does not exist in the large repo",
+                                    target_bookmark
+                                )
+                            })?;
+                        commit_syncer
+                            .reverse()?
+                            .sync_commit(
+                                ctx,
+                                target_bookmark_value,
+                                CandidateSelectionHint::Only,
+                                CommitSyncContext::XRepoSyncJob,
+                                false,
+                            )
+                            .await?;
+                    }
+
                     tokio::time::sleep(sleep_duration).await;
                 }
             }

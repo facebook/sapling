@@ -156,7 +156,6 @@ Rest of this test won't pass as we failed the previous command so is commented o
   after_change
 -- Verify the working copy state after the operation
   $ with_stripped_logs verify_wc $(hg whereami)
-  No sync outcome for 9f9f06e1ce1a68c130d34de4ac92506b9749b51f39c4a7338bba6b07cf5f9535 in CommitSyncer{0->1}
 
 -- Show the list of files in the repo after the operation
   $ hg files
