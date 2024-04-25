@@ -241,7 +241,7 @@ Successful sort-inserts merge for Python file:
 
   $ newrepo
   $ setconfig automerge.mode=accept
-  $ setconfig automerge.merge-algos=sort-inserts
+  $ setconfig automerge.sort-inserts.enable=True
   $ drawdag <<'EOS'
   > B C # C/a.py=import a\nimport c\n
   > |/  # B/a.py=import a\nimport b\n
@@ -255,6 +255,30 @@ Successful sort-inserts merge for Python file:
   import a
   import b
   import c
+
+Unsuccessful merge for Python file when 'sort-inserts' is False:
+
+  $ newrepo
+  $ setconfig automerge.mode=accept
+  $ setconfig automerge.sort-inserts.enable=False
+  $ drawdag <<'EOS'
+  > B C # C/a.py=import a\nimport c\n
+  > |/  # B/a.py=import a\nimport b\n
+  > A   # A/a.py=import a\n
+  > EOS
+  $ hg rebase -r $C -d $B
+  rebasing 07adb317b9bf "C"
+  merging a.py
+  warning: 1 conflicts while merging a.py! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ cat a.py
+  import a
+  <<<<<<< dest:   79cceee834ed - test: B
+  import b
+  =======
+  import c
+  >>>>>>> source: 07adb317b9bf - test: C
 
 Successful sort-inserts merge for Buck file:
 

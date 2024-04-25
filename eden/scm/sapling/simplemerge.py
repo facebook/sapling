@@ -109,7 +109,7 @@ class AutomergeMetrics:
     def init_from_ui(cls, ui, repo_name):
         obj = cls()
         obj.mode = ui.config("automerge", "mode")
-        obj.merge_algos = ui.config("automerge", "merge-algos")
+        obj.merge_algos = ",".join(get_enabled_automerge_algos(ui))
         obj.disable_for_noninteractive = ui.config(
             "automerge", "disable-for-noninteractive"
         )
@@ -387,6 +387,15 @@ AUTOMERGE_ALGORITHMS = {
 }
 
 
+def get_enabled_automerge_algos(ui):
+    result = []
+    automerge_algos = ui.configlist("automerge", "merge-algos")
+    for name in AUTOMERGE_ALGORITHMS:
+        if name in automerge_algos or ui.configbool("automerge", f"{name}.enable"):
+            result.append(name)
+    return result
+
+
 class Merge3Text:
     """3-way merge of texts.
 
@@ -434,15 +443,9 @@ class Merge3Text:
             return
         self.automerge_mode = ui.config("automerge", "mode") or "reject"
         automerge_fns = self.automerge_fns
-        automerge_algos = ui.configlist("automerge", "merge-algos")
+        automerge_algos = get_enabled_automerge_algos(ui)
         for name in automerge_algos:
-            try:
-                automerge_fns[name] = AUTOMERGE_ALGORITHMS[name]
-            except KeyError:
-                raise error.Abort(
-                    _("unknown automerge algorithm '%s', availabe algorithms are %s")
-                    % (name, list(AUTOMERGE_ALGORITHMS.keys()))
-                )
+            automerge_fns[name] = AUTOMERGE_ALGORITHMS[name]
 
     @util.propertycache
     def file_type(self) -> Optional[str]:
