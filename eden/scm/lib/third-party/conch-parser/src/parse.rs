@@ -3013,7 +3013,7 @@ mod tests {
 
     #[test]
     fn test_parameter_substitution_command_can_contain_comments() {
-        let param_subst = builder::SimpleWordKind::Subst(Box::new(
+        let param_subst = SimpleWordKind::Subst(Box::new(
             builder::ParameterSubstitutionKind::Command(builder::CommandGroup {
                 commands: vec![cmd("foo")],
                 trailing_comments: vec![Newline(Some("#comment".into()))],
@@ -3027,7 +3027,7 @@ mod tests {
 
     #[test]
     fn test_backticked_command_can_contain_comments() {
-        let cmd_subst = builder::SimpleWordKind::CommandSubst(builder::CommandGroup {
+        let cmd_subst = SimpleWordKind::CommandSubst(builder::CommandGroup {
             commands: vec![cmd("foo")],
             trailing_comments: vec![Newline(Some("#comment".into()))],
         });
