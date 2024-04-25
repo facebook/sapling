@@ -1612,9 +1612,9 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
   return folly::via(
              retryThreadPool_.get(),
              [this,
-              path,
+              path = std::move(path),
               manifestNode,
-              edenTreeID,
+              edenTreeID = std::move(edenTreeID),
               writeBatch,
               &liveImportTreeWatches = liveImportTreeWatches_] {
                folly::stop_watch<std::chrono::milliseconds> watch;
