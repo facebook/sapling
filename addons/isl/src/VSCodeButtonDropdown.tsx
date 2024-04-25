@@ -50,7 +50,7 @@ const styles = stylex.create({
       ':disabled': 'not-allowed',
     },
     width: '24px',
-    borderRadius: '0px 2px 2px 0px; /* meet with button *',
+    borderRadius: '0px 2px 2px 0px',
     outline: {
       default: 'none',
       ':focus': '1px solid var(--focus-border)',
