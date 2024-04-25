@@ -576,12 +576,12 @@ impl SourceControlServiceImpl {
         let (base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
                 let (_repo, mut base_changeset, other_changeset) =
-                    self.repo_changeset_pair(ctx, &commit, id).await?;
+                    self.repo_changeset_pair(ctx.clone(), &commit, id).await?;
                 add_mutable_renames(&mut base_changeset, &params).await?;
                 (base_changeset, Some(other_changeset))
             }
             None => {
-                let (repo, mut base_changeset) = self.repo_changeset(ctx, &commit).await?;
+                let (repo, mut base_changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
                 add_mutable_renames(&mut base_changeset, &params).await?;
                 let other_changeset = self
                     .find_commit_compare_parent(&repo, &mut base_changeset, &params)
@@ -589,6 +589,23 @@ impl SourceControlServiceImpl {
                 (base_changeset, other_changeset)
             }
         };
+
+        // Log the generation difference to drill down on clients making
+        // expensive `commit_compare` requests
+        let base_generation = base_changeset.generation().await?.value();
+        let other_generation = match other_changeset {
+            Some(ref cs) => cs.generation().await?.value(),
+            // If there isn't another commit, let's use the same generation
+            // to have a difference of 0.
+            None => base_generation,
+        };
+
+        let generation_diff = base_generation.abs_diff(other_generation);
+        let mut scuba = ctx.scuba().clone();
+        scuba.log_with_msg(
+            "Commit compare generation difference",
+            format!("{generation_diff}"),
+        );
 
         let mut last_path = None;
         let mut diff_items: BTreeSet<_> = params
