@@ -14,7 +14,7 @@ use edenapi_types::wire::WireTreeRequest;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
 use edenapi_types::EdenApiServerError;
-use edenapi_types::FileMetadata;
+use edenapi_types::FileAuxData;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
@@ -214,11 +214,12 @@ async fn fetch_child_file_metadata(
         .await?;
     Ok(TreeChildEntry::new_file_entry(
         child_key,
-        FileMetadata {
-            size: metadata.total_size,
-            content_sha1: metadata.sha1.into(),
-            content_blake3: metadata.seeded_blake3.into(),
-        },
+        FileAuxData {
+            total_size: metadata.total_size,
+            sha1: metadata.sha1.into(),
+            blake3: metadata.seeded_blake3.into(),
+        }
+        .into(),
     ))
 }
 

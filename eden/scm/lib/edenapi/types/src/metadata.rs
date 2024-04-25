@@ -31,13 +31,18 @@ pub struct DirectoryMetadata {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
     // #[id(0)] # deprecated
-    // #[id(1)] # deprecated
+    #[id(1)] //  deprecated, the field to be removed after 06/15/2024
+    #[no_default]
+    pub content_id: ContentId,
     // #[id(2)] # deprecated
     #[id(3)]
+    #[no_default] // for compatibility, to be removed after 06/15/2024
     pub size: u64,
     #[id(4)]
     pub content_sha1: Sha1,
-    // #[id(5)] # deprecated
+    #[id(5)] // deprecated, the field to be removed after 06/15/2024
+    #[no_default]
+    pub content_sha256: Sha256,
     #[id(6)]
     pub content_blake3: Blake3,
 }
@@ -58,6 +63,7 @@ impl From<FileAuxData> for FileMetadata {
             size: aux.total_size,
             content_sha1: aux.sha1,
             content_blake3: aux.blake3,
+            ..Default::default()
         }
     }
 }
