@@ -31,6 +31,7 @@ use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
 use edenapi_types::CloneData;
+use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphRequest;
 use edenapi_types::CommitGraphSegmentsEntry;
@@ -89,6 +90,7 @@ use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeRequest;
 use edenapi_types::UploadTreeResponse;
+use edenapi_types::WorkspaceData;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hg_http::http_client;
@@ -162,6 +164,7 @@ mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const DOWNLOAD_FILE: &str = "download/file";
     pub const BLAME: &str = "blame";
+    pub const CLOUD_WORKSPACE: &str = "cloud/workspace";
 }
 
 #[derive(Clone)]
@@ -1580,6 +1583,25 @@ impl EdenApi for Client {
     async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
         self.with_retry(|this| this.blame_attempt(files.clone()).boxed())
             .await
+    }
+
+    async fn cloud_workspace(
+        &self,
+        workspace: String,
+        reponame: String,
+    ) -> Result<WorkspaceData, EdenApiError> {
+        tracing::info!("Requesting workspace {} in repo {} ", workspace, reponame);
+        let url = self.build_url(paths::CLOUD_WORKSPACE)?;
+        let workspace_req = CloudWorkspaceRequest {
+            workspace: workspace.to_string(),
+            reponame: reponame.to_string(),
+        };
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&workspace_req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<WorkspaceData>(request).await
     }
 }
 

@@ -58,6 +58,7 @@ define_stats! {
     download_file_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_mutations_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_translate_id_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    cloud_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -83,6 +84,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
             use EdenApiMethod::*;
             match method {
+                CloudWorkspace => STATS::cloud_workspace_duration_ms.add_value(dur_ms),
                 Blame => STATS::blame_duration_ms.add_value(dur_ms),
                 Capabilities => STATS::capabilities_duration_ms.add_value(dur_ms),
                 Files2 => STATS::files2_duration_ms.add_value(dur_ms),

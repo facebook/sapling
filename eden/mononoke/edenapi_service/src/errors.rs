@@ -73,6 +73,8 @@ pub enum ErrorKind {
         "Invalid file content upload token in 'upload/filenodes' request for filenode: {0}, reason: {1}"
     )]
     UploadHgFilenodeRequestInvalidToken(HgId, String),
+    #[error("Workspace not found in commit cloud: {0}")]
+    CloudWorkspaceNotFound(String),
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.

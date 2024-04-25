@@ -25,7 +25,8 @@ pub struct WorkspaceVersion {
 
 mononoke_queries! {
     read GetVersion(reponame: String, workspace: String) -> (String, u64, bool, Timestamp){
-        "SELECT workspace, version, archived, timestamp FROM versions WHERE reponame={reponame} AND workspace={workspace}"
+        mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
+        sqlite("SELECT `workspace`, `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
 
     // We have to check the version again inside the transaction because in rare case

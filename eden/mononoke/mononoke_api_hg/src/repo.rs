@@ -28,6 +28,8 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
+use commit_cloud::sql::versions::WorkspaceVersion;
+use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use edenapi_types::AnyId;
@@ -1045,6 +1047,18 @@ impl HgRepoContext {
             .collect::<Result<Vec<_>, MononokeError>>()?;
 
         Ok(hg_parent_mapping)
+    }
+
+    pub async fn cloud_workspace(
+        &self,
+        workspace: &str,
+        reponame: &str,
+    ) -> Result<Vec<WorkspaceVersion>, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .commit_cloud()
+            .get_workspace(workspace, reponame)
+            .await?)
     }
 }
 

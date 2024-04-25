@@ -55,6 +55,7 @@ use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
+use edenapi_types::WorkspaceData;
 use futures::prelude::*;
 use hgstore::split_hg_file_metadata;
 use progress_model::ProgressBar;
@@ -708,6 +709,19 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(|data| PyBytes::new(py, &data))
+    }
+
+    fn cloud_workspace_py(
+        &self,
+        workspace: String,
+        reponame: String,
+        py: Python,
+    ) -> PyResult<Serde<WorkspaceData>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_workspace(workspace, reponame)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
     }
 }
 

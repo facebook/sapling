@@ -65,6 +65,7 @@ mod bookmarks;
 mod capabilities;
 mod clone;
 mod commit;
+mod commit_cloud;
 mod files;
 mod handler;
 mod history;
@@ -73,7 +74,6 @@ mod lookup;
 mod pull;
 mod repos;
 mod trees;
-
 pub(crate) use handler::EdenApiHandler;
 pub(crate) use handler::HandlerResult;
 pub(crate) use handler::PathExtractorWithRepo;
@@ -115,6 +115,7 @@ pub enum EdenApiMethod {
     DownloadFile,
     CommitMutations,
     CommitTranslateId,
+    CloudWorkspace,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -149,6 +150,7 @@ impl fmt::Display for EdenApiMethod {
             Self::DownloadFile => "download_file",
             Self::CommitMutations => "commit_mutations",
             Self::CommitTranslateId => "commit_translate_id",
+            Self::CloudWorkspace => "cloud_workspace",
         };
         write!(f, "{}", name)
     }
@@ -434,6 +436,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::CommitMutationsHandler>(route);
         Handlers::setup::<commit::CommitTranslateId>(route);
         Handlers::setup::<blame::BlameHandler>(route);
+        Handlers::setup::<commit_cloud::CommitCloudWorkspace>(route);
         route.get("/:repo/health_check").to(health_handler);
         route
             .get("/:repo/capabilities")

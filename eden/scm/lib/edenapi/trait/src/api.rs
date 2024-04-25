@@ -49,6 +49,7 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeResponse;
+use edenapi_types::WorkspaceData;
 use minibytes::Bytes;
 use types::HgId;
 use types::Key;
@@ -360,6 +361,16 @@ pub trait EdenApi: Send + Sync + 'static {
     /// Fetch metadata describing the last commit to modify each line in given file(s)
     async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
         let _ = files;
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Retrieves users workspace from commit cloud
+    async fn cloud_workspace(
+        &self,
+        workspace: String,
+        reponame: String,
+    ) -> Result<WorkspaceData, EdenApiError> {
+        let _ = (workspace, reponame);
         Err(EdenApiError::NotSupported)
     }
 }
