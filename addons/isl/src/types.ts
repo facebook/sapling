@@ -183,6 +183,11 @@ export type StableCommitMetadata = {
   description: string;
 };
 
+export type StableCommitFetchConfig = {
+  template: string;
+  parse: (data: string) => Array<StableCommitMetadata>;
+};
+
 export type StableLocationData = {
   /** Stables found automatically from recent builds */
   stables: Array<Result<StableInfo>>;

@@ -13,6 +13,7 @@ import type {
   Hash,
   ShelvedChange,
   SmartlogCommits,
+  StableCommitFetchConfig,
   StableInfo,
   SuccessorInfo,
 } from 'isl/src/types';
@@ -61,12 +62,16 @@ export const FETCH_TEMPLATE = [...Object.values(FIELDS), COMMIT_END_MARK].join('
 /**
  * Extract CommitInfos from log calls that use FETCH_TEMPLATE.
  */
-export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogCommits {
+export function parseCommitInfoOutput(
+  logger: Logger,
+  output: string,
+  stableCommitConfig = Internal.stableCommitConfig as StableCommitFetchConfig | null,
+): SmartlogCommits {
   const revisions = output.split(COMMIT_END_MARK);
   const commitInfos: Array<CommitInfo> = [];
   for (const chunk of revisions) {
     try {
-      const lines = chunk.trim().split('\n');
+      const lines = chunk.trimStart().split('\n');
       if (lines.length < Object.keys(FIELDS).length) {
         continue;
       }
@@ -106,7 +111,7 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         isFollower: JSON.parse(lines[FIELD_INDEX.isFollower]) as boolean,
         stableCommitMetadata:
           lines[FIELD_INDEX.stableCommitMetadata] != ''
-            ? Internal.stableCommitConfig?.parse(lines[FIELD_INDEX.stableCommitMetadata])
+            ? stableCommitConfig?.parse(lines[FIELD_INDEX.stableCommitMetadata])
             : undefined,
       });
     } catch (err) {
