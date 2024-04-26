@@ -8,6 +8,7 @@
 import type react from 'react';
 
 import {Column} from '../ComponentUtils';
+import {Tooltip} from '../Tooltip';
 import {layout} from '../stylexUtils';
 import {spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -17,6 +18,9 @@ import {useId} from 'react';
 import './Radio.css';
 
 const styles = stylex.create({
+  container: {
+    alignItems: 'flex-start',
+  },
   group: {
     appearance: 'none',
     border: 'none',
@@ -38,19 +42,20 @@ export function RadioGroup<T extends string>({
   onChange,
 }: {
   title?: string;
-  choices: Array<{value: T; title: react.ReactNode}>;
+  choices: Array<{value: T; title: react.ReactNode; tooltip?: string}>;
   current: T;
   onChange: (t: T) => unknown;
 }) {
   return (
-    <Column>
+    <Column xstyle={styles.container}>
       <strong>{title}</strong>
       <fieldset {...stylex.props(layout.flexCol, styles.group)}>
-        {choices.map(({value, title}) => (
+        {choices.map(({value, title, tooltip}) => (
           <Radio
             key={value}
             value={value}
             title={title}
+            tooltip={tooltip}
             checked={current === value}
             onChange={() => onChange(value)}
           />
@@ -63,16 +68,18 @@ export function RadioGroup<T extends string>({
 function Radio({
   title,
   value,
+  tooltip,
   checked,
   onChange,
 }: {
   title: react.ReactNode;
   value: string;
+  tooltip?: string;
   checked: boolean;
   onChange: () => unknown;
 }) {
   const id = useId();
-  return (
+  const inner = (
     <label htmlFor={id} {...stylex.props(layout.flexRow, styles.label)}>
       <input
         type="radio"
@@ -86,4 +93,5 @@ function Radio({
       {title}
     </label>
   );
+  return tooltip ? <Tooltip title={tooltip}>{inner}</Tooltip> : inner;
 }
