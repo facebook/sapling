@@ -21,6 +21,7 @@ use anyhow::Result;
 use arc_swap::ArcSwap;
 use configloader::hg::PinnedConfig;
 use configloader::Config;
+use edenapi::configmodel::config::ContentHash;
 use edenapi::configmodel::ConfigExt;
 use log::warn;
 use repo::repo::Repo;
@@ -114,7 +115,7 @@ impl BackingStore {
         constructors::init();
 
         let info = RepoMinimalInfo::from_repo_root(root.to_path_buf())?;
-        let mut config = configloader::hg::load(Some(&info), extra_configs)?;
+        let mut config = configloader::hg::embedded_load(Some(&info), extra_configs)?;
 
         let source = "backingstore".into();
         if !allow_retries {
@@ -136,9 +137,11 @@ impl BackingStore {
         // Apply indexed log configs, which can affect edenfs behavior.
         indexedlog::config::configure(&config)?;
 
-        let repo = Repo::load_with_config(root, config.clone())?;
+        let repo = Repo::load_with_config(root, config)?;
         let filestore = repo.file_store()?;
         let treestore = repo.tree_store()?;
+
+        let config = repo.config().clone();
 
         Ok(Inner {
             treestore,
@@ -248,16 +251,19 @@ impl BackingStore {
         self.inner.load().flush();
     }
 
-    // Fully reload the stores if a touch file has a newer mtime than last time
-    // we checked, or the touch file exists and didn't exist last time. The main
-    // purpose of reloading is to allow a running EdenFS to pick up Sapling
-    // config changes that affect fetching/caching.
+    // Fully reload the stores if:
+    //   - a touch file has a newer mtime than last time we checked, or
+    //   - the touch file exists and didn't exist last time, or
+    //   - sapling configs appear changed on disk
     //
-    // We perform the check at most once every 5 seconds. If the touch file
-    // hasn't changed, we still swap out the Inner object solely to reset the
-    // state we use to track the touch file (i.e. we keep all the store objects
-    // the same). Any errors reloading are ignored and the existing stores are
-    // used.
+    // The main purpose of reloading is to allow a running EdenFS to pick up
+    // Sapling config changes that affect fetching/caching.
+    //
+    // We perform the check at most once every `reload_check_interval=5`
+    // seconds. If we aren't reloading, we still swap out the Inner object
+    // solely to reset the state we use to track the touch file (i.e. we keep
+    // all the store objects the same). Any errors reloading are ignored and the
+    // existing stores are used.
     //
     // We return an arc_swap::Guard so we only call inner.load() once normally.
     #[instrument(level = "trace", skip(self))]
@@ -276,19 +282,38 @@ impl BackingStore {
             return inner;
         }
 
-        let new_mtime = touch_file_mtime();
         let since_last_reload = inner.last_reload.elapsed();
 
-        let needs_reload = (!inner.reload_interval.is_zero()
-            && since_last_reload >= inner.reload_interval)
-            || new_mtime
-                .as_ref()
-                .is_some_and(|new_mtime| match &inner.touch_file_mtime {
-                    Some(old_mtime) => new_mtime > old_mtime,
-                    None => true,
-                });
+        let mut needs_reload = false;
 
-        tracing::debug!(last_reload=?since_last_reload, old_mtime=?inner.touch_file_mtime, ?new_mtime, "checking if we need to reload");
+        // If it has been at least `reload_interval`, check if sapling config has changed.
+        if !inner.reload_interval.is_zero() && since_last_reload >= inner.reload_interval {
+            if let Ok(info) = RepoMinimalInfo::from_repo_root(inner.repo.path().to_owned()) {
+                if let Ok(config) =
+                    configloader::hg::embedded_load(Some(&info), &inner.extra_configs)
+                {
+                    if let Some(reason) =
+                        diff_config_files(&inner.repo.config().files(), &config.files())
+                    {
+                        tracing::info!("sapling config files differ: {reason}");
+                        needs_reload = true;
+                    } else {
+                        tracing::debug!("sapling config files haven't changed");
+                    }
+                }
+            }
+        };
+
+        let new_mtime = touch_file_mtime();
+
+        tracing::debug!(last_reload=?since_last_reload, old_mtime=?inner.touch_file_mtime, ?new_mtime, "checking touch file");
+
+        needs_reload |= new_mtime
+            .as_ref()
+            .is_some_and(|new_mtime| match &inner.touch_file_mtime {
+                Some(old_mtime) => new_mtime > old_mtime,
+                None => true,
+            });
 
         let new_inner = if needs_reload {
             tracing::info!("reloading backing store");
@@ -322,6 +347,35 @@ impl BackingStore {
 
         self.inner.load()
     }
+}
+
+fn diff_config_files(
+    old: &[(PathBuf, Option<ContentHash>)],
+    new: &[(PathBuf, Option<ContentHash>)],
+) -> Option<String> {
+    let mut new: HashMap<PathBuf, Option<ContentHash>> = new.iter().cloned().collect();
+
+    for (old_path, old_hash) in old.iter() {
+        if let Some(new_hash) = new.remove(old_path) {
+            let mismatch = match (old_hash, new_hash) {
+                (None, None) => false,
+                (None, Some(_)) => true,
+                (Some(_), None) => true,
+                (Some(old_hash), Some(ref new_hash)) => old_hash != new_hash,
+            };
+
+            if mismatch {
+                return Some(format!("file {} metadata mismatch", old_path.display()));
+            }
+        } else {
+            return Some(format!("file {} was deleted", old_path.display()));
+        }
+    }
+
+    // Anything left is a new file we didn't have last time.
+    new.keys()
+        .next()
+        .map(|added| format!("file {} was added", added.display()))
 }
 
 impl Inner {
