@@ -12,10 +12,10 @@ import {Row} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
 import {VSCodeCheckbox} from '../../VSCodeCheckbox';
 import {Dropdown} from '../../components/Dropdown';
+import {RadioGroup} from '../../components/Radio';
 import {t, T} from '../../i18n';
 import {FileStackEditorRow} from './FileStackEditor';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
-import {VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom} from 'jotai';
 import {useState} from 'react';
 import {nullthrows} from 'shared/utils';
@@ -27,12 +27,6 @@ export default function FileStackEditPanel() {
   const [mode, setMode] = useAtom(editModeAtom);
   const [textEdit, setTextEdit] = useState(false);
   const stackEdit = useStackEditState();
-
-  // VSCode toolkit does not provide a way to proper type `e`.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleModeChange = (e: any) => {
-    setMode(e.target.value);
-  };
 
   // File list dropdown.
   const commitStack = stackEdit.commitStack.maybeBuildFileStacks();
@@ -124,17 +118,15 @@ export default function FileStackEditPanel() {
         {editorRow}
       </div>
       <Row>
-        <VSCodeRadioGroup value={mode} onChange={handleModeChange}>
-          <VSCodeRadio accessKey="u" value="unified-diff">
-            <T>Unified diff</T>
-          </VSCodeRadio>
-          <VSCodeRadio accessKey="s" value="side-by-side-diff">
-            <T>Side-by-side diff</T>
-          </VSCodeRadio>
-          <VSCodeRadio value="unified-stack">
-            <T>Unified stack (advanced)</T>
-          </VSCodeRadio>
-        </VSCodeRadioGroup>
+        <RadioGroup
+          choices={[
+            {value: 'unified-diff', title: t('Unified diff')},
+            {value: 'side-by-side-diff', title: t('Side by side diff')},
+            {value: 'unified-stack', title: t('Unified stack (advanced)')},
+          ]}
+          current={mode}
+          onChange={setMode}
+        />
         <VSCodeCheckbox
           accessKey="t"
           checked={textEdit || mode === 'side-by-side-diff'}
