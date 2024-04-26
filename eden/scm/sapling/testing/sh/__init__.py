@@ -232,8 +232,10 @@ Tilde:
     >>> t('HOME=x; echo ~ a~ ~a ~/a')
     'x a~ ~a x/a\n'
 
-Remove prefix:
+Remove prefixes:
 
+    >>> t('A=abab; echo ${A#*a}')
+    'bab\n'
     >>> t('A=abab; echo ${A##*a}')
     'b\n'
 

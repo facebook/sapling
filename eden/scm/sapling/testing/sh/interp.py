@@ -466,15 +466,23 @@ def interpmath(v, env: Env, func) -> InterpResult:
     return InterpResult(out=out)
 
 
-def interpremovelargestprefix(v, env: Env) -> InterpResult:
+def _matchprefixes(v, env: Env, smallest: bool) -> InterpResult:
     # v: RemoveLargestPrefix(P, Option<W>)
     value = interp(v[0], env).out
     globpat = interp(v[1], env).out or ""
-    repat = re.escape(globpat).replace(r"\*", ".*")
+    repat = re.escape(globpat).replace(r"\*", ".*" + ("?" if smallest else ""))
     matched = re.match(repat, value)
     if matched:
         value = value[matched.end() :]
     return InterpResult(out=value)
+
+
+def interpremovesmallestprefix(v, env: Env) -> InterpResult:
+    return _matchprefixes(v, env, True)
+
+
+def interpremovelargestprefix(v, env: Env) -> InterpResult:
+    return _matchprefixes(v, env, False)
 
 
 # interp based on tree node type
@@ -544,7 +552,7 @@ INTERP_TYPE_TABLE = {
     "Alternative": None,
     "RemoveSmallestSuffix": None,
     "RemoveLargestSuffix": None,
-    "RemoveSmallestPrefix": None,
+    "RemoveSmallestPrefix": interpremovesmallestprefix,
     "RemoveLargestPrefix": interpremovelargestprefix,
     # Arithmetic
     "VarArithmetic": interpvar,
