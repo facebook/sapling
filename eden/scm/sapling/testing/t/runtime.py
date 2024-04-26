@@ -17,7 +17,7 @@ import textwrap
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from .. import sh
 from ..sh.bufio import BufIO
@@ -89,12 +89,13 @@ def checkoutput(
     endloc: int,
     indent: int,
     filename: str,
+    fallback_line_match: Optional[Callable[[str, str], bool]] = None,
 ):
     """compare output (a) with reference (b)
     report mismatch via globals()['mismatchcb']
     """
-    hasfeature = sys._getframe(1).f_globals.get("hasfeature")
-    matcher = MultiLineMatcher(b, hasfeature)
+    hasfeature = sys._getframe(2).f_globals.get("hasfeature")
+    matcher = MultiLineMatcher(b, hasfeature, fallback_line_match)
     # AssertionError usually means the test is already broken.
     # Report it as a mismatch to fail the test. Note: we don't raise here
     # to provide better error messages (ex. show line number of the assertion)
@@ -112,7 +113,7 @@ def checkoutput(
             indent=indent,
             filename=filename,
         )
-        cb = sys._getframe(1).f_globals.get("mismatchcb")
+        cb = sys._getframe(2).f_globals.get("mismatchcb")
         if cb:
             # callback "mismatchcb" is set - run by the testing.t.runtest()
             # report via callback, which handles rendering and autofix.
@@ -253,6 +254,7 @@ class TestTmp:
         self._atexit = []
         self._updateglobalstate = updateglobalstate
         self._origpathenv = os.getenv("PATH") or os.defpath
+        self._fallbackmatch = None
         self._setup(tmpprefix)
         self._lastout = ""
         self._testcase = testcase
@@ -470,12 +472,34 @@ class TestTmp:
                 (re.escape("\\\\?\\"), ""),
             ]
 
-    @property
-    def checkoutput(self):
-        return checkoutput
+    def checkoutput(
+        self,
+        a: str,
+        b: str,
+        src: str,
+        srcloc: int,
+        outloc: int,
+        endloc: int,
+        indent: int,
+        filename: str,
+    ):
+        return checkoutput(
+            a,
+            b,
+            src,
+            srcloc,
+            outloc,
+            endloc,
+            indent,
+            filename,
+            fallback_line_match=self._fallbackmatch,
+        )
 
     def require(self, feature: str) -> bool:
         return require(feature)
+
+    def registerfallbackmatch(self, fallback: Callable[[str, str], bool]):
+        self._fallbackmatch = fallback
 
     def hasfeature(self, feature: str) -> bool:
         return hasfeature(feature)
