@@ -17,12 +17,12 @@ import {Badge} from './components/Badge';
 import {Button} from './components/Button';
 import {ButtonDropdown} from './components/ButtonDropdown';
 import {Divider} from './components/Divider';
+import {RadioGroup} from './components/Radio';
 import {T} from './i18n';
 import {lazyAtom, writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
-import {VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
@@ -150,32 +150,18 @@ export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divid
 
   return (
     <DropdownField title={<T>Change active repository</T>}>
-      <VSCodeRadioGroup
-        orientation="vertical"
-        value={currentCwd}
-        onChange={e => {
-          const newCwd = (e.target as HTMLOptionElement).value as string;
+      <RadioGroup
+        choices={options.map(({id, label}) => ({title: label, value: id, tooltip: id}))}
+        current={currentCwd}
+        onChange={newCwd => {
           if (newCwd === currentCwd) {
             // nothing to change
             return;
           }
           changeCwd(newCwd);
           dismiss();
-        }}>
-        {options.map(({id: fullCwd, label}) => {
-          return (
-            <VSCodeRadio
-              key={fullCwd}
-              value={fullCwd}
-              checked={fullCwd === currentCwd}
-              tabIndex={0}>
-              <Tooltip title={fullCwd} placement="right">
-                {label}
-              </Tooltip>
-            </VSCodeRadio>
-          );
-        })}
-      </VSCodeRadioGroup>
+        }}
+      />
       {divider && <Divider />}
     </DropdownField>
   );
