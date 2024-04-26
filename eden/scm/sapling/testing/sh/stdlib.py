@@ -10,6 +10,7 @@ For .t test specific commands such as "hg", look at t/runtime.py
 instead.
 """
 
+import re
 import sys
 import tarfile
 from functools import wraps
@@ -122,8 +123,24 @@ def echo(args: List[str]) -> str:
 
 @command
 def printf(args: List[str]):
-    fmt = _unescapechars(args[0])
-    needed = fmt.count("%") - fmt.count("%%") * 2
+    fmt = list(_unescapechars(args[0]))
+    unescapeposs = []
+
+    # special treatment for %b
+    needed = 0
+    i = 0
+    fmtlen = len(fmt)
+    while i + 1 < fmtlen:
+        if fmt[i] == "%":
+            if fmt[i + 1] != "%":
+                if fmt[i + 1] == "b":
+                    unescapeposs.append(needed)
+                    fmt[i + 1] = "s"
+                needed += 1
+            i += 1
+        i += 1
+    fmt = "".join(fmt)
+
     i = 1
     out = []
     if not needed:
@@ -134,6 +151,8 @@ def printf(args: List[str]):
             if len(fmtargs) < needed:
                 fmtargs += ["" * (needed - len(args))]
             i += needed
+            for u in unescapeposs:
+                fmtargs[u] = _unescapechars(fmtargs[u])
             out.append(fmt % tuple(fmtargs))
     return "".join(out)
 

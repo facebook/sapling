@@ -340,19 +340,10 @@ printf
     'foo\\\\nbar (no-eol)\n'
     >>> t(r"printf '%s' 'foo\nbar'")
     'foo\\nbar (no-eol)\n'
-
-FIXME: %b should be supported
-
-    >>> try:
-    ...     t(r"printf '%b' 'foo\nbar'")
-    ... except ValueError as e:
-    ...     print(str(e))
-    unsupported format character 'b' (0x62) at index 1
-    >>> try:
-    ...     t(r"printf '%b' 'foo\\nbar'")
-    ... except ValueError as e:
-    ...     print(str(e))
-    unsupported format character 'b' (0x62) at index 1
+    >>> t(r"printf '%b %%b -> %b\n' 'foo\nbar' 1 2 'baz\nxyz' 3")
+    'foo\nbar %b -> 1\n2 %b -> baz\nxyz\n3 %b -> \n'
+    >>> t(r"printf '%b' 'foo\\nbar'")
+    'foo\\\nbar (no-eol)\n'
 
 echo
 
