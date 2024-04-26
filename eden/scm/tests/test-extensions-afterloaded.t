@@ -31,8 +31,8 @@ Test the extensions.afterloaded() function
   $ hg commit -m 'add file'
 
   $ echo '[extensions]' >> .hg/hgrc
-  $ echo "foo = $basepath/foo.py" >> .hg/hgrc
-  $ echo "bar = $basepath/bar.py" >> .hg/hgrc
+  $ printf "%s\n" "foo = $basepath/foo.py" >> .hg/hgrc
+  $ printf "%s\n" "bar = $basepath/bar.py" >> .hg/hgrc
   $ hg log -r. -T'{node}\n'
   foo.uisetup
   foo: bar loaded: True
@@ -49,8 +49,8 @@ Test afterloaded with the opposite extension load order
   $ hg commit -m 'add file'
 
   $ echo '[extensions]' >> .hg/hgrc
-  $ echo "bar = $basepath/bar.py" >> .hg/hgrc
-  $ echo "foo = $basepath/foo.py" >> .hg/hgrc
+  $ printf "%s\n" "bar = $basepath/bar.py" >> .hg/hgrc
+  $ printf "%s\n" "foo = $basepath/foo.py" >> .hg/hgrc
   $ hg log -r. -T'{node}\n'
   bar.uisetup
   foo.uisetup
@@ -68,7 +68,7 @@ loaded
   $ hg commit -m 'add file'
 
   $ echo '[extensions]' >> .hg/hgrc
-  $ echo "foo = $basepath/foo.py" >> .hg/hgrc
+  $ printf "%s\n" "foo = $basepath/foo.py" >> .hg/hgrc
   $ hg log -r. -T'{node}\n'
   foo.uisetup
   foo: bar loaded: False

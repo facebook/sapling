@@ -269,7 +269,7 @@
   $ hg log -l1 -Tblah/blah
   blah/blah (no-eol)
 
-  $ echo 'changeset = "{rev}\n"' > map-simple
+  $ printf "%s" 'changeset = "{rev}\n"' > map-simple
   $ hg log -l1 -T./map-simple
   8
 
@@ -301,7 +301,7 @@
 # Test template map inheritance
 
   $ echo '__base__ = map-cmdline.default' > map-simple
-  $ echo 'cset = "changeset: ***{rev}***\n"' >> map-simple
+  $ printf "%s" 'cset = "changeset: ***{rev}***\n"' >> map-simple
   $ hg log -l1 -T./map-simple
   changeset: ***8***
   user:        test

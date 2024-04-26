@@ -118,7 +118,7 @@
   > EOF
 
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo "printrevset=$TESTTMP/printrevset.py" >> $HGRCPATH
+  $ printf "%s\n" "printrevset=$TESTTMP/printrevset.py" >> $HGRCPATH
 
   $ hg init repo
   $ cd repo

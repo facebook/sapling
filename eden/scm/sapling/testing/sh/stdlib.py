@@ -98,6 +98,15 @@ def wrap(commandfunc) -> Callable[[Env], InterpResult]:
     return wrapper
 
 
+def _unescapechars(s: str) -> str:
+    return (
+        s.replace(r"\n", "\n")
+        .replace(r"\0", "\0")
+        .replace(r"\r", "\r")
+        .replace(r"\t", "\t")
+    )
+
+
 @command
 def echo(args: List[str]) -> str:
     eol = "\n"
@@ -108,18 +117,12 @@ def echo(args: List[str]) -> str:
                 eol = ""
             else:
                 raise NotImplementedError(f"echo {flags}")
-    return " ".join(args) + eol
+    return " ".join([_unescapechars(arg) for arg in args]) + eol
 
 
 @command
 def printf(args: List[str]):
-    fmt = (
-        args[0]
-        .replace(r"\n", "\n")
-        .replace(r"\0", "\0")
-        .replace(r"\r", "\r")
-        .replace(r"\t", "\t")
-    )
+    fmt = _unescapechars(args[0])
     needed = fmt.count("%") - fmt.count("%%") * 2
     i = 1
     out = []

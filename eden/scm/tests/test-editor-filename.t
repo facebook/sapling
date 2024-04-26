@@ -12,7 +12,7 @@ Test temp file used with an editor has the expected suffix.
 Create an editor that writes its arguments to stdout and set it to $HGEDITOR.
 
   $ cat > editor.sh << EOF
-  > echo "\$@"
+  > printf "%s\n" "\$@"
   > exit 1
   > EOF
   $ hg add editor.sh

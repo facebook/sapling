@@ -356,15 +356,10 @@ FIXME: %b should be supported
 
 echo
 
-FIXME: on actual bash this returns 'foo\\\nbar\n'
-
     >>> t(r"echo 'foo\\nbar'")
-    'foo\\\\nbar\n'
-
-FIXME: on actual bash this returns 'foo\nbar\n'
-
+    'foo\\\nbar\n'
     >>> t(r"echo 'foo\nbar'")
-    'foo\\nbar\n'
+    'foo\nbar\n'
 
 Commands on OS filesystem:
 
