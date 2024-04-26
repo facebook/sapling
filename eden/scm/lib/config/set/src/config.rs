@@ -64,6 +64,11 @@ pub struct Options {
     source: Text,
     filters: Vec<Rc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
     pin: Option<bool>,
+
+    /// Minimize cases where we regenerate the dynamic config synchronously.
+    /// This is useful for programs that embed us (like EdenFS) to avoid dynamic config
+    /// flapping due to version string mismatch.
+    pub minimize_dynamic_gen: bool,
 }
 
 impl Config for ConfigSet {

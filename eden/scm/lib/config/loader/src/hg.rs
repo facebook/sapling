@@ -315,8 +315,8 @@ impl ConfigSetHgExt for ConfigSet {
 
         let mut errors = vec![];
 
-        // Don't pin any configs we load. We are doing the "default" config loading should
-        // be cleared if we load() again (via clear_unpinned());
+        // Don't pin any configs we load. We are doing the "default" config loading, which
+        // should be cleared if we load() again (via clear_unpinned());
         let opts = Options::new().pin(false);
 
         // The config priority from low to high is:
@@ -428,8 +428,15 @@ impl ConfigSetHgExt for ConfigSet {
             _ => false,
         };
 
-        // Synchronously generate the new config if it's out of date with our version
-        if version != Some(this_version) || vpnless_changed {
+        let needs_sync_generation =
+            // No current dynamic config - need to generate.
+            version.is_none()
+            // VPNLess changed - need to regenerate.
+            || vpnless_changed
+            // Version mismatch between us and already generated - optionally generate.
+            || !opts.minimize_dynamic_gen && version != Some(this_version);
+
+        if needs_sync_generation {
             tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, vpnless_changed, "regenerating dynamic config (version mismatch)");
             let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
