@@ -98,7 +98,7 @@ export function Checkbox({
    * Usually represents partial selection of children. */
   indeterminate?: boolean;
   disabled?: boolean;
-  onChange: (checked: boolean) => unknown;
+  onChange?: (checked: boolean) => unknown;
   xstyle?: stylex.StyleXStyles;
 } & Omit<ReactProps<HTMLInputElement>, 'onChange'>) {
   const id = useId();

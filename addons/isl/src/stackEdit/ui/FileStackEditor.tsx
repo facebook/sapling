@@ -12,7 +12,7 @@ import type {Block, LineIdx} from 'shared/diff';
 
 import {CommitTitle} from '../../CommitTitle';
 import {Row, ScrollX, ScrollY} from '../../ComponentUtils';
-import {VSCodeCheckbox} from '../../VSCodeCheckbox';
+import {Checkbox} from '../../components/Checkbox';
 import {FlattenLine} from '../../linelog';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {TextEditable} from './TextEditable';
@@ -394,7 +394,7 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
             onPointerMove={e => handlePointerMove(i, rev, e)}
             onPointerUp={e => handlePointerUp(i, rev, e)}
             onDragStart={e => e.preventDefault()}>
-            <VSCodeCheckbox
+            <Checkbox
               tabIndex={-1}
               disabled={rev === 0}
               checked={checked}

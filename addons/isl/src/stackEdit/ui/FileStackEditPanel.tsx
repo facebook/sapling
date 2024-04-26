@@ -10,7 +10,7 @@ import type {Mode} from './FileStackEditorLines';
 
 import {Row} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
-import {VSCodeCheckbox} from '../../VSCodeCheckbox';
+import {Checkbox} from '../../components/Checkbox';
 import {Dropdown} from '../../components/Dropdown';
 import {RadioGroup} from '../../components/Radio';
 import {t, T} from '../../i18n';
@@ -127,7 +127,7 @@ export default function FileStackEditPanel() {
           current={mode}
           onChange={setMode}
         />
-        <VSCodeCheckbox
+        <Checkbox
           accessKey="t"
           checked={textEdit || mode === 'side-by-side-diff'}
           disabled={mode === 'side-by-side-diff'}
@@ -135,7 +135,7 @@ export default function FileStackEditPanel() {
             setTextEdit(c => !c);
           }}>
           <T>Edit text</T>
-        </VSCodeCheckbox>
+        </Checkbox>
       </Row>
     </div>
   );
