@@ -34,6 +34,7 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {Badge} from '../components/Badge';
 import {Divider} from '../components/Divider';
+import {RadioGroup} from '../components/Radio';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -76,7 +77,7 @@ import {
 } from './CommitMessageFields';
 import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
-import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect} from 'react';
@@ -226,16 +227,15 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               'In Commit mode, you can edit the blank commit message for a new commit. \n\n' +
                 'In Amend mode, you can view and edit the commit message for the current head commit.',
             )}>
-            <VSCodeRadioGroup
-              value={mode}
-              onChange={e => setMode((e.target as HTMLOptionElement).value as CommitInfoMode)}>
-              <VSCodeRadio value="commit" checked={mode === 'commit'} tabIndex={0}>
-                <T>Commit</T>
-              </VSCodeRadio>
-              <VSCodeRadio value="amend" checked={mode === 'amend'} tabIndex={0}>
-                <T>Amend</T>
-              </VSCodeRadio>
-            </VSCodeRadioGroup>
+            <RadioGroup
+              horizontal
+              choices={[
+                {title: t('Commit'), value: 'commit'},
+                {title: t('Amend'), value: 'amend'},
+              ]}
+              current={mode}
+              onChange={setMode}
+            />
           </Tooltip>
         </div>
       )}

@@ -33,6 +33,10 @@ const styles = stylex.create({
   label: {
     cursor: 'pointer',
   },
+  horizontal: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
 });
 
 export function RadioGroup<T extends string>({
@@ -40,27 +44,35 @@ export function RadioGroup<T extends string>({
   choices,
   current,
   onChange,
+  horizontal,
 }: {
   title?: string;
   choices: Array<{value: T; title: react.ReactNode; tooltip?: string}>;
   current: T;
   onChange: (t: T) => unknown;
+  horizontal?: boolean;
 }) {
-  return (
+  const inner = (
+    <fieldset
+      {...stylex.props(layout.flexCol, styles.group, horizontal === true && styles.horizontal)}>
+      {choices.map(({value, title, tooltip}) => (
+        <Radio
+          key={value}
+          value={value}
+          title={title}
+          tooltip={tooltip}
+          checked={current === value}
+          onChange={() => onChange(value)}
+        />
+      ))}
+    </fieldset>
+  );
+  return title == null ? (
+    inner
+  ) : (
     <Column xstyle={styles.container}>
       <strong>{title}</strong>
-      <fieldset {...stylex.props(layout.flexCol, styles.group)}>
-        {choices.map(({value, title, tooltip}) => (
-          <Radio
-            key={value}
-            value={value}
-            title={title}
-            tooltip={tooltip}
-            checked={current === value}
-            onChange={() => onChange(value)}
-          />
-        ))}
-      </fieldset>
+      {inner}
     </Column>
   );
 }
