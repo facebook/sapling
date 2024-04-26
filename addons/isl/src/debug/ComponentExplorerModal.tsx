@@ -204,6 +204,9 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
           <Checkbox checked={checkbox2} onChange={setCheckbox2}>
             Checked
           </Checkbox>
+          <Checkbox checked={false} indeterminate onChange={console.log}>
+            Indeterminate
+          </Checkbox>
           <RadioGroup
             choices={[
               {title: 'Radio', value: 'radio'},

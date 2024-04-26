@@ -11,7 +11,7 @@ import type react from 'react';
 import {layout} from '../stylexUtils';
 import {spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {useId} from 'react';
+import {useEffect, useId, useRef} from 'react';
 
 const cssVarFocusWithinBorder = '--checkbox-focus-within-color';
 const styles = stylex.create({
@@ -63,22 +63,48 @@ function Checkmark({checked}: {checked: boolean}) {
   );
 }
 
+function Indeterminate() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      fill={'currentColor'}
+      {...stylex.props(styles.checkmark)}>
+      <rect x="4" y="4" height="8" width="8" rx="2" />
+    </svg>
+  );
+}
+
 export function Checkbox({
   children,
   checked,
   onChange,
+  indeterminate,
   xstyle,
   ...rest
 }: {
   children: react.ReactNode;
   checked: boolean;
+  /** "indeterminate" state is neither true nor false, and renders as a box instead of a checkmark.
+   * Usually represents partial selection of children. */
+  indeterminate?: boolean;
   onChange: (checked: boolean) => unknown;
   xstyle?: stylex.StyleXStyles;
 } & Omit<ReactProps<HTMLInputElement>, 'onChange'>) {
   const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Indeterminate cannot be set in HTML, use an effect to synchronize
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.indeterminate = indeterminate === true;
+    }
+  }, [indeterminate]);
   return (
     <label htmlFor={id} {...stylex.props(layout.flexRow, styles.label, xstyle)}>
       <input
+        ref={inputRef}
         type="checkbox"
         id={id}
         checked={checked}
@@ -86,7 +112,7 @@ export function Checkbox({
         {...stylex.props(styles.input)}
         {...rest}
       />
-      <Checkmark checked={checked} />
+      {indeterminate === true ? <Indeterminate /> : <Checkmark checked={checked} />}
       {children}
     </label>
   );
