@@ -13,4 +13,5 @@ pub mod local_bookmarks;
 pub mod ops;
 pub mod remote_bookmarks;
 pub mod snapshots;
+pub(crate) mod utils;
 pub mod versions;
