@@ -18,6 +18,7 @@ use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 
+use configmodel::config::ContentHash;
 use configmodel::Config;
 pub use configmodel::ValueLocation;
 pub use configmodel::ValueSource;
@@ -47,8 +48,9 @@ pub struct ConfigSet {
     // the requested config.
     secondary: Option<Arc<dyn Config>>,
 
-    // Canonicalized files that were loaded, including files with errors
-    files: Vec<PathBuf>,
+    // Canonicalized files that were loaded, including files with errors.
+    // Value is a hash of file contents, if file was readable.
+    files: Vec<(PathBuf, Option<ContentHash>)>,
 }
 
 /// Internal representation of a config section.
@@ -175,8 +177,8 @@ impl Config for ConfigSet {
     }
 
     /// Get on-disk files loaded for this `Config`.
-    fn files(&self) -> Cow<[PathBuf]> {
-        let self_files: Cow<[PathBuf]> = Cow::Borrowed(&self.files);
+    fn files(&self) -> Cow<[(PathBuf, Option<ContentHash>)]> {
+        let self_files: Cow<[(PathBuf, Option<ContentHash>)]> = Cow::Borrowed(&self.files);
         if let Some(secondary) = &self.secondary {
             let secondary_files = secondary.files();
             // file load order: secondary first
@@ -415,15 +417,22 @@ impl ConfigSet {
                     return;
                 }
 
-                self.files.push(path.to_path_buf());
-
                 match fs::read_to_string(path) {
                     Ok(mut text) => {
+                        self.files.push((
+                            path.to_path_buf(),
+                            Some(ContentHash::from_contents(text.as_bytes())),
+                        ));
+
                         text.push('\n');
                         let text = Text::from(text);
                         self.load_file_content(path, text, opts, visited, errors);
                     }
-                    Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
+                    Err(error) => {
+                        self.files.push((path.to_path_buf(), None));
+
+                        errors.push(Error::Io(path.to_path_buf(), error))
+                    }
                 }
             }
             Err(err) => {
@@ -446,7 +455,7 @@ impl ConfigSet {
                 // record that we've loaded the repo's config file even if the config file
                 // doesn't exist.
                 if path.is_absolute() {
-                    self.files.push(path.to_path_buf());
+                    self.files.push((path.to_path_buf(), None));
                 }
             }
         }

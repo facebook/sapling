@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use configmodel::config::ContentHash;
 use configmodel::Config;
 use configmodel::Text;
 use configmodel::ValueSource;
@@ -96,15 +97,15 @@ impl Config for UnionConfig {
         result.into()
     }
 
-    fn files(&self) -> Cow<[PathBuf]> {
-        let mut result: IndexSet<PathBuf> = Default::default();
+    fn files(&self) -> Cow<[(PathBuf, Option<ContentHash>)]> {
+        let mut result: IndexSet<(PathBuf, Option<ContentHash>)> = Default::default();
         // normal order: match order loading configs
         for config in self.configs.iter() {
             for path in config.files().iter().cloned() {
                 result.insert(path);
             }
         }
-        let result: Vec<PathBuf> = result.into_iter().collect();
+        let result: Vec<_> = result.into_iter().collect();
         result.into()
     }
 

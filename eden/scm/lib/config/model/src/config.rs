@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::hash::Hasher;
 use std::ops::Range;
 use std::path::PathBuf;
 use std::str;
@@ -17,6 +18,9 @@ use minibytes::Text;
 use crate::convert::FromConfigValue;
 use crate::Error;
 use crate::Result;
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+pub struct ContentHash(u64);
 
 /// Readable config. This can be used as a trait object.
 #[auto_impl::auto_impl(&, Box, Arc)]
@@ -57,7 +61,7 @@ pub trait Config: Send + Sync {
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]>;
 
     /// Get on-disk files loaded for this `Config`.
-    fn files(&self) -> Cow<[PathBuf]> {
+    fn files(&self) -> Cow<[(PathBuf, Option<ContentHash>)]> {
         Cow::Borrowed(&[])
     }
 
@@ -208,6 +212,14 @@ impl Config for BTreeMap<String, String> {
 
     fn layer_name(&self) -> Text {
         Text::from_static("BTreeMap")
+    }
+}
+
+impl ContentHash {
+    pub fn from_contents(contents: &[u8]) -> Self {
+        let mut xx = twox_hash::Xxh3Hash64::default();
+        xx.write(contents);
+        Self(xx.finish())
     }
 }
 

@@ -158,7 +158,7 @@ py_class!(pub class config |py| {
     }
 
     def files(&self) -> PyResult<Vec<PyPathBuf>> {
-        self.cfg(py).borrow().files().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
+        self.cfg(py).borrow().files().iter().map(|(p, _)| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
 });
 
