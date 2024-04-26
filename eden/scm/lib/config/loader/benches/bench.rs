@@ -33,7 +33,7 @@ fn main() {
     bench("load system and user", || {
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.load(None).unwrap();
+            cfg.load(None, Default::default()).unwrap();
         })
     });
 
@@ -45,7 +45,7 @@ fn main() {
         let repo = RepoMinimalInfo::from_repo_root(path.to_path_buf()).unwrap();
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.load(Some(&repo)).unwrap();
+            cfg.load(Some(&repo), Default::default()).unwrap();
         })
     });
 }

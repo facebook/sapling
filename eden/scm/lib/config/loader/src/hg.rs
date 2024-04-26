@@ -56,7 +56,7 @@ pub trait OptionsHgExt {
 }
 
 pub trait ConfigSetHgExt {
-    fn load(&mut self, info: Option<&RepoMinimalInfo>) -> Result<(), Errors>;
+    fn load(&mut self, info: Option<&RepoMinimalInfo>, opts: Options) -> Result<(), Errors>;
 
     /// Load system config files if config environment variable is not set.
     /// Return errors parsing files.
@@ -98,6 +98,22 @@ pub trait ConfigSetHgExt {
 /// `extra_values` contains config overrides (i.e. "--config" CLI values).
 /// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
 pub fn load(info: Option<&RepoMinimalInfo>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
+    load_with_options(info, pinned, Options::default())
+}
+
+/// Like `load`, but intended to be used by applications that embed Sapling libraries.
+/// In particular, defer to the system "sl" binary to refresh dynamic config.
+pub fn embedded_load(info: Option<&RepoMinimalInfo>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
+    let mut opts: Options = Default::default();
+    opts.minimize_dynamic_gen = true;
+    load_with_options(info, pinned, opts)
+}
+
+fn load_with_options(
+    info: Option<&RepoMinimalInfo>,
+    pinned: &[PinnedConfig],
+    opts: Options,
+) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new();
     let mut errors = Vec::new();
 
@@ -108,7 +124,7 @@ pub fn load(info: Option<&RepoMinimalInfo>, pinned: &[PinnedConfig]) -> Result<C
     // precedence over "regular" configs.
     set_pinned_with_errors(&mut cfg, pinned, &mut errors);
 
-    match cfg.load(info) {
+    match cfg.load(info, opts) {
         Ok(_) => {
             if !errors.is_empty() {
                 return Err(Errors(errors).into());
@@ -303,7 +319,7 @@ fn set_override(config: &mut ConfigSet, raw: &Text, opts: Options) -> crate::Res
 
 impl ConfigSetHgExt for ConfigSet {
     /// Load system, user config files.
-    fn load(&mut self, info: Option<&RepoMinimalInfo>) -> Result<(), Errors> {
+    fn load(&mut self, info: Option<&RepoMinimalInfo>, opts: Options) -> Result<(), Errors> {
         tracing::info!(repo_path=?info.map(|i| &i.path), "loading config");
 
         self.clear_unpinned();
@@ -317,7 +333,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Don't pin any configs we load. We are doing the "default" config loading, which
         // should be cleared if we load() again (via clear_unpinned());
-        let opts = Options::new().pin(false);
+        let opts = opts.pin(false);
 
         // The config priority from low to high is:
         //
@@ -1270,7 +1286,7 @@ mod tests {
         env.set("TESTTMP", Some("1"));
 
         let mut cfg = ConfigSet::new();
-        cfg.load(None).unwrap();
+        cfg.load(None, Default::default()).unwrap();
         assert_eq!(cfg.get("treestate", "repackfactor").unwrap(), "3");
     }
 

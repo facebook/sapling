@@ -143,7 +143,7 @@ py_class!(pub class config |py| {
     def load(repopath: Option<PyPathBuf>) -> PyResult<Self> {
         let info = path_to_info(py, repopath)?;
         let mut cfg = ConfigSet::new();
-        cfg.load(info.as_ref()).map_pyerr(py)?;
+        cfg.load(info.as_ref(), Default::default()).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(cfg))
     }
 
@@ -153,7 +153,7 @@ py_class!(pub class config |py| {
     ) -> PyResult<PyNone> {
         let info = path_to_info(py, repopath)?;
         let mut cfg = self.cfg(py).borrow_mut();
-        cfg.load(info.as_ref()).map_pyerr(py)?;
+        cfg.load(info.as_ref(), Default::default()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
