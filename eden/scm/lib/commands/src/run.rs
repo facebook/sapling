@@ -276,7 +276,10 @@ fn dispatch_command(
                     }
                 }
 
-                let mut interp = HgPython::new(dispatcher.args());
+                // Init interpreter with unmodifed args. This is so `sys.argv` in Python
+                // reflects what the user actually typed (we muck with the args in Rust
+                // dispatch).
+                let mut interp = HgPython::new(dispatcher.orig_args());
                 if dispatcher.global_opts().trace {
                     // Error is not fatal.
                     let _ = interp.setup_tracing("*".into());

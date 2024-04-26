@@ -148,6 +148,7 @@ pub fn parse_global_opts(args: &[String]) -> Result<HgGlobalOpts> {
 }
 
 pub struct Dispatcher {
+    orig_args: Vec<String>,
     args: Vec<String>,
     early_result: ParseOutput,
     early_global_opts: HgGlobalOpts,
@@ -161,6 +162,8 @@ fn version_args(binary_path: &str) -> Vec<String> {
 impl Dispatcher {
     /// Load configs. Prepare to run a command.
     pub fn from_args(mut args: Vec<String>) -> Result<Self> {
+        let orig_args = args.clone();
+
         if args.get(1).map(|s| s.as_ref()) == Some("--version") {
             args[1] = "version".to_string();
         }
@@ -188,6 +191,7 @@ impl Dispatcher {
         // Load repo and configuration.
         match OptionalRepo::from_global_opts(&global_opts, cwd) {
             Ok(optional_repo) => Ok(Self {
+                orig_args,
                 args,
                 early_result,
                 early_global_opts: global_opts,
@@ -203,6 +207,10 @@ impl Dispatcher {
                 }
             }
         }
+    }
+
+    pub fn orig_args(&self) -> &[String] {
+        &self.orig_args
     }
 
     pub fn args(&self) -> &[String] {
