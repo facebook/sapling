@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ExclusiveOr} from 'shared/typeUtils';
+
 import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'shared/Icon';
@@ -27,6 +29,9 @@ const styles = stylex.create({
   },
   spacer: {
     flexGrow: 1,
+  },
+  alignStart: {
+    alignItems: 'flex-start',
   },
 });
 
@@ -70,14 +75,20 @@ export function FlexSpacer() {
   return <div {...stylex.props(styles.spacer)} />;
 }
 
-type ContainerProps = ReactProps<HTMLDivElement> & {xstyle?: stylex.StyleXStyles};
+type ContainerProps = ReactProps<HTMLDivElement> & {xstyle?: stylex.StyleXStyles} & {
+  /** If true, use alignItems: flex-start instead of centering */
+  alignStart?: boolean;
+};
 
 /** See `<Row>` and `<Column>`. */
 function FlexBox(props: ContainerProps, flexDirection: 'row' | 'column') {
   const {className, style, ...rest} = props;
   return (
     <div
-      {...stylexPropsWithClassName([styles.flex, props.xstyle].filter(notEmpty), className)}
+      {...stylexPropsWithClassName(
+        [styles.flex, props.alignStart && styles.alignStart, props.xstyle].filter(notEmpty),
+        className,
+      )}
       {...rest}
       style={{flexDirection, ...style}}
     />

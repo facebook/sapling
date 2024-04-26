@@ -176,7 +176,7 @@ function SettingsDropdown({
       </Setting>
       {platform.canCustomizeFileOpener && (
         <Setting title={<T>Environment</T>}>
-          <Column style={{alignItems: 'flex-start'}}>
+          <Column alignStart>
             <OpenFilesCmdSetting />
             <ExternalMergeToolSetting />
           </Column>

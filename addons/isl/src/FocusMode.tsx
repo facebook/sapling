@@ -42,7 +42,7 @@ export function FocusModeToggle() {
     <Tooltip
       placement="bottom"
       title={
-        <Column style={{alignItems: 'flex-start'}}>
+        <Column alignStart>
           <div>
             {focused ? (
               <T replace={{$shortcut: shortcut}}>
