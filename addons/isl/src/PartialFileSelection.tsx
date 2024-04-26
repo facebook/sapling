@@ -8,7 +8,7 @@
 import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
 import type {RangeInfo} from './stackEdit/ui/TextEditable';
 
-import {VSCodeCheckbox} from './VSCodeCheckbox';
+import {Checkbox} from './components/Checkbox';
 import {RadioGroup} from './components/Radio';
 import {t} from './i18n';
 import {TextEditable} from './stackEdit/ui/TextEditable';
@@ -132,7 +132,7 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
         lineCheckbox.push(
           <td className="checkbox-anchor" key={`${key}c`}>
             <div className="checkbox-container">
-              <VSCodeCheckbox
+              <Checkbox
                 checked={checked}
                 indeterminate={indeterminate}
                 onChange={() => {

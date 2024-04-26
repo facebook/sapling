@@ -172,6 +172,5 @@
 .partial-file-selection .checkbox-container {
   position: absolute;
   padding-left: var(--pad);
-  white-space: normal; /* needed for <VSCodeCheckbox /> */
-  top: calc(9px - 1em);
+  top: calc(10px - 1em);
 }

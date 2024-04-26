@@ -85,7 +85,7 @@ export function Checkbox({
   xstyle,
   ...rest
 }: {
-  children: react.ReactNode;
+  children?: react.ReactNode;
   checked: boolean;
   /** "indeterminate" state is neither true nor false, and renders as a box instead of a checkmark.
    * Usually represents partial selection of children. */
