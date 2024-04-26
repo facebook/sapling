@@ -26,7 +26,7 @@ export const vars = {
   focusBorder: 'var(--focus-border)',
 };
 
-const styles = stylex.create({
+export const buttonStyles = stylex.create({
   button: {
     background: {
       default: 'var(--button-secondary-background)',
@@ -135,10 +135,10 @@ export const Button = forwardRef(
         ref={ref}
         {...stylex.props(
           layout.flexRow,
-          styles.button,
-          primary && styles.primary,
-          icon && styles.icon,
-          disabled && styles.disabled,
+          buttonStyles.button,
+          primary && buttonStyles.primary,
+          icon && buttonStyles.icon,
+          disabled && buttonStyles.disabled,
           xstyle,
         )}
         disabled={disabled}

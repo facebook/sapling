@@ -8,13 +8,12 @@
 import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
 
 import {Banner, BannerKind} from '../Banner';
-import {TypeaheadResult} from '../CommitInfoView/types';
-import {Column} from '../ComponentUtils';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
 import {Badge} from '../components/Badge';
 import {Button} from '../components/Button';
+import {ButtonDropdown} from '../components/ButtonDropdown';
 import {Checkbox} from '../components/Checkbox';
 import {Divider} from '../components/Divider';
 import {Dropdown} from '../components/Dropdown';
@@ -44,6 +43,17 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
   const [checkbox1, setCheckbox1] = useState(false);
   const [checkbox2, setCheckbox2] = useState(true);
   const [dropdownChoice, setDropdownChoice] = useState('B');
+  const buttonDropdownOptions = [
+    {
+      id: 'action 1',
+      label: 'Action 1',
+    },
+    {
+      id: 'action 2',
+      label: 'Action 2',
+    },
+  ];
+  const [buttonDropdownChoice, setButtonDropdownChoice] = useState(buttonDropdownOptions[0]);
   return (
     <div {...stylex.props(styles.container)}>
       <h2>
@@ -138,6 +148,53 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
             value={dropdownChoice}
             onChange={e => setDropdownChoice(e.currentTarget.value)}
             options={['A', 'B', 'C']}
+          />
+        </Row>
+        <Row>
+          <ButtonDropdown
+            icon={<Icon icon="rocket" />}
+            options={buttonDropdownOptions}
+            selected={buttonDropdownChoice}
+            onClick={selected => console.log('click!', selected)}
+            onChangeSelected={setButtonDropdownChoice}
+          />
+          <ButtonDropdown
+            options={buttonDropdownOptions}
+            buttonDisabled
+            selected={buttonDropdownChoice}
+            onClick={selected => console.log('click!', selected)}
+            onChangeSelected={setButtonDropdownChoice}
+          />
+          <ButtonDropdown
+            options={buttonDropdownOptions}
+            pickerDisabled
+            selected={buttonDropdownChoice}
+            onClick={selected => console.log('click!', selected)}
+            onChangeSelected={setButtonDropdownChoice}
+          />
+          <ButtonDropdown
+            icon={<Icon icon="rocket" />}
+            kind="icon"
+            options={buttonDropdownOptions}
+            selected={buttonDropdownChoice}
+            onClick={selected => console.log('click!', selected)}
+            onChangeSelected={setButtonDropdownChoice}
+          />
+          <ButtonDropdown
+            kind="icon"
+            options={buttonDropdownOptions}
+            buttonDisabled
+            selected={buttonDropdownChoice}
+            onClick={selected => console.log('click!', selected)}
+            onChangeSelected={setButtonDropdownChoice}
+          />
+          <ButtonDropdown
+            kind="icon"
+            options={buttonDropdownOptions}
+            pickerDisabled
+            selected={buttonDropdownChoice}
+            onClick={selected => console.log('click!', selected)}
+            onChangeSelected={setButtonDropdownChoice}
           />
         </Row>
         <Row>

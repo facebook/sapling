@@ -8,7 +8,8 @@
 import type {ReactNode} from 'react';
 
 import {themeNameState} from '../theme';
-import {Button} from './Button';
+import {colors, spacing} from '../tokens.stylex';
+import {Button, buttonStyles} from './Button';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
@@ -45,6 +46,10 @@ const styles = stylex.create({
       ':hover': 'var(--button-secondary-hover-background)',
     },
     color: 'var(--button-secondary-foreground)',
+    opacity: {
+      default: 1,
+      ':disabled': 0.5,
+    },
     cursor: {
       default: 'pointer',
       ':disabled': 'not-allowed',
@@ -65,6 +70,22 @@ const styles = stylex.create({
   builtinButtonBorder: {
     borderLeft: 'unset',
   },
+  iconButton: {
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingRight: spacing.half,
+  },
+  iconSelect: {
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderLeftColor: colors.hoverDarken,
+  },
+  iconChevron: {
+    color: 'var(--button-icon-foreground)',
+  },
+  chevronDisabled: {
+    opacity: 0.5,
+  },
 });
 
 export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
@@ -78,7 +99,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   icon,
 }: {
   options: ReadonlyArray<T>;
-  kind?: 'primary' | undefined; // icon-type buttons don't have a natrual spot for the dropdown
+  kind?: 'primary' | 'icon' | undefined;
   onClick: (selected: T) => unknown;
   selected: T;
   onChangeSelected: (newSelected: T) => unknown;
@@ -99,11 +120,16 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
         kind={kind}
         onClick={buttonDisabled ? undefined : () => onClick(selected)}
         disabled={buttonDisabled}
-        xstyle={styles.button}>
+        xstyle={[styles.button, kind === 'icon' && styles.iconButton]}>
         {icon ?? null} {selectedOption.label}
       </Button>
       <select
-        {...stylex.props(styles.select, useBuiltinBorder && styles.builtinButtonBorder)}
+        {...stylex.props(
+          styles.select,
+          kind === 'icon' && buttonStyles.icon,
+          kind === 'icon' && styles.iconSelect,
+          useBuiltinBorder && styles.builtinButtonBorder,
+        )}
         disabled={pickerDisabled}
         value={selectedOption.id}
         onClick={e => e.stopPropagation()}
@@ -119,7 +145,14 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
           </option>
         ))}
       </select>
-      <Icon icon="chevron-down" {...stylex.props(styles.chevron)} />
+      <Icon
+        icon="chevron-down"
+        {...stylex.props(
+          styles.chevron,
+          kind === 'icon' && styles.iconChevron,
+          pickerDisabled && styles.chevronDisabled,
+        )}
+      />
     </div>
   );
 }
