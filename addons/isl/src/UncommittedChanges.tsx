@@ -7,13 +7,7 @@
 
 import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
-import type {
-  ChangedFile,
-  ChangedFileType,
-  MergeConflicts,
-  PlatformName,
-  RepoRelativePath,
-} from './types';
+import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
 import type {MutableRefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
@@ -37,6 +31,7 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {temporaryCommitTitle} from './CommitTitle';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
+import {Row} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
@@ -49,6 +44,10 @@ import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
 import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import {
+  AutoResolveSettingCheckbox,
+  shouldAutoResolveAllBeforeContinue,
+} from './mergeConflicts/state';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
 import {getAmendOperation} from './operations/AmendOperation';
@@ -58,6 +57,7 @@ import {DiscardOperation, PartialDiscardOperation} from './operations/DiscardOpe
 import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveInExternalMergeToolOperation} from './operations/ResolveInExternalMergeToolOperation';
 import {RevertOperation} from './operations/RevertOperation';
+import {RunMergeDriversOperation} from './operations/RunMergeDriversOperation';
 import {getShelveOperation} from './operations/ShelveOperation';
 import {operationList, useRunOperation} from './operationsState';
 import {useUncommittedSelection} from './partialSelection';
@@ -793,13 +793,16 @@ function MergeConflictButtons({
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
   return (
-    <>
+    <Row style={{flexWrap: 'wrap', marginBottom: 'var(--pad)'}}>
       <Button
         kind={allConflictsResolved ? 'primary' : 'icon'}
         key="continue"
         disabled={!allConflictsResolved || shouldDisableButtons}
         data-testid="conflict-continue-button"
         onClick={() => {
+          if (readAtom(shouldAutoResolveAllBeforeContinue)) {
+            runOperation(new RunMergeDriversOperation());
+          }
           runOperation(new ContinueOperation());
         }}>
         <Icon slot="start" icon={isRunningContinue ? 'loading' : 'debug-continue'} />
@@ -875,6 +878,9 @@ function MergeConflictButtons({
           </Button>
         </Tooltip>
       )}
-    </>
+      {Internal.showInlineAutoRunMergeDriversOption === true && (
+        <AutoResolveSettingCheckbox subtle />
+      )}
+    </Row>
   );
 }

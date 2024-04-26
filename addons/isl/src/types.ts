@@ -611,7 +611,8 @@ export type LocalStorageName =
   | 'isl.debug-redux-tools'
   | 'isl.comparison-display-mode'
   | 'isl.expand-generated-files'
-  | 'isl-color-theme';
+  | 'isl-color-theme'
+  | 'isl.auto-resolve-before-continue';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}

@@ -90,6 +90,7 @@ export type TrackEventName =
   | 'ResolveOperation'
   | 'ResolveInExternalMergeToolOperation'
   | 'RevertOperation'
+  | 'RunMergeDriversOperation'
   | 'SetConfigOperation'
   | 'ShelveOperation'
   | 'DeleteShelveOperation'

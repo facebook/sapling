@@ -28,6 +28,7 @@ import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
+import {AutoResolveSettingCheckbox} from './mergeConflicts/state';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import {useRunOperation} from './operationsState';
 import platform from './platform';
@@ -115,6 +116,7 @@ function SettingsDropdown({
         <RenderCompactSetting />
       </Setting>
       <Setting title={<T>Conflicts</T>}>
+        <AutoResolveSettingCheckbox />
         <RestackBehaviorSetting />
       </Setting>
       {/* TODO: enable this setting when there is actually a chocie to be made here. */}
