@@ -14,7 +14,7 @@ import {atom} from 'jotai';
 export const repositoryData = atom<{info?: RepoInfo; cwd?: string}>({});
 
 /** "cwd" is not always the repo root. It can be a path inside the repo. */
-export const serverCwd = atom(get => {
+export const serverCwd = atom<string>(get => {
   const data = get(repositoryData);
   if (data.info?.type === 'cwdNotARepository') {
     return data.info.cwd;

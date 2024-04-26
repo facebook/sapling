@@ -14,13 +14,15 @@ import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
+import {Button} from './components/Button';
+import {ButtonDropdown} from './components/ButtonDropdown';
 import {Divider} from './components/Divider';
 import {T} from './i18n';
 import {lazyAtom, writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
-import {VSCodeButton, VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
@@ -51,7 +53,9 @@ registerDisposable(
 
 export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
+  const currentCwd = useAtomValue(serverCwd);
   const additionalToggles = useCommandEvent('ToggleCwdDropdown');
+  const options = useCwdOptions();
   if (info?.type !== 'success') {
     return null;
   }
@@ -68,10 +72,28 @@ export function CwdSelector() {
           Repository info & cwd ($shortcut)
         </T>
       }>
-      <VSCodeButton appearance="icon" data-testid="cwd-dropdown-button">
-        <Icon icon="folder" slot="start" />
-        {repoBasename}
-      </VSCodeButton>
+      {options.length < 2 ? (
+        <Button icon data-testid="cwd-dropdown-button">
+          <Icon icon="folder" />
+          {repoBasename}
+        </Button>
+      ) : (
+        // use a ButtonDropdown as a shortcut to quickly change cwd
+        <ButtonDropdown
+          data-testid="cwd-dropdown-button"
+          kind="icon"
+          options={options}
+          selected={{id: currentCwd, label: repoBasename}}
+          icon={<Icon icon="folder" />}
+          onClick={
+            () => null // fall through to the Tooltip
+          }
+          onChangeSelected={value => {
+            if (value.id !== currentCwd) {
+              changeCwd(value.id);
+            }
+          }}></ButtonDropdown>
+      )}
     </Tooltip>
   );
 }
@@ -101,14 +123,30 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   );
 }
 
-export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divider?: boolean}) {
-  const currentCwd = useAtomValue(serverCwd);
+function changeCwd(newCwd: string) {
+  serverAPI.postMessage({
+    type: 'changeCwd',
+    cwd: newCwd,
+  });
+  serverAPI.cwdChanged();
+}
+
+function useCwdOptions() {
   const cwdOptions = useAtomValue(availableCwds);
-  if (cwdOptions.length < 2) {
-    return null;
-  }
 
   const paths = minimalDisambiguousPaths(cwdOptions);
+  return paths.map((shortCwd, index) => ({
+    id: cwdOptions[index],
+    label: shortCwd,
+  }));
+}
+
+export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divider?: boolean}) {
+  const currentCwd = useAtomValue(serverCwd);
+  const options = useCwdOptions();
+  if (options.length < 2) {
+    return null;
+  }
 
   return (
     <DropdownField title={<T>Change active repository</T>}>
@@ -121,23 +159,18 @@ export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divid
             // nothing to change
             return;
           }
-          serverAPI.postMessage({
-            type: 'changeCwd',
-            cwd: newCwd,
-          });
-          serverAPI.cwdChanged();
+          changeCwd(newCwd);
           dismiss();
         }}>
-        {paths.map((shortCwd, index) => {
-          const fullCwd = cwdOptions[index];
+        {options.map(({id: fullCwd, label}) => {
           return (
             <VSCodeRadio
-              key={shortCwd}
+              key={fullCwd}
               value={fullCwd}
               checked={fullCwd === currentCwd}
               tabIndex={0}>
-              <Tooltip key={shortCwd} title={fullCwd} placement="right">
-                {shortCwd}
+              <Tooltip title={fullCwd} placement="right">
+                {label}
               </Tooltip>
             </VSCodeRadio>
           );
