@@ -32,6 +32,10 @@ const styles = stylex.create({
     appearance: 'none',
     position: 'absolute',
   },
+  disabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
   withChildren: {
     marginRight: spacing.pad,
   },
@@ -83,6 +87,7 @@ export function Checkbox({
   children,
   checked,
   onChange,
+  disabled,
   indeterminate,
   xstyle,
   ...rest
@@ -92,6 +97,7 @@ export function Checkbox({
   /** "indeterminate" state is neither true nor false, and renders as a box instead of a checkmark.
    * Usually represents partial selection of children. */
   indeterminate?: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => unknown;
   xstyle?: stylex.StyleXStyles;
 } & Omit<ReactProps<HTMLInputElement>, 'onChange'>) {
@@ -110,6 +116,7 @@ export function Checkbox({
         layout.flexRow,
         styles.label,
         children != null && styles.withChildren,
+        disabled && styles.disabled,
         xstyle,
       )}>
       <input
@@ -117,7 +124,8 @@ export function Checkbox({
         type="checkbox"
         id={id}
         checked={checked}
-        onChange={e => onChange?.(e.target.checked)}
+        onChange={e => !disabled && onChange?.(e.target.checked)}
+        disabled={disabled}
         {...stylex.props(styles.input)}
         {...rest}
       />
