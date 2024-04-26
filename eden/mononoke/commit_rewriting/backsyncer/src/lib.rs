@@ -403,10 +403,18 @@ where
             commit_syncer,
             target_repo_dbs.clone(),
             Some(counter),
-            entry,
+            &entry,
         )
         .await?;
 
+        scuba_sample.add_opt(
+            "from_csid",
+            entry.from_changeset_id.map(|csid| csid.to_string()),
+        );
+        scuba_sample.add_opt(
+            "to_csid",
+            entry.to_changeset_id.map(|csid| csid.to_string()),
+        );
         scuba_sample.add(
             "backsync_duration_ms",
             u64::try_from(start_instant.elapsed().as_millis()).unwrap_or(u64::max_value()),
@@ -484,7 +492,7 @@ async fn backsync_bookmark<M, R>(
     commit_syncer: &CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<BookmarkUpdateLogId>,
-    log_entry: BookmarkUpdateLogEntry,
+    log_entry: &BookmarkUpdateLogEntry,
 ) -> Result<Option<BookmarkUpdateLogId>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
