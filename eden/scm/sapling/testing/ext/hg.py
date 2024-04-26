@@ -35,7 +35,16 @@ def testsetup(t: TestTmp):
     use_watchman = os.getenv("HGFSMONITOR_TESTS") == "1"
     # similar to the one above, but considerably uglier
     if os.getenv("HGTEST_USE_EDEN") == "1":
+        import re
+
         edenpath = str(t.path / "bin" / "eden")
+        t.registerfallbackmatch(
+            lambda a, b: b == "update complete"
+            and re.match(
+                r"[0-9]+ files updated, [0-9]+ files merged, [0-9]+ files removed, [0-9]+ files unresolved",
+                a,
+            )
+        )
     else:
         edenpath = None
 
