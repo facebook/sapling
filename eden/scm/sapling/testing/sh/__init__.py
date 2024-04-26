@@ -328,6 +328,44 @@ sort
     >>> t('for i in c a b; do echo $i; done | sort')
     'a\nb\nc\n'
 
+printf
+
+    >>> t(r"printf 'foo\nbar'")
+    'foo\nbar (no-eol)\n'
+    >>> t(r"printf 'foo\\nbar'")
+    'foo\\\nbar (no-eol)\n'
+    >>> t(r"printf '%s' 'foo\nbar'")
+    'foo\\nbar (no-eol)\n'
+    >>> t(r"printf '%s' 'foo\\nbar'")
+    'foo\\\\nbar (no-eol)\n'
+    >>> t(r"printf '%s' 'foo\nbar'")
+    'foo\\nbar (no-eol)\n'
+
+FIXME: %b should be supported
+
+    >>> try:
+    ...     t(r"printf '%b' 'foo\nbar'")
+    ... except ValueError as e:
+    ...     print(str(e))
+    unsupported format character 'b' (0x62) at index 1
+    >>> try:
+    ...     t(r"printf '%b' 'foo\\nbar'")
+    ... except ValueError as e:
+    ...     print(str(e))
+    unsupported format character 'b' (0x62) at index 1
+
+echo
+
+FIXME: on actual bash this returns 'foo\\\nbar\n'
+
+    >>> t(r"echo 'foo\\nbar'")
+    'foo\\\\nbar\n'
+
+FIXME: on actual bash this returns 'foo\nbar\n'
+
+    >>> t(r"echo 'foo\nbar'")
+    'foo\\nbar\n'
+
 Commands on OS filesystem:
 
     >>> from .osfs import OSFS
