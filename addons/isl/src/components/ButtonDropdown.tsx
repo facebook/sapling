@@ -97,6 +97,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   buttonDisabled,
   pickerDisabled,
   icon,
+  ...rest
 }: {
   options: ReadonlyArray<T>;
   kind?: 'primary' | 'icon' | undefined;
@@ -107,6 +108,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   pickerDisabled?: boolean;
   /** Icon to place in the button */
   icon?: React.ReactNode;
+  'data-testId'?: string;
 }) {
   const selectedOption = options.find(opt => opt.id === selected.id) ?? options[0];
   const themeName = useAtomValue(themeNameState);
@@ -120,8 +122,9 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
         kind={kind}
         onClick={buttonDisabled ? undefined : () => onClick(selected)}
         disabled={buttonDisabled}
-        xstyle={[styles.button, kind === 'icon' && styles.iconButton]}>
-        {icon ?? null} {selectedOption.label}
+        xstyle={[styles.button, kind === 'icon' && styles.iconButton]}
+        {...rest}>
+        {icon ?? null} {selected.label}
       </Button>
       <select
         {...stylex.props(
