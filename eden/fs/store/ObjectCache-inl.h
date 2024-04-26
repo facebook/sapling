@@ -90,6 +90,10 @@ ObjectCache<ObjectType, Flavor>::getInterestHandle(
   // runs after the lock is released.
   ObjectInterestHandle<ObjectType> interestHandle;
 
+  if (interest == Interest::None) {
+    return GetResult{};
+  }
+
   auto state = state_.lock();
 
   auto item = getImpl(hash, *state);
@@ -116,6 +120,8 @@ ObjectCache<ObjectType, Flavor>::getInterestHandle(
       // to UINT64_MAX) after which new interest handles never need to be
       // created.
       ++item->referenceCount;
+      break;
+    case Interest::None:
       break;
   }
 
@@ -186,12 +192,17 @@ ObjectCache<ObjectType, Flavor>::insertInterestHandle(
     interestHandle.object_ = object;
   }
 
+  if (interest == Interest::None) {
+    return interestHandle;
+  }
+
   XLOG(DBG6) << "  creating entry with generation=" << cacheItemGeneration;
 
   auto state = state_.lock();
   auto [item, inserted] = insertImpl(std::move(id), std::move(object), *state);
   switch (interest) {
     case Interest::UnlikelyNeededAgain:
+    case Interest::None:
       break;
     case Interest::WantHandle:
     case Interest::LikelyNeededAgain:

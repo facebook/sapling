@@ -81,11 +81,7 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
 }
 
 TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
-    : blobCache_{BlobCache::create(
-          kBlobCacheMaximumSize,
-          kBlobCacheMinimumEntries,
-          makeRefPtr<EdenStats>())},
-      privHelper_{make_shared<FakePrivHelper>()},
+    : privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, and localStore_
@@ -107,6 +103,13 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
   edenConfig_->enableNfsServer.setValue(false, ConfigSourceType::Default, true);
 
   auto reloadableConfig = std::make_shared<ReloadableConfig>(edenConfig_);
+
+  // create blobCache
+  blobCache_ = BlobCache::create(
+      kBlobCacheMaximumSize,
+      kBlobCacheMinimumEntries,
+      reloadableConfig,
+      makeRefPtr<EdenStats>());
 
   // Create treeCache
   treeCache_ = TreeCache::create(reloadableConfig);

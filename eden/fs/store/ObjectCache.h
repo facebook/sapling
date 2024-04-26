@@ -131,6 +131,12 @@ class ObjectCache
      * is naturally evicted.
      */
     LikelyNeededAgain,
+
+    /**
+     * This value is used if the item is not cached due to
+     * blobcache:enable-in-memory-blob-caching being set to false
+     */
+    None,
   };
 
   struct GetResult {

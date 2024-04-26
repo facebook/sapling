@@ -6,7 +6,10 @@
  */
 
 #include "eden/fs/store/BlobCache.h"
+
 #include <folly/portability/GTest.h>
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
@@ -35,8 +38,20 @@ const auto blob6 = std::make_shared<Blob>("666666"_sp);
 const auto blob9 = std::make_shared<Blob>("999999999"_sp);
 } // namespace
 
-TEST(BlobCache, evicts_oldest_on_insertion) {
-  auto cache = BlobCache::create(10, 0, makeRefPtr<EdenStats>());
+struct BlobCacheTest : ::testing::Test {
+  std::shared_ptr<ReloadableConfig> edenConfig;
+
+  void SetUp() override {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+
+    edenConfig = std::make_shared<ReloadableConfig>(
+        rawEdenConfig, ConfigReloadBehavior::NoReload);
+  }
+};
+
+TEST_F(BlobCacheTest, evicts_oldest_on_insertion) {
+  auto cache = BlobCache::create(10, 0, edenConfig, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4); // blob4 is considered more recent than blob3
   EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
@@ -52,8 +67,8 @@ TEST(BlobCache, evicts_oldest_on_insertion) {
   EXPECT_EQ(blob4, cache->get(hash4).object);
 }
 
-TEST(BlobCache, inserting_large_blob_evicts_multiple_small_blobs) {
-  auto cache = BlobCache::create(10, 0, makeRefPtr<EdenStats>());
+TEST_F(BlobCacheTest, inserting_large_blob_evicts_multiple_small_blobs) {
+  auto cache = BlobCache::create(10, 0, edenConfig, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4);
   cache->insert(hash9, blob9);
@@ -62,8 +77,8 @@ TEST(BlobCache, inserting_large_blob_evicts_multiple_small_blobs) {
   EXPECT_EQ(blob9, cache->get(hash9).object);
 }
 
-TEST(BlobCache, preserves_minimum_number_of_entries) {
-  auto cache = BlobCache::create(1, 3, makeRefPtr<EdenStats>());
+TEST_F(BlobCacheTest, preserves_minimum_number_of_entries) {
+  auto cache = BlobCache::create(1, 3, edenConfig, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4);
   cache->insert(hash5, blob5);
@@ -76,8 +91,8 @@ TEST(BlobCache, preserves_minimum_number_of_entries) {
   EXPECT_TRUE(cache->get(hash6).object);
 }
 
-TEST(BlobCache, can_forget_cached_entries) {
-  auto cache = BlobCache::create(100, 0, makeRefPtr<EdenStats>());
+TEST_F(BlobCacheTest, can_forget_cached_entries) {
+  auto cache = BlobCache::create(100, 0, edenConfig, makeRefPtr<EdenStats>());
   auto handle3 = cache->insert(
       hash3,
       std::make_shared<Blob>("blob3"_sp),
@@ -95,8 +110,8 @@ TEST(BlobCache, can_forget_cached_entries) {
   EXPECT_FALSE(cache->get(hash4).object);
 }
 
-TEST(BlobCache, does_not_forget_blob_until_last_handle_is_forgotten) {
-  auto cache = BlobCache::create(100, 0, makeRefPtr<EdenStats>());
+TEST_F(BlobCacheTest, does_not_forget_blob_until_last_handle_is_forgotten) {
+  auto cache = BlobCache::create(100, 0, edenConfig, makeRefPtr<EdenStats>());
   auto blob = std::make_shared<Blob>("newblob"_sp);
   auto weak = std::weak_ptr<const Blob>{blob};
   cache->insert(hash6, blob, BlobCache::Interest::UnlikelyNeededAgain);
@@ -120,4 +135,36 @@ TEST(BlobCache, does_not_forget_blob_until_last_handle_is_forgotten) {
 
   result2.interestHandle.reset();
   EXPECT_FALSE(weak.lock());
+}
+
+TEST_F(BlobCacheTest, no_blob_caching) {
+  std::shared_ptr<EdenConfig> rawEdenConfig{EdenConfig::createTestEdenConfig()};
+  rawEdenConfig->enableInMemoryBlobCaching.setValue(
+      false, ConfigSourceType::Default, true);
+  edenConfig = std::make_shared<ReloadableConfig>(
+      rawEdenConfig, ConfigReloadBehavior::NoReload);
+  auto cache = BlobCache::create(100, 0, edenConfig, makeRefPtr<EdenStats>());
+
+  cache->insert(hash3, blob3);
+  cache->insert(hash4, blob4);
+  cache->insert(hash5, blob5);
+  // Cache should be empty since it is turned off
+  EXPECT_EQ(0, cache->getStats().totalSizeInBytes);
+
+  auto blob = std::make_shared<Blob>("newblob"_sp);
+  auto weak = std::weak_ptr<const Blob>{blob};
+  auto handle = cache->insert(hash6, blob, BlobCache::Interest::WantHandle);
+  // Cache should be empty since it is turned off
+  EXPECT_EQ(0, cache->getStats().totalSizeInBytes);
+
+  auto handle0 = cache->insert(hash6, blob, BlobCache::Interest::WantHandle);
+  // Inserting should still return the object
+  EXPECT_TRUE(handle0.getObject());
+  EXPECT_EQ(blob, handle0.getObject());
+
+  // get() should always return empty
+  EXPECT_FALSE(cache->get(hash3).object);
+  EXPECT_FALSE(cache->get(hash4).object);
+  EXPECT_FALSE(cache->get(hash5).object);
+  EXPECT_FALSE(cache->get(hash6, BlobCache::Interest::WantHandle).object);
 }

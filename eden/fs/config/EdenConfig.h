@@ -1083,6 +1083,14 @@ class EdenConfig : private ConfigSettingManager {
   // [blobcache]
 
   /**
+   * Controls whether if EdenFS caches blobs in memory.
+   */
+  ConfigSetting<bool> enableInMemoryBlobCaching{
+      "blobcache:enable-in-memory-blob-caching",
+      true,
+      this};
+
+  /**
    * How many bytes worth of blobs to keep in memory, at most.
    */
   ConfigSetting<size_t> inMemoryBlobCacheSize{
@@ -1102,7 +1110,7 @@ class EdenConfig : private ConfigSettingManager {
   // [treecache]
 
   /**
-   * Controls whether if EdenFS caches tree in memory.
+   * Controls whether if EdenFS caches trees in memory.
    */
   ConfigSetting<bool> enableInMemoryTreeCaching{
       "treecache:enable-in-memory-tree-caching",
