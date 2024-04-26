@@ -54,10 +54,10 @@ from facebook.eden.ttypes import (
     DebugGetBlobMetadataRequest,
     DebugGetRawJournalParams,
     DebugGetScmBlobRequest,
+    DebugInvalidateRequest,
     DebugJournalDelta,
     EdenError,
     MountId,
-    NoValueForKeyError,
     ScmBlobMetadata,
     ScmBlobOrError,
     ScmBlobWithOrigin,
@@ -1867,6 +1867,55 @@ class DropRequestsCmd(Subcmd):
             num_dropped = client.debugDropAllPendingRequests()
             print(f"Dropped {num_dropped} source control fetch requests")
             return 0
+
+
+@debug_cmd(
+    "gc-inodes",
+    "Invalidate not recently used files and directories (non-materialized inodes)",
+)
+class GCInodesCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
+        parser.add_argument(
+            "--path",
+            help="Relative path in the repo to recursively invalidate",
+            default="",
+        )
+        parser.add_argument(
+            "--background",
+            action="store_true",
+            help="Run invalidation in the background",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+        # non-zero age is only supported on Windows
+        if sys.platform == "win32":
+            # On Windows, the atime is updated only once an hour,
+            # so values below 1h may over-invalidate. This is also the
+            # value used in `eden doctor`
+            seconds = 3600
+        else:
+            seconds = 0
+        with instance.get_thrift_client_legacy() as client:
+            try:
+                result = client.debugInvalidateNonMaterialized(
+                    DebugInvalidateRequest(
+                        mount=MountId(mountPoint=os.fsencode(checkout.path)),
+                        path=os.fsencode(args.path),
+                        background=args.background,
+                        age=TimeSpec(seconds=seconds),
+                    )
+                )
+                print(
+                    f"Invalidated {result.numInvalidated} inodes under {checkout.path}/{args.path}"
+                )
+                return 0
+            except EdenError as err:
+                print(err, file=sys.stderr)
+                return 1
 
 
 @subcmd_mod.subcmd("debug", "Internal commands for examining EdenFS state")
