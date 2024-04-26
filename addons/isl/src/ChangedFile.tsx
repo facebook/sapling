@@ -17,6 +17,7 @@ import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {Tooltip} from './Tooltip';
 import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
+import {Checkbox} from './components/Checkbox';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
@@ -384,14 +385,11 @@ function FileSelectionCheckbox({
   selection?: UseUncommittedSelection;
 }) {
   return selection == null ? null : (
-    <VSCodeCheckbox
+    <Checkbox
       checked={selection.isFullyOrPartiallySelected(file.path)}
       indeterminate={selection.isPartiallySelected(file.path)}
       data-testid={'file-selection-checkbox'}
-      // Note: Using `onClick` instead of `onChange` since onChange apparently fires when the controlled `checked` value changes,
-      // which means this fires when using "select all" / "deselect all"
-      onClick={e => {
-        const checked = (e.target as HTMLInputElement).checked;
+      onChange={checked => {
         if (checked) {
           if (file.renamedFrom != null) {
             // Selecting a renamed file also selects the original, so they are committed/amended together

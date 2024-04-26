@@ -24,7 +24,6 @@ const styles = stylex.create({
     alignItems: 'center',
     position: 'relative',
     outline: 'none',
-    marginRight: spacing.pad,
     userSelect: 'none',
   },
   input: {
@@ -32,6 +31,9 @@ const styles = stylex.create({
     outline: 'none',
     appearance: 'none',
     position: 'absolute',
+  },
+  withChildren: {
+    marginRight: spacing.pad,
   },
   checkmark: {
     background: 'var(--checkbox-background)',
@@ -102,13 +104,20 @@ export function Checkbox({
     }
   }, [indeterminate]);
   return (
-    <label htmlFor={id} {...stylex.props(layout.flexRow, styles.label, xstyle)}>
+    <label
+      htmlFor={id}
+      {...stylex.props(
+        layout.flexRow,
+        styles.label,
+        children != null && styles.withChildren,
+        xstyle,
+      )}>
       <input
         ref={inputRef}
         type="checkbox"
         id={id}
         checked={checked}
-        onChange={e => onChange(e.target.checked)}
+        onChange={e => onChange?.(e.target.checked)}
         {...stylex.props(styles.input)}
         {...rest}
       />
