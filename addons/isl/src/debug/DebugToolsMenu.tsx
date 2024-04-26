@@ -10,7 +10,7 @@ import type {ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
-import {Row} from '../ComponentUtils';
+import {Column, Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
 import messageBus from '../MessageBus';
@@ -72,11 +72,13 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
         <InternalState />
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
-        <ServerClientMessageLogging />
-        <Row>
-          <ForceDisconnectButton />
-          <NopOperationButtons />
-        </Row>
+        <Column alignStart>
+          <ServerClientMessageLogging />
+          <Row>
+            <ForceDisconnectButton />
+            <NopOperationButtons />
+          </Row>
+        </Column>
       </DropdownField>
       <DropdownField title={<T>Component Explorer</T>}>
         <ComponentExplorerButton dismiss={dismiss} />
@@ -100,7 +102,7 @@ function InternalState() {
   };
 
   return (
-    <div>
+    <Column alignStart>
       <Row>
         <Tooltip
           placement="bottom"
@@ -153,7 +155,7 @@ function InternalState() {
           </Checkbox>
         </Row>
       )}
-    </div>
+    </Column>
   );
 }
 
