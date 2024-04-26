@@ -10,7 +10,7 @@ import type {Operation} from './operations/Operation';
 import {fetchStableLocations} from './BookmarksData';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
-import {ButtonDropdown} from './VSCodeButtonDropdown';
+import {ButtonDropdown} from './components/ButtonDropdown';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {PullOperation} from './operations/PullOperation';

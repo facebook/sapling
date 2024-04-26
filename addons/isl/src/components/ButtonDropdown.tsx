@@ -7,8 +7,8 @@
 
 import type {ReactNode} from 'react';
 
-import {Button} from './components/Button';
-import {themeNameState} from './theme';
+import {themeNameState} from '../theme';
+import {Button} from './Button';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
