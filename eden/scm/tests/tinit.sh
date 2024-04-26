@@ -53,6 +53,16 @@ newclientrepo() {
   fi
   hg clone --config "init.use-rust=True" --config "clone.use-rust=True" --config "remotefilelog.reponame=$reponame" --shallow -q "$server" "$TESTTMP/$reponame"
 
+  local drawdaginput=""
+  while IFS= read line
+  do
+    drawdaginput="${drawdaginput}:${line}\n"
+  done
+  if [ -n "${drawdaginput}" ]; then
+      cd "$TESTTMP/${server#*:}"
+      echo "${drawdaginput}" | drawdag
+  fi
+
   cd "$TESTTMP/$reponame"
   for book in $bookmarks ; do
       hg pull -q -B $book
