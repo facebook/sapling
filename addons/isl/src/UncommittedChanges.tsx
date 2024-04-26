@@ -37,6 +37,7 @@ import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
 import {Button} from './components/Button';
@@ -832,6 +833,7 @@ function MergeConflictButtons({
               icon
               disabled={allConflictsResolved || shouldDisableButtons}
               onClick={() => {
+                tracker.track('ClickedConfigureExternalMergeTool');
                 const link = Internal.externalMergeToolDocsLink;
                 if (link) {
                   platform.openExternalLink(link);

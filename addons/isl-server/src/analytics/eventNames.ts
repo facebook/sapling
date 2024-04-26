@@ -41,6 +41,7 @@ export type TrackEventName =
   | 'CommitCloudSyncOperation'
   | 'CreateEmptyInitialCommit'
   | 'ClickSuggestedRebase'
+  | 'ClickedConfigureExternalMergeTool'
   | 'DiscardOperation'
   | 'EnterMergeConflicts'
   | 'ExitMergeConflicts'
