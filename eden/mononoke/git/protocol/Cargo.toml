@@ -9,7 +9,6 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
-blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
@@ -24,6 +23,7 @@ git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-date = "0.7"
 gix-hash = "0.11"
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packetline = { version = "0.1.0", path = "../packetline" }
 packfile = { version = "0.1.0", path = "../packfile" }

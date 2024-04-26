@@ -182,7 +182,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
         .with_config_override(|config| {
             config
                 .derived_data_config
-                .get_active_config()
+                .get_active_config_mut()
                 .expect("No enabled derived data types config")
                 .blame_version = version
         })
@@ -303,12 +303,12 @@ async fn test_blame_size_rejected_version(
         .with_config_override(|config| {
             config
                 .derived_data_config
-                .get_active_config()
+                .get_active_config_mut()
                 .expect("No enabled derived data types config")
                 .blame_version = version;
             config
                 .derived_data_config
-                .get_active_config()
+                .get_active_config_mut()
                 .expect("No enabled derived data types config")
                 .blame_filesize_limit = Some(4);
         })
@@ -341,7 +341,7 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
         .with_config_override(|config| {
             config
                 .derived_data_config
-                .get_active_config()
+                .get_active_config_mut()
                 .expect("No enabled derived data types config")
                 .blame_version = BlameVersion::V2
         })

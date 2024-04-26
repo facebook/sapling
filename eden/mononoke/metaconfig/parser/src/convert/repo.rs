@@ -25,6 +25,7 @@ use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitConcurrencyParams;
+use metaconfig_types::GitDeltaManifestVersion;
 use metaconfig_types::GlobalrevConfig;
 use metaconfig_types::HgSyncConfig;
 use metaconfig_types::HookBypass;
@@ -481,6 +482,11 @@ impl Convert for RawDerivedDataTypesConfig {
             Some(2) => BlameVersion::V2,
             Some(version) => return Err(anyhow!("unknown blame version {}", version)),
         };
+        let git_delta_manifest_version = match self.git_delta_manifest_version {
+            None => GitDeltaManifestVersion::default(),
+            Some(1) => GitDeltaManifestVersion::V1,
+            Some(version) => return Err(anyhow!("unknown git delta manifest version {}", version)),
+        };
         Ok(DerivedDataTypesConfig {
             types,
             mapping_key_prefixes,
@@ -488,6 +494,7 @@ impl Convert for RawDerivedDataTypesConfig {
             blame_filesize_limit,
             hg_set_committer_extra: self.hg_set_committer_extra.unwrap_or(false),
             blame_version,
+            git_delta_manifest_version,
         })
     }
 }

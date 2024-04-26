@@ -107,7 +107,7 @@ mod tests {
             .with_config_override(|config| {
                 let config = config
                     .derived_data_config
-                    .get_active_config()
+                    .get_active_config_mut()
                     .expect("No enabled derived data types config");
                 // Repo import has no need of these derived data types
                 config.types.remove(&TreeHandle::VARIANT);

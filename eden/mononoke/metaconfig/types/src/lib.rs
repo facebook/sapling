@@ -320,7 +320,7 @@ pub struct DerivedDataConfig {
     /// Name of scuba table where all derivation will be logged to
     pub scuba_table: Option<String>,
 
-    /// Name of of configuration for enabled derived data types.
+    /// Name of configuration for enabled derived data types.
     pub enabled_config_name: String,
 
     /// All available configs for derived data types
@@ -350,8 +350,13 @@ impl DerivedDataConfig {
         }
     }
 
+    /// Returns active DerivedDataTypesConfig
+    pub fn get_active_config(&self) -> Option<&DerivedDataTypesConfig> {
+        self.available_configs.get(&self.enabled_config_name)
+    }
+
     /// Returns mutable ref to active DerivedDataTypesConfig
-    pub fn get_active_config(&mut self) -> Option<&mut DerivedDataTypesConfig> {
+    pub fn get_active_config_mut(&mut self) -> Option<&mut DerivedDataTypesConfig> {
         self.available_configs.get_mut(&self.enabled_config_name)
     }
 
@@ -390,6 +395,9 @@ pub struct DerivedDataTypesConfig {
 
     /// What blame version should be used.
     pub blame_version: BlameVersion,
+
+    /// What `GitDeltaManifest` version should be used.
+    pub git_delta_manifest_version: GitDeltaManifestVersion,
 }
 
 /// What type of unode derived data to generate
@@ -406,6 +414,14 @@ pub enum BlameVersion {
     /// Blame v2
     #[default]
     V2,
+}
+
+/// What `GitDeltaManifest` version should be used.
+#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
+pub enum GitDeltaManifestVersion {
+    /// GitDeltaManifest v1
+    #[default]
+    V1,
 }
 
 impl RepoConfig {

@@ -7,9 +7,9 @@
 
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
@@ -21,7 +21,6 @@ use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
 use buffered_weighted::StreamExt as _;
 use bytes::Bytes;
-use bytes::BytesMut;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures::future;
@@ -31,18 +30,19 @@ use futures::stream::BoxStream;
 use futures::StreamExt as _;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
-use git_types::fetch_delta_instructions;
+use git_types::fetch_git_delta_manifest;
 use git_types::fetch_git_object_bytes;
 use git_types::fetch_non_blob_git_object_bytes;
 use git_types::fetch_packfile_base_item;
 use git_types::fetch_packfile_base_item_if_exists;
 use git_types::upload_packfile_base_item;
-use git_types::DeltaInstructionChunkIdPrefix;
-use git_types::GitDeltaManifestEntry;
+use git_types::GitDeltaManifestEntryOps;
+use git_types::GitDeltaManifestOps;
 use git_types::HeaderState;
-use git_types::ObjectDelta;
-use git_types::RootGitDeltaManifestId;
+use git_types::ObjectDeltaOps;
 use gix_hash::ObjectId;
+use metaconfig_types::GitDeltaManifestVersion;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
@@ -89,6 +89,7 @@ pub trait Repo = RepoIdentityRef
     + GitSymbolicRefsRef
     + CommitGraphRef
     + BookmarksCacheRef
+    + RepoConfigRef
     + Send
     + Sync;
 
@@ -189,6 +190,7 @@ async fn trees_and_blobs_count(
     ctx: &CoreContext,
     repo: &impl Repo,
     target_commits: BoxStream<'_, Result<ChangesetId>>,
+    git_delta_manifest_version: GitDeltaManifestVersion,
     concurrency: usize,
 ) -> Result<usize> {
     // Sum up the entries in the delta manifest for each commit included in packfile
@@ -196,37 +198,25 @@ async fn trees_and_blobs_count(
         .map_ok(|changeset_id| {
             async move {
                 let blobstore = repo.repo_blobstore_arc();
-                let root_mf_id = repo
-                    .repo_derived_data()
-                    .derive::<RootGitDeltaManifestId>(ctx, changeset_id)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error in deriving RootGitDeltaManifestId for commit {:?}",
-                            changeset_id
-                        )
-                    })?;
-                let delta_manifest = root_mf_id
-                    .manifest_id()
-                    .load(ctx, &blobstore)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error in loading Git Delta Manifest from root id {:?}",
-                            root_mf_id
-                        )
-                    })?;
+                let delta_manifest = fetch_git_delta_manifest(
+                    ctx,
+                    repo.repo_derived_data(),
+                    &blobstore,
+                    git_delta_manifest_version,
+                    changeset_id,
+                )
+                .await?;
                 // Get the FxHashSet of the tree and blob object Ids that will be included
                 // in the packfile
                 let objects = delta_manifest
                     .into_subentries(ctx, &blobstore)
-                    .map_ok(|(_, entry)| entry.full.oid)
+                    .map_ok(|(_, entry)| entry.full_object_oid())
                     .try_collect::<FxHashSet<_>>()
                     .await
                     .with_context(|| {
                         format!(
-                            "Error while listing entries from GitDeltaManifest {:?}",
-                            root_mf_id
+                            "Error while listing entries from GitDeltaManifest for changeset {:?}",
+                            changeset_id,
                         )
                     })?;
                 anyhow::Ok(objects)
@@ -239,33 +229,32 @@ async fn trees_and_blobs_count(
 }
 
 fn delta_below_threshold(
-    delta: &ObjectDelta,
-    entry: &GitDeltaManifestEntry,
+    delta: &impl ObjectDeltaOps,
+    full_object_size: u64,
     inclusion_threshold: f32,
 ) -> bool {
-    (delta.instructions_compressed_size as f64)
-        < (entry.full.size as f64) * inclusion_threshold as f64
+    (delta.instructions_compressed_size() as f64)
+        < (full_object_size as f64) * inclusion_threshold as f64
 }
 
 fn delta_base(
-    entry: &mut GitDeltaManifestEntry,
+    entry: &impl GitDeltaManifestEntryOps,
     delta_inclusion: DeltaInclusion,
-) -> Option<ObjectDelta> {
+) -> Option<impl ObjectDeltaOps + Send> {
     match delta_inclusion {
         DeltaInclusion::Include {
             inclusion_threshold,
             ..
-        } => {
-            entry.deltas.sort_by(|a, b| {
-                a.instructions_compressed_size
-                    .cmp(&b.instructions_compressed_size)
-            });
-            entry
-                .deltas
-                .first()
-                .filter(|delta| delta_below_threshold(delta, entry, inclusion_threshold))
-                .cloned()
-        }
+        } => entry
+            .deltas()
+            .min_by(|a, b| {
+                a.instructions_compressed_size()
+                    .cmp(&b.instructions_compressed_size())
+            })
+            .filter(|delta| {
+                delta_below_threshold(*delta, entry.full_object_size(), inclusion_threshold)
+            })
+            .cloned(),
         // Can't use the delta variant if the request prevents us from using it
         DeltaInclusion::Exclude => None,
     }
@@ -668,27 +657,17 @@ async fn blob_and_tree_packfile_items(
     ctx: Arc<CoreContext>,
     blobstore: ArcRepoBlobstore,
     derived_data: ArcRepoDerivedData,
+    git_delta_manifest_version: GitDeltaManifestVersion,
     changeset_id: ChangesetId,
-) -> Result<BoxStream<'static, Result<(ChangesetId, MPath, GitDeltaManifestEntry)>>> {
-    let root_mf_id = derived_data
-        .derive::<RootGitDeltaManifestId>(&ctx, changeset_id)
-        .await
-        .with_context(|| {
-            format!(
-                "Error in deriving RootGitDeltaManifestId for commit {:?}",
-                changeset_id
-            )
-        })?;
-    let delta_manifest = root_mf_id
-        .manifest_id()
-        .load(&ctx, &blobstore)
-        .await
-        .with_context(|| {
-            format!(
-                "Error in loading Git Delta Manifest from root id {:?}",
-                root_mf_id
-            )
-        })?;
+) -> Result<BoxStream<'static, Result<(ChangesetId, MPath, impl GitDeltaManifestEntryOps)>>> {
+    let delta_manifest = fetch_git_delta_manifest(
+        &ctx,
+        &derived_data,
+        &blobstore,
+        git_delta_manifest_version,
+        changeset_id,
+    )
+    .await?;
     // Most delta manifests would contain tens of entries. These entries are just metadata and
     // not the actual object so its safe to load them all into memory instead of chaining streams
     // which significantly slows down the entire process.
@@ -709,6 +688,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     target_commits: BoxStream<'a, Result<ChangesetId>>,
     delta_inclusion: DeltaInclusion,
     packfile_item_inclusion: PackfileItemInclusion,
+    git_delta_manifest_version: GitDeltaManifestVersion,
     concurrency: PackfileConcurrency,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
@@ -720,7 +700,13 @@ async fn blob_and_tree_packfile_stream<'a>(
             let blobstore = blobstore.clone();
             let derived_data = derived_data.clone();
             let ctx = ctx.clone();
-            blob_and_tree_packfile_items(ctx, blobstore, derived_data, changeset_id)
+            blob_and_tree_packfile_items(
+                ctx,
+                blobstore,
+                derived_data,
+                git_delta_manifest_version,
+                changeset_id,
+            )
         })
         .try_buffered(concurrency.trees_and_blobs * 2)
         .try_flatten()
@@ -729,49 +715,25 @@ async fn blob_and_tree_packfile_stream<'a>(
         .map(move |result| {
             match result {
                 Err(err) => (0, Either::Left(future::err(err))),
-                Ok((changeset_id, path, mut entry)) => {
+                Ok((changeset_id, path, entry)) => {
                     let ctx = second_ctx.clone();
                     let blobstore = second_blobstore.clone();
-                    let delta = delta_base(&mut entry, delta_inclusion);
-                    let weight = delta
-                        .as_ref()
-                        .map_or(entry.full.size, |delta| delta.instructions_compressed_size)
-                        as usize;
+                    let delta = delta_base(&entry, delta_inclusion);
+                    let weight = delta.as_ref().map_or(entry.full_object_size(), |delta| {
+                        delta.instructions_compressed_size()
+                    }) as usize;
                     let weight = std::cmp::max(weight / THRESHOLD_BYTES, 1);
                     let fetch_future = async move {
                         match delta {
                             Some(delta) => {
-                                let chunk_id_prefix = DeltaInstructionChunkIdPrefix::new(
-                                    changeset_id,
-                                    path.clone(),
-                                    delta.origin,
-                                    path,
-                                );
-                                let instruction_bytes = fetch_delta_instructions(
-                                    &ctx,
-                                    &blobstore,
-                                    &chunk_id_prefix,
-                                    delta.instructions_chunk_count,
-                                )
-                                .try_fold(
-                                    BytesMut::with_capacity(
-                                        delta.instructions_compressed_size as usize,
-                                    ),
-                                    |mut acc, bytes| async move {
-                                        acc.extend_from_slice(bytes.as_ref());
-                                        anyhow::Ok(acc)
-                                    },
-                                )
-                                .await
-                                .context(
-                                    "Error in fetching delta instruction bytes from byte stream",
-                                )?
-                                .freeze();
+                                let instruction_bytes = delta
+                                    .instruction_bytes(&ctx, &blobstore, changeset_id, path)
+                                    .await?;
 
                                 let packfile_item = PackfileItem::new_delta(
-                                    entry.full.oid,
-                                    delta.base.oid,
-                                    delta.instructions_uncompressed_size,
+                                    entry.full_object_oid(),
+                                    delta.base_object_oid(),
+                                    delta.instructions_uncompressed_size(),
                                     instruction_bytes,
                                 );
                                 anyhow::Ok(packfile_item)
@@ -782,7 +744,7 @@ async fn blob_and_tree_packfile_stream<'a>(
                                     ctx.clone(),
                                     blobstore.clone(),
                                     ObjectIdentifierType::AllObjects(
-                                        entry.full.as_rich_git_sha1()?,
+                                        entry.full_object_rich_git_sha1()?,
                                     ),
                                     packfile_item_inclusion,
                                 )
@@ -969,6 +931,12 @@ pub async fn generate_pack_item_stream<'a>(
     repo: &'a impl Repo,
     request: PackItemStreamRequest,
 ) -> Result<PackItemStreamResponse<'a>> {
+    let git_delta_manifest_version = repo
+        .repo_config()
+        .derived_data_config
+        .get_active_config()
+        .ok_or_else(|| anyhow!("No enabled derived data types config"))?
+        .git_delta_manifest_version;
     // We need to include the bookmarks (i.e. branches, tags) in the pack based on the request parameters
     let bookmarks = bookmarks(&ctx, repo, &request.requested_refs)
         .await
@@ -999,6 +967,7 @@ pub async fn generate_pack_item_stream<'a>(
         &ctx,
         repo,
         to_commit_stream(target_commits.clone()),
+        git_delta_manifest_version,
         request.concurrency.trees_and_blobs,
     )
     .await
@@ -1024,6 +993,7 @@ pub async fn generate_pack_item_stream<'a>(
         to_commit_stream(target_commits.clone()),
         request.delta_inclusion,
         request.packfile_item_inclusion,
+        git_delta_manifest_version,
         request.concurrency,
     )
     .await
@@ -1101,6 +1071,12 @@ pub async fn fetch_response<'a>(
 ) -> Result<FetchResponse<'a>> {
     let delta_inclusion = DeltaInclusion::standard();
     let packfile_item_inclusion = PackfileItemInclusion::FetchAndStore;
+    let git_delta_manifest_version = repo
+        .repo_config()
+        .derived_data_config
+        .get_active_config()
+        .ok_or_else(|| anyhow!("No enabled derived data types config"))?
+        .git_delta_manifest_version;
     let ctx = Arc::new(ctx);
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
     let bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
@@ -1125,6 +1101,7 @@ pub async fn fetch_response<'a>(
         &ctx,
         repo,
         to_commit_stream(target_commits.clone()),
+        git_delta_manifest_version,
         request.concurrency.trees_and_blobs,
     )
     .await
@@ -1138,6 +1115,7 @@ pub async fn fetch_response<'a>(
         to_commit_stream(target_commits.clone()),
         delta_inclusion,
         packfile_item_inclusion,
+        git_delta_manifest_version,
         request.concurrency,
     )
     .await

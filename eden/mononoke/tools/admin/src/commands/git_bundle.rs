@@ -17,6 +17,7 @@ use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use git_symbolic_refs::GitSymbolicRefs;
+use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
@@ -52,6 +53,8 @@ pub struct Repo {
     git_symbolic_refs: dyn GitSymbolicRefs,
     #[facet]
     bookmark_cache: dyn BookmarksCache,
+    #[facet]
+    repo_config: RepoConfig,
 }
 
 #[derive(Subcommand)]

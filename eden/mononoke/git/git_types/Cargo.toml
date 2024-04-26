@@ -32,12 +32,14 @@ gix-hash = "0.11"
 gix-object = "0.33"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 multimap = "0.8.1"
 packfile = { version = "0.1.0", path = "../packfile" }
 quickcheck = "1.0"
 regex = "1.9.2"
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha1 = "0.10.5"
 thiserror = "1.0.49"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
@@ -58,7 +60,6 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 tempfile = "3.8"

@@ -414,7 +414,7 @@ pub fn fetch_delta_instructions<'a, B>(
     chunk_count: u64,
 ) -> BoxStream<'a, anyhow::Result<Bytes>>
 where
-    B: Blobstore + Clone,
+    B: Blobstore,
 {
     stream::iter(0..chunk_count)
         .map(move |chunk_idx| async move {

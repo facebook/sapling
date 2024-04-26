@@ -1255,6 +1255,7 @@ mod test {
                         blame_filesize_limit: Some(101),
                         hg_set_committer_extra: false,
                         blame_version: BlameVersion::V2,
+                        git_delta_manifest_version: Default::default(),
                     },],
                     scuba_table: None,
                 },

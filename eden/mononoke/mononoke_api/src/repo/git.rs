@@ -23,6 +23,7 @@ use context::CoreContext;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::GitError;
 use gix_hash::ObjectId;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
@@ -312,6 +313,7 @@ pub trait Repo = RepoIdentityRef
     + GitSymbolicRefsRef
     + BookmarksCacheRef
     + CommitGraphRef
+    + RepoConfigRef
     + Send
     + Sync;
 
