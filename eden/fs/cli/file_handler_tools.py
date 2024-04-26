@@ -25,7 +25,7 @@ class FileReleaseStatus:
         self.handle_found: bool = False
         self.keyboard_interrupt: bool = False
         self.conflict_processes: List[str] = []
-        self.failed_to_kill: Optional[str] = None
+        self.unkillable_processes: List[str] = []
         self.user_wants_to_kill: bool = False
         self.exception_raised: Optional[str] = None
         self.eden_instance = eden_instance
@@ -35,7 +35,7 @@ class FileReleaseStatus:
             "rm_open_files",
             mount=str(self.mount),
             conflict_processes=self.conflict_processes,
-            failed_to_kill=self.failed_to_kill if self.failed_to_kill else "",
+            unkillable_processes=self.unkillable_processes,
             want_kill=self.user_wants_to_kill,
             exception=str(self.exception_raised) if self.exception_raised else "",
             success=success,
@@ -141,7 +141,7 @@ if sys.platform == "win32":
                         proc.wait()
                     except Exception as e:
                         print(f"Failed to kill process {executable} {pid}: {e}")
-                        frs.failed_to_kill = executable
+                        frs.unkillable_processes.append(executable)
                         frs.exception_raised = e
                         return False
             else:
