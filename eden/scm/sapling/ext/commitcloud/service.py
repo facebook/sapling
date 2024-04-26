@@ -9,15 +9,17 @@ import socket
 
 from sapling import error
 
-from . import httpsservice, localservice
+from . import edenapiservice, httpsservice, localservice
 
 
-def get(ui):
+def get(ui, repo=None):
     servicetype = ui.config("commitcloud", "servicetype")
     if servicetype == "local":
         return localservice.LocalService(ui)
     elif servicetype == "remote":
         return httpsservice.HttpsCommitCloudService(ui)
+    elif servicetype == "edenapi":
+        return edenapiservice.EdenApiService(ui, repo)
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)

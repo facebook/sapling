@@ -203,7 +203,7 @@ def cloudjoin(ui, repo, **opts):
             )
             return 1
 
-        serv = service.get(ui)
+        serv = service.get(ui, repo)
         reponame = ccutil.getreponame(repo)
         # check that the workspace exists if the destination workspace
         # doesn't equal to the default workspace for the current user
@@ -374,7 +374,7 @@ def cloudrejoin(ui, repo, **opts):
             # The specific hostname workspace will be preferred over the default workspace.
             reponame = ccutil.getreponame(repo)
             hostnameworkspace = workspace.hostnameworkspace(ui)
-            winfos = service.get(ui).getworkspaces(
+            winfos = service.get(ui, repo).getworkspaces(
                 reponame, workspace.userworkspaceprefix(ui)
             )
 
@@ -540,7 +540,7 @@ def cloudlog(ui, repo, **opts):
     workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
 
     with progress.spinner(ui, _("fetching")):
-        serv = service.get(ui)
+        serv = service.get(ui, repo)
         slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
 
     # show all draft nodes using the provided or default template
@@ -601,7 +601,7 @@ def cloudsmartlog(ui, repo, templatealias="sl_cloud", **opts):
         % (workspacename, reponame),
         component="commitcloud",
     )
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
 
     flags = []
     if ui.configbool("commitcloud", "sl_showremotebookmarks"):
@@ -751,7 +751,7 @@ def cloudmove(ui, repo, *revs, **opts):
             % (sourceworkspace, destinationworkspace)
         )
 
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
     reponame = ccutil.getreponame(repo)
     currentworkspace = workspace.currentworkspace(repo)
 
@@ -860,7 +860,7 @@ def cloudhide(ui, repo, *revs, **opts):
 
 def checkauthenticated(ui, repo):
     """check if authentication works by sending an empty request"""
-    service.get(ui).check()
+    service.get(ui, repo).check()
 
 
 @subcmd(
@@ -885,7 +885,7 @@ def cloudrollback(ui, repo, *revs, **opts):
         raise error.Abort(_("workspace version must be specified"))
 
     version = int(version)
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
     reponame = ccutil.getreponame(repo)
 
     ui.status(
@@ -936,7 +936,7 @@ def cloudlistworspaces(ui, repo, **opts):
         component="commitcloud",
     )
 
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
     winfos = serv.getworkspaces(reponame, workspacenameprefix)
     if not winfos:
         ui.write(_("no workspaces found with the prefix %s\n") % workspacenameprefix)
@@ -1018,7 +1018,7 @@ def clouddeleteworkspace(ui, repo, **opts):
         return
 
     reponame = ccutil.getreponame(repo)
-    service.get(ui).updateworkspacearchive(reponame, workspacename, True)
+    service.get(ui, repo).updateworkspacearchive(reponame, workspacename, True)
     ui.status(
         _("workspace %s has been deleted\n") % workspacename, component="commitcloud"
     )
@@ -1033,7 +1033,7 @@ def cloudundeleteworkspace(ui, repo, **opts):
         raise error.Abort(_("workspace name should be provided\n"))
 
     reponame = ccutil.getreponame(repo)
-    service.get(ui).updateworkspacearchive(reponame, workspacename, False)
+    service.get(ui, repo).updateworkspacearchive(reponame, workspacename, False)
     ui.status(
         _("workspace %s has been restored\n") % workspacename, component="commitcloud"
     )
@@ -1141,7 +1141,7 @@ def cloudrenameworkspace(ui, repo, skipconfirmation=False, **opts):
         component="commitcloud",
     )
 
-    service.get(ui).renameworkspace(reponame, source, destination)
+    service.get(ui, repo).renameworkspace(reponame, source, destination)
 
     if source == currentworkspace:
         with backuplock.lock(repo), repo.wlock(), repo.lock():
@@ -1203,7 +1203,9 @@ def cloudreclaimworkspaces(ui, repo, **opts):
         )
         return 1
 
-    formerworkspaces = list(service.get(ui).getworkspaces(reponame, formeruserprefix))
+    formerworkspaces = list(
+        service.get(ui, repo).getworkspaces(reponame, formeruserprefix)
+    )
 
     if not formerworkspaces:
         ui.status(_("nothing to reclaim\n"), component="commitcloud")
@@ -1459,7 +1461,7 @@ def shareworkspace(ui, repo, **opts):
     if workspacename is None:
         ui.write(_("You are not connected to any workspace\n"))
         return
-    sharing_data = service.get(ui).shareworkspace(
+    sharing_data = service.get(ui, repo).shareworkspace(
         ccutil.getreponame(repo), workspacename
     )
     ui.write(sharing_data["sharing_message"] + "\n")
@@ -1477,7 +1479,9 @@ def cloudstatus(ui, repo, **opts):
     userworkspaceprefix = workspace.userworkspaceprefix(ui)
     if workspacename.startswith(userworkspaceprefix):
         # check it with the server
-        if not service.get(ui).getworkspace(ccutil.getreponame(repo), workspacename):
+        if not service.get(ui, repo).getworkspace(
+            ccutil.getreponame(repo), workspacename
+        ):
             ui.write(
                 _(
                     "Workspace: %s (renamed or removed) (run `@prog@ cloud list` and switch to a different one)\n"
@@ -1681,7 +1685,7 @@ def cloudtidyup(ui, repo, **opts):
     workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
     if workspacename is None:
         raise ccerror.WorkspaceError(ui, _("undefined workspace"))
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
     ui.status(
         _("cleanup unnessesary remote bookmarks from the workspace %s for repo %s\n")
         % (workspacename, reponame),
