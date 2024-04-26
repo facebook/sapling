@@ -1713,7 +1713,10 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::SqlCommitCloud)?;
         Ok(Arc::new(CommitCloud {
-            storage: sql_commit_cloud.new(),
+            storage: sql_commit_cloud.new(matches!(
+                &repo_config.storage_config.metadata,
+                MetadataDatabaseConfig::Remote(_)
+            )),
         }))
     }
 }

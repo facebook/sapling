@@ -37,7 +37,7 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlCommitCloudBuilder {
 }
 
 impl SqlCommitCloudBuilder {
-    pub fn new(self) -> SqlCommitCloud {
-        SqlCommitCloud::new(self.connections)
+    pub fn new(self, uses_mysql: bool) -> SqlCommitCloud {
+        SqlCommitCloud::new(self.connections, uses_mysql)
     }
 }

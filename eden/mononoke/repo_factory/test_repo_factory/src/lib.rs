@@ -870,7 +870,8 @@ impl TestRepoFactory {
     /// Commit cloud
     pub fn commit_cloud(&self, _repo_identity: &RepoIdentity) -> Result<ArcCommitCloud> {
         Ok(Arc::new(commit_cloud::CommitCloud {
-            storage: SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(),
+            storage: SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone())
+                .new(false),
         }))
     }
 }

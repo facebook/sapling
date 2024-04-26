@@ -11,11 +11,21 @@ use sql_ext::SqlConnections;
 pub struct SqlCommitCloud {
     #[allow(unused)]
     pub(crate) connections: SqlConnections,
+    // Commit cloud has three databases in mononoke:
+    // 1. xdb.commit_cloud (prod) This is a mysql db used in prod
+    // 2. sqlite db (test) This is created from sqlite-commit-cloud.sql. Used for unit tests.
+    // 3. mock mysql db (test) This is used in integration tests, it's never queried or populated,
+    /// just there to avoid a clash between "bookmarks" tables
+    #[allow(unused)]
+    uses_mysql: bool,
 }
 
 impl SqlCommitCloud {
-    pub fn new(connections: SqlConnections) -> Self {
-        Self { connections }
+    pub fn new(connections: SqlConnections, uses_mysql: bool) -> Self {
+        Self {
+            connections,
+            uses_mysql,
+        }
     }
 }
 

@@ -25,7 +25,7 @@ use sql_construct::SqlConstruct;
 #[fbinit::test]
 async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -53,7 +53,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::snapshots::DeleteArgs;
 
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -94,7 +94,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
 async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::heads::DeleteArgs;
     use commit_cloud::sql::ops::Get;
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -135,7 +135,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::local_bookmarks::DeleteArgs;
     use commit_cloud::sql::ops::Get;
 
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -177,7 +177,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::remote_bookmarks::DeleteArgs;
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -223,7 +223,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 #[fbinit::test]
 async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -252,7 +252,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::GenericGet;
 
     // Create a workspace with heads and bookmarks
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
     let timestamp = Timestamp::now();
