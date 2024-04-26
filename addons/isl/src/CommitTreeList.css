@@ -109,6 +109,7 @@
   margin-left: var(--halfpad);
   position: relative;
   align-items: center;
+  z-index: 1;
 }
 
 .commit-row-selected {
@@ -139,6 +140,11 @@
   /* Increase Draggable Commit size to overlap with avatar, without changing where the commit renders */
   margin-left: -30px;
   padding-left: 30px;
+  /* Increase drag target for commit on the right so you can drag nearly anywhere on the row to preview the rebase */
+  margin-right: -400px;
+  padding-right: 400px;
+  /* Put drag target behind buttons, so expanded ranges don't interfere with clicking buttons */
+  z-index: -1;
 }
 
 .commit-title {
