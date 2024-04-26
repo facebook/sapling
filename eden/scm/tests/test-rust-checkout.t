@@ -1,8 +1,5 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
   $ configure modernclient
   $ setconfig checkout.use-rust=true
   $ setconfig experimental.nativecheckout=true
@@ -12,6 +9,15 @@
   > A   # A/foo = foo
   >     # A/bar = bar
   > EOS
+
+#if eden
+
+Quick check for making sure this test is capable of using EdenFS
+  $ ls -a $TESTTMP/.eden-backing-repos
+  repo1
+
+#endif
+
 
 Unknown file w/ different content - conflict:
   $ echo nope > foo
@@ -84,7 +90,8 @@ Can continue interrupted checkout:
   [255]
 
   $ LOG=checkout=debug hg go -q --continue 2>&1 | grep skipped_count
-  DEBUG checkout:apply_store: checkout: skipped files based on progress skipped_count=3
+  DEBUG checkout:apply_store: checkout: skipped files based on progress skipped_count=3 (no-eden !)
+  DEBUG checkout:apply_store: checkout: skipped files based on progress skipped_count=0 (eden !)
   $ hg st
   $ tglog
   @  a19fc4bcafed 'A'
@@ -110,7 +117,7 @@ Don't fail with open files that can't be deleted:
     with open("unlink_fail/foo"), open("unlink_fail/bar"):
 
       $ hg go $B
-      update failed to remove foo: Can't remove file "*foo": The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !)
+      update failed to remove foo: Can't remove file "*foo": The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !) (no-eden !)
       2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 
@@ -192,10 +199,12 @@ Various invalid arg combos:
   > EOS
   $ hg go -q $A
   $ echo diverged > foo
+TODO(sggutier): Investigate if this is a case of diferring EdenFS behavior
   $ hg go --merge $B
   merging foo
   warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
-  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved (no-eden !)
+  0 files merged, 1 files unresolved (eden !)
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg go -qC $B
@@ -334,10 +343,12 @@ Bail on dir/path conflict with added file:
   $ hg go -q $A
   $ touch dir
   $ hg add dir
+TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this later
   $ hg go $B
-  abort: 1 conflicting file changes:
-   dir
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
+  abort: 1 conflicting file changes: (no-eden !)
+   dir (no-eden !)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
+  abort: file metadata for dir not found at source commit (eden !)
   [255]
 
 Bail on untracked file conflict only if contents differ:
@@ -366,21 +377,27 @@ Bail on untracked file path conflict:
   > EOS
   $ hg go -q $A
   $ echo foo > foo
+TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this later
   $ hg go $B
-  abort: 1 conflicting file changes:
-   foo
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
+  abort: 1 conflicting file changes: (no-eden !)
+   foo (no-eden !)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
+  abort: file metadata for foo not found at source commit (eden !)
   [255]
   $ rm foo
   $ mkdir -p foo/bar
   $ echo foo > foo/bar/baz
+TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this later
   $ hg go $B
-  abort: 1 conflicting file changes:
-   foo/bar/baz
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
-  [255]
+  abort: 1 conflicting file changes: (no-eden !)
+   foo/bar/baz (no-eden !)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
+  [255] (no-eden !)
+  update complete (eden !)
   $ hg go -q $B --config experimental.checkout.rust-path-conflicts=false
   $ hg st
+  ! foo/bar (eden !)
+  ? foo/bar/baz (eden !)
 
 Deleted file replaced by untracked directory:
   $ newclientrepo
@@ -411,10 +428,14 @@ Deleted file replaced by untracked directory:
    foo
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
+TODO(sggutier): This is yet another case of differing behavior between Eden and non-Eden
   $ hg go -qC $B
   $ hg st
+  ! foo (eden !)
+  ? foo/bar (eden !)
 
-Don't output too many conflicts:
+#if no-eden
+Don't output too many conflicts. This behavior only occurs on non-EdenFS (no need to fix):
   $ newclientrepo
   $ drawdag <<'EOS'
   > B  # B/foo=bar\n
@@ -436,6 +457,7 @@ Don't output too many conflicts:
    ...and 95 more
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
+#endif
 
 Test update_distance logging:
   $ newclientrepo
