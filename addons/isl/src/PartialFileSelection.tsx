@@ -9,9 +9,9 @@ import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSe
 import type {RangeInfo} from './stackEdit/ui/TextEditable';
 
 import {VSCodeCheckbox} from './VSCodeCheckbox';
-import {T, t} from './i18n';
+import {RadioGroup} from './components/Radio';
+import {t} from './i18n';
 import {TextEditable} from './stackEdit/ui/TextEditable';
-import {VSCodeRadio, VSCodeRadioGroup} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet} from 'immutable';
 import {useRef, useState} from 'react';
 import {notEmpty} from 'shared/utils';
@@ -28,25 +28,17 @@ export type PartialFileEditMode = 'unified' | 'side-by-side' | 'free-edit';
 export function PartialFileSelection(props: Props) {
   const [editMode, setEditMode] = useState<PartialFileEditMode>('unified');
 
-  // vscode-webview-ui-toolkit has poor typescript definitions on events.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleChange = (e: any) => {
-    setEditMode(e.target.value);
-  };
-
   return (
     <div>
-      <VSCodeRadioGroup value={editMode} onChange={handleChange}>
-        <VSCodeRadio value="unified">
-          <T>Unified</T>
-        </VSCodeRadio>
-        <VSCodeRadio value="side-by-side">
-          <T>Side-by-side</T>
-        </VSCodeRadio>
-        <VSCodeRadio value="free-edit">
-          <T>Freeform edit</T>
-        </VSCodeRadio>
-      </VSCodeRadioGroup>
+      <RadioGroup
+        choices={[
+          {title: t('Unified'), value: 'unified'},
+          {title: t('Side-by-side'), value: 'side-by-side'},
+          {title: t('Freeform edit'), value: 'free-edit'},
+        ]}
+        current={editMode}
+        onChange={setEditMode}
+      />
       <PartialFileSelectionWithMode {...props} mode={editMode} />
     </div>
   );
