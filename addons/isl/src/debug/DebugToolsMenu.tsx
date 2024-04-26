@@ -19,6 +19,7 @@ import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
 import {Badge} from '../components/Badge';
+import {Checkbox} from '../components/Checkbox';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
@@ -40,7 +41,7 @@ import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 
@@ -144,12 +145,12 @@ function InternalState() {
       {isDev && (
         <Row>
           <T>Integrate with: </T>
-          <VSCodeCheckbox checked={reduxTools} onChange={() => setReduxTools(v => !v)}>
+          <Checkbox checked={reduxTools} onChange={setReduxTools}>
             <T>Redux DevTools</T>
-          </VSCodeCheckbox>
-          <VSCodeCheckbox checked={reactTools} onChange={() => setReactTools(v => !v)}>
+          </Checkbox>
+          <Checkbox checked={reactTools} onChange={setReactTools}>
             {t('React <DebugAtoms/>')}
-          </VSCodeCheckbox>
+          </Checkbox>
         </Row>
       )}
     </div>
@@ -169,11 +170,9 @@ function ServerClientMessageLogging() {
   const [shouldLog, setShouldLog] = useAtom(logMessagesState);
   return (
     <div>
-      <VSCodeCheckbox
-        checked={shouldLog}
-        onChange={e => setShouldLog((e.target as HTMLInputElement).checked)}>
+      <Checkbox checked={shouldLog} onChange={checked => setShouldLog(checked)}>
         <T>Log messages</T>
-      </VSCodeCheckbox>
+      </Checkbox>
     </div>
   );
 }
