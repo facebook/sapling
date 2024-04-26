@@ -18,7 +18,7 @@
 /// A blake2 hash.
 typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
-/// A blake2 hash.
+/// A blake3 hash.
 typedef binary Blake3 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 /// A sha1 hash.
