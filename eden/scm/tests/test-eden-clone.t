@@ -4,12 +4,12 @@
 
 setup backing repo
 
-  $ eagerepo
+  $ configure modernclient
   $ setconfig clone.use-rust=True
   $ setconfig checkout.use-rust=True
+  $ setconfig experimental.rust-clone-updaterev=True
 
-  $ newrepo e1
-  $ drawdag << 'EOS'
+  $ newclientrepo e1_client test:e1 << 'EOS'
   > E  # bookmark master = E
   > |
   > D
@@ -27,6 +27,7 @@ test eden clone
   Cloning new repository at $TESTTMP/e2...
   Success.  Checked out commit 9bc730a1
   $ eden list
+  $TESTTMP/e1_client
   $TESTTMP/e2
   $ cd $TESTTMP/e2
   $ ls -a
@@ -56,14 +57,17 @@ test rust clone
   Cloning reponame-default into $TESTTMP/hemlo
   TRACE cmdclone: performing rust clone
    INFO clone_metadata{repo="reponame-default"}: cmdclone: enter
+  TRACE clone_metadata{repo="reponame-default"}: cmdclone: fetching lazy commit data and bookmarks
    INFO clone_metadata{repo="reponame-default"}: cmdclone: exit
    INFO get_update_target: cmdclone: enter
    INFO get_update_target: cmdclone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "master"))
    INFO get_update_target: cmdclone: exit
   $ eden list
+  $TESTTMP/e1_client
   $TESTTMP/e2
   $TESTTMP/hemlo
   $ ls -a $TESTTMP/.eden-backing-repos
+  e1_client
   reponame-default
   $ ls -a hemlo
   .eden
@@ -95,4 +99,13 @@ test rust clone with test instead of eager
   $TESTTMP/testo2
   $ ls -a $TESTTMP/.eden-backing-repos
   aname
+  e1_client
   reponame-default
+
+Make sure that --updaterev works on EdenFS
+   $ hg clone test:e1 testo3 -u stable
+   Cloning reponame-default into $TESTTMP/testo3
+   $ ls testo3
+   A
+   B
+   C
