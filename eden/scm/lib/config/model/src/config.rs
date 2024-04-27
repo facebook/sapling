@@ -266,6 +266,18 @@ impl ValueSource {
     pub fn file_content(&self) -> Option<Text> {
         self.location.as_ref().map(|src| src.content.clone())
     }
+
+    /// Return the line number, starting from 1.
+    pub fn line_number(&self) -> Option<usize> {
+        let loc = self.location.as_ref()?;
+        let line_no = loc
+            .content
+            .slice(..loc.location.start)
+            .chars()
+            .filter(|&c| c == '\n')
+            .count();
+        Some(line_no + 1)
+    }
 }
 
 #[cfg(test)]
