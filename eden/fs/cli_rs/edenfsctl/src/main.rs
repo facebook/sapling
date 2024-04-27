@@ -137,6 +137,7 @@ fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
 
 /// This function takes care of the fallback logic, hijack supported subcommand
 /// to Rust implementation and forward the rest to Python.
+#[allow(unused_variables)]
 fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
         let cmd = edenfs_commands::MainCommand::try_parse();
@@ -240,6 +241,9 @@ fn main(_fb: FacebookInit) -> Result<()> {
     // [`fbinit::expect_init`].
     #[cfg(fbcode_build)]
     let mut sample = CliUsageSample::build();
+
+    #[cfg(not(fbcode_build))]
+    let mut sample = CliUsageSample;
 
     let code = match wrapper_main(&mut sample) {
         Ok(code) => Ok(code),
