@@ -54,6 +54,9 @@ def runtest(
         subprocess.check_output(args, cwd=dirname, stderr=subprocess.PIPE)
         return (0, name, "")
     except subprocess.CalledProcessError as ex:
+        output = ex.stderr.decode("utf-8", "ignore") + ex.stdout.decode(
+            "utf-8", "ignore"
+        )
         if b"failures:" in ex.stdout:
             # Only show stdout which contains test failure information.
             # stderr might have warnings and are noisy.
@@ -67,6 +70,15 @@ def runtest(
             # 45]: expected SHT_STRTAB, but got SHT_NULL
             # Not fatal.
             return (0, name, ex.stderr.decode("utf-8", "ignore"))
+        elif "file not found for module" in output and "out" in output:
+            # Thrift codegen issue. Ignore for now.
+            # error[E0583]: file not found for module `mock`
+            #  --> ...\build\cargo-target\debug\build\fb303_core_clients-69ca1b52c8a46089\out\lib.rs:9:1
+            #   |
+            # 9 | pub mod mock;
+            #   | ^^^^^^^^^^^^^
+            #   |
+            return (0, name, output)
         elif b"could not compile" in ex.stderr:
             # Only show stderr with information about how it fails
             # to compile.
@@ -91,8 +103,7 @@ def runtest(
             return (
                 0,
                 name,
-                ex.stderr.decode("utf-8", "ignore")
-                + ex.stdout.decode("utf-8", "ignore"),
+                output,
             )
 
 
