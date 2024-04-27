@@ -7,13 +7,16 @@
 
 //! A simple store implementation to access a local git repo's odb.
 
+use std::io::BufReader;
 use std::io::BufWriter;
+use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::process::Stdio;
 
 use configmodel::Config;
 use gitcompat::rungit::RunGitOptions;
+use progress_model::ProgressBar;
 use types::HgId;
 
 type Git2Result<T> = Result<T, git2::Error>;
@@ -163,12 +166,15 @@ impl GitStore {
             "--recurse-submodules=no",
             &self.fetch_filter,
             "--stdin",
+            "--progress",
         ];
         let mut child = self
             .git
             .git_cmd("fetch", &args)
             .stdin(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()?;
+
         if let Some(stdin) = child.stdin.take() {
             let mut stdin = BufWriter::new(stdin);
             for id in missing_ids {
@@ -177,6 +183,26 @@ impl GitStore {
                 stdin.write_all(b"\n")?;
             }
             drop(stdin);
+        }
+
+        // git reads all input before running actual fetch that might print progress info
+        // (see builtin/fetch.c). No need to use a thread to read output.
+        if let Some(stderr) = child.stderr.take() {
+            let mut stderr = BufReader::with_capacity(64, stderr);
+            let mut buf = [0u8; 1];
+            let mut last_line = String::with_capacity(64);
+            let bar = ProgressBar::new_adhoc("git fetch", 0, "");
+            while stderr.read_exact(&mut buf).is_ok() {
+                match buf[0] {
+                    b'\r' | b'\n' => {
+                        update_progress(&bar, &last_line);
+                        last_line.clear();
+                    }
+                    c => {
+                        last_line.push(c as char);
+                    }
+                }
+            }
         }
 
         child.wait()?;
@@ -195,4 +221,26 @@ fn hgid_to_git_oid(id: HgId) -> git2::Oid {
 
 fn git_oid_to_hgid(oid: git2::Oid) -> HgId {
     HgId::from_slice(oid.as_bytes()).expect("git2::Oid should convert to HgId")
+}
+
+fn update_progress(bar: &ProgressBar, line: &str) -> Option<()> {
+    // Check if the message looks like a progress, examples:
+    //
+    // remote: Enumerating objects: 10414, done.
+    // remote: Counting objects: 100% (10414/10414), done.
+    // remote: Compressing objects: 100% (8992/8992), done.
+    // remote: Total 10414 (delta 294), reused 7985 (delta 121), pack-reused 0
+    // Receiving objects: 100% (10414/10414), 2.62 MiB | 13.14 MiB/s, done.
+    // Resolving deltas: 100% (294/294), done.
+    let (left, right) = line.split_once("% (")?;
+    let (current, total) = right.split_once(')')?.0.split_once('/')?;
+    let message = left.rsplit_once(':')?.0;
+    let current = current.parse::<u64>().ok()?;
+    let total = total.parse::<u64>().ok()?;
+    if total > 0 && total > current {
+        bar.set_total(total);
+        bar.set_position(current);
+        bar.set_message(message.to_string());
+    }
+    Some(())
 }
