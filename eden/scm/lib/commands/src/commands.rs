@@ -38,6 +38,7 @@ external_commands![
     cmdversion,
     cmdwhereami,
     cmddebugargs,
+    cmddebugconfigtree,
     cmddebugcurrentexe,
     cmddebugdumpindexedlog,
     cmddebugdumpinternalconfig,

@@ -34,6 +34,7 @@ members = [
   "lib/commands/commands/cmdversion",
   "lib/commands/commands/cmdwhereami",
   "lib/commands/debugcommands/cmddebugargs",
+  "lib/commands/debugcommands/cmddebugconfigtree",
   "lib/commands/debugcommands/cmddebugcurrentexe",
   "lib/commands/debugcommands/cmddebugdumpindexedlog",
   "lib/commands/debugcommands/cmddebugdumpinternalconfig",
