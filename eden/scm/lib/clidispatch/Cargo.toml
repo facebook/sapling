@@ -21,7 +21,7 @@ identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
 io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
-repo = { version = "0.1.0", path = "../repo" }
+repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 sampling = { version = "0.1.0", path = "../sampling" }
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
 thiserror = "1.0.49"

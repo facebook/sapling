@@ -10,6 +10,7 @@ rust_library(
             "dependencies_override": {
                 "dependencies": {
                     "indexedlog": {"features": ["configurable"]},
+                    "repo": {"features": ["wdir"]},
                     "thrift-types": {"optional": True},
                 },
             },
