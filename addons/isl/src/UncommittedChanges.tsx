@@ -796,7 +796,7 @@ function MergeConflictButtons({
   return (
     <Row style={{flexWrap: 'wrap', marginBottom: 'var(--pad)'}}>
       <Button
-        kind={allConflictsResolved ? 'primary' : 'icon'}
+        primary
         key="continue"
         disabled={!allConflictsResolved || shouldDisableButtons}
         data-testid="conflict-continue-button"
@@ -810,7 +810,6 @@ function MergeConflictButtons({
         <T>Continue</T>
       </Button>
       <Button
-        icon
         key="abort"
         disabled={shouldDisableButtons}
         onClick={() => {
