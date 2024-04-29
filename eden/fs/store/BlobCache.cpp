@@ -12,6 +12,7 @@
 namespace facebook::eden {
 
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
+static constexpr folly::StringPiece kBlobCacheItems{"blob_cache.items"};
 
 ObjectCache<Blob, ObjectCacheFlavor::InterestHandle>::GetResult BlobCache::get(
     const ObjectId& hash,
@@ -65,12 +66,15 @@ BlobCache::BlobCache(
 BlobCache::~BlobCache() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(kBlobCacheMemory);
+  counters->unregisterCallback(kBlobCacheItems);
 }
 
 void BlobCache::registerStats() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(
       kBlobCacheMemory, [this] { return getStats().totalSizeInBytes; });
+  counters->registerCallback(
+      kBlobCacheItems, [this] { return getStats().objectCount; });
 }
 
 } // namespace facebook::eden
