@@ -28,7 +28,9 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
+use commit_cloud::references::ReferencesData;
 use commit_cloud::sql::versions::WorkspaceVersion;
+use commit_cloud::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -1058,6 +1060,18 @@ impl HgRepoContext {
             .blob_repo()
             .commit_cloud()
             .get_workspace(workspace, reponame)
+            .await?)
+    }
+
+    pub async fn cloud_references(
+        &self,
+        ctx: CommitCloudContext,
+        base_version: u64,
+    ) -> Result<ReferencesData, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .commit_cloud()
+            .get_references(ctx, base_version)
             .await?)
     }
 }

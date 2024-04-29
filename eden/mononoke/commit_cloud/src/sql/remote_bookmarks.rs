@@ -25,6 +25,13 @@ pub struct WorkspaceRemoteBookmark {
     pub remote: String,
 }
 
+// Remote Bookmark in the format expected by the client
+#[derive(Debug, Clone)]
+pub struct RefRemoteBookmark {
+    pub remote: String,
+    pub name: String,
+    pub node: Option<String>,
+}
 pub struct DeleteArgs {
     pub removed_bookmarks: Vec<String>,
 }
