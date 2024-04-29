@@ -289,3 +289,22 @@ where
     scuba.log_with_msg(log_tag, msg);
     result
 }
+
+/// Build a new submodule dependency map to expand/validate recursive submodules
+/// under a given submodule.
+/// It removes the path of the given submodule from all the entries that are
+/// under it and ignores the ones that aren't.
+pub(crate) fn build_recursive_submodule_deps<R: Repo>(
+    submodule_deps: &HashMap<NonRootMPath, R>,
+    submodule_path: &NonRootMPath,
+) -> HashMap<NonRootMPath, R> {
+    let rec_small_repo_deps: HashMap<NonRootMPath, R> = submodule_deps
+        .iter()
+        .filter_map(|(p, repo)| {
+            p.remove_prefix_component(submodule_path)
+                .map(|relative_p| (relative_p, repo.clone()))
+        })
+        .collect();
+
+    rec_small_repo_deps
+}

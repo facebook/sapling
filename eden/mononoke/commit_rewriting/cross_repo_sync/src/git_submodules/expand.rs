@@ -44,6 +44,7 @@ use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
+use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_file_content_id;
 use crate::git_submodules::utils::get_submodule_repo;
@@ -566,14 +567,8 @@ async fn process_recursive_submodule_file_change<'a, R: Repo>(
     // submodule prefix from the keys that have it and ignoring the ones that
     // don't, because they're not relevant to the submodule being processed.
     // This prefix is added back to the results, before they're returned.
-    let rec_small_repo_deps: HashMap<NonRootMPath, R> = sm_exp_data
-        .submodule_deps
-        .iter()
-        .filter_map(|(p, repo)| {
-            p.remove_prefix_component(&submodule_path.0)
-                .map(|relative_p| (relative_p, repo.clone()))
-        })
-        .collect();
+    let rec_small_repo_deps =
+        build_recursive_submodule_deps(sm_exp_data.submodule_deps, &submodule_path.0);
 
     let sm_exp_data = SubmoduleExpansionData {
         submodule_deps: &rec_small_repo_deps,

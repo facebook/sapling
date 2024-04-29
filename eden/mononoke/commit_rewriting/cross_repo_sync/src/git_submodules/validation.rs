@@ -42,6 +42,7 @@ use slog::debug;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
+use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
@@ -229,14 +230,8 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     // Build a new submodule deps map, removing the prefix of the submodule path
     // being validated, so it can be used to validate any recursive submodule
     // being expanded in it.
-    let adjusted_submodule_deps: HashMap<NonRootMPath, R> = sm_exp_data
-        .submodule_deps
-        .iter()
-        .filter_map(|(p, repo)| {
-            p.remove_prefix_component(submodule_path)
-                .map(|relative_p| (relative_p, repo.clone()))
-        })
-        .collect();
+    let adjusted_submodule_deps =
+        build_recursive_submodule_deps(sm_exp_data.submodule_deps, submodule_path);
 
     // The submodule roots fsnode and the fsnode from its expansion in the large
     // repo should be exactly the same.
@@ -418,6 +413,8 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
 async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R: Repo>(
     ctx: &'a CoreContext,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
+    // TODO(T186874619): build recursive sm_exp_data and pass
+    // `adjusted_submodule_deps`, as it's done in expansion module.
     // Small repo submodule dependencies, but with their paths adjusted to
     // account for recursive submodules.
     adjusted_submodule_deps: HashMap<NonRootMPath, R>,
@@ -428,7 +425,7 @@ async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R: Rep
     debug!(
         ctx.logger(),
         "Validating expansion working copy of submodule repo {0}",
-        submodule_repo.repo_identity().id()
+        submodule_repo.repo_identity().name()
     );
     let large_repo = sm_exp_data.large_repo.clone();
     let large_repo_blobstore = large_repo.repo_blobstore_arc();
@@ -674,13 +671,10 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
         mut entries_to_validate,
     } = entry_validation_res;
 
-    let rec_submodule_repo_deps: HashMap<NonRootMPath, R> = adjusted_submodule_deps
-        .iter()
-        .filter_map(|(p, repo)| {
-            p.remove_prefix_component(&exp_path)
-                .map(|relative_p| (relative_p, repo.clone()))
-        })
-        .collect();
+    let rec_submodule_repo_deps = build_recursive_submodule_deps(
+        &adjusted_submodule_deps,
+        &Into::<NonRootMPath>::into(exp_path.clone()),
+    );
 
     let exp_dir_fsnode_id = *exp_directory.id();
 
