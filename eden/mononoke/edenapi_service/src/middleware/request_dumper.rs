@@ -191,13 +191,10 @@ impl Middleware for RequestDumperMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let scuba_table = self.scuba_table.as_ref()?;
         let logger = &RequestContext::borrow_from(state).logger;
-        let headers = match HeaderMap::try_borrow_from(state).context("No headers in State") {
-            Ok(headers) => headers,
-            Err(e) => {
-                warn!(logger, "Error when borrowing headers from State: {}", e);
-                return None;
-            }
-        };
+        let headers = HeaderMap::try_borrow_from(state)
+            .context("No headers in State")
+            .inspect_err(|e| warn!(logger, "Error when borrowing headers from State: {}", e))
+            .ok()?;
         let mut log_deserialized = false;
         if let Some(len) = get_content_len(headers) {
             if len > MAX_BODY_LEN {
@@ -208,20 +205,12 @@ impl Middleware for RequestDumperMiddleware {
                 log_deserialized = true;
             }
         }
-        let mut rd = match RequestDumper::new(self.fb, scuba_table) {
-            Ok(rd) => rd,
-            Err(e) => {
-                warn!(logger, "Error creating request dumper: {}", e);
-                return None;
-            }
-        };
-        if let Err(e) = rd.add_http_req_prefix(state, headers) {
-            warn!(
-                logger,
-                "Err while attempting to record http req prefix: {}", e
-            );
-            return None;
-        }
+        let mut rd = RequestDumper::new(self.fb, scuba_table)
+            .inspect_err(|e| warn!(logger, "Error creating request dumper: {}", e))
+            .ok()?;
+        rd.add_http_req_prefix(state, headers)
+            .inspect_err(|e| warn!(logger, "Error recording http req prefix: {}", e))
+            .ok()?;
         rd.set_log_deserialized(log_deserialized);
         state.put(rd);
         None
