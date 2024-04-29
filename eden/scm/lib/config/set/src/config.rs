@@ -544,88 +544,6 @@ impl ConfigSet {
         }
     }
 
-    /// Drop configs from sources that are outside `allowed_locations` or
-    /// `allowed_configs`.
-    ///
-    /// This function is being removed but we need logging to understand its
-    /// side-effect.
-    pub fn ensure_location_supersets(
-        &mut self,
-        allowed_locations: Option<HashSet<&str>>,
-        allowed_configs: Option<HashSet<(&str, &str)>>,
-    ) {
-        for (sname, section) in self.sections.iter_mut() {
-            for (kname, values) in section.items.iter_mut() {
-                let values_copy = values.clone();
-                let mut removals = 0;
-                // value with a larger index takes precedence.
-                for (index, value) in values_copy.iter().enumerate() {
-                    // Convert the index into the original index.
-                    let index = index - removals;
-
-                    // Get the filename of the value's rc location
-                    let path: PathBuf = match value.location() {
-                        None => continue,
-                        Some((path, _)) => path,
-                    };
-                    let location: Option<String> = path
-                        .file_name()
-                        .and_then(|f| f.to_str())
-                        .map(|s| s.to_string());
-                    // If only certain locations are allowed, and this isn't one of them, remove
-                    // it. If location is None, it came from inmemory, so don't filter it.
-                    if let Some(location) = location {
-                        if crate::builtin::get(location.as_str()).is_none()
-                            && allowed_locations
-                                .as_ref()
-                                .map(|a| a.contains(location.as_str()))
-                                == Some(false)
-                            && allowed_configs
-                                .as_ref()
-                                .map(|a| a.contains(&(sname, kname)))
-                                != Some(true)
-                        {
-                            tracing::trace!(
-                                target: "configset::validate",
-                                "dropping {}.{} set by {} ({})",
-                                sname.as_ref(),
-                                kname.as_ref(),
-                                path.display().to_string(),
-                                value
-                                    .value()
-                                    .as_ref()
-                                    .map(|v| v.as_ref())
-                                    .unwrap_or_default(),
-                            );
-                            values.remove(index);
-                            removals += 1;
-                            continue;
-                        }
-                    }
-                }
-
-                // If the removal changes the config, log it as mismatched.
-                if let (Some(before_remove), Some(after_remove)) =
-                    (values_copy.last(), values.last())
-                {
-                    if before_remove.value != after_remove.value {
-                        let source = match before_remove.location() {
-                            None => before_remove.source().to_string(),
-                            Some(l) => l.0.display().to_string(),
-                        };
-                        tracing::info!(
-                             target: "config_mismatch",
-                             config=&format!("{sname}.{kname}"),
-                             expected=after_remove.value.clone().unwrap_or_default().as_ref(),
-                             actual=before_remove.value.clone().unwrap_or_default().as_ref(),
-                             source=source,
-                        );
-                    }
-                }
-            }
-        }
-    }
-
     pub fn clear_unpinned(&mut self) {
         self.sections.clear();
         self.secondary = None;
@@ -1162,61 +1080,6 @@ space_list=value1.a value1.b
     }
 
     #[test]
-    fn test_allowed_locations() {
-        let mut cfg = ConfigSet::new();
-
-        fn set(
-            cfg: &mut ConfigSet,
-            section: &'static str,
-            key: &'static str,
-            value: &'static str,
-            location: &'static str,
-        ) {
-            cfg.set_internal(
-                Text::from_static(section),
-                Text::from_static(key),
-                Some(Text::from_static(value)),
-                Some(ValueLocation {
-                    path: Arc::new(Path::new(location).to_owned()),
-                    content: Text::from_static(""),
-                    location: 0..1,
-                }),
-                &Options::new()
-                    .source(Text::from_static("source"))
-                    .pin(false),
-            );
-        }
-
-        set(&mut cfg, "section1", "key1", "value1", "subset1");
-        set(&mut cfg, "section2", "key2", "value2", "subset2");
-
-        let mut allow_list = HashSet::new();
-        allow_list.insert("subset1");
-
-        cfg.ensure_location_supersets(Some(allow_list.clone()), None);
-        assert_eq!(
-            cfg.get("section1", "key1"),
-            Some(Text::from_static("value1"))
-        );
-        assert_eq!(cfg.get("section2", "key2"), None);
-
-        // Check that allow_configs allows the config through, even if allow_locations did not.
-        let mut allow_configs = HashSet::new();
-        allow_configs.insert(("section2", "key2"));
-
-        set(&mut cfg, "section2", "key2", "value2", "subset2");
-        cfg.ensure_location_supersets(Some(allow_list), Some(allow_configs));
-        assert_eq!(
-            cfg.get("section1", "key1"),
-            Some(Text::from_static("value1"))
-        );
-        assert_eq!(
-            cfg.get("section2", "key2"),
-            Some(Text::from_static("value2"))
-        );
-    }
-
-    #[test]
     fn test_secondary() {
         let mut cfg1 = ConfigSet::new();
         let mut cfg2 = ConfigSet::new();
@@ -1275,41 +1138,6 @@ x = 2
                 .collect::<Vec<_>>(),
             ["test2", "test1"]
         );
-    }
-
-    #[test]
-    fn test_verifier_removal() {
-        let mut cfg = ConfigSet::new();
-
-        fn set(
-            cfg: &mut ConfigSet,
-            section: &'static str,
-            key: &'static str,
-            value: &'static str,
-            location: &'static str,
-        ) {
-            cfg.set_internal(
-                Text::from_static(section),
-                Text::from_static(key),
-                Some(Text::from_static(value)),
-                Some(ValueLocation {
-                    path: Arc::new(Path::new(location).to_owned()),
-                    content: Text::from_static(""),
-                    location: 0..1,
-                }),
-                &Options::new().source(Text::from_static("source")),
-            );
-        }
-
-        // This test verifies that allowed location removal and subset removal interact nicely
-        // together.
-        set(&mut cfg, "section", "key", "value", "subset");
-        set(&mut cfg, "section", "key", "value2", "super");
-
-        let mut allowed_locations = HashSet::new();
-        allowed_locations.insert("super");
-
-        cfg.ensure_location_supersets(Some(allowed_locations), None);
     }
 
     #[test]

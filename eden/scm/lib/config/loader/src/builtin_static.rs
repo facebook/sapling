@@ -10,7 +10,6 @@
 //! Use `staticconfig::static_config!` to define static configs so they do not
 //! have runtime parsing or hashmap insertion overhead.
 
-use std::path::Path;
 use std::sync::Arc;
 
 use configmodel::Config;

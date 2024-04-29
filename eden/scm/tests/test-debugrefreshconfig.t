@@ -168,43 +168,6 @@ Verify we don't regenerate configs if the Mercurial version hasn't changed
   $ hg config section3.key3
   value3
 
-Verify configs.allowedlocations limits config loading to the allowed locations
-  $ cat >> .hg/hgrc <<EOF
-  > %include hgrc1
-  > %include hgrc2
-  > %include hgrc3
-  > EOF
-  $ cat >> .hg/hgrc1 <<EOF
-  > [zz_section]
-  > key=foo
-  > [zz_other_section]
-  > other_key=other_foo
-  > EOF
-  $ cat >> .hg/hgrc2 <<EOF
-  > [zz_section]
-  > key=bar
-  > [zz_other_section]
-  > other_key=other_bar
-  > EOF
-  $ hg config --debug | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
-  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
-
-  $ hg config --debug --config "configs.allowedlocations=hgrc1 .hgrc" | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc1:2: zz_section.key=foo
-  $TESTTMP/shared_copy/.hg/hgrc1:4: zz_other_section.other_key=other_foo
-
-  $ hg config --debug --config "configs.allowedlocations=hgrc2 .hgrc" | grep ': zz_'
-  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
-  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
-
-  $ hg config --debug --config "configs.allowedlocations=hgrc3 .hgrc" | grep ': zz_'
-  [1]
-
-  $ hg config --debug --config "configs.allowedlocations=hgrc3 .hgrc" --config "configs.allowedconfigs=zz_section.key .hgrc" | grep 'zz_section\.'
-  --config: configs.allowedconfigs=zz_section.key .hgrc
-  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
-
 Verify we load internalconfig during clone
   $ cd $TESTTMP
   $ export HG_TEST_INTERNALCONFIG="$TESTTMP/test_hgrc"

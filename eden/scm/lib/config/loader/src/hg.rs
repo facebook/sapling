@@ -90,8 +90,6 @@ pub trait ConfigSetHgExt {
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
-
-    fn validate_dynamic(&mut self) -> Result<(), Error>;
 }
 
 /// Load config from specified "minimal repo", or global config if no path specified.
@@ -389,7 +387,7 @@ impl ConfigSetHgExt for ConfigSet {
             return Err(Errors(errors));
         }
 
-        self.validate_dynamic().map_err(|err| Errors(vec![err]))
+        Ok(())
     }
 
     fn load_system(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
@@ -629,31 +627,6 @@ impl ConfigSetHgExt for ConfigSet {
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error> {
         let opts = Options::new().source(source).process_hgplain();
         self.load_path(path, &opts)
-    }
-
-    #[cfg(feature = "fb")]
-    fn validate_dynamic(&mut self) -> Result<(), Error> {
-        let allowed_locations: Option<Vec<String>> =
-            self.get_opt::<Vec<String>>("configs", "allowedlocations")?;
-        let allowed_configs: Option<Vec<String>> =
-            self.get_opt::<Vec<String>>("configs", "allowedconfigs")?;
-
-        Ok(self.ensure_location_supersets(
-            allowed_locations
-                .as_ref()
-                .map(|v| HashSet::from_iter(v.iter().map(|s| s.as_str()))),
-            allowed_configs.as_ref().map(|v| {
-                HashSet::from_iter(v.iter().map(|s| {
-                    s.split_once('.')
-                        .expect("allowed configs must contain dots")
-                }))
-            }),
-        ))
-    }
-
-    #[cfg(not(feature = "fb"))]
-    fn validate_dynamic(&mut self) -> Result<(), Error> {
-        Ok(())
     }
 }
 
