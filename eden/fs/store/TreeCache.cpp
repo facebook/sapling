@@ -8,8 +8,12 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
+
+static constexpr folly::StringPiece kTreeCacheMemory{"tree_cache.memory"};
+
 std::shared_ptr<const Tree> TreeCache::get(const ObjectId& hash) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
     return getSimple(hash);
@@ -27,6 +31,19 @@ TreeCache::TreeCache(std::shared_ptr<ReloadableConfig> config)
       : ObjectCache<Tree, ObjectCacheFlavor::Simple>{
             config->getEdenConfig()->inMemoryTreeCacheSize.getValue(),
             config->getEdenConfig()->inMemoryTreeCacheMinimumItems.getValue()},
-        config_{config} {}
+        config_{config} {
+  registerStats();
+}
+
+TreeCache::~TreeCache() {
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
+  counters->unregisterCallback(kTreeCacheMemory);
+}
+
+void TreeCache::registerStats() {
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
+  counters->registerCallback(
+      kTreeCacheMemory, [this] { return getStats().totalSizeInBytes; });
+}
 
 } // namespace facebook::eden

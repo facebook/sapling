@@ -62,7 +62,7 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
       size_t minimumCount,
       std::shared_ptr<ReloadableConfig> config,
       EdenStatsPtr stats);
-  ~BlobCache() = default;
+  ~BlobCache();
 
   /**
    * If a blob for the given hash is in cache, return it. If the blob is not in
@@ -102,6 +102,8 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
   bool enabled_;
 
   EdenStatsPtr stats_;
+
+  void registerStats();
 };
 
 } // namespace facebook::eden

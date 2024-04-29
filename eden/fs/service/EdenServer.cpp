@@ -348,9 +348,6 @@ class EdenServer::ThriftServerEventHandler
   folly::Promise<Unit> runningPromise_;
 };
 
-static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
-static constexpr folly::StringPiece kTreeCacheMemory{"tree_cache.memory"};
-
 static constexpr folly::StringPiece kNfsReadCount60{"nfs.read_us.count.60"};
 static constexpr folly::StringPiece kNfsReadDirCount60{
     "nfs.readdir_us.count.60"};
@@ -415,13 +412,6 @@ EdenServer::EdenServer(
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
       startupStatusChannel_{std::move(startupStatusChannel)} {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
-  counters->registerCallback(kBlobCacheMemory, [this] {
-    return this->getBlobCache()->getStats().totalSizeInBytes;
-  });
-
-  counters->registerCallback(kTreeCacheMemory, [this] {
-    return this->getTreeCache()->getStats().totalSizeInBytes;
-  });
 
   registerInodePopulationReportsCallback();
 
@@ -460,8 +450,6 @@ EdenServer::EdenServer(
 
 EdenServer::~EdenServer() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
-  counters->unregisterCallback(kBlobCacheMemory);
-  counters->unregisterCallback(kTreeCacheMemory);
 
   unregisterInodePopulationReportsCallback();
 

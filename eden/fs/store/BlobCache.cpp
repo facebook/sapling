@@ -11,6 +11,8 @@
 
 namespace facebook::eden {
 
+static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
+
 ObjectCache<Blob, ObjectCacheFlavor::InterestHandle>::GetResult BlobCache::get(
     const ObjectId& hash,
     Interest interest) {
@@ -54,9 +56,21 @@ BlobCache::BlobCache(
           ObjectCacheFlavor::InterestHandle>{maximumSize, minimumCount},
       enabled_{config->getEdenConfig()->enableInMemoryBlobCaching.getValue()},
       stats_{std::move(stats)} {
+  registerStats();
   if (!enabled_) {
     XLOG(DBG2) << "In-memory blob caching is disabled due to configuration";
   }
+}
+
+BlobCache::~BlobCache() {
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
+  counters->unregisterCallback(kBlobCacheMemory);
+}
+
+void BlobCache::registerStats() {
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
+  counters->registerCallback(
+      kBlobCacheMemory, [this] { return getStats().totalSizeInBytes; });
 }
 
 } // namespace facebook::eden

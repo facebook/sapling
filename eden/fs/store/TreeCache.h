@@ -41,7 +41,7 @@ class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
     };
     return std::make_shared<TC>(config);
   }
-  ~TreeCache() = default;
+  ~TreeCache();
 
   /**
    * If a tree for the given hash is in cache, return it. If the tree is not in
@@ -63,6 +63,8 @@ class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
   std::shared_ptr<ReloadableConfig> config_;
 
   explicit TreeCache(std::shared_ptr<ReloadableConfig> config);
+
+  void registerStats();
 };
 
 } // namespace facebook::eden
