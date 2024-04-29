@@ -440,63 +440,57 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
         .commit()
         .await?;
 
-    let _large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
         .await
         .context("sync_to_master failed")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
     println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
 
     derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
-    // TODO(T179534458): delete submodule metadata file when deleting
-    // recursive submodule
+    compare_expected_changesets(
+        large_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new_by_file_change(
+            MESSAGE,
+            // repo_b submodule metadata file is updated
+            vec!["repo_a/submodules/.x-repo-submodule-repo_b"],
+            // Files being deleted
+            vec![
+                // NOTE: repo_c submodule metadata file has to be deleted too
+                "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+                "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+            ],
+        )],
+    )?;
 
-    // compare_expected_changesets(
-    //     large_repo_changesets.last_chunk::<1>().unwrap(),
-    //     &[ExpectedChangeset::new_by_file_change(
-    //         MESSAGE,
-    //         // repo_b submodule metadata file is updated
-    //         vec!["repo_a/submodules/.x-repo-submodule-repo_b"],
-    //         // Files being deleted
-    //         vec![
-    //             // TODO(T179534458): delete submodule metadata file when deleting
-    //             // recursive submodule
-    //             // NOTE: repo_c submodule metadata file has to be deleted too
-    //             // "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
-    //             "repo_a/submodules/repo_b/submodules/repo_c/C_A",
-    //             "repo_a/submodules/repo_b/submodules/repo_c/C_B",
-    //         ],
-    //     )],
-    // )?;
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/B_B",
+        ],
+    )
+    .await?;
 
-    // assert_working_copy_matches_expected(
-    //     &ctx,
-    //     &large_repo,
-    //     large_repo_cs_id,
-    //     vec![
-    //         "large_repo_root",
-    //         "repo_a/A_A",
-    //         "repo_a/A_B",
-    //         "repo_a/A_C",
-    //         "repo_a/submodules/.x-repo-submodule-repo_b",
-    //         "repo_a/submodules/repo_b/B_A",
-    //         "repo_a/submodules/repo_b/B_B",
-    //     ],
-    // )
-    // .await?;
-
-    // let expected_cs_id =
-    //     ChangesetId::from_str("7f8fbaec6112ac5e14bb4385d744fa1fea6c64c800f30c59c9c0ffca509c4e4c")
-    //         .unwrap();
+    let expected_cs_id =
+        ChangesetId::from_str("7f8fbaec6112ac5e14bb4385d744fa1fea6c64c800f30c59c9c0ffca509c4e4c")
+            .unwrap();
 
     check_mapping(
         ctx.clone(),
         &commit_syncer,
         repo_a_cs_id,
-        // Some(expected_cs_id),
-        None,
+        Some(expected_cs_id),
     )
     .await;
 

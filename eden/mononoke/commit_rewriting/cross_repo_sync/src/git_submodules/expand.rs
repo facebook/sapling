@@ -87,7 +87,6 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     /// This is needed to validate submodule expansion in large repo bonsais.
     pub large_repo: InMemoryRepo,
 }
-
 pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     bonsai: BonsaiChangesetMut,
@@ -485,8 +484,42 @@ async fn expand_git_submodule<'a, R: Repo>(
                             .await
                         }
                         BonsaiDiffFileChange::Deleted(path) => {
-                            let path_in_sm = submodule_path.0.join(&path);
-                            let fcs = vec![(path_in_sm, FileChange::Deletion)];
+                            let previous_submodule_commits = get_previous_submodule_commits(
+                                ctx,
+                                parents,
+                                small_repo,
+                                submodule_path.clone(),
+                                submodule_repo,
+                            )
+                            .await?;
+
+                            let rec_small_repo_deps = build_recursive_submodule_deps(
+                                sm_exp_data.submodule_deps,
+                                &submodule_path.0,
+                            );
+
+                            let rec_sm_exp_data = SubmoduleExpansionData {
+                                submodule_deps: &rec_small_repo_deps,
+                                ..sm_exp_data
+                            };
+
+                            let paths_to_delete = handle_submodule_deletion(
+                                ctx,
+                                submodule_repo,
+                                rec_sm_exp_data,
+                                previous_submodule_commits.as_slice(),
+                                path,
+                            )
+                            .await?;
+                            let fcs = paths_to_delete
+                                .into_iter()
+                                .map(|p| {
+                                    cloned!(submodule_path);
+                                    let full_path = submodule_path.0.join(&p);
+                                    (full_path, FileChange::Deletion)
+                                })
+                                .collect::<Vec<_>>();
+
                             Ok(Left(fcs))
                         }
                     }
@@ -687,26 +720,23 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     Ok(sm_parents)
 }
 
-/// If a submodule is being deleted from the source repo, we should delete its
-/// entire expanded copy in the large repo.
+/// If the path being deleted is a file of type GitSubmodule, then we should
+/// delete its entire expansion and its metadata file in the large repo.
 async fn handle_submodule_deletion<'a, R: Repo>(
     ctx: &'a CoreContext,
     small_repo: &'a R,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     parents: &'a [ChangesetId],
-    submodule_file_path: NonRootMPath,
+    deleted_path: NonRootMPath,
 ) -> Result<Vec<NonRootMPath>> {
     // If the path is in the submodule_deps keys, it's almost
     // certainly a submodule being deleted.
-    if sm_exp_data
-        .submodule_deps
-        .contains_key(&submodule_file_path)
-    {
+    if sm_exp_data.submodule_deps.contains_key(&deleted_path) {
         // However, to be certain, let's verify that this file
         // was indeed of type `GitSubmodule` by getting the checking
         // the FileType of the submodule file path in each of the parents.
         let is_git_submodule_file = stream::iter(parents)
-            .map(|cs_id| is_path_git_submodule(ctx, small_repo, *cs_id, &submodule_file_path))
+            .map(|cs_id| is_path_git_submodule(ctx, small_repo, *cs_id, &deleted_path))
             .buffered(10)
             .boxed()
             .try_collect::<Vec<_>>()
@@ -717,20 +747,20 @@ async fn handle_submodule_deletion<'a, R: Repo>(
         // Not a submodule file, just a file at the same path
         // where a git submodule used to be, so just delete the file normally.
         if !is_git_submodule_file {
-            return Ok(vec![submodule_file_path]);
+            return Ok(vec![deleted_path]);
         }
 
         // This is a submodule file, so delete its entire expanded directory.
         return run_and_log_stats_to_scuba(
             ctx,
             "Deleting submodule expansion",
-            format!("Submodule path: {submodule_file_path}"),
-            delete_submodule_expansion(ctx, small_repo, sm_exp_data, parents, submodule_file_path),
+            format!("Submodule path: {deleted_path}"),
+            delete_submodule_expansion(ctx, small_repo, sm_exp_data, parents, deleted_path),
         )
         .await;
     };
 
-    Ok(vec![submodule_file_path])
+    Ok(vec![deleted_path])
 }
 
 /// After confirming that the path being deleted is indeed a submodule file,
