@@ -71,7 +71,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     if let Some(arg1) = args.get(1).map(|s| s.as_ref()) {
         match arg1 {
             "start-pfc-server" => {
-                let config: Arc<dyn Config> = Arc::new(ConfigSet::new());
+                let config: Arc<dyn Config> = Arc::new(ConfigSet::new().named("pfc-server"));
                 return HgPython::new(&args).run_hg(args, io, &config, false);
             }
             "start-commandserver" => {

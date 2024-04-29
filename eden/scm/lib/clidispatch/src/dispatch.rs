@@ -369,7 +369,7 @@ impl Dispatcher {
         // the config yet, and in general don't know which command is being run yet.
         let pinned_configs = pinned_configs(&global_opts);
         if !pinned_configs.is_empty() {
-            let mut config = ConfigSet::wrap(self.config().clone());
+            let mut config = ConfigSet::wrap(self.config().clone()).named("root:pin");
             set_pinned(&mut config, &pinned_configs)?;
             self.set_config(Arc::new(config));
         }

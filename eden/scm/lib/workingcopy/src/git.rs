@@ -27,7 +27,7 @@ pub fn parse_submodules(data: &[u8]) -> Result<Vec<Submodule>> {
         .collect::<Vec<&str>>()
         .join("\n");
 
-    let mut cfg = ConfigSet::new();
+    let mut cfg = ConfigSet::new().named("gitmodules");
     let errors = cfg.parse(data, &".gitmodules".into());
     if !errors.is_empty() {
         bail!("error parsing .gitmodules: {:?}", errors);

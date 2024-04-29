@@ -96,7 +96,7 @@ pub(crate) fn builtin_system(
 // Apply filter funcs from Options. This can do various things such as
 // ignoring or renaming certain sections.
 fn apply_filters(mut uc: UnionConfig, opts: Options) -> UnionConfig {
-    let mut filter_overrides = ConfigSet::new();
+    let mut filter_overrides = ConfigSet::new().named("builtin:filters");
     let opts = opts.source("builtin").process_hgplain();
 
     let filtered_opts: Options = "(filtered)".into();

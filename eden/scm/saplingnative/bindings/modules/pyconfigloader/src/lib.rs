@@ -43,7 +43,7 @@ py_class!(pub class config |py| {
     data cfg: RefCell<ConfigSet>;
 
     def __new__(_cls) -> PyResult<config> {
-        config::create_instance(py, RefCell::new(ConfigSet::new()))
+        config::create_instance(py, RefCell::new(ConfigSet::new().named("pyconfig")))
     }
 
     def clone(&self) -> PyResult<config> {

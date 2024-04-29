@@ -34,7 +34,7 @@ py_class!(pub class context |py| {
 
     def __new__(_cls) -> PyResult<Self> {
         Self::create_instance(py, CoreContext::new(
-            Arc::new(ConfigSet::new()),
+            Arc::new(ConfigSet::new().named("pycontext")),
             IO::main().map_pyerr(py)?,
             vec![],
         ))

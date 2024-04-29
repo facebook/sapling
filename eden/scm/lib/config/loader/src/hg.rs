@@ -112,7 +112,7 @@ fn load_with_options(
     pinned: &[PinnedConfig],
     opts: Options,
 ) -> Result<ConfigSet> {
-    let mut cfg = ConfigSet::new();
+    let mut cfg = ConfigSet::new().named("root");
     let mut errors = Vec::new();
 
     tracing::debug!(?pinned, repo_path=?info.map(|i| &i.path));
@@ -346,7 +346,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Clone rather than Self::new() so we include any --config overrides
         // already inside self.
-        let mut dynamic = self.clone();
+        let mut dynamic = self.clone().named("dynamic");
 
         errors.append(&mut self.load_system(opts.clone(), &ident));
         errors.append(&mut self.load_user(opts.clone(), &ident));
@@ -453,7 +453,7 @@ impl ConfigSetHgExt for ConfigSet {
         if needs_sync_generation {
             tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, vpnless_changed, "regenerating dynamic config (version mismatch)");
             let (repo_name, user_name) = {
-                let mut temp_config = ConfigSet::new();
+                let mut temp_config = ConfigSet::new().named("temp");
                 if !temp_config.load_user(opts.clone(), identity).is_empty() {
                     bail!("unable to read user config to get user name");
                 }
