@@ -360,7 +360,7 @@ def pull(orig, ui, repo, *args, **opts):
             rebasemodule.rebase, ui, repo, dest=dest, tool=tool
         )
     if dest and update:
-        ret = ret or commands.update(ui, repo, node=dest, check=True)
+        ret = ret or commands.update(ui, repo, node=dest)
 
     return ret
 

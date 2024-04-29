@@ -25,12 +25,11 @@ setup server and client
   pulling from $TESTTMP/a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-test a local modification (tofix: 'pull -u' should succeed )
+test a local modification
 
   $ echo aa > a
   $ hg pull -u -B main
   pulling from $TESTTMP/a
-  abort: uncommitted changes
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
   M a
