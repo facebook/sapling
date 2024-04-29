@@ -257,6 +257,7 @@ def share(
     bookmarks: bool = True,
     defaultpath=None,
     relative: bool = False,
+    repository=repository,
 ):
     """create a shared repository"""
 
