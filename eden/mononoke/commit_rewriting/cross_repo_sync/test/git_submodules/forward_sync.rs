@@ -497,6 +497,409 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test a scenario where users stop using a repository as submodule but keep
+/// its contents as static copies in the same path.
+/// This should be a valid bonsai, where the removal of the submodule metadata
+/// file means that the GitSubmodule file type should be deleted in the small
+/// repo when backsyncing.
+///
+/// This also tests that **later modifying this static copy** also passes
+/// validation, even if the path is still in the small repo config as one
+/// of its submodule deps.
+#[fbinit::test]
+async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+    )
+    .await?;
+
+    const DELETE_METADATA_FILE_MSG: &str = "Delete repo_b submodule and keept its static copy";
+
+    let del_md_file_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(DELETE_METADATA_FILE_MSG)
+        .delete_file(REPO_B_SUBMODULE_PATH)
+        // Delete the submodule file change, but keep the contents in the same path
+        .add_file(
+            format!("{}/B_A", REPO_B_SUBMODULE_PATH).as_str(),
+            "first commit in submodule B",
+        )
+        .add_file(
+            format!("{}/B_B", REPO_B_SUBMODULE_PATH).as_str(),
+            "second commit in submodule B",
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, del_md_file_cs_id)
+        .await
+        .context("sync_to_master failed")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
+
+    // assert_working_copy_matches_expected(
+    //     &ctx,
+    //     &large_repo,
+    //     large_repo_cs_id,
+    //     vec![
+    //         "large_repo_root",
+    //         "repo_a/A_A",
+    //         "repo_a/A_B",
+    //         "repo_a/A_C",
+    //         // Files from the submodule are now regular files in the small repo
+    //         "repo_a/submodules/repo_b/B_A",
+    //         "repo_a/submodules/repo_b/B_B",
+    //     ],
+    // )
+    // .await?;
+
+    const CHANGE_SUBMODULE_PATH_MSG: &str = "Change static copy of repo_b";
+
+    let chg_sm_path_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![del_md_file_cs_id])
+        .set_message(CHANGE_SUBMODULE_PATH_MSG)
+        // Modify files in the submodule path, because they're now regular files
+        // in the small repo
+        .delete_file(format!("{}/B_A", REPO_B_SUBMODULE_PATH).as_str())
+        .add_file(
+            format!("{}/B_B", REPO_B_SUBMODULE_PATH).as_str(),
+            "Changing B_B in static copy of repo_b",
+        )
+        .add_file(
+            format!("{}/B_C", REPO_B_SUBMODULE_PATH).as_str(),
+            "Add file to static copy of repo_b",
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, chg_sm_path_cs_id)
+        .await
+        .context("sync_to_master failed")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    compare_expected_changesets_from_basic_setup(
+        &large_repo_changesets,
+        &[
+            // // Changeset that deletes the submodule metadata file
+            // ExpectedChangeset::new_by_file_change(
+            //     DELETE_METADATA_FILE_MSG,
+            //     // The submodule files are treated as regular file changes
+            //     vec![
+            //         "repo_a/submodules/repo_b/B_A",
+            //         "repo_a/submodules/repo_b/B_B",
+            //     ],
+            //     // Only submodule metadata file is deleted
+            //     vec!["repo_a/submodules/.x-repo-submodule-repo_b"],
+            // ),
+            // // Changeset that modifies files in the submodule path, which is
+            // // now a static copy of the submodule
+            // ExpectedChangeset::new_by_file_change(
+            //     CHANGE_SUBMODULE_PATH_MSG,
+            //     // The submodule files are treated as regular file changes
+            //     vec![
+            //         "repo_a/submodules/repo_b/B_B",
+            //         "repo_a/submodules/repo_b/B_C",
+            //     ],
+            //     // Only submodule metadata file is deleted
+            //     vec!["repo_a/submodules/repo_b/B_A"],
+            // ),
+        ],
+    )?;
+
+    // assert_working_copy_matches_expected(
+    //     &ctx,
+    //     &large_repo,
+    //     large_repo_cs_id,
+    //     vec![
+    //         "large_repo_root",
+    //         "repo_a/A_A",
+    //         "repo_a/A_B",
+    //         "repo_a/A_C",
+    //         // Files from the submodule are now regular files in the small repo
+    //         "repo_a/submodules/repo_b/B_B",
+    //         "repo_a/submodules/repo_b/B_C",
+    //     ],
+    // )
+    // .await?;
+
+    // Check mappings of both commits
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        del_md_file_cs_id,
+        None,
+        // Some(
+        //     ChangesetId::from_str(
+        //         "6176e1966404d7da39e62f814ddc49181cb7a31f63a40504f76feada0a47bcf4",
+        //     )
+        //     .unwrap(),
+        // ),
+    )
+    .await;
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        chg_sm_path_cs_id,
+        None,
+        // Some(
+        //     ChangesetId::from_str(
+        //         "d988d913f6b9f1e91d1fdc41d317cf2d6bed335774c2d5415e33eaa46d086442",
+        //     )
+        //     .unwrap(),
+        // ),
+    )
+    .await;
+
+    Ok(())
+}
+
+/// Same scenario as `test_deleting_submodule_but_keeping_directory`, but with
+/// a recursive submodule.
+#[fbinit::test]
+async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path.clone(), repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    const DELETE_METADATA_FILE_MSG: &str = "Delete repo_c submodule and keep its static copy";
+
+    let del_repo_c_md_file_cs_id =
+        CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_map["B_B"]])
+            .set_message(DELETE_METADATA_FILE_MSG)
+            .delete_file(repo_c_submodule_path_in_repo_b.clone())
+            // Delete the submodule file change, but keep the contents in the same path
+            .add_file(
+                repo_c_submodule_path_in_repo_b
+                    .clone()
+                    .join(&NonRootMPath::new("C_A")?),
+                "first commit in submodule C",
+            )
+            .add_file(
+                repo_c_submodule_path_in_repo_b
+                    .clone()
+                    .join(&NonRootMPath::new("C_B")?),
+                "second commit in submodule C",
+            )
+            .commit()
+            .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, del_repo_c_md_file_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    let del_md_file_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(DELETE_METADATA_FILE_MSG)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, del_md_file_cs_id)
+        .await
+        .context("Failed to sync del_md_file_cs_id")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
+
+    // assert_working_copy_matches_expected(
+    //     &ctx,
+    //     &large_repo,
+    //     large_repo_cs_id,
+    //     vec![
+    //         "large_repo_root",
+    //         "repo_a/A_A",
+    //         "repo_a/A_B",
+    //         "repo_a/A_C",
+    //         // Files from the submodule are now regular files in the small repo
+    //         "repo_a/submodules/.x-repo-submodule-repo_b",
+    //         "repo_a/submodules/repo_b/B_A",
+    //         "repo_a/submodules/repo_b/B_B",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+    //     ],
+    // )
+    // .await?;
+
+    const CHANGE_SUBMODULE_PATH_MSG: &str = "Change static copy of repo_c";
+
+    let chg_repo_c_copy_cs_id =
+        CreateCommitContext::new(&ctx, &repo_b, vec![del_repo_c_md_file_cs_id])
+            .set_message(CHANGE_SUBMODULE_PATH_MSG)
+            // Modify files in the submodule path, because they're now regular files
+            // in the small repo
+            .delete_file(
+                repo_c_submodule_path_in_repo_b
+                    .clone()
+                    .join(&NonRootMPath::new("C_A")?),
+            )
+            .add_file(
+                repo_c_submodule_path_in_repo_b
+                    .clone()
+                    .join(&NonRootMPath::new("C_B")?),
+                "Change file in static copy of repo_c",
+            )
+            .add_file(
+                repo_c_submodule_path_in_repo_b.join(&NonRootMPath::new("C_C")?),
+                "Add file to static copy of repo_c",
+            )
+            .commit()
+            .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, chg_repo_c_copy_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    let chg_sm_path_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![del_md_file_cs_id])
+        .set_message(CHANGE_SUBMODULE_PATH_MSG)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, chg_sm_path_cs_id)
+        .await
+        .context("Failed to sync chg_sm_path_cs_id")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
+    // compare_expected_changesets(
+    // large_repo_changesets.last_chunk::<2>().unwrap(),
+    // &[
+    // // Changeset that deletes the submodule metadata file
+    // ExpectedChangeset::new_by_file_change(
+    //     DELETE_METADATA_FILE_MSG,
+    //     // The submodule files are treated as regular file changes
+    //     vec![
+    //         // repo_b submodule metadata file is updated
+    //         "repo_a/submodules/.x-repo-submodule-repo_b",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+    //     ],
+    //     // Only submodule metadata file is deleted
+    //     vec!["repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c"],
+    // ),
+    // // Changeset that modifies files in the submodule path, which is
+    // // now a static copy of the submodule
+    // ExpectedChangeset::new_by_file_change(
+    //     CHANGE_SUBMODULE_PATH_MSG,
+    //     // The submodule files are treated as regular file changes
+    //     vec![
+    //         // repo_b submodule metadata file is updated
+    //         "repo_a/submodules/.x-repo-submodule-repo_b",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_C",
+    //     ],
+    //     // Only submodule metadata file is deleted
+    //     vec!["repo_a/submodules/repo_b/submodules/repo_c/C_A"],
+    // ),
+    //     ],
+    // )?;
+
+    // assert_working_copy_matches_expected(
+    //     &ctx,
+    //     &large_repo,
+    //     large_repo_cs_id,
+    //     vec![
+    //         "large_repo_root",
+    //         "repo_a/A_A",
+    //         "repo_a/A_B",
+    //         "repo_a/A_C",
+    //         // Files from the submodule are now regular files in the small repo
+    //         "repo_a/submodules/.x-repo-submodule-repo_b",
+    //         "repo_a/submodules/repo_b/B_A",
+    //         "repo_a/submodules/repo_b/B_B",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+    //         "repo_a/submodules/repo_b/submodules/repo_c/C_C",
+    //     ],
+    // )
+    // .await?;
+
+    // Check mappings of both commits
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        del_md_file_cs_id,
+        None,
+        // Some(
+        //     ChangesetId::from_str(
+        //         "727dc8e42f7886bfb3bd919d58724cff6c4b7d5ea42410184b4c0027e53d8c54",
+        //     )
+        //     .unwrap(),
+        // ),
+    )
+    .await;
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        chg_sm_path_cs_id,
+        None,
+        // Some(
+        //     ChangesetId::from_str(
+        //         "3b28131208374b55997843bdcacef567aa8b1bb09212d2d3168c30ef056dcd60",
+        //     )
+        //     .unwrap(),
+        // ),
+    )
+    .await;
+
+    Ok(())
+}
+
 // ------------------------- Implicit deletes ----------------------------
 
 // Cover implicit deletions.
