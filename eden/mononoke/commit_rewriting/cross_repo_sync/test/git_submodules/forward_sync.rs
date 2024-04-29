@@ -381,6 +381,128 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test that deleting a recursive submodule also deletes its metadata file.
+#[fbinit::test]
+async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    // Delete repo_c submodule in repo_b
+    let repo_b_cs_id =
+        CreateCommitContext::new(&ctx, &repo_b, vec![*repo_b_cs_map.get("B_B").unwrap()])
+            .set_message("Add and delete file from repo_b")
+            .delete_file(repo_c_submodule_path_in_repo_b)
+            .commit()
+            .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    const MESSAGE: &str = "Update submodule after deleting repo_c submodule in repo_b";
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let _large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await
+        .context("sync_to_master failed")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
+
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
+    // TODO(T179534458): delete submodule metadata file when deleting
+    // recursive submodule
+
+    // compare_expected_changesets(
+    //     large_repo_changesets.last_chunk::<1>().unwrap(),
+    //     &[ExpectedChangeset::new_by_file_change(
+    //         MESSAGE,
+    //         // repo_b submodule metadata file is updated
+    //         vec!["repo_a/submodules/.x-repo-submodule-repo_b"],
+    //         // Files being deleted
+    //         vec![
+    //             // TODO(T179534458): delete submodule metadata file when deleting
+    //             // recursive submodule
+    //             // NOTE: repo_c submodule metadata file has to be deleted too
+    //             // "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+    //             "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+    //             "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+    //         ],
+    //     )],
+    // )?;
+
+    // assert_working_copy_matches_expected(
+    //     &ctx,
+    //     &large_repo,
+    //     large_repo_cs_id,
+    //     vec![
+    //         "large_repo_root",
+    //         "repo_a/A_A",
+    //         "repo_a/A_B",
+    //         "repo_a/A_C",
+    //         "repo_a/submodules/.x-repo-submodule-repo_b",
+    //         "repo_a/submodules/repo_b/B_A",
+    //         "repo_a/submodules/repo_b/B_B",
+    //     ],
+    // )
+    // .await?;
+
+    // let expected_cs_id =
+    //     ChangesetId::from_str("7f8fbaec6112ac5e14bb4385d744fa1fea6c64c800f30c59c9c0ffca509c4e4c")
+    //         .unwrap();
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        repo_a_cs_id,
+        // Some(expected_cs_id),
+        None,
+    )
+    .await;
+
+    Ok(())
+}
+
 // ------------------------- Implicit deletes ----------------------------
 
 // Cover implicit deletions.
@@ -439,7 +561,6 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
             // Files being deleted
             vec![
                 // The submodule metadata file should also be deleted
-                // TODO(T179534458): delete metadata file when submodule is implicitly deleted
                 "repo_a/submodules/.x-repo-submodule-repo_b",
                 // NOTE: no need to have explicit deletions for these files, because
                 // they're being deleted implicitly.
