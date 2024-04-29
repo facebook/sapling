@@ -198,7 +198,14 @@ impl Config for ConfigSet {
 
     fn layers(&self) -> Vec<Arc<dyn Config>> {
         if let Some(secondary) = &self.secondary {
-            secondary.layers()
+            let mut layers = secondary.layers();
+            if !self.sections.is_empty() {
+                // PERF: This clone can be slow.
+                let mut primary = self.clone().named("primary");
+                primary.secondary = None;
+                layers.push(Arc::new(primary))
+            }
+            layers
         } else {
             Vec::new()
         }
