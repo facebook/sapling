@@ -30,6 +30,17 @@ pub fn changeset_as_bytes(cs_id: &HgChangesetId, encode_as_hex: bool) -> anyhow:
     Ok(cs_id.as_bytes().to_vec())
 }
 
+pub fn list_as_bytes(
+    list: Vec<HgChangesetId>,
+    is_hex_encoded: bool,
+) -> anyhow::Result<Vec<Vec<u8>>> {
+    let mut res: Vec<Vec<u8>> = Vec::new();
+    for cs_id in list {
+        res.push(changeset_as_bytes(&cs_id, is_hex_encoded)?);
+    }
+    Ok(res)
+}
+
 #[cfg(test)]
 mod test {
     use std::str::FromStr;

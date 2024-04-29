@@ -16,7 +16,8 @@ use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-
+use crate::sql::utils::changeset_as_bytes;
+use crate::sql::utils::changeset_from_bytes;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceRemoteBookmark {
     pub name: String,
@@ -29,16 +30,16 @@ pub struct DeleteArgs {
 }
 
 mononoke_queries! {
-    read GetRemoteBookmarks(reponame: String, workspace: String) -> (String, String, HgChangesetId){
-        "SELECT `remote`, `name`, `commit` FROM `remotebookmarks`
-        WHERE `reponame`={reponame} AND `workspace`={workspace}"
+    read GetRemoteBookmarks(reponame: String, workspace: String) -> (String, String, Vec<u8>){
+       "SELECT `remote`, `name`, `commit` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}"
     }
+    //TODO: Handle changesets as bytes (migth require an entirely different query)
     write DeleteRemoteBookmark(reponame: String, workspace: String,  >list removed_bookmarks: String) {
         none,
         mysql("DELETE FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND CONCAT(`remote`, '/', `name`) IN {removed_bookmarks}")
         sqlite( "DELETE FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND CAST(`remote`||'/'||`name` AS BLOB) IN {removed_bookmarks}")
     }
-    write InsertRemoteBookmark(reponame: String, workspace: String, remote: String, name: String, commit: HgChangesetId) {
+    write InsertRemoteBookmark(reponame: String, workspace: String, remote: String, name: String, commit:  Vec<u8>) {
         none,
         "INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `commit` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})"
     }
@@ -61,7 +62,7 @@ impl Get<WorkspaceRemoteBookmark> for SqlCommitCloud {
             .map(|(remote, name, commit)| {
                 Ok(WorkspaceRemoteBookmark {
                     name,
-                    commit,
+                    commit: changeset_from_bytes(&commit, self.uses_mysql)?,
                     remote,
                 })
             })
@@ -83,7 +84,7 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
             &workspace,
             &data.remote,
             &data.name,
-            &data.commit,
+            &changeset_as_bytes(&data.commit, self.uses_mysql)?,
         )
         .await?;
         Ok(())

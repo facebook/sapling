@@ -17,7 +17,7 @@ pub struct SqlCommitCloud {
     // 3. mock mysql db (test) This is used in integration tests, it's never queried or populated,
     /// just there to avoid a clash between "bookmarks" tables
     #[allow(unused)]
-    uses_mysql: bool,
+    pub(crate) uses_mysql: bool,
 }
 
 impl SqlCommitCloud {
