@@ -87,6 +87,7 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_new_bonsai_changesets;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -289,6 +290,8 @@ where
             info!(ctx.logger(), "sync stopping due to cancellation request");
             return Ok(commit_only_backsync_future);
         }
+        let mut scuba_sample = ctx.scuba().clone();
+        let mut scuba_log_tag = "Backsyncing".to_string();
         commit_only_backsync_future = do_sync_entry(
             ctx.clone(),
             commit_syncer,
@@ -298,8 +301,11 @@ where
             sync_context,
             disable_lease,
             commit_only_backsync_future,
+            &mut scuba_sample,
+            &mut scuba_log_tag,
         )
         .await?;
+        scuba_sample.log_with_msg(&scuba_log_tag, None);
     }
     Ok(commit_only_backsync_future)
 }
@@ -316,6 +322,8 @@ async fn do_sync_entry<M, R>(
     sync_context: CommitSyncContext,
     disable_lease: bool,
     mut commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
+    scuba_sample: &mut MononokeScubaSampleBuilder,
+    scuba_log_tag: &mut String,
 ) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -378,7 +386,6 @@ where
         return Ok(commit_only_backsync_future);
     }
 
-    let mut scuba_sample = ctx.scuba().clone();
     scuba_sample.add("backsyncer_bookmark_log_entry_id", u64::from(entry.id));
 
     let start_instant = Instant::now();
@@ -398,10 +405,7 @@ where
                 ctx.logger(),
                 "skipping {}, entry id {}", entry.bookmark_name, entry.id
             );
-            scuba_sample.log_with_msg(
-                "Skipping entry because there are no synced ancestors",
-                Some(format!("{}", entry.id)),
-            );
+            *scuba_log_tag = "Skipping entry because there are no synced ancestors".to_string();
             target_repo_dbs
                 .counters
                 .set_counter(
@@ -451,7 +455,6 @@ where
         u64::try_from(start_instant.elapsed().as_millis()).unwrap_or(u64::max_value()),
     );
     scuba_sample.add("backsync_previously_done", maybe_log_id.is_none());
-    scuba_sample.log_with_msg("Backsyncing", None);
 
     if let Some(_log_id) = maybe_log_id {
         *counter = new_counter;
