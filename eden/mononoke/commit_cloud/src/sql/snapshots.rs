@@ -29,17 +29,20 @@ pub struct DeleteArgs {
 
 mononoke_queries! {
     read GetSnapshots(reponame: String, workspace: String) -> (String, Vec<u8>){
-        "SELECT `reponame`, `commit` FROM snapshots WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`"
+        mysql("SELECT `reponame`, `node` FROM snapshots WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
+        sqlite("SELECT `reponame`, `commit` FROM snapshots WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
     }
 
     write DeleteSnapshot(reponame: String, workspace: String, >list commits: Vec<u8>) {
         none,
-        "DELETE FROM `snapshots` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {commits}"
+        mysql("DELETE FROM `snapshots` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `node` IN {commits}")
+        sqlite("DELETE FROM `snapshots` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {commits}")
     }
 
     write InsertSnapshot(reponame: String, workspace: String, commit: Vec<u8>) {
         none,
-        "INSERT INTO `snapshots` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})"
+        mysql("INSERT INTO `snapshots` (`reponame`, `workspace`, `node`) VALUES ({reponame}, {workspace}, {commit})")
+        sqlite("INSERT INTO `snapshots` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})")
     }
 }
 

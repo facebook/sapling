@@ -33,15 +33,18 @@ pub struct DeleteArgs {
 
 mononoke_queries! {
     read GetLocalBookmarks(reponame: String, workspace: String) -> (String,  Vec<u8>){
-        "SELECT `name`, `commit` FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}"
+        mysql("SELECT `name`, `node` FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
+        sqlite("SELECT `name`, `commit` FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
     write DeleteLocalBookmark(reponame: String, workspace: String, >list removed_bookmarks: Vec<u8>) {
         none,
-        "DELETE FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {removed_bookmarks}"
+        mysql("DELETE FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `node` IN {removed_bookmarks}")
+        sqlite("DELETE FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {removed_bookmarks}")
     }
     write InsertLocalBookmark(reponame: String, workspace: String, name: String, commit: Vec<u8>) {
         none,
-        "INSERT INTO `workspacebookmarks` (`reponame`, `workspace`, `name`, `commit`) VALUES ({reponame}, {workspace}, {name}, {commit})"
+        mysql("INSERT INTO `bookmarks` (`reponame`, `workspace`, `name`, `node`) VALUES ({reponame}, {workspace}, {name}, {commit})")
+        sqlite("INSERT INTO `workspacebookmarks` (`reponame`, `workspace`, `name`, `commit`) VALUES ({reponame}, {workspace}, {name}, {commit})")
     }
 }
 

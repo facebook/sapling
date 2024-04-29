@@ -31,7 +31,8 @@ pub struct DeleteArgs {
 
 mononoke_queries! {
     read GetRemoteBookmarks(reponame: String, workspace: String) -> (String, String, Vec<u8>){
-       "SELECT `remote`, `name`, `commit` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}"
+        mysql("SELECT `remote`, `name`, `node` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
+        sqlite("SELECT `remote`, `name`, `commit` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
     //TODO: Handle changesets as bytes (migth require an entirely different query)
     write DeleteRemoteBookmark(reponame: String, workspace: String,  >list removed_bookmarks: String) {
@@ -41,7 +42,8 @@ mononoke_queries! {
     }
     write InsertRemoteBookmark(reponame: String, workspace: String, remote: String, name: String, commit:  Vec<u8>) {
         none,
-        "INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `commit` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})"
+        mysql("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `node` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
+        sqlite("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `commit` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
     }
 }
 

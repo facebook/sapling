@@ -30,17 +30,20 @@ pub struct DeleteArgs {
 
 mononoke_queries! {
     read GetHeads(reponame: String, workspace: String) -> (String, Vec<u8>){
-        "SELECT `reponame`, `commit` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`"
+        mysql("SELECT `reponame`, `node` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
+        sqlite("SELECT `reponame`, `commit` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
     }
 
     write DeleteHead(reponame: String, workspace: String, >list commits: Vec<u8>) {
         none,
-        "DELETE FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {commits}"
+        mysql("DELETE FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `node` IN {commits}")
+        sqlite("DELETE FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {commits}")
     }
 
     write InsertHead(reponame: String, workspace: String, commit: Vec<u8>) {
         none,
-        "INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})"
+        mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`) VALUES ({reponame}, {workspace}, {commit})")
+        sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})")
     }
 }
 
