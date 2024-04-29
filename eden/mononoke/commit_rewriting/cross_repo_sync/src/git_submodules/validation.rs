@@ -47,6 +47,7 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
+use crate::git_submodules::utils::run_and_log_stats_to_scuba;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::types::Repo;
 
@@ -71,13 +72,18 @@ pub async fn validate_all_submodule_expansions<'a, R: Repo>(
         .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
             cloned!(mover, sm_exp_data);
             async move {
-                validate_submodule_expansion(
+                run_and_log_stats_to_scuba(
                     ctx,
-                    sm_exp_data,
-                    bonsai,
-                    submodule_path,
-                    submodule_repo,
-                    mover,
+                    "Validating submodule expansion",
+                    format!("Submodule path: {submodule_path}"),
+                    validate_submodule_expansion(
+                        ctx,
+                        sm_exp_data,
+                        bonsai,
+                        submodule_path,
+                        submodule_repo,
+                        mover,
+                    ),
                 )
                 .await
             }
@@ -234,13 +240,21 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 
     // The submodule roots fsnode and the fsnode from its expansion in the large
     // repo should be exactly the same.
-    validate_working_copy_of_expansion_with_recursive_submodules(
+    run_and_log_stats_to_scuba(
         ctx,
-        sm_exp_data,
-        adjusted_submodule_deps,
-        submodule_repo,
-        expansion_fsnode_id,
-        submodule_fsnode_id,
+        "Validate working copy of submodule expansion with recursive submodules",
+        format!(
+            "Recursive submodule: {}",
+            submodule_repo.repo_identity().name()
+        ),
+        validate_working_copy_of_expansion_with_recursive_submodules(
+            ctx,
+            sm_exp_data,
+            adjusted_submodule_deps,
+            submodule_repo,
+            expansion_fsnode_id,
+            submodule_fsnode_id,
+        ),
     )
     .await?;
 
@@ -536,14 +550,23 @@ async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R: Rep
                 borrowed!(submodule_repo);
 
                 async move {
-                    validate_expansion_directory_against_submodule_manifest_entry(
+                    run_and_log_stats_to_scuba(
                         ctx,
-                        sm_exp_data,
-                        submodule_repo,
-                        adjusted_submodule_deps,
-                        iteration_data,
-                        exp_path,
-                        exp_directory,
+                        "Validate expansion directory against submodule manifest entry",
+                        format!(
+                            "submodule_repo: {} / exp_path: {}",
+                            submodule_repo.repo_identity().name(),
+                            exp_path
+                        ),
+                        validate_expansion_directory_against_submodule_manifest_entry(
+                            ctx,
+                            sm_exp_data,
+                            submodule_repo,
+                            adjusted_submodule_deps,
+                            iteration_data,
+                            exp_path,
+                            exp_directory,
+                        ),
                     )
                     .await
                 }

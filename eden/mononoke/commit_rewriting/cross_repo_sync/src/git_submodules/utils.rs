@@ -20,6 +20,8 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::Future;
+use futures_stats::TimedFutureExt;
 use git_types::ObjectKind;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
@@ -270,4 +272,20 @@ pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
         .await?;
 
     Ok(submodule_root_fsnode_id.into_fsnode_id())
+}
+
+pub async fn run_and_log_stats_to_scuba<R, S>(
+    ctx: &CoreContext,
+    log_tag: &str,
+    msg: S,
+    fut: impl Future<Output = R>,
+) -> R
+where
+    S: Into<Option<String>>,
+{
+    let (stats, result) = fut.timed().await;
+    let mut scuba = ctx.scuba().clone();
+    scuba.add_future_stats(&stats);
+    scuba.log_with_msg(log_tag, msg);
+    result
 }

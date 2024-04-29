@@ -51,6 +51,7 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_all_paths;
 use crate::git_submodules::utils::list_non_submodule_files_under;
+use crate::git_submodules::utils::run_and_log_stats_to_scuba;
 use crate::git_submodules::utils::submodule_diff;
 use crate::git_submodules::validation::validate_all_submodule_expansions;
 use crate::types::Large;
@@ -101,19 +102,28 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
         "Can't sync changes from large to small repo if small repo has submodule expansion enabled"
     );
 
-    let new_bonsai =
-        expand_all_git_submodule_file_changes(ctx, bonsai, small_repo, sm_exp_data.clone())
-            .await
-            .context("Failed to expand submodule file changes from bonsai")?;
-
-    let rewritten_bonsai = rewrite_commit(
+    let new_bonsai = run_and_log_stats_to_scuba(
         ctx,
-        new_bonsai,
-        remapped_parents,
-        mover_to_multi_mover(mover.clone()),
-        small_repo,
+        "Expanding all git submodule file changes",
         None,
-        rewrite_opts,
+        expand_all_git_submodule_file_changes(ctx, bonsai, small_repo, sm_exp_data.clone()),
+    )
+    .await
+    .context("Failed to expand submodule file changes from bonsai")?;
+
+    let rewritten_bonsai = run_and_log_stats_to_scuba(
+        ctx,
+        "Rewriting commit",
+        None,
+        rewrite_commit(
+            ctx,
+            new_bonsai,
+            remapped_parents,
+            mover_to_multi_mover(mover.clone()),
+            small_repo,
+            None,
+            rewrite_opts,
+        ),
     )
     .await
     .context("Failed to create bonsai to be synced")?
@@ -121,8 +131,15 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
 
     let rewritten_bonsai = rewritten_bonsai.freeze()?;
 
-    let validated_bonsai =
-        validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover).await?;
+    let validated_bonsai = run_and_log_stats_to_scuba(
+        ctx,
+        "Validating all submodule expansions",
+        None,
+        validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover),
+    )
+    .await
+    // TODO(gustavoavena): print some identifier of changeset that failed
+    .context("Validation of submodule expansion failed")?;
 
     Ok(validated_bonsai.into_mut())
 }
@@ -146,13 +163,18 @@ async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
                 match &fc {
                     FileChange::Change(tfc) => match &tfc.file_type() {
                         FileType::GitSubmodule => {
-                            expand_git_submodule_file_change(
+                            run_and_log_stats_to_scuba(
                                 ctx,
-                                small_repo,
-                                sm_exp_data.clone(),
-                                parents,
-                                p,
-                                tfc.content_id(),
+                                "Expand git submodule file change",
+                                format!("submodule_file_path: {p}"),
+                                expand_git_submodule_file_change(
+                                    ctx,
+                                    small_repo,
+                                    sm_exp_data.clone(),
+                                    parents,
+                                    p,
+                                    tfc.content_id(),
+                                ),
                             )
                             .await
                         }
@@ -704,12 +726,11 @@ async fn handle_submodule_deletion<'a, R: Repo>(
         }
 
         // This is a submodule file, so delete its entire expanded directory.
-        return delete_submodule_expansion(
+        return run_and_log_stats_to_scuba(
             ctx,
-            small_repo,
-            sm_exp_data,
-            parents,
-            submodule_file_path,
+            "Deleting submodule expansion",
+            format!("Submodule path: {submodule_file_path}"),
+            delete_submodule_expansion(ctx, small_repo, sm_exp_data, parents, submodule_file_path),
         )
         .await;
     };
