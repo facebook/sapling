@@ -2831,6 +2831,20 @@ ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
   }
 }
 
+ImmediateFuture<std::unique_ptr<PrefetchResult>> detachIfBackgrounded(
+    ImmediateFuture<std::unique_ptr<PrefetchResult>> globFuture,
+    const std::shared_ptr<ServerState>& serverState,
+    bool background) {
+  if (!background) {
+    return globFuture;
+  } else {
+    folly::futures::detachOn(
+        serverState->getThreadPool().get(), std::move(globFuture).semi());
+    return ImmediateFuture<std::unique_ptr<PrefetchResult>>(
+        std::make_unique<PrefetchResult>());
+  }
+}
+
 ImmediateFuture<folly::Unit> detachIfBackgrounded(
     ImmediateFuture<folly::Unit> globFuture,
     const std::shared_ptr<ServerState>& serverState,
@@ -3117,6 +3131,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   return std::move(globFut).semi().via(serial);
 }
 
+// DEPRECATED. Use semifuture_prefetchFilesV2 instead.
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
     std::unique_ptr<PrefetchParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
@@ -3187,6 +3202,97 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
   } else {
     return detachIfBackgrounded(
                std::move(globFut), server_->getServerState(), isBackground)
+        .semi();
+  }
+}
+
+folly::SemiFuture<std::unique_ptr<PrefetchResult>>
+EdenServiceHandler::semifuture_prefetchFilesV2(
+    std::unique_ptr<PrefetchParams> params) {
+  TaskTraceBlock block{"EdenServiceHandler::prefetchFilesV2"};
+  auto mountHandle = lookupMount(params->mountPoint());
+  if (!params->revisions_ref().value().empty()) {
+    params->revisions_ref() = resolveRootsWithLastFilter(
+        params->revisions_ref().value(), mountHandle);
+  }
+  ThriftGlobImpl globber{*params};
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG2,
+      *params->mountPoint_ref(),
+      toLogArg(*params->globs_ref()),
+      globber.logString());
+  auto& context = helper->getFetchContext();
+  auto isBackground = *params->background();
+  auto returnPrefetchedFiles = *params->returnPrefetchedFiles();
+
+  ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
+  if (isBackground) {
+    backgroundFuture = makeNotReadyImmediateFuture();
+  }
+
+  maybeLogExpensiveGlob(
+      *params->globs(),
+      *params->searchRoot_ref(),
+      globber,
+      context,
+      server_->getServerState());
+
+  auto globFut =
+      std::move(backgroundFuture)
+          .thenValue([mountHandle,
+                      serverState = server_->getServerState(),
+                      globs = std::move(*params->globs()),
+                      globber = std::move(globber),
+                      context = helper->getPrefetchFetchContext().copy()](
+                         auto&&) mutable {
+            return globber.glob(
+                mountHandle.getEdenMountPtr(),
+                serverState,
+                std::move(globs),
+                context);
+          });
+
+  // If returnPrefetchedFiles is set then return the list of globs
+  auto prefetchResult = std::move(globFut)
+                            .thenValue([returnPrefetchedFiles](
+                                           std::unique_ptr<Glob> glob) mutable {
+                              std::unique_ptr<PrefetchResult> result =
+                                  std::make_unique<PrefetchResult>();
+                              if (!returnPrefetchedFiles) {
+                                return result;
+                              }
+                              result->prefetchedFiles_ref() = std::move(*glob);
+                              return result;
+                            })
+                            .ensure([mountHandle,
+                                     helper = std::move(helper),
+                                     params = std::move(params)] {});
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->runSerialPrefetch.getValue()) {
+    // The glob code has a very large fan-out that can easily overload the
+    // Thrift CPU worker pool. To combat with that, we limit the execution to a
+    // single thread by using `folly::SerialExecutor` so the glob queries will
+    // not overload the executor.
+    auto serial = folly::SerialExecutor::create(
+        server_->getServer()->getThreadManager().get());
+
+    if (isBackground) {
+      folly::futures::detachOn(serial, std::move(prefetchResult).semi());
+      prefetchResult = ImmediateFuture<std::unique_ptr<PrefetchResult>>(
+          std::make_unique<PrefetchResult>());
+    }
+
+    if (prefetchResult.isReady()) {
+      return std::move(prefetchResult).semi();
+    }
+
+    return std::move(prefetchResult).semi().via(serial);
+  } else {
+    return detachIfBackgrounded(
+               std::move(prefetchResult),
+               server_->getServerState(),
+               isBackground)
         .semi();
   }
 }

@@ -204,6 +204,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::SemiFuture<folly::Unit> semifuture_prefetchFiles(
       std::unique_ptr<PrefetchParams> params) override;
 
+  folly::SemiFuture<std::unique_ptr<PrefetchResult>> semifuture_prefetchFilesV2(
+      std::unique_ptr<PrefetchParams> params) override;
+
   folly::SemiFuture<std::unique_ptr<Glob>> semifuture_predictiveGlobFiles(
       std::unique_ptr<GlobParams> params) override;
 

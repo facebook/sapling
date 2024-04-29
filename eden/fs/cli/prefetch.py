@@ -194,41 +194,82 @@ class PrefetchCmd(Subcmd):
 
             silent = args.silent or not args.debug_print
 
+            # TODO(T183395303) Remove fallback when prefetch_fallback ODS counter hits 0.
             with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
                 if args.background or silent:
-                    # TODO(T166554962): handle debug_print in prefetchFiles endpoint
-                    # instead of calling globFiles
-                    client.prefetchFiles(
-                        PrefetchParams(
-                            mountPoint=bytes(checkout_and_patterns.checkout.path),
-                            globs=checkout_and_patterns.patterns,
-                            directoriesOnly=args.directories_only,
-                            background=args.background,
+                    try:
+                        client.prefetchFilesV2(
+                            PrefetchParams(
+                                mountPoint=bytes(checkout_and_patterns.checkout.path),
+                                globs=checkout_and_patterns.patterns,
+                                directoriesOnly=args.directories_only,
+                                background=args.background,
+                                returnPrefetchedFiles=False,
+                            )
                         )
-                    )
+                        telemetry_sample.add_bool("prefetchV2_fallback", False)
+                    except TApplicationException:
+                        client.prefetchFiles(
+                            PrefetchParams(
+                                mountPoint=bytes(checkout_and_patterns.checkout.path),
+                                globs=checkout_and_patterns.patterns,
+                                directoriesOnly=args.directories_only,
+                                background=args.background,
+                            )
+                        )
+                        telemetry_sample.add_bool("prefetchV2_fallback", True)
                 else:
-                    # If debug print is requested, we call into globFiles instead to get the file list
-                    result = client.globFiles(
-                        GlobParams(
-                            mountPoint=bytes(checkout_and_patterns.checkout.path),
-                            globs=checkout_and_patterns.patterns,
-                            includeDotfiles=args.include_dot_files,
-                            prefetchFiles=not args.directories_only,
-                            suppressFileList=False,
-                            background=False,
-                            listOnlyFiles=args.list_only_files,
+                    try:
+                        # Not handling the following arguments used in globFiles
+                        # includeDotfiles is true by default in prefetching
+                        # prefetchFiles is happening in this command
+                        # suppressFileList is replaced by returnPrefetchedFiles
+                        # listOnlyFiles is false by default in prefetching
+                        prefetchResult = client.prefetchFilesV2(
+                            PrefetchParams(
+                                mountPoint=bytes(checkout_and_patterns.checkout.path),
+                                globs=checkout_and_patterns.patterns,
+                                directoriesOnly=args.directories_only,
+                                background=False,
+                                returnPrefetchedFiles=True,
+                            )
                         )
-                    )
-
-                    telemetry_sample.add_int("files_fetched", len(result.matchingFiles))
-
-                    if checkout_and_patterns.patterns and not result.matchingFiles:
-                        _eprintln(
-                            f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
-                            "See `eden prefetch -h` for docs on pattern matching.",
+                        telemetry_sample.add_bool("prefetchV2_fallback", False)
+                        if prefetchResult.prefetchedFiles:
+                            result = prefetchResult.prefetchedFiles
+                        else:
+                            result = None
+                    except TApplicationException:
+                        # Falling back to globFiles if V2 doesn't exist
+                        result = client.globFiles(
+                            GlobParams(
+                                mountPoint=bytes(checkout_and_patterns.checkout.path),
+                                globs=checkout_and_patterns.patterns,
+                                includeDotfiles=args.include_dot_files,
+                                prefetchFiles=not args.directories_only,
+                                suppressFileList=False,
+                                background=False,
+                                listOnlyFiles=args.list_only_files,
+                            )
                         )
-                    _println(
-                        "\n".join(os.fsdecode(name) for name in result.matchingFiles)
-                    )
+                        telemetry_sample.add_bool("prefetchV2_fallback", True)
+                    # result should always be set unless there was an error with prefetchV2
+                    if result:
+                        telemetry_sample.add_int(
+                            "files_fetched", len(result.matchingFiles)
+                        )
+
+                        if checkout_and_patterns.patterns and not result.matchingFiles:
+                            _eprintln(
+                                f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
+                                "See `eden prefetch -h` for docs on pattern matching.",
+                            )
+                        _println(
+                            "\n".join(
+                                os.fsdecode(name) for name in result.matchingFiles
+                            )
+                        )
+                    else:
+                        _eprintln("Error prefetching files")
 
         return 0

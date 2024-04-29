@@ -9,6 +9,7 @@ const CRATEMAP: &str = "\
 eden crate //eden/fs/service:thrift-rust
 eden_config config_thrift //eden/fs/config:config_thrift-rust
 fb303_core fb303_core //fb303/thrift:fb303_core-rust
+thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {
