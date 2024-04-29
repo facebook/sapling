@@ -981,9 +981,15 @@ trouble cleaning up leftovers. You will need to manually remove {path}.
 """
             )
 
+            # For those that failed, we might be able to do something with error codes
+            # 5 ERROR_ACCESS_DENIED - Access is denied (file is a running executable).
+            # 32 (ERROR_SHARING_VIOLATION) - The process cannot access the file because it is being used by another process.
+            # See # https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
             used_by_other = any(
                 filter(
-                    lambda x: isinstance(x[1], OSError) and x[1].winerror == 32, errors
+                    lambda x: isinstance(x[1], OSError)
+                    and (x[1].winerror == 32 or x[1].winerror == 5),
+                    errors,
                 )
             )
 
