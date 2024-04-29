@@ -25,3 +25,17 @@ python_unittest(
         "//eden/test_support:py",
     ],
 )
+
+python_unittest(
+    name = "wintests",
+    srcs = glob(["windows/*.py"]),
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    env = {
+        "EDENFS_UNITTEST": "1",
+    },
+    deps = [
+        "//eden/fs/cli:lib",
+    ],
+)
