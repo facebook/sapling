@@ -51,7 +51,7 @@ newclientrepo() {
   if [ -z "$server" ]; then
       server="test:${reponame}_server"
   fi
-  hg clone --config "init.use-rust=True" --config "clone.use-rust=True" --config "remotefilelog.reponame=$reponame" --shallow -q "$server" "$TESTTMP/$reponame"
+  hg clone --config "clone.use-rust=True" --config "remotefilelog.reponame=$reponame" --shallow -q "$server" "$TESTTMP/$reponame"
 
   local drawdaginput=""
   while IFS= read line
@@ -127,7 +127,6 @@ clone() {
   fi
 
   hg clone -q --shallow "$serverurl" "$clientname" "$@" \
-    --config "init.use-rust=True" \
     --config "extensions.remotefilelog=" \
     --config "extensions.remotenames=" \
     --config "extensions.treemanifest=" \
