@@ -38,6 +38,8 @@ def testsetup(t: TestTmp):
         import re
 
         edenpath = str(t.path / "bin" / "eden")
+        if "eden" not in t.shenv.cmdtable:
+            t.requireexe("eden")
         t.registerfallbackmatch(
             lambda a, b: b == "update complete"
             and re.match(
