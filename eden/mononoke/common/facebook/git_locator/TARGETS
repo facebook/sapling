@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "git_locator",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/smc:smc",
+        "//common/rust/smc-updates:smc-updates",
+        "//common/rust/thrift/srclient:srclient",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+    ],
+)
