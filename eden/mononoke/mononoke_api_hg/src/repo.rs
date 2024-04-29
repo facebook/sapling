@@ -32,6 +32,7 @@ use commit_cloud::references::ReferencesData;
 use commit_cloud::sql::versions::WorkspaceVersion;
 use commit_cloud::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
+use commit_cloud::UpdateReferencesParams;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use edenapi_types::AnyId;
@@ -1072,6 +1073,18 @@ impl HgRepoContext {
             .blob_repo()
             .commit_cloud()
             .get_references(ctx, base_version)
+            .await?)
+    }
+
+    pub async fn cloud_update_references(
+        &self,
+        ctx: CommitCloudContext,
+        params: UpdateReferencesParams,
+    ) -> Result<ReferencesData, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .commit_cloud()
+            .update_references(ctx, params)
             .await?)
     }
 }
