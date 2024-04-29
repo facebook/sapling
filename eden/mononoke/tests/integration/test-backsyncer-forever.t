@@ -8,6 +8,9 @@
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
+
+We use multiplex blobstore here as this one provides logging that we test later.
+  $ export MULTIPLEXED=1
   $ setup_configerator_configs
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
   > {
@@ -123,31 +126,40 @@ Config change
   >     .int.SqlReadsMaster \
   >     .int.poll_count
   {
+    \"BlobGets\": [1-9]\d*, (re)
+    \"SqlReadsMaster\": [1-9]\d*, (re)
     \"backsync_duration_ms\": [1-9]\d*, (re)
     "backsync_previously_done": "false",
     "backsyncer_bookmark_log_entry_id": 2,
     "from_csid": "*", (glob)
     "log_tag": "Backsyncing",
+    \"poll_count\": [1-9]\d*, (re)
     "source_repo_name": "large-mon",
     "target_repo_name": "small-mon",
     "to_csid": "*" (glob)
   }
   {
+    \"BlobGets\": [1-9]\d*, (re)
+    \"SqlReadsMaster\": [1-9]\d*, (re)
     \"backsync_duration_ms\": [1-9]\d*, (re)
     "backsync_previously_done": "false",
     "backsyncer_bookmark_log_entry_id": 3,
     "from_csid": "*", (glob)
     "log_tag": "Backsyncing",
+    \"poll_count\": [1-9]\d*, (re)
     "source_repo_name": "large-mon",
     "target_repo_name": "small-mon",
     "to_csid": "*" (glob)
   }
   {
+    \"BlobGets\": [1-9]\d*, (re)
+    \"SqlReadsMaster\": [1-9]\d*, (re)
     \"backsync_duration_ms\": [1-9]\d*, (re)
     "backsync_previously_done": "false",
     "backsyncer_bookmark_log_entry_id": 4,
     "from_csid": "*", (glob)
     "log_tag": "Backsyncing",
+    \"poll_count\": [1-9]\d*, (re)
     "source_repo_name": "large-mon",
     "target_repo_name": "small-mon",
     "to_csid": "*" (glob)

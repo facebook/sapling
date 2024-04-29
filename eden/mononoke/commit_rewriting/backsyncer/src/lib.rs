@@ -68,6 +68,7 @@ use futures::Future;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
@@ -269,7 +270,7 @@ where
 }
 
 async fn sync_entries<M, R>(
-    ctx: CoreContext,
+    mut ctx: CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
@@ -291,8 +292,9 @@ where
             return Ok(commit_only_backsync_future);
         }
         let mut scuba_sample = ctx.scuba().clone();
+        let pc = ctx.fork_perf_counters();
         let mut scuba_log_tag = "Backsyncing".to_string();
-        commit_only_backsync_future = do_sync_entry(
+        let (stats, new_commit_only_backsync_future) = do_sync_entry(
             ctx.clone(),
             commit_syncer,
             &target_repo_dbs,
@@ -304,8 +306,13 @@ where
             &mut scuba_sample,
             &mut scuba_log_tag,
         )
+        .try_timed()
         .await?;
-        scuba_sample.log_with_msg(&scuba_log_tag, None);
+        commit_only_backsync_future = new_commit_only_backsync_future;
+        pc.insert_perf_counters(&mut scuba_sample);
+        scuba_sample
+            .add_future_stats(&stats)
+            .log_with_msg(&scuba_log_tag, None);
     }
     Ok(commit_only_backsync_future)
 }
