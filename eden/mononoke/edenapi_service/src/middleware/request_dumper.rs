@@ -163,31 +163,33 @@ impl RequestDumper {
             .add("client_entry_point", entry_point.to_string());
     }
 
-    pub fn new(fb: FacebookInit) -> Self {
-        let scuba = MononokeScubaSampleBuilder::new(fb, "mononoke_replay_logged_edenapi_requests")
-            .expect("Couldn't create scuba sample builder");
-        Self {
-            logger: scuba,
+    pub fn new(fb: FacebookInit, scuba_table: &str) -> Result<Self> {
+        let logger = MononokeScubaSampleBuilder::new(fb, scuba_table)
+            .with_context(|| format!("Couldn't create scuba sample builder for {scuba_table}"))?;
+        Ok(Self {
+            logger,
             log_action: LogAction::Log,
             log_deserialized: false,
-        }
+        })
     }
 }
 
 #[derive(Clone)]
 pub struct RequestDumperMiddleware {
     fb: FacebookInit,
+    scuba_table: Option<String>,
 }
 
 impl RequestDumperMiddleware {
-    pub fn new(fb: FacebookInit) -> Self {
-        Self { fb }
+    pub fn new(fb: FacebookInit, scuba_table: Option<String>) -> Self {
+        Self { fb, scuba_table }
     }
 }
 
 #[async_trait::async_trait]
 impl Middleware for RequestDumperMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
+        let scuba_table = self.scuba_table.as_ref()?;
         let logger = &RequestContext::borrow_from(state).logger;
         let headers = match HeaderMap::try_borrow_from(state).context("No headers in State") {
             Ok(headers) => headers,
@@ -206,7 +208,13 @@ impl Middleware for RequestDumperMiddleware {
                 log_deserialized = true;
             }
         }
-        let mut rd = RequestDumper::new(self.fb);
+        let mut rd = match RequestDumper::new(self.fb, scuba_table) {
+            Ok(rd) => rd,
+            Err(e) => {
+                warn!(logger, "Error creating request dumper: {}", e);
+                return None;
+            }
+        };
         if let Err(e) = rd.add_http_req_prefix(state, headers) {
             warn!(
                 logger,

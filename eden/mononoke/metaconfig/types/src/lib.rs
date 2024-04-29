@@ -134,6 +134,8 @@ pub struct CommonConfig {
     /// Upper bound in bytes for the RSS memory that can be utilized by Mononoke GRit
     /// server for serving packfile stream
     pub git_memory_upper_bound: Option<u64>,
+    /// Scuba table to dump edenapi requests to (for replay).
+    pub edenapi_dumper_scuba_table: Option<String>,
 }
 
 /// Configuration for logging of censored blobstore accesses

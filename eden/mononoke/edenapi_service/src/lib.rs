@@ -97,7 +97,10 @@ pub fn build(
             rate_limiter,
             readonly,
         ))
-        .add(RequestDumperMiddleware::new(fb))
+        .add(RequestDumperMiddleware::new(
+            fb,
+            common_config.edenapi_dumper_scuba_table.clone(),
+        ))
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(OdsMiddleware::new())

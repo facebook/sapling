@@ -436,6 +436,7 @@ fn parse_common_config(
         .git_memory_upper_bound
         .map(|bound| bound.try_into())
         .transpose()?;
+    let edenapi_dumper_scuba_table = common.edenapi_dumper_scuba_table;
 
     let censored_scuba_params = CensoredScubaParams {
         table: scuba_censored_table,
@@ -476,6 +477,7 @@ fn parse_common_config(
         redaction_config,
         internal_identity,
         git_memory_upper_bound,
+        edenapi_dumper_scuba_table,
     })
 }
 
@@ -965,6 +967,7 @@ mod test {
             scuba_local_path_censored="censored_local_path"
             trusted_parties_hipster_tier="tier1"
             git_memory_upper_bound=100
+            edenapi_dumper_scuba_table="dumped_requests"
 
             [internal_identity]
             identity_type = "SERVICE_IDENTITY"
@@ -1445,6 +1448,7 @@ mod test {
                     id_data: "internal".to_string(),
                 },
                 git_memory_upper_bound: Some(100),
+                edenapi_dumper_scuba_table: Some("dumped_requests".to_string()),
             }
         );
         assert_eq!(
