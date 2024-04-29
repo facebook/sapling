@@ -31,7 +31,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("thrift__types");
     conf.clients_crate("thrift__clients");
-    conf.services_crate("thrift__services");
     conf.options("deprecated_default_enum_min_i32");
     let srcs = &["../eden.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

@@ -29,7 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("replication_lag_config__types");
     conf.clients_crate("replication_lag_config__clients");
-    conf.services_crate("replication_lag_config__services");
     conf.options("serde");
     let srcs = &["config.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

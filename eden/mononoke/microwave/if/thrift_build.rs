@@ -47,7 +47,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("microwave-if__types");
     conf.clients_crate("microwave-if__clients");
-    conf.services_crate("microwave-if__services");
     let srcs = &["microwave.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

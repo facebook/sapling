@@ -30,7 +30,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("lfs_server_config__types");
     conf.clients_crate("lfs_server_config__clients");
-    conf.services_crate("lfs_server_config__services");
     conf.options("serde");
     let srcs = &["../lfs_server.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

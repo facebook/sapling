@@ -29,7 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("xdb_gc_structs__types");
     conf.clients_crate("xdb_gc_structs__clients");
-    conf.services_crate("xdb_gc_structs__services");
     conf.options("serde");
     let srcs = &["xdb_gc.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

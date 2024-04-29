@@ -45,7 +45,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("mononoke_types_serialization__types");
     conf.clients_crate("mononoke_types_serialization__clients");
-    conf.services_crate("mononoke_types_serialization__services");
     let srcs = &[
         "blame.thrift",
         "bonsai.thrift",

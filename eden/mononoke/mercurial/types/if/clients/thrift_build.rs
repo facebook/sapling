@@ -46,7 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("mercurial-thrift__types");
     conf.clients_crate("mercurial-thrift__clients");
-    conf.services_crate("mercurial-thrift__services");
     let srcs = &["../mercurial_thrift.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

@@ -29,7 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("pushredirect_enable__types");
     conf.clients_crate("pushredirect_enable__clients");
-    conf.services_crate("pushredirect_enable__services");
     conf.options("serde");
     let srcs = &["enable.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

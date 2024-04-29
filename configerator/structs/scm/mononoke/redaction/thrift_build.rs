@@ -29,7 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("redaction_set__types");
     conf.clients_crate("redaction_set__clients");
-    conf.services_crate("redaction_set__services");
     conf.options("serde");
     let srcs = &["redaction_set.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

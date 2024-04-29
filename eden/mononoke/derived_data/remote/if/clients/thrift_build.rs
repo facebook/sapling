@@ -50,7 +50,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("derived_data_service_if__types");
     conf.clients_crate("derived_data_service_if__clients");
-    conf.services_crate("derived_data_service_if__services");
     conf.options("deprecated_default_enum_min_i32");
     let srcs = &["../derived_data_service.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

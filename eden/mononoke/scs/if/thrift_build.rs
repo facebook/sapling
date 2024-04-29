@@ -32,7 +32,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("source_control__types");
     conf.clients_crate("source_control__clients");
-    conf.services_crate("source_control__services");
     conf.options("deprecated_default_enum_min_i32,serde");
     let srcs = &["source_control.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

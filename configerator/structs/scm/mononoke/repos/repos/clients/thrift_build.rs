@@ -29,7 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("repos__types");
     conf.clients_crate("repos__clients");
-    conf.services_crate("repos__services");
     conf.options("deprecated_default_enum_min_i32,serde");
     let srcs = &["../../repos.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

@@ -47,7 +47,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("filenodes-if__types");
     conf.clients_crate("filenodes-if__clients");
-    conf.services_crate("filenodes-if__services");
     let srcs = &["../filenodes.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

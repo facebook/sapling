@@ -29,7 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("version_cconf_index__types");
     conf.clients_crate("version_cconf_index__clients");
-    conf.services_crate("version_cconf_index__services");
     conf.options("serde");
     let srcs = &["../../version_cconf_index.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");

@@ -28,7 +28,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("config__types");
     conf.clients_crate("config__clients");
-    conf.services_crate("config__services");
     conf.options("serde");
     let srcs = &["hgclient.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
