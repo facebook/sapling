@@ -303,7 +303,7 @@ impl ConfigSet {
     }
 
     /// Update the name of the `ConfigSet`.
-    pub fn named(&mut self, name: &str) -> &mut Self {
+    pub fn named(mut self, name: &str) -> Self {
         self.name = Text::copy_from_slice(name);
         self
     }
@@ -1028,7 +1028,7 @@ pub(crate) mod tests {
     fn test_named() {
         let mut cfg = ConfigSet::new();
         assert_eq!(cfg.layer_name(), "ConfigSet");
-        cfg.named("foo");
+        cfg = cfg.named("foo");
         assert_eq!(cfg.layer_name(), "foo");
     }
 
