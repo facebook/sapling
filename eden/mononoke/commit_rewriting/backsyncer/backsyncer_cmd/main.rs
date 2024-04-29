@@ -108,6 +108,8 @@ impl BacksyncProcess {
             .with_source_and_target_repos()
             .with_dynamic_repos()
             .with_scribe_args()
+            .with_default_scuba_dataset(SCUBA_TABLE)
+            .with_scuba_logging_args()
             .build();
         let backsync_forever_subcommand = SubCommand::with_name(ARG_MODE_BACKSYNC_FOREVER)
             .about("Backsyncs all new bookmark moves");
@@ -556,7 +558,7 @@ async fn run(
                     .await?,
             );
 
-            let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE)?;
+            let mut scuba_sample = matches.scuba_sample_builder();
             scuba_sample.add("source_repo", source_repo.id.id());
             scuba_sample.add("source_repo_name", source_repo.name.clone());
             scuba_sample.add("target_repo", target_repo.id.id());

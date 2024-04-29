@@ -112,3 +112,43 @@ Config change
   ["small-mon","*","master_bookmark",true] (glob)
   ["small-mon","*","master_bookmark",true] (glob)
   ["small-mon","*","master_bookmark",true] (glob)
+
+  $ cat "$TESTTMP/scuba_backsyncer.json" | summarize_scuba_json "Backsyncing" \
+  >     .normal.log_tag .int.backsync_duration_ms \
+  >     .normal.source_repo_name .normal.target_repo_name \
+  >     .normal.from_csid .normal.to_csid \
+  >     .normal.backsync_previously_done \
+  >     .int.backsyncer_bookmark_log_entry_id \
+  >     .int.BlobGets \
+  >     .int.SqlReadsMaster \
+  >     .int.poll_count
+  {
+    \"backsync_duration_ms\": [1-9]\d*, (re)
+    "backsync_previously_done": "false",
+    "backsyncer_bookmark_log_entry_id": 2,
+    "from_csid": "*", (glob)
+    "log_tag": "Backsyncing",
+    "source_repo_name": "large-mon",
+    "target_repo_name": "small-mon",
+    "to_csid": "*" (glob)
+  }
+  {
+    \"backsync_duration_ms\": [1-9]\d*, (re)
+    "backsync_previously_done": "false",
+    "backsyncer_bookmark_log_entry_id": 3,
+    "from_csid": "*", (glob)
+    "log_tag": "Backsyncing",
+    "source_repo_name": "large-mon",
+    "target_repo_name": "small-mon",
+    "to_csid": "*" (glob)
+  }
+  {
+    \"backsync_duration_ms\": [1-9]\d*, (re)
+    "backsync_previously_done": "false",
+    "backsyncer_bookmark_log_entry_id": 4,
+    "from_csid": "*", (glob)
+    "log_tag": "Backsyncing",
+    "source_repo_name": "large-mon",
+    "target_repo_name": "small-mon",
+    "to_csid": "*" (glob)
+  }
