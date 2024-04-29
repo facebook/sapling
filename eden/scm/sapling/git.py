@@ -84,13 +84,37 @@ def isgitpeer(repo):
 
 
 def createrepo(ui, url, destpath):
-    from . import hg
 
     repo_config = ""
     if url:
         repo_config += "\n[paths]\ndefault = %s\n" % url
 
-    return hg.repository(ui, destpath, create=True, initial_config=repo_config).local()
+    return setup_repository(
+        ui, destpath, create=True, initial_config=repo_config
+    ).local()
+
+
+def setup_repository(ui, path, create=False, initial_config=None, submodule=None):
+    """similar to hg.repository, but optionally sets `submodule`"""
+    from . import hg
+
+    presetupfuncs = []
+
+    if submodule is not None:
+        weak_submodule = weakref.proxy(submodule)
+
+        def setup_submodule(ui, repo):
+            repo.submodule = weak_submodule
+
+        presetupfuncs.append(setup_submodule)
+
+    return hg.repository(
+        ui,
+        path,
+        create=create,
+        initial_config=initial_config,
+        presetupfuncs=presetupfuncs,
+    )
 
 
 def clone(ui, url, destpath=None, update=True, pullnames=None):
@@ -263,7 +287,7 @@ def initgit(repo, gitdir, giturl=None):
     # recreate the repo to pick up key changes
     from . import hg
 
-    repo = hg.repository(repo.baseui, repo.root).local()
+    repo = setup_repository(repo.baseui, repo.root).local()
     visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
     return repo
 
@@ -808,9 +832,7 @@ class Submodule:
         repopath = self.gitmodulesvfs.join("gitmodules", urldigest)
         ident = identity.sniffdir(repopath)
         if ident:
-            from . import hg
-
-            repo = hg.repository(self.parentrepo.baseui, repopath)
+            repo = setup_repository(self.parentrepo.baseui, repopath)
         else:
             # create the repo but do not fetch anything
             repo = clone(
@@ -842,7 +864,7 @@ class Submodule:
         ident = identity.sniffdir(repopath)
         if ident:
             ui.debug(" initializing submodule workingcopy at %s\n" % repopath)
-            repo = hg.repository(self.parentrepo.baseui, repopath)
+            repo = setup_repository(self.parentrepo.baseui, repopath)
         else:
             if self.parentrepo.wvfs.isfile(self.path):
                 ui.debug(" unlinking conflicted submodule file at %s\n" % self.path)
