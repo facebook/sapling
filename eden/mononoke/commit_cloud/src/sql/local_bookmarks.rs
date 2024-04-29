@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::str::FromStr;
+
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
@@ -19,7 +23,9 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
+use crate::sql::utils::cs_ids_from_string;
 use crate::sql::utils::list_as_bytes;
+use crate::CommitCloudContext;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkspaceLocalBookmark {
@@ -125,4 +131,37 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
         .await?;
         Ok(())
     }
+}
+
+pub async fn update_bookmarks(
+    sql_commit_cloud: &SqlCommitCloud,
+    ctx: CommitCloudContext,
+    updated_bookmarks: HashMap<String, String>,
+    removed_bookmarks: HashSet<String>,
+) -> anyhow::Result<()> {
+    let removed_commits = cs_ids_from_string(removed_bookmarks)?;
+    let delete_args = DeleteArgs {
+        removed_bookmarks: removed_commits,
+    };
+
+    Delete::<WorkspaceLocalBookmark>::delete(
+        sql_commit_cloud,
+        ctx.reponame.clone(),
+        ctx.workspace.clone(),
+        delete_args,
+    )
+    .await?;
+
+    for (name, book) in updated_bookmarks {
+        let commit = HgChangesetId::from_str(&book)?;
+        Insert::<WorkspaceLocalBookmark>::insert(
+            sql_commit_cloud,
+            ctx.reponame.clone(),
+            ctx.workspace.clone(),
+            WorkspaceLocalBookmark { name, commit },
+        )
+        .await?;
+    }
+
+    Ok(())
 }

@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::str::FromStr;
+
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
@@ -16,7 +19,9 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
+use crate::sql::utils::cs_ids_from_string;
 use crate::sql::utils::list_as_bytes;
+use crate::CommitCloudContext;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceSnapshot {
@@ -115,4 +120,35 @@ impl Delete<WorkspaceSnapshot> for SqlCommitCloud {
         .await?;
         Ok(())
     }
+}
+
+pub async fn update_snapshots(
+    sql_commit_cloud: &SqlCommitCloud,
+    ctx: CommitCloudContext,
+    new_snapshots: Vec<String>,
+    removed_snapshots: HashSet<String>,
+) -> anyhow::Result<()> {
+    let removed_commits = cs_ids_from_string(removed_snapshots)?;
+    let delete_args = DeleteArgs { removed_commits };
+
+    Delete::<WorkspaceSnapshot>::delete(
+        sql_commit_cloud,
+        ctx.reponame.clone(),
+        ctx.workspace.clone(),
+        delete_args,
+    )
+    .await?;
+
+    for snapshot in new_snapshots {
+        let commit = HgChangesetId::from_str(&snapshot)?;
+        Insert::<WorkspaceSnapshot>::insert(
+            sql_commit_cloud,
+            ctx.reponame.clone(),
+            ctx.workspace.clone(),
+            WorkspaceSnapshot { commit },
+        )
+        .await?;
+    }
+
+    Ok(())
 }

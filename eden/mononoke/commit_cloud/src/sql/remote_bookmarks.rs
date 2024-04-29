@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
@@ -18,6 +20,7 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
+use crate::CommitCloudContext;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceRemoteBookmark {
     pub name: String,
@@ -132,4 +135,46 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
         .await?;
         Ok(())
     }
+}
+
+pub async fn update_remote_bookmarks(
+    sql_commit_cloud: &SqlCommitCloud,
+    ctx: CommitCloudContext,
+    updated_remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
+    removed_remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
+) -> anyhow::Result<()> {
+    let removed_commits = removed_remote_bookmarks
+        .unwrap()
+        .into_iter()
+        .map(|b| b.node.unwrap_or_default())
+        .collect::<Vec<_>>();
+    let delete_args = DeleteArgs {
+        removed_bookmarks: removed_commits,
+    };
+
+    Delete::<WorkspaceRemoteBookmark>::delete(
+        sql_commit_cloud,
+        ctx.reponame.clone(),
+        ctx.workspace.clone(),
+        delete_args,
+    )
+    .await?;
+
+    for book in updated_remote_bookmarks.unwrap() {
+        //TODO: Resolve remote bookmarks if no node available (e.g. master)
+        let commit = HgChangesetId::from_str(&book.node.unwrap_or_default())?;
+        Insert::<WorkspaceRemoteBookmark>::insert(
+            sql_commit_cloud,
+            ctx.reponame.clone(),
+            ctx.workspace.clone(),
+            WorkspaceRemoteBookmark {
+                name: book.name,
+                commit,
+                remote: book.remote,
+            },
+        )
+        .await?;
+    }
+
+    Ok(())
 }
