@@ -160,9 +160,24 @@ impl HttpClientBuilder {
             .transpose()
             .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e))?
             .unwrap_or_default();
+
+        let source = if std::env::current_exe()
+            .ok()
+            .and_then(|path| {
+                path.file_name()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.contains("edenfs"))
+            })
+            .unwrap_or_default()
+        {
+            "EdenFs"
+        } else {
+            "Sapling"
+        };
+
         headers.insert(
             "User-Agent".to_string(),
-            format!("Sapling/{}", version::VERSION),
+            format!("{}/{}", source, version::VERSION),
         );
 
         let max_requests = get_config(config, "edenapi", "maxrequests")?;
