@@ -43,6 +43,20 @@ struct StarGlob {
   }
 };
 
+struct SuffixGlob {
+  static constexpr const char* type = "suffix_glob";
+
+  double duration = 0.0;
+  std::string glob_request;
+  std::string client_cmdline;
+
+  void populate(DynamicEvent& event) const {
+    event.addDouble("duration", duration);
+    event.addString("glob_request", glob_request);
+    event.addString("client_scope", client_cmdline);
+  }
+};
+
 struct MissingProxyHash {
   static constexpr const char* type = "missing_proxy_hash";
 

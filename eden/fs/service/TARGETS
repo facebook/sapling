@@ -464,6 +464,9 @@ cpp_library(
         "//folly/portability:sys_stat",
         "//thrift/lib/cpp:event_handler_base",
     ],
+    external_deps = [
+        "re2",
+    ],
 )
 
 # The eden.thrift interface.

@@ -25,6 +25,7 @@
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
+#include <re2/re2.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
@@ -390,6 +391,52 @@ ImmediateFuture<ReturnType> wrapImmediateFuture(
   return std::move(f).ensure([logHelper = std::move(logHelper)]() {});
 }
 
+/**
+ * Lives as long as a suffix glob request and primarily exists to record logging
+ * and telemetry.
+ */
+class SuffixGlobRequestScope {
+ public:
+  SuffixGlobRequestScope(SuffixGlobRequestScope&&) = delete;
+  SuffixGlobRequestScope& operator=(SuffixGlobRequestScope&&) = delete;
+
+  SuffixGlobRequestScope(
+      std::string globberLogString,
+      const std::shared_ptr<ServerState>& serverState,
+      const ObjectFetchContextPtr& context)
+      : globberLogString_{std::move(globberLogString)},
+        serverState_{serverState},
+        context_{context} {}
+
+  ~SuffixGlobRequestScope() {
+    // Logging completion time for the request
+    auto elapsed = itcTimer_.elapsed();
+    auto duration = std::chrono::duration<double>{elapsed}.count();
+    std::string client_cmdline;
+    if (auto clientPid = context_->getClientPid()) {
+      // TODO: we should look up client scope here instead of command line
+      // since it will give move context into the overarching process or
+      // system producing the expensive query
+      client_cmdline = serverState_->getProcessInfoCache()
+                           ->lookup(clientPid.value().get())
+                           .get()
+                           .name;
+      std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+    }
+
+    XLOG(WARN) << "EdenFS asked to evaluate suffix glob by caller "
+               << client_cmdline << ":" << globberLogString_
+               << ": duration=" << duration << "s";
+    serverState_->getStructuredLogger()->logEvent(
+        SuffixGlob{duration, globberLogString_, std::move(client_cmdline)});
+  }
+
+ private:
+  std::string globberLogString_;
+  const std::shared_ptr<ServerState>& serverState_;
+  const ObjectFetchContextPtr& context_;
+  folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
+}; // namespace
 #undef EDEN_MICRO
 
 RelativePath relpathFromUserPath(StringPiece userPath) {
@@ -3088,9 +3135,30 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
 
+  static const re2::RE2 suffixRegex("\\*\\*/\\*\\.[A-z0-9]+");
+  std::vector<std::string> suffixGlobs;
+  std::vector<std::string> nonSuffixGlobs;
+
+  // Copying to new vectors, since we want to keep the original around
+  // in case we need to fall back to the legacy pathway
+  for (const auto& glob : *params->globs_ref()) {
+    if (re2::RE2::FullMatch(glob, suffixRegex)) {
+      suffixGlobs.push_back(glob);
+    } else {
+      nonSuffixGlobs.push_back(glob);
+    }
+  }
+
   ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
   if (isBackground) {
     backgroundFuture = makeNotReadyImmediateFuture();
+  }
+
+  std::unique_ptr<SuffixGlobRequestScope> suffixGlobRequestScope;
+  if (!suffixGlobs.empty()) {
+    auto suffixGlobLogString = globber.logString(suffixGlobs);
+    suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
+        suffixGlobLogString, server_->getServerState(), context);
   }
 
   maybeLogExpensiveGlob(
@@ -3113,7 +3181,10 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                            context);
                      });
   globFut = std::move(globFut).ensure(
-      [mountHandle, helper = std::move(helper), params = std::move(params)] {});
+      [mountHandle,
+       helper = std::move(helper),
+       params = std::move(params),
+       suffixGlobRequestScope = std::move(suffixGlobRequestScope)] {});
 
   globFut = detachIfBackgrounded(
       std::move(globFut), server_->getServerState(), isBackground);
