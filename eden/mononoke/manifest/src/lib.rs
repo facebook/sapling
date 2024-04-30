@@ -27,6 +27,7 @@ pub use crate::ops::Diff;
 pub use crate::ops::ManifestOps;
 pub use crate::ordered_ops::After;
 pub use crate::ordered_ops::ManifestOrderedOps;
+pub use crate::path_tree::PathTree;
 pub use crate::select::PathOrPrefix;
 pub use crate::types::AsyncManifest;
 pub use crate::types::AsyncOrderedManifest;
@@ -35,7 +36,6 @@ pub use crate::types::CombinedId;
 pub use crate::types::Entry;
 pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
-pub use crate::types::PathTree;
 pub use crate::types::Traced;
 pub use crate::types::TrieMapOps;
 
@@ -46,6 +46,7 @@ mod derive_from_predecessor;
 mod implicit_deletes;
 mod ops;
 mod ordered_ops;
+mod path_tree;
 mod select;
 mod types;
 

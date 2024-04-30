@@ -31,7 +31,6 @@ pub(crate) use crate::Entry;
 pub(crate) use crate::ManifestOps;
 pub(crate) use crate::ManifestOrderedOps;
 pub(crate) use crate::PathOrPrefix;
-pub(crate) use crate::PathTree;
 
 pub mod test_manifest;
 
@@ -46,50 +45,6 @@ fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath,
         .into_iter()
         .map(|(path, content)| Ok((NonRootMPath::new(path)?, content.to_string())))
         .collect()
-}
-
-#[test]
-fn test_path_tree() -> Result<()> {
-    let tree = PathTree::from_iter(vec![
-        (MPath::new("/one/two/three")?, true),
-        (MPath::new("/one/two/four")?, true),
-        (MPath::new("/one/two")?, true),
-        (MPath::new("/five")?, true),
-    ]);
-
-    let reference = vec![
-        (MPath::ROOT, false),
-        (MPath::new("one")?, false),
-        (MPath::new("one/two")?, true),
-        (MPath::new("one/two/three")?, true),
-        (MPath::new("one/two/four")?, true),
-        (MPath::new("five")?, true),
-    ];
-
-    assert_eq!(Vec::from_iter(tree), reference);
-    Ok(())
-}
-
-#[test]
-fn test_path_insert_and_merge() -> Result<()> {
-    let mut tree = PathTree::<Vec<_>>::default();
-    let items = vec![
-        (MPath::new("/one/two/three")?, true),
-        (MPath::new("/one/two/three")?, false),
-    ];
-    for (path, value) in items {
-        tree.insert_and_merge(path, value);
-    }
-
-    let reference = vec![
-        (MPath::ROOT, vec![]),
-        (MPath::new("one")?, vec![]),
-        (MPath::new("one/two")?, vec![]),
-        (MPath::new("one/two/three")?, vec![true, false]),
-    ];
-
-    assert_eq!(Vec::from_iter(tree), reference);
-    Ok(())
 }
 
 #[fbinit::test]
