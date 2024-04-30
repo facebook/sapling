@@ -83,6 +83,7 @@ define_stats! {
     total_request_internal_failure: timeseries(Rate, Sum),
     total_request_invalid: timeseries(Rate, Sum),
     total_request_cancelled: timeseries(Rate, Sum),
+    total_request_overloaded: timeseries(Rate, Sum),
 
     // permille is used in canaries, because canaries do not allow for tracking formulas
     total_request_internal_failure_permille: timeseries(Average),
@@ -589,16 +590,17 @@ fn log_result<T: AddScubaResponse>(
 ) {
     let mut scuba = ctx.scuba().clone();
 
-    let (status, error, invalid_request, internal_failure) = match result {
+    let (status, error, invalid_request, internal_failure, overloaded) = match result {
         Ok(response) => {
             response.add_scuba_response(&mut scuba);
-            ("SUCCESS", None, 0, 0)
+            ("SUCCESS", None, 0, 0, 0)
         }
         Err(err) => {
             let (status, desc) = err.status_and_description();
             match status {
-                Status::RequestError => ("REQUEST_ERROR", Some(desc), 1, 0),
-                Status::InternalError => ("INTERNAL_ERROR", Some(desc), 0, 1),
+                Status::RequestError => ("REQUEST_ERROR", Some(desc), 1, 0, 0),
+                Status::InternalError => ("INTERNAL_ERROR", Some(desc), 0, 1, 0),
+                Status::OverloadError => ("OVERLOAD_ERROR", Some(desc), 0, 0, 1),
             }
         }
     };
@@ -610,6 +612,7 @@ fn log_result<T: AddScubaResponse>(
     STATS::total_request_cancelled.add_value(0);
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
+    STATS::total_request_overloaded.add_value(overloaded);
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 

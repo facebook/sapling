@@ -2074,6 +2074,11 @@ transient server exception InternalError {
   3: list<string> source_chain;
 }
 
+transient server exception OverloadError {
+  @thrift.ExceptionMessage
+  1: string reason;
+}
+
 struct RequestErrorStruct {
   1: RequestErrorKind kind;
   2: string reason;
@@ -2317,7 +2322,11 @@ service SourceControlService extends fb303_core.BaseService {
   CommitFindFilesResponse commit_find_files(
     1: CommitSpecifier commit,
     2: CommitFindFilesParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   CommitHistoryResponse commit_history(
     1: CommitSpecifier commit,

@@ -40,6 +40,7 @@ use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_types::path::MPath;
+use slog::debug;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -743,12 +744,50 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFindFilesParams,
     ) -> Result<thrift::CommitFindFilesResponse, errors::ServiceError> {
-        if should_log_memory_usage() {
-            let stats = memory::get_stats();
-            if stats.is_ok() {
-                let mut scuba = ctx.clone().scuba().clone();
-                scuba.add_memory_stats(&stats.unwrap());
-                scuba.log_with_msg("Memory usage before call", None);
+        let rss_min_free_bytes =
+            justknobs::get_as::<usize>("scm/mononoke:scs_rss_min_free_bytes", None).unwrap_or(0);
+        let rss_min_free_pct =
+            justknobs::get_as::<i32>("scm/mononoke:scs_rss_min_free_pct", None).unwrap_or(0);
+
+        debug!(
+            ctx.logger(),
+            "commit_find_files: {} {} {}",
+            rss_min_free_bytes,
+            rss_min_free_pct,
+            should_log_memory_usage(),
+        );
+
+        if rss_min_free_bytes > 0 || rss_min_free_pct > 0 || should_log_memory_usage() {
+            match memory::get_stats() {
+                Ok(stats) => {
+                    debug!(ctx.logger(), "commit_find_files: loaded stats {:?}", stats);
+                    if should_log_memory_usage() {
+                        let mut scuba = ctx.clone().scuba().clone();
+                        scuba.add_memory_stats(&stats);
+                        scuba.log_with_msg("Memory usage before call", None);
+                    }
+                    if stats.rss_free_bytes < rss_min_free_bytes {
+                        debug!(
+                            ctx.logger(),
+                            "not enough memory free, need at least {} bytes free, only {} free right now",
+                            rss_min_free_bytes,
+                            stats.rss_free_bytes,
+                        );
+
+                        return Err(errors::overloaded("Not enough memory free".to_string()).into());
+                    }
+                    if stats.rss_free_pct < rss_min_free_pct as f32 {
+                        debug!(
+                            ctx.logger(),
+                            "not enough memory free, need at least {}% free, only {}% free right now",
+                            rss_min_free_pct,
+                            stats.rss_free_pct,
+                        );
+
+                        return Err(errors::overloaded("Not enough memory free".to_string()).into());
+                    }
+                }
+                Err(_) => {}
             }
         }
 
