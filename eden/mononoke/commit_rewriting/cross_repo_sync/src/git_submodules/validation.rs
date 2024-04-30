@@ -164,6 +164,13 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     let metadata_file_fc = match mb_metadata_file_fc {
         Some(fc) => fc,
         None => {
+            if !submodule_expansion_changed {
+                // Metadata file didn't change but its submodule expansion also
+                // wasn't changed.
+                // Return early in this case to avoid deriving fsnodes for
+                // the large repo bonsai
+                return Ok(bonsai);
+            }
             // Check if the submodule metadata file existed in any of the
             // parents. If it did, it means that a submodule expansion is
             // being modified without properly updating the metadata file.
@@ -187,15 +194,16 @@ async fn validate_submodule_expansion<'a, R: Repo>(
                 .any(|mb_content_id| mb_content_id.is_some());
 
             // This means that the metadata file wasn't modified
-            if submodule_expansion_changed && submodule_metadata_file_exists {
+            if submodule_metadata_file_exists {
                 // Submodule expansion changed, but the metadata file wasn't updated
                 return Err(anyhow!(
                     "Expansion of submodule {submodule_path} changed without updating its metadata file {metadata_file_path}"
                 ));
             };
 
-            // Metadata file didn't change but its submodule expansion also wasn't
-            // changed.
+            // Path that might have been a submodule expansion before was
+            // changed, but there wasn't a metadata file in a parent revision
+            // so this path is not an expansion.
             return Ok(bonsai);
         }
     };
@@ -227,16 +235,25 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     // This is the root fsnode from the submodule at the commit the submodule
     // metadata file points to.
 
-    let submodule_fsnode_id =
-        root_fsnode_id_from_submodule_git_commit(ctx, submodule_repo, git_hash).await?;
+    let submodule_fsnode_id = run_and_log_stats_to_scuba(
+        ctx,
+        "Getting root fsnode id from submodule git commit",
+        format!("Submodule repo: {}", &submodule_repo.repo_identity().name()),
+        root_fsnode_id_from_submodule_git_commit(ctx, submodule_repo, git_hash),
+    )
+    .await?;
 
     // ------------------------------------------------------------------------
     // STEP 3: Get the fsnode from the expansion of the submodule in the large
     // repo and compare it with the fsnode from the submodule commit.
 
-    let expansion_fsnode_id =
-        get_submodule_expansion_fsnode_id(ctx, sm_exp_data.clone(), &bonsai, synced_submodule_path)
-            .await?;
+    let expansion_fsnode_id = run_and_log_stats_to_scuba(
+        ctx,
+        "Get submodule expansion fsnode id",
+        format!("Synced submodule path: {}", &synced_submodule_path),
+        get_submodule_expansion_fsnode_id(ctx, sm_exp_data.clone(), &bonsai, synced_submodule_path),
+    )
+    .await?;
 
     if submodule_fsnode_id == expansion_fsnode_id {
         // If fsnodes are an exact match, there are no recursive submodules and the
@@ -372,28 +389,32 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
 
     // Get the root fsnodes from the parent commits, so the one from this commit
     // can be derived.
-    let parent_root_fsnodes = stream::iter(bonsai.parents())
-        .then(|cs_id| {
-            cloned!(large_repo_derived_data);
-            async move {
-                large_repo_derived_data
-                    .derive::<RootFsnodeId>(ctx, cs_id)
-                    .await
-            }
-        })
-        .try_collect::<Vec<_>>()
-        .await
-        .context("Failed to derive parent fsnodes in large repo")?;
+    let parent_root_fsnodes = run_and_log_stats_to_scuba(
+        ctx,
+        "Deriving large repo bonsai parent's fsnode ids",
+        format!("Synced submodule path: {}", &synced_submodule_path),
+        stream::iter(bonsai.parents())
+            .then(|cs_id| large_repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id))
+            .boxed()
+            .try_collect::<Vec<_>>(),
+    )
+    .await
+    .context("Failed to derive parent fsnodes in large repo")?;
 
     let large_derived_data_ctx = large_repo_derived_data.manager().derivation_context(None);
 
-    let new_root_fsnode_id = RootFsnodeId::derive_single(
+    let new_root_fsnode_id = run_and_log_stats_to_scuba(
         ctx,
-        &large_derived_data_ctx,
-        // NOTE: deriving directly from the bonsai requires an owned type, so
-        // the bonsai needs to be cloned.
-        bonsai.clone(),
-        parent_root_fsnodes,
+        "Deriving large repo bonsai root fsnode id",
+        format!("Synced submodule path: {}", &synced_submodule_path),
+        RootFsnodeId::derive_single(
+            ctx,
+            &large_derived_data_ctx,
+            // NOTE: deriving directly from the bonsai requires an owned type, so
+            // the bonsai needs to be cloned.
+            bonsai.clone(),
+            parent_root_fsnodes,
+        ),
     )
     .await
     .context("Deriving root fsnode for new bonsai")?
