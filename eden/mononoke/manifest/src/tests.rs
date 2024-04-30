@@ -7,15 +7,10 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
-use std::hash::Hash;
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_trait::async_trait;
 use blobstore::Blobstore;
-use blobstore::LoadableError;
-use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -24,18 +19,15 @@ use maplit::btreemap;
 use memblob::Memblob;
 use mononoke_types::path::MPath;
 use mononoke_types::FileType;
-use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::THREES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
 use pretty_assertions::assert_eq;
 
-pub(crate) use crate::bonsai::BonsaiEntry;
 pub(crate) use crate::find_intersection_of_diffs;
 pub(crate) use crate::Diff;
 pub(crate) use crate::Entry;
-pub(crate) use crate::Manifest;
 pub(crate) use crate::ManifestOps;
 pub(crate) use crate::ManifestOrderedOps;
 pub(crate) use crate::PathOrPrefix;
@@ -1213,68 +1205,4 @@ async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
     );
 
     Ok(())
-}
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub(crate) struct TestManifestIdStr(pub &'static str);
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub(crate) struct TestFileId(pub &'static str);
-
-#[derive(Default, Clone, Debug)]
-pub(crate) struct TestManifestStr(
-    pub HashMap<MPathElement, BonsaiEntry<TestManifestIdStr, TestFileId>>,
-);
-
-#[derive(Default, Debug, Clone)]
-pub(crate) struct ManifestStore(pub HashMap<TestManifestIdStr, TestManifestStr>);
-
-#[async_trait]
-impl StoreLoadable<ManifestStore> for TestManifestIdStr {
-    type Value = TestManifestStr;
-
-    async fn load<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        store: &'a ManifestStore,
-    ) -> Result<Self::Value, LoadableError> {
-        store
-            .0
-            .get(self)
-            .cloned()
-            .ok_or_else(|| LoadableError::Missing(format!("missing {}", self.0)))
-    }
-}
-
-impl Manifest for TestManifestStr {
-    type TreeId = TestManifestIdStr;
-    type LeafId = (FileType, TestFileId);
-
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.0.get(name).cloned()
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        Box::new(self.0.clone().into_iter())
-    }
-}
-
-pub(crate) fn ctx(fb: FacebookInit) -> CoreContext {
-    CoreContext::test_mock(fb)
-}
-
-pub(crate) fn element(s: &str) -> MPathElement {
-    MPathElement::new(s.as_bytes().to_vec()).unwrap()
-}
-
-pub(crate) fn path(s: &str) -> NonRootMPath {
-    NonRootMPath::new(s).unwrap()
-}
-
-pub(crate) fn file(ty: FileType, name: &'static str) -> BonsaiEntry<TestManifestIdStr, TestFileId> {
-    BonsaiEntry::Leaf((ty, TestFileId(name)))
-}
-
-pub(crate) fn dir(name: &'static str) -> BonsaiEntry<TestManifestIdStr, TestFileId> {
-    BonsaiEntry::Tree(TestManifestIdStr(name))
 }

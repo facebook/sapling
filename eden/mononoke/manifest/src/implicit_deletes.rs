@@ -132,20 +132,17 @@ where
 #[cfg(test)]
 mod test {
     use std::fmt::Debug;
+    use std::sync::Arc;
 
+    use blobstore::Blobstore;
+    use blobstore::Storable;
     use fbinit::FacebookInit;
-    use maplit::hashmap;
+    use memblob::Memblob;
     use mononoke_types::FileType;
 
     use super::*;
-    use crate::tests::ctx;
-    use crate::tests::dir;
-    use crate::tests::element;
-    use crate::tests::file;
-    use crate::tests::path;
-    use crate::tests::ManifestStore;
-    use crate::tests::TestManifestIdStr;
-    use crate::tests::TestManifestStr;
+    use crate::tests::test_manifest::TestLeaf;
+    use crate::tests::test_manifest::TestManifest;
 
     fn ensure_unordered_eq<T: Debug + Hash + PartialEq + Eq, I: IntoIterator<Item = T>>(
         v1: I,
@@ -158,6 +155,9 @@ mod test {
 
     #[fbinit::test]
     async fn test_get_implicit_deletes_single_parent(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+
         // Parent manifest looks like:
         // p1/
         //   p2/
@@ -165,28 +165,33 @@ mod test {
         //     p4
         //   p5/
         //     p6
-        let root_manifest = TestManifestIdStr("1");
-        let store = ManifestStore(hashmap! {
-            root_manifest => TestManifestStr(hashmap! {
-                element("p1") => dir("2"),
-            }),
-            TestManifestIdStr("2") => TestManifestStr(hashmap! {
-                element("p2") => dir("3"),
-                element("p5") => dir("5"),
-            }),
-            TestManifestIdStr("3") => TestManifestStr(hashmap! {
-                element("p3") => file(FileType::Regular, "3"),
-                element("p4") => file(FileType::Regular, "4"),
-            }),
-            TestManifestIdStr("5") => TestManifestStr(hashmap! {
-                element("p6") => file(FileType::Regular, "6"),
-            }),
-        });
+        let leaf6_id = TestLeaf::new("6").store(&ctx, &store).await?;
+        let tree5_id = TestManifest::new()
+            .insert("p6", Entry::Leaf((FileType::Regular, leaf6_id)))
+            .store(&ctx, &store)
+            .await?;
+        let leaf4_id = TestLeaf::new("4").store(&ctx, &store).await?;
+        let leaf3_id = TestLeaf::new("3").store(&ctx, &store).await?;
+        let tree2_id = TestManifest::new()
+            .insert("p3", Entry::Leaf((FileType::Regular, leaf3_id)))
+            .insert("p4", Entry::Leaf((FileType::Regular, leaf4_id)))
+            .store(&ctx, &store)
+            .await?;
+        let tree1_id = TestManifest::new()
+            .insert("p2", Entry::Tree(tree2_id))
+            .insert("p5", Entry::Tree(tree5_id))
+            .store(&ctx, &store)
+            .await?;
+        let root_manifest = TestManifest::new()
+            .insert("p1", Entry::Tree(tree1_id))
+            .store(&ctx, &store)
+            .await?;
+
         // Child adds a file at /p1/p2
         let implicitly_deleted_files: Vec<_> = get_implicit_deletes_single_parent(
-            ctx(fb),
+            ctx.clone(),
             store.clone(),
-            vec![path("p1/p2")],
+            vec![NonRootMPath::new("p1/p2")?],
             root_manifest,
         )
         .try_collect()
@@ -195,14 +200,17 @@ mod test {
         // (and we enumerate all files: /p1/p2/p3 and /p1/p2/p4)
         ensure_unordered_eq(
             implicitly_deleted_files,
-            vec![path("p1/p2/p3"), path("p1/p2/p4")],
+            vec![
+                NonRootMPath::new("p1/p2/p3")?,
+                NonRootMPath::new("p1/p2/p4")?,
+            ],
         );
 
         // Adding an unrelated file should not cause any implicit deletes
         let implicitly_deleted_files: Vec<_> = get_implicit_deletes_single_parent(
-            ctx(fb),
+            ctx.clone(),
             store.clone(),
-            vec![path("p1/p200")],
+            vec![NonRootMPath::new("p1/p200")?],
             root_manifest,
         )
         .try_collect()
@@ -214,6 +222,8 @@ mod test {
 
     #[fbinit::test]
     async fn test_implicit_deletes(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
         // Parent 1 manifest looks like:
         // p1/
         //   p2/
@@ -223,6 +233,32 @@ mod test {
         //     p6
         //   p7
         // p8
+        let leaf8_id = TestLeaf::new("8").store(&ctx, &store).await?;
+        let leaf7_id = TestLeaf::new("7").store(&ctx, &store).await?;
+        let leaf6_id = TestLeaf::new("6").store(&ctx, &store).await?;
+        let tree5_id = TestManifest::new()
+            .insert("p6", Entry::Leaf((FileType::Regular, leaf6_id)))
+            .store(&ctx, &store)
+            .await?;
+        let leaf4_id = TestLeaf::new("4").store(&ctx, &store).await?;
+        let leaf3_id = TestLeaf::new("3").store(&ctx, &store).await?;
+        let tree2_id = TestManifest::new()
+            .insert("p3", Entry::Leaf((FileType::Regular, leaf3_id)))
+            .insert("p4", Entry::Leaf((FileType::Regular, leaf4_id)))
+            .store(&ctx, &store)
+            .await?;
+        let tree1_id = TestManifest::new()
+            .insert("p2", Entry::Tree(tree2_id))
+            .insert("p5", Entry::Tree(tree5_id))
+            .insert("p7", Entry::Leaf((FileType::Regular, leaf7_id)))
+            .store(&ctx, &store)
+            .await?;
+        let root_manifest_1 = TestManifest::new()
+            .insert("p1", Entry::Tree(tree1_id))
+            .insert("p8", Entry::Leaf((FileType::Regular, leaf8_id)))
+            .store(&ctx, &store)
+            .await?;
+
         // Parent 2 manifest looks like:
         // p1/
         //   p2/
@@ -233,44 +269,33 @@ mod test {
         //   p9/
         //     p10
         // p11
-        let root_manifest_1 = TestManifestIdStr("1_1");
-        let root_manifest_2 = TestManifestIdStr("1_2");
-        let store = ManifestStore(hashmap! {
-            root_manifest_1 => TestManifestStr(hashmap! {
-                element("p1") => dir("2_1"),
-                element("p8") => file(FileType::Regular, "8_1"),
-            }),
-            TestManifestIdStr("2_1") => TestManifestStr(hashmap! {
-                element("p2") => dir("3"),
-                element("p5") => dir("5"),
-                element("p7") => file(FileType::Regular, "7_1"),
-            }),
-            root_manifest_2 => TestManifestStr(hashmap! {
-                element("p1") => dir("2_2"),
-                element("p11") => file(FileType::Regular, "11_1"),
-            }),
-            TestManifestIdStr("2_2") => TestManifestStr(hashmap! {
-                element("p2") => dir("3"),
-                element("p5") => dir("5"),
-                element("p9") => dir("9_2")
-            }),
-            TestManifestIdStr("9_2") => TestManifestStr(hashmap! {
-                element("p10") => file(FileType::Executable, "10_2"),
-            }),
-            TestManifestIdStr("3") => TestManifestStr(hashmap! {
-                element("p3") => file(FileType::Regular, "3"),
-                element("p4") => file(FileType::Regular, "4"),
-            }),
-            TestManifestIdStr("5") => TestManifestStr(hashmap! {
-                element("p6") => file(FileType::Regular, "6"),
-            }),
-        });
-        let c = ctx(fb);
+        let leaf11_id = TestLeaf::new("11").store(&ctx, &store).await?;
+        let leaf10_id = TestLeaf::new("10").store(&ctx, &store).await?;
+        let tree9_id = TestManifest::new()
+            .insert("p10", Entry::Leaf((FileType::Executable, leaf10_id)))
+            .store(&ctx, &store)
+            .await?;
+        let tree1b_id = TestManifest::new()
+            .insert("p2", Entry::Tree(tree2_id))
+            .insert("p5", Entry::Tree(tree5_id))
+            .insert("p9", Entry::Tree(tree9_id))
+            .store(&ctx, &store)
+            .await?;
+        let root_manifest_2 = TestManifest::new()
+            .insert("p1", Entry::Tree(tree1b_id))
+            .insert("p11", Entry::Leaf((FileType::Regular, leaf11_id)))
+            .store(&ctx, &store)
+            .await?;
+
         // Child adds files at /p1/p2, /p1/p7/p12 and /p1/p9
         let implicitly_deleted_files: Vec<_> = get_implicit_deletes(
-            &c,
+            &ctx,
             store.clone(),
-            vec![path("p1/p2"), path("p1/p7/p12"), path("p1/p9")],
+            vec![
+                NonRootMPath::new("p1/p2")?,
+                NonRootMPath::new("p1/p7/p12")?,
+                NonRootMPath::new("p1/p9")?,
+            ],
             vec![root_manifest_1, root_manifest_2],
         )
         .try_collect()
@@ -278,14 +303,22 @@ mod test {
 
         ensure_unordered_eq(
             implicitly_deleted_files,
-            vec![path("p1/p2/p3"), path("p1/p2/p4"), path("p1/p9/p10")],
+            vec![
+                NonRootMPath::new("p1/p2/p3")?,
+                NonRootMPath::new("p1/p2/p4")?,
+                NonRootMPath::new("p1/p9/p10")?,
+            ],
         );
 
         // Result should not depend on the order of parents
         let implicitly_deleted_files: Vec<_> = get_implicit_deletes(
-            &c,
+            &ctx,
             store,
-            vec![path("p1/p2"), path("p1/p7/p12"), path("p1/p9")],
+            vec![
+                NonRootMPath::new("p1/p2")?,
+                NonRootMPath::new("p1/p7/p12")?,
+                NonRootMPath::new("p1/p9")?,
+            ],
             vec![root_manifest_2, root_manifest_1],
         )
         .try_collect()
@@ -293,7 +326,11 @@ mod test {
 
         ensure_unordered_eq(
             implicitly_deleted_files,
-            vec![path("p1/p2/p3"), path("p1/p2/p4"), path("p1/p9/p10")],
+            vec![
+                NonRootMPath::new("p1/p2/p3")?,
+                NonRootMPath::new("p1/p2/p4")?,
+                NonRootMPath::new("p1/p9/p10")?,
+            ],
         );
         Ok(())
     }

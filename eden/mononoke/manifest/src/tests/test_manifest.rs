@@ -48,6 +48,12 @@ pub(crate) struct TestLeafId(u64);
 #[derive(Debug)]
 pub(crate) struct TestLeaf(String);
 
+impl TestLeaf {
+    pub(crate) fn new(s: &str) -> Self {
+        Self(s.to_string())
+    }
+}
+
 #[async_trait]
 impl Loadable for TestLeafId {
     type Value = TestLeaf;
@@ -94,6 +100,24 @@ pub(crate) struct TestManifestId(u64);
 pub(crate) struct TestManifest(
     BTreeMap<MPathElement, Entry<TestManifestId, (FileType, TestLeafId)>>,
 );
+
+impl TestManifest {
+    pub(crate) fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    pub(crate) fn insert(
+        mut self,
+        elem: &str,
+        entry: Entry<TestManifestId, (FileType, TestLeafId)>,
+    ) -> Self {
+        self.0.insert(
+            MPathElement::new_from_slice(elem.as_bytes()).unwrap(),
+            entry,
+        );
+        self
+    }
+}
 
 #[async_trait]
 impl Loadable for TestManifestId {

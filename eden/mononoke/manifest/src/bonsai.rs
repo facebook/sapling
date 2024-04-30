@@ -397,19 +397,17 @@ impl ManifestLeafId for FsnodeFile {
 
 #[cfg(test)]
 mod test {
-    use borrowed::borrowed;
+    use std::sync::Arc;
+
+    use blobstore::Blobstore;
+    use blobstore::Storable;
     use fbinit::FacebookInit;
+    use memblob::Memblob;
 
     use super::*;
-    use crate::tests::ctx;
-    use crate::tests::dir;
-    use crate::tests::element;
-    use crate::tests::file;
-    use crate::tests::path;
-    use crate::tests::ManifestStore;
-    use crate::tests::TestFileId;
-    use crate::tests::TestManifestIdStr;
-    use crate::tests::TestManifestStr;
+    use crate::tests::test_manifest::TestLeaf;
+    use crate::tests::test_manifest::TestManifest;
+    use crate::tests::test_manifest::TestManifestId;
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
     where
@@ -431,65 +429,56 @@ mod test {
         }
     }
 
-    fn changed(
-        path: NonRootMPath,
-        ty: FileType,
-        name: &'static str,
-    ) -> Option<BonsaiDiffFileChange<TestFileId>> {
-        Some(BonsaiDiffFileChange::Changed(path, ty, TestFileId(name)))
-    }
-
-    fn reused(
-        path: NonRootMPath,
-        ty: FileType,
-        name: &'static str,
-    ) -> Option<BonsaiDiffFileChange<TestFileId>> {
-        Some(BonsaiDiffFileChange::ChangedReusedId(
-            path,
-            ty,
-            TestFileId(name),
-        ))
-    }
-
-    fn deleted(path: NonRootMPath) -> Option<BonsaiDiffFileChange<TestFileId>> {
-        Some(BonsaiDiffFileChange::Deleted(path))
-    }
-
     #[fbinit::test]
     async fn test_unfold_file_from_files(fb: FacebookInit) -> Result<(), Error> {
-        let store = ManifestStore::default();
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let node = Some(file(FileType::Regular, "1"));
-        let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
+        let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
+        let node = Some(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
 
         // Start with no parent. The file should be added.
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, changed(root.clone(), FileType::Regular, "1"));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
+        assert_eq!(
+            change,
+            Some(BonsaiDiffFileChange::Changed(
+                root.clone(),
+                FileType::Regular,
+                leaf_id
+            ))
+        );
         assert_eq!(work, hashmap! {});
 
         // Add the same file in a parent
-        parents.insert(file(FileType::Regular, "1"));
+        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
         // Add the file again in a different parent
-        parents.insert(file(FileType::Regular, "1"));
+        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
         // Add a different file
-        parents.insert(file(FileType::Regular, "2"));
+        let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;
+        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf2_id)));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
+        assert_eq!(
+            change,
+            Some(BonsaiDiffFileChange::ChangedReusedId(
+                root.clone(),
+                FileType::Regular,
+                leaf_id,
+            ))
+        );
         assert_eq!(work, hashmap! {});
 
         Ok(())
@@ -497,19 +486,26 @@ mod test {
 
     #[fbinit::test]
     async fn test_unfold_file_mode_change(fb: FacebookInit) -> Result<(), Error> {
-        let store = ManifestStore::default();
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let node = Some(file(FileType::Regular, "1"));
-        let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
+        let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
+        let node = Some(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
 
         // Add a parent with a different mode. We can reuse it.
-        parents.insert(file(FileType::Executable, "1"));
-        let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
+        parents.insert(BonsaiEntry::Leaf((FileType::Executable, leaf_id)));
+
+        let (change, work) = bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents).await?;
+        assert_eq!(
+            change,
+            Some(BonsaiDiffFileChange::ChangedReusedId(
+                root.clone(),
+                FileType::Regular,
+                leaf_id,
+            ))
+        );
         assert_eq!(work, hashmap! {});
 
         Ok(())
@@ -517,33 +513,57 @@ mod test {
 
     #[fbinit::test]
     async fn test_unfold_file_from_dirs(fb: FacebookInit) -> Result<(), Error> {
-        let store = ManifestStore::default();
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let node = Some(file(FileType::Regular, "1"));
-        let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
+        let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
+        let node = Some(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
+
+        let tree_id = TestManifest::new().store(&ctx, &store).await?;
 
         // Add a conflicting directory. We need to delete it.
-        parents.insert(dir("1"));
+        parents.insert(BonsaiEntry::Tree(tree_id));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, changed(root.clone(), FileType::Regular, "1"));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
+        assert_eq!(
+            change,
+            Some(BonsaiDiffFileChange::Changed(
+                root.clone(),
+                FileType::Regular,
+                leaf_id
+            ))
+        );
         assert_eq!(work, hashmap! {});
 
         // Add another parent with the same file. We can reuse it but we still need to emit it.
-        parents.insert(file(FileType::Regular, "1"));
+        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
+        assert_eq!(
+            change,
+            Some(BonsaiDiffFileChange::ChangedReusedId(
+                root.clone(),
+                FileType::Regular,
+                leaf_id,
+            ))
+        );
         assert_eq!(work, hashmap! {});
 
         // Add a different file. Same as above.
-        parents.insert(file(FileType::Regular, "2"));
+        let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;
+        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf2_id)));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
+        assert_eq!(
+            change,
+            Some(BonsaiDiffFileChange::ChangedReusedId(
+                root.clone(),
+                FileType::Regular,
+                leaf_id,
+            ))
+        );
         assert_eq!(work, hashmap! {});
 
         Ok(())
@@ -551,60 +571,62 @@ mod test {
 
     #[fbinit::test]
     async fn test_unfold_dir_from_dirs(fb: FacebookInit) -> Result<(), Error> {
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let store = ManifestStore(hashmap! {
-            TestManifestIdStr("1") => TestManifestStr(hashmap! {
-                element("p1") => file(FileType::Regular, "1"),
-            }),
-            TestManifestIdStr("2") => TestManifestStr(hashmap! {
-                element("p1") => file(FileType::Executable, "2"),
-                element("p2") => dir("2"),
-            })
-        });
+        let leaf1_id = TestLeaf::new("1").store(&ctx, &store).await?;
+        let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;
+        let tree1_id = TestManifest::new()
+            .insert("p1", Entry::Leaf((FileType::Regular, leaf1_id)))
+            .store(&ctx, &store)
+            .await?;
+        let tree2_id = TestManifest::new()
+            .insert("p1", Entry::Leaf((FileType::Executable, leaf2_id)))
+            .insert("p2", Entry::Tree(tree1_id))
+            .store(&ctx, &store)
+            .await?;
 
-        let node = Some(dir("1"));
+        let node = Some(Entry::Tree(tree1_id));
         let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
 
         // No parents. We need to recurse in this directory.
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
             hashmap! {
-                path("a/p1") => (Some(file(FileType::Regular, "1")), CompositeEntry::empty()),
+                NonRootMPath::new("a/p1")? => (Some(Entry::Leaf((FileType::Regular, leaf1_id))), CompositeEntry::empty()),
             }
         );
 
         // Identical parent. We are done.
-        parents.insert(dir("1"));
+        parents.insert(Entry::Tree(tree1_id));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
         // One parent differs. Recurse on the 2 paths reachable from those manifests, and with the
         // contents listed in both parent manifests.
-        parents.insert(dir("2"));
+        parents.insert(Entry::Tree(tree2_id));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
             hashmap! {
-                path("a/p1") => (
-                    Some(file(FileType::Regular, "1")),
+                NonRootMPath::new("a/p1")? => (
+                    Some(Entry::Leaf((FileType::Regular, leaf1_id))),
                     CompositeEntry::files(hashset! {
-                        (FileType::Regular, TestFileId("1")),
-                        (FileType::Executable, TestFileId("2"))
+                        (FileType::Regular, leaf1_id),
+                        (FileType::Executable, leaf2_id)
                     })
                 ),
-                path("a/p2") => (
+                NonRootMPath::new("a/p2")? => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestIdStr("2") })
+                    CompositeEntry::manifests(hashset! { tree1_id })
                 ),
             }
         );
@@ -614,21 +636,24 @@ mod test {
 
     #[fbinit::test]
     async fn test_unfold_dir_from_files(fb: FacebookInit) -> Result<(), Error> {
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let store =
-            ManifestStore(hashmap! { TestManifestIdStr("1") => TestManifestStr(hashmap! {}) });
+        let tree_id = TestManifest::new().store(&ctx, &store).await?;
 
-        let node = Some(dir("1"));
+        let node = Some(BonsaiEntry::Tree(tree_id));
+
         let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
 
         // Parent has a file. Delete it.
-        parents.insert(file(FileType::Regular, "1"));
+        let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
+        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
-        assert_eq!(change, deleted(root));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
+        assert_eq!(change, Some(BonsaiDiffFileChange::Deleted(root)));
+
         assert_eq!(work, hashmap! {});
 
         Ok(())
@@ -636,18 +661,19 @@ mod test {
 
     #[fbinit::test]
     async fn test_unfold_missing_from_files(fb: FacebookInit) -> Result<(), Error> {
-        let store = ManifestStore::default();
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
+        let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
 
         // Parent has a file, delete it.
-        parents.insert(file(FileType::Regular, "1"));
+        let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
+        parents.insert(BonsaiEntry::Leaf((FileType::Executable, leaf_id)));
+
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), None, parents.clone()).await?;
-        assert_eq!(change, deleted(root));
+            bonsai_diff_unfold(&ctx, &store, root.clone(), None, parents.clone()).await?;
+        assert_eq!(change, Some(BonsaiDiffFileChange::Deleted(root)));
         assert_eq!(work, hashmap! {});
 
         Ok(())
@@ -655,51 +681,52 @@ mod test {
 
     #[fbinit::test]
     async fn test_unfold_missing_from_dirs(fb: FacebookInit) -> Result<(), Error> {
-        let root = path("a");
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let root = NonRootMPath::new("a")?;
 
-        let store = ManifestStore(hashmap! {
-            TestManifestIdStr("1") => TestManifestStr(hashmap! {
-                element("p1") => dir("2"),
-            }),
-            TestManifestIdStr("2") => TestManifestStr(hashmap! {
-                element("p2") => dir("3"),
-            })
-        });
+        let tree3_id = TestManifest::new().store(&ctx, &store).await?;
+        let tree2_id = TestManifest::new()
+            .insert("p2", Entry::Tree(tree3_id))
+            .store(&ctx, &store)
+            .await?;
+        let tree1_id = TestManifest::new()
+            .insert("p1", Entry::Tree(tree2_id))
+            .store(&ctx, &store)
+            .await?;
 
         let mut parents = CompositeEntry::empty();
-        let ctx = ctx(fb);
-        borrowed!(ctx);
 
         // Parent has a directory, recurse into it.
-        parents.insert(dir("1"));
+        parents.insert(BonsaiEntry::Tree(tree1_id));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), None, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
             hashmap! {
-                path("a/p1") => (
+                NonRootMPath::new("a/p1")? => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestIdStr("2") })
+                    CompositeEntry::manifests(hashset! { tree2_id })
                 ),
             }
         );
 
         // Multiple parents have multiple directories. Recurse into all of them.
-        parents.insert(dir("2"));
+        parents.insert(BonsaiEntry::Tree(tree2_id));
         let (change, work) =
-            bonsai_diff_unfold(ctx, &store, root.clone(), None, parents.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
             hashmap! {
-                path("a/p1") => (
+                NonRootMPath::new("a/p1")? => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestIdStr("2") })
+                    CompositeEntry::manifests(hashset! { tree2_id })
                 ),
-                path("a/p2") => (
+                NonRootMPath::new("a/p2")? => (
                     None,
-                    CompositeEntry::manifests(hashset! { TestManifestIdStr("3") })
+                    CompositeEntry::manifests(hashset! { tree3_id })
                 ),
             }
         );
