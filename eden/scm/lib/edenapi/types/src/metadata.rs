@@ -22,7 +22,12 @@ use crate::ServerError;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct DirectoryMetadata {
-    // not used
+    // Expected to match the hash of the directory's encoded augmented mf.
+    #[id(0)]
+    pub augmented_manifest_id: Blake3,
+    // Expected to match the size of the directory's encoded augmented mf.
+    #[id(1)]
+    pub augmented_manifest_size: u64,
 }
 
 /// File entry metadata
