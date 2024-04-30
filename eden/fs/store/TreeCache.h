@@ -36,11 +36,13 @@ class TreeCache
     : public ObjectCache<Tree, ObjectCacheFlavor::Simple, TreeCacheStats> {
  public:
   static std::shared_ptr<TreeCache> create(
-      std::shared_ptr<ReloadableConfig> config) {
+      std::shared_ptr<ReloadableConfig> config,
+      EdenStatsPtr stats) {
     struct TC : TreeCache {
-      explicit TC(std::shared_ptr<ReloadableConfig> c) : TreeCache{c} {}
+      explicit TC(std::shared_ptr<ReloadableConfig> c, EdenStatsPtr s)
+          : TreeCache{c, std::move(s)} {}
     };
-    return std::make_shared<TC>(config);
+    return std::make_shared<TC>(config, std::move(stats));
   }
   ~TreeCache();
 
@@ -63,7 +65,9 @@ class TreeCache
    */
   std::shared_ptr<ReloadableConfig> config_;
 
-  explicit TreeCache(std::shared_ptr<ReloadableConfig> config);
+  explicit TreeCache(
+      std::shared_ptr<ReloadableConfig> config,
+      EdenStatsPtr stats);
 
   void registerStats();
 };

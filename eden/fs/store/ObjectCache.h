@@ -169,7 +169,10 @@ class ObjectCache : public std::enable_shared_from_this<
   };
 
   static std::shared_ptr<ObjectCache<ObjectType, Flavor, ObjectCacheStats>>
-  create(size_t maximumCacheSizeBytes, size_t minimumEntryCount);
+  create(
+      size_t maximumCacheSizeBytes,
+      size_t minimumEntryCount,
+      EdenStatsPtr stats);
   ~ObjectCache() {
     clear();
   }
@@ -248,7 +251,10 @@ class ObjectCache : public std::enable_shared_from_this<
   Stats getStats() const;
 
  protected:
-  explicit ObjectCache(size_t maximumCacheSizeBytes, size_t minimumEntryCount);
+  explicit ObjectCache(
+      size_t maximumCacheSizeBytes,
+      size_t minimumEntryCount,
+      EdenStatsPtr stats);
 
  private:
   /*
@@ -291,12 +297,15 @@ class ObjectCache : public std::enable_shared_from_this<
   };
 
   struct State {
+    explicit State(EdenStatsPtr stats) : stats{std::move(stats)} {}
+
     size_t totalSize{0};
     folly::F14NodeMap<ObjectId, CacheItem> items;
 
     /// Entries are evicted from the front of the queue.
     folly::CountedIntrusiveList<CacheItem, &CacheItem::hook> evictionQueue;
 
+    EdenStatsPtr stats;
     uint64_t hitCount{0};
     uint64_t missCount{0};
     uint64_t evictionCount{0};

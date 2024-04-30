@@ -112,7 +112,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       makeRefPtr<EdenStats>());
 
   // Create treeCache
-  treeCache_ = TreeCache::create(reloadableConfig);
+  treeCache_ = TreeCache::create(reloadableConfig, makeRefPtr<EdenStats>());
 
   serverState_ = make_shared<ServerState>(
       UserInfo::lookup(),
@@ -145,7 +145,7 @@ TestMount::TestMount(
 
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
-  treeCache_ = TreeCache::create(edenConfig);
+  treeCache_ = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
   initialize(rootBuilder, startReady);
 }
 
@@ -174,7 +174,7 @@ TestMount::TestMount(
   // Create treeCache
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
-  treeCache_ = TreeCache::create(edenConfig);
+  treeCache_ = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
   initialize(initialCommitHash, rootBuilder, startReady);
 }
 

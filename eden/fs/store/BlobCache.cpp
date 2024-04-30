@@ -54,7 +54,7 @@ BlobCache::BlobCache(
     : ObjectCache<
           Blob,
           ObjectCacheFlavor::InterestHandle,
-          BlobCacheStats>{maximumSize, minimumCount},
+          BlobCacheStats>{maximumSize, minimumCount, stats.copy()},
       enabled_{config->getEdenConfig()->enableInMemoryBlobCaching.getValue()},
       stats_{std::move(stats)} {
   registerStats();

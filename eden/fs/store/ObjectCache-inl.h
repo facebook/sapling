@@ -67,13 +67,18 @@ template <
 std::shared_ptr<ObjectCache<ObjectType, Flavor, ObjectCacheStats>>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::create(
     size_t maximumCacheSizeBytes,
-    size_t minimumEntryCount) {
+    size_t minimumEntryCount,
+    EdenStatsPtr stats) {
   // Allow make_shared with private constructor.
   struct OC : ObjectCache<ObjectType, Flavor, ObjectCacheStats> {
-    OC(size_t x, size_t y)
-        : ObjectCache<ObjectType, Flavor, ObjectCacheStats>{x, y} {}
+    OC(size_t x, size_t y, EdenStatsPtr stats)
+        : ObjectCache<ObjectType, Flavor, ObjectCacheStats>{
+              x,
+              y,
+              std::move(stats)} {}
   };
-  return std::make_shared<OC>(maximumCacheSizeBytes, minimumEntryCount);
+  return std::make_shared<OC>(
+      maximumCacheSizeBytes, minimumEntryCount, std::move(stats));
 }
 
 template <
@@ -82,9 +87,11 @@ template <
     typename ObjectCacheStats>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectCache(
     size_t maximumCacheSizeBytes,
-    size_t minimumEntryCount)
+    size_t minimumEntryCount,
+    EdenStatsPtr stats)
     : maximumCacheSizeBytes_{maximumCacheSizeBytes},
-      minimumEntryCount_{minimumEntryCount} {}
+      minimumEntryCount_{minimumEntryCount},
+      state_{std::in_place, std::move(stats)} {}
 
 template <
     typename ObjectType,

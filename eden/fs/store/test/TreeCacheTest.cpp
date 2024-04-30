@@ -105,7 +105,7 @@ struct TreeCacheTest : ::testing::Test {
     edenConfig = std::make_shared<ReloadableConfig>(
         rawEdenConfig, ConfigReloadBehavior::NoReload);
 
-    cache = TreeCache::create(edenConfig);
+    cache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
   }
 };
 

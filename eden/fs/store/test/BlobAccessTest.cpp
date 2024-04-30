@@ -93,7 +93,7 @@ struct BlobAccessTest : ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto blobCache =
         BlobCache::create(10, 0, edenConfig, makeRefPtr<EdenStats>());
-    auto treeCache = TreeCache::create(edenConfig);
+    auto treeCache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
 
     localStore->open();
     objectStore = ObjectStore::create(

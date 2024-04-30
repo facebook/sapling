@@ -69,7 +69,7 @@ const auto object11 = std::make_shared<CacheObject>(hash11, 11);
 TEST(ObjectCache, testSimpleInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
 
@@ -80,7 +80,7 @@ TEST(ObjectCache, testSimpleInsert) {
 TEST(ObjectCache, testMultipleInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
   cache->insertSimple(object3a->getHash(), object3a);
@@ -97,7 +97,7 @@ TEST(ObjectCache, testMultipleInsert) {
 TEST(ObjectCache, testSizeOverflowInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
   cache->insertSimple(object3a->getHash(), object3a);
@@ -119,7 +119,7 @@ TEST(ObjectCache, testSizeOverflowInsert) {
 TEST(ObjectCache, testLRUSimpleInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
   cache->insertSimple(object3a->getHash(), object3a);
@@ -144,7 +144,7 @@ TEST(ObjectCache, testLRUSimpleInsert) {
 TEST(ObjectCache, testLargeInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object11->getHash(), object11);
 
@@ -155,7 +155,7 @@ TEST(ObjectCache, testLargeInsert) {
 TEST(ObjectCache, testSizeOverflowLargeInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
   cache->insertSimple(object3a->getHash(), object3a);
@@ -181,7 +181,7 @@ TEST(ObjectCache, testSizeOverflowLargeInsert) {
 TEST(ObjectCache, testDuplicateInsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
   cache->insertSimple(object3a->getHash(), object3a);
@@ -207,7 +207,7 @@ TEST(ObjectCache, testDuplicateInsert) {
 TEST(ObjectCache, testReinsert) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
-          10, 1);
+          10, 1, makeRefPtr<EdenStats>());
 
   cache->insertSimple(object3->getHash(), object3);
   cache->insertSimple(object3a->getHash(), object3a);
@@ -234,7 +234,7 @@ TEST(ObjectCache, testReinsert) {
 TEST(ObjectCache, interest_handle_evicts_oldest_on_insertion) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(object3->getHash(), object3);
   cache->insertInterestHandle(
       object4->getHash(),
@@ -258,7 +258,7 @@ TEST(
     interest_handle_inserting_large_object_evicts_multiple_small_objects) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(object3->getHash(), object3);
   cache->insertInterestHandle(object4->getHash(), object4);
   cache->insertInterestHandle(object9->getHash(), object9);
@@ -272,7 +272,7 @@ TEST(
     interest_handle_inserting_existing_object_moves_it_to_back_of_eviction_queue) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(8, 0);
+          create(8, 0, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(object3->getHash(), object3);
   cache->insertInterestHandle(object4->getHash(), object4);
   cache->insertInterestHandle(object3->getHash(), object3);
@@ -288,7 +288,7 @@ TEST(
     interest_handle_preserves_minimum_number_of_entries_despite_exceeding_size_limit) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(1, 3);
+          create(1, 3, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(object3->getHash(), object3);
   cache->insertInterestHandle(object4->getHash(), object4);
   cache->insertInterestHandle(object5->getHash(), object5);
@@ -302,7 +302,7 @@ TEST(
 TEST(ObjectCache, interest_handle_preserves_minimum_number_of_entries) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(1, 3);
+          create(1, 3, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(object3->getHash(), object3);
   cache->insertInterestHandle(object4->getHash(), object4);
   cache->insertInterestHandle(object5->getHash(), object5);
@@ -318,7 +318,7 @@ TEST(ObjectCache, interest_handle_preserves_minimum_number_of_entries) {
 TEST(ObjectCache, interest_handle_can_forget_cached_entries) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(100, 0);
+          create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       hash3,
       std::make_shared<CacheObject>(hash3, 3),
@@ -343,7 +343,7 @@ TEST(
     interest_handle_can_forget_cached_entries_in_reverse_insertion_order) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(100, 0);
+          create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       hash3,
       std::make_shared<CacheObject>(hash3, 3),
@@ -365,7 +365,7 @@ TEST(
 TEST(ObjectCache, interest_handle_can_forget_cached_entry_in_middle) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(100, 0);
+          create(100, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       hash3,
       std::make_shared<CacheObject>(hash3, 3),
@@ -394,7 +394,7 @@ TEST(
     interest_handle_duplicate_insertion_with_interest_forgets_on_last_drop) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(100, 0);
+          create(100, 0, makeRefPtr<EdenStats>());
   auto object = std::make_shared<CacheObject>(hash3, 3);
   auto weak = std::weak_ptr<CacheObject>{object};
   auto handle1 = cache->insertInterestHandle(
@@ -421,7 +421,7 @@ TEST(
     interest_handle_does_not_forget_object_until_last_handle_is_forgotten) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(100, 0);
+          create(100, 0, makeRefPtr<EdenStats>());
   cache->insertInterestHandle(
       hash6,
       std::make_shared<CacheObject>(hash6, 6),
@@ -454,7 +454,7 @@ TEST(
 TEST(ObjectCache, interest_handle_redundant_inserts_are_ignored) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   auto object = std::make_shared<CacheObject>(ObjectId{}, 9);
   cache->insertInterestHandle(object->getHash(), object);
   EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
@@ -469,7 +469,7 @@ TEST(
     interest_handle_redundant_insert_does_not_invalidate_handles) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       object3->getHash(),
       object3,
@@ -488,7 +488,7 @@ TEST(
     interest_handle_fetching_object_from_handle_moves_to_back_of_eviction_queue) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       hash3,
       std::make_shared<CacheObject>(hash3, 3),
@@ -511,7 +511,7 @@ TEST(
 TEST(ObjectCache, interest_handle_can_return_object_even_if_it_was_evicted) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   // Insert multiple objects that are never collected. Also, don't ask for
   // scoped interest.
   auto handle3 = cache->insertInterestHandle(object3->getHash(), object3);
@@ -531,7 +531,7 @@ TEST(
     interest_handle_dropping_does_not_evict_if_item_has_been_reloaded_after_clear) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       object3->getHash(),
       object3,
@@ -548,7 +548,7 @@ TEST(
     dropping_interest_handle_does_not_evict_if_item_has_been_reloaded_after_eviction) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
-          create(10, 0);
+          create(10, 0, makeRefPtr<EdenStats>());
   auto handle3 = cache->insertInterestHandle(
       object3->getHash(),
       object3,

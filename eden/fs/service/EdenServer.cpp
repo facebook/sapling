@@ -406,7 +406,9 @@ EdenServer::EdenServer(
       blobCache_{BlobCache::create(
           serverState_->getReloadableConfig(),
           serverState_->getStats().copy())},
-      treeCache_{TreeCache::create(serverState_->getReloadableConfig())},
+      treeCache_{TreeCache::create(
+          serverState_->getReloadableConfig(),
+          serverState_->getStats().copy())},
       version_{std::move(version)},
       progressManager_{
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},

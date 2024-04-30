@@ -42,8 +42,8 @@ struct ObjectStoreTest : ::testing::Test {
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto edenConfig = std::make_shared<ReloadableConfig>(
         rawEdenConfig, ConfigReloadBehavior::NoReload);
-    treeCache = TreeCache::create(edenConfig);
     stats = makeRefPtr<EdenStats>();
+    treeCache = TreeCache::create(edenConfig, stats.copy());
     localStore = std::make_shared<MemoryLocalStore>(stats.copy());
     fakeBackingStore = std::make_shared<FakeBackingStore>(
         BackingStore::LocalStoreCachingPolicy::Anything);
