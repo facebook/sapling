@@ -16,6 +16,7 @@ use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use futures_stats::FutureStats;
 use futures_stats::StreamStats;
+use memory::MemoryStats;
 use metadata::Metadata;
 use nonzero_ext::nonzero;
 use observability::ObservabilityContext;
@@ -289,6 +290,15 @@ impl MononokeScubaSampleBuilder {
                 "completion_time_us",
                 stats.completion_time.as_micros_unchecked(),
             );
+
+        self
+    }
+
+    pub fn add_memory_stats(&mut self, stats: &MemoryStats) -> &mut Self {
+        self.inner
+            .add("total_rss_bytes", stats.total_rss_bytes)
+            .add("rss_free_bytes", stats.rss_free_bytes)
+            .add("rss_free_pct", stats.rss_free_pct);
 
         self
     }

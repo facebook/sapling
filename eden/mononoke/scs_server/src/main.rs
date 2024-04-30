@@ -89,6 +89,9 @@ struct ScsServerArgs {
     bound_address_file: Option<String>,
     #[clap(flatten)]
     sharded_executor_args: ShardedExecutorArgs,
+    /// Max memory to use for the thrift server
+    #[clap(long)]
+    max_memory: Option<usize>,
 }
 
 /// Struct representing the Source Control Service process when sharding by
@@ -218,6 +221,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke.clone()))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
+
+    if args.max_memory.is_some() {
+        memory::set_max_memory(args.max_memory.unwrap());
+    }
 
     // Initialize the FB303 Thrift stack.
 

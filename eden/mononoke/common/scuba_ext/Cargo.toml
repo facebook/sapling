@@ -12,6 +12,7 @@ anyhow = "1.0.75"
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+memory = { version = "0.1.0", path = "../memory" }
 metadata = { version = "0.1.0", path = "../../server/metadata" }
 nonzero_ext = "0.2"
 observability = { version = "0.1.0", path = "../../observability" }

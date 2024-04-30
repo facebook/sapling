@@ -743,7 +743,16 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFindFilesParams,
     ) -> Result<thrift::CommitFindFilesResponse, errors::ServiceError> {
-        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        if should_log_memory_usage() {
+            let stats = memory::get_stats();
+            if stats.is_ok() {
+                let mut scuba = ctx.clone().scuba().clone();
+                scuba.add_memory_stats(&stats.unwrap());
+                scuba.log_with_msg("Memory usage before call", None);
+            }
+        }
+
+        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let limit: usize = check_range_and_convert(
             "limit",
             params.limit,
@@ -784,6 +793,16 @@ impl SourceControlServiceImpl {
             .map_ok(|path| path.to_string())
             .try_collect()
             .await?;
+
+        if should_log_memory_usage() {
+            let stats = memory::get_stats();
+            if stats.is_ok() {
+                let mut scuba = ctx.scuba().clone();
+                scuba.add_memory_stats(&stats.unwrap());
+                scuba.log_with_msg("Memory usage after call", None);
+            }
+        }
+
         Ok(thrift::CommitFindFilesResponse {
             files,
             ..Default::default()
@@ -1060,4 +1079,9 @@ impl SourceControlServiceImpl {
             }),
         }
     }
+}
+
+// TODO move to sitevar later, and move to a common library
+fn should_log_memory_usage() -> bool {
+    justknobs::eval("scm/mononoke:scs_log_memory_usage", None, None).unwrap_or(false)
 }
