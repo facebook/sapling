@@ -247,6 +247,7 @@ members = [
   "common/futures_watchdog",
   "common/iterhelpers",
   "common/logger_ext",
+  "common/memory",
   "common/path_hash",
   "common/reloader",
   "common/rendezvous",
