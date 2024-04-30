@@ -179,6 +179,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
   auto* item = folly::get_ptr(state.items, hash);
   if (!item) {
     XLOG(DBG6) << "ObjectCache::getImpl missed";
+    state.stats->increment(&ObjectCacheStats::getMiss);
     ++state.missCount;
 
   } else {
@@ -190,6 +191,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
         state.evictionQueue.end(),
         state.evictionQueue,
         state.evictionQueue.iterator_to(*item));
+    state.stats->increment(&ObjectCacheStats::getHit);
     ++state.hitCount;
   }
 
@@ -378,6 +380,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
 
   if (--item->referenceCount == 0) {
     state->evictionQueue.erase(state->evictionQueue.iterator_to(*item));
+    state->stats->increment(&ObjectCacheStats::objectDrop);
     ++state->dropCount;
     evictItem(*state, *item);
   }
@@ -408,6 +411,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictOne(
     State& state) noexcept {
   const auto& front = state.evictionQueue.front();
   state.evictionQueue.pop_front();
+  state.stats->increment(&ObjectCacheStats::insertEviction);
   ++state.evictionCount;
   evictItem(state, front);
 }
