@@ -15,12 +15,16 @@
 #include <mutex>
 
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
 
 enum class ObjectCacheFlavor { Simple, InterestHandle };
 
-template <typename ObjectType, ObjectCacheFlavor Flavor>
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
 class ObjectCache;
 
 /**
@@ -28,7 +32,7 @@ class ObjectCache;
  * the object remains interesting. See comments on ObjectCache for more
  * information on these.
  */
-template <typename ObjectType>
+template <typename ObjectType, typename ObjectCacheStats>
 class ObjectInterestHandle {
  public:
   ObjectInterestHandle() noexcept = default;
@@ -54,13 +58,18 @@ class ObjectInterestHandle {
 
  private:
   ObjectInterestHandle(
-      std::weak_ptr<ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>>
-          objectCache,
+      std::weak_ptr<ObjectCache<
+          ObjectType,
+          ObjectCacheFlavor::InterestHandle,
+          ObjectCacheStats>> objectCache,
       ObjectId hash,
       std::weak_ptr<const ObjectType> object,
       uint64_t generation) noexcept;
 
-  std::weak_ptr<ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>>
+  std::weak_ptr<ObjectCache<
+      ObjectType,
+      ObjectCacheFlavor::InterestHandle,
+      ObjectCacheStats>>
       objectCache_;
 
   // hash_ is only accessed if ObjectCache_ is non-expired.
@@ -74,7 +83,10 @@ class ObjectInterestHandle {
   // CacheItem::generation.
   uint64_t cacheItemGeneration_{0};
 
-  friend class ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>;
+  friend class ObjectCache<
+      ObjectType,
+      ObjectCacheFlavor::InterestHandle,
+      ObjectCacheStats>;
 };
 
 /**
@@ -103,9 +115,12 @@ class ObjectInterestHandle {
  *
  * It is safe to use this object from arbitrary threads.
  */
-template <typename ObjectType, ObjectCacheFlavor Flavor>
-class ObjectCache
-    : public std::enable_shared_from_this<ObjectCache<ObjectType, Flavor>> {
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
+class ObjectCache : public std::enable_shared_from_this<
+                        ObjectCache<ObjectType, Flavor, ObjectCacheStats>> {
  public:
   using ObjectPtr = std::shared_ptr<const ObjectType>;
 
@@ -141,7 +156,7 @@ class ObjectCache
 
   struct GetResult {
     ObjectPtr object;
-    ObjectInterestHandle<ObjectType> interestHandle;
+    ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle;
   };
 
   struct Stats {
@@ -153,9 +168,8 @@ class ObjectCache
     uint64_t dropCount{0};
   };
 
-  static std::shared_ptr<ObjectCache<ObjectType, Flavor>> create(
-      size_t maximumCacheSizeBytes,
-      size_t minimumEntryCount);
+  static std::shared_ptr<ObjectCache<ObjectType, Flavor, ObjectCacheStats>>
+  create(size_t maximumCacheSizeBytes, size_t minimumEntryCount);
   ~ObjectCache() {
     clear();
   }
@@ -175,7 +189,7 @@ class ObjectCache
   template <ObjectCacheFlavor F = Flavor>
   typename std::enable_if_t<
       F == ObjectCacheFlavor::InterestHandle,
-      typename ObjectCache<ObjectType, Flavor>::GetResult>
+      typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::GetResult>
   getInterestHandle(
       const ObjectId& hash,
       Interest interest = Interest::LikelyNeededAgain);
@@ -187,7 +201,7 @@ class ObjectCache
   template <ObjectCacheFlavor F = Flavor>
   typename std::enable_if_t<
       F == ObjectCacheFlavor::Simple,
-      typename ObjectCache<ObjectType, Flavor>::ObjectPtr>
+      typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr>
   getSimple(const ObjectId& hash);
 
   /**
@@ -201,7 +215,7 @@ class ObjectCache
   template <ObjectCacheFlavor F = Flavor>
   typename std::enable_if_t<
       F == ObjectCacheFlavor::InterestHandle,
-      ObjectInterestHandle<ObjectType>>
+      ObjectInterestHandle<ObjectType, ObjectCacheStats>>
   insertInterestHandle(
       ObjectId id,
       ObjectPtr object,
@@ -319,7 +333,7 @@ class ObjectCache
   const size_t minimumEntryCount_;
   folly::Synchronized<State, folly::DistributedMutex> state_;
 
-  friend class ObjectInterestHandle<ObjectType>;
+  friend class ObjectInterestHandle<ObjectType, ObjectCacheStats>;
 };
 
 } // namespace facebook::eden

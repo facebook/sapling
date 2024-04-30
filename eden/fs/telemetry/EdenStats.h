@@ -31,6 +31,9 @@ struct ThriftStats;
 struct OverlayStats;
 struct InodeMapStats;
 struct InodeMetadataTableStats;
+struct BlobCacheStats;
+struct TreeCacheStats;
+struct FakeStats;
 
 class EdenStats : public RefCounted {
  public:
@@ -79,6 +82,9 @@ class EdenStats : public RefCounted {
   ThreadLocal<OverlayStats> overlayStats_;
   ThreadLocal<InodeMapStats> inodeMapStats_;
   ThreadLocal<InodeMetadataTableStats> inodeMetadataTableStats_;
+  ThreadLocal<BlobCacheStats> blobCacheStats_;
+  ThreadLocal<TreeCacheStats> treeCacheStats_;
+  ThreadLocal<FakeStats> fakeStats_;
 };
 
 using EdenStatsPtr = RefPtr<EdenStats>;
@@ -149,6 +155,21 @@ template <>
 inline InodeMetadataTableStats&
 EdenStats::getStatsForCurrentThread<InodeMetadataTableStats>() {
   return *inodeMetadataTableStats_.get();
+}
+
+template <>
+inline BlobCacheStats& EdenStats::getStatsForCurrentThread<BlobCacheStats>() {
+  return *blobCacheStats_.get();
+}
+
+template <>
+inline TreeCacheStats& EdenStats::getStatsForCurrentThread<TreeCacheStats>() {
+  return *treeCacheStats_.get();
+}
+
+template <>
+inline FakeStats& EdenStats::getStatsForCurrentThread<FakeStats>() {
+  return *fakeStats_.get();
 }
 
 struct FuseStats : StatsGroup<FuseStats> {
@@ -362,6 +383,32 @@ struct InodeMapStats : StatsGroup<InodeMapStats> {
 struct InodeMetadataTableStats : StatsGroup<InodeMetadataTableStats> {
   Counter getHit{"inode_metadata_table.get_hit"};
   Counter getMiss{"inode_metadata_table.get_miss"};
+};
+
+struct BlobCacheStats : StatsGroup<BlobCacheStats> {
+  Counter getHit{"blob_cache.get_hit"};
+  Counter getMiss{"blob_cache.get_miss"};
+  Counter insertEviction{"blob_cache.insert_eviction"};
+  Counter objectDrop{"blob_cache.object_drop"};
+};
+
+struct TreeCacheStats : StatsGroup<TreeCacheStats> {
+  Counter getHit{"tree_cache.get_hit"};
+  Counter getMiss{"tree_cache.get_miss"};
+  Counter insertEviction{"tree_cache.insert_eviction"};
+  Counter objectDrop{"tree_cache.object_drop"};
+};
+
+/*
+ * This is a fake stats object that is used for testing. Counter/Duration
+ * objects can be added here to mirror variables used in real stats object as
+ * needed
+ */
+struct FakeStats : StatsGroup<FakeStats> {
+  Counter getHit{"do_not_export_0"};
+  Counter getMiss{"do_not_export_1"};
+  Counter insertEviction{"do_not_export_2"};
+  Counter objectDrop{"do_not_export_3"};
 };
 
 } // namespace facebook::eden

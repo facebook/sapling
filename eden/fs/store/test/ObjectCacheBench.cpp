@@ -19,7 +19,8 @@ class Object {
   }
 };
 
-using SimpleObjectCache = ObjectCache<Object, ObjectCacheFlavor::Simple>;
+using SimpleObjectCache =
+    ObjectCache<Object, ObjectCacheFlavor::Simple, FakeStats>;
 
 // 40 characters per line, 6 lines. 240 characters total.
 std::string longObjectBase =

@@ -15,7 +15,7 @@ namespace facebook::eden {
 
 class ReloadableConfig;
 
-using BlobInterestHandle = ObjectInterestHandle<Blob>;
+using BlobInterestHandle = ObjectInterestHandle<Blob, BlobCacheStats>;
 
 /**
  * An in-memory LRU cache for loaded blobs. It is parameterized by both a
@@ -29,7 +29,10 @@ using BlobInterestHandle = ObjectInterestHandle<Blob>;
  *
  * It is safe to use this object from arbitrary threads.
  */
-class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
+class BlobCache : public ObjectCache<
+                      Blob,
+                      ObjectCacheFlavor::InterestHandle,
+                      BlobCacheStats> {
   struct PrivateTag {};
 
  public:

@@ -32,7 +32,8 @@ class ReloadableConfig;
  *
  * It is safe to use this object from arbitrary threads.
  */
-class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
+class TreeCache
+    : public ObjectCache<Tree, ObjectCacheFlavor::Simple, TreeCacheStats> {
  public:
   static std::shared_ptr<TreeCache> create(
       std::shared_ptr<ReloadableConfig> config) {

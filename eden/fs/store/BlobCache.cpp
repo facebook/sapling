@@ -14,9 +14,8 @@ namespace facebook::eden {
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 static constexpr folly::StringPiece kBlobCacheItems{"blob_cache.items"};
 
-ObjectCache<Blob, ObjectCacheFlavor::InterestHandle>::GetResult BlobCache::get(
-    const ObjectId& hash,
-    Interest interest) {
+ObjectCache<Blob, ObjectCacheFlavor::InterestHandle, BlobCacheStats>::GetResult
+BlobCache::get(const ObjectId& hash, Interest interest) {
   if (!enabled_) {
     interest = Interest::None;
   }
@@ -54,7 +53,8 @@ BlobCache::BlobCache(
     EdenStatsPtr stats)
     : ObjectCache<
           Blob,
-          ObjectCacheFlavor::InterestHandle>{maximumSize, minimumCount},
+          ObjectCacheFlavor::InterestHandle,
+          BlobCacheStats>{maximumSize, minimumCount},
       enabled_{config->getEdenConfig()->enableInMemoryBlobCaching.getValue()},
       stats_{std::move(stats)} {
   registerStats();

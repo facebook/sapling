@@ -29,7 +29,7 @@ void TreeCache::insert(ObjectId id, std::shared_ptr<const Tree> tree) {
 }
 
 TreeCache::TreeCache(std::shared_ptr<ReloadableConfig> config)
-      : ObjectCache<Tree, ObjectCacheFlavor::Simple>{
+      : ObjectCache<Tree, ObjectCacheFlavor::Simple, TreeCacheStats>{
             config->getEdenConfig()->inMemoryTreeCacheSize.getValue(),
             config->getEdenConfig()->inMemoryTreeCacheMinimumItems.getValue()},
         config_{config} {
