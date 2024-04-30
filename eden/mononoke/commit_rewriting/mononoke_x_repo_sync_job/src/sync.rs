@@ -31,6 +31,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
+use fsnodes::RootFsnodeId;
 use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -507,11 +508,21 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     // Sync config version to use for importing the commits.
     config_version: CommitSyncConfigVersion,
     disable_progress_bar: bool,
+    no_fsnode_derivation: bool,
 ) -> Result<Vec<ChangesetId>>
 where
     R: Repo,
 {
     info!(ctx.logger(), "syncing {}", cs_id);
+    debug!(
+        ctx.logger(),
+        "Automatic derivation of fsnodes is {0}",
+        if no_fsnode_derivation {
+            "disabled"
+        } else {
+            "enabled"
+        }
+    );
 
     // All the synced ancestors of the provided commit should have been synced
     // using the config version that was provided manually, or we can create
@@ -583,6 +594,27 @@ where
             .clone()
             .ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
         res.push(synced);
+
+        debug!(
+            ctx.logger(),
+            "Ancestor {ancestor_cs_id} synced successfully as {synced}"
+        );
+
+        let target_repo = commit_syncer.get_target_repo();
+
+        if !no_fsnode_derivation {
+            // Automatically derive fsnodes from the new bonsai in target repo,
+            // to speed up submodule expansion validation
+            let root_fsnode_id = target_repo
+                .repo_derived_data()
+                .derive::<RootFsnodeId>(ctx, synced)
+                .await?;
+            trace!(
+                ctx.logger(),
+                "Root fsnode id from {synced}: {0}",
+                root_fsnode_id.into_fsnode_id()
+            );
+        };
 
         if let Some(progress_bar) = &mb_prog_bar {
             progress_bar.inc(1);

@@ -35,6 +35,7 @@ rust_binary(
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:derived_data_utils",
+        "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job_helper_lib",
