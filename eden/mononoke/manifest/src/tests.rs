@@ -744,7 +744,7 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<MPath>> {
         .collect()
 }
 
-fn describe_diff_item(diff: Diff<Entry<TestManifestId, TestLeafId>>) -> String {
+fn describe_diff_item(diff: Diff<Entry<TestManifestId, (FileType, TestLeafId)>>) -> String {
     match diff {
         Diff::Added(path, entry) => format!(
             "A {}{}",

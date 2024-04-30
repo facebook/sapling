@@ -27,6 +27,7 @@ use futures::stream::TryStreamExt;
 use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use serde_derive::Deserialize;
@@ -90,7 +91,9 @@ impl Storable for TestLeaf {
 pub(crate) struct TestManifestId(u64);
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct TestManifest(BTreeMap<MPathElement, Entry<TestManifestId, TestLeafId>>);
+pub(crate) struct TestManifest(
+    BTreeMap<MPathElement, Entry<TestManifestId, (FileType, TestLeafId)>>,
+);
 
 #[async_trait]
 impl Loadable for TestManifestId {
@@ -133,7 +136,7 @@ impl Storable for TestManifest {
 }
 
 impl Manifest for TestManifest {
-    type LeafId = TestLeafId;
+    type LeafId = (FileType, TestLeafId);
     type TreeId = TestManifestId;
 
     fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
@@ -215,7 +218,7 @@ pub(crate) async fn derive_test_manifest(
                         None => Err(Error::msg("leaf only conflict")),
                         Some(leaf) => {
                             let id = leaf.store(&ctx, &blobstore).await?;
-                            Ok(((), id))
+                            Ok(((), (FileType::Regular, id)))
                         }
                     }
                 }
@@ -275,7 +278,7 @@ pub(crate) async fn derive_stack_of_test_manifests(
                         None => Err(Error::msg("leaf only conflict")),
                         Some(leaf) => {
                             let id = leaf.store(&ctx, &blobstore).await?;
-                            Ok(((), id))
+                            Ok(((), (FileType::Regular, id)))
                         }
                     }
                 }
@@ -318,7 +321,7 @@ pub(crate) async fn list_test_manifest<'a, B: Blobstore>(
     )
     .try_filter_map(|item| {
         let item =
-            item.and_then(|(path, leaf)| Some((Option::<NonRootMPath>::from(path)?, leaf.0)));
+            item.and_then(|(path, leaf)| Some((Option::<NonRootMPath>::from(path)?, leaf.1.0)));
         future::ok(item)
     })
     .try_fold(BTreeMap::new(), |mut acc, (path, leaf)| {
