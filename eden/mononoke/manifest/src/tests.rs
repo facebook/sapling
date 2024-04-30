@@ -5,35 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::hash::Hasher;
 use std::sync::Arc;
 
-use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
-use blobstore::Loadable;
 use blobstore::LoadableError;
-use blobstore::Storable;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
-use bounded_traversal::bounded_traversal_stream;
-use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future;
-use futures::future::FutureExt;
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
 use mononoke_types::path::MPath;
-use mononoke_types::BlobstoreBytes;
-use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
@@ -41,318 +30,24 @@ use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::THREES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
 use pretty_assertions::assert_eq;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
 
 pub(crate) use crate::bonsai::BonsaiEntry;
-pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
-pub(crate) use crate::derive_batch::ManifestChanges;
-pub(crate) use crate::derive_manifest;
 pub(crate) use crate::find_intersection_of_diffs;
-pub(crate) use crate::flatten_subentries;
 pub(crate) use crate::Diff;
 pub(crate) use crate::Entry;
 pub(crate) use crate::Manifest;
 pub(crate) use crate::ManifestOps;
 pub(crate) use crate::ManifestOrderedOps;
-pub(crate) use crate::OrderedManifest;
 pub(crate) use crate::PathOrPrefix;
 pub(crate) use crate::PathTree;
-pub(crate) use crate::TreeInfo;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-struct TestLeafId(u64);
+pub mod test_manifest;
 
-#[derive(Debug)]
-struct TestLeaf(String);
-
-#[async_trait]
-impl Loadable for TestLeafId {
-    type Value = TestLeaf;
-
-    async fn load<'a, B: Blobstore>(
-        &'a self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Value, LoadableError> {
-        let key = self.0.to_string();
-        let bytes = blobstore
-            .get(ctx, &key)
-            .await?
-            .ok_or(LoadableError::Missing(key))?;
-        let bytes = std::str::from_utf8(bytes.as_raw_bytes())
-            .map_err(|err| LoadableError::Error(Error::from(err)))?;
-        Ok(TestLeaf(bytes.to_owned()))
-    }
-}
-
-#[async_trait]
-impl Storable for TestLeaf {
-    type Key = TestLeafId;
-
-    async fn store<'a, B: Blobstore>(
-        self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Key> {
-        let mut hasher = DefaultHasher::new();
-        self.0.hash(&mut hasher);
-        let key = TestLeafId(hasher.finish());
-        blobstore
-            .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0))
-            .await?;
-        Ok(key)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-struct TestManifestIdU64(u64);
-
-#[derive(Debug, Serialize, Deserialize)]
-struct TestManifestU64(BTreeMap<MPathElement, Entry<TestManifestIdU64, TestLeafId>>);
-
-#[async_trait]
-impl Loadable for TestManifestIdU64 {
-    type Value = TestManifestU64;
-
-    async fn load<'a, B: Blobstore>(
-        &'a self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Value, LoadableError> {
-        let key = self.0.to_string();
-        let get = blobstore.get(ctx, &key);
-        let data = get.await?;
-        let bytes = data.ok_or(LoadableError::Missing(key))?;
-        let mf = serde_cbor::from_slice(bytes.as_raw_bytes().as_ref())
-            .map_err(|err| LoadableError::Error(Error::from(err)))?;
-        Ok(mf)
-    }
-}
-
-#[async_trait]
-impl Storable for TestManifestU64 {
-    type Key = TestManifestIdU64;
-
-    async fn store<'a, B: Blobstore>(
-        self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Key> {
-        let mut hasher = DefaultHasher::new();
-        self.0.hash(&mut hasher);
-        let key = TestManifestIdU64(hasher.finish());
-
-        let bytes = serde_cbor::to_vec(&self)?;
-        blobstore
-            .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(bytes))
-            .await?;
-        Ok(key)
-    }
-}
-
-impl Manifest for TestManifestU64 {
-    type LeafId = TestLeafId;
-    type TreeId = TestManifestIdU64;
-
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let iter = self.0.clone().into_iter();
-        Box::new(iter)
-    }
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.0.get(name).cloned()
-    }
-}
-
-// Implement OrderedManifests for tests.  Ideally we'd need to know the
-// descendant count, but since we don't, just make something up (10).  The
-// code still works if this estimate is wrong, but it may schedule the
-// wrong number of child manifest expansions when this happens.
-impl OrderedManifest for TestManifestU64 {
-    fn list_weighted(
-        &self,
-    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<(usize, Self::TreeId), Self::LeafId>)>> {
-        let iter = self.0.clone().into_iter().map(|entry| match entry {
-            (elem, Entry::Leaf(leaf)) => (elem, Entry::Leaf(leaf)),
-            (elem, Entry::Tree(tree)) => (elem, Entry::Tree((10, tree))),
-        });
-        Box::new(iter)
-    }
-    fn lookup_weighted(
-        &self,
-        name: &MPathElement,
-    ) -> Option<Entry<(usize, Self::TreeId), Self::LeafId>> {
-        self.0.get(name).cloned().map(|entry| match entry {
-            Entry::Leaf(leaf) => Entry::Leaf(leaf),
-            Entry::Tree(tree) => Entry::Tree((10, tree)),
-        })
-    }
-}
-
-async fn derive_test_manifest(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    parents: Vec<TestManifestIdU64>,
-    changes_str: BTreeMap<&str, Option<&str>>,
-) -> Result<Option<TestManifestIdU64>> {
-    let changes: Result<_> = (|| {
-        let mut changes = Vec::new();
-        for (path, change) in changes_str {
-            let path = NonRootMPath::new(path)?;
-            changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
-        }
-        Ok(changes)
-    })();
-    derive_manifest(
-        ctx.clone(),
-        blobstore.clone(),
-        parents,
-        changes?,
-        {
-            cloned!(ctx, blobstore);
-            move |TreeInfo { subentries, .. }| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let id = TestManifestU64(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
-                    Ok(((), id))
-                }
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info| {
-                cloned!(ctx, blobstore);
-                async move {
-                    match leaf_info.leaf {
-                        None => Err(Error::msg("leaf only conflict")),
-                        Some(leaf) => {
-                            let id = leaf.store(&ctx, &blobstore).await?;
-                            Ok(((), id))
-                        }
-                    }
-                }
-            }
-        },
-    )
-    .await
-}
-
-async fn derive_test_stack_of_manifests(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    parent: Option<TestManifestIdU64>,
-    changes_str_per_cs_id: BTreeMap<ChangesetId, BTreeMap<&str, Option<&str>>>,
-) -> Result<BTreeMap<ChangesetId, TestManifestIdU64>> {
-    let mut stack_of_commits = vec![];
-    let mut all_mf_changes = vec![];
-    for (cs_id, changes_str) in changes_str_per_cs_id {
-        let mut changes = Vec::new();
-        for (path, change) in changes_str {
-            let path = NonRootMPath::new(path)?;
-            changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
-        }
-        let mf_changes = ManifestChanges { cs_id, changes };
-        all_mf_changes.push(mf_changes);
-        stack_of_commits.push(cs_id);
-    }
-
-    let derived = derive_manifests_for_simple_stack_of_commits(
-        ctx.clone(),
-        blobstore.clone(),
-        parent,
-        all_mf_changes,
-        {
-            cloned!(ctx, blobstore);
-            move |TreeInfo { subentries, .. }, _| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let id = TestManifestU64(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
-                    Ok(((), id))
-                }
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info, _| {
-                cloned!(ctx, blobstore);
-                async move {
-                    match leaf_info.leaf {
-                        None => Err(Error::msg("leaf only conflict")),
-                        Some(leaf) => {
-                            let id = leaf.store(&ctx, &blobstore).await?;
-                            Ok(((), id))
-                        }
-                    }
-                }
-            }
-        },
-    )
-    .await?;
-
-    let mut res = BTreeMap::new();
-    for cs_id in stack_of_commits {
-        res.insert(cs_id, derived.get(&cs_id).unwrap().clone());
-    }
-    Ok(res)
-}
-
-struct Files(TestManifestIdU64);
-
-#[async_trait]
-impl Loadable for Files {
-    type Value = BTreeMap<NonRootMPath, String>;
-
-    async fn load<'a, B: Blobstore>(
-        &'a self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Value, LoadableError> {
-        bounded_traversal_stream(
-            256,
-            Some((MPath::ROOT, Entry::Tree(self.0))),
-            move |(path, entry)| {
-                async move {
-                    let content = Loadable::load(&entry, ctx, blobstore).await?;
-                    Ok(match content {
-                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                        Entry::Tree(tree) => {
-                            let recurse = tree
-                                .list()
-                                .map(|(name, entry)| (path.join(&name), entry))
-                                .collect();
-                            (None, recurse)
-                        }
-                    })
-                }
-                .boxed()
-            },
-        )
-        .try_filter_map(|item| {
-            let item =
-                item.and_then(|(path, leaf)| Some((Option::<NonRootMPath>::from(path)?, leaf.0)));
-            future::ok(item)
-        })
-        .try_fold(BTreeMap::new(), |mut acc, (path, leaf)| {
-            acc.insert(path, leaf);
-            future::ok::<_, LoadableError>(acc)
-        })
-        .await
-    }
-}
+use self::test_manifest::derive_stack_of_test_manifests;
+use self::test_manifest::derive_test_manifest;
+use self::test_manifest::list_test_manifest;
+use self::test_manifest::TestLeafId;
+use self::test_manifest::TestManifestId;
 
 fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath, String>> {
     files
@@ -421,9 +116,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
     };
 
     // load all files for specified manifest
-    let files = {
-        move |manifest_id| async move { Loadable::load(&Files(manifest_id), ctx, blobstore).await }
-    };
+    let files = move |manifest_id| list_test_manifest(ctx, blobstore, manifest_id);
 
     // clean merge of two directories
     {
@@ -678,16 +371,12 @@ async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
     // derive manifest
     let derive = {
         move |parents, changes| async move {
-            derive_test_stack_of_manifests(ctx, blobstore, parents, changes).await
+            derive_stack_of_test_manifests(ctx, blobstore, parents, changes).await
         }
     };
 
     // load all files for specified manifest
-    let files = {
-        move |manifest_id: TestManifestIdU64| async move {
-            Loadable::load(&Files(manifest_id), ctx, blobstore).await
-        }
-    };
+    let files = move |manifest_id| list_test_manifest(ctx, blobstore, manifest_id);
 
     // Simple case - add files one after another
     {
@@ -1055,7 +744,7 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<MPath>> {
         .collect()
 }
 
-fn describe_diff_item(diff: Diff<Entry<TestManifestIdU64, TestLeafId>>) -> String {
+fn describe_diff_item(diff: Diff<Entry<TestManifestId, TestLeafId>>) -> String {
     match diff {
         Diff::Added(path, entry) => format!(
             "A {}{}",

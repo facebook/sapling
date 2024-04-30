@@ -5,7 +5,7 @@ oncall("mononoke")
 
 rust_library(
     name = "manifest",
-    srcs = glob(["src/*.rs"]),
+    srcs = glob(["src/**/*.rs"]),
     test_deps = [
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:serde_cbor",
