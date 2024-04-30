@@ -8,6 +8,7 @@ utilities for git support
 """
 
 import errno
+import functools
 import hashlib
 import os
 import re
@@ -83,14 +84,14 @@ def isgitpeer(repo):
     return isgitstore(repo)
 
 
-def createrepo(ui, url, destpath):
+def createrepo(ui, url, destpath, submodule=None):
 
     repo_config = ""
     if url:
         repo_config += "\n[paths]\ndefault = %s\n" % url
 
     return setup_repository(
-        ui, destpath, create=True, initial_config=repo_config
+        ui, destpath, create=True, initial_config=repo_config, submodule=submodule
     ).local()
 
 
@@ -117,7 +118,7 @@ def setup_repository(ui, path, create=False, initial_config=None, submodule=None
     )
 
 
-def clone(ui, url, destpath=None, update=True, pullnames=None):
+def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
     """Clone a git repo, then create a repo at dest backed by the git repo.
     update can be False, or True, or a node to update to.
     - False: do not update, leave an empty working copy.
@@ -127,6 +128,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
     - None: use default refspecs set by configs.
     - []: do not fetch anything.
     If url is empty, create the repo but do not add a remote.
+    If submodule is set, it will be passed to `setup_repository`.
     """
     from . import hg
 
@@ -155,7 +157,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
 
     with bindings.atexit.AtExit.rmtree(destpath):
         try:
-            repo = createrepo(ui, url, destpath)
+            repo = createrepo(ui, url, destpath, submodule=submodule)
             ret = initgitbare(ui, repo.svfs.join("git"))
             if ret != 0:
                 raise error.Abort(_("git clone was not successful"))
@@ -832,7 +834,7 @@ class Submodule:
         repopath = self.gitmodulesvfs.join("gitmodules", urldigest)
         ident = identity.sniffdir(repopath)
         if ident:
-            repo = setup_repository(self.parentrepo.baseui, repopath)
+            repo = setup_repository(self.parentrepo.baseui, repopath, submodule=self)
         else:
             # create the repo but do not fetch anything
             repo = clone(
@@ -841,8 +843,8 @@ class Submodule:
                 destpath=repopath,
                 update=False,
                 pullnames=[],
+                submodule=self,
             )
-        repo.submodule = weakref.proxy(self)
         self._inherit_git_config(repo)
         return repo
 
@@ -864,7 +866,7 @@ class Submodule:
         ident = identity.sniffdir(repopath)
         if ident:
             ui.debug(" initializing submodule workingcopy at %s\n" % repopath)
-            repo = setup_repository(self.parentrepo.baseui, repopath)
+            repo = setup_repository(self.parentrepo.baseui, repopath, submodule=self)
         else:
             if self.parentrepo.wvfs.isfile(self.path):
                 ui.debug(" unlinking conflicted submodule file at %s\n" % self.path)
@@ -876,9 +878,13 @@ class Submodule:
                 % (repopath, backingrepo.root)
             )
             repo = hg.share(
-                backingrepo.ui, backingrepo.root, repopath, update=False, relative=True
+                backingrepo.ui,
+                backingrepo.root,
+                repopath,
+                update=False,
+                relative=True,
+                repository=functools.partial(setup_repository, submodule=self),
             )
-        repo.submodule = weakref.proxy(self)
         self._inherit_git_config(repo)
         return repo
 
