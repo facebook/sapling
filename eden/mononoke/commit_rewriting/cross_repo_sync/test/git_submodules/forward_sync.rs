@@ -543,25 +543,25 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, del_md_file_cs_id)
         .await
         .context("sync_to_master failed")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
 
     println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
 
-    // assert_working_copy_matches_expected(
-    //     &ctx,
-    //     &large_repo,
-    //     large_repo_cs_id,
-    //     vec![
-    //         "large_repo_root",
-    //         "repo_a/A_A",
-    //         "repo_a/A_B",
-    //         "repo_a/A_C",
-    //         // Files from the submodule are now regular files in the small repo
-    //         "repo_a/submodules/repo_b/B_A",
-    //         "repo_a/submodules/repo_b/B_B",
-    //     ],
-    // )
-    // .await?;
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            // Files from the submodule are now regular files in the small repo
+            "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/B_B",
+        ],
+    )
+    .await?;
 
     const CHANGE_SUBMODULE_PATH_MSG: &str = "Change static copy of repo_b";
 
@@ -584,7 +584,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, chg_sm_path_cs_id)
         .await
         .context("sync_to_master failed")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
 
     println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
 
@@ -593,73 +593,71 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
         &[
-            // // Changeset that deletes the submodule metadata file
-            // ExpectedChangeset::new_by_file_change(
-            //     DELETE_METADATA_FILE_MSG,
-            //     // The submodule files are treated as regular file changes
-            //     vec![
-            //         "repo_a/submodules/repo_b/B_A",
-            //         "repo_a/submodules/repo_b/B_B",
-            //     ],
-            //     // Only submodule metadata file is deleted
-            //     vec!["repo_a/submodules/.x-repo-submodule-repo_b"],
-            // ),
-            // // Changeset that modifies files in the submodule path, which is
-            // // now a static copy of the submodule
-            // ExpectedChangeset::new_by_file_change(
-            //     CHANGE_SUBMODULE_PATH_MSG,
-            //     // The submodule files are treated as regular file changes
-            //     vec![
-            //         "repo_a/submodules/repo_b/B_B",
-            //         "repo_a/submodules/repo_b/B_C",
-            //     ],
-            //     // Only submodule metadata file is deleted
-            //     vec!["repo_a/submodules/repo_b/B_A"],
-            // ),
+            // Changeset that deletes the submodule metadata file
+            ExpectedChangeset::new_by_file_change(
+                DELETE_METADATA_FILE_MSG,
+                // The submodule files are treated as regular file changes
+                vec![
+                    "repo_a/submodules/repo_b/B_A",
+                    "repo_a/submodules/repo_b/B_B",
+                ],
+                // Only submodule metadata file is deleted
+                vec!["repo_a/submodules/.x-repo-submodule-repo_b"],
+            ),
+            // Changeset that modifies files in the submodule path, which is
+            // now a static copy of the submodule
+            ExpectedChangeset::new_by_file_change(
+                CHANGE_SUBMODULE_PATH_MSG,
+                // The submodule files are treated as regular file changes
+                vec![
+                    "repo_a/submodules/repo_b/B_B",
+                    "repo_a/submodules/repo_b/B_C",
+                ],
+                // Only submodule metadata file is deleted
+                vec!["repo_a/submodules/repo_b/B_A"],
+            ),
         ],
     )?;
 
-    // assert_working_copy_matches_expected(
-    //     &ctx,
-    //     &large_repo,
-    //     large_repo_cs_id,
-    //     vec![
-    //         "large_repo_root",
-    //         "repo_a/A_A",
-    //         "repo_a/A_B",
-    //         "repo_a/A_C",
-    //         // Files from the submodule are now regular files in the small repo
-    //         "repo_a/submodules/repo_b/B_B",
-    //         "repo_a/submodules/repo_b/B_C",
-    //     ],
-    // )
-    // .await?;
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            // Files from the submodule are now regular files in the small repo
+            "repo_a/submodules/repo_b/B_B",
+            "repo_a/submodules/repo_b/B_C",
+        ],
+    )
+    .await?;
 
     // Check mappings of both commits
     check_mapping(
         ctx.clone(),
         &commit_syncer,
         del_md_file_cs_id,
-        None,
-        // Some(
-        //     ChangesetId::from_str(
-        //         "6176e1966404d7da39e62f814ddc49181cb7a31f63a40504f76feada0a47bcf4",
-        //     )
-        //     .unwrap(),
-        // ),
+        Some(
+            ChangesetId::from_str(
+                "6176e1966404d7da39e62f814ddc49181cb7a31f63a40504f76feada0a47bcf4",
+            )
+            .unwrap(),
+        ),
     )
     .await;
     check_mapping(
         ctx.clone(),
         &commit_syncer,
         chg_sm_path_cs_id,
-        None,
-        // Some(
-        //     ChangesetId::from_str(
-        //         "d988d913f6b9f1e91d1fdc41d317cf2d6bed335774c2d5415e33eaa46d086442",
-        //     )
-        //     .unwrap(),
-        // ),
+        Some(
+            ChangesetId::from_str(
+                "d988d913f6b9f1e91d1fdc41d317cf2d6bed335774c2d5415e33eaa46d086442",
+            )
+            .unwrap(),
+        ),
     )
     .await;
 
@@ -743,28 +741,28 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
     let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, del_md_file_cs_id)
         .await
         .context("Failed to sync del_md_file_cs_id")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
 
     println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
 
-    // assert_working_copy_matches_expected(
-    //     &ctx,
-    //     &large_repo,
-    //     large_repo_cs_id,
-    //     vec![
-    //         "large_repo_root",
-    //         "repo_a/A_A",
-    //         "repo_a/A_B",
-    //         "repo_a/A_C",
-    //         // Files from the submodule are now regular files in the small repo
-    //         "repo_a/submodules/.x-repo-submodule-repo_b",
-    //         "repo_a/submodules/repo_b/B_A",
-    //         "repo_a/submodules/repo_b/B_B",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_A",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
-    //     ],
-    // )
-    // .await?;
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            // Files from the submodule are now regular files in the small repo
+            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/B_B",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+        ],
+    )
+    .await?;
 
     const CHANGE_SUBMODULE_PATH_MSG: &str = "Change static copy of repo_c";
 
@@ -810,90 +808,88 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
     let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, chg_sm_path_cs_id)
         .await
         .context("Failed to sync chg_sm_path_cs_id")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")));
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
 
     println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
     derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
-    // compare_expected_changesets(
-    // large_repo_changesets.last_chunk::<2>().unwrap(),
-    // &[
-    // // Changeset that deletes the submodule metadata file
-    // ExpectedChangeset::new_by_file_change(
-    //     DELETE_METADATA_FILE_MSG,
-    //     // The submodule files are treated as regular file changes
-    //     vec![
-    //         // repo_b submodule metadata file is updated
-    //         "repo_a/submodules/.x-repo-submodule-repo_b",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_A",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
-    //     ],
-    //     // Only submodule metadata file is deleted
-    //     vec!["repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c"],
-    // ),
-    // // Changeset that modifies files in the submodule path, which is
-    // // now a static copy of the submodule
-    // ExpectedChangeset::new_by_file_change(
-    //     CHANGE_SUBMODULE_PATH_MSG,
-    //     // The submodule files are treated as regular file changes
-    //     vec![
-    //         // repo_b submodule metadata file is updated
-    //         "repo_a/submodules/.x-repo-submodule-repo_b",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_C",
-    //     ],
-    //     // Only submodule metadata file is deleted
-    //     vec!["repo_a/submodules/repo_b/submodules/repo_c/C_A"],
-    // ),
-    //     ],
-    // )?;
+    compare_expected_changesets(
+        large_repo_changesets.last_chunk::<2>().unwrap(),
+        &[
+            // Changeset that deletes the submodule metadata file
+            ExpectedChangeset::new_by_file_change(
+                DELETE_METADATA_FILE_MSG,
+                // The submodule files are treated as regular file changes
+                vec![
+                    // repo_b submodule metadata file is updated
+                    "repo_a/submodules/.x-repo-submodule-repo_b",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+                ],
+                // Only submodule metadata file is deleted
+                vec!["repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c"],
+            ),
+            // Changeset that modifies files in the submodule path, which is
+            // now a static copy of the submodule
+            ExpectedChangeset::new_by_file_change(
+                CHANGE_SUBMODULE_PATH_MSG,
+                // The submodule files are treated as regular file changes
+                vec![
+                    // repo_b submodule metadata file is updated
+                    "repo_a/submodules/.x-repo-submodule-repo_b",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_C",
+                ],
+                // Only submodule metadata file is deleted
+                vec!["repo_a/submodules/repo_b/submodules/repo_c/C_A"],
+            ),
+        ],
+    )?;
 
-    // assert_working_copy_matches_expected(
-    //     &ctx,
-    //     &large_repo,
-    //     large_repo_cs_id,
-    //     vec![
-    //         "large_repo_root",
-    //         "repo_a/A_A",
-    //         "repo_a/A_B",
-    //         "repo_a/A_C",
-    //         // Files from the submodule are now regular files in the small repo
-    //         "repo_a/submodules/.x-repo-submodule-repo_b",
-    //         "repo_a/submodules/repo_b/B_A",
-    //         "repo_a/submodules/repo_b/B_B",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_B",
-    //         "repo_a/submodules/repo_b/submodules/repo_c/C_C",
-    //     ],
-    // )
-    // .await?;
+    assert_working_copy_matches_expected(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        vec![
+            "large_repo_root",
+            "repo_a/A_A",
+            "repo_a/A_B",
+            "repo_a/A_C",
+            // Files from the submodule are now regular files in the small repo
+            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "repo_a/submodules/repo_b/B_A",
+            "repo_a/submodules/repo_b/B_B",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+            "repo_a/submodules/repo_b/submodules/repo_c/C_C",
+        ],
+    )
+    .await?;
 
     // Check mappings of both commits
     check_mapping(
         ctx.clone(),
         &commit_syncer,
         del_md_file_cs_id,
-        None,
-        // Some(
-        //     ChangesetId::from_str(
-        //         "727dc8e42f7886bfb3bd919d58724cff6c4b7d5ea42410184b4c0027e53d8c54",
-        //     )
-        //     .unwrap(),
-        // ),
+        Some(
+            ChangesetId::from_str(
+                "727dc8e42f7886bfb3bd919d58724cff6c4b7d5ea42410184b4c0027e53d8c54",
+            )
+            .unwrap(),
+        ),
     )
     .await;
     check_mapping(
         ctx.clone(),
         &commit_syncer,
         chg_sm_path_cs_id,
-        None,
-        // Some(
-        //     ChangesetId::from_str(
-        //         "3b28131208374b55997843bdcacef567aa8b1bb09212d2d3168c30ef056dcd60",
-        //     )
-        //     .unwrap(),
-        // ),
+        Some(
+            ChangesetId::from_str(
+                "3b28131208374b55997843bdcacef567aa8b1bb09212d2d3168c30ef056dcd60",
+            )
+            .unwrap(),
+        ),
     )
     .await;
 

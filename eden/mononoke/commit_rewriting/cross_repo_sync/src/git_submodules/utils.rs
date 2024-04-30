@@ -186,6 +186,21 @@ pub(crate) async fn get_submodule_file_content_id(
     cs_id: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<Option<ContentId>> {
+    content_id_of_file_with_type(ctx, repo, cs_id, path, FileType::GitSubmodule).await
+}
+
+/// Returns the content id of a file at a given path if it was os a specific
+/// file type.
+pub(crate) async fn content_id_of_file_with_type<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    cs_id: ChangesetId,
+    path: &NonRootMPath,
+    expected_file_type: FileType,
+) -> Result<Option<ContentId>>
+where
+    R: RepoDerivedDataRef + RepoBlobstoreArc,
+{
     let fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -197,7 +212,7 @@ pub(crate) async fn get_submodule_file_content_id(
         .await?;
 
     match entry {
-        Some(Entry::Leaf(file)) if *file.file_type() == FileType::GitSubmodule => {
+        Some(Entry::Leaf(file)) if *file.file_type() == expected_file_type => {
             Ok(Some(file.content_id().clone()))
         }
         _ => Ok(None),

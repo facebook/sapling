@@ -259,10 +259,11 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
     Ok(())
 }
 
-/// Test that manually deleting the submodule metadata file without deleting
-/// the expansion fails.
+/// Deleting the submodule metadata file without deleting the expansion is a
+/// valid scenario, e.g. when users delete a submodule but keep its static copy
+/// in the repo as regular files.
 #[fbinit::test]
-async fn test_deleting_submodule_metadata_file_without_expansion_fails_validation(
+async fn test_deleting_submodule_metadata_file_without_expansion_passes_validation(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
@@ -302,11 +303,10 @@ async fn test_deleting_submodule_metadata_file_without_expansion_fails_validatio
     )
     .await;
 
-    println!("Validation result: {0:#?}", &validation_res);
-
-    let expected_err_msg =
-        "Submodule metadata file is being deleted without removing the entire submodule expansion";
-    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
+    assert!(
+        validation_res.is_ok(),
+        "Validation failed when working copy matches submodule pointer"
+    );
 
     Ok(())
 }

@@ -43,6 +43,7 @@ use slog::debug;
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
+use crate::git_submodules::utils::content_id_of_file_with_type;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
@@ -163,8 +164,30 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     let metadata_file_fc = match mb_metadata_file_fc {
         Some(fc) => fc,
         None => {
+            // Check if the submodule metadata file existed in any of the
+            // parents. If it did, it means that a submodule expansion is
+            // being modified without properly updating the metadata file.
+            let submodule_metadata_file_exists = stream::iter(bonsai.parents())
+                .map(|cs_id| {
+                    content_id_of_file_with_type(
+                        ctx,
+                        &sm_exp_data.large_repo,
+                        cs_id,
+                        &metadata_file_path,
+                        FileType::Regular,
+                    )
+                })
+                .buffered(10)
+                .boxed()
+                .try_collect::<Vec<_>>()
+                .await?
+                .into_iter()
+                // If a content id is returned, the submodule metadata file
+                // existed in the parent changeset
+                .any(|mb_content_id| mb_content_id.is_some());
+
             // This means that the metadata file wasn't modified
-            if submodule_expansion_changed {
+            if submodule_expansion_changed && submodule_metadata_file_exists {
                 // Submodule expansion changed, but the metadata file wasn't updated
                 return Err(anyhow!(
                     "Expansion of submodule {submodule_path} changed without updating its metadata file {metadata_file_path}"
@@ -181,15 +204,9 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         FileChange::Change(tfc) => tfc.content_id(),
         FileChange::UntrackedChange(bfc) => bfc.content_id(),
         FileChange::Deletion | FileChange::UntrackedDeletion => {
-            // Metadata file is being deleted, so the entire submodule expansion
-            // has to deleted as well.
-            return ensure_submodule_expansion_deletion(
-                ctx,
-                sm_exp_data,
-                bonsai,
-                synced_submodule_path,
-            )
-            .await;
+            // TODO(T187241943): ensure that submodule expansion is always
+            // deleted when the metadata file is deleted during backsyncing.
+            return Ok(bonsai);
         }
     };
 
@@ -256,6 +273,8 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     Ok(bonsai)
 }
 
+// TODO(T187241943): ensure submodule expansion is always deleted when metadata
+// file is deleted during backsyncing.
 /// Ensures that, when the x-repo submodule metadata file was deleted, the
 /// entire submodule expansion is deleted as well.
 ///
@@ -264,7 +283,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 /// `FileChange::Deletion` for all the files in the expansion.
 /// 2. Implicitly deleted by adding a file in the path of the expansion
 /// directory.
-async fn ensure_submodule_expansion_deletion<'a, R: Repo>(
+async fn _ensure_submodule_expansion_deletion<'a, R: Repo>(
     ctx: &'a CoreContext,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     // Bonsai from the large repo
