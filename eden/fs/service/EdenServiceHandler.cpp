@@ -4318,8 +4318,14 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
 void EdenServiceHandler::getStatInfo(
     InternalStats& result,
     std::unique_ptr<GetStatInfoParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   int64_t statsMask = *params->statsMask();
+  // return all stats when mask not provided
+  // TODO: remove when no old clients exists
+  if (0 == statsMask) {
+    statsMask = ~0;
+  }
+
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
   if (statsMask & eden_constants::STATS_MOUNTS_STATS_) {
     auto mountList = server_->getMountPoints();
