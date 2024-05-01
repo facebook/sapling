@@ -234,6 +234,52 @@ class FuseChannel final : public FsChannel {
    * The caller is expected to follow up with a call to the
    * initialize() method to perform the handshake with the
    * kernel and set up the thread pool.
+   *
+   * privHelper -
+   *      a helper object that can be used to perform privileged actions like
+   *      mounting/unmounting the FUSE device.
+   * fuseDevice -
+   *      the file to use for communication with the kernel. Fuse requests and
+   *      responses go through here.
+   * mountPath -
+   *      the absolute path to the mount point on disk.
+   * threadPool -
+   *      the thread pool to use for processing FUSE requests. Note this is not
+   *      used to read fuse requests, but the processing that is not run on
+   *      another thread pool in EdenFS is run here.
+   * numThreads -
+   *      the number of worker threads to read fuse requests off the fuseDevice.
+   * dispatcher -
+   *      once parsed requests are passed off to the dispatcher for handling,
+   *      this is the connection to the rest of EdenFS.
+   * straceLogger -
+   *      a logger to use for logging strace/syscall like events.
+   * processInfoCache -
+   *      a cache of client process infomation (pid, command line, parent, etc).
+   * fsEventLogger -
+   *      legacy telemetry on filesystem access.
+   * requestTimeout -
+   *      internal timeout for how long the FuseChannel will give the lower
+   *      levels of EdenFS to process an event. ETIMEDOUT will be returned to
+   *      the kernel if a request exceeds this amount of time.
+   * notifier -
+   *      used to flag abnormal EdenFS behavior to users.
+   * caseSensitive -
+   *      whether or not the mount is case sensitive.
+   * requireUtf8Path -
+   *      whether the mount requires utf-8 compliant paths.
+   * maximumBackgroundRequests -
+   *      The max number of background requests the kernel will send. The
+   *      libfuse documentation says this only applies to background requests
+   *      like readahead prefetches and direct I/O, but we have empirically
+   *      observed that, on Linux, without setting this value, `rg -j 200`
+   *      limits the number of active FUSE requests to 16.
+   * useWriteBackCache -
+   *      Fuse may complete writes while they are cached in kernel before they
+   *      are written to EdenFS.
+   * fuseTraceBusCapacity -
+   *      The maximum number of FuseTraceEvents that can be buffered in the
+   *      trace bus at any one time. This data feeds into `eden trace fs`.
    */
   FuseChannel(
       PrivHelper* privHelper,
