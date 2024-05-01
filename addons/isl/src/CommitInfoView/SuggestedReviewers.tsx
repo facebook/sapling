@@ -146,6 +146,25 @@ export function SuggestedReviewers({
 
   return (
     <div className="suggested-reviewers" data-testid="suggested-reviewers">
+      {recent.length > 0 ? (
+        <div data-testid="recent-reviewers-list">
+          <div className="suggestion-header">
+            <T>Recent</T>
+          </div>
+          <div className="suggestions">
+            {recent.map(s => (
+              <Suggestion
+                key={s}
+                onClick={() => {
+                  addReviewer(s);
+                  tracker.track('AcceptSuggestedReviewer', {extras: {type: 'recent'}});
+                }}>
+                {s}
+              </Suggestion>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {provider?.supportsSuggestedReviewers &&
       (filteredSuggestions == null || filteredSuggestions.length > 0) ? (
         <div data-testid="suggested-reviewers-list">
@@ -168,25 +187,6 @@ export function SuggestedReviewers({
                 {s}
               </Suggestion>
             )) ?? null}
-          </div>
-        </div>
-      ) : null}
-      {recent.length > 0 ? (
-        <div data-testid="recent-reviewers-list">
-          <div className="suggestion-header">
-            <T>Recent</T>
-          </div>
-          <div className="suggestions">
-            {recent.map(s => (
-              <Suggestion
-                key={s}
-                onClick={() => {
-                  addReviewer(s);
-                  tracker.track('AcceptSuggestedReviewer', {extras: {type: 'recent'}});
-                }}>
-                {s}
-              </Suggestion>
-            ))}
           </div>
         </div>
       ) : null}
