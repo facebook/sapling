@@ -2032,12 +2032,15 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                   NfsServer::NfsMountInfo mountInfo) mutable {
                 auto [channel, mountdAddr] = std::move(mountInfo);
 #ifndef _WIN32
+                // Channel is later moved. We must assign addr to a local var
+                // to avoid the possibility of a use-after-move bug.
+                auto addr = channel->getAddr();
                 // TODO: teach privhelper or something to mount on Windows
                 return serverState_->getPrivHelper()
                     ->nfsMount(
                         mountPath.view(),
                         mountdAddr,
-                        channel->getAddr(),
+                        addr,
                         readOnly,
                         iosize,
                         useReaddirplus)
