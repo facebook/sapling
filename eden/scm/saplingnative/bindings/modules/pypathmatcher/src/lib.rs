@@ -279,20 +279,23 @@ fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> PyRe
     Ok(matches)
 }
 
-/// Extracts a Rust matcher from a Python Object
-/// When possible it converts it into a pure-Rust matcher.
-pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
+/// Extracts a Rust matcher from a Python Object.
+/// Returns the matcher and whether it was able to extract to a pure Rust matcher.
+pub fn extract_matcher(
+    py: Python,
+    matcher: PyObject,
+) -> PyResult<(Arc<dyn Matcher + Sync + Send>, bool)> {
     if let Ok(matcher) = treematcher::downcast_from(py, matcher.clone_ref(py)) {
         debug!("treematcher downcast");
-        return Ok(matcher.extract_inner(py));
+        return Ok((matcher.extract_inner(py), true));
     }
     if let Ok(matcher) = gitignorematcher::downcast_from(py, matcher.clone_ref(py)) {
         debug!("gitignorematcher downcast");
-        return Ok(matcher.extract_inner(py));
+        return Ok((matcher.extract_inner(py), true));
     }
     if let Ok(matcher) = hintedmatcher::downcast_from(py, matcher.clone_ref(py)) {
         debug!("hintedmatcher downcast");
-        return Ok(matcher.extract_inner(py));
+        return Ok((matcher.extract_inner(py), true));
     }
 
     let py_type = matcher.get_type(py);
@@ -308,32 +311,41 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
             let py_matchers = matcher.getattr(py, "_matchers")?;
             let py_matchers = PyList::extract(py, &py_matchers)?;
             let mut matchers: Vec<Arc<dyn Matcher + Sync + Send>> = vec![];
+            let mut all_rust = true;
             for matcher in py_matchers.iter(py) {
-                matchers.push(extract_matcher(py, matcher)?);
+                let (matcher, rust) = extract_matcher(py, matcher)?;
+                matchers.push(matcher);
+                all_rust &= rust;
             }
 
-            Ok(Arc::new(UnionMatcher::new(matchers)))
+            Ok((Arc::new(UnionMatcher::new(matchers)), all_rust))
         }
         "differencematcher" => {
-            let include = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
-            let exclude = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
-            Ok(Arc::new(DifferenceMatcher::new(include, exclude)))
+            let (incl, incl_rust) = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
+            let (excl, excl_rust) = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
+            Ok((
+                Arc::new(DifferenceMatcher::new(incl, excl)),
+                incl_rust && excl_rust,
+            ))
         }
         "xormatcher" => {
-            let m1 = extract_matcher(py, matcher.getattr(py, "m1")?)?;
-            let m2 = extract_matcher(py, matcher.getattr(py, "m2")?)?;
-            Ok(Arc::new(XorMatcher::new(m1, m2)))
+            let (m1, m1_rust) = extract_matcher(py, matcher.getattr(py, "m1")?)?;
+            let (m2, m2_rust) = extract_matcher(py, matcher.getattr(py, "m2")?)?;
+            Ok((Arc::new(XorMatcher::new(m1, m2)), m1_rust && m2_rust))
         }
         "intersectionmatcher" => {
-            let m1 = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
-            let m2 = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
-            Ok(Arc::new(IntersectMatcher::new(vec![m1, m2])))
+            let (m1, m1_rust) = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
+            let (m2, m2_rust) = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
+            Ok((
+                Arc::new(IntersectMatcher::new(vec![m1, m2])),
+                m1_rust && m2_rust,
+            ))
         }
-        "alwaysmatcher" => Ok(Arc::new(AlwaysMatcher::new())),
-        "nevermatcher" => Ok(Arc::new(NeverMatcher::new())),
+        "alwaysmatcher" => Ok((Arc::new(AlwaysMatcher::new()), true)),
+        "nevermatcher" => Ok((Arc::new(NeverMatcher::new()), true)),
         _ => {
             warn!("using Python matcher");
-            Ok(Arc::new(ThreadPythonMatcher::new(matcher)))
+            Ok((Arc::new(ThreadPythonMatcher::new(matcher)), false))
         }
     }
 }
@@ -344,6 +356,6 @@ pub fn extract_option_matcher(
 ) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
     match matcher {
         None => Ok(Arc::new(AlwaysMatcher::new())),
-        Some(m) => extract_matcher(py, m),
+        Some(m) => Ok(extract_matcher(py, m)?.0),
     }
 }

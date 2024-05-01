@@ -158,7 +158,7 @@ py_class!(pub class treemanifest |py| {
     def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
         let tree = self.underlying(py);
-        let matcher = extract_matcher(py, pymatcher)?;
+        let matcher = extract_matcher(py, pymatcher)?.0;
         let files = py.allow_threads(move || -> Vec<_> {
             let tree = tree.read();
             tree.files(matcher).collect()
@@ -173,7 +173,7 @@ py_class!(pub class treemanifest |py| {
     /// Like walk(), but includes file node as well.
     def walkfiles(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, PyBytes)>> {
         let tree = self.underlying(py);
-        let matcher = extract_matcher(py, pymatcher)?;
+        let matcher = extract_matcher(py, pymatcher)?.0;
         let files = py.allow_threads(move || -> Vec<_> {
             let tree = tree.read();
             tree.files(matcher).collect()
@@ -190,7 +190,7 @@ py_class!(pub class treemanifest |py| {
     def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, Option<PyBytes>)>> {
         let mut result = Vec::new();
         let tree = self.underlying(py);
-        let matcher = extract_matcher(py, pymatcher)?;
+        let matcher = extract_matcher(py, pymatcher)?.0;
         let dirs = py.allow_threads(move || -> Vec<_> {
             let tree = tree.read();
             tree.dirs(matcher).collect()

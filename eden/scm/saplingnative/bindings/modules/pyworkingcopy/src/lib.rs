@@ -66,7 +66,7 @@ py_class!(class walker |py| {
         pymatcher: PyObject,
         include_directories: bool,
     ) -> PyResult<walker> {
-        let matcher = extract_matcher(py, pymatcher)?;
+        let matcher = extract_matcher(py, pymatcher)?.0;
         let walker = Walker::new(
             root.to_path_buf(),
             dot_dir.clone(),

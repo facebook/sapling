@@ -161,7 +161,7 @@ py_class!(pub class dagcopytrace |py| {
         let src = Vertex::copy_from(src.data(py));
         let dst = Vertex::copy_from(dst.data(py));
         let matcher = match matcher {
-            Some(obj) => Some(extract_matcher(py, obj)?),
+            Some(obj) => Some(extract_matcher(py, obj)?.0),
             None => None,
         };
 

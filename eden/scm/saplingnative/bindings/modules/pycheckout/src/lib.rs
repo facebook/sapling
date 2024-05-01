@@ -104,8 +104,8 @@ py_class!(class checkoutplan |py| {
         let current_lock = current_manifest.get_underlying(py);
         let target_lock = target_manifest.get_underlying(py);
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
-            let old_matcher = extract_matcher(py, old_sparse_matcher)?;
-            let new_matcher = extract_matcher(py, new_sparse_matcher)?;
+            let old_matcher = extract_matcher(py, old_sparse_matcher)?.0;
+            let new_matcher = extract_matcher(py, new_sparse_matcher)?.0;
             actions = py.allow_threads(move || {
                 let current = current_lock.read();
                 let target = target_lock.read();
