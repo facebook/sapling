@@ -1774,15 +1774,22 @@ ImmediateFuture<Unit> EdenMount::diff(
     }
 
     if (parentInfo->workingCopyParentRootId != commitHash) {
+      // TODO: We should really add a method to FilteredBackingStore that
+      // allows us to render a FOID as the underlying ObjectId. This would
+      // avoid the round trip we're doing here.
+      auto renderedParentRootId =
+          objectStore_->renderRootId(parentInfo->workingCopyParentRootId);
+      auto renderedCommitHash = objectStore_->renderRootId(commitHash);
+
       // Log this occurrence to Scuba
       getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
           commitHash.value(), parentInfo->workingCopyParentRootId.value()});
       return makeImmediateFuture<Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
-          commitHash,
+          folly::hexlify(renderedCommitHash),
           ", but current parent commit is ",
-          parentInfo->workingCopyParentRootId,
+          folly::hexlify(renderedParentRootId),
           ".\nTry running `eden doctor` to remediate"));
     }
 

@@ -134,7 +134,10 @@ if sys.platform == "win32":
             "test_truncation_upon_open_modifies_file",
         ],
         "hg.update_test.UpdateCacheInvalidationTest": [
-            "test_changing_file_contents_creates_new_inode_and_flushes_dcache"
+            "test_changing_file_contents_creates_new_inode_and_flushes_dcache",
+            # Similar to above, this test is marked flaky on the TestX UI. To avoid
+        # the FilteredFS mixin showing up as broken, we skip it altogether.
+            "test_file_locked_removal",
         ],
         "hg.update_test.UpdateTest": [
             # TODO: A \r\n is used
@@ -163,11 +166,6 @@ if sys.platform == "win32":
             "test_journal_stream_changes_since",
             "test_journal_stream_selected_changes_since",
             "test_journal_stream_selected_changes_since_empty_glob",
-        ],
-        # Similar to above, this test is marked flaky on the TestX UI. To avoid
-        # the FilteredFS mixin showing up as broken, we skip it altogether.
-        "hg.update_test.UpdateCacheInvalidationTestTreeOnly": [
-            "test_file_locked_removal"
         ],
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):
@@ -471,7 +469,6 @@ FILTEREDFS_TEST_DISABLED = {
     "hg.update_test.UpdateTestTreeOnly": [
         "test_update_dir_to_file",
         "test_mount_state_during_unmount_with_in_progress_checkout",
-        "test_update_with_hg_failure",
     ],
     "readdir_test.ReaddirTest": [
         "test_get_attributes_symlink",
