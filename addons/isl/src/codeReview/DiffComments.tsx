@@ -75,6 +75,7 @@ const styles = stylex.create({
   },
   left: {
     alignItems: 'end',
+    flexShrink: 0,
   },
   author: {
     fontSize: font.small,
