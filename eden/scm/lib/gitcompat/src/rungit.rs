@@ -126,5 +126,7 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
     }
     cmd.args(&args[global_arg_count..]);
 
+    tracing::debug!("git command: {:?}", &cmd.get_args().collect::<Vec<_>>());
+
     cmd
 }
