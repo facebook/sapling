@@ -8,7 +8,9 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:filetime",
         "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/spawn-ext:spawn-ext",
