@@ -58,6 +58,15 @@ ALL_ATTRIBUTES = (
 )
 
 
+class RawObjectId:
+    raw_oid: bytes
+    raw_scm_type: SourceControlType
+
+    def __init__(self, raw_oid: bytes, raw_scm_type: SourceControlType) -> None:
+        self.raw_oid = raw_oid
+        self.raw_scm_type = raw_scm_type
+
+
 @testcase.eden_repo_test
 # pyre-fixme[13]: Attribute `commit1` is never initialized.
 # pyre-fixme[13]: Attribute `commit2` is never initialized.
@@ -108,6 +117,39 @@ class ReaddirTest(testcase.EdenRepoTest):
         assert p.returncode == 0, "0 exit code is expected for blake3_sum"
         return bytes.fromhex(p.stdout)
 
+    def convert_raw_oid_to_foid(self, oid: RawObjectId) -> bytes:
+        """Converts an expected ObjectID into a FilteredObjectID. For non-FFS
+        repos, this is a no-op. For FFS repos, we attach the appropriate type
+        and filter_id to the oid. We assume no filter_id is active in our
+        integration tests.
+        """
+
+        def get_type_bytes(scm_type: SourceControlType) -> bytes:
+            """Determines a FilteredObjectIdType based on a given SCM Type.
+            The list of FilteredObjectIdTypes can be found here: fs/store/filter/FilteredObjectId.h
+            """
+            kRecursivelyUnfilteredTreeType = "18"
+            kUnfilteredBlobType = "16"
+
+            # No filters are activated for integration tests, so we can assume
+            # every tree is unfiltered. If that changes, we would have to
+            # evaluate whether the given path is included in the filter or not.
+            if scm_type == SourceControlType.TREE:
+                return kRecursivelyUnfilteredTreeType.encode("utf-8")
+            # The FilteredBackingStore only supports tree and blob objects
+            elif scm_type == SourceControlType.UNKNOWN:
+                raise ValueError("cannot create a foid with an unknown scm type")
+            # All other types evaluate to a blob
+            else:
+                return kUnfilteredBlobType.encode("utf-8")
+
+        if self.backing_store_type == "filteredhg":
+            type_bytes = get_type_bytes(oid.raw_scm_type)
+            return type_bytes + ":".encode("utf-8") + oid.raw_oid
+
+        else:
+            return oid.raw_oid
+
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("test_fetch1", "testing fetch\n")
@@ -128,32 +170,62 @@ class ReaddirTest(testcase.EdenRepoTest):
         self.commit3 = self.repo.commit("Commit 3.")
 
         self.adir_file_id = {
-            "hg": b"41825fd37af5796284289a1e0770ccd3d27d4832:adir/file",
+            "hg": self.convert_raw_oid_to_foid(
+                RawObjectId(
+                    b"41825fd37af5796284289a1e0770ccd3d27d4832:adir/file",
+                    SourceControlType.REGULAR_FILE,
+                )
+            ),
             "git": b"929efb30534598535198700b994ee438d441d1af",
         }[self.repo_type]
 
         self.bdir_file_id = {
-            "hg": b"e5336dae10d1e7590fc25db9d417d089295875e0:bdir/file",
+            "hg": self.convert_raw_oid_to_foid(
+                RawObjectId(
+                    b"e5336dae10d1e7590fc25db9d417d089295875e0:bdir/file",
+                    SourceControlType.REGULAR_FILE,
+                )
+            ),
             "git": b"e50a49f9558d09d4d3bfc108363bb24c127ed263",
         }[self.repo_type]
 
         self.hello_id = {
-            "hg": b"edd9bdab9ab7a84b21a7a19fffe7a29709ac3b47:hello",
+            "hg": self.convert_raw_oid_to_foid(
+                RawObjectId(
+                    b"edd9bdab9ab7a84b21a7a19fffe7a29709ac3b47:hello",
+                    SourceControlType.REGULAR_FILE,
+                )
+            ),
             "git": b"5c1b14949828006ed75a3e8858957f86a2f7e2eb",
         }[self.repo_type]
 
         self.slink_id = {
-            "hg": b"7fac34a232926c628f2d890d3eed95be7ab57f34:slink",
+            "hg": self.convert_raw_oid_to_foid(
+                RawObjectId(
+                    b"7fac34a232926c628f2d890d3eed95be7ab57f34:slink",
+                    SourceControlType.SYMLINK,
+                )
+            ),
             "git": b"b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0",
         }[self.repo_type]
 
         self.adir_id = {
-            "hg": b"6ae9e90c9c90aa85adbdab16808203e64a5163cb:adir",
+            "hg": self.convert_raw_oid_to_foid(
+                RawObjectId(
+                    b"6ae9e90c9c90aa85adbdab16808203e64a5163cb:adir",
+                    SourceControlType.TREE,
+                )
+            ),
             "git": b"aa0e79d49fe12527662d2d73ea839691eb472c9a",
         }[self.repo_type]
 
         self.cdir_subdir_id = {
-            "hg": b"cd765cb479197becdca10a4baa87e983244bf24f:cdir/subdir",
+            "hg": self.convert_raw_oid_to_foid(
+                RawObjectId(
+                    b"cd765cb479197becdca10a4baa87e983244bf24f:cdir/subdir",
+                    SourceControlType.TREE,
+                )
+            ),
             "git": b"f5497927ddcc19b41c4ca57e01ff99339f93db13",
         }[self.repo_type]
 

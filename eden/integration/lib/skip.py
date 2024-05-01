@@ -462,15 +462,6 @@ TEST_DISABLED.update(FILTEREDFS_PARITY)
 
 # Any future FilteredHg skips should be added here
 FILTEREDFS_TEST_DISABLED = {
-    # The test expects ObjectIDs, not FilteredObjectIDs. Either we need to fix
-    # the test or change the output of readdir when FilteredFS is used.
-    "readdir_test.ReaddirTest": [
-        "test_get_attributes_symlink",
-        "test_readdir_directory_symlink_and_other",
-        "test_get_attributes_directory",
-        "test_readdir",
-        "test_get_attributes",
-    ],
     # These tests will behave the exact same on FilteredFS. Duplicating them can
     # cause issues on macOS (too many APFS subvolumes), so we'll disable the
     # FilteredHg variants for now.
