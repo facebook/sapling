@@ -367,6 +367,8 @@ static constexpr folly::StringPiece kNfsReadDirCount60{
 static constexpr folly::StringPiece kNfsReadDirPlusCount60{
     "nfs.readdirplus_us.count.60"};
 
+static constexpr folly::StringPiece kFsChannelTaskCount{"fs.task.count"};
+
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
@@ -456,6 +458,19 @@ EdenServer::EdenServer(
       });
     }
   }
+
+  counters->registerCallback(kFsChannelTaskCount, [this] {
+    auto fsChannelExecutor = this->getServerState()->getFsChannelThreadPool();
+    if (auto ex = std::dynamic_pointer_cast<folly::CPUThreadPoolExecutor>(
+            fsChannelExecutor)) {
+      return ex->getTaskQueueSize();
+    }
+    if (auto ex = std::dynamic_pointer_cast<UnboundedQueueExecutor>(
+            fsChannelExecutor)) {
+      return ex->getTaskQueueSize();
+    }
+    return (size_t)0;
+  });
 }
 
 EdenServer::~EdenServer() {
@@ -473,6 +488,7 @@ EdenServer::~EdenServer() {
       counters->unregisterCallback(summaryCounterName);
     }
   }
+  counters->unregisterCallback(kFsChannelTaskCount);
 }
 
 namespace cursor_helper {

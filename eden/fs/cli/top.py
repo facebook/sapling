@@ -100,7 +100,9 @@ COLUMN_REVERSE_SORT = Row(
     command=False,
 )
 
-COUNTER_REGEX = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*)|(object_store\..*))"
+COUNTER_REGEX = (
+    r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*)|(object_store\..*)|(fs\..*))"
+)
 
 
 # pyre-fixme[2]: Parameter must be annotated.
