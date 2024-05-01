@@ -156,6 +156,19 @@ if sys.platform == "win32":
             "test_detect_removed_file_from_dirty_placeholder_directory",
             "test_detect_removed_file_from_placeholder_directory",
         ],
+        # This is broken on Vanilla EdenFS but only disabled through the TestX
+        # UI. To avoid the FilteredFS mixin showing up as broken, we skip it.
+        "hg.eden_journal_test.EdenJournalTest": [
+            "test_journal_position_write",
+            "test_journal_stream_changes_since",
+            "test_journal_stream_selected_changes_since",
+            "test_journal_stream_selected_changes_since_empty_glob",
+        ],
+        # Similar to above, this test is marked flaky on the TestX UI. To avoid
+        # the FilteredFS mixin showing up as broken, we skip it altogether.
+        "hg.update_test.UpdateCacheInvalidationTestTreeOnly": [
+            "test_file_locked_removal"
+        ],
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):
     # The ChownTest.setUp() code tries to look up the "nobody" group, which doesn't
@@ -458,6 +471,7 @@ FILTEREDFS_TEST_DISABLED = {
     "hg.update_test.UpdateTestTreeOnly": [
         "test_update_dir_to_file",
         "test_mount_state_during_unmount_with_in_progress_checkout",
+        "test_update_with_hg_failure",
     ],
     "readdir_test.ReaddirTest": [
         "test_get_attributes_symlink",
@@ -485,6 +499,11 @@ FILTEREDFS_TEST_DISABLED = {
         "test_list_no_legacy_bind_mounts",
         "test_disallow_bind_mount_outside_repo",
     ],
+    # These tests don't make sense to run on FilteredFS since the legacy
+    # filtering method doesn't work on FilteredFS.
+    "hg.legacy_filter_test.FilterTestTreeOnly": ["test_read_dir"],
+    # This is broken. Fixed further up in the stack.
+    "hg.filteredhg_clone_test.NonFilteredTestCaseTreeOnly": ["test_eden_get_filter_nonfiltered"],
 }
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
