@@ -10,6 +10,7 @@ import type {ValidatedRepoInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Delayed} from './Delayed';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
@@ -20,6 +21,7 @@ import {
   useAbortRunningOperation,
 } from './operationsState';
 import {repositoryInfo} from './serverAPIState';
+import {TerminalLikeOutput, processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -158,6 +160,8 @@ export function CommandHistoryAndProgress() {
     showLastLineOfOutput = true;
   }
 
+  const processedLines = processTerminalLines(progress.commandOutput ?? []);
+
   return (
     <div className="progress-container" data-testid="progress-container">
       <Tooltip
@@ -172,7 +176,17 @@ export function CommandHistoryAndProgress() {
                 <br />
                 <b>Command output:</b>
                 <br />
-                <pre>{progress.commandOutput?.join('') || 'No output'}</pre>
+                {processedLines.length === 0 ? (
+                  <Subtle>
+                    <T>No output</T>
+                  </Subtle>
+                ) : (
+                  <pre>
+                    {processedLines.map((line, i) => (
+                      <div key={i}>{line}</div>
+                    ))}
+                  </pre>
+                )}
               </>
             )}
           </div>
@@ -202,9 +216,7 @@ export function CommandHistoryAndProgress() {
                   {progress.currentProgress.message}
                 </ProgressLine>
               ) : (
-                progress.commandOutput
-                  ?.slice(-1)
-                  .map((line, i) => <ProgressLine key={i}>{line}</ProgressLine>)
+                processedLines.length > 0 && <ProgressLine>{processedLines.at(-1)}</ProgressLine>
               )}
             </div>
           </div>

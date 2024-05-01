@@ -103,7 +103,7 @@ describe('operations', () => {
       });
     });
 
-    expect(screen.queryByText('another message')).toBeInTheDocument();
+    expect(screen.queryByText('another message', {exact: false})).toBeInTheDocument();
   });
 
   it('shows stderr from running command', async () => {
@@ -126,7 +126,7 @@ describe('operations', () => {
       });
     });
 
-    expect(screen.queryByText('some progress...')).toBeInTheDocument();
+    expect(screen.queryByText('some progress...', {exact: false})).toBeInTheDocument();
 
     act(() => {
       simulateMessageFromServer({
@@ -137,7 +137,7 @@ describe('operations', () => {
       });
     });
 
-    expect(screen.queryByText('another message')).toBeInTheDocument();
+    expect(screen.queryByText('another message', {exact: false})).toBeInTheDocument();
   });
 
   it('shows abort on long-running commands', async () => {
