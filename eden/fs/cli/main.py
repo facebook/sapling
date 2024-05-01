@@ -816,7 +816,8 @@ class CloneCmd(Subcmd):
             help=(
                 "Clone the path with a specified Backing Store implementation. "
                 "Currently only supports 'filteredhg' (all), 'recas' (Linux), "
-                "and 'http' (Linux)."
+                "and 'http' (Linux). Takes precedent over the inferred backing"
+                "store type from the existing repository we're cloning from."
             ),
         )
 
@@ -1075,6 +1076,14 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         # Check to see if repo_arg points to an existing EdenFS mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
         if checkout_config is not None:
+            if backing_store_type is not None:
+                # If the user specified a backing store type, make sure it takes
+                # priority over the existing checkout config.
+                if backing_store_type != checkout_config.scm_type:
+                    checkout_config = checkout_config._replace(
+                        scm_type=backing_store_type
+                    )
+
             repo = util.get_repo(str(checkout_config.backing_repo), backing_store_type)
             if repo is None:
                 raise RepoError(
