@@ -55,6 +55,7 @@ use metaconfig_types::UpdateLoggingConfig;
 use metaconfig_types::WalkerConfig;
 use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
+use metaconfig_types::ZelosConfig;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
@@ -95,6 +96,7 @@ use repos::RawUpdateLoggingConfig;
 use repos::RawWalkerConfig;
 use repos::RawWalkerJobParams;
 use repos::RawWalkerJobType;
+use repos::RawZelosConfig;
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
@@ -756,6 +758,20 @@ impl Convert for RawMetadataLoggerConfig {
                 .collect::<Result<_>>()?,
             sleep_interval_secs: self.sleep_interval_secs.try_into()?,
         })
+    }
+}
+
+impl Convert for RawZelosConfig {
+    type Output = ZelosConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            Self::local_zelos_port(port) => Ok(ZelosConfig::Local {
+                port: port.try_into()?,
+            }),
+            Self::zelos_tier(tier) => Ok(ZelosConfig::Remote { tier }),
+            Self::UnknownField(f) => Err(anyhow!("Unknown variant {} of RawZelosConfig", f)),
+        }
     }
 }
 

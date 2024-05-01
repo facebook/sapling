@@ -241,6 +241,8 @@ pub struct RepoConfig {
     pub git_concurrency: Option<GitConcurrencyParams>,
     /// Configuration for the repo metadata logger
     pub metadata_logger_config: MetadataLoggerConfig,
+    /// Configuration for connecting to Zelos
+    pub zelos_config: Option<ZelosConfig>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1893,6 +1895,21 @@ pub struct MetadataLoggerConfig {
     /// The interval time in secs for which the repo metadata logger sleeps between
     /// successive iterations of its incremental mode execution
     pub sleep_interval_secs: u64,
+}
+
+/// Configuration for connecting to Zelos
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ZelosConfig {
+    /// Connect to a local Zelos server
+    Local {
+        /// Local Zelos server port
+        port: u16,
+    },
+    /// Connect to a remote Zelos server
+    Remote {
+        /// Remote Zelos server tier name
+        tier: String,
+    },
 }
 
 /// Information on a loaded config

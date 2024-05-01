@@ -226,6 +226,7 @@ fn parse_with_repo_definition(
         everstore_local_path,
         git_concurrency,
         metadata_logger_config,
+        zelos_config,
         ..
     } = named_repo_config;
 
@@ -343,6 +344,7 @@ fn parse_with_repo_definition(
     let deep_sharding_config = deep_sharding_config.convert()?;
     let git_concurrency = git_concurrency.convert()?;
     let metadata_logger_config = metadata_logger_config.convert()?.unwrap_or_default();
+    let zelos_config = zelos_config.convert()?;
 
     Ok(RepoConfig {
         enabled,
@@ -388,6 +390,7 @@ fn parse_with_repo_definition(
         everstore_local_path,
         git_concurrency,
         metadata_logger_config,
+        zelos_config,
     })
 }
 
@@ -1344,6 +1347,7 @@ mod test {
                     ],
                     sleep_interval_secs: 100,
                 },
+                zelos_config: None,
             },
         );
 
@@ -1421,6 +1425,7 @@ mod test {
                 everstore_local_path: None,
                 git_concurrency: None,
                 metadata_logger_config: MetadataLoggerConfig::default(),
+                zelos_config: None,
             },
         );
         assert_eq!(
