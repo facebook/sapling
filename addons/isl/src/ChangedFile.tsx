@@ -34,7 +34,7 @@ import {optimisticMergeConflicts} from './previews';
 import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {usePromise} from './usePromise';
-import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import React from 'react';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
