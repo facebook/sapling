@@ -26,6 +26,8 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use gitcompat::init::translated_git_repo_config_path;
+use gitcompat::init::translated_git_user_config_path;
 use hgplain;
 use identity::Identity;
 use minibytes::Text;
@@ -317,6 +319,18 @@ impl ConfigSetHgExt for ConfigSet {
             Some(i) => i.ident,
         };
 
+        // The ".git/sl" path for a dotgit repo. Otherwise None.
+        let dotgit_sl_path = match info {
+            None => None,
+            Some(info) => {
+                if info.ident.dot_dir().starts_with(".git") {
+                    Some(&info.dot_hg_path)
+                } else {
+                    None
+                }
+            }
+        };
+
         let mut errors = vec![];
 
         // Don't pin any configs we load. We are doing the "default" config loading, which
@@ -328,7 +342,9 @@ impl ConfigSetHgExt for ConfigSet {
         //   builtin
         //   dynamic
         //   system
+        //   user-git (only for dotgit repos)
         //   user
+        //   repo-git (only for dotgit repos)
         //   repo
         //
         // We load things out of order a bit since the dynamic config can depend
@@ -357,11 +373,24 @@ impl ConfigSetHgExt for ConfigSet {
         errors.append(&mut system.load_system(opts.clone(), &ident));
         layers.push(Arc::new(system));
 
+        if let Some(dotgit_sl_path) = dotgit_sl_path {
+            let mut user_git = ConfigSet::new().named("user-git");
+            let path = translated_git_user_config_path(dotgit_sl_path, ident);
+            errors.append(&mut user_git.load_hgrc(path, "user-git"));
+            layers.push(Arc::new(user_git));
+        }
+
         let mut user = ConfigSet::new().named("user");
         errors.append(&mut user.load_user(opts.clone(), &ident));
         layers.push(Arc::new(user));
 
         if let Some(info) = info {
+            if let Some(dotgit_sl_path) = dotgit_sl_path {
+                let mut repo_git = ConfigSet::new().named("repo-git");
+                let path = translated_git_repo_config_path(dotgit_sl_path, ident);
+                errors.append(&mut repo_git.load_hgrc(path, "repo-git"));
+                layers.push(Arc::new(repo_git));
+            }
             let mut local = ConfigSet::new().named("repo");
             errors.append(&mut local.load_repo(info, opts));
             layers.push(Arc::new(local));
