@@ -502,8 +502,6 @@ FILTEREDFS_TEST_DISABLED = {
     # These tests don't make sense to run on FilteredFS since the legacy
     # filtering method doesn't work on FilteredFS.
     "hg.legacy_filter_test.FilterTestTreeOnly": ["test_read_dir"],
-    # This is broken. Fixed further up in the stack.
-    "hg.filteredhg_clone_test.NonFilteredTestCaseTreeOnly": ["test_eden_get_filter_nonfiltered"],
 }
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.

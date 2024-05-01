@@ -630,10 +630,10 @@ class EdenFS:
             params.append("--case-insensitive")
         if enable_windows_symlinks:
             params.append("--enable-windows-symlinks")
-        if backing_store:
+        if backing_store is not None:
             params.append("--backing-store")
             params.append(backing_store)
-        if filter_path:
+        if filter_path is not None:
             params.append("--filter-path")
             params.append(filter_path)
         self.run_cmd(*params)

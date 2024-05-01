@@ -217,7 +217,6 @@ class NonFilteredTestCase(EdenHgTestCase):
             self.repo.path,
             empty_dir,
             backing_store=backing_store,
-            filter_path=filter_path,
         )
         return Path(empty_dir)
 
@@ -228,5 +227,4 @@ class NonFilteredTestCase(EdenHgTestCase):
             result = client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(MountId(os.fsencode(path)))
             )
-            print(result)
             self.assertEqual(None, result.filterId)
