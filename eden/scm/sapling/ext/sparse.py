@@ -440,23 +440,24 @@ def _setupcommit(ui) -> None:
         repo = self._repo
 
         if _hassparse(repo):
-            if not _isedensparse(repo):
-                # Eden sparse repos don't need to refresh -- that's handled on
-                # the EdenFS side
-                ctx = repo[node]
-                profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
-                if profiles & set(ctx.files()):
-                    origstatus = repo.status()
-                    origsparsematch = repo.sparsematch(
-                        *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
-                    )
-                    repo._refreshsparse(repo.ui, origstatus, origsparsematch, True)
-            else:
+            if _isedensparse(repo):
                 # We just created a new commit that the edenfs_ffi Rust
                 # repo won't know about until we flush in-memory commit
                 # data to disk. Flush now to avoid unknown commit id errors
                 # in EdenFS when checking edensparse contents.
                 repo.changelog.inner.flushcommitdata()
+
+            # Refresh the sparse profile so that the working copy reflects any
+            # sparse (or edensparse) changes made by the new commit
+            ctx = repo[node]
+            profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
+            if profiles & set(ctx.files()):
+                origstatus = repo.status()
+                origsparsematch = repo.sparsematch(
+                    *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
+                )
+                repo._refreshsparse(repo.ui, origstatus, origsparsematch, True)
+
             repo.prunetemporaryincludes()
 
     extensions.wrapfunction(context.committablectx, "markcommitted", _refreshoncommit)

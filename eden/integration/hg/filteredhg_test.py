@@ -369,9 +369,9 @@ bdir/README.md
         self.assert_status({"include_exclude_filter": "M"})
         self.repo.commit("Change contents of include_exclude_filter")
 
-        # We would expect status to be empty since the filter change is
-        # commited. However, committing filter changes doesn't properly update
-        # filtered files. Therefore `dir2/not_filtered` shows up as missing.
-        self.assert_status({"dir2/not_filtered": "!"})
+        # Status should be empty since the working copy reflects the changes
+        # made to the filter file.
+        self.assert_status_empty()
 
-        # TODO(cuev): Fix this bug
+        # The newly unfiltered files should be unfiltered
+        self.ensure_filtered_and_unfiltered(set(), {"dir2/not_filtered", "dir2/README"})
