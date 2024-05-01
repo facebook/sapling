@@ -396,4 +396,18 @@ struct FetchMiss {
   }
 };
 
+/**
+ * So that we know how many hosts have EdenFS handling high numbers of fuse
+ * requests at once as we rollout rate limiting.
+ *
+ * This honestly could be an ODS counter, but we don't have ODS on some
+ * platforms (CI), so logging it to scuba so that we have this available to
+ * monitor on all platforms.
+ */
+struct ManyLiveFsChannelRequests {
+  static constexpr const char* type = "high_fschannel_requests";
+
+  void populate(DynamicEvent& /*event*/) const {}
+};
+
 } // namespace facebook::eden

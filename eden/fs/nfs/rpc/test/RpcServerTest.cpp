@@ -22,7 +22,9 @@ struct RpcServerTest : ::testing::Test {
         std::make_shared<TestServerProcessor>(),
         &evb,
         folly::getUnsafeMutableGlobalCPUExecutor(),
-        std::make_shared<NullStructuredLogger>());
+        std::make_shared<NullStructuredLogger>(),
+        /*maximumInFlightRequests=*/1000,
+        /*highNfsRequestsLogInterval=*/std::chrono::minutes{10});
   }
 
   folly::EventBase evb;

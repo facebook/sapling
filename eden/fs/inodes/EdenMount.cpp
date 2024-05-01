@@ -1928,12 +1928,15 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       &mount->getStraceLogger(),
       mount->getServerState()->getProcessInfoCache(),
       mount->getServerState()->getFsEventLogger(),
+      mount->getServerState()->getStructuredLogger(),
       std::chrono::duration_cast<folly::Duration>(
           edenConfig->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifier(),
       mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getRequireUtf8Path(),
-      edenConfig->fuseMaximumRequests.getValue(),
+      edenConfig->fuseMaximumBackgroundRequests.getValue(),
+      edenConfig->maxFsChannelInflightRequests.getValue(),
+      edenConfig->highFsRequestsLogInterval.getValue(),
       mount->getCheckoutConfig()->getUseWriteBackCache(),
       mount->getServerState()
           ->getEdenConfig()

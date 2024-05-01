@@ -446,13 +446,16 @@ class EdenConfig : private ConfigSettingManager {
   // [fuse]
 
   /**
-   * The maximum number of concurrent FUSE requests we allow the kernel to send
-   * us.
+   * The maximum number of concurrent background FUSE requests we allow the
+   * kernel to send us. background should mean things like readahead prefetches
+   * and direct I/O, but may include things that seem like more traditionally
+   * foreground I/O. What counts as "background" seems to be up to the
+   * discretion of the kernel.
    *
    * Linux FUSE defaults to 12, but EdenFS can handle a great deal of
    * concurrency.
    */
-  ConfigSetting<int32_t> fuseMaximumRequests{
+  ConfigSetting<int32_t> fuseMaximumBackgroundRequests{
       "fuse:max-concurrent-requests",
       1000,
       this};
@@ -706,6 +709,11 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> unboundedFsChannel{
       "fschannel:unbounded-task-queue",
       true,
+      this};
+
+  ConfigSetting<std::chrono::nanoseconds> highFsRequestsLogInterval{
+      "fschannel:high-fs-requests-log-interval",
+      std::chrono::minutes{30},
       this};
 
   // [hg]

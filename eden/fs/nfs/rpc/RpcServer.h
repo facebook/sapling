@@ -127,7 +127,9 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
       folly::AsyncSocket::UniquePtr&& socket,
       std::shared_ptr<folly::Executor> threadPool,
       const std::shared_ptr<StructuredLogger>& structuredLogger,
-      std::weak_ptr<RpcServer> owningServer);
+      std::weak_ptr<RpcServer> owningServer,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval);
 
   // AsyncReader::ReadCallback
 
@@ -241,6 +243,12 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
 
     // number of requests we are in the middle of processing
     size_t pendingRequests = 0;
+
+    // We log to scuba when clients see a high number of NFS requests. It's
+    // likely we exceed this threshold many times in a row, so we only log
+    // once every EdenConfig::highFsRequestsLogInterval. This keeps track of
+    // the last time we logged to scuba.
+    std::chrono::steady_clock::time_point lastHighNfsRequestsLog_;
   };
 
   EventBaseState<State> state_;
@@ -261,6 +269,18 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
    * shutdown then we can just skip notifying it that we are shutting down.
    */
   std::weak_ptr<RpcServer> owningServer_;
+
+  /**
+   * max number of requests that can be processed at one time. Currently not
+   * enforced.
+   */
+  size_t maximumInFlightRequests_;
+
+  /**
+   * we log when the number of pending requests exceeds maximumInFlightRequests,
+   * however to avoid spamming the logs once per highNfsRequestsLogInterval.
+   */
+  std::chrono::nanoseconds highNfsRequestsLogInterval_;
 };
 
 class RpcServer final : public std::enable_shared_from_this<RpcServer>,
@@ -276,7 +296,9 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<RpcServerProcessor> proc,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger);
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval);
 
   /**
    * RpcServer must be torn down on its EventBase. destroy() is called by the
@@ -341,7 +363,9 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<RpcServerProcessor> proc,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger);
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval);
 
   ~RpcServer() override;
 
@@ -392,6 +416,13 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   };
 
   EventBaseState<State> state_;
+
+  // max number of requests that can be processed at one time.
+  size_t maximumInFlightRequests_;
+
+  // we log when the number of pending requests exceeds maximumInFlightRequests,
+  // however to avoid spamming the logs once per highNfsRequestsLogInterval.
+  std::chrono::nanoseconds highNfsRequestsLogInterval_;
 };
 
 } // namespace facebook::eden

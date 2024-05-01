@@ -46,7 +46,9 @@ class NfsServer {
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
       bool shouldRunOurOwnRpcbindServer,
-      const std::shared_ptr<StructuredLogger>& structuredLogger);
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval);
 
   /**
    * Bind the NfsServer to the passed in socket.
@@ -123,6 +125,8 @@ class NfsServer {
   std::shared_ptr<folly::Executor> threadPool_;
   std::shared_ptr<Rpcbindd> rpcbindd_;
   Mountd mountd_;
+  size_t maximumInFlightRequests_;
+  std::chrono::nanoseconds highNfsRequestsLogInterval_;
 };
 
 } // namespace facebook::eden

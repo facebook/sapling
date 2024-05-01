@@ -1979,6 +1979,8 @@ Nfsd3::Nfsd3(
     std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
     uint32_t iosize,
+    size_t maximumInFlightRequests,
+    std::chrono::nanoseconds highNfsRequestsLogInterval,
     size_t traceBusCapacity)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
@@ -1995,7 +1997,9 @@ Nfsd3::Nfsd3(
               traceBus_),
           evb,
           std::move(threadPool),
-          structuredLogger)),
+          structuredLogger,
+          maximumInFlightRequests,
+          highNfsRequestsLogInterval)),
       processAccessLog_(std::move(processInfoCache)),
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},

@@ -9,11 +9,13 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:synchronized",
         "//eden/common/utils:system_error",
         "//eden/fs/notifications:notifier",
         "//eden/fs/privhelper:interface",
         "//eden/fs/telemetry:fs_event_logger",
+        "//eden/fs/telemetry:log_info",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:thread",
         "//folly:exception",

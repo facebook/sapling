@@ -71,7 +71,9 @@ ServerState::ServerState(
                     mainEventBase,
                     fsChannelThreadPool_,
                     initialConfig.runInternalRpcbind.getValue(),
-                    structuredLogger_)
+                    structuredLogger_,
+                    initialConfig.maxFsChannelInflightRequests.getValue(),
+                    initialConfig.highFsRequestsLogInterval.getValue())
               : nullptr},
       config_{std::move(reloadableConfig)},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{

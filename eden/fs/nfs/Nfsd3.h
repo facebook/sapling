@@ -140,6 +140,8 @@ class Nfsd3 final : public FsChannel {
       std::shared_ptr<Notifier> notifications,
       CaseSensitivity caseSensitive,
       uint32_t iosize,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval,
       size_t traceBusCapacity);
 
   void destroy() override;

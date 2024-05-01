@@ -42,7 +42,9 @@ class Mountd {
   Mountd(
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger);
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval);
 
   /**
    * Bind the RPC mountd program to the passed in address.

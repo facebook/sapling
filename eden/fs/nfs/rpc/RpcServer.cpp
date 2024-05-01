@@ -111,13 +111,17 @@ RpcConnectionHandler::RpcConnectionHandler(
     AsyncSocket::UniquePtr&& socket,
     std::shared_ptr<folly::Executor> threadPool,
     const std::shared_ptr<StructuredLogger>& structuredLogger,
-    std::weak_ptr<RpcServer> owningServer)
+    std::weak_ptr<RpcServer> owningServer,
+    size_t maximumInFlightRequests,
+    std::chrono::nanoseconds highNfsRequestsLogInterval)
     : proc_(proc),
       sock_(std::move(socket)),
       threadPool_(std::move(threadPool)),
       errorLogger_(structuredLogger),
       state_(sock_->getEventBase()),
-      owningServer_(std::move(owningServer)) {
+      owningServer_(std::move(owningServer)),
+      maximumInFlightRequests_(maximumInFlightRequests),
+      highNfsRequestsLogInterval_(highNfsRequestsLogInterval) {
   sock_->setReadCB(this);
   proc_->clientConnected();
 }
@@ -233,7 +237,27 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
       break;
     }
     XLOG(DBG7) << "received a request";
-    state_.get().pendingRequests += 1;
+
+    auto now = std::chrono::steady_clock::now();
+    auto should_log = false;
+    {
+      // state isn't actually locked, this scoping is just for show.
+      // we skipped the lock since it's only ever accessed by one thread so a
+      // lock is unnessecary.
+      auto& state = state_.get();
+      state.pendingRequests += 1;
+
+      if (state.pendingRequests == maximumInFlightRequests_ &&
+          now >= state.lastHighNfsRequestsLog_ + highNfsRequestsLogInterval_) {
+        should_log = true;
+        state.lastHighNfsRequestsLog_ = now;
+      }
+    }
+
+    if (should_log) {
+      errorLogger_->logEvent(ManyLiveFsChannelRequests{});
+    }
+
     // Send the work to a thread pool to increase the number of inflight
     // requests that can be handled concurrently.
     threadPool_->add(
@@ -495,7 +519,9 @@ void RpcServer::connectionAccepted(
       std::move(socket),
       threadPool_,
       structuredLogger_,
-      weak_from_this()));
+      weak_from_this(),
+      maximumInFlightRequests_,
+      highNfsRequestsLogInterval_));
 
   // At this point we could stop accepting connections with this callback for
   // nfsd3 because we only support one connected client, and we do not support
@@ -539,10 +565,17 @@ std::shared_ptr<RpcServer> RpcServer::create(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
-    const std::shared_ptr<StructuredLogger>& structuredLogger) {
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    size_t maximumInFlightRequests,
+    std::chrono::nanoseconds highNfsRequestsLogInterval) {
   return std::shared_ptr<RpcServer>{
       new RpcServer{
-          std::move(proc), evb, std::move(threadPool), structuredLogger},
+          std::move(proc),
+          evb,
+          std::move(threadPool),
+          structuredLogger,
+          maximumInFlightRequests,
+          highNfsRequestsLogInterval},
       [](RpcServer* p) { p->destroy(); }};
 }
 
@@ -550,13 +583,17 @@ RpcServer::RpcServer(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
-    const std::shared_ptr<StructuredLogger>& structuredLogger)
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    size_t maximumInFlightRequests,
+    std::chrono::nanoseconds highNfsRequestsLogInterval)
     : evb_(evb),
       threadPool_(threadPool),
       structuredLogger_(structuredLogger),
       serverSocket_(new AsyncServerSocket(evb_)),
       proc_(std::move(proc)),
-      state_{evb} {}
+      state_{evb},
+      maximumInFlightRequests_{maximumInFlightRequests},
+      highNfsRequestsLogInterval_{highNfsRequestsLogInterval} {}
 
 void RpcServer::destroy() {
   evb_->runInEventBaseThread([this] { delete this; });
@@ -586,7 +623,9 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
           evb_, folly::NetworkSocket::fromFd(socket.release())),
       threadPool_,
       structuredLogger_,
-      weak_from_this()));
+      weak_from_this(),
+      maximumInFlightRequests_,
+      highNfsRequestsLogInterval_));
 }
 
 void RpcServer::initializeServerSocket(folly::File socket) {

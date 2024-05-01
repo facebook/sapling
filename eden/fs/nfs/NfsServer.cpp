@@ -17,15 +17,28 @@ NfsServer::NfsServer(
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
     bool shouldRunOurOwnRpcbindServer,
-    const std::shared_ptr<StructuredLogger>& structuredLogger)
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    size_t maximumInFlightRequests,
+    std::chrono::nanoseconds highNfsRequestsLogInterval)
     : privHelper_{privHelper},
       evb_(evb),
       threadPool_{std::move(threadPool)},
       rpcbindd_(
-          shouldRunOurOwnRpcbindServer
-              ? std::make_shared<Rpcbindd>(evb_, threadPool_, structuredLogger)
-              : nullptr),
-      mountd_(evb_, threadPool_, structuredLogger) {}
+          shouldRunOurOwnRpcbindServer ? std::make_shared<Rpcbindd>(
+                                             evb_,
+                                             threadPool_,
+                                             structuredLogger,
+                                             maximumInFlightRequests,
+                                             highNfsRequestsLogInterval)
+                                       : nullptr),
+      mountd_(
+          evb_,
+          threadPool_,
+          structuredLogger,
+          maximumInFlightRequests,
+          highNfsRequestsLogInterval),
+      maximumInFlightRequests_(maximumInFlightRequests),
+      highNfsRequestsLogInterval_(highNfsRequestsLogInterval) {}
 
 void NfsServer::initialize(
     folly::SocketAddress addr,
@@ -83,6 +96,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       std::move(notifier),
       caseSensitive,
       iosize,
+      maximumInFlightRequests_,
+      highNfsRequestsLogInterval_,
       traceBusCapacity}};
   mountd_.registerMount(path, rootIno);
 

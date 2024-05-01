@@ -13,6 +13,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -80,11 +81,14 @@ class FuseChannelTest : public ::testing::Test {
         &straceLogger,
         std::make_shared<ProcessInfoCache>(),
         /*fsEventLogger=*/nullptr,
+        /*structuredLogger=*/std::make_shared<NullStructuredLogger>(),
         std::chrono::seconds(60),
         /*notifications=*/nullptr,
         CaseSensitivity::Sensitive,
         /*requireUtf8Path=*/true,
         /*maximumBackgroundRequests=*/12,
+        /*maximumInFlightRequests=*/1000,
+        /*highFuseRequestsLogInterval=*/std::chrono::minutes{10},
         /*useWriteBackCache=*/false,
         /*fuseTraceBusCapacity*/ kTraceBusCapacity);
   }

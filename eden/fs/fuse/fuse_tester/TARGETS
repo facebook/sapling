@@ -10,6 +10,7 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:enum",
         "//eden/common/utils:path",

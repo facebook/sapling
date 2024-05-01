@@ -213,5 +213,5 @@ TEST(TestMount, can_update_EdenConfig) {
       52,
       testMount.getServerState()
           ->getEdenConfig()
-          ->fuseMaximumRequests.getValue());
+          ->fuseMaximumBackgroundRequests.getValue());
 }

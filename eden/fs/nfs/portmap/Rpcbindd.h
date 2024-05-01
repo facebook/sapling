@@ -40,7 +40,9 @@ class Rpcbindd {
   Rpcbindd(
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger);
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      size_t maximumInFlightRequests,
+      std::chrono::nanoseconds highNfsRequestsLogInterval);
 
   /**
    * Start the rpcbind service
