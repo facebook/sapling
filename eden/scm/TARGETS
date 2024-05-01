@@ -19,7 +19,6 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("mercurial_release")
 
 cpp_library(
-    # @autodeps-skip
     name = "core_headers",
     headers = [
         "sapling/bitmanipulation.h",
@@ -28,7 +27,6 @@ cpp_library(
 )
 
 cpp_library(
-    # @autodeps-skip
     name = "traceprof",
     srcs = ["sapling/ext/extlib/traceprofimpl.cpp"],
     cpp_compiler_flags = [
@@ -246,7 +244,6 @@ rust_universal_binary(
 )
 
 cpp_library(
-    # @autodeps-skip
     name = "chg",
     srcs = [
         "contrib/chg/chg.c",
@@ -262,6 +259,9 @@ cpp_library(
     compatible_with = [
         "ovr_config//os:linux",
         "ovr_config//os:macos",
+    ],
+    external_deps = [
+        ("glibc", None, "rt"),
     ],
 )
 
