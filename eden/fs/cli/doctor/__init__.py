@@ -31,6 +31,8 @@ from eden.fs.cli.doctor.util import (
     hg_doctor_in_backing_repo,
 )
 
+from facebook.eden.constants import STATS_MOUNTS_STATS
+
 from facebook.eden.ttypes import GetStatInfoParams, MountState
 from fb303_core.ttypes import fb303_status
 
@@ -243,7 +245,9 @@ class EdenDoctorChecker:
         # Get information about the checkouts currently known to the running
         # edenfs process
         with self.instance.get_thrift_client_legacy() as client:
-            internal_stats = client.getStatInfo(GetStatInfoParams())
+            internal_stats = client.getStatInfo(
+                GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
+            )
             mount_point_info = internal_stats.mountPointInfo or {}
 
             for mount in client.listMounts():
