@@ -344,16 +344,13 @@ impl ConfigSetHgExt for ConfigSet {
         // We load things out of order a bit since the dynamic config can depend
         // on system config (namely, auth_proxy.unix_socket_path).
 
-        // Clone rather than Self::new() so we include any --config overrides
-        // already inside self.
-        let mut dynamic = self.clone().named("dynamic");
-
         errors.append(&mut self.load_system(opts.clone(), &ident));
         errors.append(&mut self.load_user(opts.clone(), &ident));
 
         // This is the out-of-orderness. We load the dynamic config on a
         // detached ConfigSet then combine it into our "secondary" config
         // sources to maintain the correct priority.
+        let mut dynamic = ConfigSet::new().named("dynamic");
         errors.append(
             &mut dynamic
                 .load_dynamic(
