@@ -62,16 +62,6 @@ pub trait ConfigSetHgExt {
     /// Return errors parsing files.
     fn load_system(&mut self, opts: Options, identity: &Identity) -> Vec<Error>;
 
-    /// Load the dynamic config files for the given repo path.
-    /// Returns errors parsing, generating, or fetching the configs.
-    fn load_dynamic(
-        &mut self,
-        info: Option<&RepoMinimalInfo>,
-        opts: Options,
-        identity: &Identity,
-        proxy_sock_path: Option<String>,
-    ) -> Result<Vec<Error>>;
-
     /// Optionally refresh the dynamic config in the background.
     fn maybe_refresh_dynamic(
         &self,
@@ -350,21 +340,20 @@ impl ConfigSetHgExt for ConfigSet {
         // This is the out-of-orderness. We load the dynamic config on a
         // detached ConfigSet then combine it into our "secondary" config
         // sources to maintain the correct priority.
-        let mut dynamic = ConfigSet::new().named("dynamic");
-        errors.append(
-            &mut dynamic
-                .load_dynamic(
-                    info,
-                    opts.clone(),
-                    &ident,
-                    self.get_opt("auth_proxy", "unix_socket_path")
-                        .unwrap_or_default(),
-                )
-                .map_err(|e| Errors(vec![Error::Other(e)]))?,
-        );
+        #[cfg(feature = "fb")]
+        let dynamic = load_dynamic(
+            info,
+            opts.clone(),
+            &ident,
+            self.get_opt("auth_proxy", "unix_socket_path")
+                .unwrap_or_default(),
+            &mut errors,
+        )
+        .map_err(|e| Errors(vec![Error::Other(e)]))?;
 
         let mut low_prio_configs =
             crate::builtin_static::builtin_system(opts.clone(), &ident, info);
+        #[cfg(feature = "fb")]
         low_prio_configs.push(Arc::new(dynamic));
         self.secondary(Arc::new(low_prio_configs));
 
@@ -398,115 +387,6 @@ impl ConfigSetHgExt for ConfigSet {
         }
 
         errors
-    }
-
-    #[cfg(feature = "fb")]
-    fn load_dynamic(
-        &mut self,
-        info: Option<&RepoMinimalInfo>,
-        opts: Options,
-        identity: &Identity,
-        proxy_sock_path: Option<String>,
-    ) -> Result<Vec<Error>> {
-        use crate::fb::internalconfig::vpnless_config_path;
-
-        let mut errors = Vec::new();
-        let mode = FbConfigMode::from_identity(identity);
-
-        tracing::debug!("FbConfigMode is {:?}", &mode);
-
-        if !mode.need_dynamic_generator() {
-            return Ok(errors);
-        }
-
-        // Compute path
-        let dynamic_path = get_config_dir(info)?.join("hgrc.dynamic");
-
-        // Check version
-        let content = read_to_string(&dynamic_path).ok();
-        let version = content.as_ref().and_then(|c| {
-            let mut lines = c.split('\n');
-            match lines.next() {
-                Some(line) if line.starts_with("# version=") => Some(&line[10..]),
-                Some(_) | None => None,
-            }
-        });
-
-        let this_version = ::version::VERSION;
-
-        let vpnless_changed = match (dynamic_path.metadata(), vpnless_config_path().metadata()) {
-            (Ok(d), Ok(v)) => v.modified()? > d.modified()?,
-            _ => false,
-        };
-
-        let needs_sync_generation =
-            // No current dynamic config - need to generate.
-            version.is_none()
-            // VPNLess changed - need to regenerate.
-            || vpnless_changed
-            // Version mismatch between us and already generated - optionally generate.
-            || !opts.minimize_dynamic_gen && version != Some(this_version);
-
-        if needs_sync_generation {
-            tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, vpnless_changed, "regenerating dynamic config (version mismatch)");
-            let (repo_name, user_name) = {
-                let mut temp_config = ConfigSet::new().named("temp");
-                if !temp_config.load_user(opts.clone(), identity).is_empty() {
-                    bail!("unable to read user config to get user name");
-                }
-
-                let repo_name = match info {
-                    Some(info) => {
-                        let opts = opts.clone().source("temp").process_hgplain();
-                        // We need to know the repo name, but that's stored in the repository configs at
-                        // the moment. In the long term we need to move that, but for now let's load the
-                        // repo config ahead of time to read the name.
-                        let repo_hgrc_path = info.dot_hg_path.join("hgrc");
-                        if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
-                            bail!("unable to read repo config to get repo name");
-                        }
-                        Some(read_set_repo_name(&mut temp_config, &info.dot_hg_path)?)
-                    }
-                    None => None,
-                };
-
-                (repo_name, temp_config.get_or_default("ui", "username")?)
-            };
-
-            // Regen inline
-            let res =
-                generate_internalconfig(mode, info, repo_name, None, user_name, proxy_sock_path);
-            if let Err(e) = res {
-                let is_perm_error = e
-                    .chain()
-                    .any(|cause| match cause.downcast_ref::<IOError>() {
-                        Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => true,
-                        _ => false,
-                    });
-                if !is_perm_error {
-                    return Err(e);
-                }
-            }
-        } else {
-            tracing::debug!(?dynamic_path, version=%this_version, "internalconfig version in-sync");
-        }
-
-        if !dynamic_path.exists() {
-            return Err(IOError::new(
-                ErrorKind::NotFound,
-                format!("required config not found at {}", dynamic_path.display()),
-            )
-            .into());
-        }
-
-        // Read hgrc.dynamic
-        let opts = opts.source("dynamic").process_hgplain();
-        errors.append(&mut self.load_path(&dynamic_path, &opts));
-
-        // Log config ages
-        // - Done in python for now
-
-        Ok(errors)
     }
 
     #[cfg(feature = "fb")]
@@ -592,17 +472,6 @@ impl ConfigSetHgExt for ConfigSet {
         _identity: &Identity,
     ) -> Result<()> {
         Ok(())
-    }
-
-    #[cfg(not(feature = "fb"))]
-    fn load_dynamic(
-        &mut self,
-        _info: Option<&RepoMinimalInfo>,
-        _opts: Options,
-        _identity: &Identity,
-        _proxy_sock_path: Option<String>,
-    ) -> Result<Vec<Error>> {
-        Ok(Vec::new())
     }
 
     fn load_user(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
@@ -954,6 +823,116 @@ pub fn generate_internalconfig(
     }
 
     Ok(())
+}
+
+/// Load the dynamic config files for the given repo path.
+/// Returns errors parsing, generating, or fetching the configs.
+#[cfg(feature = "fb")]
+fn load_dynamic(
+    info: Option<&RepoMinimalInfo>,
+    opts: Options,
+    identity: &Identity,
+    proxy_sock_path: Option<String>,
+    errors: &mut Vec<Error>,
+) -> Result<ConfigSet> {
+    use crate::fb::internalconfig::vpnless_config_path;
+
+    let mode = FbConfigMode::from_identity(identity);
+    let mut this = ConfigSet::new().named("dynamic");
+
+    tracing::debug!("FbConfigMode is {:?}", &mode);
+
+    if !mode.need_dynamic_generator() {
+        return Ok(this);
+    }
+
+    // Compute path
+    let dynamic_path = get_config_dir(info)?.join("hgrc.dynamic");
+
+    // Check version
+    let content = read_to_string(&dynamic_path).ok();
+    let version = content.as_ref().and_then(|c| {
+        let mut lines = c.split('\n');
+        match lines.next() {
+            Some(line) if line.starts_with("# version=") => Some(&line[10..]),
+            Some(_) | None => None,
+        }
+    });
+
+    let this_version = ::version::VERSION;
+
+    let vpnless_changed = match (dynamic_path.metadata(), vpnless_config_path().metadata()) {
+        (Ok(d), Ok(v)) => v.modified()? > d.modified()?,
+        _ => false,
+    };
+
+    let needs_sync_generation =
+            // No current dynamic config - need to generate.
+            version.is_none()
+            // VPNLess changed - need to regenerate.
+            || vpnless_changed
+            // Version mismatch between us and already generated - optionally generate.
+            || !opts.minimize_dynamic_gen && version != Some(this_version);
+
+    if needs_sync_generation {
+        tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, vpnless_changed, "regenerating dynamic config (version mismatch)");
+        let (repo_name, user_name) = {
+            let mut temp_config = ConfigSet::new().named("temp");
+            if !temp_config.load_user(opts.clone(), identity).is_empty() {
+                bail!("unable to read user config to get user name");
+            }
+
+            let repo_name = match info {
+                Some(info) => {
+                    let opts = opts.clone().source("temp").process_hgplain();
+                    // We need to know the repo name, but that's stored in the repository configs at
+                    // the moment. In the long term we need to move that, but for now let's load the
+                    // repo config ahead of time to read the name.
+                    let repo_hgrc_path = info.dot_hg_path.join("hgrc");
+                    if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
+                        bail!("unable to read repo config to get repo name");
+                    }
+                    Some(read_set_repo_name(&mut temp_config, &info.dot_hg_path)?)
+                }
+                None => None,
+            };
+
+            (repo_name, temp_config.get_or_default("ui", "username")?)
+        };
+
+        // Regen inline
+        let res = generate_internalconfig(mode, info, repo_name, None, user_name, proxy_sock_path);
+        if let Err(e) = res {
+            let is_perm_error = e
+                .chain()
+                .any(|cause| match cause.downcast_ref::<IOError>() {
+                    Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => true,
+                    _ => false,
+                });
+            if !is_perm_error {
+                return Err(e);
+            }
+        }
+    } else {
+        tracing::debug!(?dynamic_path, version=%this_version, "internalconfig version in-sync");
+    }
+
+    if !dynamic_path.exists() {
+        return Err(IOError::new(
+            ErrorKind::NotFound,
+            format!("required config not found at {}", dynamic_path.display()),
+        )
+        .into());
+    }
+
+    // Read hgrc.dynamic
+    let opts = opts.source("dynamic").process_hgplain();
+    errors.append(&mut this.load_path(&dynamic_path, &opts));
+
+    // Log config ages
+    // - Done in python for now
+
+    Ok(this)
 }
 
 /// Get the path of the reponame file.
