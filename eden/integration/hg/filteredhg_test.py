@@ -7,6 +7,7 @@
 
 
 import os
+from pathlib import Path
 from typing import Optional, Set
 
 from eden.integration.hg.lib.hg_extension_test_base import (
@@ -31,6 +32,17 @@ class FilteredFSBase(FilteredHgTestCase):
 foo
 dir2/README
 filtered_out
+"""
+
+    testFilterIncludeExclude: str = """
+[metadata]
+version: 2
+[include]
+*
+[exclude]
+dir2
+[include]
+dir2/README
 """
 
     testFilterOnlyMetadata: str = """
@@ -82,6 +94,7 @@ bdir/README.md
         # Filter files that determine what is filtered
         repo.write_file("top_level_filter", self.testFilter1)
         repo.write_file("a/nested_filter_file", self.testFilter1)
+        repo.write_file("include_exclude_filter", self.testFilterIncludeExclude)
         repo.write_file("filters/empty_filter", self.testFilterEmpty)
         repo.write_file("filters/metadata_only", self.testFilterOnlyMetadata)
         repo.write_file("filters/v2", self.testFilterV2)
@@ -344,3 +357,21 @@ bdir/README.md
         self.set_active_filter("does_not_exist")
         counters = self.get_counters()
         self.assertGreaterEqual(counters["edenffi.ffs.lookup_failures"], 1)
+
+    def test_commit_filter_change(self) -> None:
+        self.set_active_filter("include_exclude_filter")
+        self.assert_status_empty()
+
+        # Modify the active filter file
+        filter_change = "dir2/not_filtered"
+        new_filter_contents = self.testFilterIncludeExclude + filter_change
+        self.write_file("include_exclude_filter", new_filter_contents)
+        self.assert_status({"include_exclude_filter": "M"})
+        self.repo.commit("Change contents of include_exclude_filter")
+
+        # We would expect status to be empty since the filter change is
+        # commited. However, committing filter changes doesn't properly update
+        # filtered files. Therefore `dir2/not_filtered` shows up as missing.
+        self.assert_status({"dir2/not_filtered": "!"})
+
+        # TODO(cuev): Fix this bug
