@@ -703,6 +703,11 @@ class EdenConfig : private ConfigSettingManager {
       1000,
       this};
 
+  ConfigSetting<bool> unboundedFsChannel{
+      "fschannel:unbounded-task-queue",
+      true,
+      this};
+
   // [hg]
 
   /**
