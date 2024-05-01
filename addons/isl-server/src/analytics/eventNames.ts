@@ -91,6 +91,7 @@ export type TrackEventName =
   | 'ResolveOperation'
   | 'ResolveInExternalMergeToolOperation'
   | 'RevertOperation'
+  | 'RmOperation'
   | 'RunMergeDriversOperation'
   | 'SetConfigOperation'
   | 'ShelveOperation'

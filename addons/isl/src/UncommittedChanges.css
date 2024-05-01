@@ -171,6 +171,8 @@
 .file-actions {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--halfpad);
 }
 
 .file-actions .tooltip-creator {

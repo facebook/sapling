@@ -14,6 +14,7 @@ import type {Comparison} from 'shared/Comparison';
 import {type ChangedFilesDisplayType} from './ChangedFileDisplayTypePicker';
 import {generatedStatusToLabel, generatedStatusDescription} from './GeneratedFile';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
+import {Subtle} from './Subtle';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {Tooltip} from './Tooltip';
 import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
@@ -27,12 +28,13 @@ import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveInExternalMergeToolOperation} from './operations/ResolveInExternalMergeToolOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
+import {RmOperation} from './operations/RmOperation';
 import {useRunOperation} from './operationsState';
 import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {optimisticMergeConflicts} from './previews';
 import {useShowToast} from './toast';
-import {succeedableRevset} from './types';
+import {ConflictType, succeedableRevset} from './types';
 import {usePromise} from './usePromise';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
@@ -188,6 +190,13 @@ function FileActions({
   const runOperation = useRunOperation();
   const conflicts = useAtomValue(optimisticMergeConflicts);
 
+  const conflictData = conflicts?.files?.find(f => f.path === file.path);
+  const label = labelForConflictType(conflictData?.conflictType);
+  let conflictLabel = null;
+  if (label) {
+    conflictLabel = <Subtle>{label}</Subtle>;
+  }
+
   const actions: Array<React.ReactNode> = [];
 
   if (platform.openDiff != null && !conflictStatuses.has(file.status)) {
@@ -326,34 +335,59 @@ function FileActions({
             <Icon icon="check" />
           </VSCodeButton>
         </Tooltip>,
-        <Tooltip title={t('Take local version')} key="resolve-local">
-          <VSCodeButton
-            className="file-show-on-hover"
-            key={file.path}
-            appearance="icon"
-            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.local))}>
-            <Icon icon="fold-up" />
-          </VSCodeButton>
-        </Tooltip>,
-        <Tooltip title={t('Take incoming version')} key="resolve-other">
-          <VSCodeButton
-            className="file-show-on-hover"
-            key={file.path}
-            appearance="icon"
-            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.other))}>
-            <Icon icon="fold-down" />
-          </VSCodeButton>
-        </Tooltip>,
-        <Tooltip title={t('Combine both incoming and local')} key="resolve-both">
-          <VSCodeButton
-            className="file-show-on-hover"
-            key={file.path}
-            appearance="icon"
-            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.both))}>
-            <Icon icon="fold" />
-          </VSCodeButton>
-        </Tooltip>,
       );
+      if (
+        conflictData?.conflictType &&
+        [ConflictType.DeletedInSource, ConflictType.DeletedInDest].includes(
+          conflictData.conflictType,
+        )
+      ) {
+        actions.push(
+          <Tooltip title={t('Delete file')} key="resolve-delete">
+            <VSCodeButton
+              className="file-show-on-hover"
+              data-testid="file-action-resolve-delete"
+              appearance="icon"
+              onClick={() => {
+                runOperation(new RmOperation(file.path, /* force */ true));
+                // then explicitly mark the file as resolved
+                runOperation(new ResolveOperation(file.path, ResolveTool.mark));
+              }}>
+              <Icon icon="trash" />
+            </VSCodeButton>
+          </Tooltip>,
+        );
+      } else {
+        actions.push(
+          <Tooltip title={t('Take local version')} key="resolve-local">
+            <VSCodeButton
+              className="file-show-on-hover"
+              key={file.path}
+              appearance="icon"
+              onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.local))}>
+              <Icon icon="fold-up" />
+            </VSCodeButton>
+          </Tooltip>,
+          <Tooltip title={t('Take incoming version')} key="resolve-other">
+            <VSCodeButton
+              className="file-show-on-hover"
+              key={file.path}
+              appearance="icon"
+              onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.other))}>
+              <Icon icon="fold-down" />
+            </VSCodeButton>
+          </Tooltip>,
+          <Tooltip title={t('Combine both incoming and local')} key="resolve-both">
+            <VSCodeButton
+              className="file-show-on-hover"
+              key={file.path}
+              appearance="icon"
+              onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.both))}>
+              <Icon icon="fold" />
+            </VSCodeButton>
+          </Tooltip>,
+        );
+      }
     }
 
     if (place === 'main' && conflicts == null) {
@@ -362,9 +396,21 @@ function FileActions({
   }
   return (
     <div className="file-actions" data-testid="file-actions">
+      {conflictLabel}
       {actions}
     </div>
   );
+}
+
+function labelForConflictType(type?: ConflictType) {
+  switch (type) {
+    case ConflictType.DeletedInSource:
+      return t('(Deleted in incoming)');
+    case ConflictType.DeletedInDest:
+      return t('(Deleted in destination)');
+    default:
+      return null;
+  }
 }
 
 /**
