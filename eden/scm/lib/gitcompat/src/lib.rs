@@ -56,3 +56,6 @@ pub mod rungit;
 
 /// Work with git references.
 mod refs;
+
+/// Work with git configs.
+mod config;
