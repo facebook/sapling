@@ -462,12 +462,6 @@ TEST_DISABLED.update(FILTEREDFS_PARITY)
 
 # Any future FilteredHg skips should be added here
 FILTEREDFS_TEST_DISABLED = {
-    # Doctor doesn't detect mismatched FilteredRootIDs. Some work in doctor
-    # is needed to make it detect/fix them.
-    "hg.doctor_test.DoctorTestTreeOnly": [
-        "test_eden_doctor_fixes_bad_dirstate_file",
-        "test_eden_doctor_fixes_valid_mismatched_parents",
-    ],
     # The test expects ObjectIDs, not FilteredObjectIDs. Either we need to fix
     # the test or change the output of readdir when FilteredFS is used.
     "readdir_test.ReaddirTest": [

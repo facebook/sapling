@@ -712,7 +712,7 @@ def check_running_mount(
         except Exception as ex:
             raise RuntimeError("Failed to check loaded content integrity") from ex
 
-    if config.scm_type == "hg":
+    if config.scm_type in ["hg", "filteredhg"]:
         try:
             check_hg.check_hg(tracker, checkout)
         except Exception as ex:
