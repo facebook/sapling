@@ -18,8 +18,10 @@ Eden sparse files comprise of 3 sections: `[metadata]`, `[include]` and
 
 Any line starting with a `;` or `#` character is a comment and is ignored.
 
+
 Extending existing eden sparse files
 ....................................
+
 
 Metadata
 ........
@@ -29,8 +31,8 @@ Anything before the first `:` or `=` is the key, everything after is the
 value. Values can be extended over multiple lines by indenting additional
 lines.
 
-Only the `title`, `description` keys carry meaning to for
-`hg edensparse`.
+Only the `title`, `description` keys carry meaning for filteredfs.
+
 
 Include and exclude rules
 .........................
@@ -40,6 +42,7 @@ standard pattern, see :prog:`help patterns`. Exclude rules indicate which
 files/patterns should be filtered out from the repository. Include rules
 indicate which files should be unfiltered. Everything in the repository is
 included (unfiltered) by default.
+
 
 Example
 .......
@@ -123,24 +126,19 @@ def unimpl():
     _("SUBCOMMAND ..."),
 )
 def filteredfs(ui, repo, pat, **opts) -> None:
-    """make the current checkout filtered, or edit the existing checkout
+    """modify the sparseness (AKA filter) of the current eden checkout
 
-    The filter command is used to make the current checkout filtered.
-    This means files that don't meet the filter condition will not be
-    written to disk, or show up in any working copy operations. It does
-    not affect files in history in any way.
+    The filteredfs command is used to change the sparseness of a repo. This
+    means files that don't meet the filter condition will not be written to
+    disk or show up in any working copy operations. It does not affect files
+    in history in any way.
 
-    All the work is done in subcommands such as `hg filter enable`;
-    passing no subcommand prints the currently applied filter rules.
+    All the work is done in subcommands such as `hg filter enable`. Use the
+    `enable` and `disable` subcommands to enable or disable profiles that have
+    been committed to the repo. Changes to profiles are not applied until they
+    have been committed.
 
-    Filters can also be shared with other users of the repository by
-    committing a file with include and exclude rules in a separate file. Use the
-    `enable` and `disable` subcommands to enable or disable
-    such profiles. Changes to profiles are not applied until they have
-    been committed.
-
-    See :prog:`help -e filter` and :prog:`help filter [subcommand]` to get
-    additional information.
+    See :prog:`help filteredfs [subcommand]` to get additional information.
     """
     unimpl()
 
@@ -164,7 +162,12 @@ def show(ui, repo, **opts) -> None:
 
 @subcmd("disable|disableprofile|disablefilter|reset", _common_config_opts)
 def disablefiltersubcmd(ui, repo, **opts) -> None:
-    """disable the current active filter"""
+    """disable the current active filter (i.e. activates the null filter)
+
+    Note: This command does not switch you from a FilteredFS repo to a vanilla
+    EdenFS repo. It simply disables the active filter and applies the null
+    filter to the working copy.
+    """
     commonopts = getcommonopts(opts)
     _config(ui, repo, [], opts, disableprofile=True, **commonopts)
 
