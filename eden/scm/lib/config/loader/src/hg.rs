@@ -334,35 +334,43 @@ impl ConfigSetHgExt for ConfigSet {
         // We load things out of order a bit since the dynamic config can depend
         // on system config (namely, auth_proxy.unix_socket_path).
 
-        errors.append(&mut self.load_system(opts.clone(), &ident));
-        errors.append(&mut self.load_user(opts.clone(), &ident));
+        let mut layers = crate::builtin_static::builtin_system(opts.clone(), &ident, info);
 
         // This is the out-of-orderness. We load the dynamic config on a
         // detached ConfigSet then combine it into our "secondary" config
         // sources to maintain the correct priority.
         #[cfg(feature = "fb")]
-        let dynamic = load_dynamic(
-            info,
-            opts.clone(),
-            &ident,
-            self.get_opt("auth_proxy", "unix_socket_path")
-                .unwrap_or_default(),
-            &mut errors,
-        )
-        .map_err(|e| Errors(vec![Error::Other(e)]))?;
+        {
+            let dynamic = load_dynamic(
+                info,
+                opts.clone(),
+                &ident,
+                self.get_opt("auth_proxy", "unix_socket_path")
+                    .unwrap_or_default(),
+                &mut errors,
+            )
+            .map_err(|e| Errors(vec![Error::Other(e)]))?;
+            layers.push(Arc::new(dynamic));
+        }
 
-        let mut low_prio_configs =
-            crate::builtin_static::builtin_system(opts.clone(), &ident, info);
-        #[cfg(feature = "fb")]
-        low_prio_configs.push(Arc::new(dynamic));
-        self.secondary(Arc::new(low_prio_configs));
+        let mut system = ConfigSet::new().named("system");
+        errors.append(&mut system.load_system(opts.clone(), &ident));
+        layers.push(Arc::new(system));
+
+        let mut user = ConfigSet::new().named("user");
+        errors.append(&mut user.load_user(opts.clone(), &ident));
+        layers.push(Arc::new(user));
 
         if let Some(info) = info {
-            errors.append(&mut self.load_repo(info, opts));
-            if let Err(e) = read_set_repo_name(self, &info.dot_hg_path) {
+            let mut local = ConfigSet::new().named("repo");
+            errors.append(&mut local.load_repo(info, opts));
+            layers.push(Arc::new(local));
+            if let Err(e) = read_set_repo_name(&layers, self, &info.dot_hg_path) {
                 errors.push(e);
             }
         }
+
+        self.secondary(Arc::new(layers));
 
         // Wait until config is fully loaded so maybe_refresh_dynamic() itself sees
         // correct config values.
@@ -503,14 +511,18 @@ impl ConfigSetHgExt for ConfigSet {
 ///
 /// If `configs.forbid-empty-reponame` is `true`, raise if the repo name is empty
 /// and `paths.default` is set.
-fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result<String> {
+fn read_set_repo_name(
+    input_config: &dyn Config,
+    output_config: &mut ConfigSet,
+    repo_path: &Path,
+) -> crate::Result<String> {
     let (repo_name, source): (String, &str) = {
-        let mut name: String = config.get_or_default("remotefilelog", "reponame")?;
+        let mut name: String = input_config.get_or_default("remotefilelog", "reponame")?;
         let mut source = "remotefilelog.reponame";
         if name.is_empty() {
             tracing::warn!("repo name: no remotefilelog.reponame");
-            let path: String = config.get_or_default("paths", "default")?;
-            name = repo_name_from_url(config, &path).unwrap_or_default();
+            let path: String = input_config.get_or_default("paths", "default")?;
+            name = repo_name_from_url(input_config, &path).unwrap_or_default();
             if name.is_empty() {
                 tracing::warn!("repo name: no path.default reponame: {}", &path);
             }
@@ -546,7 +558,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
             }
         }
         if source != "remotefilelog.reponame" {
-            config.set(
+            output_config.set(
                 "remotefilelog",
                 "reponame",
                 Some(&repo_name),
@@ -555,8 +567,8 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
         }
     } else {
         let forbid_empty_reponame: bool =
-            config.get_or_default("configs", "forbid-empty-reponame")?;
-        if forbid_empty_reponame && config.get("paths", "default").is_some() {
+            input_config.get_or_default("configs", "forbid-empty-reponame")?;
+        if forbid_empty_reponame && input_config.get("paths", "default").is_some() {
             let msg = "reponame is empty".to_string();
             return Err(Error::General(msg));
         }
@@ -892,7 +904,11 @@ fn load_dynamic(
                     if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
                         bail!("unable to read repo config to get repo name");
                     }
-                    Some(read_set_repo_name(&mut temp_config, &info.dot_hg_path)?)
+                    Some(read_set_repo_name(
+                        &temp_config,
+                        &mut ConfigSet::new(),
+                        &info.dot_hg_path,
+                    )?)
                 }
                 None => None,
             };
