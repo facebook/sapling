@@ -29,7 +29,7 @@
 
 /* Written by setup.py */
 #ifdef HAVE_VERSIONHASH
-#include "versionhash.h" // @manual
+#include "versionhash.h"
 #endif
 
 #ifndef PATH_MAX

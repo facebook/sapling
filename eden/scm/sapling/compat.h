@@ -42,7 +42,7 @@ typedef unsigned __int64 uint64_t;
 /* not windows */
 #include <sys/types.h>
 #if defined __BEOS__ && !defined __HAIKU__
-#include <ByteOrder.h> // @manual
+#include <ByteOrder.h>
 #else
 #include <arpa/inet.h>
 #endif
