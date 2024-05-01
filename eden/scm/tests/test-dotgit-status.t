@@ -26,6 +26,13 @@ Ignore status
   $ sl status --ignore
   I i
 
+Status when run from a sub-directory:
+
+  $ mkdir foo
+  $ cd foo
+  $ sl status
+  $ cd ..
+
 Status after changing filesystem (modify, create, remove)
 
   $ echo 2 > b

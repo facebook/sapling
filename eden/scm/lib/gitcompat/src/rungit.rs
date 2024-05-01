@@ -95,6 +95,13 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
     // --git-dir=...
     if let Some(git_dir) = &opts.git_dir {
         cmd.arg(format!("--git-dir={}", git_dir.display()));
+        if git_dir.file_name().unwrap_or_default() == ".git" {
+            // Run `git` from the repo root. This avoids issues like `git status` being over smart
+            // and uses relative paths.
+            if let Some(cwd) = git_dir.parent() {
+                cmd.current_dir(cwd);
+            }
+        }
     }
 
     // global flags like --no-optional-locks
