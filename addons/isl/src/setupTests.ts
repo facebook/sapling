@@ -26,7 +26,7 @@ import {configure} from '@testing-library/react';
 const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
 configure({
   // bump waitFor timeouts in CI where jobs may run slower
-  asyncUtilTimeout: IS_CI ? 5_000 : undefined,
+  ...(IS_CI ? {asyncUtilTimeout: 5_000} : undefined),
   ...(process.env.HIDE_RTL_DOM_ERRORS
     ? {
         getElementError: (message: string | null) => {
