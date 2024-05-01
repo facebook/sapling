@@ -119,6 +119,8 @@ function get_free_socket {
   "$GET_FREE_SOCKET"
 }
 
+ZELOS_PORT=$(get_free_socket)
+
 function mononoke_host {
   if [[ $LOCALIP == *":"* ]]; then
     # ipv6, surround in brackets
@@ -1237,6 +1239,11 @@ if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
 new_commit_logging_destination = { scribe = { scribe_category = "$COMMIT_SCRIBE_CATEGORY" } }
 CONFIG
 fi
+
+cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+  [zelos_config]
+  local_zelos_port = $ZELOS_PORT
+CONFIG
 
 }
 

@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_once_cell::AsyncOnceCell;
@@ -149,10 +150,9 @@ use repo_bookmark_attrs::ArcRepoBookmarkAttrs;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
+use repo_derivation_queues::ArcRepoDerivationQueues;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
-use repo_derived_data_service::ArcDerivedDataManagerSet;
-use repo_derived_data_service::DerivedDataManagerSet;
 use repo_hook_file_content_provider::RepoHookFileContentProvider;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
@@ -196,6 +196,8 @@ use wireproto_handler::PushRedirectorMode;
 use wireproto_handler::PushRedirectorMode::Enabled;
 use wireproto_handler::RepoHandlerBase;
 use wireproto_handler::TargetRepoDbs;
+#[cfg(fbcode_build)]
+use zelos_queue::zelos_derivation_queues;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
 
@@ -1255,7 +1257,7 @@ impl RepoFactory {
         )?))
     }
 
-    pub fn derived_data_manager_set(
+    pub async fn repo_derivation_queues(
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
@@ -1265,33 +1267,42 @@ impl RepoFactory {
         bonsai_git_mapping: &ArcBonsaiGitMapping,
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
-    ) -> Result<ArcDerivedDataManagerSet> {
-        let config = repo_config.derived_data_config.clone();
-        let lease = self.lease(DERIVED_DATA_LEASE)?;
-        let ctx = self.ctx(Some(repo_identity));
-        let logger = ctx.logger().clone();
-        let derived_data_scuba = build_scuba(
-            self.env.fb,
-            config.scuba_table.clone(),
-            repo_identity.name(),
-        )?;
-        let derivation_service_client =
-            get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
-        anyhow::Ok(Arc::new(DerivedDataManagerSet::new(
-            repo_identity.id(),
-            repo_identity.name().to_string(),
-            changesets.clone(),
-            commit_graph.clone(),
-            bonsai_hg_mapping.clone(),
-            bonsai_git_mapping.clone(),
-            filenodes.clone(),
-            repo_blobstore.as_ref().clone(),
-            lease,
-            logger,
-            derived_data_scuba,
-            config,
-            derivation_service_client,
-        )?))
+    ) -> Result<ArcRepoDerivationQueues> {
+        #[cfg(not(fbcode_build))]
+        {
+            anyhow::bail!("RepoDerivationQueues is not supported in non-fbcode builds")
+        }
+        #[cfg(fbcode_build)]
+        {
+            let config = repo_config.derived_data_config.clone();
+            let zelos_config = repo_config.zelos_config.as_ref().ok_or_else(|| {
+                anyhow!("Missing zelos config while trying to construct repo_derivation_queues")
+            })?;
+            let lease = self.lease(DERIVED_DATA_LEASE)?;
+            let derived_data_scuba = build_scuba(
+                self.env.fb,
+                config.scuba_table.clone(),
+                repo_identity.name(),
+            )?;
+            anyhow::Ok(Arc::new(
+                zelos_derivation_queues(
+                    self.env.fb,
+                    repo_identity.id(),
+                    repo_identity.name().to_string(),
+                    changesets.clone(),
+                    commit_graph.clone(),
+                    bonsai_hg_mapping.clone(),
+                    bonsai_git_mapping.clone(),
+                    filenodes.clone(),
+                    repo_blobstore.as_ref().clone(),
+                    lease,
+                    derived_data_scuba,
+                    config,
+                    zelos_config,
+                )
+                .await?,
+            ))
+        }
     }
 
     /// The commit mapping bettween repos for synced commits.
