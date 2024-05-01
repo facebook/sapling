@@ -67,7 +67,7 @@ export class ResolveOperation extends Operation {
 
     const func: ApplyUncommittedChangesPreviewsFuncType = (changes: UncommittedChanges) => {
       return changes.map(change =>
-        change.path === this.filePath ? {path: change.path, status: 'Resolved'} : change,
+        change.path === this.filePath ? {...change, status: 'Resolved'} : change,
       );
     };
     return func;
@@ -92,9 +92,7 @@ export class ResolveOperation extends Operation {
         ...conflicts,
         files:
           conflicts?.files?.map(change =>
-            change.path === this.filePath
-              ? {path: change.path, status: 'Resolved' as const}
-              : change,
+            change.path === this.filePath ? {...change, status: 'Resolved' as const} : change,
           ) ?? [],
       };
     };

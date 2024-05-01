@@ -16,6 +16,7 @@ import {
   closeCommitInfoSidebar,
   simulateMessageFromServer,
 } from '../testUtils';
+import {ConflictType} from '../types';
 import {fireEvent, render, screen, act} from '@testing-library/react';
 
 describe('CommitTreeList', () => {
@@ -74,8 +75,8 @@ describe('CommitTreeList', () => {
             toContinue: 'rebase --continue',
             toAbort: 'rebase --abort',
             files: [
-              {path: 'src/file2.js', status: 'U'},
-              {path: 'src/file3.js', status: 'Resolved'},
+              {path: 'src/file2.js', status: 'U', conflictType: ConflictType.BothChanged},
+              {path: 'src/file3.js', status: 'Resolved', conflictType: ConflictType.BothChanged},
             ],
             fetchStartTimestamp: 1,
             fetchCompletedTimestamp: 2,
@@ -115,8 +116,8 @@ describe('CommitTreeList', () => {
             toContinue: 'rebase --continue',
             toAbort: 'rebase --abort',
             files: [
-              {path: 'src/file2.js', status: 'Resolved'},
-              {path: 'src/file3.js', status: 'Resolved'},
+              {path: 'src/file2.js', status: 'Resolved', conflictType: ConflictType.BothChanged},
+              {path: 'src/file3.js', status: 'Resolved', conflictType: ConflictType.BothChanged},
             ],
             fetchStartTimestamp: 1,
             fetchCompletedTimestamp: 2,

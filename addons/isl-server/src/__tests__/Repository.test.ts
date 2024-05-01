@@ -583,8 +583,79 @@ ${MARK_OUT}
         toContinue: 'rebase --continue',
         toAbort: 'rebase --abort',
         files: [
-          {path: 'file1.txt', status: 'U'},
-          {path: 'file2.txt', status: 'U'},
+          {path: 'file1.txt', status: 'U', conflictType: 'both_changed'},
+          {path: 'file2.txt', status: 'U', conflictType: 'both_changed'},
+        ],
+        fetchStartTimestamp: expect.anything(),
+        fetchCompletedTimestamp: expect.anything(),
+      } as MergeConflicts);
+    });
+
+    it('shows deleted file conflicts', async () => {
+      const repo = new Repository(repoInfo, ctx);
+
+      const onChange = jest.fn();
+      repo.onChangeConflictState(onChange);
+
+      await repo.checkForMergeConflicts();
+      expect(onChange).toHaveBeenCalledTimes(0);
+
+      const MOCK_DELETED_CONFLICT: ResolveCommandConflictOutput = [
+        {
+          command: 'rebase',
+          command_details: {
+            cmd: 'rebase',
+            to_abort: 'rebase --abort',
+            to_continue: 'rebase --continue',
+          },
+          conflicts: [
+            {
+              base: conflictFileData('hello\nworld\n'),
+              local: conflictFileData('hello\nworld - modified 1\n'),
+              other: {
+                contents: null,
+                exists: false,
+                isexec: false,
+                issymlink: false,
+              },
+              output: {
+                contents: null,
+                exists: false,
+                isexec: false,
+                issymlink: false,
+              },
+              path: 'file_del1.txt',
+            },
+            {
+              base: conflictFileData('hello\nworld\n'),
+              local: {
+                contents: null,
+                exists: false,
+                isexec: false,
+                issymlink: false,
+              },
+              other: conflictFileData('hello\nworld - modified 2\n'),
+              output: conflictFileData('hello\nworld - modified 2\n'),
+              path: 'file_del2.txt',
+            },
+          ],
+          pathconflicts: [],
+        },
+      ];
+
+      enterMergeConflict(MOCK_DELETED_CONFLICT);
+
+      await repo.checkForMergeConflicts();
+
+      expect(onChange).toHaveBeenCalledWith({state: 'loading'});
+      expect(onChange).toHaveBeenCalledWith({
+        state: 'loaded',
+        command: 'rebase',
+        toContinue: 'rebase --continue',
+        toAbort: 'rebase --abort',
+        files: [
+          {path: 'file_del1.txt', status: 'U', conflictType: 'source_deleted'},
+          {path: 'file_del2.txt', status: 'U', conflictType: 'dest_deleted'},
         ],
         fetchStartTimestamp: expect.anything(),
         fetchCompletedTimestamp: expect.anything(),
@@ -619,8 +690,8 @@ ${MARK_OUT}
         toContinue: 'rebase --continue',
         toAbort: 'rebase --abort',
         files: [
-          {path: 'file1.txt', status: 'U'},
-          {path: 'file2.txt', status: 'U'},
+          {path: 'file1.txt', status: 'U', conflictType: 'both_changed'},
+          {path: 'file2.txt', status: 'U', conflictType: 'both_changed'},
         ],
         fetchStartTimestamp: expect.anything(),
         fetchCompletedTimestamp: expect.anything(),
@@ -640,8 +711,8 @@ ${MARK_OUT}
         toContinue: 'rebase --continue',
         toAbort: 'rebase --abort',
         files: [
-          {path: 'file1.txt', status: 'U'},
-          {path: 'file2.txt', status: 'U'},
+          {path: 'file1.txt', status: 'U', conflictType: 'both_changed'},
+          {path: 'file2.txt', status: 'U', conflictType: 'both_changed'},
         ],
         fetchStartTimestamp: expect.anything(),
         fetchCompletedTimestamp: expect.anything(),
@@ -656,8 +727,8 @@ ${MARK_OUT}
         toAbort: 'rebase --abort',
         files: [
           // even though file1 is no longer in the output, we remember it from before.
-          {path: 'file1.txt', status: 'Resolved'},
-          {path: 'file2.txt', status: 'U'},
+          {path: 'file1.txt', status: 'Resolved', conflictType: 'both_changed'},
+          {path: 'file2.txt', status: 'U', conflictType: 'both_changed'},
         ],
         fetchStartTimestamp: expect.anything(),
         fetchCompletedTimestamp: expect.anything(),

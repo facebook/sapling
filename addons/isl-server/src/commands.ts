@@ -6,10 +6,10 @@
  */
 
 import type {RepositoryContext} from './serverTypes';
-import type {AbsolutePath, MergeConflicts} from 'isl/src/types';
 
 import {isExecaError} from './utils';
 import execa from 'execa';
+import {ConflictType, type AbsolutePath, type MergeConflicts} from 'isl/src/types';
 import os from 'node:os';
 
 export const MAX_FETCHED_FILES_PER_COMMIT = 25;
@@ -19,7 +19,7 @@ export const MAX_SIMULTANEOUS_CAT_CALLS = 4;
 export const READ_COMMAND_TIMEOUT_MS = 40_000;
 
 export type ConflictFileData = {
-  contents: string;
+  contents: string | null;
   exists: boolean;
   isexec: boolean;
   issymlink: boolean;
@@ -285,6 +285,9 @@ export function computeNewConflicts(
   const previousFiles = previousConflicts?.files ?? [];
 
   const newConflictSet = new Set(newConflictData.conflicts.map(conflict => conflict.path));
+  const conflictFileData = new Map(
+    newConflictData.conflicts.map(conflict => [conflict.path, conflict]),
+  );
   const previousFilesSet = new Set(previousFiles.map(file => file.path));
   const newlyAddedConflicts = new Set(
     [...newConflictSet].filter(file => !previousFilesSet.has(file)),
@@ -293,18 +296,39 @@ export function computeNewConflicts(
   // Preserve previous ordering by first pulling from previous files
   conflicts.files = previousFiles.map(conflict =>
     newConflictSet.has(conflict.path)
-      ? {path: conflict.path, status: 'U'}
+      ? {...conflict, status: 'U'}
       : // 'R' is overloaded to mean "removed" for `sl status` but 'Resolved' for `sl resolve --list`
         // let's re-write this to make the UI layer simpler.
-        {path: conflict.path, status: 'Resolved'},
+        {...conflict, status: 'Resolved'},
   );
   if (newlyAddedConflicts.size > 0) {
     conflicts.files.push(
-      ...[...newlyAddedConflicts].map(conflict => ({path: conflict, status: 'U' as const})),
+      ...[...newlyAddedConflicts].map(conflict => ({
+        path: conflict,
+        status: 'U' as const,
+        conflictType: getConflictType(conflictFileData.get(conflict)) ?? ConflictType.BothChanged,
+      })),
     );
   }
 
   return conflicts;
+}
+
+function getConflictType(
+  conflict?: ResolveCommandConflictOutput[number]['conflicts'][number],
+): ConflictType | undefined {
+  if (conflict == null) {
+    return undefined;
+  }
+  let type;
+  if (conflict.local.exists && conflict.other.exists) {
+    type = ConflictType.BothChanged;
+  } else if (conflict.other.exists) {
+    type = ConflictType.DeletedInDest;
+  } else {
+    type = ConflictType.DeletedInSource;
+  }
+  return type;
 }
 
 /**

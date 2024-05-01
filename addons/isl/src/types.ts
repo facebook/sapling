@@ -411,11 +411,17 @@ export enum GeneratedStatus {
   Generated = 2,
 }
 
+export enum ConflictType {
+  BothChanged = 'both_changed',
+  DeletedInDest = 'dest_deleted',
+  DeletedInSource = 'source_deleted',
+}
+
 type ConflictInfo = {
   command: string;
   toContinue: string;
   toAbort: string;
-  files: Array<ChangedFile>;
+  files: Array<ChangedFile & {conflictType: ConflictType}>;
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
 };
