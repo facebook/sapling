@@ -82,11 +82,11 @@ type ContainerProps = ReactProps<HTMLDivElement> & {xstyle?: stylex.StyleXStyles
 
 /** See `<Row>` and `<Column>`. */
 function FlexBox(props: ContainerProps, flexDirection: 'row' | 'column') {
-  const {className, style, ...rest} = props;
+  const {className, style, alignStart, xstyle, ...rest} = props;
   return (
     <div
       {...stylexPropsWithClassName(
-        [styles.flex, props.alignStart && styles.alignStart, props.xstyle].filter(notEmpty),
+        [styles.flex, alignStart && styles.alignStart, xstyle].filter(notEmpty),
         className,
       )}
       {...rest}
