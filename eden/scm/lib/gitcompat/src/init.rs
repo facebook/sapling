@@ -25,25 +25,23 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
 
     let dot_dir = root_path.join(dot_dir);
     let store_dir = dot_dir.join("store");
-    if store_dir.is_dir() {
-        return Ok(());
+    if !store_dir.is_dir() {
+        fs::create_dir_all(&store_dir)?;
+
+        fs::write(dot_dir.join("requires"), "store\ndotgit\n")?;
+        fs::write(
+            store_dir.join("requires"),
+            "narrowheads\nvisibleheads\ngit\ngit-store\ndotgit\n",
+        )?;
+        fs::write(store_dir.join("gitdir"), format!("..{SEP}.."))?;
+
+        // Write an empty eden dirstate so it can be loaded.
+        treestate::overlay_dirstate::write_overlay_dirstate(
+            &dot_dir.join("dirstate"),
+            std::iter::once(("p1".to_owned(), HgId::null_id().to_hex())).collect(),
+            Default::default(),
+        )?;
     }
-
-    fs::create_dir_all(&store_dir)?;
-
-    fs::write(dot_dir.join("requires"), "store\ndotgit\n")?;
-    fs::write(
-        store_dir.join("requires"),
-        "narrowheads\nvisibleheads\ngit\ngit-store\ndotgit\n",
-    )?;
-    fs::write(store_dir.join("gitdir"), format!("..{SEP}.."))?;
-
-    // Write an empty eden dirstate so it can be loaded.
-    treestate::overlay_dirstate::write_overlay_dirstate(
-        &dot_dir.join("dirstate"),
-        std::iter::once(("p1".to_owned(), HgId::null_id().to_hex())).collect(),
-        Default::default(),
-    )?;
 
     Ok(())
 }
