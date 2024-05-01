@@ -462,27 +462,20 @@ TEST_DISABLED.update(FILTEREDFS_PARITY)
 
 # Any future FilteredHg skips should be added here
 FILTEREDFS_TEST_DISABLED = {
+    # Doctor doesn't detect mismatched FilteredRootIDs. Some work in doctor
+    # is needed to make it detect/fix them.
     "hg.doctor_test.DoctorTestTreeOnly": [
         "test_eden_doctor_fixes_bad_dirstate_file",
         "test_eden_doctor_fixes_valid_mismatched_parents",
     ],
-    "hg.update_test.UpdateTestTreeOnly": [
-        "test_update_dir_to_file",
-        "test_mount_state_during_unmount_with_in_progress_checkout",
-    ],
+    # The test expects ObjectIDs, not FilteredObjectIDs. Either we need to fix
+    # the test or change the output of readdir when FilteredFS is used.
     "readdir_test.ReaddirTest": [
         "test_get_attributes_symlink",
         "test_readdir_directory_symlink_and_other",
         "test_get_attributes_directory",
         "test_readdir",
         "test_get_attributes",
-    ],
-    "patch_test.PatchTest": ["test_patch"],
-    "clone_test.CloneTest": ["test_force_case_insensitive"],
-    "update_test.UpdateTest": [
-        "test_merge_update_untracked_file_with_conflict_in_destination",
-        "test_merge_update_added_file_with_conflict_in_destination",
-        "test_merge_update_untracked_file_with_conflict_in_destination",
     ],
     # These tests will behave the exact same on FilteredFS. Duplicating them can
     # cause issues on macOS (too many APFS subvolumes), so we'll disable the
