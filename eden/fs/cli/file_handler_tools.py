@@ -6,12 +6,10 @@
 
 # pyre-strict
 
-import re
 import shutil
 import subprocess
 import sys
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING
 
@@ -19,14 +17,6 @@ from .prompt import prompt_confirmation
 
 if TYPE_CHECKING:
     from .config import EdenInstance
-
-
-@dataclass
-class FileHandleEntry:
-    process_name: str
-    process_id: str
-    resource_type: str
-    path: str
 
 
 class FileReleaseStatus:
@@ -81,35 +71,6 @@ if sys.platform == "win32":
             if handle:
                 return Path(handle)
             return None
-
-        def parse_handlerexe_output(self, output: str) -> List[FileHandleEntry]:
-            r"""
-            Parses the output of handle.exe and returns a list of FileHandleEntry objects.
-
-            Lines that we care about look like this:
-            VS Code @ FB.exe   pid: 19044  type: File           34C: C:\open\fbsource2
-            Hubbub.exe         pid: 24856  type: File            40: C:\open\fbsource\ovrsource-legacy\unity\socialvr\_tools\hubbub
-            Note, no tabs, process names may contain spaces, best we can do is probably regex here, naive split is not enough
-            """
-
-            p = re.compile(
-                r"^\s*(.+?)\s*pid: ([0-9]+)\s*type: ([^ ]*)\s*([^ ]*)\s*(.*?): (.*)"
-            )
-            ret = []
-            for line in output.splitlines():
-                if not line:
-                    continue
-                m = p.findall(line)
-                if m and len(m) == 1 and len(m[0]) == 6:
-                    ret.append(
-                        FileHandleEntry(
-                            m[0][0],  # Process name
-                            m[0][1],  # Process id
-                            m[0][2],  # Type
-                            m[0][5],  # Name
-                        )
-                    )
-            return ret
 
         def check_handle(self, mount: Path, frs: FileReleaseStatus) -> bool:
             try:
