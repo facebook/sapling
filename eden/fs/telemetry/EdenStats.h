@@ -313,6 +313,8 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
 struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
+  Duration getRootTree{"store.sapling.get_root_tree_us"};
+  Duration importManifestForRoot{"store.sapling.import_manifest_for_root_us"};
   Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};
   Counter fetchTreeRetryFailure{"store.hg.fetch_tree_retry_failure"};
   Duration importTreeDuration{"store.hg.import_tree_us"};

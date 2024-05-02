@@ -1439,19 +1439,22 @@ ImmediateFuture<BackingStore::GetRootTreeResult>
 SaplingBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
+  folly::stop_watch<std::chrono::milliseconds> watch;
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .thenValue(
-          [this, commitId, context = context.copy()](StoreResult result)
+          [this, commitId, context = context.copy(), watch](StoreResult result)
               -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
             if (!result.isValid()) {
               return importTreeManifest(commitId, context)
-                  .thenValue([this, commitId](TreePtr rootTree) {
+                  .thenValue([this, commitId, watch](TreePtr rootTree) {
                     XLOG(DBG1) << "imported mercurial commit " << commitId
                                << " as tree " << rootTree->getHash();
-
+                    stats_->addDuration(
+                        &SaplingBackingStoreStats::getRootTree,
+                        watch.elapsed());
                     localStore_->put(
                         KeySpace::HgCommitToTreeFamily,
                         commitId,
@@ -1467,7 +1470,9 @@ SaplingBackingStore::getRootTree(
                 "getRootTree",
                 *stats_);
             return importTreeManifestImpl(rootTreeHash.revHash(), context)
-                .thenValue([](TreePtr tree) {
+                .thenValue([this, watch](TreePtr tree) {
+                  stats_->addDuration(
+                      &SaplingBackingStoreStats::getRootTree, watch.elapsed());
                   return BackingStore::GetRootTreeResult{tree, tree->getHash()};
                 });
           });
@@ -1525,13 +1530,11 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
   }
 
   // try SaplingNativeBackingStore
-  folly::stop_watch<std::chrono::milliseconds> watch;
   auto tree = getTreeFromBackingStore(
       path.copy(), manifestNode, objectId, context.copy());
   if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from SaplingNativeBackingStore";
-    stats_->addDuration(&SaplingBackingStoreStats::fetchTree, watch.elapsed());
     return folly::makeFuture(std::move(tree.value()));
   }
   // retry once if the initial fetch failed
@@ -1562,7 +1565,6 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
     return folly::makeFuture<TreePtr>(std::move(ew));
   }
 
-  folly::stop_watch<std::chrono::milliseconds> watch;
   auto writeBatch = localStore_->beginWrite();
   // When aux metadata is enabled hg fetches file metadata along with get tree
   // request, no need for separate network call!
@@ -1572,9 +1574,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
              path.copy(),
              std::move(writeBatch),
              context.copy())
-      .thenValue([this, watch, config = config_](TreePtr&& result) mutable {
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+      .thenValue([config = config_](TreePtr&& result) mutable {
         return std::move(result);
       });
 }
@@ -1913,11 +1913,12 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
    * treemanifest data.  This is called when the root manifest is provided
    * to EdenFS directly by the hg client.
    */
+  folly::stop_watch<std::chrono::milliseconds> watch;
   auto commitId = hashFromRootId(rootId);
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .thenValue(
-          [this, commitId, manifestId, context = context.copy()](
+          [this, commitId, manifestId, context = context.copy(), watch](
               StoreResult result) -> folly::Future<folly::Unit> {
             if (result.isValid()) {
               // We have already imported this commit, nothing to do.
@@ -1925,16 +1926,19 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
             }
 
             return importTreeManifestImpl(manifestId, context)
-                .thenValue([this, commitId, manifestId](TreePtr rootTree) {
-                  XLOG(DBG3) << "imported mercurial commit " << commitId
-                             << " with manifest " << manifestId << " as tree "
-                             << rootTree->getHash();
-
-                  localStore_->put(
-                      KeySpace::HgCommitToTreeFamily,
-                      commitId,
-                      rootTree->getHash().getBytes());
-                });
+                .thenValue(
+                    [this, commitId, manifestId, watch](TreePtr rootTree) {
+                      XLOG(DBG3) << "imported mercurial commit " << commitId
+                                 << " with manifest " << manifestId
+                                 << " as tree " << rootTree->getHash();
+                      stats_->addDuration(
+                          &SaplingBackingStoreStats::importManifestForRoot,
+                          watch.elapsed());
+                      localStore_->put(
+                          KeySpace::HgCommitToTreeFamily,
+                          commitId,
+                          rootTree->getHash().getBytes());
+                    });
           });
 }
 
