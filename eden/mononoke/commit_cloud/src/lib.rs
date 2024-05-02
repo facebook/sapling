@@ -130,6 +130,11 @@ impl CommitCloud {
             version_timestamp = maybeworkspace[0].timestamp.timestamp_nanos();
         }
         let new_version = latest_version + 1;
+        if params.version < latest_version {
+            let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
+            return cast_references_data(raw_references_data, latest_version, version_timestamp)
+                .await;
+        }
 
         update_heads(
             &self.storage,
@@ -159,22 +164,26 @@ impl CommitCloud {
             params.removed_snapshots,
         )
         .await?;
+        let new_version_timestamp = Timestamp::now();
         let args = WorkspaceVersion {
             workspace: ctx.workspace.clone(),
             version: new_version,
-            timestamp: Timestamp::from_timestamp_nanos(version_timestamp),
+            timestamp: new_version_timestamp,
             archived: false,
         };
         let _ = &self
             .storage
             .insert(ctx.reponame.clone(), ctx.workspace.clone(), args.clone())
             .await?;
-        self.get_references(GetReferencesParams {
+
+        Ok(ReferencesData {
             version: new_version,
-            workspace: ctx.workspace.clone(),
-            reponame: ctx.reponame.clone(),
-            client_info: None,
+            heads: None,
+            bookmarks: None,
+            heads_dates: None,
+            remote_bookmarks: None,
+            snapshots: None,
+            timestamp: Some(new_version_timestamp.timestamp_nanos()),
         })
-        .await
     }
 }
