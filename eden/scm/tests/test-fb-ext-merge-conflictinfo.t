@@ -1264,3 +1264,74 @@ mergestate (like shelve):
       "pathconflicts": []
     }
   ]
+
+Source deleted, dest changed, file is deleted after conflict is entered
+  $ reset
+  $ echo "change" > file
+  $ hg commit -Aqm "dest"
+  $ hg up -q 'desc(base)'
+  $ hg rm file
+  $ hg commit -Aqm "source"
+  $ hg up -q 'desc(dest)'
+  $ logg
+  o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
+  │  affected: file
+  │  deleted: file
+  │
+  │ @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
+  ├─╯  affected: file
+  │    deleted:
+  │
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
+     affected: file
+     deleted:
+  
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
+  rebasing 25c2ef28f4c7 "source"
+  local [dest (rebasing onto)] changed file which other [source (being rebased)] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rm file
+  $ hg resolve --tool=internal:dumpjson --all | jq
+  [
+    {
+      "command": "rebase",
+      "command_details": {
+        "cmd": "rebase",
+        "to_abort": "rebase --abort",
+        "to_continue": "rebase --continue"
+      },
+      "conflicts": [
+        {
+          "base": {
+            "contents": "base\n",
+            "exists": true,
+            "isexec": false,
+            "issymlink": false
+          },
+          "local": {
+            "contents": null,
+            "exists": false,
+            "isexec": false,
+            "issymlink": false
+          },
+          "other": {
+            "contents": null,
+            "exists": false,
+            "isexec": null,
+            "issymlink": null
+          },
+          "output": {
+            "contents": null,
+            "exists": false,
+            "isexec": false,
+            "issymlink": false,
+            "path": "$TESTTMP/foo/file"
+          },
+          "path": "file"
+        }
+      ],
+      "pathconflicts": []
+    }
+  ]

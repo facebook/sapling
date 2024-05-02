@@ -231,7 +231,7 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
         else scmutil.origpath(repo.ui, repo, repo.wjoin(workingfilectx.path()))
     )
 
-    def flags(context):
+    def flags(context, isworkingfilectx):
         if isinstance(context, absentfilectx):
             return {
                 "contents": None,
@@ -239,14 +239,15 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
                 "isexec": None,
                 "issymlink": None,
             }
+        exists = not isworkingfilectx or context.lexists()
         return {
-            "contents": _decodeutf8ornone(context.data()),
-            "exists": True,
+            "contents": _decodeutf8ornone(context.data()) if exists else None,
+            "exists": exists,
             "isexec": context.isexec(),
             "issymlink": context.islink(),
         }
 
-    output = flags(workingfilectx)
+    output = flags(workingfilectx, True)
 
     filestat = util.filestat.frompath(origfile) if origfile is not None else None
     if origfile and filestat.stat:
@@ -286,8 +287,8 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
 
     output["path"] = repo.wjoin(workingfilectx.path())
 
-    base = flags(basectx)
-    other = flags(otherctx)
+    base = flags(basectx, False)
+    other = flags(otherctx, False)
 
     gen_contents_with_conflict_styles(repo, output, base, local, other)
 
