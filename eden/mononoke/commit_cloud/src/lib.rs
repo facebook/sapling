@@ -9,6 +9,7 @@
 pub mod references;
 pub mod sql;
 pub mod workspace;
+use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
@@ -56,9 +57,15 @@ impl CommitCloud {
 
     pub async fn get_references(
         &self,
-        ctx: CommitCloudContext,
-        base_version: u64,
+        params: GetReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
+        let ctx = CommitCloudContext {
+            workspace: params.workspace.clone(),
+            reponame: params.reponame.clone(),
+        };
+
+        let base_version = params.version;
+
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
         let maybeworkspace = self
@@ -85,7 +92,7 @@ impl CommitCloud {
 
         if base_version == latest_version {
             return Ok(ReferencesData {
-                version: latest_version as i64,
+                version: latest_version,
                 heads: None,
                 bookmarks: None,
                 heads_dates: None,
@@ -105,9 +112,12 @@ impl CommitCloud {
 
     pub async fn update_references(
         &self,
-        ctx: CommitCloudContext,
         params: UpdateReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
+        let ctx = CommitCloudContext {
+            workspace: params.workspace.clone(),
+            reponame: params.reponame.clone(),
+        };
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
@@ -159,6 +169,12 @@ impl CommitCloud {
             .storage
             .insert(ctx.reponame.clone(), ctx.workspace.clone(), args.clone())
             .await?;
-        self.get_references(ctx, new_version).await
+        self.get_references(GetReferencesParams {
+            version: new_version,
+            workspace: ctx.workspace.clone(),
+            reponame: ctx.reponame.clone(),
+            client_info: None,
+        })
+        .await
     }
 }

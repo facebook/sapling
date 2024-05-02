@@ -50,7 +50,7 @@ pub struct UpdateReferencesParams {
     #[id(1)]
     pub reponame: String,
     #[id(2)]
-    pub version: i64,
+    pub version: u64,
     #[id(3)]
     pub removed_heads: Vec<String>,
     #[id(4)]
@@ -80,7 +80,7 @@ pub struct GetReferencesParams {
     #[id(1)]
     pub reponame: String,
     #[id(2)]
-    pub version: i64,
+    pub version: u64,
     #[id(3)]
     pub client_info: Option<ClientInfo>,
 }
@@ -90,7 +90,7 @@ pub struct GetReferencesParams {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct ReferencesData {
     #[id(0)]
-    pub version: i64,
+    pub version: u64,
     #[id(1)]
     pub heads: Option<Vec<String>>,
     #[id(2)]

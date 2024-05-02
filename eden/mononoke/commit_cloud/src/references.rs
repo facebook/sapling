@@ -87,7 +87,7 @@ pub(crate) async fn cast_references_data(
     }
 
     Ok(ReferencesData {
-        version: latest_version as i64,
+        version: latest_version,
         heads: Some(heads),
         bookmarks: Some(bookmarks),
         heads_dates: Some(heads_dates),

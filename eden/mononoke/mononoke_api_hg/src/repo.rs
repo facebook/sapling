@@ -29,11 +29,11 @@ use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
 use commit_cloud::sql::versions::WorkspaceVersion;
-use commit_cloud::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use edenapi_types::AnyId;
+use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadToken;
@@ -1066,25 +1066,23 @@ impl HgRepoContext {
 
     pub async fn cloud_references(
         &self,
-        ctx: CommitCloudContext,
-        base_version: u64,
+        params: GetReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
         Ok(self
             .blob_repo()
             .commit_cloud()
-            .get_references(ctx, base_version)
+            .get_references(params)
             .await?)
     }
 
     pub async fn cloud_update_references(
         &self,
-        ctx: CommitCloudContext,
         params: UpdateReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
         Ok(self
             .blob_repo()
             .commit_cloud()
-            .update_references(ctx, params)
+            .update_references(params)
             .await?)
     }
 }
