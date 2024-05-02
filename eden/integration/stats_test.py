@@ -181,9 +181,9 @@ class SaplingBackingStoreStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after["store.hg.get_blob_us.count"],
-            counters_before.get("store.hg.get_blob_us.count", 0) + 1,
-            f"Reading {path} should increment store.hg.get_blob_us.count",
+            counters_after["store.sapling.get_blob_us.count"],
+            counters_before.get("store.sapling.get_blob_us.count", 0) + 1,
+            f"Reading {path} should increment store.sapling.get_blob_us.count",
         )
 
     def test_pending_import_counters_available(self) -> None:
@@ -231,9 +231,9 @@ class HgImporterStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after["store.hg.get_blob_us.count"],
-            counters_before.get("store.hg.get_blob_us.count", 0) + 1,
-            f"Reading {path} should increment store.hg.get_blob_us.count",
+            counters_after["store.sapling.get_blob_us.count"],
+            counters_before.get("store.sapling.get_blob_us.count", 0) + 1,
+            f"Reading {path} should increment store.sapling.get_blob_us.count",
         )
 
     def create_repo(self, name: str) -> HgRepository:

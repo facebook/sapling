@@ -127,10 +127,10 @@ class SaplingBackingStoreStatsTest(unittest.TestCase):
             "store.mononoke.get_blob.p50.60": 20,
             "store.mononoke.get_blob.p50.600": 30,
             "store.mononoke.get_blob.p50.3600": 40,
-            "store.hg.get_blob.p50": 40,
-            "store.hg.get_blob.p50.60": 30,
-            "store.hg.get_blob.p50.600": 20,
-            "store.hg.get_blob.p50.3600": 10,
+            "store.sapling.get_blob.p50": 40,
+            "store.sapling.get_blob.p50.60": 30,
+            "store.sapling.get_blob.p50.600": 20,
+            "store.sapling.get_blob.p50.3600": 10,
         }
         table = get_store_latency(counters, "mononoke")
         result = table.get("get_blob")

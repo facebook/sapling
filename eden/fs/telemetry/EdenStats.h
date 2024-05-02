@@ -308,22 +308,21 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
  * Terminology:
  *   get = entire lookup process, including both Sapling disk hits and fetches
  *   fetch = includes asynchronous retrieval from Mononoke
- *   import = fall back process
  */
 struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
-  Duration getTree{"store.hg.get_tree_us"};
-  Duration fetchTree{"store.hg.fetch_tree_us"};
+  Duration getTree{"store.sapling.get_tree_us"};
+  Duration fetchTree{"store.sapling.fetch_tree_us"};
   Duration getRootTree{"store.sapling.get_root_tree_us"};
   Duration importManifestForRoot{"store.sapling.import_manifest_for_root_us"};
-  Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};
-  Counter fetchTreeRetryFailure{"store.hg.fetch_tree_retry_failure"};
-  Duration getBlob{"store.hg.get_blob_us"};
-  Duration fetchBlob{"store.hg.fetch_blob_us"};
-  Counter fetchBlobRetrySuccess{"store.hg.fetch_blob_retry_success"};
-  Counter fetchBlobRetryFailure{"store.hg.fetch_blob_retry_failure"};
-  Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};
-  Duration fetchBlobMetadata{"store.hg.fetch_blob_metadata_us"};
-  Counter loadProxyHash{"store.hg.load_proxy_hash"};
+  Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
+  Counter fetchTreeRetryFailure{"store.sapling.fetch_tree_retry_failure"};
+  Duration getBlob{"store.sapling.get_blob_us"};
+  Duration fetchBlob{"store.sapling.fetch_blob_us"};
+  Counter fetchBlobRetrySuccess{"store.sapling.fetch_blob_retry_success"};
+  Counter fetchBlobRetryFailure{"store.sapling.fetch_blob_retry_failure"};
+  Duration getBlobMetadata{"store.sapling.get_blob_metadata_us"};
+  Duration fetchBlobMetadata{"store.sapling.fetch_blob_metadata_us"};
+  Counter loadProxyHash{"store.sapling.load_proxy_hash"};
 };
 
 /**
