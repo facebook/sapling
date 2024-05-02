@@ -27,7 +27,6 @@ class FileHandleEntry:
     process_id: str
     resource_type: str
     path: str
-    kill_order: int
 
 
 class FileReleaseStatus:
@@ -83,26 +82,6 @@ if sys.platform == "win32":
                 return Path(handle)
             return None
 
-        def get_kill_order(self, process_name: str) -> int:
-            """
-            Returns the kill order of a process. We use this to sort later and kill the process in an order that minimizes inconvenience.
-            """
-            known_processes = {"Hubbub.exe": 0, "dotnet.exe": 1}
-            if process_name in known_processes:
-                return known_processes[process_name]
-            else:
-                return len(known_processes) + 1
-
-        def get_process_chain(self) -> List[int]:
-            """
-            Returns a list of PIDs from the current process (ourselves) all the way to the top.
-            """
-            import psutil
-
-            current_process = psutil.Process()
-            parents = current_process.parents()
-            return [current_process.pid] + [process.pid for process in parents]
-
         def parse_handlerexe_output(self, output: str) -> List[FileHandleEntry]:
             r"""
             Parses the output of handle.exe and returns a list of FileHandleEntry objects.
@@ -128,7 +107,6 @@ if sys.platform == "win32":
                             m[0][1],  # Process id
                             m[0][2],  # Type
                             m[0][5],  # Name
-                            self.get_kill_order(m[0][0]),  # Kill order
                         )
                     )
             return ret
@@ -166,24 +144,20 @@ if sys.platform == "win32":
                 frs.keyboard_interrupt = True
                 return False
 
-            parsed = self.parse_handlerexe_output(output.decode(errors="ignore"))
-            try:
-                chain = self.get_process_chain()
-            except Exception as e:
-                frs.exception_raised = e
-                return False
-
             parsed = [
-                entry
-                for entry in parsed
-                if entry.process_name
-                not in {"edenfs.exe", "handle.exe", "handle64.exe"}
-                and int(entry.process_id)
-                not in chain  # Skip our own process tree or we'll kill ourselves
-            ]  # We skip some things that could kill ourselves.
-            parsed = sorted(parsed, key=lambda entry: entry.kill_order)
-            if len(parsed) == 0:
-                # Nothing that we could kill is holding the repo, so we can't help here.
+                line.split()
+                for line in output.decode(errors="ignore").splitlines()
+                if line
+            ]
+            non_edenfs_process = any(
+                filter(lambda x: x[0].lower() != "edenfs.exe", parsed)
+            )
+
+            # When no handle is found in the repo, handle.exe will report `"No
+            # matching handles found."`, which will be 4 words.
+            if not non_edenfs_process or not parsed or len(parsed[0]) == 4:
+                # Nothing other than edenfs.exe is holding handles to files from
+                # the repo, we can proceed with the removal
                 print(
                     "No processes found. They may be running under a different user.\n"
                 )
@@ -191,49 +165,31 @@ if sys.platform == "win32":
 
             print("The following processes are still using the repo.\n")
 
-            for entry in parsed:
-                print(f"{entry.process_name}({entry.process_id}): {entry.path}")
+            for executable, _, pid, _, _type, _, path in parsed:
+                print(f"{executable}({pid}): {path}")
 
-            frs.conflict_processes = [parse.process_name for parse in parsed]
-            all_ok = True
+            frs.conflict_processes = [parse[0] for parse in parsed]
 
-            # Don't kill each process more than once but maintain order in list, we want
-            # to kill them in kill order.
-            seen = set()
-            proc_list = []
-            for entry in parsed:
-                if entry.process_id not in seen:
-                    proc_list.append((entry.process_name, entry.process_id))
-                    seen.add(entry.process_id)
-            print("Process list:")
-            for entry in proc_list:
-                print(f"{entry[0]}: {entry[1]}")
-
-            if prompt_confirmation("Do you want to kill the processes above?"):
+            if prompt_confirmation("Do you want to kill these processes?"):
                 frs.user_wants_to_kill = True
                 print("Attempting to kill all processes...")
-                for entry in proc_list:
+                for executable, _, pid, _, _type, _, _path in parsed:
                     try:
-                        print(f"Killing: {entry[0]} ({entry[1]})")
-                        proc = psutil.Process(int(entry[1]))
+                        proc = psutil.Process(int(pid))
                         proc.kill()
                         proc.wait()
-                    except (
-                        psutil.NoSuchProcess
-                    ):  # Probably terminated on its own before we got to it
-                        pass
                     except Exception as e:
-                        print(f"Failed to kill process {entry[0]} {entry[1]}: {e}")
-                        frs.failed_to_kill.append(entry[0])
+                        print(f"Failed to kill process {executable} {pid}: {e}")
+                        frs.unkillable_processes.append(executable)
                         frs.exception_raised = e
-                        all_ok = False
+                        return False
             else:
                 print(
                     f"Once you have exited those processes, delete {mount} manually.\n"
                 )
                 return False
             print()
-            return all_ok
+            return True
 
         def try_release(self, mount: Path) -> bool:
             try:
