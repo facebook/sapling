@@ -10,6 +10,7 @@ import type {DetailedHTMLProps} from 'react';
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
+import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 
 const avatarUrl = atomFamilyWeak((author: string) => {
@@ -43,6 +44,32 @@ export function AvatarImg({
       {...rest}
     />
   );
+}
+
+const styles = stylex.create({
+  empty: {
+    content: '',
+    width: 14,
+    height: 14,
+    backgroundColor: 'var(--foreground)',
+    borderRadius: '50%',
+    border: '1px solid var(--foreground)',
+  },
+});
+
+export function BlankAvatar() {
+  return <div {...stylex.props(styles.empty)} />;
+}
+
+export function Avatar({
+  username,
+  ...rest
+}: {username: string} & DetailedHTMLProps<
+  React.ImgHTMLAttributes<HTMLImageElement>,
+  HTMLImageElement
+>) {
+  const url = useAtomValue(avatarUrl(username));
+  return url == null ? <BlankAvatar /> : <AvatarImg url={url} username={username} {...rest} />;
 }
 
 /** Render as a SVG pattern */

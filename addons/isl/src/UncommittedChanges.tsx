@@ -11,6 +11,7 @@ import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} fro
 import type {MutableRefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
+import {Avatar} from './Avatar';
 import {Banner, BannerKind} from './Banner';
 import {File} from './ChangedFile';
 import {
@@ -19,6 +20,7 @@ import {
   changedFilesDisplayType,
 } from './ChangedFileDisplayTypePicker';
 import {Collapsable} from './Collapsable';
+import {Commit} from './Commit';
 import {
   commitMessageTemplate,
   commitMode,
@@ -44,7 +46,8 @@ import {Button} from './components/Button';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
-import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import {DownwardArrow} from './icons/DownwardIcon';
+import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
 import {
   AutoResolveSettingCheckbox,
   shouldAutoResolveAllBeforeContinue,
@@ -64,6 +67,8 @@ import {operationList, useRunOperation} from './operationsState';
 import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {
+  CommitPreview,
+  dagWithPreviews,
   optimisticMergeConflicts,
   uncommittedChangesWithPreviews,
   useIsOperationRunningOrQueued,
@@ -71,6 +76,7 @@ import {
 import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
+import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
@@ -756,7 +762,44 @@ export function UncommittedChanges({place}: {place: Place}) {
           )}
         </div>
       )}
+      {place === 'main' && <ConflictingIncomingCommit />}
     </div>
+  );
+}
+
+const styles = stylex.create({
+  conflictingIncomingContainer: {
+    gap: 'var(--halfpad)',
+    position: 'relative',
+    paddingLeft: '20px',
+    paddingTop: '5px',
+    marginBottom: '-5px',
+    color: 'var(--scm-added-foreground)',
+  },
+  downwardArrow: {
+    position: 'absolute',
+    top: '20px',
+    left: '5px',
+  },
+});
+
+function ConflictingIncomingCommit() {
+  const conflicts = useAtomValue(optimisticMergeConflicts);
+  // "other" is the incoming / source / your commit
+  const commit = useAtomGet(dagWithPreviews, conflicts?.hashes?.other);
+  if (commit == null) {
+    return null;
+  }
+  return (
+    <Row xstyle={styles.conflictingIncomingContainer}>
+      <DownwardArrow {...stylex.props(styles.downwardArrow)} />
+      <Avatar username={commit.author} />
+      <Commit
+        commit={commit}
+        hasChildren={false}
+        previewType={CommitPreview.NON_ACTIONABLE_COMMIT}
+      />
+    </Row>
   );
 }
 

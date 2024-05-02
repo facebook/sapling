@@ -7,6 +7,7 @@
 
 import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
+import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {Bookmarks} from './Bookmark';
@@ -37,7 +38,7 @@ import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
-import {readAtom, writeAtom} from './jotaiUtils';
+import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
@@ -52,14 +53,16 @@ import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './
 import {RelativeDate, relativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitCallbacks} from './selection';
+import {mergeConflicts} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
+import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue, useSetAtom} from 'jotai';
+import {atom, useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo} from 'react';
 import {ComparisonType} from 'shared/Comparison';
@@ -89,6 +92,19 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
   return false;
 }
 
+const commitLabelForCommit = atomFamilyWeak((hash: string) =>
+  atom(get => {
+    const conflicts = get(mergeConflicts);
+    const hashes = conflicts?.hashes;
+    if (hash === hashes?.other) {
+      return t('Incoming');
+    } else if (hash === hashes?.local) {
+      return t('Local');
+    }
+    return null;
+  }),
+);
+
 export const Commit = memo(
   ({
     commit,
@@ -114,6 +130,8 @@ export const Commit = memo(
     const isNarrow = useAtomValue(isNarrowCommitTree);
 
     const title = useAtomValue(latestCommitMessageTitle(commit.hash));
+
+    const commitLabel = useAtomValue(commitLabelForCommit(commit.hash));
 
     const toast = useShowToast();
 
@@ -363,6 +381,7 @@ export const Commit = memo(
             previewType={previewType}>
             {isPublic ? null : (
               <span className="commit-title">
+                {commitLabel && <CommitLabel>{commitLabel}</CommitLabel>}
                 <span>{title}</span>
                 <CommitDate date={commit.date} />
               </span>
@@ -403,6 +422,19 @@ export const Commit = memo(
     );
   },
 );
+
+const styles = stylex.create({
+  commitLabel: {
+    fontVariant: 'all-petite-caps',
+    opacity: '0.8',
+    fontWeight: 'bold',
+    fontSize: '90%',
+  },
+});
+
+function CommitLabel({children}: {children?: ReactNode}) {
+  return <div {...stylex.props(styles.commitLabel)}>{children}</div>;
+}
 
 export function InlineProgressSpan(props: {message: string}) {
   return (
