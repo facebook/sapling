@@ -1122,12 +1122,9 @@ SaplingBackingStore::getTreeEnqueue(
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
   auto getTreeFuture = makeImmediateFutureWith([&] {
+    auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeTreeImportRequest(
-        id,
-        proxyHash,
-        context->getPriority(),
-        context->getCause(),
-        context->getClientPid());
+        id, proxyHash, requestContext);
     uint64_t unique = request->getUnique();
 
     auto importTracker =
@@ -1251,13 +1248,9 @@ ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
   auto getBlobFuture = makeImmediateFutureWith([&] {
     XLOG(DBG4) << "make blob import request for " << proxyHash.path()
                << ", hash is:" << id;
-
+    auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeBlobImportRequest(
-        id,
-        proxyHash,
-        context->getPriority(),
-        context->getCause(),
-        context->getClientPid());
+        id, proxyHash, requestContext);
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -1341,13 +1334,9 @@ SaplingBackingStore::getBlobMetadataImpl(
   auto getBlobMetaFuture = makeImmediateFutureWith([&] {
     XLOG(DBG4) << "make blob meta import request for " << proxyHash.path()
                << ", hash is:" << id;
-
+    auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeBlobMetaImportRequest(
-        id,
-        proxyHash,
-        context->getPriority(),
-        context->getCause(),
-        context->getClientPid());
+        id, proxyHash, requestContext);
     auto unique = request->getUnique();
 
     auto importTracker =

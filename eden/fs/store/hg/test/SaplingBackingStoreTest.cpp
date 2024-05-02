@@ -224,12 +224,9 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
   HgProxyHash proxyHash =
       HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
 
+  auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
-      tree1Hash,
-      proxyHash,
-      ObjectFetchContext::getNullContext()->getPriority(),
-      ObjectFetchContext::getNullContext()->getCause(),
-      ObjectFetchContext::getNullContext()->getClientPid());
+      tree1Hash, proxyHash, requestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
@@ -263,12 +260,9 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
   HgProxyHash proxyHash =
       HgProxyHash::load(localStore.get(), tree1Hash, "getTree", *stats);
 
+  auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
-      tree1Hash,
-      proxyHash,
-      ObjectFetchContext::getNullContext()->getPriority(),
-      ObjectFetchContext::getNullContext()->getCause(),
-      ObjectFetchContext::getNullContext()->getClientPid());
+      tree1Hash, proxyHash, requestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {

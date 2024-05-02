@@ -53,27 +53,21 @@ makeBlobImportRequest(ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   auto hash = ObjectId{proxyHash.getValue()};
-  return std::make_pair(
-      hash,
-      SaplingImportRequest::makeBlobImportRequest(
-          hash,
-          std::move(proxyHash),
-          priority,
-          ObjectFetchContext::Cause::Unknown,
-          std::nullopt));
+  auto requestContext = ObjectFetchContext::getNullContext();
+  auto request = SaplingImportRequest::makeBlobImportRequest(
+      hash, std::move(proxyHash), requestContext);
+  request->setPriority(priority);
+  return std::make_pair(hash, request);
 }
 
 std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
 makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
   auto hash = ObjectId{proxyHash.getValue()};
-  return std::make_pair(
-      hash,
-      SaplingImportRequest::makeBlobImportRequest(
-          hash,
-          std::move(proxyHash),
-          priority,
-          ObjectFetchContext::Cause::Unknown,
-          std::nullopt));
+  auto requestContext = ObjectFetchContext::getNullContext();
+  auto request = SaplingImportRequest::makeBlobImportRequest(
+      hash, std::move(proxyHash), requestContext);
+  request->setPriority(priority);
+  return std::make_pair(hash, request);
 }
 
 std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
@@ -81,14 +75,11 @@ makeBlobMetaImportRequestWithHash(
     ImportPriority priority,
     HgProxyHash proxyHash) {
   auto hash = ObjectId{proxyHash.getValue()};
-  return std::make_pair(
-      hash,
-      SaplingImportRequest::makeBlobMetaImportRequest(
-          hash,
-          std::move(proxyHash),
-          priority,
-          ObjectFetchContext::Cause::Unknown,
-          std::nullopt));
+  auto requestContext = ObjectFetchContext::getNullContext();
+  auto request = SaplingImportRequest::makeBlobMetaImportRequest(
+      hash, std::move(proxyHash), requestContext);
+  request->setPriority(priority);
+  return std::make_pair(hash, request);
 }
 
 std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
@@ -96,14 +87,11 @@ makeTreeImportRequest(ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};
   auto hash = ObjectId{proxyHash.getValue()};
-  return std::make_pair(
-      hash,
-      SaplingImportRequest::makeTreeImportRequest(
-          hash,
-          std::move(proxyHash),
-          priority,
-          ObjectFetchContext::Cause::Unknown,
-          std::nullopt));
+  auto requestContext = ObjectFetchContext::getNullContext();
+  auto request = SaplingImportRequest::makeTreeImportRequest(
+      hash, std::move(proxyHash), requestContext);
+  request->setPriority(priority);
+  return std::make_pair(hash, request);
 }
 
 ObjectId insertBlobImportRequest(

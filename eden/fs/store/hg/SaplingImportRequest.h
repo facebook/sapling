@@ -55,9 +55,7 @@ class SaplingImportRequest {
   static std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
-      ImportPriority priority,
-      ObjectFetchContext::Cause cause,
-      OptionalProcessId pid);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Allocate a tree request.
@@ -65,16 +63,12 @@ class SaplingImportRequest {
   static std::shared_ptr<SaplingImportRequest> makeTreeImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
-      ImportPriority priority,
-      ObjectFetchContext::Cause cause,
-      OptionalProcessId pid);
+      const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeBlobMetaImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
-      ImportPriority priority,
-      ObjectFetchContext::Cause cause,
-      OptionalProcessId pid);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Implementation detail of the make*Request functions from above. Do not
@@ -83,9 +77,7 @@ class SaplingImportRequest {
   template <typename RequestType>
   SaplingImportRequest(
       RequestType request,
-      ImportPriority priority,
-      ObjectFetchContext::Cause cause,
-      OptionalProcessId pid,
+      const ObjectFetchContextPtr& context,
       folly::Promise<typename RequestType::Response>&& promise);
 
   ~SaplingImportRequest() = default;
@@ -112,11 +104,11 @@ class SaplingImportRequest {
   }
 
   ObjectFetchContext::Cause getCause() const noexcept {
-    return cause_;
+    return context_->getCause();
   }
 
   OptionalProcessId getPid() const noexcept {
-    return pid_;
+    return context_->getClientPid();
   }
 
   void setPriority(ImportPriority priority) noexcept {
@@ -147,9 +139,7 @@ class SaplingImportRequest {
    */
   template <typename Request, typename... Input>
   static std::shared_ptr<SaplingImportRequest> makeRequest(
-      ImportPriority priority,
-      ObjectFetchContext::Cause cause,
-      OptionalProcessId pid,
+      const ObjectFetchContextPtr& context,
       Input&&... input);
 
   SaplingImportRequest(const SaplingImportRequest&) = delete;
@@ -162,9 +152,16 @@ class SaplingImportRequest {
       folly::Promise<BlobMetadataPtr>>;
 
   Request request_;
+  ObjectFetchContextPtr context_;
+  /**
+   * Priority of the request. The priority_ get initialized with context's
+   * priority. However, down the line we can update the priority of a request,
+   * and we don't update priority of the context. For example, before enququing
+   * a new request, we check the queue and if this request is already in the
+   * queue, we don't enqueue the request again, instead of that we update the
+   * priority of the existing request in the queue.
+   */
   ImportPriority priority_;
-  ObjectFetchContext::Cause cause_;
-  OptionalProcessId pid_;
   Response promise_;
   uint64_t unique_ = generateUniqueID();
   std::chrono::steady_clock::time_point requestTime_ =

@@ -29,12 +29,11 @@ std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   std::string proxyHashString = proxyHash.getValue();
-  return SaplingImportRequest::makeBlobImportRequest(
-      ObjectId{proxyHashString},
-      std::move(proxyHash),
-      priority,
-      ObjectFetchContext::Cause::Unknown,
-      std::nullopt);
+  auto requestContext = ObjectFetchContext::getNullContext();
+  auto request = SaplingImportRequest::makeBlobImportRequest(
+      ObjectId{proxyHashString}, std::move(proxyHash), requestContext);
+  request->setPriority(priority);
+  return request;
 }
 
 void enqueue(benchmark::State& state) {
