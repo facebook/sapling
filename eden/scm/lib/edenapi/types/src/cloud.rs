@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
@@ -37,4 +39,92 @@ pub struct CloudWorkspaceRequest {
     pub workspace: String,
     #[id(1)]
     pub reponame: String,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct UpdateReferencesParams {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    pub version: i64,
+    #[id(3)]
+    pub removed_heads: Vec<String>,
+    #[id(4)]
+    pub new_heads: Vec<String>,
+    #[id(5)]
+    pub updated_bookmarks: HashMap<String, String>,
+    #[id(6)]
+    pub removed_bookmarks: Vec<String>,
+    #[id(7)]
+    pub updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
+    #[id(8)]
+    pub removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
+    #[id(9)]
+    pub new_snapshots: Vec<String>,
+    #[id(10)]
+    pub removed_snapshots: Vec<String>,
+    #[id(11)]
+    pub client_info: Option<ClientInfo>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct GetReferencesParams {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    pub version: i64,
+    #[id(3)]
+    pub client_info: Option<ClientInfo>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct ReferencesData {
+    #[id(0)]
+    pub version: i64,
+    #[id(1)]
+    pub heads: Option<Vec<String>>,
+    #[id(2)]
+    pub bookmarks: Option<HashMap<String, String>>,
+    #[id(3)]
+    pub heads_dates: Option<HashMap<String, i64>>,
+    #[id(4)]
+    pub remote_bookmarks: Option<Vec<RemoteBookmark>>,
+    #[id(5)]
+    pub snapshots: Option<Vec<String>>,
+    #[id(6)]
+    pub timestamp: Option<i64>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RemoteBookmark {
+    #[id(0)]
+    pub remote: String,
+    #[id(1)]
+    pub name: String,
+    #[id(2)]
+    pub node: Option<String>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct ClientInfo {
+    #[id(0)]
+    pub hostname: String,
+    #[id(1)]
+    pub reporoot: String,
+    #[id(2)]
+    pub version: u64,
 }

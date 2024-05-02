@@ -36,14 +36,17 @@ use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
+use edenapi_types::GetReferencesParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
+use edenapi_types::ReferencesData;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
@@ -371,6 +374,22 @@ pub trait EdenApi: Send + Sync + 'static {
         reponame: String,
     ) -> Result<WorkspaceData, EdenApiError> {
         let _ = (workspace, reponame);
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn cloud_references(
+        &self,
+        data: GetReferencesParams,
+    ) -> Result<ReferencesData, EdenApiError> {
+        let _ = data;
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn cloud_update_references(
+        &self,
+        data: UpdateReferencesParams,
+    ) -> Result<ReferencesData, EdenApiError> {
+        let _ = data;
         Err(EdenApiError::NotSupported)
     }
 }

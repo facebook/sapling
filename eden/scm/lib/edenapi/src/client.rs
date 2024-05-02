@@ -60,6 +60,7 @@ use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileRequest;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
+use edenapi_types::GetReferencesParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
@@ -72,6 +73,7 @@ use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::PushVar;
+use edenapi_types::ReferencesData;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
 use edenapi_types::SetBookmarkResponse;
@@ -80,6 +82,7 @@ use edenapi_types::ToWire;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::TreeRequest;
+use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadBonsaiChangesetRequest;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadHgChangesetsRequest;
@@ -165,6 +168,8 @@ mod paths {
     pub const DOWNLOAD_FILE: &str = "download/file";
     pub const BLAME: &str = "blame";
     pub const CLOUD_WORKSPACE: &str = "cloud/workspace";
+    pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
+    pub const CLOUD_REFERENCES: &str = "cloud/references";
 }
 
 #[derive(Clone)]
@@ -1602,6 +1607,32 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         self.fetch_single::<WorkspaceData>(request).await
+    }
+
+    async fn cloud_references(
+        &self,
+        data: GetReferencesParams,
+    ) -> Result<ReferencesData, EdenApiError> {
+        let url = self.build_url(paths::CLOUD_REFERENCES)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<ReferencesData>(request).await
+    }
+
+    async fn cloud_update_references(
+        &self,
+        data: UpdateReferencesParams,
+    ) -> Result<ReferencesData, EdenApiError> {
+        let url = self.build_url(paths::CLOUD_UPDATE_REFERENCES)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<ReferencesData>(request).await
     }
 }
 
