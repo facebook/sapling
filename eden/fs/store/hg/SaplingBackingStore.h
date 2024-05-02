@@ -303,18 +303,20 @@ class SaplingBackingStore final : public BackingStore {
       const RelativePath& path,
       const Hash20& manifestId,
       const ObjectId& edenTreeId,
-      const ObjectFetchContextPtr& context);
+      ObjectFetchContextPtr context);
 
   folly::Future<TreePtr> retryGetTree(
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,
-      RelativePathPiece path);
+      RelativePathPiece path,
+      ObjectFetchContextPtr context);
 
   folly::Future<TreePtr> retryGetTreeImpl(
       Hash20 manifestNode,
       ObjectId edenTreeID,
       RelativePath path,
-      std::shared_ptr<LocalStore::WriteBatch> writeBatch);
+      std::shared_ptr<LocalStore::WriteBatch> writeBatch,
+      ObjectFetchContextPtr context);
 
   /**
    * Imports the tree identified by the given hash from the hg cache.
@@ -351,7 +353,9 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
 
   // Get blob step functions
-  folly::SemiFuture<BlobPtr> retryGetBlob(HgProxyHash hgInfo);
+  folly::SemiFuture<BlobPtr> retryGetBlob(
+      HgProxyHash hgInfo,
+      ObjectFetchContextPtr context);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same

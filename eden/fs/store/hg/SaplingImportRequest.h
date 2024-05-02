@@ -95,6 +95,10 @@ class SaplingImportRequest {
     return std::holds_alternative<T>(request_);
   }
 
+  ObjectFetchContextPtr getContext() {
+    return context_.copy();
+  }
+
   size_t getType() const noexcept {
     return request_.index();
   }

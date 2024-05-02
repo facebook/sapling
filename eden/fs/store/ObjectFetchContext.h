@@ -42,6 +42,21 @@ class ObjectFetchContext : public RefCounted {
   };
 
   /**
+   * The source of the data that was fetched
+   */
+  enum class FetchedSource : uint8_t {
+    /** The data was fetched from a local source */
+    Local,
+    /** The data was fetched from a remote source */
+    Remote,
+    /**
+     * The data will be fetched from local or remote source.
+     * We don't know the source yet.
+     */
+    Unknown,
+  };
+
+  /**
    * Which cache satisfied a lookup request.
    *
    * Suitable for use as an index into an array of size kOriginEnumMax.
@@ -94,6 +109,14 @@ class ObjectFetchContext : public RefCounted {
     return kDefaultImportPriority;
   }
 
+  void setFetchedSource(FetchedSource fetchedSource) {
+    fetchedSource_ = fetchedSource;
+  }
+
+  FetchedSource getFetchedSource() const {
+    return fetchedSource_;
+  }
+
   // RequestInfo keys used by ReCasBackingStore
   inline static const std::string kSessionIdField = "session-id";
   inline static const std::string kCacheSessionIdField = "cache-session-id";
@@ -136,6 +159,8 @@ class ObjectFetchContext : public RefCounted {
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
+
+  FetchedSource fetchedSource_{FetchedSource::Unknown};
 };
 
 // For fbcode/eden/scm/lib/backingstore/src/ffi.rs
