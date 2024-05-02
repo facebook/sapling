@@ -33,7 +33,15 @@ mononoke_queries! {
     // it could be modified by another transaction fail the transaction in such cases
     write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: Timestamp) {
         none,
-        "INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`)
+        mysql("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`) VALUES ({reponame}, {workspace}, {version}, {timestamp}) \
+        ON DUPLICATE KEY UPDATE timestamp = current_timestamp, version = \
+          IF(version + 1 = VALUES(version), \
+            VALUES(version), \
+            /* hack: the query below always generates runtime error \
+              this is a way to raise an exception (err 1242) */ \
+            (SELECT table_name FROM information_schema.tables LIMIT 2) \
+          )")
+        sqlite("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`)
         VALUES ({reponame}, {workspace}, {version}, {timestamp})
         ON CONFLICT(`reponame`, `workspace`)  DO UPDATE SET`timestamp` = CURRENT_TIMESTAMP,
         `version` = CASE
@@ -41,7 +49,7 @@ mononoke_queries! {
             ELSE
                 /* hack: the query below always generates runtime error this is a way to raise an exception (err 1242) */
                 (SELECT name FROM sqlite_master WHERE type='table' LIMIT 2)
-            END"
+            END")
     }
 }
 
