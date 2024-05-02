@@ -21,9 +21,11 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use futures::stream;
 use futures::try_join;
 use futures::Stream;
 use futures::StreamExt;
@@ -273,8 +275,8 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
 
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     let roots = target.get_roots();
-    // TODO - remove this
-    let nb_commits_to_import = target.get_nb_commits(&prefs.git_command_path, path).await?;
+    let all_commits = target.list_commits(&prefs.git_command_path, path).await?;
+    let nb_commits_to_import = all_commits.len();
     if 0 == nb_commits_to_import {
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
         return Ok(GitimportAccumulator::new());
@@ -283,27 +285,40 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
     let acc = RwLock::new(GitimportAccumulator::new());
     let backfill_derivation = prefs.backfill_derivation.clone();
 
-    // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
-    target
-        .list_commits(&prefs.git_command_path, path)
+    // How many commits to query from bonsai git mapping per SQL query.
+    const SQL_CONCURRENCY: usize = 10_000;
+    let mappings: Vec<(ObjectId, ChangesetId)> = stream::iter(&all_commits)
+        // Ignore any error. This is an optional optimization
+        .filter_map(|res| async { res.as_ref().ok() })
+        .chunks(SQL_CONCURRENCY)
+        .map(|v| v.into_iter().cloned().collect::<Vec<_>>())
+        .map(|oids| {
+            borrowed!(uploader);
+            async move { uploader.preload_uploaded_commits(ctx, &oids).await }
+        })
+        .buffered(prefs.concurrency)
+        .try_collect::<Vec<_>>()
         .await?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    acc.write().expect("lock poisoned").inner.extend(mappings);
+    let n_existing_commits = acc.read().expect("lock poisoned").len();
+    if n_existing_commits > 0 {
+        info!(
+            ctx.logger(),
+            "GitRepo:{} {} of {} commit(s) already exist",
+            repo_name,
+            n_existing_commits,
+            nb_commits_to_import,
+        );
+    }
+    // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
+    stream::iter(all_commits)
         .try_filter_map({
-            let acc = &acc;
-            let uploader = &uploader;
-            let repo_name = &repo_name;
+            borrowed!(acc);
             move |oid| async move {
-                if let Some(bcs_id) = uploader.check_commit_uploaded(ctx, &oid).await? {
-                    acc.write().expect("lock poisoned").insert(oid, bcs_id);
-                    let git_sha1 = oid_to_sha1(&oid)?;
-                    info!(
-                        ctx.logger(),
-                        "GitRepo:{} commit {} of {} - Oid:{} => Bid:{} (already exists)",
-                        repo_name,
-                        acc.read().expect("lock poisoned").len(),
-                        nb_commits_to_import,
-                        git_sha1.to_brief(),
-                        bcs_id.to_brief()
-                    );
+                if let Some(_bcs_id) = acc.read().expect("lock poisoned").get(&oid) {
                     Ok(None)
                 } else {
                     Ok(Some(oid))

@@ -53,7 +53,6 @@ use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::Command;
-use tokio_stream::wrappers::LinesStream;
 
 use crate::git_reader::GitRepoReader;
 use crate::gitlfs::GitImportLfs;
@@ -240,36 +239,13 @@ impl GitimportTarget {
         }
     }
 
-    /// Returns the number of commits to import
-    pub async fn get_nb_commits(
-        &self,
-        git_command_path: &Path,
-        repo_path: &Path,
-    ) -> Result<usize, Error> {
-        let mut rev_list = self
-            .build_rev_list(git_command_path, repo_path)
-            .arg("--count")
-            .spawn()?;
-
-        self.write_filter_list(&mut rev_list).await?;
-
-        // stdout is a single line that parses as number of commits
-        let stdout = BufReader::new(rev_list.stdout.take().context("stdout not set up")?);
-        let mut lines = stdout.lines();
-        if let Some(line) = lines.next_line().await? {
-            Ok(line.parse()?)
-        } else {
-            bail!("No lines returned by git rev-list");
-        }
-    }
-
-    /// Returns a stream of commit hashes to import, ordered so that all
+    /// Returns a Vec of commit hashes to import, ordered so that all
     /// of a commit's parents are listed first
     pub(crate) async fn list_commits(
         &self,
         git_command_path: &Path,
         repo_path: &Path,
-    ) -> Result<impl Stream<Item = Result<ObjectId, Error>>, Error> {
+    ) -> Result<Vec<Result<ObjectId, Error>>, Error> {
         let mut rev_list = self
             .build_rev_list(git_command_path, repo_path)
             .arg("--topo-order")
@@ -279,15 +255,17 @@ impl GitimportTarget {
         self.write_filter_list(&mut rev_list).await?;
 
         let stdout = BufReader::new(rev_list.stdout.take().context("stdout not set up")?);
-        let lines_stream = LinesStream::new(stdout.lines());
+        let mut lines = stdout.lines();
 
-        Ok(lines_stream.err_into().and_then(|line| async move {
-            // rev-list with --boundary option returns boundary commits prefixed with `-`
-            // here we remove that prefix to get uniformed list of commits
-            line.replace('-', "")
-                .parse()
-                .context("Reading from git rev-list")
-        }))
+        let mut vec = Vec::new();
+        while let Some(line) = lines.next_line().await? {
+            vec.push(
+                line.replace('-', "")
+                    .parse()
+                    .context("Reading from git rev-list"),
+            );
+        }
+        Ok(vec)
     }
 
     async fn write_filter_list(&self, rev_list: &mut Child) -> Result<(), Error> {
@@ -651,6 +629,15 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
 
     /// Returns a change representing a deletion
     fn deleted() -> Self::Change;
+
+    /// Preload a number of commits, allowing us to batch the
+    /// lookups in the bonsai_git_mapping table, largely reducing
+    /// the I/O load
+    async fn preload_uploaded_commits(
+        &self,
+        ctx: &CoreContext,
+        oids: &[gix_hash::ObjectId],
+    ) -> Result<Vec<(gix_hash::ObjectId, ChangesetId)>, Error>;
 
     /// Looks to see if we can elide importing a commit
     /// If you can give us the ChangesetId for a given git object,

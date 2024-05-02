@@ -22,7 +22,7 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:tokio",
-        "fbsource//third-party/rust:tokio-stream",
+        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobstore:blobstore",

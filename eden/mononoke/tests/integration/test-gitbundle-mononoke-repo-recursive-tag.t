@@ -101,8 +101,7 @@
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/origin/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:032cd4dc (already exists)
-  GitRepo:$TESTTMP/origin/repo-git commit 2 of 2 - Oid:e8615d6f => Bid:da93dc81 (already exists)
+  GitRepo:$TESTTMP/origin/repo-git 2 of 2 commit(s) already exist
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))

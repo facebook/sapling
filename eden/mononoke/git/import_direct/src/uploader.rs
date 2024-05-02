@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
@@ -103,6 +104,31 @@ where
         FileChange::Deletion
     }
 
+    async fn preload_uploaded_commits(
+        &self,
+        ctx: &CoreContext,
+        oids: &[gix_hash::ObjectId],
+    ) -> Result<Vec<(gix_hash::ObjectId, ChangesetId)>, Error> {
+        if self.reupload_commits.reupload_commit() {
+            return Ok(Vec::new());
+        }
+        let oids = BonsaisOrGitShas::GitSha1(
+            oids.iter()
+                .map(|oid| hash::GitSha1::from_bytes(oid.as_bytes()))
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+        let result = self.inner.bonsai_git_mapping().get(ctx, oids).await?;
+        result
+            .into_iter()
+            .map(|entry| {
+                entry
+                    .git_sha1
+                    .to_object_id()
+                    .map(|git_sha1| (git_sha1, entry.bcs_id))
+            })
+            .collect()
+    }
+
     async fn check_commit_uploaded(
         &self,
         ctx: &CoreContext,
@@ -111,7 +137,6 @@ where
         if self.reupload_commits.reupload_commit() {
             return Ok(None);
         }
-
         self.inner
             .bonsai_git_mapping()
             .get_bonsai_from_git_sha1(ctx, hash::GitSha1::from_bytes(oid.as_bytes())?)
