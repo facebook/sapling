@@ -54,7 +54,7 @@ import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './
 import {RelativeDate, relativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitCallbacks} from './selection';
-import {mergeConflicts} from './serverAPIState';
+import {inMergeConflicts, mergeConflicts} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
@@ -129,6 +129,8 @@ export const Commit = memo(
     const {isSelected, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
     const actionsPrevented = previewPreventsActions(previewType);
 
+    const inConflicts = useAtomValue(inMergeConflicts);
+
     const isNarrow = useAtomValue(isNarrowCommitTree);
 
     const title = useAtomValue(latestCommitMessageTitle(commit.hash));
@@ -199,7 +201,7 @@ export const Commit = memo(
           });
         }
       }
-      if (!isPublic && !actionsPrevented) {
+      if (!isPublic && !actionsPrevented && !inConflicts) {
         const suggestedRebases = readAtom(suggestedRebaseDestinations);
         items.push({
           label: 'Rebase onto',
@@ -340,10 +342,10 @@ export const Commit = memo(
       );
     }
 
-    if (!isPublic && !actionsPrevented && commit.isDot) {
+    if (!isPublic && !actionsPrevented && commit.isDot && !inConflicts) {
       commitActions.push(<UncommitButton key="uncommit" />);
     }
-    if (!isPublic && !actionsPrevented && commit.isDot && !isObsoleted) {
+    if (!isPublic && !actionsPrevented && commit.isDot && !isObsoleted && !inConflicts) {
       commitActions.push(<SplitButton key="split" commit={commit} />);
     }
 

@@ -203,6 +203,8 @@ registerCleanup(
   }),
 );
 
+export const inMergeConflicts = atom(get => get(mergeConflicts) != undefined);
+
 export const latestCommitsData = atom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
