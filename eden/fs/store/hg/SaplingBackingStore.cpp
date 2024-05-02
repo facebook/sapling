@@ -397,6 +397,7 @@ void SaplingBackingStore::processBlobImportRequests(
             ObjectFetchContext::FetchedSource::Local);
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+        stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -421,12 +422,13 @@ void SaplingBackingStore::processBlobImportRequests(
         }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+        stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
         continue;
       }
 
       // The blobs were either not found locally, or, when EdenAPI is enabled,
-      // not found on the server. Let's import the blob through the sapling
-      // importer.
+      // not found on the server. Let's retry to import the blob
+      stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
       auto fetchSemiFuture = retryGetBlob(
           request->getRequest<SaplingImportRequest::BlobImport>()->proxyHash,
           request->getContext().copy());
@@ -635,6 +637,7 @@ void SaplingBackingStore::processTreeImportRequests(
             ObjectFetchContext::FetchedSource::Local);
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+        stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -658,11 +661,13 @@ void SaplingBackingStore::processTreeImportRequests(
         }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+        stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
         continue;
       }
 
       // The trees were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the trees
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
       auto* treeImport =
           request->getRequest<SaplingImportRequest::TreeImport>();
       auto treeSemiFuture =
@@ -897,7 +902,7 @@ void SaplingBackingStore::processBlobMetaImportRequests(
             ObjectFetchContext::FetchedSource::Local);
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
-
+        stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataSuccess);
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -919,6 +924,7 @@ void SaplingBackingStore::processBlobMetaImportRequests(
         }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
+        stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataSuccess);
         continue;
       }
 
@@ -926,6 +932,7 @@ void SaplingBackingStore::processBlobMetaImportRequests(
       // compute the blob metadata. We can't trigger a blob fetch here without
       // the risk of running into a deadlock: if all import thread are in this
       // code path, there are no free importer to fetch blobs.
+      stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataFailure);
       promise->setValue(nullptr);
     }
   }
@@ -1132,6 +1139,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
   if (auto tree = getTreeLocal(id, proxyHash)) {
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
     return folly::makeSemiFuture(GetTreeResult{
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
@@ -1259,6 +1267,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
 
   auto blob = getBlobLocal(proxyHash);
   if (blob.hasValue()) {
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
     return folly::makeSemiFuture(GetBlobResult{
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
   }
@@ -1340,6 +1349,7 @@ SaplingBackingStore::getBlobMetadata(
 
   auto metadata = getLocalBlobMetadata(proxyHash);
   if (metadata.hasValue()) {
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataSuccess);
     return folly::makeSemiFuture(GetBlobMetaResult{
         std::move(metadata.value()),
         ObjectFetchContext::Origin::FromDiskCache});

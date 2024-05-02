@@ -314,14 +314,20 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Duration fetchTree{"store.sapling.fetch_tree_us"};
   Duration getRootTree{"store.sapling.get_root_tree_us"};
   Duration importManifestForRoot{"store.sapling.import_manifest_for_root_us"};
+  Counter fetchTreeSuccess{"store.sapling.fetch_tree_success"};
+  Counter fetchTreeFailure{"store.sapling.fetch_tree_failure"};
   Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
   Counter fetchTreeRetryFailure{"store.sapling.fetch_tree_retry_failure"};
   Duration getBlob{"store.sapling.get_blob_us"};
   Duration fetchBlob{"store.sapling.fetch_blob_us"};
+  Counter fetchBlobSuccess{"store.sapling.fetch_blob_success"};
+  Counter fetchBlobFailure{"store.sapling.fetch_blob_failure"};
   Counter fetchBlobRetrySuccess{"store.sapling.fetch_blob_retry_success"};
   Counter fetchBlobRetryFailure{"store.sapling.fetch_blob_retry_failure"};
   Duration getBlobMetadata{"store.sapling.get_blob_metadata_us"};
   Duration fetchBlobMetadata{"store.sapling.fetch_blob_metadata_us"};
+  Counter fetchBlobMetadataSuccess{"store.sapling.fetch_blob_metadata_success"};
+  Counter fetchBlobMetadataFailure{"store.sapling.fetch_blob_metadata_failure"};
   Counter loadProxyHash{"store.sapling.load_proxy_hash"};
 };
 
