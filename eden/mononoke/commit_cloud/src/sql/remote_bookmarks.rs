@@ -8,6 +8,7 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use edenapi_types::cloud::RemoteBookmark;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
 use serde::Serialize;
@@ -28,13 +29,6 @@ pub struct WorkspaceRemoteBookmark {
     pub remote: String,
 }
 
-// Remote Bookmark in the format expected by the client
-#[derive(Debug, Clone)]
-pub struct RefRemoteBookmark {
-    pub remote: String,
-    pub name: String,
-    pub node: Option<String>,
-}
 pub struct DeleteArgs {
     pub removed_bookmarks: Vec<String>,
 }
@@ -140,8 +134,8 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
 pub async fn update_remote_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     ctx: CommitCloudContext,
-    updated_remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
-    removed_remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
+    updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
+    removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
 ) -> anyhow::Result<()> {
     let removed_commits = removed_remote_bookmarks
         .unwrap()

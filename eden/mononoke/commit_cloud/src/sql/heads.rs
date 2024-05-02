@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::str::FromStr;
 
 use ::sql_ext::mononoke_queries;
@@ -124,7 +123,7 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
 pub async fn update_heads(
     sql_commit_cloud: &SqlCommitCloud,
     ctx: CommitCloudContext,
-    removed_heads: HashSet<String>,
+    removed_heads: Vec<String>,
     new_heads: Vec<String>,
 ) -> anyhow::Result<()> {
     let removed_commits = cs_ids_from_string(removed_heads)?;

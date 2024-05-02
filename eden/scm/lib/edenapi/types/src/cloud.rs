@@ -106,7 +106,7 @@ pub struct ReferencesData {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct RemoteBookmark {
     #[id(0)]

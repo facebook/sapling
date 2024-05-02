@@ -7,13 +7,14 @@
 
 use std::collections::HashMap;
 
+use edenapi_types::cloud::RemoteBookmark;
+use edenapi_types::ReferencesData;
 use mononoke_types::Timestamp;
 
 use crate::sql::heads::WorkspaceHead;
 use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::ops::Get;
 use crate::sql::ops::SqlCommitCloud;
-use crate::sql::remote_bookmarks::RefRemoteBookmark;
 use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::snapshots::WorkspaceSnapshot;
 use crate::CommitCloudContext;
@@ -25,18 +26,6 @@ pub struct RawReferencesData {
     pub local_bookmarks: Vec<WorkspaceLocalBookmark>,
     pub remote_bookmarks: Vec<WorkspaceRemoteBookmark>,
     pub snapshots: Vec<WorkspaceSnapshot>,
-}
-
-// Workspace information in the format the client expects it
-#[derive(Debug, Clone, Default)]
-pub struct ReferencesData {
-    pub version: i64,
-    pub heads: Option<Vec<String>>,
-    pub bookmarks: Option<HashMap<String, String>>,
-    pub heads_dates: Option<HashMap<String, i64>>,
-    pub remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
-    pub snapshots: Option<Vec<String>>,
-    pub timestamp: Option<i64>,
 }
 
 // Perform all get queries into the database
@@ -72,7 +61,7 @@ pub(crate) async fn cast_references_data(
     let mut heads: Vec<String> = Vec::new();
     let mut bookmarks: HashMap<String, String> = HashMap::new();
     let mut heads_dates: HashMap<String, i64> = HashMap::new();
-    let mut remote_bookmarks: Vec<RefRemoteBookmark> = Vec::new();
+    let mut remote_bookmarks: Vec<RemoteBookmark> = Vec::new();
     let mut snapshots: Vec<String> = Vec::new();
     let _timestamp: i64 = 0;
 
@@ -86,7 +75,7 @@ pub(crate) async fn cast_references_data(
     }
 
     for remote_bookmark in raw_references_data.remote_bookmarks {
-        remote_bookmarks.push(RefRemoteBookmark {
+        remote_bookmarks.push(RemoteBookmark {
             remote: remote_bookmark.remote.clone(),
             name: remote_bookmark.name.clone(),
             node: Some(remote_bookmark.commit.to_string()),

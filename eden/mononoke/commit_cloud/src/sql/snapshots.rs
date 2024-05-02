@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::str::FromStr;
 
 use ::sql_ext::mononoke_queries;
@@ -126,7 +125,7 @@ pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,
     ctx: CommitCloudContext,
     new_snapshots: Vec<String>,
-    removed_snapshots: HashSet<String>,
+    removed_snapshots: Vec<String>,
 ) -> anyhow::Result<()> {
     let removed_commits = cs_ids_from_string(removed_snapshots)?;
     let delete_args = DeleteArgs { removed_commits };

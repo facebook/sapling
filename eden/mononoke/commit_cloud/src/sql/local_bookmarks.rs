@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::str::FromStr;
 
 use ::sql_ext::mononoke_queries;
@@ -137,7 +136,7 @@ pub async fn update_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     ctx: CommitCloudContext,
     updated_bookmarks: HashMap<String, String>,
-    removed_bookmarks: HashSet<String>,
+    removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<()> {
     let removed_commits = cs_ids_from_string(removed_bookmarks)?;
     let delete_args = DeleteArgs {

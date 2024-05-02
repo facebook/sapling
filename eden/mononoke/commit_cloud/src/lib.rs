@@ -9,21 +9,18 @@
 pub mod references;
 pub mod sql;
 pub mod workspace;
-use std::collections::HashMap;
-use std::collections::HashSet;
-
+use edenapi_types::ReferencesData;
+use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
 
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
-use crate::references::ReferencesData;
 use crate::sql::heads::update_heads;
 use crate::sql::local_bookmarks::update_bookmarks;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::remote_bookmarks::update_remote_bookmarks;
-use crate::sql::remote_bookmarks::RefRemoteBookmark;
 use crate::sql::snapshots::update_snapshots;
 use crate::sql::versions::WorkspaceVersion;
 #[facet::facet]
@@ -42,19 +39,6 @@ pub struct ClientInfo {
 pub struct CommitCloudContext {
     pub reponame: String,
     pub workspace: String,
-}
-
-pub struct UpdateReferencesParams {
-    pub version: i64,
-    pub removed_heads: HashSet<String>,
-    pub new_heads: Vec<String>,
-    pub updated_bookmarks: HashMap<String, String>,
-    pub removed_bookmarks: HashSet<String>,
-    pub updated_remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
-    pub removed_remote_bookmarks: Option<Vec<RefRemoteBookmark>>,
-    pub new_snapshots: Vec<String>,
-    pub removed_snapshots: HashSet<String>,
-    pub client_info: Option<ClientInfo>,
 }
 
 impl CommitCloud {
