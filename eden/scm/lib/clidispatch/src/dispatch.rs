@@ -323,7 +323,7 @@ impl Dispatcher {
         // - args are unchanged arguments provided by the user, unless only global options are provided.
         //   args can have global flags before command name.
         //   for example, ["--traceback", "log", "-Gvr", "master"]
-        //                                      ^^^^^ first_arg_index, "log" is "command_name"
+        //                                ^^^^^ first_arg_index, "log" is "command_name"
         // - expanded: includes alias expansion result
         //   no global flags before command name.
         //   for example, with alias "log = log -f", ["log", "-Gvr", "master"]
