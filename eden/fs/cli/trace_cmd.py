@@ -87,7 +87,7 @@ Import Cause (--verbose):
             "--verbose",
             action="store_true",
             default=False,
-            help="Show import priority and cause",
+            help="Show import priority, cause, and fetched source",
         )
         parser.add_argument(
             "--retroactive",

@@ -29,7 +29,7 @@ DEFINE_string(mountRoot, "", "Root of the EdenFS mount");
 DEFINE_string(trace, "", "Trace mode");
 DEFINE_bool(writes, false, "Limit trace to write operations");
 DEFINE_bool(reads, false, "Limit trace to write operations");
-DEFINE_bool(verbose, false, "Show import priority and cause");
+DEFINE_bool(verbose, false, "Show import priority, cause and fetched source");
 DEFINE_bool(
     retroactive,
     false,
@@ -60,6 +60,12 @@ static const auto kFaxMachineEmoji =
     reinterpret_cast<const char*>(u8"\U0001F4E0");
 static const auto kCalendarEmoji =
     reinterpret_cast<const char*>(u8"\U0001F4C5");
+static const auto kLocalFetchedEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F4BB"); // 💻
+static const auto kRemoteFetchedEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F310"); // 🌐
+static const auto kUnknownFetchedEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F937"); // 🤷
 
 static const std::unordered_map<HgEventType, const char*> kHgEventTypes = {
     {HgEventType::QUEUE, " "},
@@ -99,6 +105,12 @@ static const std::unordered_map<HgImportCause, const char*> kImportCauses = {
     {HgImportCause::FS, kFolderEmoji},
     {HgImportCause::THRIFT, kFaxMachineEmoji},
     {HgImportCause::PREFETCH, kCalendarEmoji},
+};
+
+static const std::unordered_map<FetchedSource, const char*> kFetchedSource = {
+    {FetchedSource::LOCAL, kLocalFetchedEmoji},
+    {FetchedSource::REMOTE, kRemoteFetchedEmoji},
+    {FetchedSource::UNKNOWN, kUnknownFetchedEmoji},
 };
 
 /**
@@ -181,6 +193,7 @@ void print_hg_event(
   const HgResourceType resourceType = *evt.resourceType();
   const HgImportPriority importPriority = *evt.importPriority();
   const HgImportCause importCause = *evt.importCause();
+  const FetchedSource fetchedSource = *evt.fetchedSource();
   const uint64_t unique = *evt.unique();
 
   switch (eventType) {
@@ -241,6 +254,8 @@ void print_hg_event(
       folly::get_default(kImportPriorities, importPriority, "?");
   const char* importCauseStr =
       folly::get_default(kImportCauses, importCause, "?");
+  const char* fetchedSourceStr =
+      folly::get_default(kFetchedSource, fetchedSource, "?");
 
   std::string processInfo;
   if (auto requestInfo = evt.requestInfo()) {
@@ -260,11 +275,12 @@ void print_hg_event(
 
   if (FLAGS_verbose) {
     fmt::print(
-        "{} {} {} {} {}{}{}\n",
+        "{} {} {} {} {} {}{}{}\n",
         eventTypeStr,
         resourceTypeStr,
         importPriorityStr,
         importCauseStr,
+        fetchedSourceStr,
         *evt.path(),
         timeAnnotation,
         processInfo);

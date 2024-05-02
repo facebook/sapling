@@ -1591,6 +1591,18 @@ void convertHgImportTraceEventToHgEvent(
       break;
   }
 
+  switch (event.fetchedSource) {
+    case ObjectFetchContext::FetchedSource::Local:
+      te.fetchedSource_ref() = FetchedSource::LOCAL;
+      break;
+    case ObjectFetchContext::FetchedSource::Remote:
+      te.fetchedSource_ref() = FetchedSource::REMOTE;
+      break;
+    case ObjectFetchContext::FetchedSource::Unknown:
+      te.fetchedSource_ref() = FetchedSource::UNKNOWN;
+      break;
+  }
+
   te.unique_ref() = event.unique;
 
   te.manifestNodeId_ref() = event.manifestNodeId.toString();

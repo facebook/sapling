@@ -210,14 +210,16 @@ HgImportTraceEvent::HgImportTraceEvent(
     const HgProxyHash& proxyHash,
     ImportPriority::Class priority,
     ObjectFetchContext::Cause cause,
-    OptionalProcessId pid)
+    OptionalProcessId pid,
+    ObjectFetchContext::FetchedSource fetchedSource)
     : unique{unique},
       manifestNodeId{proxyHash.revHash()},
       eventType{eventType},
       resourceType{resourceType},
       importPriority{priority},
       importCause{cause},
-      pid{pid} {
+      pid{pid},
+      fetchedSource{fetchedSource} {
   auto hgPath = proxyHash.path().view();
   // TODO: If HgProxyHash (and correspondingly ObjectId) used an immutable,
   // refcounted string, we wouldn't need to allocate here.
@@ -371,7 +373,8 @@ void SaplingBackingStore::processBlobImportRequests(
         blobImport->proxyHash,
         request->getPriority().getClass(),
         request->getCause(),
-        request->getPid()));
+        request->getPid(),
+        ObjectFetchContext::FetchedSource::Unknown));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
@@ -620,7 +623,8 @@ void SaplingBackingStore::processTreeImportRequests(
         treeImport->proxyHash,
         request->getPriority().getClass(),
         request->getCause(),
-        request->getPid()));
+        request->getPid(),
+        ObjectFetchContext::FetchedSource::Unknown));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
@@ -880,7 +884,8 @@ void SaplingBackingStore::processBlobMetaImportRequests(
         blobMetaImport->proxyHash,
         request->getPriority().getClass(),
         request->getCause(),
-        request->getPid()));
+        request->getPid(),
+        ObjectFetchContext::FetchedSource::Unknown));
 
     XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
   }
@@ -1166,7 +1171,8 @@ SaplingBackingStore::getTreeEnqueue(
         proxyHash,
         context->getPriority().getClass(),
         context->getCause(),
-        context->getClientPid()));
+        context->getClientPid(),
+        ObjectFetchContext::FetchedSource::Unknown));
 
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
@@ -1180,7 +1186,8 @@ SaplingBackingStore::getTreeEnqueue(
               proxyHash,
               context->getPriority().getClass(),
               context->getCause(),
-              context->getClientPid()));
+              context->getClientPid(),
+              context->getFetchedSource()));
         });
   });
 
@@ -1292,7 +1299,8 @@ ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
         proxyHash,
         context->getPriority().getClass(),
         context->getCause(),
-        context->getClientPid()));
+        context->getClientPid(),
+        ObjectFetchContext::FetchedSource::Unknown));
 
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
@@ -1306,7 +1314,8 @@ ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
               proxyHash,
               context->getPriority().getClass(),
               context->getCause(),
-              context->getClientPid()));
+              context->getClientPid(),
+              context->getFetchedSource()));
         });
   });
 
@@ -1378,7 +1387,8 @@ SaplingBackingStore::getBlobMetadataImpl(
         proxyHash,
         context->getPriority().getClass(),
         context->getCause(),
-        context->getClientPid()));
+        context->getClientPid(),
+        ObjectFetchContext::FetchedSource::Unknown));
 
     return queue_.enqueueBlobMeta(std::move(request))
         .ensure([this,
@@ -1392,7 +1402,8 @@ SaplingBackingStore::getBlobMetadataImpl(
               proxyHash,
               context->getPriority().getClass(),
               context->getCause(),
-              context->getClientPid()));
+              context->getClientPid(),
+              context->getFetchedSource()));
         });
   });
 

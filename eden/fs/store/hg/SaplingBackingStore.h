@@ -63,9 +63,17 @@ struct HgImportTraceEvent : TraceEventBase {
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
-      OptionalProcessId pid) {
+      OptionalProcessId pid,
+      ObjectFetchContext::FetchedSource fetchedSource) {
     return HgImportTraceEvent{
-        unique, QUEUE, resourceType, proxyHash, priority, cause, pid};
+        unique,
+        QUEUE,
+        resourceType,
+        proxyHash,
+        priority,
+        cause,
+        pid,
+        fetchedSource};
   }
 
   static HgImportTraceEvent start(
@@ -74,9 +82,17 @@ struct HgImportTraceEvent : TraceEventBase {
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
-      OptionalProcessId pid) {
+      OptionalProcessId pid,
+      ObjectFetchContext::FetchedSource fetchedSource) {
     return HgImportTraceEvent{
-        unique, START, resourceType, proxyHash, priority, cause, pid};
+        unique,
+        START,
+        resourceType,
+        proxyHash,
+        priority,
+        cause,
+        pid,
+        fetchedSource};
   }
 
   static HgImportTraceEvent finish(
@@ -85,9 +101,17 @@ struct HgImportTraceEvent : TraceEventBase {
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
-      OptionalProcessId pid) {
+      OptionalProcessId pid,
+      ObjectFetchContext::FetchedSource fetchedSource) {
     return HgImportTraceEvent{
-        unique, FINISH, resourceType, proxyHash, priority, cause, pid};
+        unique,
+        FINISH,
+        resourceType,
+        proxyHash,
+        priority,
+        cause,
+        pid,
+        fetchedSource};
   }
 
   HgImportTraceEvent(
@@ -97,7 +121,8 @@ struct HgImportTraceEvent : TraceEventBase {
       const HgProxyHash& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
-      OptionalProcessId pid);
+      OptionalProcessId pid,
+      ObjectFetchContext::FetchedSource fetchedSource);
 
   // Simple accessor that hides the internal memory representation of paths.
   std::string getPath() const {
@@ -118,6 +143,7 @@ struct HgImportTraceEvent : TraceEventBase {
   ImportPriority::Class importPriority;
   ObjectFetchContext::Cause importCause;
   OptionalProcessId pid;
+  ObjectFetchContext::FetchedSource fetchedSource;
 };
 
 /**
