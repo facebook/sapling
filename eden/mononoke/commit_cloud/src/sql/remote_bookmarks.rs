@@ -137,24 +137,29 @@ pub async fn update_remote_bookmarks(
     updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
 ) -> anyhow::Result<()> {
-    let removed_commits = removed_remote_bookmarks
-        .unwrap()
-        .into_iter()
-        .map(|b| b.node.unwrap_or_default())
-        .collect::<Vec<_>>();
-    let delete_args = DeleteArgs {
-        removed_bookmarks: removed_commits,
-    };
+    if removed_remote_bookmarks
+        .clone()
+        .is_some_and(|x| !x.is_empty())
+    {
+        let removed_commits = removed_remote_bookmarks
+            .unwrap()
+            .into_iter()
+            .map(|b| b.node.unwrap_or_default())
+            .collect::<Vec<_>>();
+        let delete_args = DeleteArgs {
+            removed_bookmarks: removed_commits,
+        };
 
-    Delete::<WorkspaceRemoteBookmark>::delete(
-        sql_commit_cloud,
-        ctx.reponame.clone(),
-        ctx.workspace.clone(),
-        delete_args,
-    )
-    .await?;
+        Delete::<WorkspaceRemoteBookmark>::delete(
+            sql_commit_cloud,
+            ctx.reponame.clone(),
+            ctx.workspace.clone(),
+            delete_args,
+        )
+        .await?;
+    }
 
-    for book in updated_remote_bookmarks.unwrap() {
+    for book in updated_remote_bookmarks.unwrap_or_default() {
         //TODO: Resolve remote bookmarks if no node available (e.g. master)
         let commit = HgChangesetId::from_str(&book.node.unwrap_or_default())?;
         Insert::<WorkspaceRemoteBookmark>::insert(

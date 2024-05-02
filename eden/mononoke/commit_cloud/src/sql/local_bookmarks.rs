@@ -138,18 +138,20 @@ pub async fn update_bookmarks(
     updated_bookmarks: HashMap<String, String>,
     removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<()> {
-    let removed_commits = cs_ids_from_string(removed_bookmarks)?;
-    let delete_args = DeleteArgs {
-        removed_bookmarks: removed_commits,
-    };
+    if !removed_bookmarks.is_empty() {
+        let removed_commits = cs_ids_from_string(removed_bookmarks)?;
+        let delete_args = DeleteArgs {
+            removed_bookmarks: removed_commits,
+        };
 
-    Delete::<WorkspaceLocalBookmark>::delete(
-        sql_commit_cloud,
-        ctx.reponame.clone(),
-        ctx.workspace.clone(),
-        delete_args,
-    )
-    .await?;
+        Delete::<WorkspaceLocalBookmark>::delete(
+            sql_commit_cloud,
+            ctx.reponame.clone(),
+            ctx.workspace.clone(),
+            delete_args,
+        )
+        .await?;
+    }
 
     for (name, book) in updated_bookmarks {
         let commit = HgChangesetId::from_str(&book)?;
