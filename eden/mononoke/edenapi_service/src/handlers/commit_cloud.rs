@@ -8,6 +8,8 @@
 use async_trait::async_trait;
 use edenapi_types::cloud::WorkspaceData;
 use edenapi_types::CloudWorkspaceRequest;
+use edenapi_types::GetReferencesParams;
+use edenapi_types::ReferencesData;
 use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
@@ -19,6 +21,7 @@ use super::EdenApiMethod;
 use super::HandlerResult;
 use crate::errors::ErrorKind;
 pub struct CommitCloudWorkspace;
+pub struct CommitCloudReferences;
 
 #[async_trait]
 impl EdenApiHandler for CommitCloudWorkspace {
@@ -59,4 +62,30 @@ async fn get_workspace(
     Err(anyhow::anyhow!(ErrorKind::CloudWorkspaceNotFound(
         request.workspace
     )))
+}
+
+#[async_trait]
+impl EdenApiHandler for CommitCloudReferences {
+    type Request = GetReferencesParams;
+    type Response = ReferencesData;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CloudReferences;
+    const ENDPOINT: &'static str = "/cloud/references";
+
+    async fn handler(
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = get_references(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn get_references(
+    request: GetReferencesParams,
+    repo: HgRepoContext,
+) -> anyhow::Result<ReferencesData> {
+    Ok(repo.cloud_references(request).await?)
 }

@@ -116,6 +116,7 @@ pub enum EdenApiMethod {
     CommitMutations,
     CommitTranslateId,
     CloudWorkspace,
+    CloudReferences,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -151,6 +152,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitMutations => "commit_mutations",
             Self::CommitTranslateId => "commit_translate_id",
             Self::CloudWorkspace => "cloud_workspace",
+            Self::CloudReferences => "cloud_references",
         };
         write!(f, "{}", name)
     }
@@ -437,6 +439,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::CommitTranslateId>(route);
         Handlers::setup::<blame::BlameHandler>(route);
         Handlers::setup::<commit_cloud::CommitCloudWorkspace>(route);
+        Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
         route.get("/:repo/health_check").to(health_handler);
         route
             .get("/:repo/capabilities")
