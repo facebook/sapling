@@ -984,10 +984,20 @@ class Submodule:
             return repo.dirstate.p1()
 
         repopath = self.parentrepo.wvfs.join(self.path)
+        dotgit_path = os.path.join(repopath, ".git")
 
-        from . import dirstate
+        if DOTGIT_REQUIREMENT in self.parentrepo.requirements and os.path.exists(
+            dotgit_path
+        ):
+            # dotgit repo, .git/sl not yet initialized.
+            # read git HEAD directly.
+            git = bindings.gitcompat.RunGit(self.parentrepo.ui._rcfg, dotgit_path)
 
-        return dirstate.fastreadp1(repopath)
+            return git.resolve_head()
+        else:
+            from . import dirstate
+
+            return dirstate.fastreadp1(repopath)
 
 
 def callgit(repo, args, checkreturncode=True):
