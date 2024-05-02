@@ -1,6 +1,5 @@
 #debugruntest-compatible
 #require no-eden
-#require jq
 
   $ configure modernclient
   $ configure mutation-norecord
@@ -55,7 +54,7 @@
   [1]
 
 5) Get the paths:
-  $ hg resolve --tool internal:dumpjson --all | jq
+  $ hg resolve --tool internal:dumpjson --all | pp
   [
     {
       "command": "merge",
@@ -133,7 +132,7 @@
   ]
 
 6) Only requested paths get dumped
-  $ hg resolve --tool internal:dumpjson F2 | jq
+  $ hg resolve --tool internal:dumpjson F2 | pp
   [
     {
       "command": "merge",
@@ -250,7 +249,7 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "merge",
@@ -331,7 +330,7 @@ tldr: Since we couldn't premerge, the working copy is left alone.
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "merge",
@@ -406,7 +405,7 @@ Test case 1: Source deleted, dest changed
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -481,7 +480,7 @@ Test case 1b: Like #1 but with a merge, with local changes
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "merge",
@@ -556,7 +555,7 @@ Test case 2: Source changed, dest deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -630,7 +629,7 @@ Test case 3: Source changed, dest moved
   $ hg up -q 'desc(source)' # source
   $ cat file_newloc # Should follow:
   change
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": null,
@@ -671,7 +670,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -783,7 +782,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -897,7 +896,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   ($TESTTMP/foo/file: mode 0o52, uid 42, gid 42) (?)
   ($TESTTMP/foo: mode 0o52, uid 42, gid 42) (?)
   [255]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -973,7 +972,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   [1]
   $ cat file # The local version should be left in the working copy
   change
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -1047,7 +1046,7 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -1125,7 +1124,7 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
   [1]
   $ cat file
   change
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -1205,7 +1204,7 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
   Does not exist
   $ ls file
   file
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
@@ -1282,7 +1281,7 @@ mergestate (like shelve):
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "unshelve",
@@ -1358,7 +1357,7 @@ Source deleted, dest changed, file is deleted after conflict is entered
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rm file
-  $ hg resolve --tool=internal:dumpjson --all | jq
+  $ hg resolve --tool=internal:dumpjson --all | pp
   [
     {
       "command": "rebase",
