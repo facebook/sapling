@@ -59,3 +59,6 @@ mod refs;
 
 /// Work with git configs.
 mod config;
+
+/// Misc functions.
+pub mod utils;
