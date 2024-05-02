@@ -47,7 +47,7 @@ impl GitStore {
         let odb = git_repo.odb()?;
 
         let mut git = RunGitOptions::from_config(config);
-        git.git_dir = Some(git_repo.path().to_owned());
+        git.set_git_dir(git_repo.path().to_owned());
 
         // Git's negotiation algorithm works on commit reference level and can add significant
         // overhead if we simply want to fetch trees or blobs.

@@ -6,6 +6,7 @@
  */
 
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::ExitStatus;
@@ -14,6 +15,8 @@ use std::process::Output;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use spawn_ext::CommandExt;
+
+use crate::utils::follow_dotgit_path;
 
 /// Options used by `run_git`.
 #[derive(Default, Clone)]
@@ -28,7 +31,10 @@ pub struct RunGitOptions {
     pub quiet: bool,
 
     /// The `GIT_DIR`.
-    pub git_dir: Option<PathBuf>,
+    pub(crate) git_dir: Option<PathBuf>,
+
+    /// cwd used when running commands.
+    root: Option<PathBuf>,
 
     /// Extra Git configs, "foo.bar=baz".
     pub extra_git_configs: Vec<String>,
@@ -50,6 +56,20 @@ impl RunGitOptions {
             quiet,
             ..Default::default()
         }
+    }
+
+    /// Update git_dir. Follow "gitdir: " link. Best-effort.
+    pub fn set_git_dir(&mut self, git_dir: PathBuf) {
+        self.root = git_dir.parent().map(|p| p.to_path_buf());
+        self.git_dir = Some(follow_dotgit_path(git_dir));
+    }
+
+    pub fn git_dir(&self) -> Option<&Path> {
+        self.git_dir.as_deref()
+    }
+
+    pub fn root(&self) -> Option<&Path> {
+        self.root.as_deref()
     }
 
     /// Prepare the `Command` for `git`.
@@ -98,7 +118,7 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
         if git_dir.file_name().unwrap_or_default() == ".git" {
             // Run `git` from the repo root. This avoids issues like `git status` being over smart
             // and uses relative paths.
-            if let Some(cwd) = git_dir.parent() {
+            if let Some(cwd) = opts.root.as_ref() {
                 cmd.current_dir(cwd);
             }
         }

@@ -44,10 +44,8 @@ impl DotGitFileSystem {
         store: Arc<dyn FileStore>,
         config: &dyn Config,
     ) -> Result<Self> {
-        let git = RunGitOptions {
-            git_dir: Some(vfs.root().join(".git")),
-            ..RunGitOptions::from_config(config)
-        };
+        let mut git = RunGitOptions::from_config(config);
+        git.set_git_dir(vfs.root().join(".git"));
         let treestate = create_treestate(&git, dot_dir, vfs.case_sensitive())?;
         let treestate = Arc::new(Mutex::new(treestate));
         Ok(DotGitFileSystem {
