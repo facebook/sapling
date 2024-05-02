@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.49
+
+### May 2 2024
+
+- Updates to merge conflict handling
+  - Conflicts in deleted files can now be either deleted or marked as resolved
+  - Conflicts in deleted files are shown more clearly as being deleted, and why
+  - Show the commit being rebased on top of the destination, to make it easier to understand
+    - This feature will require a new version of Sapling to work
+  - Made labels more consistent, now use the terms "Source - being rebased" and "Dest - rebasing onto" consistently
+  - Support for external merge tools, if configured. See `sl help config.merge-tools` for more information.
+  - Automatically run merge drivers before continueing a rebase
+  - Make Continue / Abort conflict buttons more prominent
+- Quickly change your cwd via a dropdown button for the Repository Info & cwd dropdown. You can still open the menu for information.
+- Increase the drag target on the right side of commits so you can more easily drag and drop rebase
+- Purge added files when partially discaring, making discard more consistent
+- Handle commits with no titles, but also prevent them from being created by split
+- Merge driver output with `\r` is rendered better in command output
+
 ## 0.1.48
 
 ### Apr 19 2024
