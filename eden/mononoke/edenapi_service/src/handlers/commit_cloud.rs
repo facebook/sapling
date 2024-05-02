@@ -10,6 +10,7 @@ use edenapi_types::cloud::WorkspaceData;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
+use edenapi_types::UpdateReferencesParams;
 use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
@@ -22,6 +23,7 @@ use super::HandlerResult;
 use crate::errors::ErrorKind;
 pub struct CommitCloudWorkspace;
 pub struct CommitCloudReferences;
+pub struct CommitCloudUpdateReferences;
 
 #[async_trait]
 impl EdenApiHandler for CommitCloudWorkspace {
@@ -88,4 +90,30 @@ async fn get_references(
     repo: HgRepoContext,
 ) -> anyhow::Result<ReferencesData> {
     Ok(repo.cloud_references(request).await?)
+}
+
+#[async_trait]
+impl EdenApiHandler for CommitCloudUpdateReferences {
+    type Request = UpdateReferencesParams;
+    type Response = ReferencesData;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CloudUpdateReferences;
+    const ENDPOINT: &'static str = "/cloud/update_references";
+
+    async fn handler(
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = update_references(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn update_references(
+    request: UpdateReferencesParams,
+    repo: HgRepoContext,
+) -> anyhow::Result<ReferencesData> {
+    Ok(repo.cloud_update_references(request).await?)
 }
