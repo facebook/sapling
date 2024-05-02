@@ -1,4 +1,5 @@
-#chg-compatible
+#debugruntest-compatible
+#require no-eden
 #require jq
 
   $ configure modernclient
@@ -665,8 +666,9 @@ Test case 4: Source changed, dest moved (w/o copytracing)
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config extensions.copytrace=!
   rebasing ec87889f5f90 "source"
-  other [source (being rebased)] changed file which local [dest (rebasing onto)] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source (being rebased)] changed file which local [dest (rebasing onto)] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --tool=internal:dumpjson --all | jq
@@ -943,7 +945,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   ]
 Test case 9: Source is a binary file, dest is a file (base is still a file)
   $ reset
-  $ printf '\0\xE1' > file # 0xE1 is an unfinished 2-byte utf-8 sequence
+  >>> with open("file", "wb") as f: f.write(b"\0\xE1") and None # 0xE1 is an unfinished 2-byte utf-8 sequence
   $ hg commit -Aqm "source"
   $ hg up -q 'desc(base)'
   $ echo "change" > file
@@ -961,7 +963,6 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
-  
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing f974f4b40bb1 "source"
@@ -970,7 +971,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ cat -v file # The local version should be left in the working copy
+  $ cat file # The local version should be left in the working copy
   change
   $ hg resolve --tool=internal:dumpjson --all | jq
   [
@@ -1023,7 +1024,7 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   $ echo "change" > file
   $ hg commit -Aqm "source"
   $ hg up -q 'desc(base)'
-  $ printf '\0\xE1' > file # 0xE1 is an unfinished 2-byte utf-8 sequence
+  >>> with open("file", "wb") as f: f.write(b"\0\xE1") and None # 0xE1 is an unfinished 2-byte utf-8 sequence
   $ hg commit -Aqm "dest"
   $ hg up -q 'desc(dest)'
   $ logg
@@ -1038,7 +1039,6 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
-  
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
@@ -1123,7 +1123,7 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ cat -v file
+  $ cat file
   change
   $ hg resolve --tool=internal:dumpjson --all | jq
   [
