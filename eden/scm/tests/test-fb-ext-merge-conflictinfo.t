@@ -123,6 +123,10 @@
           "path": "F2"
         }
       ],
+      "hashes": {
+        "local": "13124abb51b9fbac518b2b8722df68e012ecfc58",
+        "other": "6dd692b7db4a573115a661237cb90b506bccc45d"
+      },
       "pathconflicts": []
     }
   ]
@@ -168,6 +172,10 @@
           "path": "F2"
         }
       ],
+      "hashes": {
+        "local": "13124abb51b9fbac518b2b8722df68e012ecfc58",
+        "other": "6dd692b7db4a573115a661237cb90b506bccc45d"
+      },
       "pathconflicts": []
     }
   ]
@@ -281,6 +289,10 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "9b65ba2922f0e466c10e5344d8691afa631e353b"
+      },
       "pathconflicts": []
     }
   ]
@@ -357,6 +369,10 @@ tldr: Since we couldn't premerge, the working copy is left alone.
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "25c2ef28f4c763dd5068d3aa96cafa1342fe5280"
+      },
       "pathconflicts": []
     }
   ]
@@ -428,6 +444,10 @@ Test case 1: Source deleted, dest changed
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "25c2ef28f4c763dd5068d3aa96cafa1342fe5280"
+      },
       "pathconflicts": []
     }
   ]
@@ -499,6 +519,10 @@ Test case 1b: Like #1 but with a merge, with local changes
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "25c2ef28f4c763dd5068d3aa96cafa1342fe5280"
+      },
       "pathconflicts": []
     }
   ]
@@ -570,6 +594,10 @@ Test case 2: Source changed, dest deleted
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "66a38a15024ce5297f27bab5b7f17870de6d0d96",
+        "other": "ec87889f5f908dd874cf31122628f081037e4bf5"
+      },
       "pathconflicts": []
     }
   ]
@@ -606,6 +634,10 @@ Test case 3: Source changed, dest moved
     {
       "command": null,
       "conflicts": [],
+      "hashes": {
+        "local": null,
+        "other": null
+      },
       "pathconflicts": []
     }
   ]
@@ -676,6 +708,10 @@ Test case 4: Source changed, dest moved (w/o copytracing)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "d168768b462ba7bdf7d27a2c2e317362498a0a65",
+        "other": "ec87889f5f908dd874cf31122628f081037e4bf5"
+      },
       "pathconflicts": []
     }
   ]
@@ -713,6 +749,7 @@ Test case 5: Source moved, dest changed
    {
     "command": null,
     "conflicts": [],
+    "hashes": {"local": null, "other": null},
     "pathconflicts": []
    }
   ]
@@ -783,6 +820,10 @@ Test case 6: Source moved, dest changed (w/o copytracing)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "e6e7483a895027a7b6f8146011cce3b46ef5d8d6"
+      },
       "pathconflicts": []
     }
   ]
@@ -893,6 +934,10 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "1803169f37a9243ff3ba460d0cc4b95347fa0d82",
+        "other": "ec87889f5f908dd874cf31122628f081037e4bf5"
+      },
       "pathconflicts": []
     }
   ]
@@ -966,6 +1011,10 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "f974f4b40bb140e46fe56a47978cfabe5fd82916"
+      },
       "pathconflicts": []
     }
   ]
@@ -1037,6 +1086,10 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "dba9f6032ce22b062d671e030ed4650cc74e3c85",
+        "other": "ec87889f5f908dd874cf31122628f081037e4bf5"
+      },
       "pathconflicts": []
     }
   ]
@@ -1111,6 +1164,10 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "06aece48b59fc832b921a114492f962a5b358b22"
+      },
       "pathconflicts": []
     }
   ]
@@ -1187,6 +1244,10 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "c4bbf66fc0d73a7b05e64344fa86a678e19c35a2",
+        "other": "ec87889f5f908dd874cf31122628f081037e4bf5"
+      },
       "pathconflicts": []
     }
   ]
@@ -1261,6 +1322,10 @@ mergestate (like shelve):
           "path": "b"
         }
       ],
+      "hashes": {
+        "local": "488e1b7e73412c8f887fb3ed9b9666d5958ee997",
+        "other": "b0582bede31d7681921cea37ec06afc204d6e8f2"
+      },
       "pathconflicts": []
     }
   ]
@@ -1332,6 +1397,10 @@ Source deleted, dest changed, file is deleted after conflict is entered
           "path": "file"
         }
       ],
+      "hashes": {
+        "local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868",
+        "other": "25c2ef28f4c763dd5068d3aa96cafa1342fe5280"
+      },
       "pathconflicts": []
     }
   ]

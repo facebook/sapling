@@ -120,6 +120,14 @@ def _findconflictcommand(repo) -> Union[None, Dict[str, str], str]:
     return None
 
 
+def _findconflicthashes(mergestate) -> Dict[str, str]:
+    ms = mergestate._rust_ms
+    return {
+        "local": ms.local().hex() if ms.local() else None,
+        "other": ms.other().hex() if ms.other() else None,
+    }
+
+
 # To become a block in commands.py/resolve().
 def _resolve(orig, ui, repo, *pats, **opts):
     # This block is duplicated from commands.py to maintain behavior.
@@ -167,6 +175,7 @@ def _resolve(orig, ui, repo, *pats, **opts):
             formatter.write("command_details", "%s\n", cmd)
         else:
             formatter.write("command", "%s\n", None)  # For BC
+        formatter.write("hashes", "%s\n", _findconflicthashes(mergestate))
         formatter.end()
         return 0
 
