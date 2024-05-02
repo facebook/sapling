@@ -43,10 +43,10 @@
   +this is file1
 
 # Import it into Mononoke
-  $ gitimport "$GIT_REPO" --concurrency 1 full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:9695b5ce => Bid:53be2f28 (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8))) (glob)
+  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 1 full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:9695b5ce => Bid:53be2f28
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8)))
 
 
 # Derive the git commit for this commit

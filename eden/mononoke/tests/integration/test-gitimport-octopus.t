@@ -48,17 +48,17 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:*repo-git commit 1 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 2 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 3 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 4 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
-  * Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7))) (glob)
-  * Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
+  $ with_stripped_logs gitimport "$GIT_REPO" full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git commit 1 of 5 - Oid:d53a2ef2 => Bid:3127796a
+  GitRepo:$TESTTMP/repo-git commit 2 of 5 - Oid:161a8cb7 => Bid:dc24905c
+  GitRepo:$TESTTMP/repo-git commit 3 of 5 - Oid:bf946c82 => Bid:7db05def
+  GitRepo:$TESTTMP/repo-git commit 4 of 5 - Oid:933c6d85 => Bid:3f6085be
+  GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:6283891f => Bid:375ef2c6
+  Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(7db05defca4d86fbafe97460d971c74fcb571da08f921252990831d86816ab5f)))
+  Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(3f6085be18c9325ed283c4b4f766737470a243e00f7236db58e48ab918410d45)))
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7)))
+  Ref: "refs/heads/root": Some(ChangesetId(Blake2(3127796ac597cbfe000475927080d809512a797d800cb0af0153d37533544ef3)))
 
 # Validate if creating the commits also uploaded the raw commit blobs AND the raw tree blobs
 # The id of the blobs should be the same as the commit and tree object ids

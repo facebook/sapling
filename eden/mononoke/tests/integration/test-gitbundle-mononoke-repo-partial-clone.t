@@ -35,24 +35,24 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
-  * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Hg: Sha1(e8615d6f149b876be0a2f30a1c5bf0c42bf8e136): HgManifestId(HgNodeHash(Sha1(d92f8d2d10e61e62f65acf25cdd638ea214f267f))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
-  * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
-  * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
-  * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
-  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
-  * Initializing repo: repo (glob)
-  * Initialized repo: repo (glob)
-  * All repos initialized. It took: * seconds (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
-  * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
-  * Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created) (glob)
+  $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
+  GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
+  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: 0 seconds
+  Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
+  Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
+  Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
+  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # Regenerate the Git repo out of the Mononoke repo
   $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
@@ -88,32 +88,32 @@
 
 # Import the new commits into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 4 - Oid:8ce3eae4 => Bid:032cd4dc (already exists) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 2 of 4 - Oid:e8615d6f => Bid:da93dc81 (already exists) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 3 of 4 - Oid:bfc616ee => Bid:e70bae43 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 4 of 4 - Oid:2fffba32 => Bid:9a3b8a37 (glob)
-  * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Hg: Sha1(e8615d6f149b876be0a2f30a1c5bf0c42bf8e136): HgManifestId(HgNodeHash(Sha1(d92f8d2d10e61e62f65acf25cdd638ea214f267f))) (glob)
-  * Hg: Sha1(bfc616ee3980b461c7d38caa901fa591aa776631): HgManifestId(HgNodeHash(Sha1(8d973572ed46d7564f2e6d8e92772349ba328410))) (glob)
-  * Hg: Sha1(2fffba32d46eadef1e064bce2f109f248da94cd1): HgManifestId(HgNodeHash(Sha1(598aee31ec54105c746ec33fdd19fc5980d04014))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764))) (glob)
-  * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764))) (glob)
-  * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764))) (glob)
-  * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
-  * Ref: "refs/tags/file3_tag": Some(ChangesetId(Blake2(e70bae430caf70f469dd5517d77f396290a0cad67af436397849f01075413ed2))) (glob)
-  * Ref: "refs/tags/file4_tag": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764))) (glob)
-  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
-  * Initializing repo: repo (glob)
-  * Initialized repo: repo (glob)
-  * All repos initialized. It took: * seconds (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (already up-to-date) (glob)
-  * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
-  * Bookmark: "tags/file3_tag": ChangesetId(Blake2(e70bae430caf70f469dd5517d77f396290a0cad67af436397849f01075413ed2)) (created) (glob)
-  * Bookmark: "tags/file4_tag": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (created) (glob)
-  * Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date) (glob)
+  $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git commit 1 of 4 - Oid:8ce3eae4 => Bid:032cd4dc (already exists)
+  GitRepo:$TESTTMP/repo-git commit 2 of 4 - Oid:e8615d6f => Bid:da93dc81 (already exists)
+  GitRepo:$TESTTMP/repo-git commit 3 of 4 - Oid:bfc616ee => Bid:e70bae43
+  GitRepo:$TESTTMP/repo-git commit 4 of 4 - Oid:2fffba32 => Bid:9a3b8a37
+  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)))
+  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)))
+  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)))
+  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/tags/file3_tag": Some(ChangesetId(Blake2(e70bae430caf70f469dd5517d77f396290a0cad67af436397849f01075413ed2)))
+  Ref: "refs/tags/file4_tag": Some(ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)))
+  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: * seconds (glob)
+  Bookmark: "heads/master": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Bookmark: "heads/master": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (already up-to-date)
+  Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
+  Bookmark: "tags/file3_tag": ChangesetId(Blake2(e70bae430caf70f469dd5517d77f396290a0cad67af436397849f01075413ed2)) (created)
+  Bookmark: "tags/file4_tag": ChangesetId(Blake2(9a3b8a37081bad8b5abdefbe01391b4960afcb329164cc03e3b52161912fd764)) (created)
+  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
 
 # We already have the repo generated uptill da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c from the earlier clone from bundle
 # Let's generate a bundle of the partial state of the repo after the known head

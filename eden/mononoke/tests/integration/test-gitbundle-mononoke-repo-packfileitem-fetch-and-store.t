@@ -81,37 +81,37 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 7 - Oid:8ce3eae4 => Bid:032cd4dc (glob)
-  * GitRepo:$TESTTMP/repo-git commit 2 of 7 - Oid:a612a217 => Bid:148f9770 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 3 of 7 - Oid:ca4b2b21 => Bid:3e35338a (glob)
-  * GitRepo:$TESTTMP/repo-git commit 4 of 7 - Oid:7cb1854d => Bid:70d4bcfd (glob)
-  * GitRepo:$TESTTMP/repo-git commit 5 of 7 - Oid:ed15d7e7 => Bid:89b959e7 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 6 of 7 - Oid:3d0b9959 => Bid:a2cfb9ad (glob)
-  * GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516 (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/remotes/origin/dev_branch": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/remotes/origin/test_branch": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/tags/dev_version": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/tags/release_v1.0": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/tags/simple_tag": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/tags/tag_version": Some(ChangesetId(Blake2(*))) (glob)
-  * Initializing repo: repo (glob)
-  * Initialized repo: repo (glob)
-  * All repos initialized. It took: * seconds (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "heads/dev_branch": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
-  * Bookmark: "heads/test_branch": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "tags/dev_version": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "tags/release_v1.0": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "tags/simple_tag": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "tags/tag_version": ChangesetId(Blake2(*)) (created) (glob)
+  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git commit 1 of 7 - Oid:8ce3eae4 => Bid:032cd4dc
+  GitRepo:$TESTTMP/repo-git commit 2 of 7 - Oid:a612a217 => Bid:148f9770
+  GitRepo:$TESTTMP/repo-git commit 3 of 7 - Oid:ca4b2b21 => Bid:3e35338a
+  GitRepo:$TESTTMP/repo-git commit 4 of 7 - Oid:7cb1854d => Bid:70d4bcfd
+  GitRepo:$TESTTMP/repo-git commit 5 of 7 - Oid:ed15d7e7 => Bid:89b959e7
+  GitRepo:$TESTTMP/repo-git commit 6 of 7 - Oid:3d0b9959 => Bid:a2cfb9ad
+  GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/remotes/origin/dev_branch": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/remotes/origin/test_branch": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/tags/dev_version": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/tags/release_v1.0": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/tags/simple_tag": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/tags/tag_version": Some(ChangesetId(Blake2(*))) (glob)
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: * seconds (glob)
+  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/dev_branch": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
+  Bookmark: "heads/test_branch": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "tags/dev_version": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "tags/release_v1.0": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "tags/simple_tag": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "tags/tag_version": ChangesetId(Blake2(*)) (created) (glob)
 
 # Get the count of stored packfile items
   $ ls "$TESTTMP"/blobstore/blobs/*git_packfile_base_item* | wc -l

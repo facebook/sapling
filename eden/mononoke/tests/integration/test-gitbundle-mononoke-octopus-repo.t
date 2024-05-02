@@ -65,24 +65,24 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:*repo-git commit 1 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 2 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 3 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 4 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:*repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
-  * Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7))) (glob)
-  * Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
-  * Initializing repo: repo (glob)
-  * Initialized repo: repo (glob)
-  * All repos initialized. It took: * seconds (glob)
-  * Bookmark: "heads/branch1": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "heads/branch2": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
-  * Bookmark: "heads/root": ChangesetId(Blake2(*)) (created) (glob)
+  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:*repo-git commit 1 of 5 - Oid:* => Bid:* (glob)
+  GitRepo:*repo-git commit 2 of 5 - Oid:* => Bid:* (glob)
+  GitRepo:*repo-git commit 3 of 5 - Oid:* => Bid:* (glob)
+  GitRepo:*repo-git commit 4 of 5 - Oid:* => Bid:* (glob)
+  GitRepo:*repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
+  Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(375ef2c64bcda29f59e557d6da26baca67af93b6da5702fcaa2bb626aa1a45e7)))
+  Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: * seconds (glob)
+  Bookmark: "heads/branch1": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/branch2": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/root": ChangesetId(Blake2(*)) (created) (glob)
 
 
 # Regenerate the Git repo out of the Mononoke repo
