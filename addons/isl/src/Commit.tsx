@@ -39,6 +39,7 @@ import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
+import {CONFLICT_SIDE_LABELS} from './mergeConflicts/state';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
@@ -95,11 +96,12 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
 const commitLabelForCommit = atomFamilyWeak((hash: string) =>
   atom(get => {
     const conflicts = get(mergeConflicts);
+    const {localShort, incomingShort} = CONFLICT_SIDE_LABELS;
     const hashes = conflicts?.hashes;
     if (hash === hashes?.other) {
-      return t('Incoming');
+      return incomingShort;
     } else if (hash === hashes?.local) {
-      return t('Local');
+      return localShort;
     }
     return null;
   }),

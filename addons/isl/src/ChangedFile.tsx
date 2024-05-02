@@ -22,6 +22,7 @@ import {Checkbox} from './components/Checkbox';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
+import {CONFLICT_SIDE_LABELS} from './mergeConflicts/state';
 import {AddOperation} from './operations/AddOperation';
 import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
@@ -359,7 +360,11 @@ function FileActions({
         );
       } else {
         actions.push(
-          <Tooltip title={t('Take local version')} key="resolve-local">
+          <Tooltip
+            title={t('Take $local', {
+              replace: {$local: CONFLICT_SIDE_LABELS.local},
+            })}
+            key="resolve-local">
             <VSCodeButton
               className="file-show-on-hover"
               key={file.path}
@@ -368,7 +373,11 @@ function FileActions({
               <Icon icon="fold-up" />
             </VSCodeButton>
           </Tooltip>,
-          <Tooltip title={t('Take incoming version')} key="resolve-other">
+          <Tooltip
+            title={t('Take $incoming', {
+              replace: {$incoming: CONFLICT_SIDE_LABELS.incoming},
+            })}
+            key="resolve-other">
             <VSCodeButton
               className="file-show-on-hover"
               key={file.path}
@@ -377,7 +386,14 @@ function FileActions({
               <Icon icon="fold-down" />
             </VSCodeButton>
           </Tooltip>,
-          <Tooltip title={t('Combine both incoming and local')} key="resolve-both">
+          <Tooltip
+            title={t('Combine both $incoming and $local', {
+              replace: {
+                $local: CONFLICT_SIDE_LABELS.local,
+                $incoming: CONFLICT_SIDE_LABELS.incoming,
+              },
+            })}
+            key="resolve-both">
             <VSCodeButton
               className="file-show-on-hover"
               key={file.path}
@@ -405,9 +421,12 @@ function FileActions({
 function labelForConflictType(type?: ConflictType) {
   switch (type) {
     case ConflictType.DeletedInSource:
-      return t('(Deleted in incoming)');
+      return t('(Deleted in $incoming)', {
+        replace: {$incoming: CONFLICT_SIDE_LABELS.incoming},
+      });
+
     case ConflictType.DeletedInDest:
-      return t('(Deleted in destination)');
+      return t('(Deleted in $local)', {replace: {$local: CONFLICT_SIDE_LABELS.local}});
     default:
       return null;
   }

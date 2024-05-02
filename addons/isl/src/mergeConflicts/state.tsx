@@ -37,3 +37,14 @@ export function AutoResolveSettingCheckbox({subtle}: {subtle?: boolean}) {
     </Tooltip>
   );
 }
+
+export const CONFLICT_SIDE_LABELS = {
+  /* Label used for the local / destination side of a conflict */
+  local: t('dest - rebasing onto'),
+  /* Shortened label used for the local / destination side of a conflict, when there's not good space for the full label */
+  localShort: t('dest'),
+  /* Label used for the incoming / source side of a conflict */
+  incoming: t('source - being rebased'),
+  /* Shortened label used for the incoming / source side of a conflict, when there's not good space for the full label */
+  incomingShort: t('source'),
+};
