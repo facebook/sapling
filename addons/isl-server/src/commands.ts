@@ -41,6 +41,10 @@ export type ResolveCommandConflictOutput = [
         path: string;
       }>;
       pathconflicts: Array<never>;
+      hashes?: {
+        local?: string;
+        other?: string;
+      };
     },
 ];
 
@@ -280,6 +284,7 @@ export function computeNewConflicts(
     files: [],
     fetchStartTimestamp,
     fetchCompletedTimestamp: Date.now(),
+    hashes: newConflictData.hashes,
   };
 
   const previousFiles = previousConflicts?.files ?? [];

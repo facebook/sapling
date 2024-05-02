@@ -424,6 +424,7 @@ type ConflictInfo = {
   files: Array<ChangedFile & {conflictType: ConflictType}>;
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
+  hashes?: {local?: string; other?: string};
 };
 export type MergeConflicts =
   | ({state: 'loading'} & AllUndefined<ConflictInfo>)
