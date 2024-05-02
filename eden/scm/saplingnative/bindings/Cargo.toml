@@ -34,6 +34,7 @@ pyerror = { version = "0.1.0", path = "modules/pyerror" }
 pyexchange = { version = "0.1.0", path = "modules/pyexchange" }
 pyfail = { version = "0.1.0", path = "modules/pyfail" }
 pyfs = { version = "0.1.0", path = "modules/pyfs" }
+pygitcompat = { version = "0.1.0", path = "modules/pygitcompat" }
 pygitstore = { version = "0.1.0", path = "modules/pygitstore" }
 pyhgmetrics = { version = "0.1.0", path = "modules/pyhgmetrics" }
 pyhgtime = { version = "0.1.0", path = "modules/pyhgtime" }

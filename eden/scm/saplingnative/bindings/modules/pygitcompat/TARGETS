@@ -1,0 +1,18 @@
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pygitcompat",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/gitcompat:gitcompat",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/saplingnative/bindings/modules/pyprocess:pyprocess",
+    ],
+)

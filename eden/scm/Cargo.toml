@@ -216,6 +216,7 @@ members = [
   "saplingnative/bindings/modules/pyexchange",
   "saplingnative/bindings/modules/pyfail",
   "saplingnative/bindings/modules/pyfs",
+  "saplingnative/bindings/modules/pygitcompat",
   "saplingnative/bindings/modules/pygitstore",
   "saplingnative/bindings/modules/pyhgmetrics",
   "saplingnative/bindings/modules/pyhgtime",

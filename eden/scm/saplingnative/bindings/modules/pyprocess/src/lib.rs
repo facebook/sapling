@@ -137,7 +137,7 @@ py_class!(pub class Command |py| {
         Output::from_rust(py, output)
     }
 
-    /// Executes the command as a child process, waiting for it to finish and collecting all of its output.
+    /// Executes the command as a child process, waiting for it to finish and collecting its status.
     def status(&self) -> PyResult<ExitStatus> {
         let mut inner = self.inner(py).borrow_mut();
         let status = inner.status().map_pyerr(py)?;
