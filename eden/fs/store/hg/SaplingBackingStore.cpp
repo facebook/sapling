@@ -455,82 +455,71 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
     HgProxyHash hgInfo,
     ObjectFetchContextPtr context) {
   return folly::via(
-             retryThreadPool_.get(),
-             [this,
-              hgInfo = std::move(hgInfo),
-              &liveImportBlobWatches = liveImportBlobWatches_,
-              context = context.copy()] {
-               folly::stop_watch<std::chrono::milliseconds> watch;
-               RequestMetricsScope queueTracker{&liveImportBlobWatches};
+      retryThreadPool_.get(),
+      [this,
+       hgInfo = std::move(hgInfo),
+       &liveImportBlobWatches = liveImportBlobWatches_,
+       context = context.copy()] {
+        RequestMetricsScope queueTracker{&liveImportBlobWatches};
 
-               // NOTE: In the future we plan to update
-               // SaplingNativeBackingStore to provide and
-               // asynchronous interface enabling us to perform our retries
-               // there. In the meantime we use retryThreadPool_ for these
-               // longer-running retry requests to avoid starving
-               // serverThreadPool_.
+        // NOTE: In the future we plan to update
+        // SaplingNativeBackingStore to provide and
+        // asynchronous interface enabling us to perform our retries
+        // there. In the meantime we use retryThreadPool_ for these
+        // longer-running retry requests to avoid starving
+        // serverThreadPool_.
 
-               // Flush (and refresh) SaplingNativeBackingStore to ensure all
-               // data is written and to rescan pack files or local indexes
-               flush();
+        // Flush (and refresh) SaplingNativeBackingStore to ensure all
+        // data is written and to rescan pack files or local indexes
+        flush();
 
-               // Retry using datapackStore (SaplingNativeBackingStore).
-               auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
+        // Retry using datapackStore (SaplingNativeBackingStore).
+        auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
 
-               auto fetch_mode =
-                   config_->getEdenConfig()->allowRemoteGetBatch.getValue()
-                   ? sapling::FetchMode::AllowRemote
-                   : sapling::FetchMode::LocalOnly;
-               auto blob = getBlobFromBackingStore(hgInfo, fetch_mode);
-               if (!blob.hasValue() &&
-                   fetch_mode == sapling::FetchMode::LocalOnly) {
-                 // Retry using remote
-                 fetch_mode = sapling::FetchMode::RemoteOnly;
-                 blob = getBlobFromBackingStore(hgInfo, fetch_mode);
-               }
+        auto fetch_mode =
+            config_->getEdenConfig()->allowRemoteGetBatch.getValue()
+            ? sapling::FetchMode::AllowRemote
+            : sapling::FetchMode::LocalOnly;
+        auto blob = getBlobFromBackingStore(hgInfo, fetch_mode);
+        if (!blob.hasValue() && fetch_mode == sapling::FetchMode::LocalOnly) {
+          // Retry using remote
+          fetch_mode = sapling::FetchMode::RemoteOnly;
+          blob = getBlobFromBackingStore(hgInfo, fetch_mode);
+        }
 
-               if (blob.hasValue()) {
-                 switch (fetch_mode) {
-                   case sapling::FetchMode::LocalOnly:
-                     context->setFetchedSource(
-                         ObjectFetchContext::FetchedSource::Local);
-                     break;
-                   case sapling::FetchMode::RemoteOnly:
-                     context->setFetchedSource(
-                         ObjectFetchContext::FetchedSource::Remote);
-                     break;
-                   case sapling::FetchMode::AllowRemote:
-                   case sapling::FetchMode::AllowRemotePrefetch:
-                     context->setFetchedSource(
-                         ObjectFetchContext::FetchedSource::Unknown);
-                     break;
-                 }
-                 stats_->increment(
-                     &SaplingBackingStoreStats::fetchBlobRetrySuccess);
-                 result = blob.value();
-               } else {
-                 // Record miss and return error
-                 if (structuredLogger_) {
-                   structuredLogger_->logEvent(FetchMiss{
-                       store_.getRepoName(),
-                       FetchMiss::Blob,
-                       blob.exception().what().toStdString(),
-                       true});
-                 }
+        if (blob.hasValue()) {
+          switch (fetch_mode) {
+            case sapling::FetchMode::LocalOnly:
+              context->setFetchedSource(
+                  ObjectFetchContext::FetchedSource::Local);
+              break;
+            case sapling::FetchMode::RemoteOnly:
+              context->setFetchedSource(
+                  ObjectFetchContext::FetchedSource::Remote);
+              break;
+            case sapling::FetchMode::AllowRemote:
+            case sapling::FetchMode::AllowRemotePrefetch:
+              context->setFetchedSource(
+                  ObjectFetchContext::FetchedSource::Unknown);
+              break;
+          }
+          stats_->increment(&SaplingBackingStoreStats::fetchBlobRetrySuccess);
+          result = blob.value();
+        } else {
+          // Record miss and return error
+          if (structuredLogger_) {
+            structuredLogger_->logEvent(FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::Blob,
+                blob.exception().what().toStdString(),
+                true});
+          }
 
-                 stats_->increment(
-                     &SaplingBackingStoreStats::fetchBlobRetryFailure);
-                 auto ew = folly::exception_wrapper{blob.exception()};
-                 result = folly::makeFuture<BlobPtr>(std::move(ew));
-               }
-               stats_->addDuration(
-                   &SaplingBackingStoreStats::importBlobDuration,
-                   watch.elapsed());
-               return result;
-             })
-      .thenError([this](folly::exception_wrapper&& ew) {
-        stats_->increment(&SaplingBackingStoreStats::importBlobError);
-        return folly::makeSemiFuture<BlobPtr>(std::move(ew));
+          stats_->increment(&SaplingBackingStoreStats::fetchBlobRetryFailure);
+          auto ew = folly::exception_wrapper{blob.exception()};
+          result = folly::makeFuture<BlobPtr>(std::move(ew));
+        }
+        return result;
       });
 }
 
@@ -1660,59 +1649,49 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
     std::shared_ptr<LocalStore::WriteBatch> writeBatch,
     ObjectFetchContextPtr context) {
   return folly::via(
-             retryThreadPool_.get(),
-             [this,
-              path = std::move(path),
-              manifestNode,
-              edenTreeID = std::move(edenTreeID),
-              writeBatch,
-              &liveImportTreeWatches = liveImportTreeWatches_,
-              context = context.copy()] {
-               folly::stop_watch<std::chrono::milliseconds> watch;
-               RequestMetricsScope queueTracker{&liveImportTreeWatches};
+      retryThreadPool_.get(),
+      [this,
+       path = std::move(path),
+       manifestNode,
+       edenTreeID = std::move(edenTreeID),
+       writeBatch,
+       &liveImportTreeWatches = liveImportTreeWatches_,
+       context = context.copy()] {
+        RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
-               // NOTE: In the future we plan to update
-               // SaplingNativeBackingStore to provide and
-               // asynchronous interface enabling us to perform our retries
-               // there. In the meantime we use retryThreadPool_ for these
-               // longer-running retry requests to avoid starving
-               // serverThreadPool_.
+        // NOTE: In the future we plan to update
+        // SaplingNativeBackingStore to provide and
+        // asynchronous interface enabling us to perform our retries
+        // there. In the meantime we use retryThreadPool_ for these
+        // longer-running retry requests to avoid starving
+        // serverThreadPool_.
 
-               // Flush (and refresh) SaplingNativeBackingStore to ensure all
-               // data is written and to rescan pack files or local indexes
-               flush();
+        // Flush (and refresh) SaplingNativeBackingStore to ensure all
+        // data is written and to rescan pack files or local indexes
+        flush();
 
-               // Retry using datapackStore (SaplingNativeBackingStore)
-               auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
-               auto tree = getTreeFromBackingStore(
-                   path, manifestNode, edenTreeID, context.copy());
-               if (tree.hasValue()) {
-                 stats_->increment(
-                     &SaplingBackingStoreStats::fetchTreeRetrySuccess);
-                 result = tree.value();
-               } else {
-                 // Record miss and return error
-                 if (structuredLogger_) {
-                   structuredLogger_->logEvent(FetchMiss{
-                       store_.getRepoName(),
-                       FetchMiss::Tree,
-                       tree.exception().what().toStdString(),
-                       true});
-                 }
+        // Retry using datapackStore (SaplingNativeBackingStore)
+        auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
+        auto tree = getTreeFromBackingStore(
+            path, manifestNode, edenTreeID, context.copy());
+        if (tree.hasValue()) {
+          stats_->increment(&SaplingBackingStoreStats::fetchTreeRetrySuccess);
+          result = tree.value();
+        } else {
+          // Record miss and return error
+          if (structuredLogger_) {
+            structuredLogger_->logEvent(FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::Tree,
+                tree.exception().what().toStdString(),
+                true});
+          }
 
-                 stats_->increment(
-                     &SaplingBackingStoreStats::fetchTreeRetryFailure);
-                 auto ew = folly::exception_wrapper{tree.exception()};
-                 result = folly::makeFuture<TreePtr>(std::move(ew));
-               }
-               stats_->addDuration(
-                   &SaplingBackingStoreStats::importTreeDuration,
-                   watch.elapsed());
-               return result;
-             })
-      .thenError([this](folly::exception_wrapper&& ew) {
-        stats_->increment(&SaplingBackingStoreStats::importTreeError);
-        return folly::makeFuture<TreePtr>(std::move(ew));
+          stats_->increment(&SaplingBackingStoreStats::fetchTreeRetryFailure);
+          auto ew = folly::exception_wrapper{tree.exception()};
+          result = folly::makeFuture<TreePtr>(std::move(ew));
+        }
+        return result;
       });
 }
 
