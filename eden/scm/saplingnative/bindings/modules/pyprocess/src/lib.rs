@@ -11,6 +11,7 @@ use std::io;
 use std::process::Child as RustChild;
 use std::process::Command as RustCommand;
 use std::process::ExitStatus as RustExitStatus;
+use std::process::Output as RustOutput;
 use std::process::Stdio as RustStdio;
 
 use cpython::*;
@@ -19,7 +20,7 @@ use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use spawn_ext::CommandExt;
 
-py_class!(class Command |py| {
+py_class!(pub class Command |py| {
     data inner: RefCell<RustCommand>;
 
     /// Constructs a new Command for launching the program at path program, with
@@ -129,6 +130,33 @@ py_class!(class Command |py| {
         Child::from_rust(py, child)
     }
 
+    /// Executes the command as a child process, waiting for it to finish and collecting all of its output.
+    def output(&self) -> PyResult<Output> {
+        let mut inner = self.inner(py).borrow_mut();
+        let output = inner.output().map_pyerr(py)?;
+        Output::from_rust(py, output)
+    }
+
+    /// Executes the command as a child process, waiting for it to finish and collecting all of its output.
+    def status(&self) -> PyResult<ExitStatus> {
+        let mut inner = self.inner(py).borrow_mut();
+        let status = inner.status().map_pyerr(py)?;
+        ExitStatus::from_rust(py, status)
+    }
+
+    /// Similar to `output` but reports an error for non-zero exit code.
+    def checked_output(&self) -> PyResult<Output> {
+        let mut inner = self.inner(py).borrow_mut();
+        let output = inner.checked_output().map_pyerr(py)?;
+        Output::from_rust(py, output)
+    }
+
+    /// Similar to `status` but reports an error for non-zero exit code.
+    def checked_run(&self) -> PyResult<ExitStatus> {
+        let mut inner = self.inner(py).borrow_mut();
+        let status = inner.checked_run().map_pyerr(py)?;
+        ExitStatus::from_rust(py, status)
+    }
 });
 
 impl Command {
@@ -142,9 +170,13 @@ impl Command {
         func(&mut inner);
         Ok(self.clone_ref(py))
     }
+
+    pub fn from_rust(py: Python, child: RustCommand) -> PyResult<Self> {
+        Self::create_instance(py, RefCell::new(child))
+    }
 }
 
-py_class!(class Stdio |py| {
+py_class!(pub class Stdio |py| {
     data inner: Box<dyn Fn() -> io::Result<RustStdio> + Send + 'static> ;
 
     /// A new pipe should be arranged to connect the parent and child processes.
@@ -184,21 +216,26 @@ impl Stdio {
     }
 }
 
-py_class!(class Child |py| {
-    data inner: RefCell<RustChild>;
+py_class!(pub class Child |py| {
+    data inner: RefCell<Option<RustChild>>;
 
     /// Forces the child process to exit. If the child has already exited, an
     /// InvalidInput error is returned.
     def kill(&self) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
-        inner.kill().map_pyerr(py)?;
+        if let Some(inner) = inner.as_mut() {
+            inner.kill().map_pyerr(py)?;
+        }
         Ok(PyNone)
     }
 
     /// Returns the OS-assigned process identifier associated with this child.
     def id(&self) -> PyResult<u32> {
         let inner = self.inner(py).borrow();
-        Ok(inner.id())
+        match inner.as_ref() {
+            Some(inner) => Ok(inner.id()),
+            None => Ok(0),
+        }
     }
 
     /// Waits for the child to exit completely, returning the status that it
@@ -206,27 +243,51 @@ py_class!(class Child |py| {
     /// after it has been called at least once.
     def wait(&self) -> PyResult<ExitStatus> {
         let mut inner = self.inner(py).borrow_mut();
-        let status = inner.wait().map_pyerr(py)?;
-        ExitStatus::from_rust(py, status)
+        if let Some(inner) = inner.as_mut() {
+            let status = inner.wait().map_pyerr(py)?;
+            ExitStatus::from_rust(py, status)
+        } else {
+            Err(child_consumed(py))
+        }
+    }
+
+    /// Simultaneously waits for the child to exit and collect all remaining output on the
+    /// stdout/stderr handles, returning an Output instance.
+    def wait_with_output(&self) -> PyResult<Output> {
+        let inner = self.inner(py).borrow_mut().take();
+        if let Some(inner) = inner {
+            let output = inner.wait_with_output().map_pyerr(py)?;
+            Output::from_rust(py, output)
+        } else {
+            Err(child_consumed(py))
+        }
     }
 
     /// Attempts to collect the exit status of the child if it has already exited.
     def try_wait(&self) -> PyResult<Option<ExitStatus>> {
         let mut inner = self.inner(py).borrow_mut();
-        match inner.try_wait().map_pyerr(py)? {
-            Some(s) => Ok(Some(ExitStatus::from_rust(py, s)?)),
-            None => Ok(None)
+        if let Some(inner) = inner.as_mut() {
+            match inner.try_wait().map_pyerr(py)? {
+                Some(s) => Ok(Some(ExitStatus::from_rust(py, s)?)),
+                None => Ok(None)
+            }
+        } else {
+            Ok(None)
         }
     }
 });
 
+fn child_consumed(py: Python) -> PyErr {
+    PyErr::new::<exc::ValueError, _>(py, "child is consumed")
+}
+
 impl Child {
-    fn from_rust(py: Python, child: RustChild) -> PyResult<Self> {
-        Self::create_instance(py, RefCell::new(child))
+    pub fn from_rust(py: Python, child: RustChild) -> PyResult<Self> {
+        Self::create_instance(py, RefCell::new(Some(child)))
     }
 }
 
-py_class!(class ExitStatus |py| {
+py_class!(pub class ExitStatus |py| {
     data inner: RustExitStatus;
 
     /// Was termination successful? Signal termination is not considered a
@@ -243,8 +304,33 @@ py_class!(class ExitStatus |py| {
 });
 
 impl ExitStatus {
-    fn from_rust(py: Python, status: RustExitStatus) -> PyResult<Self> {
+    pub fn from_rust(py: Python, status: RustExitStatus) -> PyResult<Self> {
         Self::create_instance(py, status)
+    }
+}
+
+py_class!(pub class Output |py| {
+    data inner: RustOutput;
+
+    @property
+    def status(&self) -> PyResult<ExitStatus> {
+        ExitStatus::from_rust(py, self.inner(py).status)
+    }
+
+    @property
+    def stdout(&self) -> PyResult<PyBytes> {
+        Ok(PyBytes::new(py, &self.inner(py).stdout))
+    }
+
+    @property
+    def stderr(&self) -> PyResult<PyBytes> {
+        Ok(PyBytes::new(py, &self.inner(py).stderr))
+    }
+});
+
+impl Output {
+    pub fn from_rust(py: Python, output: RustOutput) -> PyResult<Self> {
+        Self::create_instance(py, output)
     }
 }
 
