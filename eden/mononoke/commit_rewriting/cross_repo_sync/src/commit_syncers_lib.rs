@@ -584,38 +584,21 @@ impl<R: Repo> CommitSyncRepos<R> {
         submodule_deps: SubmoduleDeps<R>,
         common_commit_sync_config: &CommonCommitSyncConfig,
     ) -> Result<Self, Error> {
-        let small_repo_id = if common_commit_sync_config.large_repo_id
-            == source_repo.repo_identity().id()
-            && common_commit_sync_config
-                .small_repos
-                .contains_key(&target_repo.repo_identity().id())
-        {
-            target_repo.repo_identity().id()
-        } else if common_commit_sync_config.large_repo_id == target_repo.repo_identity().id()
-            && common_commit_sync_config
-                .small_repos
-                .contains_key(&source_repo.repo_identity().id())
-        {
-            source_repo.repo_identity().id()
-        } else {
-            return Err(format_err!(
-                "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id()
-            ));
-        };
-
-        if source_repo.repo_identity().id() == small_repo_id {
-            Ok(CommitSyncRepos::SmallToLarge {
+        let sync_direction = commit_sync_direction_from_config(
+            &source_repo,
+            &target_repo,
+            common_commit_sync_config,
+        )?;
+        match sync_direction {
+            CommitSyncDirection::SmallToLarge => Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo,
                 small_repo: source_repo,
                 submodule_deps,
-            })
-        } else {
-            Ok(CommitSyncRepos::LargeToSmall {
+            }),
+            CommitSyncDirection::LargeToSmall => Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: source_repo,
                 small_repo: target_repo,
-            })
+            }),
         }
     }
 
@@ -670,6 +653,50 @@ impl<R: Repo> CommitSyncRepos<R> {
             CommitSyncRepos::LargeToSmall { .. } => CommitSyncDirection::LargeToSmall,
             CommitSyncRepos::SmallToLarge { .. } => CommitSyncDirection::SmallToLarge,
         }
+    }
+}
+
+/// Get the direction of the sync based on the common commit sync config.
+/// Forward sync -> SmallToLarge
+/// Backsync -> LargeToSmall
+pub fn commit_sync_direction_from_config<R: Repo>(
+    source_repo: &R,
+    target_repo: &R,
+    common_commit_sync_config: &CommonCommitSyncConfig,
+) -> Result<CommitSyncDirection> {
+    let is_small_repo = |repo: &R| {
+        common_commit_sync_config
+            .small_repos
+            .contains_key(&repo.repo_identity().id())
+    };
+
+    if common_commit_sync_config.large_repo_id == source_repo.repo_identity().id()
+        && is_small_repo(target_repo)
+    {
+        Ok(CommitSyncDirection::LargeToSmall)
+    } else if common_commit_sync_config.large_repo_id == target_repo.repo_identity().id()
+        && is_small_repo(source_repo)
+    {
+        Ok(CommitSyncDirection::SmallToLarge)
+    } else {
+        Err(format_err!(
+            "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id()
+        ))
+    }
+}
+
+pub fn get_small_and_large_repos<'a, R: Repo>(
+    source_repo: &'a R,
+    target_repo: &'a R,
+    common_commit_sync_config: &'a CommonCommitSyncConfig,
+) -> Result<(&'a R, &'a R)> {
+    let sync_direction =
+        commit_sync_direction_from_config(source_repo, target_repo, common_commit_sync_config)?;
+    match sync_direction {
+        CommitSyncDirection::SmallToLarge => Ok((source_repo, target_repo)),
+        CommitSyncDirection::LargeToSmall => Ok((target_repo, source_repo)),
     }
 }
 

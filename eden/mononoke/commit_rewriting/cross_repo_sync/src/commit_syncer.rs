@@ -719,7 +719,7 @@ where
                     .commit_graph()
                     .changeset_parents(ctx, ancestor)
                     .await?;
-                if parents.is_empty() {
+                let expected_version = if parents.is_empty() {
                     let version = self
                         .get_version_for_syncing_commit_with_no_parent(
                             ctx,
@@ -731,24 +731,19 @@ where
                             format_err!("failed to sync ancestor {} of {}", ancestor, source_cs_id)
                         })?;
 
-                    self.unsafe_sync_commit_impl(
-                        ctx,
-                        ancestor,
-                        ancestor_selection_hint.clone(),
-                        commit_sync_context,
-                        Some(version),
-                    )
-                    .await?;
+                    Some(version)
                 } else {
-                    self.unsafe_sync_commit_impl(
-                        ctx,
-                        ancestor,
-                        ancestor_selection_hint.clone(),
-                        commit_sync_context,
-                        None,
-                    )
-                    .await?;
-                }
+                    None
+                };
+
+                self.unsafe_sync_commit_impl(
+                    ctx,
+                    ancestor,
+                    ancestor_selection_hint.clone(),
+                    commit_sync_context,
+                    expected_version,
+                )
+                .await?;
                 Ok(())
             };
             let xrepo_disable_commit_sync_lease =
