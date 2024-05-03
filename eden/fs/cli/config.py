@@ -994,8 +994,10 @@ trouble cleaning up leftovers. You will need to manually remove {path}.
             )
 
             if used_by_other:
-                winhr = WinFileHandlerReleaser()
-                winhr.try_release(path)
+                # Use the hammer
+                winhr = WinFileHandlerReleaser(self)
+                winhr.stop_adb_server()
+                winhr.stop_buck2()
 
             raise errors[0][1]
 
