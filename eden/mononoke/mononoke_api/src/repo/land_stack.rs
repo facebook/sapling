@@ -156,9 +156,6 @@ impl RepoContext {
             .try_collect()
             .await?;
 
-        // We CANNOT do remote pushrebase here otherwise it would result in an infinite
-        // loop, as this code is used for remote pushrebase. Let's use local pushrebase.
-
         let outcome = if let Some(redirector) = self.push_redirector.as_ref() {
             // run hooks on small repo
             bookmarks_movement::run_hooks(
