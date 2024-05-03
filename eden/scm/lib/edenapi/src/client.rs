@@ -77,6 +77,8 @@ use edenapi_types::ReferencesData;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
 use edenapi_types::SetBookmarkResponse;
+use edenapi_types::SuffixQueryRequest;
+use edenapi_types::SuffixQueryResponse;
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
 use edenapi_types::TreeAttributes;
@@ -170,6 +172,7 @@ mod paths {
     pub const CLOUD_WORKSPACE: &str = "cloud/workspace";
     pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
+    pub const SUFFIXQUERY: &str = "suffix_query";
 }
 
 #[derive(Clone)]
@@ -806,6 +809,35 @@ impl Client {
         )?;
 
         self.fetch::<BlameResult>(requests)
+    }
+
+    async fn suffix_query_attempt(
+        &self,
+        commit: CommitId,
+        suffixes: Vec<String>,
+    ) -> Result<Response<SuffixQueryResponse>, EdenApiError> {
+        tracing::info!(
+            "Retrieving file paths matching {:?} in {}",
+            suffixes,
+            &self.repo_name(),
+        );
+
+        if suffixes.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::SUFFIXQUERY)?;
+        let req = SuffixQueryRequest {
+            commit,
+            basename_suffixes: suffixes,
+        };
+
+        let requests = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch::<SuffixQueryResponse>(vec![requests])
     }
 
     async fn commit_translate_id_attempt(
@@ -1633,6 +1665,18 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         self.fetch_single::<ReferencesData>(request).await
+    }
+
+    async fn suffix_query(
+        &self,
+        commit: CommitId,
+        suffixes: Vec<String>,
+    ) -> Result<Response<SuffixQueryResponse>, EdenApiError> {
+        self.with_retry(|this| {
+            this.suffix_query_attempt(commit.clone(), suffixes.clone())
+                .boxed()
+        })
+        .await
     }
 }
 

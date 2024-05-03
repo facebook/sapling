@@ -52,6 +52,7 @@ use edenapi_types::Key;
 use edenapi_types::LandStackResponse;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SnapshotRawData;
+use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UploadSnapshotResponse;
@@ -535,6 +536,21 @@ py_class!(pub class client |py| {
         -> PyResult<Serde<WorkspaceData>>
     {
         self.inner(py).as_ref().cloud_workspace_py(workspace,reponame, py)
+    }
+
+    def suffix_query(
+        &self,
+        commit: Serde<CommitId>,
+        suffixes: Serde<Vec<String>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<SuffixQueryResponse>>>> {
+        let api = self.inner(py).as_ref();
+        let suffix_query_response = py.allow_threads(|| block_unless_interrupted(api.suffix_query(
+            commit.0,
+            suffixes.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(suffix_query_response.map_ok(Serde).map_err(Into::into).into())
     }
 });
 

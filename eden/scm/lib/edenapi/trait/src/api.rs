@@ -44,6 +44,7 @@ use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
 use edenapi_types::ReferencesData;
 use edenapi_types::SetBookmarkResponse;
+use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UpdateReferencesParams;
@@ -390,6 +391,16 @@ pub trait EdenApi: Send + Sync + 'static {
         data: UpdateReferencesParams,
     ) -> Result<ReferencesData, EdenApiError> {
         let _ = data;
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Fetch files matching the given suffixes on the given commit
+    async fn suffix_query(
+        &self,
+        commit: CommitId,
+        suffixes: Vec<String>,
+    ) -> Result<Response<SuffixQueryResponse>, EdenApiError> {
+        let _ = (commit, suffixes);
         Err(EdenApiError::NotSupported)
     }
 }
