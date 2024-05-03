@@ -26,6 +26,9 @@ const styles = stylex.create({
   fullLength: {
     maxWidth: 'unset',
   },
+  bookmarkTag: {
+    maxWidth: '200px',
+  },
 });
 
 export type BookmarkKind = 'remote' | 'local' | 'stable';
@@ -74,7 +77,11 @@ export function Bookmark({
   const inner = (
     <Tag
       onContextMenu={contextMenu}
-      xstyle={[kind === 'stable' && styles.stable, fullLength === true && styles.fullLength]}
+      xstyle={[
+        kind === 'stable' && styles.stable,
+        fullLength === true && styles.fullLength,
+        styles.bookmarkTag,
+      ]}
       title={tooltip == null ? bookmark : undefined}>
       {bookmark}
     </Tag>
