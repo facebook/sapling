@@ -11,6 +11,7 @@ import {act, screen, waitFor, within} from '@testing-library/react';
 describe('merge conflicts integration test', () => {
   it('shows conflicts, supports resolving, and continuing the operation', async () => {
     const {cleanup, sl, drawdag, writeFileInRepo} = await initRepo();
+    const {ignoreRTL} = await import('../src/testQueries');
     await act(() =>
       drawdag(`
         C
@@ -36,8 +37,10 @@ commit('A', files={"file1.txt": "base\\n"})
     await waitFor(() =>
       within(screen.getByTestId('commit-tree-root')).getByText('Unresolved Merge Conflicts'),
     );
-    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('file1.txt'));
+    await waitFor(() =>
+      within(screen.getByTestId('commit-tree-root')).getByText(ignoreRTL('file1.txt')),
+    );
 
-    await cleanup();
+    await act(cleanup);
   });
 });

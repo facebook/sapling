@@ -10,3 +10,36 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+
+/* eslint-disable no-console */
+global.console = require('console');
+jest.mock('../src/logger', () => ({
+  logger: {
+    log: (...args: Array<unknown>) => console.log('[client]', ...args),
+    info: (...args: Array<unknown>) => console.info('[client]', ...args),
+    error: (...args: Array<unknown>) => console.error('[client]', ...args),
+    warn: (...args: Array<unknown>) => console.warn('[client]', ...args),
+  },
+}));
+
+jest.mock('@stylexjs/stylex');
+
+import {configure} from '@testing-library/react';
+
+const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
+configure({
+  // bump waitFor timeouts in CI where jobs may run slower
+  asyncUtilTimeout: IS_CI ? 30_000 : 20_000,
+  ...(process.env.HIDE_RTL_DOM_ERRORS
+    ? {
+        getElementError: (message: string | null) => {
+          const error = new Error(message ?? '');
+          error.name = 'TestingLibraryElementError';
+          error.stack = undefined;
+          return error;
+        },
+      }
+    : {}),
+});
+
+global.ResizeObserver = require('resize-observer-polyfill');

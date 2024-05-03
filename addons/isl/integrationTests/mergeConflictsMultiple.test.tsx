@@ -5,20 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {MergeConflictTestUtils} from '../src/testQueries';
 import {initRepo} from './setup';
-import {act, screen, waitFor, within} from '@testing-library/react';
-
-const {
-  expectInMergeConflicts,
-  expectNotInMergeConflicts,
-  waitForContinueButtonNotDisabled,
-  clickContinueConflicts,
-} = MergeConflictTestUtils;
+import {act, fireEvent, screen, waitFor, within} from '@testing-library/react';
 
 describe('multiple merge conflicts integration test', () => {
   it('shows conflicts, supports resolving, and continuing the operation', async () => {
-    const {cleanup, sl, drawdag, writeFileInRepo} = await initRepo();
+    const {cleanup, sl, drawdag, writeFileInRepo, refresh} = await initRepo();
+
+    const {MergeConflictTestUtils, ignoreRTL} = await import('../src/testQueries');
+    const {
+      expectInMergeConflicts,
+      expectNotInMergeConflicts,
+      waitForContinueButtonNotDisabled,
+      clickContinueConflicts,
+    } = MergeConflictTestUtils;
+
     await act(() =>
       drawdag(`
         C
@@ -43,25 +44,31 @@ commit('A', files={"file1.txt": "base\\n", "file2.txt": "base\\n"})
     });
 
     await waitFor(() => expectInMergeConflicts());
-    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('file1.txt'));
+    await waitFor(() =>
+      within(screen.getByTestId('commit-tree-root')).getByText(ignoreRTL('file1.txt')),
+    );
 
     await act(async () => {
       await sl(['resolve', '--tool', 'internal:union', 'file1.txt']);
     });
+    refresh();
 
     await waitForContinueButtonNotDisabled();
     clickContinueConflicts();
 
-    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('file2.txt'));
+    await waitFor(() =>
+      within(screen.getByTestId('commit-tree-root')).getByText(ignoreRTL('file2.txt')),
+    );
     await act(async () => {
       await sl(['resolve', '--tool', 'internal:union', 'file2.txt']);
     });
+    refresh();
 
     await waitForContinueButtonNotDisabled();
     clickContinueConflicts();
 
     await waitFor(() => expectNotInMergeConflicts());
 
-    await cleanup();
+    await act(cleanup);
   });
 });

@@ -23,16 +23,21 @@ const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   rootDir: '..',
-  globals: {
-    'ts-jest': {
-      // don't do type checking in tests
-      diagnostics: false,
-    },
-  },
   setupFilesAfterEnv: ['<rootDir>/integrationTests/setupTests.ts'],
+  testTimeout: 60_000,
 
+  modulePaths: ['<rootDir>/src'],
   moduleNameMapper: {
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
+      '<rootDir>/src/__mocks__/fileMock.js',
     '\\.css$': '<rootDir>/src/__mocks__/styleMock.ts',
   },
+  transform: {
+    '^.+\\.tsx?$': '<rootDir>/jest-transformer-import-meta.cjs',
+  },
+  transformIgnorePatterns: [
+    '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$',
+    '^.+\\.module\\.(css|sass|scss)$',
+  ],
 };
 export default config;

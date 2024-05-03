@@ -27,6 +27,6 @@ describe('commits integration test', () => {
     await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('C'));
     await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('D'));
 
-    await cleanup();
+    await act(cleanup);
   });
 });
