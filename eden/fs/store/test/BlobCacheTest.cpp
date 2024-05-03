@@ -54,14 +54,14 @@ TEST_F(BlobCacheTest, evicts_oldest_on_insertion) {
   auto cache = BlobCache::create(10, 0, edenConfig, makeRefPtr<EdenStats>());
   cache->insert(hash3, blob3);
   cache->insert(hash4, blob4); // blob4 is considered more recent than blob3
-  EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(7, cache->getTotalSizeBytes());
   cache->insert(hash5, blob5); // evicts blob3
-  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(9, cache->getTotalSizeBytes());
   EXPECT_EQ(nullptr, cache->get(hash3).object)
       << "Inserting blob5 should evict oldest (blob3)";
   EXPECT_EQ(blob4, cache->get(hash4).object) << "But blob4 still fits";
   cache->insert(hash3, blob3); // evicts blob5
-  EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(7, cache->getTotalSizeBytes());
   EXPECT_EQ(nullptr, cache->get(hash5).object)
       << "Inserting blob3 again evicts blob5 because blob4 was accessed";
   EXPECT_EQ(blob4, cache->get(hash4).object);
@@ -84,7 +84,7 @@ TEST_F(BlobCacheTest, preserves_minimum_number_of_entries) {
   cache->insert(hash5, blob5);
   cache->insert(hash6, blob6);
 
-  EXPECT_EQ(15, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(15, cache->getTotalSizeBytes());
   EXPECT_FALSE(cache->get(hash3).object);
   EXPECT_TRUE(cache->get(hash4).object);
   EXPECT_TRUE(cache->get(hash5).object);
@@ -149,13 +149,13 @@ TEST_F(BlobCacheTest, no_blob_caching) {
   cache->insert(hash4, blob4);
   cache->insert(hash5, blob5);
   // Cache should be empty since it is turned off
-  EXPECT_EQ(0, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(0, cache->getTotalSizeBytes());
 
   auto blob = std::make_shared<Blob>("newblob"_sp);
   auto weak = std::weak_ptr<const Blob>{blob};
   auto handle = cache->insert(hash6, blob, BlobCache::Interest::WantHandle);
   // Cache should be empty since it is turned off
-  EXPECT_EQ(0, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(0, cache->getTotalSizeBytes());
 
   auto handle0 = cache->insert(hash6, blob, BlobCache::Interest::WantHandle);
   // Inserting should still return the object

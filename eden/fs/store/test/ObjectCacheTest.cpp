@@ -239,15 +239,15 @@ TEST(ObjectCache, interest_handle_evicts_oldest_on_insertion) {
   cache->insertInterestHandle(
       object4->getHash(),
       object4); // object4 is considered more recent than object3
-  EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(7, cache->getTotalSizeBytes());
   cache->insertInterestHandle(object5->getHash(), object5); // evicts object3
-  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(9, cache->getTotalSizeBytes());
   EXPECT_EQ(nullptr, cache->getInterestHandle(hash3).object)
       << "Inserting object5 should evict oldest (object3)";
   EXPECT_EQ(object4, cache->getInterestHandle(hash4).object)
       << "But object4 still fits";
   cache->insertInterestHandle(object3->getHash(), object3); // evicts object5
-  EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(7, cache->getTotalSizeBytes());
   EXPECT_EQ(nullptr, cache->getInterestHandle(hash5).object)
       << "Inserting object3 again evicts object5 because object4 was accessed";
   EXPECT_EQ(object4, cache->getInterestHandle(hash4).object);
@@ -293,7 +293,7 @@ TEST(
   cache->insertInterestHandle(object4->getHash(), object4);
   cache->insertInterestHandle(object5->getHash(), object5);
 
-  EXPECT_EQ(12, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(12, cache->getTotalSizeBytes());
   EXPECT_TRUE(cache->getInterestHandle(hash3).object);
   EXPECT_TRUE(cache->getInterestHandle(hash4).object);
   EXPECT_TRUE(cache->getInterestHandle(hash5).object);
@@ -308,7 +308,7 @@ TEST(ObjectCache, interest_handle_preserves_minimum_number_of_entries) {
   cache->insertInterestHandle(object5->getHash(), object5);
   cache->insertInterestHandle(object6->getHash(), object6);
 
-  EXPECT_EQ(15, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(15, cache->getTotalSizeBytes());
   EXPECT_FALSE(cache->getInterestHandle(hash3).object);
   EXPECT_TRUE(cache->getInterestHandle(hash4).object);
   EXPECT_TRUE(cache->getInterestHandle(hash5).object);
@@ -457,11 +457,11 @@ TEST(ObjectCache, interest_handle_redundant_inserts_are_ignored) {
           create(10, 0, makeRefPtr<EdenStats>());
   auto object = std::make_shared<CacheObject>(ObjectId{}, 9);
   cache->insertInterestHandle(object->getHash(), object);
-  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(9, cache->getTotalSizeBytes());
   cache->insertInterestHandle(object->getHash(), object);
-  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(9, cache->getTotalSizeBytes());
   cache->insertInterestHandle(object->getHash(), object);
-  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
+  EXPECT_EQ(9, cache->getTotalSizeBytes());
 }
 
 TEST(

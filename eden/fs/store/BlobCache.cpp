@@ -72,9 +72,9 @@ BlobCache::~BlobCache() {
 void BlobCache::registerStats() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(
-      kBlobCacheMemory, [this] { return getStats().totalSizeInBytes; });
+      kBlobCacheMemory, [this] { return getTotalSizeBytes(); });
   counters->registerCallback(
-      kBlobCacheItems, [this] { return getStats().objectCount; });
+      kBlobCacheItems, [this] { return getObjectCount(); });
 }
 
 } // namespace facebook::eden

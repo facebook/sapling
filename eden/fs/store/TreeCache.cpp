@@ -45,9 +45,9 @@ TreeCache::~TreeCache() {
 void TreeCache::registerStats() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(
-      kTreeCacheMemory, [this] { return getStats().totalSizeInBytes; });
+      kTreeCacheMemory, [this] { return getTotalSizeBytes(); });
   counters->registerCallback(
-      kTreeCacheItems, [this] { return getStats().objectCount; });
+      kTreeCacheItems, [this] { return getObjectCount(); });
 }
 
 } // namespace facebook::eden

@@ -336,6 +336,26 @@ template <
     typename ObjectType,
     ObjectCacheFlavor Flavor,
     typename ObjectCacheStats>
+size_t ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getTotalSizeBytes()
+    const {
+  auto state = state_.lock();
+  return state->totalSize;
+}
+
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
+size_t ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getObjectCount()
+    const {
+  auto state = state_.lock();
+  return state->items.size();
+}
+
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
 typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::Stats
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getStats() const {
   auto state = state_.lock();

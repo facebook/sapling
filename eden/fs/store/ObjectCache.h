@@ -245,6 +245,18 @@ class ObjectCache : public std::enable_shared_from_this<
   void clear();
 
   /**
+   * Returns the memory footprint of the cache. This is meant to be used for
+   * dynamic counter registration
+   */
+  size_t getTotalSizeBytes() const;
+
+  /**
+   * Returns the number of objects in the cache. This is meant to be used for
+   * dynamic counter registration
+   */
+  size_t getObjectCount() const;
+
+  /**
    * Return information about the current size of the cache and the total number
    * of hits and misses.
    */
