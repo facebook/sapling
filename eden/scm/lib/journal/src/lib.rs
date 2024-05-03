@@ -141,7 +141,7 @@ impl Journal {
         let command = util::sys::shell_escape(raw_args);
         let timestamp = hgtime::HgTime::now()
             .context("unable to determine current time when writing to journal")?;
-        let user = util::sys::username();
+        let user = util::sys::username()?;
         let command = if let Some((left, _)) = command.split_once('\n') {
             format!("{} ...", left)
         } else {

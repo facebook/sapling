@@ -70,7 +70,6 @@ rust_library(
         "fbsource//third-party/rust:shell-escape",
         "fbsource//third-party/rust:shellexpand",
         "fbsource//third-party/rust:thiserror",
-        "fbsource//third-party/rust:whoami",
         "//eden/scm/lib/atomicfile:atomicfile",
         "//eden/scm/lib/lazystr:lazystr",
     ],
