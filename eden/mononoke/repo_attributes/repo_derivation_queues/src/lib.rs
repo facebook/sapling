@@ -51,7 +51,7 @@ pub trait DerivationQueue {
         &self,
         ctx: &CoreContext,
         limit: usize,
-    ) -> Result<Vec<DerivationDagItem>, InternalError>;
+    ) -> Result<DequeueResponse, InternalError>;
 
     async fn ack(&self, ctx: &CoreContext, item_id: DagItemId) -> Result<(), InternalError>;
 
@@ -97,4 +97,12 @@ impl std::fmt::Debug for EnqueueResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Wrapper for Zeus watch")
     }
+}
+
+pub enum DequeueResponse {
+    Empty {
+        ready_queue_watch:
+            Box<dyn futures::future::Future<Output = anyhow::Result<()>> + Unpin + Send + Sync>,
+    },
+    Items(Vec<DerivationDagItem>),
 }

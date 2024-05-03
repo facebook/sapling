@@ -15,8 +15,6 @@ use crate::DerivationDagItem;
 
 #[derive(Error, Debug)]
 pub enum InternalError {
-    #[error("Derivation queue is empty")]
-    EmptyQueue,
     #[error("Got item for non-existing repo: {0}")]
     RepoNotFound(RepositoryId),
     #[error("Provided config_name: {0} was not found in the available configs")]
