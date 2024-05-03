@@ -508,7 +508,7 @@ impl<R: Repo> PushRedirector<R> {
         log_id: BookmarkUpdateLogId,
     ) -> Result<(), Error> {
         let defer_to_backsyncer_for_backsync =
-            justknobs::eval("scm/mononoke/defer_to_backsyncer_for_backsync", None, None)
+            justknobs::eval("scm/mononoke:defer_to_backsyncer_for_backsync", None, None)
                 .unwrap_or(false);
         if defer_to_backsyncer_for_backsync {
             ensure_backsynced(
