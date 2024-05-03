@@ -30,7 +30,8 @@ use movers::Movers;
 pub async fn get_strip_git_submodules_by_version(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     version: &CommitSyncConfigVersion,
-    source_repo_id: RepositoryId, // Treat this as small_repo for now
+    // TODO(T179530927): stop treating this always as small repo and pass target repo id as well
+    source_repo_id: RepositoryId,
 ) -> Result<GitSubmodulesChangesAction, Error> {
     let commit_sync_config = live_commit_sync_config
         .get_commit_sync_config_by_version(source_repo_id, version)
@@ -42,6 +43,12 @@ pub async fn get_strip_git_submodules_by_version(
             .git_submodules_action
             .clone());
     };
+
+    // TODO(T179530927): get the correct submodule action from small repo
+    // when call is made during backsyncing.
+    // Currently, when this is called for backsyncing, we look for the large
+    // repo in the small repo configs, don't find it and return the default
+    // action of STRIP.
 
     Ok(GitSubmodulesChangesAction::default())
 }

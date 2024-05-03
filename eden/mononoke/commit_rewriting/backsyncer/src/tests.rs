@@ -715,6 +715,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
         small_repo: target_repo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
 
     let current_version = CommitSyncConfigVersion("current_version".to_string());
@@ -1335,6 +1336,7 @@ async fn init_repos(
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
         small_repo: target_repo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
 
     let empty: BTreeMap<_, Option<&str>> = BTreeMap::new();
@@ -1696,6 +1698,7 @@ async fn init_merged_repos(
         let repos = CommitSyncRepos::LargeToSmall {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
+            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
         };
 
         let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(

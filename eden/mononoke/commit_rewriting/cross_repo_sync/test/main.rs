@@ -1858,6 +1858,7 @@ async fn merge_test_setup(
         lts_syncer.repos = CommitSyncRepos::LargeToSmall {
             small_repo: small_repo.clone(),
             large_repo: large_repo.clone(),
+            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
         };
         lts_syncer.live_commit_sync_config = get_merge_sync_live_commit_sync_config(
             large_repo.repo_identity().id(),
@@ -2082,6 +2083,7 @@ async fn test_no_accidental_preserved_roots(
             LargeToSmall {
                 small_repo,
                 large_repo,
+                submodule_deps: _submodule_deps,
             } => create_large_to_small_commit_syncer(
                 &ctx,
                 small_repo.clone(),
@@ -2177,6 +2179,7 @@ async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> 
     let commit_sync_repos = CommitSyncRepos::LargeToSmall {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping, live_commit_sync_config)
         .await
@@ -2253,6 +2256,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: first_smallrepo.clone(),
         large_repo: large_repo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     let large_to_first_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         &ctx,
@@ -2279,6 +2283,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: second_smallrepo.clone(),
         large_repo: large_repo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     let large_to_second_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         &ctx,

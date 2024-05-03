@@ -304,6 +304,7 @@ pub async fn init_small_large_repo(
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
+        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
 
     let large_to_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(

@@ -1539,6 +1539,7 @@ mod test {
         let repos = CommitSyncRepos::LargeToSmall {
             small_repo: target,
             large_repo: source,
+            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
         };
 
         let live_commit_sync_config = get_live_commit_sync_config();
@@ -1658,6 +1659,7 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
+                submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),

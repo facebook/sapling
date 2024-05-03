@@ -566,6 +566,10 @@ pub enum CommitSyncRepos<R> {
     LargeToSmall {
         large_repo: R,
         small_repo: R,
+        // TODO(T186874619): stop duplicating all these fields. Create new
+        // struct that takes small_repo, large_repo and submodule deps, along
+        // with sync direction.
+        submodule_deps: SubmoduleDeps<R>,
     },
     SmallToLarge {
         small_repo: R,
@@ -598,6 +602,7 @@ impl<R: Repo> CommitSyncRepos<R> {
             CommitSyncDirection::LargeToSmall => Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: source_repo,
                 small_repo: target_repo,
+                submodule_deps,
             }),
         }
     }
@@ -606,23 +611,30 @@ impl<R: Repo> CommitSyncRepos<R> {
     // Note: doesn't support large-to-small as input right now
     pub fn reverse(&self) -> Result<Self> {
         match self {
-            CommitSyncRepos::LargeToSmall { .. } => Err(anyhow!(
-                "reversing sync direction is only supported for small to large sync (because of submodule dependencies)"
-            )),
+            CommitSyncRepos::LargeToSmall {
+                large_repo,
+                small_repo,
+                submodule_deps,
+            } => Ok(CommitSyncRepos::SmallToLarge {
+                large_repo: large_repo.clone(),
+                small_repo: small_repo.clone(),
+                submodule_deps: submodule_deps.clone(),
+            }),
             CommitSyncRepos::SmallToLarge {
                 large_repo,
                 small_repo,
-                ..
+                submodule_deps,
             } => Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: large_repo.clone(),
                 small_repo: small_repo.clone(),
+                submodule_deps: submodule_deps.clone(),
             }),
         }
     }
 
     pub fn get_submodule_deps(&self) -> &SubmoduleDeps<R> {
         match self {
-            CommitSyncRepos::LargeToSmall { .. } => &SubmoduleDeps::NotNeeded,
+            CommitSyncRepos::LargeToSmall { submodule_deps, .. } => submodule_deps,
             CommitSyncRepos::SmallToLarge { submodule_deps, .. } => submodule_deps,
         }
     }
