@@ -1,4 +1,4 @@
-# Mononoke xxx 2024-01-30
+# Mononoke
 
 Mononoke is a the server built for the [Sapling Source Control
 System](https://sapling-scm.com/), meant to scale up to accepting thousands of
