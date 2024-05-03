@@ -50,6 +50,17 @@ impl UnionConfig {
     pub fn push(&mut self, config: Arc<dyn Config>) {
         self.configs.push(config)
     }
+
+    /// Return number of contained configs.
+    pub fn len(&self) -> usize {
+        self.configs.len()
+    }
+
+    /// Insert `config` at a specific index. The config will take precedence over configs
+    /// with lower indices.
+    pub fn insert(&mut self, idx: usize, config: Arc<dyn Config>) {
+        self.configs.insert(idx, config);
+    }
 }
 
 impl Config for UnionConfig {

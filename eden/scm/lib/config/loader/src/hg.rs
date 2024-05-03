@@ -352,22 +352,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         let mut layers = crate::builtin_static::builtin_system(opts.clone(), &ident, info);
 
-        // This is the out-of-orderness. We load the dynamic config on a
-        // detached ConfigSet then combine it into our "secondary" config
-        // sources to maintain the correct priority.
-        #[cfg(feature = "fb")]
-        {
-            let dynamic = load_dynamic(
-                info,
-                opts.clone(),
-                &ident,
-                self.get_opt("auth_proxy", "unix_socket_path")
-                    .unwrap_or_default(),
-                &mut errors,
-            )
-            .map_err(|e| Errors(vec![Error::Other(e)]))?;
-            layers.push(Arc::new(dynamic));
-        }
+        let dynamic_layer_idx = layers.len();
 
         let mut system = ConfigSet::new().named("system");
         errors.append(&mut system.load_system(opts.clone(), &ident));
@@ -392,11 +377,26 @@ impl ConfigSetHgExt for ConfigSet {
                 layers.push(Arc::new(repo_git));
             }
             let mut local = ConfigSet::new().named("repo");
-            errors.append(&mut local.load_repo(info, opts));
+            errors.append(&mut local.load_repo(info, opts.clone()));
             layers.push(Arc::new(local));
             if let Err(e) = read_set_repo_name(&layers, self, &info.dot_hg_path) {
                 errors.push(e);
             }
+        }
+
+        #[cfg(feature = "fb")]
+        {
+            let dynamic = load_dynamic(
+                info,
+                opts,
+                &ident,
+                layers
+                    .get_opt("auth_proxy", "unix_socket_path")
+                    .unwrap_or_default(),
+                &mut errors,
+            )
+            .map_err(|e| Errors(vec![Error::Other(e)]))?;
+            layers.insert(dynamic_layer_idx, Arc::new(dynamic));
         }
 
         self.secondary(Arc::new(layers));
