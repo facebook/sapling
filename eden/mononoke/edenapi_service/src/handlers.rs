@@ -73,6 +73,7 @@ mod land;
 mod lookup;
 mod pull;
 mod repos;
+mod suffix_query;
 mod trees;
 pub(crate) use handler::EdenApiHandler;
 pub(crate) use handler::HandlerResult;
@@ -86,6 +87,7 @@ const REPORTING_LOOP_WAIT: u64 = 5;
 /// Used to identify the handler for logging and stats collection.
 #[derive(Copy, Clone)]
 pub enum EdenApiMethod {
+    SuffixQuery,
     Blame,
     Capabilities,
     Files2,
@@ -123,6 +125,7 @@ pub enum EdenApiMethod {
 impl fmt::Display for EdenApiMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
+            Self::SuffixQuery => "suffix_query",
             Self::Blame => "blame",
             Self::Capabilities => "capabilities",
             Self::Files2 => "files2",
@@ -443,6 +446,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit_cloud::CommitCloudWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudUpdateReferences>(route);
+        Handlers::setup::<suffix_query::SuffixQueryHandler>(route);
         route.get("/:repo/health_check").to(health_handler);
         route
             .get("/:repo/capabilities")
