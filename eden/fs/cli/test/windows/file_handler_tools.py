@@ -25,13 +25,14 @@ class UtilTest(unittest.TestCase):
         )
         assert len(output) == 2
         assert output[0] == FileHandleEntry(
-            "VS Code @ FB.exe", "19044", "File", r"C:\open\fbsource2"
+            "VS Code @ FB.exe", "19044", "File", r"C:\open\fbsource2", 2
         )
         assert output[1] == FileHandleEntry(
             "Hubbub.exe",
             "24856",
             "File",
             r"C:\open\fbsource\ovrsource-legacy\unity\socialvr\_tools\hubbub",
+            0,
         )
 
     def test_parse_handlerexe_output_no_matching_handles_found(self) -> None:

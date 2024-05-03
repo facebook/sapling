@@ -968,18 +968,12 @@ Do you want to run `eden mount %s` instead?"""
 
             shutil.rmtree(windows_prefix + os.fsencode(path), onerror=collect_errors)
             if not path.exists():
+                # We were successful.
                 return
 
             print(f"Failed to remove {path}, the following files couldn't be removed:")
             for f in errors:
                 print(os.fsdecode(f[0].strip(windows_prefix)))
-
-            print(
-                f"""
-At this point your EdenFS mount is destroyed, but EdenFS is having
-trouble cleaning up leftovers. You will need to manually remove {path}.
-"""
-            )
 
             # For those that failed, we might be able to do something with error codes
             # 5 ERROR_ACCESS_DENIED - Access is denied (file is a running executable).
@@ -994,12 +988,40 @@ trouble cleaning up leftovers. You will need to manually remove {path}.
             )
 
             if used_by_other:
-                # Use the hammer
+                # Use the hammer - kill all processes
                 winhr = WinFileHandlerReleaser(self)
                 winhr.stop_adb_server()
                 winhr.stop_buck2()
+                if not winhr.try_release(
+                    path
+                ):  # This will return True if there's a chance it could kill the processes.
+                    raise Exception("Failed to clear all resources")
 
-            raise errors[0][1]
+                # Reset the errors because we're going to do a new pass after killing things
+                errors = []
+                # Try again
+                shutil.rmtree(
+                    windows_prefix + os.fsencode(path), onerror=collect_errors
+                )
+                if not path.exists():
+                    # Success this time.
+                    return
+                print(
+                    f"Failed to remove {path}, the following files couldn't be removed:"
+                )
+                for f in errors:
+                    print(
+                        f"{os.fsdecode(f[0].strip(windows_prefix))} win32 error: {f[1]}"
+                    )
+
+                print(
+                    f"""
+    At this point your EdenFS mount is destroyed, but EdenFS is having
+    trouble cleaning up leftovers. You will need to manually remove {path}.
+    """
+                )
+
+            raise Exception("Failed to delete mount.")
 
     def check_health(self, timeout: Optional[float] = None) -> HealthStatus:
         """
