@@ -1377,8 +1377,8 @@ Source deleted, dest changed, file is deleted after conflict is entered
           "local": {
             "contents": null,
             "exists": false,
-            "isexec": false,
-            "issymlink": false
+            "isexec": null,
+            "issymlink": null
           },
           "other": {
             "contents": null,
@@ -1389,8 +1389,8 @@ Source deleted, dest changed, file is deleted after conflict is entered
           "output": {
             "contents": null,
             "exists": false,
-            "isexec": false,
-            "issymlink": false,
+            "isexec": null,
+            "issymlink": null,
             "path": "$TESTTMP/foo/file"
           },
           "path": "file"

@@ -32,6 +32,7 @@ from typing import Any, Dict, Optional, Union
 
 from sapling import (
     commands,
+    context as contextmod,
     error,
     extensions,
     merge as mergemod,
@@ -240,23 +241,24 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
         else scmutil.origpath(repo.ui, repo, repo.wjoin(workingfilectx.path()))
     )
 
-    def flags(context, isworkingfilectx):
-        if isinstance(context, absentfilectx):
+    def flags(context):
+        if isinstance(context, absentfilectx) or (
+            isinstance(context, contextmod.workingfilectx) and not context.lexists()
+        ):
             return {
                 "contents": None,
                 "exists": False,
                 "isexec": None,
                 "issymlink": None,
             }
-        exists = not isworkingfilectx or context.lexists()
         return {
-            "contents": _decodeutf8ornone(context.data()) if exists else None,
-            "exists": exists,
+            "contents": _decodeutf8ornone(context.data()),
+            "exists": True,
             "isexec": context.isexec(),
             "issymlink": context.islink(),
         }
 
-    output = flags(workingfilectx, True)
+    output = flags(workingfilectx)
 
     filestat = util.filestat.frompath(origfile) if origfile is not None else None
     if origfile and filestat.stat:
@@ -296,8 +298,8 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
 
     output["path"] = repo.wjoin(workingfilectx.path())
 
-    base = flags(basectx, False)
-    other = flags(otherctx, False)
+    base = flags(basectx)
+    other = flags(otherctx)
 
     gen_contents_with_conflict_styles(repo, output, base, local, other)
 
