@@ -178,9 +178,11 @@ def debugapi(ui, repo=None, **opts) -> None:
 
     client = repo and repo.edenapi or edenapi.getclient(ui)
     func = getattr(client, endpoint)
-
-    response = func(*params)
-    response = _flattenresponse(response, sort=opts.get("sort"))
+    try:
+        response = func(*params)
+        response = _flattenresponse(response, sort=opts.get("sort"))
+    except error.HttpError as e:
+        raise error.Abort(e)
     formatted = bindings.pprint.pformat(response)
     ui.write(_("%s\n") % formatted)
 

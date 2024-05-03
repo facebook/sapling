@@ -1203,7 +1203,7 @@ impl ChangesetContext {
         })
     }
 
-    pub(crate) async fn find_files_with_bssm_v3(
+    pub async fn find_files_with_bssm_v3(
         &self,
         prefixes: Option<Vec<MPath>>,
         basenames_and_suffixes: EitherOrBoth<Vec1<String>, Vec1<String>>,

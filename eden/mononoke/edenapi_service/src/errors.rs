@@ -8,6 +8,7 @@
 use std::fmt::Display;
 
 use anyhow::Error;
+use edenapi_types::CommitId;
 use gotham_ext::error::HttpError;
 use mononoke_api::ChangesetId;
 use mononoke_api::MononokeError;
@@ -75,6 +76,8 @@ pub enum ErrorKind {
     UploadHgFilenodeRequestInvalidToken(HgId, String),
     #[error("Workspace not found in commit cloud: {0}")]
     CloudWorkspaceNotFound(String),
+    #[error("CommitId not found: {0}")]
+    CommitIdNotFound(CommitId),
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.

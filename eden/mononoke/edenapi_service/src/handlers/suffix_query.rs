@@ -7,17 +7,24 @@
 
 use std::num::NonZeroU64;
 
+use anyhow::anyhow;
+use anyhow::Context;
+use async_stream::try_stream;
 use async_trait::async_trait;
 use edenapi_types::SuffixQueryRequest;
 use edenapi_types::SuffixQueryResponse;
-use futures::stream;
 use futures::StreamExt;
+use gotham_ext::error::HttpError;
+use itertools::EitherOrBoth;
+use mononoke_api::ChangesetFileOrdering;
 use types::RepoPathBuf;
+use vec1::Vec1;
 
 use super::handler::EdenApiContext;
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
+use crate::errors::ErrorKind;
 
 pub struct SuffixQueryHandler;
 
@@ -35,18 +42,42 @@ impl EdenApiHandler for SuffixQueryHandler {
     }
 
     async fn handler(
-        _ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
-        _request: Self::Request,
+        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        // Stub function
-        let result = vec![
-            Ok(SuffixQueryResponse {
-                file_path: RepoPathBuf::new(),
-            }),
-            Ok(SuffixQueryResponse {
-                file_path: RepoPathBuf::new(),
-            }),
-        ];
-        Ok(stream::iter(result).boxed())
+        let repo = ectx.repo();
+        let suffixes = Vec1::try_from_vec(request.basename_suffixes)
+            .with_context(|| anyhow!("No suffixes provided"))
+            .map_err(HttpError::e400)?;
+        let commit = request.commit.clone();
+
+        // Changeset may return None if given an incorrect commit id.
+        let changeset = repo
+            .repo()
+            .changeset(commit.clone())
+            .await
+            .with_context(|| anyhow!("Error getting changeset {}", commit.clone()))?
+            .ok_or_else(|| ErrorKind::CommitIdNotFound(commit.clone()))
+            .map_err(HttpError::e400)?;
+
+        Ok(try_stream! {
+            // Find files may return None if BSSM tree does not exist(eg. testing locally)
+            // Will cause server to return 500 error.
+            let matched_files = changeset
+                .find_files_with_bssm_v3(
+                    None,
+                    EitherOrBoth::Right(suffixes),
+                    ChangesetFileOrdering::Unordered,
+                ).await?;
+
+            for await mpath in matched_files {
+                let mpath = mpath?;
+                let file_path = RepoPathBuf::from_string(mpath.to_string())?;
+                yield SuffixQueryResponse {
+                    file_path
+                }
+            }
+        }
+        .boxed())
     }
 }

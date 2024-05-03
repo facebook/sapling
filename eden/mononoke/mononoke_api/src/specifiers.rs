@@ -10,6 +10,7 @@ use std::fmt;
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
+use edenapi_types::CommitId;
 use edenapi_types::HgId;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -76,6 +77,17 @@ impl From<Svnrev> for ChangesetSpecifier {
 impl From<GitSha1> for ChangesetSpecifier {
     fn from(id: GitSha1) -> Self {
         Self::GitSha1(id)
+    }
+}
+
+impl From<CommitId> for ChangesetSpecifier {
+    fn from(id: CommitId) -> Self {
+        match id {
+            CommitId::Hg(id) => Self::Hg(HgChangesetId::from(id)),
+            CommitId::Bonsai(id) => Self::Bonsai(id.into()),
+            CommitId::Globalrev(id) => Self::Globalrev(Globalrev::new(id)),
+            CommitId::GitSha1(id) => Self::GitSha1(id.into()),
+        }
     }
 }
 

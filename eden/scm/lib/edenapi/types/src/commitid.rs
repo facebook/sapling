@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fmt::Debug;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
@@ -52,5 +55,16 @@ pub enum CommitId {
 impl Default for CommitId {
     fn default() -> CommitId {
         CommitId::Hg(HgId::null_id().clone())
+    }
+}
+
+impl fmt::Display for CommitId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CommitId::Hg(id) => std::fmt::Display::fmt(&id, f),
+            CommitId::Bonsai(id) => std::fmt::Display::fmt(&id, f),
+            CommitId::Globalrev(id) => std::fmt::Display::fmt(&id, f),
+            CommitId::GitSha1(id) => std::fmt::Display::fmt(&id, f),
+        }
     }
 }

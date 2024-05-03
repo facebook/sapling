@@ -31,6 +31,7 @@ gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 hooks = { version = "0.1.0", path = "../hooks" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
+itertools = "0.11.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
@@ -59,3 +60,4 @@ thiserror = "1.0.49"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../../scm/lib/types" }
+vec1 = { version = "1", features = ["serde"] }

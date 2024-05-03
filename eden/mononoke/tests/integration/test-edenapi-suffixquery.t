@@ -21,7 +21,29 @@
   > A # A/foo = one\n
   > EOS
 
-Test suffix query output:
-  $ hgedenapi debugapi -e suffix_query -i "{'Hg': 'e9ace545f925b6f62ae34087895fdc950d168e5f'}" -i "['.txt']"
-  [{"file_path": ""},
-   {"file_path": ""}]
+Test suffix query output errors if commit not on server:
+  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']"
+  abort: server responded 400 Bad Request for https://localhost:*/edenapi/repo/suffix_query: {"message":"CommitId not found: *","request_id":"*"}. Headers: { (glob)
+      "x-request-id": "*", (glob)
+      "content-type": "application/json",
+      "x-load": "1",
+      "server": "edenapi_server",
+      "x-mononoke-host": * (glob)
+      "date": * (glob)
+      "content-length": "*", (glob)
+  }
+  [255]
+API works:
+  $ touch tmp.txt
+  $ mkdir src
+  $ touch src/rust.rs
+  $ hg add tmp.txt
+  $ hg add src/rust.rs
+  $ hg commit -m "jkter"
+  $ hgedenapi push -q --to master --create
+  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']"
+  [{"file_path": "tmp.txt"}]
+  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.rs']"
+  [{"file_path": "src/rust.rs"}]
+  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.cpp']"
+  []

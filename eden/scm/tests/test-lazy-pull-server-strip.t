@@ -53,7 +53,7 @@ Use the new server graph for lookup:
 Explicitly lookup the removed commit via edenapi:
 
   $ hg debugapi -e commithashtolocation -i "['$D']" -i "['$D']"
-  error.HttpError: f585351a92f85104bff7c284233c338b10eb1df7 cannot be found
+  abort: f585351a92f85104bff7c284233c338b10eb1df7 cannot be found
   [255]
 
 Lookup commits that are removed:
