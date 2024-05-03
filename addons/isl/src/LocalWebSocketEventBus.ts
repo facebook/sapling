@@ -122,7 +122,7 @@ export class LocalWebSocketEventBus {
 
   private scheduleReconnect() {
     this.setStatus({type: 'reconnecting'});
-    logger.info(`websocket connecion closed. Retrying in ${this.exponentialReconnectDelay}ms`);
+    logger.info(`websocket connection closed. Retrying in ${this.exponentialReconnectDelay}ms`);
     setTimeout(() => {
       this.startConnection();
     }, this.exponentialReconnectDelay);
