@@ -119,7 +119,9 @@ pub async fn rewrite_commit<'a, R: Repo>(
             // Expand submodules -> no filters, but modify the file change
             // file types in the bonsai
             GitSubmodulesChangesAction::Expand => {
-                let submodule_expansion_data = mb_submodule_expansion_data.ok_or(anyhow!("Submodule expansion data not provided when submodules is enabled for small repo"))?;
+                let submodule_expansion_data = mb_submodule_expansion_data.ok_or(
+                    anyhow!("Submodule expansion data not provided when submodules is enabled for small repo")
+                )?;
 
                 let new_bonsai = expand_and_validate_all_git_submodule_file_changes(
                     ctx,

@@ -59,6 +59,7 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use sorted_vector_map::SortedVectorMap;
 use static_assertions::assert_impl_all;
 use thiserror::Error;
 
@@ -273,5 +274,24 @@ pub enum SubmoduleDeps<R> {
 impl<R> Default for SubmoduleDeps<R> {
     fn default() -> Self {
         Self::NotNeeded
+    }
+}
+
+impl<R: Repo> SubmoduleDeps<R> {
+    pub fn get_submodule_deps_names(&self) -> Option<SortedVectorMap<&NonRootMPath, &str>> {
+        match self {
+            Self::ForSync(map) => Some(
+                map.iter()
+                    .map(|(k, v)| (k, v.repo_identity().name()))
+                    .collect(),
+            ),
+            _ => None,
+        }
+    }
+}
+
+impl<R: Repo> Debug for SubmoduleDeps<R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.get_submodule_deps_names().fmt(f)
     }
 }

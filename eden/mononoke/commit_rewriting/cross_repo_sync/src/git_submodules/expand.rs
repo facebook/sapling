@@ -21,6 +21,7 @@ use commit_transformation::copy_file_contents;
 use commit_transformation::rewrite_commit;
 use commit_transformation::RewriteOpts;
 use context::CoreContext;
+use derivative::Derivative;
 use either::Either;
 use either::Either::*;
 use futures::stream;
@@ -71,12 +72,14 @@ impl std::fmt::Display for SubmodulePath {
 
 // TODO(T174902563): support expansion of git submodules
 /// Everything needed to expand submodule changes
-#[derive(Clone)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
 pub struct SubmoduleExpansionData<'a, R: Repo> {
     // Submodule dependencies of from the small repo, which have to be loaded
     // and available to (a) expand submodule file changes or (b) validate
     // that a bonsai in the large repo doesn't break the consistency of submodule
     // expansions.
+    #[derivative(Debug = "ignore")]
     pub submodule_deps: &'a HashMap<NonRootMPath, R>,
     pub x_repo_submodule_metadata_file_prefix: &'a str,
     // TODO(T179530927): remove this once backsync is supported
@@ -85,6 +88,7 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     pub large_repo_id: Large<RepositoryId>,
     /// Read-only version of the large repo, which performs any writes in memory.
     /// This is needed to validate submodule expansion in large repo bonsais.
+    #[derivative(Debug = "ignore")]
     pub large_repo: InMemoryRepo,
 }
 
