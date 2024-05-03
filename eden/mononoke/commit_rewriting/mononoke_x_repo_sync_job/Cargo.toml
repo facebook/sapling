@@ -12,9 +12,11 @@ anyhow = "1.0.75"
 backsyncer = { version = "0.1.0", path = "../backsyncer" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.4", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
@@ -39,6 +41,7 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+strum = { version = "0.24", features = ["derive"] }
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 

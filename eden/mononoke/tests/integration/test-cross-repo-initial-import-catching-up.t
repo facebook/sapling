@@ -34,13 +34,14 @@ Create small repo commits
 
 # Ignoring lines with `initializing` or `initialized
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
-  > initial-import --no-progress-bar -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" | rg -v "nitializ"
+  > initial-import --no-progress-bar -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" | \
+  > rg -v "nitializ" | rg -v "derive" | rg -v "Upload"
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator
   Checking if 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 is already synced 1->0
   syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
-  Automatic derivation of fsnodes is enabled
+  Automatic derivation is enabled
   Found 2 unsynced ancestors
   Unsynced ancestors: [
       ChangesetId(
@@ -51,16 +52,11 @@ Create small repo commits
       ),
   ]
   CommitSyncer{1->0}: unsafe_sync_commit called for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, with hint: CandidateSelectionHint::Only
-  derive exactly changeset_info batch from 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36 to 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   Ancestor 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36 synced successfully as ac220d3e57adf7c31a869141787d3bc638d79a3f1dd54b0ba54d545c260f14e6
-  derive exactly fsnodes batch from ac220d3e57adf7c31a869141787d3bc638d79a3f1dd54b0ba54d545c260f14e6 to ac220d3e57adf7c31a869141787d3bc638d79a3f1dd54b0ba54d545c260f14e6
   Root fsnode id from ac220d3e57adf7c31a869141787d3bc638d79a3f1dd54b0ba54d545c260f14e6: 8a7bd43727f4428740b8bd502c6993ad2e5d81037f83eb0a9cdc74aaef52a03d
   CommitSyncer{1->0}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
-  derive exactly changeset_info batch from 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 to 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
-  derive exactly skeleton_manifests batch from 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36 to 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   Ancestor 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 synced successfully as 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652
-  derive exactly fsnodes batch from 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652 to 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652
   Root fsnode id from 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652: bd7918272cd69f6f7946d62d5dddf4dc8687c11b5399f2b73539ab6c375cad5a
   CommitSyncer{1->0}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
@@ -103,13 +99,14 @@ Add more commits to small repo
 
 # Ignoring lines with `initializing` or `initialized
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
-  > initial-import --no-progress-bar -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" | rg -v "nitializ"
+  > initial-import --no-progress-bar -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" | \
+  > rg -v "nitializ" | rg -v "derive" | rg -v "Upload"
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator
   Checking if d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a is already synced 1->0
   syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
-  Automatic derivation of fsnodes is enabled
+  Automatic derivation is enabled
   Found 2 unsynced ancestors
   Unsynced ancestors: [
       ChangesetId(
@@ -121,17 +118,11 @@ Add more commits to small repo
   ]
   CommitSyncer{1->0}: unsafe_sync_commit called for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, hint CandidateSelectionHint::Only
-  derive exactly changeset_info batch from 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583 to 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
-  derive exactly skeleton_manifests batch from 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 to 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
   Ancestor 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583 synced successfully as eee07cc327b80fd172bbbe2933615d1f4685a3a032eed0fc52c02c01e8f49c42
-  derive exactly fsnodes batch from eee07cc327b80fd172bbbe2933615d1f4685a3a032eed0fc52c02c01e8f49c42 to eee07cc327b80fd172bbbe2933615d1f4685a3a032eed0fc52c02c01e8f49c42
   Root fsnode id from eee07cc327b80fd172bbbe2933615d1f4685a3a032eed0fc52c02c01e8f49c42: 64a2b572a34a75970856970b60d6b56bffd10f377736e2b15d14957b710878eb
   CommitSyncer{1->0}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
-  derive exactly changeset_info batch from d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a to d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
-  derive exactly skeleton_manifests batch from 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583 to 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
   Ancestor d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a synced successfully as ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b
-  derive exactly fsnodes batch from ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b to ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b
   Root fsnode id from ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b: 7e4e5c99dcb5cfc12e6729bf8a6bac22884d21d2ba1de5d4c00563229863053f
   CommitSyncer{1->0}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only

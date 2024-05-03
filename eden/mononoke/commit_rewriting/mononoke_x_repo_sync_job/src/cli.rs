@@ -30,7 +30,7 @@ pub struct InitialImportCommandArgs {
 
     /// Disable automatic derivation of fsnodes as commits are synced
     #[clap(long)]
-    pub no_fsnode_derivation: bool,
+    pub no_automatic_derivation: bool,
 }
 
 #[derive(Debug, Args)]

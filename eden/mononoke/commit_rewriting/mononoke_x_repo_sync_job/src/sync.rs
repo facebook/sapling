@@ -19,6 +19,8 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bulk_derivation::BulkDerivation;
+use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -40,6 +42,7 @@ use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -48,7 +51,9 @@ use slog::debug;
 use slog::info;
 use slog::trace;
 use slog::warn;
+use strum::IntoEnumIterator;
 use synced_commit_mapping::SyncedCommitMapping;
+use tokio::task;
 
 use crate::reporting::log_bookmark_deletion_result;
 use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
@@ -508,7 +513,7 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     // Sync config version to use for importing the commits.
     config_version: CommitSyncConfigVersion,
     disable_progress_bar: bool,
-    no_fsnode_derivation: bool,
+    no_automatic_derivation: bool,
 ) -> Result<Vec<ChangesetId>>
 where
     R: Repo,
@@ -516,8 +521,8 @@ where
     info!(ctx.logger(), "syncing {}", cs_id);
     debug!(
         ctx.logger(),
-        "Automatic derivation of fsnodes is {0}",
-        if no_fsnode_derivation {
+        "Automatic derivation is {0}",
+        if no_automatic_derivation {
             "disabled"
         } else {
             "enabled"
@@ -602,18 +607,41 @@ where
 
         let large_repo = commit_syncer.get_target_repo();
 
-        if !no_fsnode_derivation {
-            // Automatically derive fsnodes from the new bonsai in target repo,
-            // to speed up submodule expansion validation
+        if !no_automatic_derivation {
+            // Fsnodes will be derived synchronously, because submodule
+            // expansion depends on it.
             let root_fsnode_id = large_repo
                 .repo_derived_data()
                 .derive::<RootFsnodeId>(ctx, synced)
                 .await?;
+
             trace!(
                 ctx.logger(),
                 "Root fsnode id from {synced}: {0}",
                 root_fsnode_id.into_fsnode_id()
             );
+
+            let types_to_derive_asynchronously = DerivableType::iter()
+                // Fsnodes were derived synchronously above
+                .filter(|ddt| *ddt != DerivableType::Fsnodes)
+                .collect::<Vec<_>>();
+
+            // Asynchronously derive the other data types
+            let dd_manager = large_repo.repo_derived_data().manager().clone();
+            let _ = task::spawn({
+                cloned!(ctx, synced);
+                async move {
+                    dd_manager
+                        .derive_bulk(
+                            &ctx,
+                            vec![synced],
+                            None,
+                            types_to_derive_asynchronously.as_slice(),
+                        )
+                        .await
+                }
+            })
+            .await?;
         };
 
         if let Some(progress_bar) = &mb_prog_bar {

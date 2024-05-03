@@ -230,6 +230,12 @@ Merge repo A into the large repo
       `-- root_file
   
   9 directories, 17 files
+  
+  
+  NOTE: Count underived data types
+  9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
+  9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
+  9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
 
 Make changes to submodule and make sure they're synced properly
   $ make_changes_to_git_repos_a_b_c

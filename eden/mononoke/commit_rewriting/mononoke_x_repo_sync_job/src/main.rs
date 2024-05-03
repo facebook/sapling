@@ -168,7 +168,7 @@ async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clo
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
-    no_fsnode_derivation: bool,
+    no_automatic_derivation: bool,
 ) -> Result<()> {
     info!(
         ctx.logger(),
@@ -191,7 +191,7 @@ async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clo
         bcs,
         config_version,
         disable_progress_bar,
-        no_fsnode_derivation,
+        no_automatic_derivation,
     )
     .await?;
     info!(ctx.logger(), "successful sync of head {}", bcs);
@@ -208,7 +208,7 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
-    no_fsnode_derivation: bool,
+    no_automatic_derivation: bool,
 ) -> Result<()> {
     for bcs_id in bcs_ids {
         run_in_initial_import_mode_for_single_head(
@@ -218,7 +218,7 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
             config_version.clone(),
             scuba_sample.clone(),
             disable_progress_bar,
-            no_fsnode_derivation,
+            no_automatic_derivation,
         )
         .await?;
     }
@@ -559,7 +559,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 config_version,
                 scuba_sample,
                 initial_import_args.no_progress_bar,
-                initial_import_args.no_fsnode_derivation,
+                initial_import_args.no_automatic_derivation,
             )
             .await
         }

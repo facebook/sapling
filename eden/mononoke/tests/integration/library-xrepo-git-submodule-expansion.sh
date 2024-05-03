@@ -144,6 +144,18 @@ function merge_repo_a_to_large_repo {
   echo "Large repo tree:"
   tree -a -I ".hg"| tee "${TESTTMP}/large_repo_tree_1"
 
+
+  print_section "Count underived data types"
+  sleep 1;
+  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+    count-underived -i "$SYNCED_HEAD" -T fsnodes
+
+  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+    count-underived -i "$SYNCED_HEAD" -T changeset_info
+
+  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+    count-underived -i "$SYNCED_HEAD" -T hgchangesets
+
 }
 
 # This will make some changes to all repos, so we can assert that all of them
