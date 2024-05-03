@@ -340,8 +340,8 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
     maybe_bookmark_regex: &Option<Regex>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<bool, Error> {
-    let source_repo = commit_syncer.get_source_repo();
-    let bookmark_update_log = source_repo.bookmark_update_log();
+    let small_repo = commit_syncer.get_source_repo();
+    let bookmark_update_log = small_repo.bookmark_update_log();
     let counter = format_counter(commit_syncer);
 
     let maybe_start_id = target_mutable_counters.get_counter(ctx, &counter).await?;
@@ -439,11 +439,11 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
 async fn maybe_apply_backpressure(
     ctx: &CoreContext,
     backpressure_params: &BackpressureParams,
-    target_repo: &Repo,
+    large_repo: &Repo,
     scuba_sample: MononokeScubaSampleBuilder,
     sleep_duration: Duration,
 ) -> Result<(), Error> {
-    let target_repo_id = target_repo.repo_identity().id();
+    let large_repo_id = large_repo.repo_identity().id();
     let limit = 10;
     loop {
         let max_further_entries = stream::iter(&backpressure_params.backsync_repos)
@@ -451,7 +451,7 @@ async fn maybe_apply_backpressure(
             .map_ok(|repo| {
                 async move {
                     let repo_id = repo.repo_identity().id();
-                    let backsyncer_counter = format_backsyncer_counter(&target_repo_id);
+                    let backsyncer_counter = format_backsyncer_counter(&large_repo_id);
                     let maybe_counter = repo
                         .mutable_counters()
                         .get_counter(ctx, &backsyncer_counter)
@@ -494,7 +494,7 @@ async fn maybe_apply_backpressure(
     }
 
     if backpressure_params.wait_for_target_repo_hg_sync {
-        wait_for_latest_log_id_to_be_synced(ctx, target_repo, sleep_duration).await?;
+        wait_for_latest_log_id_to_be_synced(ctx, large_repo, sleep_duration).await?;
     }
     Ok(())
 }
@@ -516,9 +516,9 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
     let args: ForwardSyncerArgs = app.args()?;
 
     let logger = ctx.logger();
-    let source_repo: Arc<Repo> = app.open_repo(&args.repo_args.source_repo).await?;
+    let small_repo: Arc<Repo> = app.open_repo(&args.repo_args.source_repo).await?;
 
-    let target_repo: Arc<Repo> = app.open_repo(&args.repo_args.target_repo).await?;
+    let large_repo: Arc<Repo> = app.open_repo(&args.repo_args.target_repo).await?;
 
     // RFC: use unredacted or standard `create_commit_syncers_from_app`?
     let syncers = create_commit_syncers_from_app_unredacted(&ctx, &app, &args.repo_args).await?;
@@ -526,7 +526,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(logger, &config_store)?);
     let common_commit_sync_config =
-        live_commit_sync_config.get_common_config(source_repo.blob_repo().repo_identity().id())?;
+        live_commit_sync_config.get_common_config(small_repo.blob_repo().repo_identity().id())?;
 
     let common_bookmarks: HashSet<_> = common_commit_sync_config
         .common_pushrebase_bookmarks
@@ -534,7 +534,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
         .into_iter()
         .collect();
 
-    let target_mutable_counters = target_repo.mutable_counters_arc();
+    let target_mutable_counters = large_repo.mutable_counters_arc();
 
     let pushrebase_rewrite_dates = if args.pushrebase_rewrite_dates {
         PushrebaseRewriteDates::Yes
@@ -549,7 +549,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
             let config_version = CommitSyncConfigVersion(sync_config_version_name);
             let resolved_csids = initial_import_args
                 .changeset_args
-                .resolve_changesets(&ctx, &source_repo)
+                .resolve_changesets(&ctx, &small_repo)
                 .await?;
 
             run_in_initial_import_mode(
@@ -569,12 +569,9 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 .clone()
                 .map(BookmarkKey::new)
                 .transpose()?;
-            let bcs = helpers::csid_resolve(
-                &ctx,
-                source_repo.blob_repo(),
-                &once_cmd_args.commit.as_str(),
-            )
-            .await?;
+            let bcs =
+                helpers::csid_resolve(&ctx, small_repo.blob_repo(), &once_cmd_args.commit.as_str())
+                    .await?;
             let new_version = once_cmd_args.new_version.map(CommitSyncConfigVersion);
 
             run_in_single_commit_mode(

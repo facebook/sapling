@@ -318,7 +318,7 @@ where
             None
         };
 
-    let source_repo = commit_syncer.get_source_repo();
+    let small_repo = commit_syncer.get_source_repo();
     // It stores commits that were introduced as part of current bookmark update, but that
     // shouldn't be pushrebased.
     let mut no_pushrebase = HashSet::new();
@@ -330,7 +330,7 @@ where
             continue;
         }
 
-        let bcs = cs_id.load(ctx, source_repo.repo_blobstore()).await?;
+        let bcs = cs_id.load(ctx, small_repo.repo_blobstore()).await?;
 
         let mut parents = bcs.parents();
         let maybe_p1 = parents.next();
@@ -340,7 +340,7 @@ where
                 return Err(format_err!("only 2 parent merges are supported"));
             }
 
-            no_pushrebase.extend(validate_if_new_repo_merge(ctx, source_repo, p1, p2).await?);
+            no_pushrebase.extend(validate_if_new_repo_merge(ctx, small_repo, p1, p2).await?);
         }
     }
 
@@ -412,10 +412,10 @@ where
         // merge commit and ancestors of common pushrebase bookmark in target repo.
         // The code below does exactly that - it fetches common_pushrebase_bookmarks and parent
         // commits from the target repo, and then it checks if there are no intersection.
-        let target_repo = commit_syncer.get_target_repo();
+        let large_repo = commit_syncer.get_target_repo();
         let mut book_values = vec![];
         for common_bookmark in common_pushrebase_bookmarks {
-            book_values.push(target_repo.bookmarks().get(ctx.clone(), common_bookmark));
+            book_values.push(large_repo.bookmarks().get(ctx.clone(), common_bookmark));
         }
 
         let book_values = try_join_all(book_values).await?;
@@ -428,7 +428,7 @@ where
         .await?;
         let maybe_independent_branch = check_if_independent_branch_and_return(
             ctx,
-            target_repo,
+            large_repo,
             parents.into_iter().flatten().collect(),
             book_values,
         )
@@ -600,12 +600,12 @@ where
             "Ancestor {ancestor_cs_id} synced successfully as {synced}"
         );
 
-        let target_repo = commit_syncer.get_target_repo();
+        let large_repo = commit_syncer.get_target_repo();
 
         if !no_fsnode_derivation {
             // Automatically derive fsnodes from the new bonsai in target repo,
             // to speed up submodule expansion validation
-            let root_fsnode_id = target_repo
+            let root_fsnode_id = large_repo
                 .repo_derived_data()
                 .derive::<RootFsnodeId>(ctx, synced)
                 .await?;
@@ -757,8 +757,8 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R>(
 where
     R: Repo,
 {
-    let source_repo = commit_syncer.get_source_repo();
-    let bcs = cs_id.load(ctx, source_repo.repo_blobstore()).await?;
+    let small_repo = commit_syncer.get_source_repo();
+    let bcs = cs_id.load(ctx, small_repo.repo_blobstore()).await?;
     commit_syncer
         .unsafe_sync_commit_pushrebase(
             ctx,
