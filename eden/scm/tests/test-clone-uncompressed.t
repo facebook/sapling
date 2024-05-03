@@ -1,4 +1,5 @@
 #debugruntest-compatible
+#modern-config-incompatible
 #inprocess-hg-incompatible
 
   $ configure dummyssh

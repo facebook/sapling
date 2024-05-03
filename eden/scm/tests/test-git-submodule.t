@@ -1,4 +1,5 @@
 #require git no-windows no-eden
+#modern-config-incompatible
 #debugruntest-compatible
 
   $ . $TESTDIR/git.sh

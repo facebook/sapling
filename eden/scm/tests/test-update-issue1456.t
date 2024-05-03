@@ -1,4 +1,5 @@
 #debugruntest-compatible
+#modern-config-incompatible
 
 #require execbit no-eden
   $ setconfig experimental.nativecheckout=true
