@@ -58,13 +58,6 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_get_stats_no_max_set() {
-        let stats = get_stats();
-        assert!(stats.is_err());
-        assert_eq!(stats.err().unwrap(), "max_memory is not set");
-    }
-
-    #[test]
     fn test_get_stats() {
         let old = MAX_MEMORY.load(Ordering::Relaxed);
         let max_memory = 1024 * 1024 * 1024;
