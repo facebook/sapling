@@ -130,6 +130,3 @@
   $ rm -rf git_client_repo
   $ git clone "$BUNDLE_PATH" git_client_repo
   Cloning into 'git_client_repo'...
-  fatal: bad object 8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
-  fatal: remote did not send all necessary objects
-  [128]

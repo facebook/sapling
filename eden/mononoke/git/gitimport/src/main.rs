@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(async_closure)]
+
 mod mem_writes_changesets;
 use std::collections::HashMap;
 use std::path::Path;
@@ -368,15 +370,18 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
                     continue;
                 }
-                if let Some(tag_id) = maybe_tag_id {
-                    // The ref getting imported is a tag, so store the raw git Tag object.
-                    upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
-                    // Create the changeset corresponding to the commit pointed to by the tag.
-                    create_changeset_for_annotated_tag(
-                        &ctx, &uploader, path, &prefs, tag_id, changeset,
-                    )
-                    .await?;
-                }
+                let upload_if_tag = async {
+                    if let Some(tag_id) = maybe_tag_id {
+                        // The ref getting imported is a tag, so store the raw git Tag object.
+                        upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
+                        // Create the changeset corresponding to the commit pointed to by the tag.
+                        create_changeset_for_annotated_tag(
+                            &ctx, &uploader, path, &prefs, tag_id, changeset,
+                        )
+                        .await?;
+                    }
+                    Ok::<_, Error>(())
+                };
                 let bookmark_key = BookmarkKey::new(&name)?;
 
                 let pushvars = if args.bypass_readonly {
@@ -396,6 +401,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // The bookmark already exists. Instead of creating it, we need to move it.
                     Some(old_changeset) => {
                         if old_changeset != final_changeset {
+                            upload_if_tag.await?;
                             let allow_non_fast_forward = true;
                             repo_context
                                 .move_bookmark(
@@ -420,6 +426,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     }
                     // The bookmark doesn't yet exist. Create it.
                     None => {
+                        upload_if_tag.await?;
                         repo_context
                             .create_bookmark(&bookmark_key, final_changeset, pushvars.as_ref())
                             .await
