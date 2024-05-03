@@ -27,8 +27,8 @@ pub enum InternalError {
     ItemExists(Box<DerivationDagItem>),
     #[error("Item with not derived and not present dependencies in Derivation DAG {0:#?}")]
     MissingDependencies(Box<DerivationDagItem>),
-    #[error("While querying Derivation DAG item was deleted {0:#?}")]
-    ItemDeleted(DagItemId),
+    #[error("While querying Derivation DAG item was deleted {0}")]
+    ItemDeleted(String),
     #[error("Attepmt to create Derivation Item with dependency on itself {0:#?}")]
     CircularDependency(DagItemId),
     #[error(transparent)]
@@ -55,7 +55,10 @@ impl From<DerivationError> for InternalError {
 #[cfg(fbcode_build)]
 impl From<ZeusWrapperError> for InternalError {
     fn from(e: ZeusWrapperError) -> Self {
-        InternalError::Other(e.into())
+        match e {
+            ZeusWrapperError::NoSuchNode(path) => InternalError::ItemDeleted(path),
+            e => InternalError::Other(e.into()),
+        }
     }
 }
 
