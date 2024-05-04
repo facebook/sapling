@@ -211,7 +211,7 @@ HgImportTraceEvent::HgImportTraceEvent(
     ImportPriority::Class priority,
     ObjectFetchContext::Cause cause,
     OptionalProcessId pid,
-    ObjectFetchContext::FetchedSource fetchedSource)
+    std::optional<ObjectFetchContext::FetchedSource> fetchedSource)
     : unique{unique},
       manifestNodeId{proxyHash.revHash()},
       eventType{eventType},
@@ -373,8 +373,7 @@ void SaplingBackingStore::processBlobImportRequests(
         blobImport->proxyHash,
         request->getPriority().getClass(),
         request->getCause(),
-        request->getPid(),
-        ObjectFetchContext::FetchedSource::Unknown));
+        request->getPid()));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
@@ -614,8 +613,7 @@ void SaplingBackingStore::processTreeImportRequests(
         treeImport->proxyHash,
         request->getPriority().getClass(),
         request->getCause(),
-        request->getPid(),
-        ObjectFetchContext::FetchedSource::Unknown));
+        request->getPid()));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
@@ -878,8 +876,7 @@ void SaplingBackingStore::processBlobMetaImportRequests(
         blobMetaImport->proxyHash,
         request->getPriority().getClass(),
         request->getCause(),
-        request->getPid(),
-        ObjectFetchContext::FetchedSource::Unknown));
+        request->getPid()));
 
     XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
   }
@@ -1168,8 +1165,7 @@ SaplingBackingStore::getTreeEnqueue(
         proxyHash,
         context->getPriority().getClass(),
         context->getCause(),
-        context->getClientPid(),
-        ObjectFetchContext::FetchedSource::Unknown));
+        context->getClientPid()));
 
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
@@ -1297,8 +1293,7 @@ ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
         proxyHash,
         context->getPriority().getClass(),
         context->getCause(),
-        context->getClientPid(),
-        ObjectFetchContext::FetchedSource::Unknown));
+        context->getClientPid()));
 
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
@@ -1386,8 +1381,7 @@ SaplingBackingStore::getBlobMetadataImpl(
         proxyHash,
         context->getPriority().getClass(),
         context->getCause(),
-        context->getClientPid(),
-        ObjectFetchContext::FetchedSource::Unknown));
+        context->getClientPid()));
 
     return queue_.enqueueBlobMeta(std::move(request))
         .ensure([this,

@@ -1591,16 +1591,20 @@ void convertHgImportTraceEventToHgEvent(
       break;
   }
 
-  switch (event.fetchedSource) {
-    case ObjectFetchContext::FetchedSource::Local:
-      te.fetchedSource_ref() = FetchedSource::LOCAL;
-      break;
-    case ObjectFetchContext::FetchedSource::Remote:
-      te.fetchedSource_ref() = FetchedSource::REMOTE;
-      break;
-    case ObjectFetchContext::FetchedSource::Unknown:
-      te.fetchedSource_ref() = FetchedSource::UNKNOWN;
-      break;
+  if (event.fetchedSource.has_value()) {
+    switch (event.fetchedSource.value()) {
+      case ObjectFetchContext::FetchedSource::Local:
+        te.fetchedSource_ref() = FetchedSource::LOCAL;
+        break;
+      case ObjectFetchContext::FetchedSource::Remote:
+        te.fetchedSource_ref() = FetchedSource::REMOTE;
+        break;
+      case ObjectFetchContext::FetchedSource::Unknown:
+        te.fetchedSource_ref() = FetchedSource::UNKNOWN;
+        break;
+    }
+  } else {
+    te.fetchedSource_ref() = FetchedSource::NOT_AVAILABLE_YET;
   }
 
   te.unique_ref() = event.unique;

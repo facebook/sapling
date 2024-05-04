@@ -66,6 +66,8 @@ static const auto kRemoteFetchedEmoji =
     reinterpret_cast<const char*>(u8"\U0001F310"); // 🌐
 static const auto kUnknownFetchedEmoji =
     reinterpret_cast<const char*>(u8"\U0001F937"); // 🤷
+static const auto kNotAvailableYetFetchedEmoji = reinterpret_cast<const char*>(
+    u8"\U00000020\U00000020"); // double blank space "  "
 
 static const std::unordered_map<HgEventType, const char*> kHgEventTypes = {
     {HgEventType::QUEUE, " "},
@@ -111,6 +113,7 @@ static const std::unordered_map<FetchedSource, const char*> kFetchedSource = {
     {FetchedSource::LOCAL, kLocalFetchedEmoji},
     {FetchedSource::REMOTE, kRemoteFetchedEmoji},
     {FetchedSource::UNKNOWN, kUnknownFetchedEmoji},
+    {FetchedSource::NOT_AVAILABLE_YET, kNotAvailableYetFetchedEmoji},
 };
 
 /**
