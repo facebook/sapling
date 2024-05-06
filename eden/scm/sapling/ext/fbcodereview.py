@@ -85,6 +85,7 @@ configitem("pullcreatemarkers", "check-local-versions", default=False)
 configitem("phrevset", "autopull", default=True)
 configitem("phrevset", "callsign", default=None)
 configitem("phrevset", "graphqlonly", default=True)
+configitem("phrevset", "abort-if-git-diff-unavailable", default=True)
 
 configitem("fbcodereview", "hide-landed-commits", default=True)
 
@@ -1183,6 +1184,17 @@ def diffidtonode(repo, diffid):
                 )
                 if successors:
                     return successors[0]
+            if (
+                vcs == "git"
+                and repo.ui.configbool("phrevset", "abort-if-git-diff-unavailable")
+                and node not in repo
+            ):
+                raise error.Abort(
+                    _(
+                        "A more recent version (%s) of D%s was found in Phabricator, you might want to run `jf get D%s`"
+                    )
+                    % (hex(node)[:8], diffid, diffid)
+                )
             return node
 
         # local:commits is empty
