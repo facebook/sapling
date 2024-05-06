@@ -907,7 +907,7 @@ class basefilectx:
         """whether this filectx represents a file not in self._changectx
 
         This is mainly for merge code to detect change/delete conflicts. This is
-        expected to be True for all subclasses of basectx."""
+        expected to be True for all subclasses of absentfilectx."""
         return False
 
     _customcmp = False
