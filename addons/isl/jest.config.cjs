@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
+
 /* global module */
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
 module.exports = {
@@ -12,6 +14,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   collectCoverageFrom: ['src/**/*.{js,jsx,ts,tsx}', '!src/**/*.d.ts'],
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  testTimeout: IS_CI ? 15 * 1000 : 5 * 1000,
   moduleNameMapper: {
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       '<rootDir>/src/__mocks__/fileMock.js',
