@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::str::FromStr;
-
 use async_trait::async_trait;
 use edenapi_types::cloud::RemoteBookmark;
 use mercurial_types::HgChangesetId;
@@ -161,14 +159,13 @@ pub async fn update_remote_bookmarks(
 
     for book in updated_remote_bookmarks.unwrap_or_default() {
         //TODO: Resolve remote bookmarks if no node available (e.g. master)
-        let commit = HgChangesetId::from_str(&book.node.unwrap_or_default())?;
         Insert::<WorkspaceRemoteBookmark>::insert(
             sql_commit_cloud,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             WorkspaceRemoteBookmark {
                 name: book.name,
-                commit,
+                commit: book.node.unwrap_or_default().into(),
                 remote: book.remote,
             },
         )

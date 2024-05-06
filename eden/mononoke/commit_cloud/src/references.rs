@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use edenapi_types::cloud::RemoteBookmark;
+use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use mononoke_types::Timestamp;
 
@@ -58,32 +59,32 @@ pub(crate) async fn cast_references_data(
     latest_version: u64,
     version_timestamp: i64,
 ) -> Result<ReferencesData, anyhow::Error> {
-    let mut heads: Vec<String> = Vec::new();
-    let mut bookmarks: HashMap<String, String> = HashMap::new();
-    let mut heads_dates: HashMap<String, i64> = HashMap::new();
+    let mut heads: Vec<HgId> = Vec::new();
+    let mut bookmarks: HashMap<String, HgId> = HashMap::new();
+    let mut heads_dates: HashMap<HgId, i64> = HashMap::new();
     let mut remote_bookmarks: Vec<RemoteBookmark> = Vec::new();
-    let mut snapshots: Vec<String> = Vec::new();
+    let mut snapshots: Vec<HgId> = Vec::new();
     let _timestamp: i64 = 0;
 
     for head in raw_references_data.heads {
-        heads.push(head.commit.to_string());
+        heads.push(head.commit.into());
         // TODO: Retrieve this information from SCS.
-        heads_dates.insert(head.commit.to_string(), Timestamp::now().timestamp_nanos());
+        heads_dates.insert(head.commit.into(), Timestamp::now().timestamp_nanos());
     }
     for bookmark in raw_references_data.local_bookmarks {
-        bookmarks.insert(bookmark.name.clone(), bookmark.commit.to_string());
+        bookmarks.insert(bookmark.name.clone(), bookmark.commit.into());
     }
 
     for remote_bookmark in raw_references_data.remote_bookmarks {
         remote_bookmarks.push(RemoteBookmark {
             remote: remote_bookmark.remote.clone(),
             name: remote_bookmark.name.clone(),
-            node: Some(remote_bookmark.commit.to_string()),
+            node: Some(remote_bookmark.commit.into()),
         });
     }
 
     for snapshot in raw_references_data.snapshots {
-        snapshots.push(snapshot.commit.to_string());
+        snapshots.push(snapshot.commit.into());
     }
 
     Ok(ReferencesData {

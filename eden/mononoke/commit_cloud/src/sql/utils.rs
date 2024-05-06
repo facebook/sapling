@@ -41,16 +41,6 @@ pub fn list_as_bytes(
     Ok(res)
 }
 
-pub fn cs_ids_from_string(
-    list: impl IntoIterator<Item = String>,
-) -> anyhow::Result<Vec<HgChangesetId>> {
-    let mut res = Vec::new();
-    for cs_id in list {
-        res.push(cs_id.parse()?);
-    }
-    Ok(res)
-}
-
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
@@ -60,7 +50,6 @@ mod test {
 
     use crate::sql::utils::changeset_as_bytes;
     use crate::sql::utils::changeset_from_bytes;
-    use crate::sql::utils::cs_ids_from_string;
 
     const HEX_ENCODED: &[u8] = b"2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
 
@@ -77,13 +66,6 @@ mod test {
     fn test_decode_changeset() {
         assert_eq!(changeset_from_bytes(HEX_ENCODED, true).unwrap(), *CS_ID);
         assert_eq!(changeset_from_bytes(&BYTES, false).unwrap(), *CS_ID);
-        assert_eq!(
-            cs_ids_from_string(vec![String::from(
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"
-            )])
-            .unwrap(),
-            vec![*CS_ID]
-        );
     }
 
     #[test]

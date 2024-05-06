@@ -12,6 +12,7 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
+use types::HgId;
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -52,21 +53,21 @@ pub struct UpdateReferencesParams {
     #[id(2)]
     pub version: u64,
     #[id(3)]
-    pub removed_heads: Vec<String>,
+    pub removed_heads: Vec<HgId>,
     #[id(4)]
-    pub new_heads: Vec<String>,
+    pub new_heads: Vec<HgId>,
     #[id(5)]
-    pub updated_bookmarks: HashMap<String, String>,
+    pub updated_bookmarks: HashMap<String, HgId>,
     #[id(6)]
-    pub removed_bookmarks: Vec<String>,
+    pub removed_bookmarks: Vec<HgId>,
     #[id(7)]
     pub updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     #[id(8)]
     pub removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     #[id(9)]
-    pub new_snapshots: Vec<String>,
+    pub new_snapshots: Vec<HgId>,
     #[id(10)]
-    pub removed_snapshots: Vec<String>,
+    pub removed_snapshots: Vec<HgId>,
     #[id(11)]
     pub client_info: Option<ClientInfo>,
 }
@@ -92,15 +93,15 @@ pub struct ReferencesData {
     #[id(0)]
     pub version: u64,
     #[id(1)]
-    pub heads: Option<Vec<String>>,
+    pub heads: Option<Vec<HgId>>,
     #[id(2)]
-    pub bookmarks: Option<HashMap<String, String>>,
+    pub bookmarks: Option<HashMap<String, HgId>>,
     #[id(3)]
-    pub heads_dates: Option<HashMap<String, i64>>,
+    pub heads_dates: Option<HashMap<HgId, i64>>,
     #[id(4)]
     pub remote_bookmarks: Option<Vec<RemoteBookmark>>,
     #[id(5)]
-    pub snapshots: Option<Vec<String>>,
+    pub snapshots: Option<Vec<HgId>>,
     #[id(6)]
     pub timestamp: Option<i64>,
 }
@@ -114,7 +115,7 @@ pub struct RemoteBookmark {
     #[id(1)]
     pub name: String,
     #[id(2)]
-    pub node: Option<String>,
+    pub node: Option<HgId>,
 }
 
 #[auto_wire]

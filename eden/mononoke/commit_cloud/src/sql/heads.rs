@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::str::FromStr;
-
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
+use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
 use serde::Serialize;
@@ -20,7 +19,6 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
-use crate::sql::utils::cs_ids_from_string;
 use crate::sql::utils::list_as_bytes;
 use crate::CommitCloudContext;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -123,12 +121,16 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
 pub async fn update_heads(
     sql_commit_cloud: &SqlCommitCloud,
     ctx: CommitCloudContext,
-    removed_heads: Vec<String>,
-    new_heads: Vec<String>,
+    removed_heads: Vec<HgId>,
+    new_heads: Vec<HgId>,
 ) -> anyhow::Result<()> {
     if !removed_heads.is_empty() {
-        let removed_commits = cs_ids_from_string(removed_heads)?;
-        let delete_args = DeleteArgs { removed_commits };
+        let delete_args = DeleteArgs {
+            removed_commits: removed_heads
+                .into_iter()
+                .map(|id| id.into())
+                .collect::<Vec<HgChangesetId>>(),
+        };
 
         Delete::<WorkspaceHead>::delete(
             sql_commit_cloud,
@@ -140,12 +142,13 @@ pub async fn update_heads(
     }
 
     for head in new_heads {
-        let commit = HgChangesetId::from_str(&head)?;
         Insert::<WorkspaceHead>::insert(
             sql_commit_cloud,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
-            WorkspaceHead { commit },
+            WorkspaceHead {
+                commit: head.into(),
+            },
         )
         .await?;
     }
