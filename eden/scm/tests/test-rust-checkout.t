@@ -1,6 +1,5 @@
 #debugruntest-compatible
 
-  $ configure modernclient
   $ setconfig checkout.use-rust=true
   $ setconfig experimental.nativecheckout=true
 

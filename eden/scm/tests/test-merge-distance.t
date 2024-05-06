@@ -1,6 +1,5 @@
 #debugruntest-compatible
 
-  $ configure modernclient
   $ newclientrepo
   $ drawdag << 'EOS'
   >   A01..A20

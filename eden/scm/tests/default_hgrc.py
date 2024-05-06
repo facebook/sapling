@@ -17,8 +17,14 @@ import os
 from typing import Optional
 
 
+# non-debugruntest only uses use_wawtchman and use_ipv6
 def get_content(
-    use_watchman: bool = False, use_ipv6: bool = False, edenpath: Optional[str] = None
+    use_watchman: bool = False,
+    use_ipv6: bool = False,
+    edenpath: Optional[str] = None,
+    modernconfig: bool = False,
+    testdir: Optional[str] = None,
+    testtmp: Optional[str] = None,
 ) -> str:
     content = f"""
 [ui]
@@ -105,6 +111,48 @@ backing-repos-dir=$TESTTMP/.eden-backing-repos
 
 [clone]
 use-eden=True
+"""
+
+    if modernconfig:
+        content += f"""
+[commitcloud]
+hostname=testhost
+servicetype=local
+servicelocation={testtmp}
+remotebookmarkssync=True
+
+[experimental]
+changegroup3=True
+evolution=obsolete
+narrow-heads=true
+
+[extensions]
+commitcloud=
+infinitepush=
+remotenames=
+
+[mutation]
+enabled=true
+record=false
+date=0 0
+
+[remotefilelog]
+http=True
+
+[remotenames]
+rename.default=remote
+hoist=remote
+selectivepull=True
+selectivepulldefault=master
+
+[treemanifest]
+http=True
+
+[ui]
+ssh=python {testdir}/dummyssh
+
+[visibility]
+enabled=true
 """
 
     return content

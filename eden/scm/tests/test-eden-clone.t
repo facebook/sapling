@@ -4,7 +4,6 @@
 
 setup backing repo
 
-  $ configure modernclient
   $ setconfig clone.use-rust=True
   $ setconfig checkout.use-rust=True
   $ setconfig experimental.rust-clone-updaterev=True
