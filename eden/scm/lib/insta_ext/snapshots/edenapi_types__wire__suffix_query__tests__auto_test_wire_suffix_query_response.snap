@@ -1,0 +1,5 @@
+---
+source: suffix_query.rs
+expression: "WireSuffixQueryResponse::arbitrary(&mut g)"
+---
+{"0":"jaiffe/nuat/fk/ejkleav/rc/ohh"}

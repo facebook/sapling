@@ -59,6 +59,7 @@ pub mod history;
 pub mod land;
 pub mod metadata;
 pub mod pull;
+pub mod suffix_query;
 #[cfg(test)]
 pub(crate) mod tests;
 pub mod token;
@@ -134,6 +135,8 @@ pub use crate::wire::metadata::WireFileMetadata;
 pub use crate::wire::metadata::WireFileType;
 pub use crate::wire::metadata::WireSha1;
 pub use crate::wire::metadata::WireSha256;
+pub use crate::wire::suffix_query::WireSuffixQueryRequest;
+pub use crate::wire::suffix_query::WireSuffixQueryResponse;
 pub use crate::wire::token::WireUploadToken;
 pub use crate::wire::token::WireUploadTokenData;
 pub use crate::wire::token::WireUploadTokenSignature;
