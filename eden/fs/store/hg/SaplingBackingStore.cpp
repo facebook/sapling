@@ -674,7 +674,8 @@ void SaplingBackingStore::processTreeImportRequests(
                   .revHash(), // this is really the manifest node
               treeImport->hash,
               treeImport->proxyHash.path(),
-              request->getContext().copy())
+              request->getContext().copy(),
+              getTreeType::Tree)
               .semi();
       futures.emplace_back(
           std::move(treeSemiFuture)
@@ -1441,7 +1442,8 @@ SaplingBackingStore::getRootTree(
           [this, commitId, context = context.copy(), watch](StoreResult result)
               -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
             if (!result.isValid()) {
-              return importTreeManifest(commitId, context)
+              return importTreeManifest(
+                         commitId, context, getTreeType::RootTree)
                   .thenValue([this, commitId, watch](TreePtr rootTree) {
                     XLOG(DBG1) << "imported mercurial commit " << commitId
                                << " as tree " << rootTree->getHash();
@@ -1462,7 +1464,8 @@ SaplingBackingStore::getRootTree(
                 ObjectId{result.bytes()},
                 "getRootTree",
                 *stats_);
-            return importTreeManifestImpl(rootTreeHash.revHash(), context)
+            return importTreeManifestImpl(
+                       rootTreeHash.revHash(), context, getTreeType::RootTree)
                 .thenValue([this, watch](TreePtr tree) {
                   stats_->addDuration(
                       &SaplingBackingStoreStats::getRootTree, watch.elapsed());
@@ -1473,11 +1476,12 @@ SaplingBackingStore::getRootTree(
 
 folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
     const ObjectId& commitId,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    const getTreeType getType) {
   return folly::via(
              serverThreadPool_,
              [this, commitId] { return getManifestNode(commitId); })
-      .thenValue([this, commitId, fetchContext = context.copy()](
+      .thenValue([this, commitId, fetchContext = context.copy(), getType](
                      auto manifestNode) {
         if (!manifestNode.has_value()) {
           auto ew = folly::exception_wrapper{std::runtime_error{
@@ -1489,7 +1493,8 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
             "commit {} has manifest node {}",
             commitId,
             manifestNode.value());
-        return importTreeManifestImpl(*std::move(manifestNode), fetchContext);
+        return importTreeManifestImpl(
+            *std::move(manifestNode), fetchContext, getType);
       });
 }
 
@@ -1505,7 +1510,8 @@ std::optional<Hash20> SaplingBackingStore::getManifestNode(
 
 folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
     Hash20 manifestNode,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    const getTreeType getType) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -1528,17 +1534,44 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
   if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from SaplingNativeBackingStore";
+    switch (getType) {
+      case getTreeType::Tree:
+        // getTree never gets here. We add this case only for completeness
+        stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+        break;
+      case getTreeType::RootTree:
+        stats_->increment(&SaplingBackingStoreStats::getRootTreeSuccess);
+        break;
+      case getTreeType::ManifestForRoot:
+        stats_->increment(
+            &SaplingBackingStoreStats::importManifestForRootSuccess);
+        break;
+    }
     return folly::makeFuture(std::move(tree.value()));
   }
   // retry once if the initial fetch failed
-  return retryGetTree(manifestNode, objectId, path, context.copy());
+  switch (getType) {
+    case getTreeType::Tree:
+      // getTree never gets here. We add this case only for completeness
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
+      break;
+    case getTreeType::RootTree:
+      stats_->increment(&SaplingBackingStoreStats::getRootTreeFailure);
+      break;
+    case getTreeType::ManifestForRoot:
+      stats_->increment(
+          &SaplingBackingStoreStats::importManifestForRootFailure);
+      break;
+  }
+  return retryGetTree(manifestNode, objectId, path, context.copy(), getType);
 }
 
 folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
     const Hash20& manifestNode,
     const ObjectId& edenTreeID,
     RelativePathPiece path,
-    ObjectFetchContextPtr context) {
+    ObjectFetchContextPtr context,
+    const getTreeType getType) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -1566,7 +1599,8 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
              edenTreeID,
              path.copy(),
              std::move(writeBatch),
-             context.copy())
+             context.copy(),
+             getType)
       .thenValue([config = config_](TreePtr&& result) mutable {
         return std::move(result);
       });
@@ -1651,7 +1685,8 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
     ObjectId edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch,
-    ObjectFetchContextPtr context) {
+    ObjectFetchContextPtr context,
+    const getTreeType getType) {
   return folly::via(
       retryThreadPool_.get(),
       [this,
@@ -1660,7 +1695,8 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
        edenTreeID = std::move(edenTreeID),
        writeBatch,
        &liveImportTreeWatches = liveImportTreeWatches_,
-       context = context.copy()] {
+       context = context.copy(),
+       getType] {
         RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
         // NOTE: In the future we plan to update
@@ -1679,7 +1715,20 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
         auto tree = getTreeFromBackingStore(
             path, manifestNode, edenTreeID, context.copy());
         if (tree.hasValue()) {
-          stats_->increment(&SaplingBackingStoreStats::fetchTreeRetrySuccess);
+          switch (getType) {
+            case getTreeType::Tree:
+              stats_->increment(
+                  &SaplingBackingStoreStats::fetchTreeRetrySuccess);
+              break;
+            case getTreeType::RootTree:
+              stats_->increment(
+                  &SaplingBackingStoreStats::getRootTreeRetrySuccess);
+              break;
+            case getTreeType::ManifestForRoot:
+              stats_->increment(
+                  &SaplingBackingStoreStats::importManifestForRootRetrySuccess);
+              break;
+          }
           result = tree.value();
         } else {
           // Record miss and return error
@@ -1691,7 +1740,20 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                 true});
           }
 
-          stats_->increment(&SaplingBackingStoreStats::fetchTreeRetryFailure);
+          switch (getType) {
+            case getTreeType::Tree:
+              stats_->increment(
+                  &SaplingBackingStoreStats::fetchTreeRetryFailure);
+              break;
+            case getTreeType::RootTree:
+              stats_->increment(
+                  &SaplingBackingStoreStats::getRootTreeRetryFailure);
+              break;
+            case getTreeType::ManifestForRoot:
+              stats_->increment(
+                  &SaplingBackingStoreStats::importManifestForRootRetryFailure);
+              break;
+          }
           auto ew = folly::exception_wrapper{tree.exception()};
           result = folly::makeFuture<TreePtr>(std::move(ew));
         }
@@ -1908,7 +1970,8 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
               return folly::unit;
             }
 
-            return importTreeManifestImpl(manifestId, context)
+            return importTreeManifestImpl(
+                       manifestId, context, getTreeType::ManifestForRoot)
                 .thenValue(
                     [this, commitId, manifestId, watch](TreePtr rootTree) {
                       XLOG(DBG3) << "imported mercurial commit " << commitId

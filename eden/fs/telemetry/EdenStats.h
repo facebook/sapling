@@ -318,6 +318,18 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchTreeFailure{"store.sapling.fetch_tree_failure"};
   Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
   Counter fetchTreeRetryFailure{"store.sapling.fetch_tree_retry_failure"};
+  Counter getRootTreeSuccess{"store.sapling.get_root_tree_success"};
+  Counter getRootTreeFailure{"store.sapling.get_root_tree_failure"};
+  Counter getRootTreeRetrySuccess{"store.sapling.get_root_tree_retry_success"};
+  Counter getRootTreeRetryFailure{"store.sapling.get_root_tree_retry_failure"};
+  Counter importManifestForRootSuccess{
+      "store.sapling.import_manifest_for_root_success"};
+  Counter importManifestForRootFailure{
+      "store.sapling.import_manifest_for_root_failure"};
+  Counter importManifestForRootRetrySuccess{
+      "store.sapling.import_manifest_for_root_retry_success"};
+  Counter importManifestForRootRetryFailure{
+      "store.sapling.import_manifest_for_root_retry_failure"};
   Duration getBlob{"store.sapling.get_blob_us"};
   Duration fetchBlob{"store.sapling.fetch_blob_us"};
   Counter fetchBlobSuccess{"store.sapling.fetch_blob_success"};
