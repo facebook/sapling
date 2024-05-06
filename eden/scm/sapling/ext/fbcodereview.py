@@ -1116,14 +1116,10 @@ def diffidtonode(repo, diffid):
         if diffreponame in repo.ui.configlist("phrevset", "aliases"):
             diffreponame = localreponame
 
-    if not util.istest() and (
-        _normalize_slash(diffreponame) != _normalize_slash(localreponame)
-    ):
+    if not util.istest() and not _matchreponames(diffreponame, localreponame):
         megarepo_can_handle = extensions.isenabled(
             repo.ui, "megarepo"
-        ) and _normalize_slash(diffreponame) in repo.ui.configlist(
-            "megarepo", "transparent-lookup"
-        )
+        ) and diffreponame in repo.ui.configlist("megarepo", "transparent-lookup")
 
         if megarepo_can_handle:
             # megarepo extension might be able to translate diff/commit to
@@ -1285,5 +1281,29 @@ def _get_callsigns(repo) -> List[str]:
     return callsigns
 
 
-def _normalize_slash(name):
-    return (name or "").rsplit("/", 1)[-1]
+def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -> bool:
+    """Makes sure two different repo names look mostly the same, ignoring `.git`
+    suffixes and checking that suffixes considering repos names separated by
+    slashes look the same. It's assumed that `localreponame` should be a longer
+    version of `diffreponame`.
+
+    >>> _matchreponames("bar.git", "foo/bar")
+    True
+    >>> _matchreponames("bar", "foo/bar.git")
+    True
+    >>> _matchreponames("afoo/bar", "foo/bar")
+    False
+    >>> _matchreponames("foo/bar", "bar")
+    False
+    >>> _matchreponames("w/x/y", "z/x/y")
+    False
+    """
+
+    def _processreponame(reponame: str) -> List[str]:
+        return (reponame or "").removesuffix(".git").split("/")
+
+    diffreponame = _processreponame(diffreponame)
+    localreponame = _processreponame(localreponame)
+    dilen = len(diffreponame)
+    lolen = len(localreponame)
+    return dilen <= lolen and diffreponame[-dilen:] == localreponame[-dilen:]
