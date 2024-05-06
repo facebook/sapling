@@ -713,6 +713,17 @@ pub fn repo_name_from_url(config: &dyn Config, s: &str) -> Option<String> {
                     }
                 }
                 _ => {
+                    // Try to remove special prefixes to guess the repo name from that
+                    if let Some(repo_prefix) = config.get("remotefilelog", "reponame-path-prefixes")
+                    {
+                        if let Some((_, reponame)) =
+                            url.path().split_once(repo_prefix.to_string().as_str())
+                        {
+                            if !reponame.is_empty() {
+                                return Some(reponame.to_string());
+                            }
+                        }
+                    }
                     // Try the last segment in url path.
                     if let Some(last_segment) = url
                         .path_segments()
