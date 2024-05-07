@@ -63,11 +63,14 @@
   $ echo "this is fileB.this is fileB.this is fileB.this is fileB.this is fileB.this is fileB.this is fileB.this is fileB" > fileB
   $ git add fileB
   $ git commit -qam "Reverted fileB.1 -> fileB"
-  $ git tag -a -m "last tag" last_tag
+  $ echo "this is fileB.2 this is fileB.2 this is fileB.2 this is fileB.2 this is fileB.2 this is fileB.2 this is fileB.2.this is fileB.2" > fileB
+  $ git add fileB
+  $ git commit -qam "Modified fileB -> fileB.2"
 
   $ cd "$GIT_REPO"
   $ quiet git pull "$GIT_REPO_ORIGIN"
 # Capture all the known Git objects from the repo
+  $ cd $GIT_REPO_ORIGIN
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import the newly added commits to Mononoke
@@ -77,7 +80,7 @@
   $ cd $REPONAME
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $current_head
-  $ quiet git_client pull $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  $ quiet git_client pull
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
