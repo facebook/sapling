@@ -14,6 +14,7 @@ use bookmark_renaming::get_bookmark_renamers;
 use bookmark_renaming::BookmarkRenamer;
 use bookmark_renaming::BookmarkRenamers;
 use bookmarks::BookmarkKey;
+use context::CoreContext;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -24,24 +25,45 @@ use mononoke_types::RepositoryId;
 use movers::get_movers;
 use movers::Mover;
 use movers::Movers;
+use slog::warn;
 
 // TODO(T169306120): rename this module
 
 pub async fn get_strip_git_submodules_by_version(
+    ctx: &CoreContext,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     version: &CommitSyncConfigVersion,
-    // TODO(T179530927): stop treating this always as small repo and pass target repo id as well
+    // TODO(T179530927): stop treating source repo always as small repo
     source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
 ) -> Result<GitSubmodulesChangesAction, Error> {
     let commit_sync_config = live_commit_sync_config
         .get_commit_sync_config_by_version(source_repo_id, version)
         .await?;
+
     let small_repo_configs = commit_sync_config.small_repos;
     if let Some(small_repo_config) = small_repo_configs.get(&source_repo_id) {
+        // If sync direction is forward, small repo would be the source
         return Ok(small_repo_config
             .submodule_config
             .git_submodules_action
             .clone());
+    };
+
+    if let Some(small_repo_config) = small_repo_configs.get(&target_repo_id) {
+        // If sync direction is backwards, small repo would be the target
+        let small_repo_action = small_repo_config
+            .submodule_config
+            .git_submodules_action
+            .clone();
+        // TODO(T179530927): return small repo action instead of default one
+        if small_repo_action != GitSubmodulesChangesAction::default() {
+            warn!(
+                ctx.logger(),
+                "Using default submodule action for backsyncing. Actual submodule action configured for small repo is {0:#?}",
+                small_repo_action,
+            );
+        };
     };
 
     // TODO(T179530927): get the correct submodule action from small repo

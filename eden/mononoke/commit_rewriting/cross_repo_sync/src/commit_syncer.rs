@@ -836,9 +836,11 @@ where
         let mover = self.get_mover_by_version(sync_config_version).await?;
 
         let git_submodules_action = get_strip_git_submodules_by_version(
+            ctx,
             Arc::clone(&self.live_commit_sync_config),
             sync_config_version,
             self.repos.get_source_repo().repo_identity().id(),
+            self.repos.get_target_repo().repo_identity().id(),
         )
         .await?;
         let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
@@ -946,9 +948,11 @@ where
         let mover = self.get_mover_by_version(&version).await?;
 
         let git_submodules_action = get_strip_git_submodules_by_version(
+            ctx,
             Arc::clone(&self.live_commit_sync_config),
             &version,
             self.repos.get_source_repo().repo_identity().id(),
+            self.repos.get_target_repo().repo_identity().id(),
         )
         .await?;
         let mut source_cs_mut = source_cs.clone().into_mut();

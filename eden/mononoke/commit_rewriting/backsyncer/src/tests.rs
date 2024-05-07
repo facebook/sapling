@@ -1371,9 +1371,11 @@ async fn init_repos(
     let live_commit_sync_config = Arc::new(lv_cfg);
 
     let git_submodules_action = get_strip_git_submodules_by_version(
+        &ctx,
         live_commit_sync_config.clone(),
         &version,
         source_repo_id,
+        target_repo_id,
     )
     .await?;
 

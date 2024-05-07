@@ -220,9 +220,11 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         )
         .await?;
         let git_submodules_action = get_strip_git_submodules_by_version(
+            self.ctx,
             Arc::clone(&self.live_commit_sync_config),
             &expected_version,
             self.source_repo_id().0,
+            self.target_repo_id.0,
         )
         .await?;
 
@@ -326,9 +328,11 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 remapped_parents.insert(p, remapped_p);
 
                 let git_submodules_action = get_strip_git_submodules_by_version(
+                    self.ctx,
                     Arc::clone(&self.live_commit_sync_config),
                     &version,
                     self.source_repo_id().0,
+                    self.target_repo_id.0,
                 )
                 .await?;
 
@@ -481,9 +485,11 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             }
 
             let git_submodules_action = get_strip_git_submodules_by_version(
+                self.ctx,
                 Arc::clone(&self.live_commit_sync_config),
                 &version,
                 self.source_repo_id().0,
+                self.target_repo_id.0,
             )
             .await?;
 
