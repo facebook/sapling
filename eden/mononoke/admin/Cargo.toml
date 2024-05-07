@@ -63,7 +63,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.49"

@@ -23,7 +23,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 unicode-segmentation = "1.6.0"
 
 [dev-dependencies]

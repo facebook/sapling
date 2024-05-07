@@ -36,6 +36,6 @@ mononoke_types-mocks = { version = "0.1.0", path = "../../../mononoke_types/mock
 permission_checker = { version = "0.1.0", path = "../../../permission_checker" }
 regex = "1.9.2"
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../../tests/utils" }
