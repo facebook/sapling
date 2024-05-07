@@ -265,14 +265,14 @@ fn to_commit_stream(commits: Vec<ChangesetId>) -> BoxStream<'static, Result<Chan
 }
 
 /// Fetch all the bonsai commits pointed to by the annotated tags corresponding
-/// to the input object ids
+/// to the input object ids along with the tag names
 async fn tagged_commits(
     ctx: &CoreContext,
     repo: &impl Repo,
     git_shas: Vec<GitSha1>,
-) -> Result<Vec<ChangesetId>> {
+) -> Result<(Vec<ChangesetId>, Arc<FxHashSet<String>>)> {
     if git_shas.is_empty() {
-        return Ok(vec![]);
+        return Ok((vec![], Arc::new(FxHashSet::default())));
     }
     // Fetch the names of the tags corresponding to the tag object represented by the input object ids
     let tag_names = repo
@@ -285,7 +285,8 @@ async fn tagged_commits(
         .collect::<FxHashSet<String>>();
     let tag_names = Arc::new(tag_names);
     // Fetch the commits pointed to by those tags
-    repo.bookmarks_cache()
+    let commits = repo
+        .bookmarks_cache()
         .list(
             ctx,
             &BookmarkPrefix::new(TAGS_PREFIX)?,
@@ -304,16 +305,18 @@ async fn tagged_commits(
                     }
                 })
                 .collect::<Vec<_>>()
-        })
+        })?;
+    Ok((commits, tag_names))
 }
 
 /// Fetch the corresponding bonsai commits for the input Git object ids. If the object id doesn't
-/// correspond to a bonsai commit, try to resolve it to a tag and then fetch the bonsai commit
+/// correspond to a bonsai commit, try to resolve it to a tag and then fetch the bonsai commit and
+/// return it along with the tag name
 async fn git_shas_to_bonsais(
     ctx: &CoreContext,
     repo: &impl Repo,
     oids: impl Iterator<Item = impl AsRef<gix_hash::oid>>,
-) -> Result<Vec<ChangesetId>> {
+) -> Result<(Vec<ChangesetId>, Arc<FxHashSet<String>>)> {
     let shas = oids
         .map(|oid| GitSha1::from_object_id(oid.as_ref()))
         .collect::<Result<Vec<_>>>()
@@ -335,11 +338,11 @@ async fn git_shas_to_bonsais(
         .into_iter()
         .filter(|&sha| !entries.iter().any(|entry| entry.git_sha1 == sha))
         .collect::<Vec<_>>();
-    let mut commits_from_tags = tagged_commits(ctx, repo, tag_shas)
+    let (mut commits_from_tags, tag_names) = tagged_commits(ctx, repo, tag_shas)
         .await
         .context("Error while resolving annotated tags to their commits")?;
     commits_from_tags.extend(entries.into_iter().map(|entry| entry.bcs_id));
-    anyhow::Ok(commits_from_tags)
+    Ok((commits_from_tags, tag_names))
 }
 
 /// Fetch the Bonsai Git Mappings for the given bonsais
@@ -882,6 +885,7 @@ async fn tags_packfile_stream<'a>(
     repo: &'a impl Repo,
     requested_commits: Vec<ChangesetId>,
     packfile_item_inclusion: PackfileItemInclusion,
+    requested_tag_names: Arc<FxHashSet<String>>,
     concurrency: usize,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     let requested_commits: Arc<FxHashSet<ChangesetId>> =
@@ -909,14 +913,18 @@ async fn tags_packfile_stream<'a>(
                 .collect::<FxHashSet<_>>()
         })
         .context("Error in getting tags pointing to input set of commits")?;
-    // Fetch entries corresponding to annotated tags in the repo
+    // Fetch entries corresponding to annotated tags in the repo or with names
+    // that match the requested tag names
     let tag_entries = repo
         .bonsai_tag_mapping()
         .get_all_entries()
         .await
         .context("Error in getting tags during fetch")?
         .into_iter()
-        .filter(|entry| required_tag_names.contains(&entry.tag_name))
+        .filter(|entry| {
+            required_tag_names.contains(&entry.tag_name)
+                || requested_tag_names.contains(&entry.tag_name)
+        })
         .collect::<Vec<_>>();
     let tags_count = tag_entries.len();
     let tag_stream =
@@ -1079,10 +1087,11 @@ pub async fn fetch_response<'a>(
         .git_delta_manifest_version;
     let ctx = Arc::new(ctx);
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
-    let bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
+    // If the input contains tag object Ids, fetch the corresponding tag names
+    let (bases, _) = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
         .await
         .context("Error converting base Git commits to Bonsai duing fetch")?;
-    let heads = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
+    let (heads, requested_tag_names) = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
         .await
         .context("Error converting head Git commits to Bonsai during fetch")?;
     // Get the stream of commits between the bases and heads
@@ -1139,6 +1148,7 @@ pub async fn fetch_response<'a>(
         repo,
         target_commits,
         packfile_item_inclusion,
+        requested_tag_names,
         request.concurrency.tags,
     )
     .await

@@ -80,7 +80,6 @@
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $current_head
   $ quiet git_client pull
-  fatal: bad object 113454d6c6f11b84d16c504f75e39fca4c522f00
-  error: https://*/repos/git/ro/repo.git did not send all necessary objects (glob)
-  
-  [1]
+# Verify that we get the same Git repo back that we started with
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
