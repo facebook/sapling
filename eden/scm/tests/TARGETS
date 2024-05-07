@@ -1,4 +1,4 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
@@ -155,6 +155,12 @@ python_unittest(
     deps = [
         "//libfb/py:parutil",
     ],
+)
+
+buck_command_alias(
+    name = "run_tests_py_eden_cli",
+    env = E_ENV,
+    exe = ":run_tests_py_eden",
 )
 
 M_ENV = dict(ENV)
