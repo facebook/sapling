@@ -361,7 +361,7 @@ impl HgAugmentedManifestEnvelope {
             }
             .await
             .context(format!(
-                "When loading manifest {} from blobstore",
+                "Failed to load manifest {} from blobstore",
                 manifestid
             ))
         }
