@@ -57,6 +57,7 @@ pub mod flags;
 pub mod fsencode;
 pub mod manifest;
 pub mod nodehash;
+pub mod preloaded_augmented_manifest;
 pub mod remotefilelog;
 pub mod sharded_augmented_manifest;
 pub mod sql_types;
@@ -106,8 +107,10 @@ pub use crate::nodehash::HgNodeHash;
 pub use crate::nodehash::HgNodeKey;
 pub use crate::nodehash::NULL_CSID;
 pub use crate::nodehash::NULL_HASH;
+pub use crate::preloaded_augmented_manifest::HgPreloadedAugmentedManifest;
 pub use crate::remotefilelog::convert_parents_to_remotefilelog_format;
 pub use crate::remotefilelog::HgFileHistoryEntry;
+pub use crate::sharded_augmented_manifest::HgAugmentedManifestEntry;
 pub use crate::sharded_augmented_manifest::ShardedHgAugmentedManifest;
 pub use crate::utils::percent_encode;
 
