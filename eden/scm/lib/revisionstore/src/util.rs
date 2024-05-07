@@ -22,6 +22,7 @@ use repo_name::encode_repo_name;
 use tracing::Span;
 use util::path::create_dir;
 use util::path::create_shared_dir;
+use util::path::create_shared_dir_all;
 
 pub fn get_repo_name(config: &dyn Config) -> Result<String> {
     Ok(config.must_get("remotefilelog", "reponame")?)
@@ -30,7 +31,7 @@ pub fn get_repo_name(config: &dyn Config) -> Result<String> {
 fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf> {
     let reponame = get_repo_name(config)?;
     let mut path: PathBuf = config.must_get("remotefilelog", "cachepath")?;
-    create_shared_dir(&path)?;
+    create_shared_dir_all(&path)?;
     path.push(encode_repo_name(reponame));
     create_shared_dir(&path)?;
 
@@ -65,7 +66,7 @@ pub fn get_local_path(mut path: PathBuf, suffix: &Option<impl AsRef<Path>>) -> R
 pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore");
-    create_shared_dir(&path)?;
+    create_shared_dir_all(&path)?;
     Ok(path)
 }
 
@@ -73,7 +74,7 @@ pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
 pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore_aux");
-    create_shared_dir(&path)?;
+    create_shared_dir_all(&path)?;
     Ok(path)
 }
 
@@ -81,7 +82,7 @@ pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBu
 pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedloghistorystore");
-    create_shared_dir(&path)?;
+    create_shared_dir_all(&path)?;
     Ok(path)
 }
 
@@ -89,7 +90,7 @@ pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf
 pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("packs");
-    create_shared_dir(&path)?;
+    create_shared_dir_all(&path)?;
 
     if let Some(suffix) = suffix {
         path.push(suffix);
@@ -107,7 +108,7 @@ pub fn get_cache_packs_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Re
 fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = store_path.as_ref().to_owned();
     path.push("lfs");
-    create_shared_dir(&path)?;
+    create_shared_dir_all(&path)?;
 
     Ok(path)
 }
