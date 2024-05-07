@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import foundPlatform from '../platform';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -181,5 +182,21 @@ describe('FillCommitMessage', () => {
         expect(getDescriptionEditor().value).toMatch(/This is my commit message/);
       });
     });
+  });
+
+  it('Clears commit message', async () => {
+    clickCommitMode();
+
+    expect(getTitleEditor()).toHaveValue('');
+    expect(getDescriptionEditor()).toHaveValue('');
+
+    const confirmSpy = jest
+      .spyOn(foundPlatform, 'confirm')
+      .mockImplementation(() => Promise.resolve(true));
+
+    fireEvent.click(screen.getByTestId('fill-commit-message-more-options'));
+    fireEvent.click(screen.getByText('Clear commit message'));
+
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
   });
 });

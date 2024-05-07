@@ -9,12 +9,15 @@ import type {CommitInfo} from '../types';
 import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
+import {FlexSpacer} from '../ComponentUtils';
 import {Internal} from '../Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
+import {Button} from '../components/Button';
 import {LinkButton} from '../components/LinkButton';
 import {T, t} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
+import foundPlatform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {layout} from '../stylexUtils';
 import {font, spacing} from '../tokens.stylex';
@@ -33,6 +36,7 @@ import {
 import {SmallCapsTitle} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {useCallback} from 'react';
+import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
 const fillCommitMessageMethods: Array<{
@@ -80,6 +84,19 @@ const fillCommitMessageMethods: Array<{
 
 export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: CommitInfoMode}) {
   const showModal = useModal();
+  const menu = useContextMenu(() => [
+    {
+      label: t('Clear commit message'),
+      onClick: async () => {
+        const confirmed = await foundPlatform.confirm(
+          t('Are you sure you want to clear the currently edited commit message?'),
+        );
+        if (confirmed) {
+          writeAtom(editedCommitMessages('head'), {});
+        }
+      },
+    },
+  ]);
   const fillMessage = useCallback(
     async (newMessage: CommitMessageFields) => {
       const hashOrHead = mode === 'commit' ? 'head' : commit.hash;
@@ -162,6 +179,10 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
   return (
     <div {...stylex.props(layout.flexRow, styles.container)}>
       <T replace={{$methods: methods}}>Fill commit message from $methods</T>
+      <FlexSpacer />
+      <Button icon onClick={menu} data-testid="fill-commit-message-more-options">
+        <Icon icon="ellipsis" />
+      </Button>
     </div>
   );
 }
@@ -225,8 +246,9 @@ const styles = stylex.create({
   container: {
     padding: spacing.half,
     paddingInline: spacing.pad,
+    paddingBottom: 0,
     gap: spacing.half,
-    alignItems: 'baseline',
+    alignItems: 'center',
     fontSize: font.small,
     marginInline: spacing.pad,
     marginTop: spacing.half,
