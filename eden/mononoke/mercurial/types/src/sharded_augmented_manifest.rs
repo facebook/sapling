@@ -7,11 +7,14 @@
 
 use std::str::FromStr;
 
+use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -29,11 +32,15 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
 
+use crate::blobs::MononokeHgBlobError;
 use crate::thrift;
 use crate::FileType;
+use crate::HgAugmentedManifestId;
 use crate::HgNodeHash;
 use crate::HgParents;
 use crate::MPathElement;
+use crate::MononokeHgError;
+use crate::NULL_HASH;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct HgAugmentedFileLeafNode {
@@ -309,5 +316,89 @@ impl Rollup<HgAugmentedManifestEntry> for ShardedHgAugmentedManifestRollupCount 
             }),
             |acc, child| ShardedHgAugmentedManifestRollupCount(acc.0 + child.0),
         )
+    }
+}
+
+impl HgAugmentedManifestEnvelope {
+    pub fn from_blob(blob: Bytes) -> Result<Self> {
+        let thrift_tc = fbthrift::compact_protocol::deserialize(blob).with_context(|| {
+            MononokeHgError::BlobDeserializeError("HgAugmentedManifestEnvelope".into())
+        })?;
+        Self::from_thrift(thrift_tc)
+    }
+
+    pub async fn load<'a, B: Blobstore>(
+        ctx: &CoreContext,
+        blobstore: &B,
+        manifestid: HgAugmentedManifestId,
+    ) -> Result<Option<Self>> {
+        if manifestid.clone().into_nodehash() == NULL_HASH {
+            Ok(None)
+        } else {
+            async {
+                let blobstore_key = manifestid.blobstore_key();
+                let bytes = blobstore
+                    .get(ctx, &blobstore_key)
+                    .await
+                    .context("While fetching aurmented manifest envelope blob")?;
+                (|| {
+                    let envelope = match bytes {
+                        Some(bytes) => Self::from_blob(bytes.into_raw_bytes())?,
+                        None => return Ok(None),
+                    };
+                    if manifestid.into_nodehash() != envelope.augmented_manifest.hg_node_id() {
+                        bail!(
+                            "Augmented Manifest ID mismatch (requested: {}, got: {})",
+                            manifestid,
+                            envelope.augmented_manifest.hg_node_id()
+                        );
+                    }
+                    Ok(Some(envelope))
+                })()
+                .context(MononokeHgBlobError::ManifestDeserializeFailed(
+                    blobstore_key,
+                ))
+            }
+            .await
+            .context(format!(
+                "When loading manifest {} from blobstore",
+                manifestid
+            ))
+        }
+    }
+
+    /// Serialize this structure into bytes
+    #[inline]
+    pub fn into_blob(self) -> Bytes {
+        let thrift = self.into_thrift();
+        fbthrift::compact_protocol::serialize(&thrift)
+    }
+
+    pub fn augmented_manifest(&self) -> &ShardedHgAugmentedManifest {
+        &self.augmented_manifest
+    }
+
+    pub fn augmented_manifest_id(&self) -> Blake3 {
+        self.augmented_manifest_id
+    }
+
+    pub fn augmented_manifest_size(&self) -> u64 {
+        self.augmented_manifest_size
+    }
+}
+
+#[async_trait]
+impl Loadable for HgAugmentedManifestId {
+    type Value = HgAugmentedManifestEnvelope;
+
+    async fn load<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError> {
+        let id = *self;
+        HgAugmentedManifestEnvelope::load(ctx, blobstore, id)
+            .await?
+            .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
     }
 }
