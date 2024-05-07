@@ -2042,6 +2042,7 @@ class changeset_printer:
         self.lastheader = None
         self.footer = None
         self._columns = templatekw.getlogcolumns()
+        self.use_committer_date = ui.configbool("log", "use-committer-date")
 
     def flush(self, ctx):
         rev = ctx.rev()
@@ -2115,7 +2116,11 @@ class changeset_printer:
                 columns["manifest"] % hex(mnode), label="ui.debug log.manifest"
             )
         self.ui.write(columns["user"] % ctx.user(), label="log.user")
-        self.ui.write(columns["date"] % util.datestr(ctx.date()), label="log.date")
+        date = ctx.date()
+        if self.use_committer_date:
+            if committer_info := git.committer_and_date_from_extras(ctx.extra()):
+                date = committer_info[1:]
+        self.ui.write(columns["date"] % util.datestr(date), label="log.date")
 
         if self.ui.debugflag:
             files = ctx.p1().status(ctx)[:3]
@@ -2233,7 +2238,15 @@ class jsonchangeset(changeset_printer):
         self.ui.write(_x(',\n  "branch": %s') % j(ctx.branch()))
         self.ui.write(_x(',\n  "phase": "%s"') % ctx.phasestr())
         self.ui.write(_x(',\n  "user": %s') % j(ctx.user()))
-        self.ui.write(_x(',\n  "date": [%d, %d]') % ctx.date())
+        date = ctx.date()
+        if author_date := git.author_date_from_extras(ctx.extra()):
+            self.ui.write(_x(',\n  "author_date": [%d, %d]') % author_date)
+        if committer_info := git.committer_and_date_from_extras(ctx.extra()):
+            self.ui.write(_x(',\n  "committer": %s') % j(committer_info[0]))
+            self.ui.write(_x(',\n  "committer_date": [%d, %d]') % committer_info[1:])
+            if self.use_committer_date:
+                date = committer_info[1:]
+        self.ui.write(_x(',\n  "date": [%d, %d]') % date)
         self.ui.write(_x(',\n  "desc": %s') % j(ctx.description()))
 
         self.ui.write(

@@ -1137,6 +1137,21 @@ def submodule_node_from_ctx_path(ctx, path) -> Optional[bytes]:
     return submodule_node_from_fctx(fctx)
 
 
+def author_date_from_extras(extra) -> Optional[Tuple[int, int]]:
+    """Extract the author date from commit extras.
+
+    This is encoded using the 'author_date' extra.
+    """
+    d = extra.get("author_date")
+    if d:
+        try:
+            sec_str, tz_str = d.split(" ", 1)
+            return int(sec_str), int(tz_str)
+        except ValueError:
+            pass
+    return None
+
+
 def committer_and_date_from_extras(extra) -> Optional[Tuple[str, int, int]]:
     """Extract the committer and committer date from commit extras.
 
