@@ -116,22 +116,50 @@ def _may_need_xrepotranslate(repo, commitid) -> bool:
     return True
 
 
+def _diff_to_commit(repo, commitid):
+    try:
+        # First try looking up the diff using our local repo name. This can work xrepo
+        # since Phabricator has knowledge of a commit landing to multiple different repos
+        # (one of which might be our repo).
+        if resolved := fbcodereview.diffidtonode(
+            repo,
+            commitid[1:],
+        ):
+            return hex(resolved)
+    except Exception as ex:
+        repo.ui.note_err(_("error resolving diff %s to commit: %s\n") % (commitid, ex))
+
+    for xrepo in repo.ui.configlist("megarepo", "transparent-lookup"):
+        if xrepo == repo.ui.config("remotefilelog", "reponame"):
+            continue
+
+        try:
+            # Now try using the other repo's name. If Phabricator hasn't noticed the
+            # commit appearing in our local repo yet, we need to resolve the diff number
+            # using the "native" repo.
+            if resolved := fbcodereview.diffidtonode(
+                repo,
+                commitid[1:],
+                localreponame=xrepo,
+            ):
+                return hex(resolved)
+        except Exception as ex:
+            repo.ui.note_err(
+                _("error resolving diff %s to commit in %s: %s\n")
+                % (commitid, xrepo, ex)
+            )
+
+    return None
+
+
 def _xrepotranslate(repo, commitid):
     commit_ids = {commitid}
 
     if _diffidre.match(commitid):
         # If it looks like a phabricator diff, first resolve the diff ID to a commit hash.
-        try:
-            commitid = fbcodereview.diffidtonode(
-                repo,
-                commitid[1:],
-            )
-            commitid = hex(commitid)
+        if resolved := _diff_to_commit(repo, commitid):
+            commitid = resolved
             commit_ids.add(commitid)
-        except Exception as ex:
-            repo.ui.note_err(
-                _("error resolving diff %s to commit: %s\n") % (commitid, ex)
-            )
 
     if not _commithashre.match(commitid) and "/" not in commitid:
         return None
@@ -139,14 +167,17 @@ def _xrepotranslate(repo, commitid):
     if not repo.nullableedenapi:
         return None
 
-    # Avoid xrepo query if commithash is now known to be of this repo.
-    # This would be the case if a previous autopull already found it.
-    if commitid in repo:
-        return None
-
     cache = getattr(repo, "_xrepo_lookup_cache", None)
     if cache is None:
         return None
+
+    # Avoid xrepo query if commithash is now known to be of this repo.
+    # This would be the case if a previous autopull already found it.
+    if commitid in repo:
+        node = repo[commitid].node()
+        for id in commit_ids:
+            cache[id] = node
+        return node
 
     if commitid in cache:
         return cache[commitid]

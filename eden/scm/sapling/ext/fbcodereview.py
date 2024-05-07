@@ -1072,7 +1072,7 @@ def parsedesc(repo, resp, ignoreparsefailure):
 
 
 @util.lrucachefunc
-def diffidtonode(repo, diffid):
+def diffidtonode(repo, diffid, localreponame=None):
     """Return node that matches a given Differential ID or None.
 
     The node might exist or not exist in the repo.
@@ -1101,7 +1101,10 @@ def diffidtonode(repo, diffid):
         return None
 
     vcs = resp.get("source_control_system")
-    localreponame = repo.ui.config("remotefilelog", "reponame")
+
+    if localreponame is None:
+        localreponame = repo.ui.config("remotefilelog", "reponame")
+
     diffreponame = None
 
     # If already committed, prefer the commit that went to our local
@@ -1125,7 +1128,7 @@ def diffidtonode(repo, diffid):
         if megarepo_can_handle:
             # megarepo extension might be able to translate diff/commit to
             # local repo - don't abort the entire command.
-            pass
+            return None
         else:
             raise error.Abort(
                 "D%s is for repo '%s', not this repo ('%s')"
