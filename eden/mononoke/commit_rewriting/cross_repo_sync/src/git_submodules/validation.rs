@@ -49,8 +49,8 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
-use crate::git_submodules::utils::run_and_log_stats_to_scuba;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
+use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
 /// Validate that a given bonsai **from the large repo** keeps all submodule

@@ -50,6 +50,7 @@ pub use commit_syncers_lib::Syncers;
 pub use git_submodules::validate_all_submodule_expansions;
 pub use git_submodules::InMemoryRepo;
 pub use git_submodules::SubmoduleExpansionData;
+pub use reporting::run_and_log_stats_to_scuba;
 pub use reporting::CommitSyncContext;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 pub use types::ConcreteRepo;
