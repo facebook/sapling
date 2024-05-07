@@ -39,8 +39,10 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--pattern-file",
+        metavar="FILE",
         help=(
-            "Specify path to a file that lists patterns/files to match, one per line"
+            "Obtain patterns to match from FILE, one per line. "
+            "If FILE is - , read patterns from standard input."
         ),
     )
     parser.add_argument(
@@ -97,7 +99,8 @@ def _find_checkout_and_patterns(
 
     raw_patterns = list(args.PATTERN)
     if args.pattern_file is not None:
-        with open(args.pattern_file) as f:
+        handle = sys.stdin if args.pattern_file == "-" else open(args.pattern_file)
+        with handle as f:
             raw_patterns.extend(pat.strip() for pat in f.readlines())
 
     patterns = [_clean_pattern(pattern) for pattern in raw_patterns]
@@ -113,9 +116,10 @@ def _find_checkout_and_patterns(
 class GlobCmd(Subcmd):
     NAME = "glob"
     HELP = "Print matching filenames"
-    DESCRIPTION = """Print matching filenames. Glob patterns can be provided
-    either via stdin or a pattern file. This command does not do any filtering
-    based on source control state or gitignore files."""
+    DESCRIPTION = """Print matching filenames.
+    Glob patterns can be provided via a pattern file.
+    This command does not do any filtering based on source control state or
+    gitignore files."""
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         _add_common_arguments(parser)
@@ -144,7 +148,7 @@ class PrefetchCmd(Subcmd):
     NAME = "prefetch"
     HELP = "Prefetch content for matching file patterns"
     DESCRIPTION = """Prefetch content for matching file patterns.
-    Glob patterns can be provided either via stdin or a pattern file.
+    Glob patterns can be provided via a pattern file.
     This command does not do any filtering based on source control state or
     gitignore files."""
 
