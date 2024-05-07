@@ -1,0 +1,313 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::str::FromStr;
+
+use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
+use context::CoreContext;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use mononoke_types::hash::Blake2;
+use mononoke_types::hash::Blake3;
+use mononoke_types::hash::Sha1;
+use mononoke_types::impl_typed_hash;
+use mononoke_types::sharded_map_v2::Rollup;
+use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use mononoke_types::sharded_map_v2::ShardedMapV2Value;
+use mononoke_types::Blob;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::MononokeId;
+use mononoke_types::ThriftConvert;
+
+use crate::thrift;
+use crate::FileType;
+use crate::HgNodeHash;
+use crate::HgParents;
+use crate::MPathElement;
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct HgAugmentedFileLeafNode {
+    pub file_type: FileType,
+    pub filenode: HgNodeHash,
+    pub content_blake3: Blake3,
+    pub content_sha1: Sha1,
+    pub total_size: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct HgAugmentedDirectoryNode {
+    pub treenode: HgNodeHash,
+    pub augmented_manifest_id: Blake3,
+    pub augmented_manifest_size: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub enum HgAugmentedManifestEntry {
+    FileNode(HgAugmentedFileLeafNode),
+    DirectoryNode(HgAugmentedDirectoryNode),
+}
+
+/// An identifier for a sharded map node used in (sharded) Augmented Manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapV2NodeHgAugmentedManifestId(Blake2);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ShardedHgAugmentedManifestRollupCount(pub u64);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ShardedHgAugmentedManifest {
+    pub hg_node_id: HgNodeHash,
+    pub p1: Option<HgNodeHash>,
+    pub p2: Option<HgNodeHash>,
+    pub computed_node_id: HgNodeHash,
+    pub subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HgAugmentedManifestEnvelope {
+    // Expected to match the hash of the encoded augmented mf.
+    pub augmented_manifest_id: Blake3,
+    // Expected to match the size of the encoded augmented mf.
+    pub augmented_manifest_size: u64,
+    pub augmented_manifest: ShardedHgAugmentedManifest,
+}
+
+impl ShardedHgAugmentedManifest {
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        name: &MPathElement,
+    ) -> Result<Option<HgAugmentedManifestEntry>> {
+        self.subentries.lookup(ctx, blobstore, name.as_ref()).await
+    }
+
+    pub fn into_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
+        self.subentries
+            .into_entries(ctx, blobstore)
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
+
+    pub fn into_prefix_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
+        self.subentries
+            .into_prefix_entries(ctx, blobstore, prefix.as_ref())
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
+
+    pub fn into_prefix_subentries_after<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
+        self.subentries
+            .into_prefix_entries_after(ctx, blobstore, prefix, after)
+            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
+    }
+
+    #[inline]
+    pub fn hg_node_id(&self) -> HgNodeHash {
+        self.hg_node_id
+    }
+
+    #[inline]
+    pub fn p1(&self) -> Option<HgNodeHash> {
+        self.p1
+    }
+
+    #[inline]
+    pub fn p2(&self) -> Option<HgNodeHash> {
+        self.p2
+    }
+
+    #[inline]
+    pub fn hg_parents(&self) -> HgParents {
+        HgParents::new(self.p1, self.p2)
+    }
+
+    #[inline]
+    pub fn computed_node_id(&self) -> HgNodeHash {
+        self.computed_node_id
+    }
+}
+
+impl HgAugmentedManifestEntry {
+    pub fn rollup_count(&self) -> ShardedHgAugmentedManifestRollupCount {
+        ShardedHgAugmentedManifestRollupCount(1)
+    }
+}
+
+impl ThriftConvert for HgAugmentedFileLeafNode {
+    const NAME: &'static str = "HgAugmentedFileLeafNode";
+    type Thrift = thrift::HgAugmentedFileLeaf;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        Ok(Self {
+            file_type: FileType::from_thrift(t.file_type)?,
+            filenode: HgNodeHash::from_thrift(t.filenode)?,
+            content_blake3: Blake3::from_thrift(t.content_blake3)?,
+            content_sha1: Sha1::from_bytes(t.content_sha1.0)?,
+            total_size: t.total_size as u64,
+        })
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        Self::Thrift {
+            file_type: self.file_type.into_thrift(),
+            filenode: self.filenode.into_thrift(),
+            content_blake3: self.content_blake3.into_thrift(),
+            content_sha1: self.content_sha1.into_thrift(),
+            total_size: self.total_size as i64,
+        }
+    }
+}
+
+impl ThriftConvert for HgAugmentedDirectoryNode {
+    const NAME: &'static str = "HgAugmentedDirectoryNode";
+    type Thrift = thrift::HgAugmentedDirectoryNode;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        Ok(Self {
+            treenode: HgNodeHash::from_thrift(t.treenode)?,
+            augmented_manifest_id: Blake3::from_thrift(t.augmented_manifest_id)?,
+            augmented_manifest_size: t.augmented_manifest_size as u64,
+        })
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        Self::Thrift {
+            treenode: self.treenode.into_thrift(),
+            augmented_manifest_id: self.augmented_manifest_id.into_thrift(),
+            augmented_manifest_size: self.augmented_manifest_size as i64,
+        }
+    }
+}
+
+impl ThriftConvert for HgAugmentedManifestEntry {
+    const NAME: &'static str = "HgAugmentedManifestEntry";
+    type Thrift = thrift::HgAugmentedManifestEntry;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        match t {
+            Self::Thrift::file(file) => Ok(Self::FileNode(ThriftConvert::from_thrift(file)?)),
+            Self::Thrift::directory(directory) => {
+                Ok(Self::DirectoryNode(ThriftConvert::from_thrift(directory)?))
+            }
+            _ => Err(anyhow::anyhow!("Unknown HgAugmentedManifestEntry variant")),
+        }
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        match self {
+            Self::FileNode(file) => Self::Thrift::file(file.into_thrift()),
+            Self::DirectoryNode(directory) => Self::Thrift::directory(directory.into_thrift()),
+        }
+    }
+}
+
+impl ThriftConvert for ShardedHgAugmentedManifest {
+    const NAME: &'static str = "ShardedHgAugmentedManifest";
+    type Thrift = thrift::HgAugmentedManifest;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        Ok(Self {
+            hg_node_id: HgNodeHash::from_thrift(t.hg_node_id)?,
+            p1: HgNodeHash::from_thrift_opt(t.p1)?,
+            p2: HgNodeHash::from_thrift_opt(t.p2)?,
+            computed_node_id: HgNodeHash::from_thrift(t.computed_node_id)?,
+            subentries: ShardedMapV2Node::from_thrift(t.subentries)?,
+        })
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        Self::Thrift {
+            hg_node_id: self.hg_node_id.into_thrift(),
+            p1: self.p1.map(HgNodeHash::into_thrift),
+            p2: self.p2.map(HgNodeHash::into_thrift),
+            computed_node_id: self.computed_node_id.into_thrift(),
+            subentries: self.subentries.into_thrift(),
+        }
+    }
+}
+
+impl ThriftConvert for HgAugmentedManifestEnvelope {
+    const NAME: &'static str = "HgAugmentedManifestEnvelope";
+    type Thrift = thrift::HgAugmentedManifestEnvelope;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        Ok(Self {
+            augmented_manifest_id: Blake3::from_thrift(t.augmented_manifest_id)?,
+            augmented_manifest_size: t.augmented_manifest_size as u64,
+            augmented_manifest: ShardedHgAugmentedManifest::from_thrift(t.augmented_manifest)?,
+        })
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        Self::Thrift {
+            augmented_manifest_id: self.augmented_manifest_id.into_thrift(),
+            augmented_manifest_size: self.augmented_manifest_size as i64,
+            augmented_manifest: self.augmented_manifest.into_thrift(),
+        }
+    }
+}
+
+impl ThriftConvert for ShardedHgAugmentedManifestRollupCount {
+    const NAME: &'static str = "ShardedHgAugmentedManifestRollupCount";
+    type Thrift = i64;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        Ok(Self(t as u64))
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        self.0 as i64
+    }
+}
+
+impl_typed_hash! {
+    hash_type => ShardedMapV2NodeHgAugmentedManifestId,
+    thrift_hash_type => mononoke_types::thrift::id::ShardedMapV2NodeId,
+    value_type => ShardedMapV2Node<HgAugmentedManifestEntry>,
+    context_type => ShardedMapV2NodeHgAugmentedManifestContext,
+    context_key => "augmf.map2node",
+}
+
+impl ShardedMapV2Value for HgAugmentedManifestEntry {
+    type NodeId = ShardedMapV2NodeHgAugmentedManifestId;
+    type Context = ShardedMapV2NodeHgAugmentedManifestContext;
+    type RollupData = ShardedHgAugmentedManifestRollupCount;
+}
+
+impl Rollup<HgAugmentedManifestEntry> for ShardedHgAugmentedManifestRollupCount {
+    fn rollup(value: Option<&HgAugmentedManifestEntry>, child_rollup_data: Vec<Self>) -> Self {
+        child_rollup_data.into_iter().fold(
+            value.map_or(ShardedHgAugmentedManifestRollupCount(0), |value| {
+                value.rollup_count()
+            }),
+            |acc, child| ShardedHgAugmentedManifestRollupCount(acc.0 + child.0),
+        )
+    }
+}

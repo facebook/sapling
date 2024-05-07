@@ -92,7 +92,7 @@ struct HgAugmentedManifest {
 // Augmented HgManifest Envelope (stored in Mononoke)
 struct HgAugmentedManifestEnvelope {
   // Expected to match the hash of the encoded augmented mf.
-  1: id.Blake3 augumented_manifest_id;
+  1: id.Blake3 augmented_manifest_id;
   // Expected to match the size of the encoded augmented mf.
   2: i64 augmented_manifest_size;
   // HgAugmentedManifest data
