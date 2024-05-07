@@ -3,6 +3,7 @@
 #require no-eden
 
 
+  $ disable amend
   $ configure mutation-norecord
   $ setconfig commands.update.check=none
 

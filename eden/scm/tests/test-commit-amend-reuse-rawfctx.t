@@ -3,6 +3,7 @@
 #require no-eden
 
 
+  $ disable amend
   $ configure mutation-norecord
 
 File node could be reused during commit --amend

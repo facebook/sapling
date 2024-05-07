@@ -127,6 +127,7 @@ evolution=obsolete
 narrow-heads=true
 
 [extensions]
+amend=
 commitcloud=
 infinitepush=
 remotenames=
