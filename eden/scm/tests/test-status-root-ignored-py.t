@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require fsmonitor no-eden
 
-  $ configure modernclient
   $ newclientrepo
 
 Ensure that, when files in the root are ignored and there is an exclusion, that hg status returns the correct value

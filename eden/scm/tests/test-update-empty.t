@@ -12,7 +12,6 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'ui.disallowemptyupdate=True'
-  $ configure modernclient
   $ newclientrepo
   $ hg debugdrawdag << 'EOS'
   > B

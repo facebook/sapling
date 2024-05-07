@@ -4,7 +4,6 @@
 
 #inprocess-hg-incompatible
 
-  $ configure modernclient
   $ newclientrepo repo
   $ export EDENSCM_LOG=auth=debug
 

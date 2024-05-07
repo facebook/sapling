@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig clone.nativecheckout=True
   $ setconfig checkout.use-rust=true

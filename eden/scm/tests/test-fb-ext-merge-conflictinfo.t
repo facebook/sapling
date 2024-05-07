@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require no-eden
 
-  $ configure modernclient
   $ configure mutation-norecord
   $ enable conflictinfo rebase copytrace
   $ setconfig experimental.rebase-long-labels=True

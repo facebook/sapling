@@ -6,7 +6,6 @@
 Test log FILE history handling with renames / file node collisions.
 
   $ . $TESTDIR/library.sh
-  $ configure modernclient
 
 Create a repo with two files X and Y. Create 3 branches (B+E, C, D) where X and
 Y are swapped 0 to 2 times, and merge those branches.

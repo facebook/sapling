@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require fsmonitor no-eden
 
-  $ configure modernclient
   $ setconfig fsmonitor.warn-fresh-instance=true
 
 A warning is printed for the first use

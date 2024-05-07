@@ -2,7 +2,6 @@
 
 #require execbit no-eden
 
-  $ configure modernclient
 
 Create extension that can disable exec checks:
 

@@ -4,7 +4,6 @@
 
 set up test repo
 
-  $ configure modernclient
 
   $ newclientrepo
   $ echo testcontents > testfile.txt

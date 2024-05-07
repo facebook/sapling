@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require icasefs no-eden
 
-  $ configure modernclient
   $ setconfig checkout.use-rust=true
   $ hg debugfsinfo | grep 'case-sensitive:'
   case-sensitive: no

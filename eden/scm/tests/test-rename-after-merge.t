@@ -5,7 +5,6 @@
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
 
-  $ configure modernclient
   $ enable amend
 
 Issue746: renaming files brought by the second parent of a merge was

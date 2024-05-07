@@ -5,7 +5,6 @@
 
 Create a repository:
 
-  $ configure modernclient
   $ newclientrepo t
 
 Prepare a changeset:

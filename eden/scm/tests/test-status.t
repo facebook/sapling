@@ -9,7 +9,6 @@
   $ setconfig scmstore.status=true
 #endif
 
-  $ configure modernclient
   $ newclientrepo repo1
   $ mkdir a b a/1 b/1 b/2
   $ touch in_root a/in_a b/in_b a/1/in_a_1 b/1/in_b_1 b/2/in_b_2

@@ -5,7 +5,6 @@
 
 Crash in histpack code path where the amend destination already exists
 
-  $ configure modernclient
 
   $ configure mutation-norecord
   $ enable undo treemanifest remotefilelog

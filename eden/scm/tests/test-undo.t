@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
   $ newclientrepo repo
   $ enable undo
   $ echo >> file

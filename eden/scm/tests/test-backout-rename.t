@@ -4,7 +4,6 @@
 
   $ setconfig copytrace.dagcopytrace=True
 
-  $ configure modernclient
   $ newclientrepo
   $ drawdag <<EOS
   > C

@@ -6,7 +6,6 @@
 Test update logic when there are renames or weird same-name cases between dirs
 and files
 
-  $ configure modernclient
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=none
 

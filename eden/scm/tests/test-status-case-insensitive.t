@@ -2,7 +2,6 @@
 #require icasefs no-eden
 #require no-windows no-eden
 
-  $ configure modernclient
 
 Status is clean when file changes case
   $ newclientrepo

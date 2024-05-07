@@ -2,7 +2,6 @@
 #debugruntest-compatible
 
 setup
-  $ configure modernclient
   $ readconfig <<EOF
   > [alias]
   > blackbox = blackbox --no-timestamp --no-sid

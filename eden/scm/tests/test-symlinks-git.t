@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require git symlink no-eden
 
-  $ configure modernclient
   $ . $TESTDIR/git.sh
 
 Test cloning git repos

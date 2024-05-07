@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require symlink no-eden
 
-  $ configure modernclient
   $ eagerepo
   $ enable sparse
 

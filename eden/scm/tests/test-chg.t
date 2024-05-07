@@ -2,7 +2,6 @@
 #chg-compatible
 #require chg linux no-eden
 
-  $ configure modernclient
   $ newclientrepo
   $ drawdag <<'EOS'
   > B

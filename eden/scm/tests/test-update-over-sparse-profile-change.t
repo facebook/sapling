@@ -3,7 +3,6 @@
 #require no-eden
 
   $ setconfig experimental.nativecheckout=true
-  $ configure modernclient
 
 test sparse
 

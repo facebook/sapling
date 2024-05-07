@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ configure modernclient
 
   $ setconfig format.usegeneraldelta=yes
 We're bundling local clones here

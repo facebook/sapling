@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require fsmonitor no-eden
 
-  $ configure modernclient
   $ newclientrepo
 
   $ echo ignored > .gitignore

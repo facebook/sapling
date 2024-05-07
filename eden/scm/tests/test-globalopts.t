@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
 
   $ newclientrepo server
   $ newclientrepo a test:server_server

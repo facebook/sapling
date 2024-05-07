@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
   $ setconfig tweakdefaults.logdefaultfollow=true
 
   $ newclientrepo

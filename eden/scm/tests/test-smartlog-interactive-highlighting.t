@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #require no-windows no-eden
   $ enable smartlog
-  $ configure modernclient
   $ disable commitcloud
   $ newclientrepo
   $ hg debugdrawdag <<'EOS'

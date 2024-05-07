@@ -2,7 +2,6 @@
 #inprocess-hg-incompatible
 #require symlink windows no-eden
 
-  $ configure modernclient
   $ eagerepo
   $ enable sparse
   $ setconfig unsafe.filtersuspectsymlink=False

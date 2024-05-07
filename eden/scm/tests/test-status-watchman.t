@@ -2,7 +2,6 @@
 
 #require fsmonitor
 
-  $ configure modernclient
   $ enable sparse
 
   $ newclientrepo client test:server

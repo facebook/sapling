@@ -5,7 +5,6 @@
 
 #testcases rust python
 
-  $ configure modernclient
 
 #if python
   $ setconfig checkout.use-rust=false

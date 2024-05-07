@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
   $ newclientrepo
   $ echo foo > .gitignore
 Avoid dirstate race condition where added files end up as NEED_CHECK.

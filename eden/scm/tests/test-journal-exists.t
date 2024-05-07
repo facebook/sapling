@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ configure modernclient
   $ newclientrepo repo
   $ echo a > a
   $ hg ci -Am0

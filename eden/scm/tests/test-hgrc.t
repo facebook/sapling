@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
 
 Use hgrc within $TESTTMP
 

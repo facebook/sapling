@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
   $ setconfig clone.use-rust=true
 
   $ newrepo

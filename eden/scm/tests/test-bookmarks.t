@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ configure modernclient
   $ newclientrepo repo
 
   $ cat > $TESTTMP/hook.sh <<'EOF'

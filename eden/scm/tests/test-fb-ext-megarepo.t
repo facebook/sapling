@@ -7,7 +7,6 @@
   $ enable rebase commitextras megarepo
   $ setconfig megarepo.lossy-commit-action=abort
 
-  $ configure modernclient
   $ newclientrepo
 
   $ touch A

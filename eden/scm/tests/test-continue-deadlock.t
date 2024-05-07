@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ configure modernclient
   $ enable rebase smartlog
 
 Prepare repo

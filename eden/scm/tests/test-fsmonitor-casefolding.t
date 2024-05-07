@@ -5,7 +5,6 @@
 
 Updating across a rename
 
-  $ configure modernclient
   $ newclientrepo
 
   $ echo >> a
