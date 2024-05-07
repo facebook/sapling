@@ -197,6 +197,9 @@ pub struct WireTreeAttributesRequest {
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
     with_child_metadata: bool,
+
+    #[serde(rename = "5", default, skip_serializing_if = "is_default")]
+    with_augmented_trees: bool,
 }
 
 impl ToWire for TreeAttributes {
@@ -207,6 +210,7 @@ impl ToWire for TreeAttributes {
             with_data: self.manifest_blob,
             with_parents: self.parents,
             with_child_metadata: self.child_metadata,
+            with_augmented_trees: self.augmented_trees,
         }
     }
 }
@@ -220,6 +224,7 @@ impl ToApi for WireTreeAttributesRequest {
             child_metadata: self.with_child_metadata,
             parents: self.with_parents,
             manifest_blob: self.with_data,
+            augmented_trees: self.with_augmented_trees,
         })
     }
 }

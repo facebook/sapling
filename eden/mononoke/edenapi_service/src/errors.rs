@@ -78,6 +78,8 @@ pub enum ErrorKind {
     CloudWorkspaceNotFound(String),
     #[error("CommitId not found: {0}")]
     CommitIdNotFound(CommitId),
+    #[error("Invalid Request, reason: {0}")]
+    InvalidRequest(String),
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.

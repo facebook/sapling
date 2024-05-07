@@ -6,17 +6,21 @@
  */
 
 use async_trait::async_trait;
+use blobstore::Loadable;
 use bytes::Bytes;
 use manifest::Entry;
 use manifest::Manifest;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
+use mercurial_types::HgAugmentedManifestEntry;
+use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgBlobEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
+use mercurial_types::HgPreloadedAugmentedManifest;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::file_change::FileType;
 use mononoke_types::path::MPathElement;
@@ -78,6 +82,45 @@ impl HgTreeContext {
     }
 }
 
+#[derive(Clone)]
+pub struct HgAugmentedTreeContext {
+    #[allow(dead_code)]
+    repo: HgRepoContext,
+    preloaded_manifest: HgPreloadedAugmentedManifest,
+}
+
+impl HgAugmentedTreeContext {
+    /// Create a new `HgAugmentedTreeContext`, representing a single augmented tree manifest node.
+    pub async fn new_check_exists(
+        repo: HgRepoContext,
+        augmented_manifest_id: HgAugmentedManifestId,
+    ) -> Result<Option<Self>, MononokeError> {
+        let ctx = repo.ctx();
+        let blobstore = repo.blob_repo().repo_blobstore();
+        let envelope = augmented_manifest_id.load(ctx, blobstore).await?;
+        let preloaded_manifest = HgPreloadedAugmentedManifest::load_from_sharded(
+            envelope.augmented_manifest,
+            ctx,
+            blobstore,
+        )
+        .await?;
+        Ok(Some(Self {
+            repo,
+            preloaded_manifest,
+        }))
+    }
+
+    pub fn augmented_children_entries(&self) -> impl Iterator<Item = &HgAugmentedManifestEntry> {
+        self.preloaded_manifest.children_augmented_metadata.iter()
+    }
+
+    /// Get the content for this tree manifest node in the format expected
+    /// by Mercurial's data storage layer.
+    pub fn content_bytes(&self) -> Bytes {
+        self.preloaded_manifest.contents.clone()
+    }
+}
+
 #[async_trait]
 impl HgDataContext for HgTreeContext {
     type NodeId = HgManifestId;
@@ -117,6 +160,41 @@ impl HgDataContext for HgTreeContext {
 }
 
 #[async_trait]
+impl HgDataContext for HgAugmentedTreeContext {
+    type NodeId = HgManifestId;
+
+    /// Get the manifest node hash (HgAugmentedManifestId) for this tree.
+    ///
+    /// This should be same as the HgAugmentedManifestId specified when this context was created,
+    /// but the value returned here comes from the data loaded from Mononoke.
+    fn node_id(&self) -> HgManifestId {
+        HgManifestId::new(self.preloaded_manifest.hg_node_id)
+    }
+
+    /// Get the parents of this tree node in a strongly-typed manner.
+    ///
+    /// Useful for implementing anything that needs to traverse the history
+    /// of tree nodes, or otherwise needs to use make further queries using
+    /// the returned `HgManifestId`s.
+    fn parents(&self) -> (Option<HgManifestId>, Option<HgManifestId>) {
+        (
+            self.preloaded_manifest.p1.map(HgManifestId::new),
+            self.preloaded_manifest.p2.map(HgManifestId::new),
+        )
+    }
+
+    /// Get the parents of this tree node in a format that can be easily
+    /// sent to the Mercurial client as part of a serialized response.
+    fn hg_parents(&self) -> HgParents {
+        HgParents::new(self.preloaded_manifest.p1, self.preloaded_manifest.p2)
+    }
+
+    async fn content(&self) -> Result<(Bytes, Metadata), MononokeError> {
+        Ok((self.content_bytes(), Metadata::default()))
+    }
+}
+
+#[async_trait]
 impl HgDataId for HgManifestId {
     type Context = HgTreeContext;
 
@@ -126,6 +204,22 @@ impl HgDataId for HgManifestId {
 
     async fn context(self, repo: HgRepoContext) -> Result<Option<HgTreeContext>, MononokeError> {
         HgTreeContext::new_check_exists(repo, self).await
+    }
+}
+
+#[async_trait]
+impl HgDataId for HgAugmentedManifestId {
+    type Context = HgAugmentedTreeContext;
+
+    fn from_node_hash(hash: HgNodeHash) -> Self {
+        HgAugmentedManifestId::new(hash)
+    }
+
+    async fn context(
+        self,
+        repo: HgRepoContext,
+    ) -> Result<Option<HgAugmentedTreeContext>, MononokeError> {
+        HgAugmentedTreeContext::new_check_exists(repo, self).await
     }
 }
 

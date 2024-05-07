@@ -76,3 +76,14 @@ Create and send tree request.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000")}}}}]}]
 
+  $ cat > attrs << EOF
+  > {
+  >     "manifest_blob": False,
+  >     "parents": False,
+  >     "child_metadata": False,
+  >     "augmented_trees": True
+  > }
+  > EOF
+
+  $ hgedenapi debugapi -e trees -f keys -f attrs --sort 2>&1 | grep 'internal error: Blob is missing'
+      0: internal error: Blob is missing: hgaugmentedmanifest.sha1.15024c4dc4a27b572d623db342ae6a08d7f7adec

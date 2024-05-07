@@ -13,6 +13,7 @@ use context::PerfCounterType;
 use edenapi_types::wire::WireTreeRequest;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
+use edenapi_types::DirectoryMetadata;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAttributes;
@@ -38,6 +39,8 @@ use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
 use manifest::Entry;
 use manifest::Manifest;
+use mercurial_types::HgAugmentedManifestEntry;
+use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
@@ -88,6 +91,15 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         rd.add_request(&request);
     };
 
+    if request.attributes.child_metadata && request.attributes.augmented_trees {
+        return Err(HttpError::e400(EdenApiServerError::new(
+            ErrorKind::InvalidRequest(
+                "Augmented trees and child metadata cannot be requested at the same time"
+                    .to_string(),
+            ),
+        )));
+    }
+
     ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
     Ok(custom_cbor_stream(
@@ -124,6 +136,64 @@ async fn fetch_tree(
     attributes: TreeAttributes,
 ) -> Result<TreeEntry, Error> {
     let mut entry = TreeEntry::new(key.clone());
+
+    if attributes.augmented_trees {
+        // Augmented Trees always come with the hg manifest blob, parents,
+        // and child metadata in the augmented trees format.
+        let id = HgAugmentedManifestId::new(HgNodeHash::from(key.hgid));
+        repo.ctx()
+            .perf_counters()
+            .increment_counter(PerfCounterType::EdenapiAugmentedTrees);
+
+        let ctx = id
+            .context(repo.clone())
+            .await
+            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
+            .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
+
+        entry.with_parents(Some(ctx.hg_parents().into()));
+
+        entry.with_children(Some(
+            ctx.augmented_children_entries()
+                .map(|augmented_entry| match augmented_entry {
+                    HgAugmentedManifestEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
+                        Key {
+                            hgid: file.filenode.into(),
+                            ..Default::default()
+                        },
+                        FileAuxData {
+                            blake3: file.content_blake3.clone().into(),
+                            sha1: file.content_sha1.clone().into(),
+                            total_size: file.total_size.clone(),
+                        }
+                        .into(),
+                    )),
+                    HgAugmentedManifestEntry::DirectoryNode(tree) => {
+                        Ok(TreeChildEntry::new_directory_entry(
+                            Key {
+                                hgid: tree.treenode.into(),
+                                ..Default::default()
+                            },
+                            DirectoryMetadata {
+                                augmented_manifest_id: tree.augmented_manifest_id.clone().into(),
+                                augmented_manifest_size: tree.augmented_manifest_size.clone(),
+                            },
+                        ))
+                    }
+                })
+                .collect(),
+        ));
+
+        let (data, _) = ctx
+            .content()
+            .await
+            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
+
+        entry.with_data(Some(data));
+
+        return Ok(entry);
+    }
+
     let id = HgManifestId::from_node_hash(HgNodeHash::from(key.hgid));
 
     let ctx = id
@@ -192,10 +262,11 @@ async fn fetch_child_metadata_entries<'a>(
                             let child_key = Key::new(name, child_id.into_nodehash().into());
                             fetch_child_file_metadata(repo, child_key.clone()).await?
                         }
-                        Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(Key::new(
-                            name,
-                            child_id.into_nodehash().into(),
-                        )),
+                        // This API never returned any directory metadata
+                        Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(
+                            Key::new(name, child_id.into_nodehash().into()),
+                            DirectoryMetadata::default(),
+                        ),
                     })
                 }
             }),

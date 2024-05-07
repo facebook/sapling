@@ -225,6 +225,7 @@ impl TreeStore {
                             manifest_blob: true,
                             parents: true,
                             child_metadata: fetch_children_metadata,
+                            augmented_trees: false,
                         };
                         let response = edenapi
                             .trees_blocking(pending, Some(attributes))

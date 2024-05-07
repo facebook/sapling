@@ -170,10 +170,10 @@ impl TreeChildEntry {
         })
     }
 
-    pub fn new_directory_entry(key: Key) -> Self {
+    pub fn new_directory_entry(key: Key, metadata: DirectoryMetadata) -> Self {
         TreeChildEntry::Directory(TreeChildDirectoryEntry {
             key,
-            ..Default::default()
+            directory_metadata: Some(metadata),
         })
     }
 }
@@ -208,10 +208,16 @@ pub struct TreeAttributes {
     pub parents: bool,
     #[serde(default = "get_true")]
     pub child_metadata: bool,
+    #[serde(default = "get_false")]
+    pub augmented_trees: bool,
 }
 
 fn get_true() -> bool {
     true
+}
+
+fn get_false() -> bool {
+    false
 }
 
 impl TreeAttributes {
@@ -220,6 +226,16 @@ impl TreeAttributes {
             manifest_blob: true,
             parents: true,
             child_metadata: true,
+            augmented_trees: false,
+        }
+    }
+
+    pub fn augmented_trees() -> Self {
+        TreeAttributes {
+            manifest_blob: false,  // not used
+            parents: false,        // not used
+            child_metadata: false, // not used
+            augmented_trees: true,
         }
     }
 }
@@ -230,6 +246,7 @@ impl Default for TreeAttributes {
             manifest_blob: true,
             parents: true,
             child_metadata: false,
+            augmented_trees: false,
         }
     }
 }
