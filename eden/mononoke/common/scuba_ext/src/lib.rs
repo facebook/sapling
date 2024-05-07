@@ -6,6 +6,7 @@
  */
 
 use std::collections::hash_map::Entry;
+use std::future::Future;
 use std::io::Error as IoError;
 use std::num::NonZeroU64;
 use std::path::Path;
@@ -228,6 +229,34 @@ impl MononokeScubaSampleBuilder {
         }
 
         self.log_with_msg(log_tag, msg)
+    }
+
+    pub async fn maybe_log_memory_stats<T, E>(
+        &self,
+        log_memory_usage: bool,
+        fut: impl Future<Output = Result<T, E>>,
+    ) -> Result<T, E> {
+        if log_memory_usage {
+            let stats = memory::get_stats();
+            if stats.is_ok() {
+                let mut scuba = self.clone();
+                scuba.add_memory_stats(&stats.unwrap());
+                scuba.log_with_msg("Memory usage before call", None);
+            }
+        }
+
+        let ret = fut.await;
+
+        if log_memory_usage {
+            let stats = memory::get_stats();
+            if stats.is_ok() {
+                let mut scuba = self.clone();
+                scuba.add_memory_stats(&stats.unwrap());
+                scuba.log_with_msg("Memory usage after call", None);
+            }
+        }
+
+        ret
     }
 
     pub fn add_stream_stats(&mut self, stats: &StreamStats) -> &mut Self {
