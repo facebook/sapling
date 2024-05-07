@@ -987,9 +987,9 @@ impl EdenFsCheckout {
                     This means prefetch-profiles.predictive-prefetching-enabled is not set in \
                     the EdenFS configs.",
                 );
-            } else {
-                return Ok(());
             }
+
+            return Ok(());
         }
 
         if !EdenFsCheckout::should_prefetch_profiles(&config) && !predictive {
