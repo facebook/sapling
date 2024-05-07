@@ -1049,15 +1049,18 @@ def lrucachefunc(func):
 
     else:
 
-        def f(*args):
-            if args not in cache:
+        def f(*args, **kwargs):
+            cachekey = args
+            if kwargs:
+                cachekey = tuple(list(args) + sorted(kwargs.items()))
+            if cachekey not in cache:
                 if len(cache) > 20:
                     del cache[order.popleft()]
-                cache[args] = func(*args)
+                cache[cachekey] = func(*args, **kwargs)
             else:
-                order.remove(args)
-            order.append(args)
-            return cache[args]
+                order.remove(cachekey)
+            order.append(cachekey)
+            return cache[cachekey]
 
     return f
 
