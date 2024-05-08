@@ -177,9 +177,25 @@ function SectionedFileList({filesByPrefix, ...rest}: SectionProps) {
     <div className="file-tree">
       {Array.from(filesByPrefix.entries(), ([prefix, files]) => {
         const isCollapsed = collapsedSections.has(prefix);
+        const isEverythingSelected = files.every(file =>
+          rest.selection?.isFullySelected(file.path),
+        );
+        const isPartiallySelected = files.some(file =>
+          rest.selection?.isFullyOrPartiallySelected(file.path),
+        );
         return (
           <div className="file-tree-section" key={prefix}>
             <FileTreeFolderHeader
+              checkedState={
+                isEverythingSelected ? true : isPartiallySelected ? 'indeterminate' : false
+              }
+              toggleChecked={checked => {
+                if (checked) {
+                  rest.selection?.select(...files.map(file => file.path));
+                } else {
+                  rest.selection?.deselect(...files.map(file => file.path));
+                }
+              }}
               isCollapsed={isCollapsed}
               toggleCollapsed={() =>
                 setCollapsedSections(previous =>

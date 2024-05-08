@@ -13,19 +13,33 @@ import type {Comparison} from 'shared/Comparison';
 
 import {File} from './ChangedFile';
 import {Button} from './components/Button';
+import {Checkbox} from './components/Checkbox';
 import {buildPathTree} from './pathTree';
 import {useMemo, useState} from 'react';
 import {Icon} from 'shared/Icon';
 
-type HeaderProps = {
+export function FileTreeFolderHeader({
+  isCollapsed,
+  toggleCollapsed,
+  checkedState,
+  toggleChecked,
+  folder,
+}: {
   isCollapsed: boolean;
   toggleCollapsed: () => void;
+  checkedState?: true | false | 'indeterminate';
+  toggleChecked?: (checked: boolean) => void;
   folder: string;
-};
-
-export function FileTreeFolderHeader({isCollapsed, toggleCollapsed, folder}: HeaderProps) {
+}) {
   return (
     <span className="file-tree-folder-path">
+      {checkedState != null && toggleChecked != null && (
+        <Checkbox
+          checked={checkedState === true}
+          indeterminate={checkedState === 'indeterminate'}
+          onChange={() => toggleChecked(checkedState !== true)}
+        />
+      )}
       <Button icon onClick={toggleCollapsed}>
         <Icon icon={isCollapsed ? 'chevron-right' : 'chevron-down'} slot="start" />
         {folder}
