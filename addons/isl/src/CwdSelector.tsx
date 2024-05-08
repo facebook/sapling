@@ -29,6 +29,36 @@ import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename} from 'shared/utils';
 
+/**
+ * Give the relative path to `path` from `root`
+ * For example, relativePath('/home/user', '/home') -> 'user'
+ */
+export function relativePath(root: AbsolutePath, path: AbsolutePath) {
+  if (root == null || path === '') {
+    return '';
+  }
+  return path.replace(root, '');
+}
+
+/**
+ * Trim a suffix if it exists
+ * maybeTrim('abc/', '/') -> 'abc'
+ * maybeTrim('abc', '/') -> 'abc'
+ */
+function maybeTrim(s: string, c: string): string {
+  return s.endsWith(c) ? s.slice(0, -c.length) : s;
+}
+
+function getRepoLabel(repoRoot: AbsolutePath, cwd: string) {
+  const sep = guessPathSep(cwd);
+  const repoBasename = maybeTrim(basename(repoRoot, sep), sep);
+  const repoRelativeCwd = relativePath(repoRoot, cwd);
+  if (repoRelativeCwd === '') {
+    return repoBasename;
+  }
+  return repoBasename + repoRelativeCwd;
+}
+
 export const availableCwds = lazyAtom<Array<AbsolutePath>>(() => {
   // Only request `subscribeToAvailableCwds` when first read the atom.
   registerCleanup(
@@ -59,7 +89,7 @@ export function CwdSelector() {
   if (info?.type !== 'success') {
     return null;
   }
-  const repoBasename = basename(info.repoRoot);
+  const repoLabel = getRepoLabel(info.repoRoot, currentCwd);
   return (
     <Tooltip
       trigger="click"
@@ -75,7 +105,7 @@ export function CwdSelector() {
       {options.length < 2 ? (
         <Button icon data-testid="cwd-dropdown-button">
           <Icon icon="folder" />
-          {repoBasename}
+          {repoLabel}
         </Button>
       ) : (
         // use a ButtonDropdown as a shortcut to quickly change cwd
@@ -83,7 +113,7 @@ export function CwdSelector() {
           data-testid="cwd-dropdown-button"
           kind="icon"
           options={options}
-          selected={{id: currentCwd, label: repoBasename}}
+          selected={{id: currentCwd, label: repoLabel}}
           icon={<Icon icon="folder" />}
           onClick={
             () => null // fall through to the Tooltip
@@ -139,6 +169,14 @@ function useCwdOptions() {
     id: cwdOptions[index],
     label: shortCwd,
   }));
+}
+
+function guessPathSep(path: string): '/' | '\\' {
+  if (path.includes('\\')) {
+    return '\\';
+  } else {
+    return '/';
+  }
 }
 
 export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divider?: boolean}) {

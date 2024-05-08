@@ -94,17 +94,19 @@ export function simulateUncommittedChangedFiles(files: Result<UncommittedChanges
     },
   });
 }
-export function simulateRepoConnected(repoRoot = '/path/to/repo') {
+export function simulateRepoConnected(repoRoot?: string, cwd?: string) {
+  const root = repoRoot ?? '/path/to/repo';
   simulateMessageFromServer({
     type: 'repoInfo',
     info: {
       type: 'success',
-      repoRoot,
-      dotdir: `${repoRoot}/.sl`,
+      repoRoot: root,
+      dotdir: `${root}/.sl`,
       command: 'sl',
       pullRequestDomain: undefined,
       codeReviewSystem: {type: 'github', owner: 'owner', repo: 'repo', hostname: 'github.com'},
     },
+    cwd,
   });
   testMessageBus.simulateServerStatusChange({type: 'open'});
 }

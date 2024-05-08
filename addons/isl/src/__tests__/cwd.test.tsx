@@ -57,6 +57,18 @@ describe('cwd', () => {
     });
   };
 
+  it('shows repo+relative cwd in the cwd button', () => {
+    act(() => {
+      simulateRepoConnected('/path/to/repo', '/path/to/repo/some/subdir');
+    });
+    expect(screen.getByText('repo/some/subdir')).toBeInTheDocument();
+
+    act(() => {
+      simulateRepoConnected('C:\\path\\to\\repo', 'C:\\path\\to\\repo\\some\\subdir');
+    });
+    expect(screen.getByText('repo\\some\\subdir')).toBeInTheDocument();
+  });
+
   it('shows cwd options from the platform', () => {
     openCwdDropdown();
 
