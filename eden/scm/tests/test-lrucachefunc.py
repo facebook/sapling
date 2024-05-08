@@ -44,6 +44,18 @@ class testlrucachefunc(unittest.TestCase):
             self.assertEqual(foo(1, i), (1, i, 4, 5))
         self.assertEqual(calledcount, 9)
 
+        @util.lrucachefunc
+        def bar(*args, **kwargs):
+            nonlocal calledcount
+            calledcount += 1
+            return (args, kwargs)
+
+        # Make sure we differentiate args and kwargs in cache:
+        calledcount = 0
+        self.assertEqual(bar(1, a=2), ((1,), {"a": 2}))
+        self.assertEqual(bar(1, ("a", 2)), ((1, ("a", 2)), {}))
+        self.assertEqual(calledcount, 2)
+
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)
