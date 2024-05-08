@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UseUncommittedSelection} from './partialSelection';
 import type {RepoPath} from 'shared/types/common';
 
 export type PathTree<T> = Map<string, PathTree<T> | T>;
@@ -13,7 +14,7 @@ export type PathTree<T> = Map<string, PathTree<T> | T>;
  * then compresses path names for single-child directories.
  *
  * ```
- * buidlPathTree({
+ * buildPathTree({
  *   'a/b/file1.txt': {...},
  *   'a/b/file2.txt': {...},
  *   'a/file3.txt': {...},
@@ -84,4 +85,83 @@ export function buildPathTree<T>(paths: Record<RepoPath, T>): PathTree<T> {
   }
 
   return recurse(new Map(Object.entries(paths)));
+}
+
+/**
+ * Compute accumulated selected state of directory nodes in the tree, so we don't need to repeatedly
+ * check isSelected among child nodes.
+ * Note that this is only stored for directories (non-leaf), not files (leaves)
+ * given tree like
+ * Map{
+ *   a: Map{
+ *     b: Map{
+ *       'file1.txt' : checked
+ *       'file2.txt' : checked,
+ *     },
+ *     c: Map{
+ *       'file1.txt' : checked
+ *       'file2.txt' : unchecked,
+ *     },
+ *     d: Map{
+ *       'file1.txt' : checked
+ *       'file2.txt' : partiallyChecked,
+ *     },
+ *   },
+ *   q: Map{
+ *     'file6.txt': unchecked
+ *   }
+ * }
+ * returns:
+ * a -> 'indeterminate'
+ * a/b -> true
+ * a/c -> 'indeterminate'
+ * a/d -> 'indeterminate'
+ * q -> false
+ */
+export function calculateTreeSelectionStates<T extends {path: string}>(
+  tree: PathTree<T>,
+  selection: UseUncommittedSelection,
+): Map<string, boolean | 'indeterminate'> {
+  const checkedStates = new Map<string, boolean | 'indeterminate'>();
+  function inner(key: string, node: PathTree<T> | T): boolean | 'indeterminate' {
+    if (node instanceof Map) {
+      // every child checked -> checked
+      // any child partially checked -> indeterminate
+      // no child checked -> unchecked
+      let allChecked = true;
+      let anyChecked = false;
+      let anyPartiallyChecked = false;
+
+      for (const [childKey, child] of node.entries()) {
+        const childChecked = inner(key + '/' + childKey, child);
+        if (childChecked === false) {
+          allChecked = false;
+        } else if (childChecked === 'indeterminate') {
+          anyPartiallyChecked = true;
+          allChecked = false;
+          anyChecked = true;
+        } else {
+          anyChecked = true;
+        }
+      }
+      const checked = anyPartiallyChecked
+        ? 'indeterminate'
+        : allChecked
+        ? true
+        : anyChecked
+        ? 'indeterminate'
+        : false;
+      checkedStates.set(key, checked);
+      return checked;
+    } else {
+      const checked = selection.isFullySelected(node.path)
+        ? true
+        : selection.isFullyOrPartiallySelected(node.path)
+        ? 'indeterminate'
+        : false;
+      return checked;
+    }
+  }
+  inner('', tree);
+  return checkedStates;
 }

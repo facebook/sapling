@@ -14,9 +14,10 @@ import type {Comparison} from 'shared/Comparison';
 import {File} from './ChangedFile';
 import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
-import {buildPathTree} from './pathTree';
+import {buildPathTree, calculateTreeSelectionStates} from './pathTree';
 import {useMemo, useState} from 'react';
 import {Icon} from 'shared/Icon';
+import {mapIterable} from 'shared/utils';
 
 export function FileTreeFolderHeader({
   isCollapsed,
@@ -47,6 +48,17 @@ export function FileTreeFolderHeader({
     </span>
   );
 }
+
+function* iteratePathTree(tree: PathTree<UIChangedFile>): Generator<UIChangedFile> {
+  for (const node of tree.values()) {
+    if (node instanceof Map) {
+      yield* iteratePathTree(node);
+    } else {
+      yield node;
+    }
+  }
+}
+
 export function FileTree(props: {
   files: Array<UIChangedFile>;
   displayType: ChangedFilesDisplayType;
@@ -61,6 +73,11 @@ export function FileTree(props: {
     [files],
   );
 
+  const directoryCheckedStates = useMemo(
+    () => (props.selection == null ? null : calculateTreeSelectionStates(tree, props.selection)),
+    [tree, props.selection],
+  );
+
   const [collapsed, setCollapsed] = useState(new Set());
 
   function renderTree(tree: PathTree<UIChangedFile>, accumulatedPath = '') {
@@ -69,26 +86,46 @@ export function FileTree(props: {
         {[...tree.entries()].map(([folder, inner]) => {
           const folderKey = `${accumulatedPath}/${folder}`;
           const isCollapsed = collapsed.has(folderKey);
+
+          let content;
+          if (inner instanceof Map) {
+            const checkedState = directoryCheckedStates?.get(folderKey);
+            content = (
+              <>
+                <FileTreeFolderHeader
+                  isCollapsed={isCollapsed}
+                  checkedState={checkedState}
+                  toggleChecked={
+                    rest.selection == null
+                      ? undefined
+                      : checked => {
+                          const paths = mapIterable(iteratePathTree(inner), file => file.path);
+                          if (checked) {
+                            rest.selection?.select(...paths);
+                          } else {
+                            rest.selection?.deselect(...paths);
+                          }
+                        }
+                  }
+                  toggleCollapsed={() => {
+                    setCollapsed(last =>
+                      isCollapsed
+                        ? new Set([...last].filter(v => v !== folderKey))
+                        : new Set([...last, folderKey]),
+                    );
+                  }}
+                  folder={folder}
+                />
+                {isCollapsed ? null : renderTree(inner, folderKey)}
+              </>
+            );
+          } else {
+            content = <File key={inner.path} {...rest} file={inner} />;
+          }
+
           return (
             <div className="file-tree-level" key={folderKey}>
-              {inner instanceof Map ? (
-                <>
-                  <FileTreeFolderHeader
-                    isCollapsed={isCollapsed}
-                    toggleCollapsed={() => {
-                      setCollapsed(last =>
-                        isCollapsed
-                          ? new Set([...last].filter(v => v !== folderKey))
-                          : new Set([...last, folderKey]),
-                      );
-                    }}
-                    folder={folder}
-                  />
-                  {isCollapsed ? null : renderTree(inner, folderKey)}
-                </>
-              ) : (
-                <File key={inner.path} {...rest} file={inner} />
-              )}
+              {content}
             </div>
           );
         })}

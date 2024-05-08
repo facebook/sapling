@@ -201,3 +201,13 @@ export function splitOnce(s: string, sep: string): [string, string] | undefined 
   }
   return [s.substring(0, index), s.substring(index + sep.length)];
 }
+
+/**
+ * Like Array's .map() but for iterators.
+ * Returns a new iterator applying a function to each value in the input.
+ */
+export function* mapIterable<T, R>(iterable: Iterable<T>, mapFn: (t: T) => R): IterableIterator<R> {
+  for (const item of iterable) {
+    yield mapFn(item);
+  }
+}

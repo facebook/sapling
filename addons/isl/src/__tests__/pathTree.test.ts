@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UseUncommittedSelection} from '../partialSelection';
 import type {PathTree} from '../pathTree';
 
-import {buildPathTree} from '../pathTree';
+import {buildPathTree, calculateTreeSelectionStates} from '../pathTree';
 
 type FakeData = {name: string};
 describe('pathTree', () => {
@@ -151,3 +152,52 @@ function testTree(data: Data): PathTree<FakeData> {
     ),
   );
 }
+
+describe('calculateTreeSelectionStates', () => {
+  it('computes selection states', () => {
+    const selection = {
+      isFullySelected: (path: string) => {
+        switch (path) {
+          case 'file1.txt':
+          case 'file2.txt':
+          case 'file3.txt':
+          case 'file5.txt':
+            return true;
+          default:
+            return false;
+        }
+      },
+      isFullyOrPartiallySelected: (path: string) => {
+        switch (path) {
+          case 'file1.txt':
+          case 'file2.txt':
+          case 'file3.txt':
+          case 'file6.txt':
+            return true;
+          default:
+            return false;
+        }
+      },
+    } as UseUncommittedSelection;
+    const tree = buildPathTree<{path: string}>({
+      'a/b/file1.txt': {path: 'file1.txt'}, // checked
+      'a/b/file2.txt': {path: 'file2.txt'}, // checked
+      'a/c/file3.txt': {path: 'file3.txt'}, // checked
+      'a/c/file4.txt': {path: 'file4.txt'}, // UNchecked
+      'a/d/file5.txt': {path: 'file5.txt'}, // checked
+      'a/d/file6.txt': {path: 'file6.txt'}, // partially checked
+      'q/file7.txt': {path: 'file7.txt'}, // UNchecked
+    });
+
+    expect(calculateTreeSelectionStates(tree, selection)).toEqual(
+      new Map<string, boolean | 'indeterminate'>([
+        ['', 'indeterminate'],
+        ['/a', 'indeterminate'],
+        ['/a/b', true],
+        ['/a/c', 'indeterminate'],
+        ['/a/d', 'indeterminate'],
+        ['/q', false],
+      ]),
+    );
+  });
+});
