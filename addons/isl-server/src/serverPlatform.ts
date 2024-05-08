@@ -27,7 +27,7 @@ export interface ServerPlatform {
   sessionId?: string;
   handleMessageFromClient(
     repo: Repository | undefined,
-    ctx: RepositoryContext | undefined,
+    ctx: RepositoryContext,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (disapose: () => unknown) => void,
@@ -38,7 +38,7 @@ export const browserServerPlatform: ServerPlatform = {
   platformName: 'browser',
   handleMessageFromClient: (
     repo: Repository | undefined,
-    ctx: RepositoryContext | undefined,
+    ctx: RepositoryContext,
     message: PlatformSpecificClientToServerMessages,
   ) => {
     switch (message.type) {

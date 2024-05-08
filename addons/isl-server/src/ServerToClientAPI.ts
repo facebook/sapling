@@ -277,7 +277,13 @@ export default class ServerToClientAPI {
         if (data.type.startsWith('platform/')) {
           this.platform.handleMessageFromClient(
             /*repo=*/ undefined,
-            /*ctx*/ undefined,
+            // even if we don't have a repo, we can still make a RepositoryContext to execute commands
+            {
+              cwd: this.connection.cwd,
+              cmd: this.connection.command ?? 'sl',
+              logger: this.logger,
+              tracker: this.tracker,
+            },
             data as PlatformSpecificClientToServerMessages,
             message => this.postMessage(message),
             (dispose: () => unknown) => {

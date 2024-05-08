@@ -31,7 +31,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
   sessionId: vscode.env.sessionId,
   handleMessageFromClient: async (
     repo: Repository | undefined,
-    _ctx: RepositoryContext | undefined,
+    ctx: RepositoryContext,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (cb: () => unknown) => void,
