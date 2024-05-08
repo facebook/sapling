@@ -133,12 +133,12 @@ export type RepositoryError =
 export type CwdInfo = {
   /** Full cwd path, like /Users/username/repoRoot/some/subfolder */
   cwd: AbsolutePath;
-  /** Full path to the repository root, like /Users/username/repoRoot
+  /** Full real path to the repository root, like /Users/username/repoRoot
    * Undefined for cwds that are not valid repositories */
   repoRoot?: AbsolutePath;
-  /** cwd path within the repo, like some/subfolder
-   * Undefined for cwds that are not valid repositories */
-  repoRelativeCwd?: RepoRelativePath;
+  /** Label for a cwd, which is <repoBasename>/<cwd>, like 'sapling/addons'.
+   * Intended for display. Undefined for cwds that are not valid repositories */
+  repoRelativeCwdLabel?: string;
 };
 
 export type RepoInfo = RepositoryError | ValidatedRepoInfo;

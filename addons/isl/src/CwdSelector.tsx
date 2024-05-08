@@ -174,11 +174,7 @@ function useCwdOptions() {
 
   return cwdOptions.map((cwd, index) => ({
     id: cwdOptions[index].cwd,
-    label:
-      cwd.repoRelativeCwd == null || cwd.repoRoot == null
-        ? cwd.cwd
-        : basename(cwd.repoRoot) +
-          (cwd.repoRelativeCwd ? guessPathSep(cwd.cwd) + cwd.repoRelativeCwd : ''),
+    label: cwd.repoRelativeCwdLabel ?? cwd.cwd,
     valid: cwd.repoRoot != null,
   }));
 }

@@ -56,17 +56,17 @@ describe('cwd', () => {
           {
             cwd: '/path/to/repo1',
             repoRoot: '/path/to/repo1',
-            repoRelativeCwd: '',
+            repoRelativeCwdLabel: 'repo1',
           },
           {
             cwd: '/path/to/repo2',
             repoRoot: '/path/to/repo2',
-            repoRelativeCwd: '',
+            repoRelativeCwdLabel: 'repo2',
           },
           {
             cwd: '/path/to/repo2/some/subdir',
             repoRoot: '/path/to/repo2',
-            repoRelativeCwd: 'some/subdir',
+            repoRelativeCwdLabel: 'repo2/some/subdir',
           },
         ],
       });

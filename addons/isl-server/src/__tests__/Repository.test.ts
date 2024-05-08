@@ -15,6 +15,7 @@ import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {extractRepoInfoFromUrl, setConfigOverrideForTests} from '../commands';
 import * as execa from 'execa';
 import {CommandRunner, type MergeConflicts, type ValidatedRepoInfo} from 'isl/src/types';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import * as fsUtils from 'shared/fs';
@@ -916,5 +917,59 @@ describe('absolutePathForFileInRepo', () => {
     );
 
     expect(absolutePathForFileInRepo('foo\\..\\..\\file.txt', repo, path.win32)).toEqual(null);
+  });
+});
+
+describe('getCwdInfo', () => {
+  it('computes cwd path and labels', async () => {
+    mockExeca([[/^sl root/, {stdout: '/path/to/myRepo'}]]);
+    jest.spyOn(fs.promises, 'realpath').mockImplementation(async (path, _opts) => {
+      return path as string;
+    });
+    await expect(
+      Repository.getCwdInfo({
+        cmd: 'sl',
+        cwd: '/path/to/myRepo/some/subdir',
+        logger: mockLogger,
+        tracker: mockTracker,
+      }),
+    ).resolves.toEqual({
+      cwd: '/path/to/myRepo/some/subdir',
+      repoRoot: '/path/to/myRepo',
+      repoRelativeCwdLabel: 'myRepo/some/subdir',
+    });
+  });
+
+  it('uses realpath', async () => {
+    mockExeca([[/^sl root/, {stdout: '/data/users/name/myRepo'}]]);
+    jest.spyOn(fs.promises, 'realpath').mockImplementation(async (path, _opts) => {
+      return (path as string).replace(/^\/home\/name\//, '/data/users/name/');
+    });
+    await expect(
+      Repository.getCwdInfo({
+        cmd: 'sl',
+        cwd: '/home/name/myRepo/some/subdir',
+        logger: mockLogger,
+        tracker: mockTracker,
+      }),
+    ).resolves.toEqual({
+      cwd: '/home/name/myRepo/some/subdir', // cwd is not realpath'd
+      repoRoot: '/data/users/name/myRepo', // repo root is realpath'd
+      repoRelativeCwdLabel: 'myRepo/some/subdir',
+    });
+  });
+
+  it('returns null for non-repos', async () => {
+    mockExeca([[/^sl root/, new Error('not a repository')]]);
+    await expect(
+      Repository.getCwdInfo({
+        cmd: 'sl',
+        cwd: '/path/ro/myRepo/some/subdir',
+        logger: mockLogger,
+        tracker: mockTracker,
+      }),
+    ).resolves.toEqual({
+      cwd: '/path/ro/myRepo/some/subdir',
+    });
   });
 });

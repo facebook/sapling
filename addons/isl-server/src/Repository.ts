@@ -86,6 +86,7 @@ import {
   CommitCloudBackupStatus,
   CommandRunner,
 } from 'isl/src/types';
+import fs from 'node:fs';
 import path from 'node:path';
 import {revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
@@ -508,10 +509,17 @@ export class Repository {
       return {cwd: ctx.cwd};
     }
 
+    const [realCwd, realRoot] = await Promise.all([
+      fs.promises.realpath(ctx.cwd),
+      fs.promises.realpath(root),
+    ]);
+    // Since we found `root` for this particular `cwd`, we expect realpath(root) is a prefix of realpath(cwd).
+    // That is, the relative path does not contain any ".." components.
+    const repoRelativeCwd = path.relative(realRoot, realCwd);
     return {
       cwd: ctx.cwd,
-      repoRoot: root,
-      repoRelativeCwd: path.relative(root, ctx.cwd),
+      repoRoot: realRoot,
+      repoRelativeCwdLabel: path.normalize(path.join(path.basename(realRoot), repoRelativeCwd)),
     };
   }
 
