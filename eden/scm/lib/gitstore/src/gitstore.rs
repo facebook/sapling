@@ -104,9 +104,12 @@ impl GitStore {
         if id.is_null() {
             return Ok(Vec::new());
         }
-        let _fetch_err = self.fetch_objs(&[id]).err();
+        let fetch_err = self.fetch_objs(&[id]).err();
         let oid = hgid_to_git_oid(id);
-        let obj = self.odb.read(oid)?;
+        let obj = self
+            .odb
+            .read(oid)
+            .map_err(|e| include_fetch_error(e, &fetch_err))?;
         if kind != git2::ObjectType::Any && obj.kind() != kind {
             return Err(git2::Error::new(
                 git2::ErrorCode::NotFound,
@@ -124,7 +127,10 @@ impl GitStore {
         }
         let fetch_err = self.fetch_objs(&[id]).err();
         let oid = hgid_to_git_oid(id);
-        let (size, obj_kind) = self.odb.read_header(oid)?;
+        let (size, obj_kind) = self
+            .odb
+            .read_header(oid)
+            .map_err(|e| include_fetch_error(e, &fetch_err))?;
         if kind != git2::ObjectType::Any && obj_kind != kind {
             return Err(git2::Error::new(
                 git2::ErrorCode::NotFound,
@@ -252,4 +258,30 @@ fn update_progress(bar: &ProgressBar, line: &str) -> Option<()> {
         bar.set_message(message.to_string());
     }
     Some(())
+}
+
+fn include_fetch_error(git2_err: git2::Error, fetch_err: &Option<anyhow::Error>) -> git2::Error {
+    match fetch_err {
+        None => git2_err,
+        Some(e) => {
+            let fetch_err_indented = indent(&e.to_string());
+            let git2_err_indented = indent(git2_err.message());
+            git2::Error::new(
+                git2_err.code(),
+                git2_err.class(),
+                format!(
+                    "git fetch failed:\n{}This might cause:\n{}",
+                    fetch_err_indented, git2_err_indented
+                ),
+            )
+        }
+    }
+}
+
+fn indent(text: &str) -> String {
+    text.trim_end()
+        .lines()
+        .map(|l| format!("  {}", l))
+        .collect::<Vec<_>>()
+        .concat()
 }
