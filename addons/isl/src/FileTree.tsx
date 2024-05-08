@@ -12,8 +12,8 @@ import type {PathTree} from './pathTree';
 import type {Comparison} from 'shared/Comparison';
 
 import {File} from './ChangedFile';
+import {Button} from './components/Button';
 import {buildPathTree} from './pathTree';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useMemo, useState} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -26,10 +26,10 @@ type HeaderProps = {
 export function FileTreeFolderHeader({isCollapsed, toggleCollapsed, folder}: HeaderProps) {
   return (
     <span className="file-tree-folder-path">
-      <VSCodeButton appearance="icon" onClick={toggleCollapsed}>
+      <Button icon onClick={toggleCollapsed}>
         <Icon icon={isCollapsed ? 'chevron-right' : 'chevron-down'} slot="start" />
         {folder}
-      </VSCodeButton>
+      </Button>
     </span>
   );
 }
