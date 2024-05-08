@@ -37,6 +37,10 @@ const styles = stylex.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  disabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
 });
 
 export function RadioGroup<T extends string>({
@@ -47,7 +51,7 @@ export function RadioGroup<T extends string>({
   horizontal,
 }: {
   title?: string;
-  choices: Array<{value: T; title: react.ReactNode; tooltip?: string}>;
+  choices: Array<{value: T; title: react.ReactNode; tooltip?: string; disabled?: boolean}>;
   current: T;
   onChange: (t: T) => unknown;
   horizontal?: boolean;
@@ -55,12 +59,13 @@ export function RadioGroup<T extends string>({
   const inner = (
     <fieldset
       {...stylex.props(layout.flexCol, styles.group, horizontal === true && styles.horizontal)}>
-      {choices.map(({value, title, tooltip}) => (
+      {choices.map(({value, title, tooltip, disabled}) => (
         <Radio
           key={value}
           value={value}
           title={title}
           tooltip={tooltip}
+          disabled={disabled}
           checked={current === value}
           onChange={() => onChange(value)}
         />
@@ -83,16 +88,20 @@ function Radio({
   tooltip,
   checked,
   onChange,
+  disabled,
 }: {
   title: react.ReactNode;
   value: string;
   tooltip?: string;
   checked: boolean;
   onChange: () => unknown;
+  disabled?: boolean;
 }) {
   const id = useId();
   const inner = (
-    <label htmlFor={id} {...stylex.props(layout.flexRow, styles.label)}>
+    <label
+      htmlFor={id}
+      {...stylex.props(layout.flexRow, styles.label, disabled && styles.disabled)}>
       <input
         type="radio"
         id={id}
@@ -101,6 +110,7 @@ function Radio({
         checked={checked}
         onChange={onChange}
         className="isl-radio"
+        disabled={disabled}
       />
       {title}
     </label>
