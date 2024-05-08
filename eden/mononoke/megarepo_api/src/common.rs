@@ -347,7 +347,7 @@ pub trait MegarepoOp {
             .await?;
 
         // Now check if we have a file in target which has the same path
-        // as a directory in additions_merge i.e. detect file-dir conflit
+        // as a directory in additions_merge i.e. detect file-dir conflict
         // where file is from target and dir from additions_merge
         let mut addition_prefixes = vec![];
         for addition in additions {
