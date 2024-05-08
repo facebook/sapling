@@ -394,7 +394,7 @@ cpp_library(
         "//eden/fs/nfs:nfs_server",
         "//eden/fs/nfs:nfsd3",
         "//eden/fs/notifications:command_notifier",
-        "//eden/fs/notifications:windows_notifier",
+        "//eden/fs/notifications:null_notifier",
         "//eden/fs/privhelper:interface",
         "//eden/fs/prjfs:prjfs",
         "//eden/fs/store:context",

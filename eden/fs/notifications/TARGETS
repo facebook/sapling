@@ -43,12 +43,17 @@ cpp_library(
 )
 
 cpp_library(
+    name = "null_notifier",
+    headers = ["NullNotifier.h"],
+    exported_deps = [
+        ":notifier",
+    ],
+)
+
+cpp_library(
     name = "windows_notifier",
     srcs = ["WindowsNotifier.cpp"],
-    headers = [
-        "NullNotifier.h",
-        "WindowsNotifier.h",
-    ],
+    headers = ["WindowsNotifier.h"],
     os_deps = [
         (
             "windows",
