@@ -525,7 +525,7 @@ export type PlatformSpecificServerToClientMessages =
     }
   | {
       type: 'platform/availableCwds';
-      options: Array<AbsolutePath>;
+      options: Array<CwdInfo>;
     }
   | {
       type: 'platform/vscodeConfigChanged';

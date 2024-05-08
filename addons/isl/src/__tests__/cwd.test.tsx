@@ -52,7 +52,23 @@ describe('cwd', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'platform/availableCwds',
-        options: ['/path/to/repo1', '/path/to/repo2'],
+        options: [
+          {
+            cwd: '/path/to/repo1',
+            repoRoot: '/path/to/repo1',
+            repoRelativeCwd: '',
+          },
+          {
+            cwd: '/path/to/repo2',
+            repoRoot: '/path/to/repo2',
+            repoRelativeCwd: '',
+          },
+          {
+            cwd: '/path/to/repo2/some/subdir',
+            repoRoot: '/path/to/repo2',
+            repoRelativeCwd: 'some/subdir',
+          },
+        ],
       });
     });
   };
@@ -76,6 +92,16 @@ describe('cwd', () => {
 
     expect(within(dropdown).getByText('repo1')).toBeInTheDocument();
     expect(within(dropdown).getByText('repo2')).toBeInTheDocument();
+  });
+
+  it('shows cwd options from the platform with repo relative cwd paths', () => {
+    openCwdDropdown();
+
+    const dropdown = screen.getByTestId('cwd-details-dropdown');
+
+    expect(within(dropdown).getByText('repo1')).toBeInTheDocument();
+    expect(within(dropdown).getByText('repo2')).toBeInTheDocument();
+    expect(within(dropdown).getByText('repo2/some/subdir')).toBeInTheDocument();
   });
 
   it('requests new data for subscriptions after changing cwd', () => {

@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AbsolutePath} from './types';
+import type {AbsolutePath, CwdInfo} from './types';
 
 import serverAPI from './ClientToServerAPI';
+import {Row} from './ComponentUtils';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
@@ -18,7 +20,7 @@ import {Button} from './components/Button';
 import {ButtonDropdown} from './components/ButtonDropdown';
 import {Divider} from './components/Divider';
 import {RadioGroup} from './components/Radio';
-import {T} from './i18n';
+import {T, t} from './i18n';
 import {lazyAtom, writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
@@ -26,7 +28,6 @@ import {registerCleanup, registerDisposable} from './utils';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
-import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename} from 'shared/utils';
 
 /**
@@ -59,7 +60,7 @@ function getRepoLabel(repoRoot: AbsolutePath, cwd: string) {
   return repoBasename + repoRelativeCwd;
 }
 
-export const availableCwds = lazyAtom<Array<AbsolutePath>>(() => {
+export const availableCwds = lazyAtom<Array<CwdInfo>>(() => {
   // Only request `subscribeToAvailableCwds` when first read the atom.
   registerCleanup(
     availableCwds,
@@ -85,7 +86,8 @@ export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
   const currentCwd = useAtomValue(serverCwd);
   const additionalToggles = useCommandEvent('ToggleCwdDropdown');
-  const options = useCwdOptions();
+  const allOptions = useCwdOptions();
+  const options = allOptions.filter(opt => opt.valid);
   if (info?.type !== 'success') {
     return null;
   }
@@ -113,7 +115,13 @@ export function CwdSelector() {
           data-testid="cwd-dropdown-button"
           kind="icon"
           options={options}
-          selected={{id: currentCwd, label: repoLabel}}
+          selected={
+            options.find(opt => opt.id === currentCwd) ?? {
+              id: currentCwd,
+              label: repoLabel,
+              valid: true,
+            }
+          }
           icon={<Icon icon="folder" />}
           onClick={
             () => null // fall through to the Tooltip
@@ -136,7 +144,7 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   return (
     <DropdownFields title={<T>Repository info</T>} icon="folder" data-testid="cwd-details-dropdown">
       <CwdSelections dismiss={dismiss} divider />
-      <DropdownField title={<T>Active repository</T>}>
+      <DropdownField title={<T>Active working directory</T>}>
         <code>{cwd}</code>
       </DropdownField>
       <DropdownField title={<T>Repository Root</T>}>
@@ -164,10 +172,14 @@ function changeCwd(newCwd: string) {
 function useCwdOptions() {
   const cwdOptions = useAtomValue(availableCwds);
 
-  const paths = minimalDisambiguousPaths(cwdOptions);
-  return paths.map((shortCwd, index) => ({
-    id: cwdOptions[index],
-    label: shortCwd,
+  return cwdOptions.map((cwd, index) => ({
+    id: cwdOptions[index].cwd,
+    label:
+      cwd.repoRelativeCwd == null || cwd.repoRoot == null
+        ? cwd.cwd
+        : basename(cwd.repoRoot) +
+          (cwd.repoRelativeCwd ? guessPathSep(cwd.cwd) + cwd.repoRelativeCwd : ''),
+    valid: cwd.repoRoot != null,
   }));
 }
 
@@ -187,9 +199,27 @@ export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divid
   }
 
   return (
-    <DropdownField title={<T>Change active repository</T>}>
+    <DropdownField title={<T>Change active working directory</T>}>
       <RadioGroup
-        choices={options.map(({id, label}) => ({title: label, value: id, tooltip: id}))}
+        choices={options.map(({id, label, valid}) => ({
+          title: valid ? (
+            label
+          ) : (
+            <Row key={id}>
+              {label}{' '}
+              <Subtle>
+                <T>Not a valid repository</T>
+              </Subtle>
+            </Row>
+          ),
+          value: id,
+          tooltip: valid
+            ? id
+            : t('Path $path does not appear to be a valid Sapling repository', {
+                replace: {$path: id},
+              }),
+          disabled: !valid,
+        }))}
         current={currentCwd}
         onChange={newCwd => {
           if (newCwd === currentCwd) {

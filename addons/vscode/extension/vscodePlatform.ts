@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Repository} from 'isl-server/src/Repository';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {
@@ -17,6 +16,7 @@ import type {Json} from 'shared/typeUtils';
 
 import {executeVSCodeCommand} from './commands';
 import {t} from './i18n';
+import {Repository} from 'isl-server/src/Repository';
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
 
@@ -95,11 +95,18 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
           break;
         }
         case 'platform/subscribeToAvailableCwds': {
-          const postAllAvailableCwds = () =>
+          const postAllAvailableCwds = async () => {
+            const options = await Promise.all(
+              (vscode.workspace.workspaceFolders ?? []).map(folder => {
+                const cwd = folder.uri.fsPath;
+                return Repository.getCwdInfo({...ctx, cwd});
+              }),
+            );
             postMessage({
               type: 'platform/availableCwds',
-              options: (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.fsPath),
+              options,
             });
+          };
 
           postAllAvailableCwds();
           const dispose = vscode.workspace.onDidChangeWorkspaceFolders(postAllAvailableCwds);
