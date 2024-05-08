@@ -104,6 +104,7 @@ impl GitStore {
         if id.is_null() {
             return Ok(Vec::new());
         }
+        let _fetch_err = self.fetch_objs(&[id]).err();
         let oid = hgid_to_git_oid(id);
         let obj = self.odb.read(oid)?;
         if kind != git2::ObjectType::Any && obj.kind() != kind {
@@ -121,6 +122,7 @@ impl GitStore {
         if id.is_null() {
             return Ok(0);
         }
+        let fetch_err = self.fetch_objs(&[id]).err();
         let oid = hgid_to_git_oid(id);
         let (size, obj_kind) = self.odb.read_header(oid)?;
         if kind != git2::ObjectType::Any && obj_kind != kind {
