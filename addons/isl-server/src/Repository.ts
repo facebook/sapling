@@ -38,6 +38,7 @@ import type {
   RepoRelativePath,
   SettableConfigName,
   StableInfo,
+  CwdInfo,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -494,6 +495,24 @@ export class Repository {
     };
     logger.info('repo info: ', result);
     return result;
+  }
+
+  /**
+   * Determine basic information about a cwd, without fetching the full RepositoryInfo.
+   * Useful to determine if a cwd is valid and find the repo root without constructing a Repository.
+   */
+  static async getCwdInfo(ctx: RepositoryContext): Promise<CwdInfo> {
+    const root = await findRoot(ctx).catch((err: Error) => err);
+
+    if (root instanceof Error || root == null) {
+      return {cwd: ctx.cwd};
+    }
+
+    return {
+      cwd: ctx.cwd,
+      repoRoot: root,
+      repoRelativeCwd: path.relative(root, ctx.cwd),
+    };
   }
 
   /**

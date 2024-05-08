@@ -130,6 +130,17 @@ export type RepositoryError =
       error: Error;
     };
 
+export type CwdInfo = {
+  /** Full cwd path, like /Users/username/repoRoot/some/subfolder */
+  cwd: AbsolutePath;
+  /** Full path to the repository root, like /Users/username/repoRoot
+   * Undefined for cwds that are not valid repositories */
+  repoRoot?: AbsolutePath;
+  /** cwd path within the repo, like some/subfolder
+   * Undefined for cwds that are not valid repositories */
+  repoRelativeCwd?: RepoRelativePath;
+};
+
 export type RepoInfo = RepositoryError | ValidatedRepoInfo;
 
 /** Proven valid repositories with valid repoRoot / dotdir */
