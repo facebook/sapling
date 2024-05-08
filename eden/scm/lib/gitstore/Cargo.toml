@@ -20,4 +20,5 @@ gitcompat = { version = "0.1.0", path = "../gitcompat" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
+tracing = { version = "0.1.40", features = ["attributes"] }
 types = { version = "0.1.0", path = "../types" }

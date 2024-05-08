@@ -17,6 +17,7 @@ use std::process::Stdio;
 use configmodel::Config;
 use gitcompat::rungit::RunGitOptions;
 use progress_model::ProgressBar;
+use tracing::debug;
 use types::HgId;
 
 type Git2Result<T> = Result<T, git2::Error>;
@@ -82,6 +83,12 @@ impl GitStore {
         // Cast to `Opaque` and prevents access to `git_repo`.
         let opaque_repo: Box<dyn Opaque + Send + Sync> = Box::new(UnsafeForceSync(git_repo));
 
+        debug!(
+            git_dir = ?git_dir,
+            fetch_url = &fetch_url,
+            fetch_filter = &fetch_filter,
+            "GitStore::open"
+        );
         let store = GitStore {
             odb,
             git,
