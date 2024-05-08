@@ -206,7 +206,11 @@ function SectionedFileList({filesByPrefix, ...rest}: SectionProps) {
               }
               folder={prefix}
             />
-            {!isCollapsed ? <LinearFileList {...rest} files={files} /> : null}
+            {!isCollapsed ? (
+              <div className="file-tree-level">
+                <LinearFileList {...rest} files={files} />
+              </div>
+            ) : null}
           </div>
         );
       })}
