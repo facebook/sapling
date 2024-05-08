@@ -27,7 +27,7 @@ pub use scrub::ScrubOutputNodeArgs;
 pub use scrub::ScrubPackLogArgs;
 use strum::AsRefStr;
 use strum::EnumString;
-use strum::EnumVariantNames;
+use strum::VariantNames;
 pub use tail_args::TailArgs;
 pub use validate::ValidateCheckTypeArgs;
 pub use walk_params::WalkerGraphArgs;
@@ -78,7 +78,7 @@ pub struct WalkerCommonArgs {
     pub tailing: TailArgs,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, AsRefStr, EnumVariantNames, EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, AsRefStr, VariantNames, EnumString)]
 pub enum OutputFormat {
     Debug,
     PrettyDebug,

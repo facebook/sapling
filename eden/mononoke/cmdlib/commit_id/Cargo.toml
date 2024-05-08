@@ -21,4 +21,4 @@ context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-strum = { version = "0.24", features = ["derive"] }
+strum = { version = "0.26.2", features = ["derive"] }

@@ -11,13 +11,13 @@ use clap::ValueEnum;
 use once_cell::sync::Lazy;
 use strum::AsRefStr;
 use strum::EnumString;
-use strum::EnumVariantNames;
 use strum::IntoEnumIterator;
+use strum::VariantNames;
 
 use crate::detail::graph::NodeType;
 use crate::detail::state::InternedType;
 
-#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, EnumVariantNames)]
+#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, VariantNames)]
 // Forcing backward compatibility with clap-3 for user facing CLI arguments
 #[clap(rename_all = "PascalCase")]
 pub enum InternedTypeArg {
@@ -80,7 +80,7 @@ pub static DEFAULT_INTERNED_TYPES_STR: Lazy<Vec<&'static str>> = Lazy::new(|| {
 });
 
 /// We can jump for ChangesetId to all of these
-#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, EnumVariantNames)]
+#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, VariantNames)]
 // Forcing backward compatibility with clap-3 for user facing CLI arguments
 #[clap(rename_all = "PascalCase")]
 pub enum ChunkByPublicArg {

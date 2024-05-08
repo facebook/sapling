@@ -31,8 +31,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::warn;
 use strum::EnumString;
-use strum::EnumVariantNames;
 use strum::IntoStaticStr;
+use strum::VariantNames;
 
 use crate::base::inner_put;
 
@@ -49,7 +49,7 @@ static HEAL_MAX_BACKLOG: Lazy<Duration> =
     Hash,
     ValueEnum,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     IntoStaticStr
 )]
 // Forcing backward compatibility with clap-3 for user facing CLI arguments
@@ -71,7 +71,7 @@ pub enum ScrubAction {
     Hash,
     ValueEnum,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     IntoStaticStr
 )]
 // Forcing backward compatibility with clap-3 for user facing CLI arguments

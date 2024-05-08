@@ -20,7 +20,7 @@ use scuba_ext::ScubaValue;
 use strum::AsRefStr;
 use strum::Display;
 use strum::EnumString;
-use strum::EnumVariantNames;
+use strum::VariantNames;
 use time_ext::DurationExt;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
@@ -51,7 +51,7 @@ const OVERWRITE_STATUS: &str = "overwrite_status";
     Display,
     AsRefStr,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     ValueEnum
 )]
 #[strum(serialize_all = "kebab_case")]

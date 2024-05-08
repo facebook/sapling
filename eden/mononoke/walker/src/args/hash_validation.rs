@@ -11,7 +11,7 @@ use clap::Args;
 use clap::ValueEnum;
 use strum::AsRefStr;
 use strum::EnumString;
-use strum::EnumVariantNames;
+use strum::VariantNames;
 
 use crate::detail::graph::NodeType;
 
@@ -35,7 +35,7 @@ impl HashValidationArgs {
     }
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, EnumVariantNames)]
+#[derive(Debug, Clone, Copy, ValueEnum, AsRefStr, EnumString, VariantNames)]
 // Forcing backward compatibility with clap-3 for user facing CLI arguments
 #[clap(rename_all = "PascalCase")]
 pub enum HashValidationArg {

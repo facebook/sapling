@@ -33,18 +33,9 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use strum::AsRefStr;
 use strum::EnumString;
-use strum::EnumVariantNames;
+use strum::VariantNames;
 
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    PartialEq,
-    AsRefStr,
-    EnumVariantNames,
-    EnumString
-)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, AsRefStr, VariantNames, EnumString)]
 pub enum Direction {
     NewestFirst,
     OldestFirst,

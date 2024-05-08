@@ -44,7 +44,6 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use strum::EnumString;
-use strum::EnumVariantNames;
 use strum::VariantNames;
 use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::MountInfo;
@@ -75,7 +74,7 @@ const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 // List of supported repository types. This should stay in sync with the list
 // in the Python CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
 // the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
-#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, VariantNames, EnumString)]
 #[serde(rename_all = "lowercase")]
 enum RepositoryType {
     #[strum(serialize = "git")]
@@ -88,7 +87,7 @@ enum RepositoryType {
     FilteredHg,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, VariantNames, EnumString)]
 #[serde(rename_all = "lowercase")]
 enum MountProtocol {
     #[strum(serialize = "fuse")]
@@ -99,7 +98,7 @@ enum MountProtocol {
     Prjfs,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, VariantNames, EnumString)]
 #[serde(rename_all = "lowercase")]
 enum InodeCatalogType {
     #[strum(serialize = "legacy")]

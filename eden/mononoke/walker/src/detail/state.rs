@@ -47,7 +47,7 @@ use slog::Logger;
 use strum::EnumCount;
 use strum::EnumIter;
 use strum::EnumString;
-use strum::EnumVariantNames;
+use strum::VariantNames;
 
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::Node;
@@ -693,7 +693,7 @@ impl WalkState {
     Hash,
     EnumIter,
     EnumString,
-    EnumVariantNames
+    VariantNames
 )]
 pub enum InternedType {
     // No ChangesetId as that is not flushable as it is used to maintain deferred_bcs

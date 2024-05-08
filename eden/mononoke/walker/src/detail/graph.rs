@@ -103,7 +103,7 @@ macro_rules! define_type_enum {
      }) => {
          #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum::AsRefStr,
          strum::EnumCount, strum::EnumIter, strum::EnumString,
-         strum::EnumVariantNames, strum::IntoStaticStr)]
+         strum::VariantNames, strum::IntoStaticStr)]
          pub enum $enum_name {
              $($variant),*
          }

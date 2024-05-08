@@ -68,7 +68,7 @@ sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 sqlphases = { version = "0.1.0", path = "../../phases/sqlphases" }
 streaming_clone = { version = "0.1.0", path = "../../repo_client/streaming_clone" }
-strum = { version = "0.24", features = ["derive"] }
+strum = { version = "0.26.2", features = ["derive"] }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
