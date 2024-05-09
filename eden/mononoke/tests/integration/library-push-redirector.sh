@@ -34,11 +34,11 @@ function validate_commit_sync() {
 function test_version_cfg {
   jq . << EOF
    {
-    "large_repo_id": 0,
+    "large_repo_id": $LARGE_REPO_ID,
     "common_pushrebase_bookmarks": ["master_bookmark"],
     "small_repos": [
       {
-        "repoid": 1,
+        "repoid": $SMALL_REPO_ID,
         "bookmark_prefix": "bookprefix/",
         "default_action": "prepend_prefix",
         "default_prefix": "smallrepofolder",
@@ -64,7 +64,7 @@ function large_small_megarepo_config() {
       "versions": [
         $TEST_VERSION_CFG,
         {
-          "large_repo_id": 0,
+          "large_repo_id": $LARGE_REPO_ID,
           "common_pushrebase_bookmarks": [],
           "small_repos": [],
           "version_name": "large_only"
@@ -72,7 +72,7 @@ function large_small_megarepo_config() {
       ],
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
-        "large_repo_id": 0,
+        "large_repo_id": $LARGE_REPO_ID,
         "small_repos": {
           1: {
             "bookmark_prefix": "bookprefix/"
@@ -88,8 +88,12 @@ EOF
 
 function large_small_config() {
   REPOTYPE="blob_files"
-  INFINITEPUSH_ALLOW_WRITES=true REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
-  INFINITEPUSH_ALLOW_WRITES=true REPOID=1 REPONAME=small-mon setup_common_config "$REPOTYPE"
+  export LARGE_REPO_ID=0;
+  export SMALL_REPO_ID=1;
+  export LARGE_REPO_NAME="large-mon";
+  export SMALL_REPO_NAME="small-mon";
+  INFINITEPUSH_ALLOW_WRITES=true REPOID="$LARGE_REPO_ID" REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
+  INFINITEPUSH_ALLOW_WRITES=true REPOID="$SMALL_REPO_ID" REPONAME="$SMALL_REPO_NAME" setup_common_config "$REPOTYPE"
   large_small_megarepo_config
 }
 
@@ -169,11 +173,11 @@ function update_commit_sync_map_first_option {
       "versions": [
         $TEST_VERSION_CFG,
       {
-        "large_repo_id": 0,
+        "large_repo_id": $LARGE_REPO_ID,
         "common_pushrebase_bookmarks": ["master_bookmark"],
         "small_repos": [
           {
-            "repoid": 1,
+            "repoid": $SMALL_REPO_ID,
             "bookmark_prefix": "bookprefix/",
             "default_action": "prepend_prefix",
             "default_prefix": "smallrepofolder_after",
@@ -188,7 +192,7 @@ function update_commit_sync_map_first_option {
       ],
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
-        "large_repo_id": 0,
+        "large_repo_id": $LARGE_REPO_ID,
         "small_repos": {
           1: {
             "bookmark_prefix": "bookprefix/"
@@ -209,11 +213,11 @@ function update_commit_sync_map_second_option {
     "megarepo_test": {
       "versions": [
         {
-          "large_repo_id": 0,
+          "large_repo_id": $LARGE_REPO_ID,
           "common_pushrebase_bookmarks": ["master_bookmark"],
           "small_repos": [
             {
-              "repoid": 1,
+              "repoid": $SMALL_REPO_ID,
               "default_action": "prepend_prefix",
               "default_prefix": "smallrepofolder1",
               "bookmark_prefix": "bookprefix1/",
@@ -226,13 +230,13 @@ function update_commit_sync_map_second_option {
           "version_name": "TEST_VERSION_NAME_LIVE_V1"
         },
         {
-          "large_repo_id": 0,
+          "large_repo_id": $LARGE_REPO_ID,
           "common_pushrebase_bookmarks": [
             "master_bookmark"
           ],
           "small_repos": [
             {
-              "repoid": 1,
+              "repoid": $SMALL_REPO_ID,
               "default_action": "prepend_prefix",
               "default_prefix": "smallrepofolder1",
               "bookmark_prefix": "bookprefix1/",
@@ -247,7 +251,7 @@ function update_commit_sync_map_second_option {
       ],
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
-        "large_repo_id": 0,
+        "large_repo_id": $LARGE_REPO_ID,
         "small_repos": {
           1: {
             "bookmark_prefix": "bookprefix1/"
@@ -265,11 +269,11 @@ EOF
 function imported_noop_cfg {
   jq . << EOF
     {
-      "large_repo_id": 0,
+      "large_repo_id": $LARGE_REPO_ID,
       "common_pushrebase_bookmarks": ["master_bookmark"],
       "small_repos": [
         {
-          "repoid": 2,
+          "repoid": $IMPORTED_REPO_ID,
           "bookmark_prefix": "imported_repo/",
           "default_action": "prepend_prefix",
           "default_prefix": "imported_repo",
@@ -286,11 +290,11 @@ EOF
 function another_noop {
   jq . << EOF
     {
-      "large_repo_id": 0,
+      "large_repo_id": $LARGE_REPO_ID,
       "common_pushrebase_bookmarks": ["master_bookmark"],
       "small_repos": [
         {
-          "repoid": 3,
+          "repoid": $ANOTHER_REPO_ID,
           "bookmark_prefix": "another_repo/",
           "default_action": "prepend_prefix",
           "default_prefix": "another_repoo",
@@ -307,11 +311,11 @@ EOF
 function new_version {
   jq . << EOF
     {
-      "large_repo_id": 0,
+      "large_repo_id": $LARGE_REPO_ID,
       "common_pushrebase_bookmarks": ["master_bookmark"],
       "small_repos": [
         {
-          "repoid": 1,
+          "repoid": $SMALL_REPO_ID,
           "bookmark_prefix": "bookprefix/",
           "default_action": "prepend_prefix",
           "default_prefix": "smallrepofolder",
@@ -321,7 +325,7 @@ function new_version {
           }
         },
         {
-          "repoid": 2,
+          "repoid": $IMPORTED_REPO_ID,
           "bookmark_prefix": "imported_repo/",
           "default_action": "prepend_prefix",
           "default_prefix": "imported_repo",
@@ -338,11 +342,11 @@ EOF
 function another_version {
   jq . << EOF
     {
-      "large_repo_id": 0,
+      "large_repo_id": $LARGE_REPO_ID,
       "common_pushrebase_bookmarks": ["master_bookmark"],
       "small_repos": [
         {
-          "repoid": 1,
+          "repoid": $SMALL_REPO_ID,
           "bookmark_prefix": "bookprefix/",
           "default_action": "prepend_prefix",
           "default_prefix": "smallrepofolder",
@@ -352,7 +356,7 @@ function another_version {
           }
         },
         {
-          "repoid": 2,
+          "repoid": $IMPORTED_REPO_ID,
           "bookmark_prefix": "imported_repo/",
           "default_action": "prepend_prefix",
           "default_prefix": "imported_repo",
@@ -360,7 +364,7 @@ function another_version {
           "mapping": {}
         },
         {
-          "repoid": 3,
+          "repoid": $ANOTHER_REPO_ID,
           "bookmark_prefix": "another_repo/",
           "default_action": "prepend_prefix",
           "default_prefix": "another_repo",
@@ -410,7 +414,7 @@ function update_commit_sync_map_for_new_repo_import {
         ],
         "common": {
           "common_pushrebase_bookmarks": ["master_bookmark"],
-          "large_repo_id": 0,
+          "large_repo_id": $LARGE_REPO_ID,
           "small_repos": {
             1: {
               "bookmark_prefix": "bookprefix/"

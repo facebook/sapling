@@ -7,6 +7,8 @@
 This is a fork  of test-cross-repo-commit-sync-live.t that brings the via-extra mode
 to be fully able to deal with mapping changes regardless of sync direction. I will
 replace that file once fully fixed.
+  $ export LARGE_REPO_ID=0
+  $ export SMALL_REPO_ID=1
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
@@ -176,4 +178,3 @@ Rest of this test won't pass as we failed the previous command so is commented o
   using repo "small-mon" repoid RepositoryId(1)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   RewrittenAs([(ChangesetId(Blake2(e7a0827177ac9caf3578f2c5e4307f3d11a8954ccaa576c3813f166d174f4e64)), CommitSyncConfigVersion("new_version"))])
-

@@ -4,13 +4,16 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export LARGE_REPO_ID=0
+  $ export SMALL_REPO_ID=1
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
 setup configuration
   $ REPOTYPE="blob_files"
-  $ REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
-  $ REPOID=1 REPONAME=small-mon-1 setup_common_config $REPOTYPE
+  $ REPOID=$LARGE_REPO_ID REPONAME=large-mon setup_common_config $REPOTYPE
+  $ REPOID=$SMALL_REPO_ID REPONAME=small-mon-1 setup_common_config $REPOTYPE
 
   $ cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
   > [megarepo_test]

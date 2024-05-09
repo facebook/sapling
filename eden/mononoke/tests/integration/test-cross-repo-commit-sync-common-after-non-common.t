@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export LARGE_REPO_ID=0
+  $ export SMALL_REPO_ID=1
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 

@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export LARGE_REPO_ID=0
+  $ export SMALL_REPO_ID=1
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
@@ -154,4 +156,3 @@ After the change
   using repo "small-mon" repoid RepositoryId(1)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)
-
