@@ -7,7 +7,7 @@
 Test migration between narrow-heads and non-narrow-heads
 
   $ enable remotenames amend
-  $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution= remotenames.rename.default=remote
+  $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution= remotenames.rename.default=remote
 
   $ newrepo
   $ drawdag << 'EOS'

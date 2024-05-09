@@ -7,7 +7,7 @@
 
   $ configure dummyssh modernclient
   $ enable remotenames amend
-  $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution= remotenames.rename.default=remote
+  $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution= remotenames.rename.default=remote
   $ setconfig 'infinitepush.branchpattern=re:(^hack/.*)'
   $ shorttraceback
 

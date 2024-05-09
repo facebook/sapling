@@ -35,7 +35,7 @@ def record(repo, extra, prednodes, op=None, splitting=None) -> Optional[Dict[str
         mutinfo = {}
         mutinfo["mutpred"] = ",".join(identfromnode(p) for p in prednodes)
         mutinfo["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
-        date = repo.ui.config("mutation", "date")
+        date = repo.ui.config("devel", "default-date")
         if date is None:
             date = util.makedate()
         else:
@@ -134,7 +134,7 @@ def createsyntheticentry(
     repo, preds, succ, op, splitting=None, user=None, date=None, extras=None
 ):
     user = user or repo.ui.config("mutation", "user") or repo.ui.username()
-    date = date or repo.ui.config("mutation", "date")
+    date = date or repo.ui.config("devel", "default-date")
     if date is None:
         date = util.makedate()
     else:

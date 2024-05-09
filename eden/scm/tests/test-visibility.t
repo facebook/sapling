@@ -6,7 +6,7 @@
   $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true visibility.verbose=true
-  $ setconfig mutation.enabled=true mutation.date="0 0"
+  $ setconfig mutation.enabled=true
   $ setconfig hint.ack=undo
 
 Useful functions

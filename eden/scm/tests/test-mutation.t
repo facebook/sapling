@@ -9,7 +9,7 @@
   $ setconfig ui.interactive=true
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
-  $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
+  $ setconfig mutation.record=true mutation.enabled=true
 
   $ cat >> $HGRCPATH <<EOF
   > [templatealias]
@@ -1351,24 +1351,21 @@ Test debugmutation filtering of mutation info by date
   $ for i in 18403200 18489600 18576000 18662400 18748800
   > do
   >   echo $i >> file
-  >   hg amend -m "c1 (amended $i)" --config mutation.date="$i 0"
+  >   hg amend -m "c1 (amended $i)" --config devel.default-date="$i 0"
   > done
   $ hg debugmutation
-   *  84e2ff9513ee8590e5041376df1d272b64d4ee08 amend by test at 1970-08-06T00:00:00 from:
-      e035b5c57c88b4faa986496e6e09977a9581897e amend by test at 1970-08-05T00:00:00 from:
-      52a4ae3f992f2c080f8bf1f141da0f6ab9df153d amend by test at 1970-08-04T00:00:00 from:
-      d11277f4e35fa8d09d6dd33e727e33c8c7c2d259 amend by test at 1970-08-03T00:00:00 from:
-      b7e5dd3c4bc4c85e7ef1f5c10e245fd14ad9ba19 amend by test at 1970-08-02T00:00:00 from:
+   *  5ace6d97ba5801022fb3b2b47eba651ee0d6fb00 amend by test at 1970-08-06T00:00:00 from:
+      59a4ec3303deb98d755eda1ee2319b543b0db5a6 amend by test at 1970-08-05T00:00:00 from:
+      fa37f25c1fbfd999bb6230235f33e2fbdf82944d amend by test at 1970-08-04T00:00:00 from:
+      9192e2082d2773b40faea0dae95a4479fdcec7c2 amend by test at 1970-08-03T00:00:00 from:
+      8567425fe92afee0db280f2c01783085691903b6 amend by test at 1970-08-02T00:00:00 from:
       315843a7e2114894c0e7345436313f20282907bd
-  
   $ hg debugmutation -t "1970-08-05 to 1970-08-10"
-   *  84e2ff9513ee8590e5041376df1d272b64d4ee08 amend by test at 1970-08-06T00:00:00 from:
-      e035b5c57c88b4faa986496e6e09977a9581897e amend by test at 1970-08-05T00:00:00 from:
-      52a4ae3f992f2c080f8bf1f141da0f6ab9df153d ...
-  
+   *  5ace6d97ba5801022fb3b2b47eba651ee0d6fb00 amend by test at 1970-08-06T00:00:00 from:
+      59a4ec3303deb98d755eda1ee2319b543b0db5a6 amend by test at 1970-08-05T00:00:00 from:
+      fa37f25c1fbfd999bb6230235f33e2fbdf82944d ...
   $ hg debugmutation -s -r 315843a -t "1970-08-01 to 1970-08-04" --hidden
    *  315843a7e2114894c0e7345436313f20282907bd amend by test at 1970-08-02T00:00:00 into:
-      b7e5dd3c4bc4c85e7ef1f5c10e245fd14ad9ba19 amend by test at 1970-08-03T00:00:00 into:
-      d11277f4e35fa8d09d6dd33e727e33c8c7c2d259 amend by test at 1970-08-04T00:00:00 into:
-      52a4ae3f992f2c080f8bf1f141da0f6ab9df153d ...
-  
+      8567425fe92afee0db280f2c01783085691903b6 amend by test at 1970-08-03T00:00:00 into:
+      9192e2082d2773b40faea0dae95a4479fdcec7c2 amend by test at 1970-08-04T00:00:00 into:
+      fa37f25c1fbfd999bb6230235f33e2fbdf82944d ...

@@ -21,7 +21,7 @@
 
   $ enable amend rebase remotenames
   $ setconfig experimental.narrow-heads=True
-  $ setconfig visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date='0 0' experimental.evolution= remotenames.rename.default=remote
+  $ setconfig visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution= remotenames.rename.default=remote
   $ hg init restack
   $ cd restack
 

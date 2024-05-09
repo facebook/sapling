@@ -180,13 +180,13 @@ configure() {
       mutation)
         setconfig \
             experimental.evolution=obsolete \
-            mutation.enabled=true mutation.record=true mutation.date="0 0" \
+            mutation.enabled=true mutation.record=true \
             visibility.enabled=true
         ;;
       mutation-norecord)
         setconfig \
             experimental.evolution=obsolete \
-            mutation.enabled=true mutation.record=false mutation.date="0 0" \
+            mutation.enabled=true mutation.record=false \
             visibility.enabled=true
         ;;
       evolution)
@@ -289,7 +289,7 @@ setglobalconfig() {
 # Set config items that enable modern features.
 setmodernconfig() {
   enable remotenames amend
-  setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution=obsolete remotenames.rename.default=remote
+  setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution=obsolete remotenames.rename.default=remote
 }
 
 # Read config from stdin (usually a heredoc).
