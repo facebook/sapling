@@ -27,6 +27,7 @@ rust_library(
         "//eden/scm/lib/gitcompat:gitcompat",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/factory:factory",

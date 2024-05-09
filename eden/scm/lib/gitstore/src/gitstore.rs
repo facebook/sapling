@@ -12,13 +12,16 @@ use std::io::BufWriter;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
+use std::process::Output;
 use std::process::Stdio;
 
 use anyhow::Result;
 use configmodel::Config;
 use gitcompat::rungit::RunGitOptions;
 use progress_model::ProgressBar;
+use spawn_ext::CommandError;
 use tracing::debug;
+use types::errors::NetworkError;
 use types::fetch_mode::FetchMode;
 use types::HgId;
 
@@ -149,7 +152,7 @@ impl GitStore {
     /// Fetch the oids from fetch_remote. Existing oids will be skipped.
     /// If every oid exists locally, then no `git fetch` process is spawned.
     /// Otherwise, block until the `git fetch` command completes.
-    /// Currently, does not check the exit code of `git fetch`.
+    /// Report `git fetch` errors as `NetworkError`.
     pub fn fetch_objs(&self, ids: &[HgId]) -> Result<()> {
         let mut missing_ids = ids.iter().filter(|id| {
             let id = hgid_to_git_oid(**id);
@@ -181,12 +184,8 @@ impl GitStore {
             "--stdin",
             "--progress",
         ];
-        let mut child = self
-            .git
-            .git_cmd("fetch", &args)
-            .stdin(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
+        let mut cmd = self.git.git_cmd("fetch", &args);
+        let mut child = cmd.stdin(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 
         if let Some(stdin) = child.stdin.take() {
             let mut stdin = BufWriter::new(stdin);
@@ -200,25 +199,39 @@ impl GitStore {
 
         // git reads all input before running actual fetch that might print progress info
         // (see builtin/fetch.c). No need to use a thread to read output.
+        let mut stderr_output: Vec<u8> = Vec::with_capacity(1024);
         if let Some(stderr) = child.stderr.take() {
             let mut stderr = BufReader::with_capacity(64, stderr);
             let mut buf = [0u8; 1];
-            let mut last_line = String::with_capacity(64);
+            let mut last_line = Vec::with_capacity(64);
             let bar = ProgressBar::new_adhoc("git fetch", 0, "");
             while stderr.read_exact(&mut buf).is_ok() {
                 match buf[0] {
                     b'\r' | b'\n' => {
-                        update_progress(&bar, &last_line);
+                        if buf[0] == b'\n' {
+                            stderr_output.extend_from_slice(&last_line);
+                            stderr_output.push(b'\n');
+                        }
+                        update_progress(&bar, std::str::from_utf8(&last_line).unwrap_or(""));
                         last_line.clear();
                     }
                     c => {
-                        last_line.push(c as char);
+                        last_line.push(c);
                     }
                 }
             }
         }
 
-        child.wait()?;
+        let status = child.wait()?;
+        if !status.success() {
+            let output = Output {
+                status,
+                stdout: Vec::new(),
+                stderr: stderr_output,
+            };
+            let err = CommandError::new(&cmd, None).with_output(&output);
+            return Err(NetworkError(err.into()).into());
+        }
         Ok(())
     }
 
