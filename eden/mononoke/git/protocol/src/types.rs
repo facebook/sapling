@@ -340,10 +340,18 @@ pub struct FetchRequest {
     pub deepen_not: Option<ObjectId>,
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
-    pub filter: Option<String>,
+    pub filter: Option<FetchFilter>,
     /// The concurrency setting to be used for generating the packfile items for the
     /// fetch request
     pub concurrency: PackfileConcurrency,
+}
+
+/// Struct representing the filtering options that can be used during fetch / clone
+#[derive(Debug, Clone)]
+pub struct FetchFilter {
+    pub max_blob_size: u64,
+    pub max_tree_depth: u64,
+    pub allowed_object_types: Vec<gix_object::Kind>,
 }
 
 /// Struct representing the packfile item response generated for the

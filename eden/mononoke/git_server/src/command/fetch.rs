@@ -5,11 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::bail;
 use anyhow::Context;
+use anyhow::Result;
 use gix_hash::ObjectId;
+use gix_object::Kind;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
+use protocol::types::FetchFilter;
 use protocol::types::FetchRequest;
 use protocol::types::PackfileConcurrency;
 
@@ -81,7 +85,7 @@ pub struct FetchArgs {
     pub deepen_not: Option<ObjectId>,
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
-    pub filter: Option<String>,
+    pub filter: Option<FilterArgs>,
     /// Indicates to the server that the client wants to retrieve a particular set of
     /// refs by providing the full name of the ref on the server
     pub want_refs: Vec<String>,
@@ -97,7 +101,115 @@ pub struct FetchArgs {
     pub wait_for_done: bool,
 }
 
-fn parse_oid(data: &[u8], oid_type: &[u8]) -> anyhow::Result<ObjectId> {
+/// Argument for filtering objects during clone/fetch
+#[derive(Clone, Debug)]
+pub struct FilterArgs {
+    max_blob_size: u64,
+    max_tree_depth: u64,
+    allowed_object_types: Vec<Kind>,
+}
+
+impl Default for FilterArgs {
+    fn default() -> Self {
+        Self {
+            max_blob_size: u64::MAX,
+            max_tree_depth: u64::MAX,
+            allowed_object_types: vec![Kind::Blob, Kind::Tree, Kind::Commit, Kind::Tag],
+        }
+    }
+}
+
+impl FilterArgs {
+    const COMBINE_PREFIX: &'static str = "combine:";
+    const OBJECT_TYPE_PREFIX: &'static str = "object:type=";
+    const BLOB_PREFIX: &'static str = "blob:";
+    const TREE_PREFIX: &'static str = "tree:";
+    const NO_BLOBS: &'static str = "none";
+    const SIZE_LIMIT: &'static str = "limit=";
+    const FILTER_SPLITTER: &'static str = "+";
+
+    fn parse_size(size: &str) -> Result<u64> {
+        const KB_SUFFIX: &str = "k";
+        const MB_SUFFIX: &str = "m";
+        const GB_SUFFIX: &str = "g";
+        let mut multiplier = 1;
+        let size = if let Some(size_num) = size.strip_suffix(KB_SUFFIX) {
+            multiplier = 1024;
+            size_num
+        } else if let Some(size_num) = size.strip_suffix(MB_SUFFIX) {
+            multiplier = 1024 * 1024;
+            size_num
+        } else if let Some(size_num) = size.strip_suffix(GB_SUFFIX) {
+            multiplier = 1024 * 1024 * 1024;
+            size_num
+        } else {
+            size
+        };
+        size.parse::<u64>()
+            .map(|size| size * multiplier)
+            .with_context(|| format!("Invalid blob size {:?}", size))
+    }
+
+    fn parse_from_spec(data: String) -> Result<Self> {
+        let filter_set = if let Some(combined_filters) = data.strip_prefix(Self::COMBINE_PREFIX) {
+            // There are multiple filters combined together
+            combined_filters
+                .split(Self::FILTER_SPLITTER)
+                .map(String::from)
+                .collect()
+        } else {
+            // There is only one filter
+            vec![data]
+        };
+        let mut filter_args = FilterArgs::default();
+        let mut allowed_type = None;
+        for filter in filter_set {
+            if let Some(object_type) = filter.strip_prefix(Self::OBJECT_TYPE_PREFIX) {
+                let object_kind = Kind::from_bytes(object_type.as_bytes())
+                    .with_context(|| format!("Invalid object type {:?}", object_type))?;
+                // Git has this weird behavior if you specify multiple allowed object types
+                // it just honors the first one it comes across. And no, there is no mention
+                // of it in the docs. Found this out through code reading and trail-and-error :)
+                if allowed_type.is_none() {
+                    allowed_type = Some(object_kind);
+                }
+            }
+            if let Some(blob_size) = filter.strip_prefix(Self::BLOB_PREFIX) {
+                if blob_size == Self::NO_BLOBS {
+                    filter_args.max_blob_size = 0;
+                } else if let Some(blob_limit) = blob_size.strip_prefix(Self::SIZE_LIMIT) {
+                    filter_args.max_blob_size = Self::parse_size(blob_limit)?;
+                } else {
+                    bail!(
+                        "Invalid blob size {:?} in filter spec {}",
+                        blob_size,
+                        filter
+                    );
+                }
+            }
+            if let Some(tree_depth) = filter.strip_prefix(Self::TREE_PREFIX) {
+                let max_depth = tree_depth
+                    .parse::<u64>()
+                    .with_context(|| format!("Invalid tree depth {:?}", tree_depth))?;
+                filter_args.max_tree_depth = max_depth;
+            }
+        }
+        if let Some(allowed_type) = allowed_type {
+            filter_args.allowed_object_types = vec![allowed_type];
+        }
+        Ok(filter_args)
+    }
+
+    fn into_fetch_filter(self) -> FetchFilter {
+        FetchFilter {
+            max_blob_size: self.max_blob_size,
+            max_tree_depth: self.max_tree_depth,
+            allowed_object_types: self.allowed_object_types,
+        }
+    }
+}
+
+fn parse_oid(data: &[u8], oid_type: &[u8]) -> Result<ObjectId> {
     ObjectId::from_hex(data).with_context(|| {
         format!(
             "Invalid {:?}object id {:?} received during fetch request",
@@ -110,11 +222,10 @@ fn bytes_to_str<'a, 'b, 'c>(
     bytes: &'a [u8],
     bytes_type: &'b str,
     arg_type: &'c str,
-) -> anyhow::Result<&'a str> {
+) -> Result<&'a str> {
     std::str::from_utf8(bytes).with_context(|| {
         format!(
-            "Invalid {} bytes {:?} received for {:?} during fetch command args parsing",
-            bytes_type, arg_type, bytes
+            "Invalid {bytes_type} bytes {bytes:?} received for {arg_type} during fetch command args parsing",
         )
     })
 }
@@ -133,13 +244,13 @@ impl FetchArgs {
         self.filter.is_some()
     }
 
-    fn validate(&self) -> anyhow::Result<()> {
+    fn validate(&self) -> Result<()> {
         if self.deepen.is_some() && self.deepen_since.is_some() {
-            anyhow::bail!(
+            bail!(
                 "deepen and deepen-since arguments cannot be provided at the same time for fetch command"
             )
         } else if self.deepen.is_some() && self.deepen_not.is_some() {
-            anyhow::bail!(
+            bail!(
                 "deepen and deepen-not arguments cannot be provided at the same time for fetch command"
             )
         } else {
@@ -147,7 +258,7 @@ impl FetchArgs {
         }
     }
 
-    pub fn parse_from_packetline(args: &[u8]) -> anyhow::Result<Self> {
+    pub fn parse_from_packetline(args: &[u8]) -> Result<Self> {
         let mut tokens = StreamingPeekableIter::new(args, &[PacketLineRef::Flush], true);
         let mut fetch_args = Self::default();
         while let Some(token) = tokens.read_line() {
@@ -179,7 +290,7 @@ impl FetchArgs {
                     fetch_args.deepen_not = Some(parse_oid(oid_depth, DEEPEN_NOT_PREFIX)?);
                 } else if let Some(filter) = data.strip_prefix(FILTER_PREFIX) {
                     let filter_spec = bytes_to_str(filter, "filter_spec", "filter")?.to_owned();
-                    fetch_args.filter = Some(filter_spec);
+                    fetch_args.filter = Some(FilterArgs::parse_from_spec(filter_spec)?);
                 } else if let Some(want_ref) = data.strip_prefix(WANT_REF_PREFIX) {
                     let want_ref = bytes_to_str(want_ref, "want_ref", "want-ref")?.to_owned();
                     fetch_args.want_refs.push(want_ref);
@@ -201,14 +312,14 @@ impl FetchArgs {
                         WAIT_FOR_DONE => fetch_args.wait_for_done = true,
                         SIDEBAND_ALL => fetch_args.sideband_all = true,
                         DEEPEN_RELATIVE => fetch_args.deepen_relative = true,
-                        arg => anyhow::bail!(
+                        arg => bail!(
                             "Unexpected arg {} in fetch command args",
                             String::from_utf8_lossy(arg)
                         ),
                     };
                 }
             } else {
-                anyhow::bail!(
+                bail!(
                     "Unexpected token {:?} in packetline during fetch command args parsing",
                     token
                 );
@@ -231,7 +342,7 @@ impl FetchArgs {
             deepen_since: self.deepen_since,
             deepen_not: self.deepen_not,
             deepen_relative: self.deepen_relative,
-            filter: self.filter,
+            filter: self.filter.map(FilterArgs::into_fetch_filter),
             concurrency,
         }
     }
@@ -241,13 +352,14 @@ impl FetchArgs {
 mod tests {
     use std::io::Write;
 
+    use anyhow::Result;
     use gix_packetline::encode::flush_to_write;
     use gix_packetline::Writer;
 
     use super::*;
 
     #[test]
-    fn test_fetch_command_args_parsing() -> anyhow::Result<()> {
+    fn test_fetch_command_args_parsing() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
         packetline_writer.write_all(b"thin-pack\n")?;
@@ -266,6 +378,7 @@ mod tests {
         packetline_writer.write_all(b"want 1000000000000000000000000000000000000001\n")?;
         packetline_writer.write_all(b"have 2000000000000000000000000000000000000002\n")?;
         packetline_writer.write_all(b"shallow 1000000000000000000000000000000000000001\n")?;
+        packetline_writer.write_all(b"filter combine:blob:none+tree:5+object:type=blob+object:type=tree+object:type=commit\n")?;
         packetline_writer.write_all(b"done\n")?;
         packetline_writer.flush()?;
         let mut inner_writer = packetline_writer.into_inner();
@@ -283,11 +396,12 @@ mod tests {
         assert_eq!(parsed_args.shallow.len(), 2);
         assert_eq!(parsed_args.haves.len(), 3);
         assert_eq!(parsed_args.wants.len(), 2);
+        assert!(parsed_args.filter.is_some());
         Ok(())
     }
 
     #[test]
-    fn test_fetch_command_args_validation() -> anyhow::Result<()> {
+    fn test_fetch_command_args_validation() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
         packetline_writer.write_all(b"deepen 1\n")?;
@@ -309,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fetch_command_args_time_parsing() -> anyhow::Result<()> {
+    fn test_fetch_command_args_time_parsing() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
         packetline_writer.write_all(b"deepen-since 1979-02-26 18:30:00\n")?;
@@ -325,6 +439,47 @@ mod tests {
         flush_to_write(&mut inner_writer)?;
 
         assert!(FetchArgs::parse_from_packetline(&inner_writer).is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_filter_args_parsing() -> Result<()> {
+        let raw_input =
+            "combine:blob:none+tree:5+object:type=blob+object:type=tree+object:type=commit"
+                .to_string();
+        let filter_args = FilterArgs::parse_from_spec(raw_input)?;
+
+        assert_eq!(
+            filter_args.allowed_object_types,
+            vec![Kind::Blob] // Since blob was the first one in the spec, rest are ignored
+        );
+        assert_eq!(filter_args.max_tree_depth, 5);
+        assert_eq!(filter_args.max_blob_size, 0);
+
+        let raw_input = "tree:5".to_string();
+        let filter_args = FilterArgs::parse_from_spec(raw_input)?;
+        assert_eq!(filter_args.max_tree_depth, 5);
+        assert_eq!(filter_args.max_blob_size, u64::MAX);
+
+        let raw_input = "object:type=commit".to_string();
+        let filter_args = FilterArgs::parse_from_spec(raw_input)?;
+        assert_eq!(filter_args.max_tree_depth, u64::MAX);
+        assert_eq!(filter_args.max_blob_size, u64::MAX);
+        assert_eq!(filter_args.allowed_object_types, vec![Kind::Commit]);
+
+        let raw_input = "blob:limit=5m".to_string();
+        let filter_args = FilterArgs::parse_from_spec(raw_input)?;
+        assert_eq!(filter_args.max_tree_depth, u64::MAX);
+        assert_eq!(filter_args.max_blob_size, 5 * 1024 * 1024);
+
+        let raw_input = "blob:limit=49999".to_string();
+        let filter_args = FilterArgs::parse_from_spec(raw_input)?;
+        assert_eq!(filter_args.max_blob_size, 49999);
+        assert_eq!(filter_args.max_tree_depth, u64::MAX);
+        assert_eq!(
+            filter_args.allowed_object_types,
+            vec![Kind::Blob, Kind::Tree, Kind::Commit, Kind::Tag]
+        );
         Ok(())
     }
 }

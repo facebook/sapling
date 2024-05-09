@@ -22,9 +22,7 @@ use crate::model::ServiceType;
 
 const CORE_CAPABILITIES: &[&str] = &[
     "ls-refs=unborn",
-    "fetch=shallow",
-    "wait-for-done",
-    "filter",
+    "fetch=shallow wait-for-done filter",
     "ref-in-want",
     "object-format=sha1",
 ];

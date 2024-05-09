@@ -50,4 +50,8 @@
 # Clone the Git repo from Mononoke
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=blob:limit=5k --filter=tree:3 --filter=object:type=blob --filter=object:type=tree --filter=object:type=commit 
   Cloning into 'repo'...
-  warning: filtering not recognized by server, ignoring
+
+# Verify that we get the same Git repo back that we started with
+  $ cd $REPONAME  
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list 
