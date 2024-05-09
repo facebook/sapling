@@ -68,7 +68,6 @@ pub use types::SubmoduleDeps;
 pub use types::Target;
 pub use validation::find_bookmark_diff;
 pub use validation::report_different;
-pub use validation::verify_working_copy;
 pub use validation::verify_working_copy_fast_path;
 pub use validation::verify_working_copy_with_version_fast_path;
 pub use validation::BookmarkDiff;
