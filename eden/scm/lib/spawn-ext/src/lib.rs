@@ -49,7 +49,7 @@ pub trait CommandExt {
 }
 
 #[derive(Debug)]
-struct CommandError {
+pub struct CommandError {
     title: String,
     command: String,
     output: String,
@@ -92,7 +92,7 @@ fn os_str_to_naive_quoted_str(s: &OsStr) -> String {
 }
 
 impl CommandError {
-    fn new(command: &Command, source: Option<io::Error>) -> Self {
+    pub fn new(command: &Command, source: Option<io::Error>) -> Self {
         let arg0 = os_str_to_naive_quoted_str(command.get_program());
         let args = command
             .get_args()
@@ -108,14 +108,14 @@ impl CommandError {
         }
     }
 
-    fn with_output(mut self, output: &Output) -> Self {
+    pub fn with_output(mut self, output: &Output) -> Self {
         for out in [&output.stdout, &output.stderr] {
             self.output.push_str(&String::from_utf8_lossy(out));
         }
         self.with_status(&output.status)
     }
 
-    fn with_status(mut self, exit: &ExitStatus) -> Self {
+    pub fn with_status(mut self, exit: &ExitStatus) -> Self {
         match exit.code() {
             None =>
             {
@@ -134,7 +134,7 @@ impl CommandError {
         self
     }
 
-    fn into_io_error(self: CommandError) -> io::Error {
+    pub fn into_io_error(self: CommandError) -> io::Error {
         let kind = match self.source.as_ref() {
             None => io::ErrorKind::Other,
             Some(e) => e.kind(),
