@@ -2,7 +2,7 @@
 
   $ configure modernclient mutation
   $ enable rebase amend undo
-  $ setconfig tweakdefaults.rebasekeepdate=true
+  $ setconfig rebase.reproducible-commits=true
 
   $ newclientrepo
   $ drawdag <<EOS
@@ -25,9 +25,9 @@
   $ hg rebase -qs $B -d $D
 
   $ tglog
-  o  3827d805d9ee 'C'
+  o  29bb7e1252bc 'C'
   │
-  o  680dc0c1d0a1 'B'
+  o  9f482d67f5e1 'B'
   │
   o  b18e25de2cf5 'D'
   │
@@ -39,11 +39,11 @@ Undo and then redo the same rebase.
   $ hg undo -q
   $ hg rebase -qs $B -d $D
 
-FIXME B and C have converged back into the same commits as above:
+B and C have converged back into the same commits as above:
   $ tglog
-  o  2d7470337ad2 'C'
+  o  29bb7e1252bc 'C'
   │
-  o  0a2fc1549f72 'B'
+  o  9f482d67f5e1 'B'
   │
   o  b18e25de2cf5 'D'
   │

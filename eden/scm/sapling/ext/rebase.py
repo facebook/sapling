@@ -1278,6 +1278,11 @@ def _defaultdate(ui):
         # to bump it on rebase.
         return None
 
+    if ui.configbool("rebase", "reproducible-commits"):
+        # We want rebase to create reproducible commits, which in practice means dates
+        # must be stable (so we want to maintain the commit's date).
+        return None
+
     if stub := ui.config("devel", "default-date"):
         return stub
 
@@ -1697,6 +1702,13 @@ def concludenode(
             mutinfo = mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
+
+        if repo.ui.configbool("rebase", "reproducible-commits"):
+            # If we want reproducible commits, we need stable dates. The mutation date in
+            # extras is always "now", which affects the commit hash. Nothing uses this
+            # extra, so should be okay to skip.
+            extra.pop("mutdate", None)
+
         loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
 
         destphase = max(ctx.phase(), phases.draft)
