@@ -1349,7 +1349,7 @@ mod test {
 
     async fn test_bookmark_diff_with_renamer_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (commit_syncer, _config) = init(fb, CommitSyncDirection::LargeToSmall).await?;
 
         let small_repo = commit_syncer.get_small_repo();
         let large_repo = commit_syncer.get_large_repo();
@@ -1385,7 +1385,7 @@ mod test {
 
     async fn test_bookmark_small_to_large_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(fb, CommitSyncDirection::SmallToLarge).await?;
+        let (commit_syncer, _config) = init(fb, CommitSyncDirection::SmallToLarge).await?;
 
         let large_repo = commit_syncer.get_large_repo();
 
@@ -1408,7 +1408,7 @@ mod test {
 
     async fn test_bookmark_no_sync_outcome_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (commit_syncer, _config) = init(fb, CommitSyncDirection::LargeToSmall).await?;
 
         let large_repo = commit_syncer.get_large_repo();
 
@@ -1433,30 +1433,26 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source: TestRepo = test_repo_factory::build_empty(fb).await?;
-        let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
+        let (commit_syncer, live_commit_sync_config) =
+            init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_large_repo())
             .add_file("prefix/file1", "1")
             .add_file("prefix/file2", "2")
             .commit()
             .await?;
 
-        let target: TestRepo = test_repo_factory::build_empty(fb).await?;
-        let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
+        let target_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_small_repo())
             .add_file("file1", "1")
             .commit()
             .await?;
 
-        // Source is a large repo, hence reverse the movers
-        let mover: Mover = Arc::new(reverse_prefix_mover);
-        let reverse_mover: Mover = Arc::new(prefix_mover);
-        let res = verify_working_copy_inner(
+        let res = verify_working_copy_with_version_fast_path(
             &ctx,
-            Source(&source),
-            Target(&target),
+            &commit_syncer,
             Source(source_cs_id),
             Target(target_cs_id),
-            &mover,
-            &reverse_mover,
+            &CommitSyncConfigVersion("prefix".to_string()),
+            live_commit_sync_config.clone(),
         )
         .await;
 
@@ -1468,32 +1464,29 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source: TestRepo = test_repo_factory::build_empty(fb).await?;
-        let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
+        let (commit_syncer, live_commit_sync_config) =
+            init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_large_repo())
             .add_file("prefix/sub/file1", "1")
             .add_file("prefix/sub/file2", "2")
             .add_file("prefix/file1", "1")
             .commit()
             .await?;
 
-        let target: TestRepo = test_repo_factory::build_empty(fb).await?;
-        let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
+        let target_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_small_repo())
             .add_file("sub/file1", "1")
             .add_file("sub/file2", "2")
             .add_file("file1", "someothercontent")
             .commit()
             .await?;
 
-        let mover: Mover = Arc::new(reverse_prefix_mover);
-        let reverse_mover: Mover = Arc::new(prefix_mover);
-        let res = verify_working_copy_inner(
+        let res = verify_working_copy_with_version_fast_path(
             &ctx,
-            Source(&source),
-            Target(&target),
+            &commit_syncer,
             Source(source_cs_id),
             Target(target_cs_id),
-            &mover,
-            &reverse_mover,
+            &CommitSyncConfigVersion("prefix".to_string()),
+            live_commit_sync_config.clone(),
         )
         .await;
 
@@ -1620,24 +1613,16 @@ mod test {
         Ok(())
     }
 
-    fn prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
-        let prefix = NonRootMPath::new("prefix").unwrap();
-        Ok(Some(NonRootMPath::join(&prefix, v)))
-    }
-
-    fn reverse_prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
-        let prefix = NonRootMPath::new("prefix").unwrap();
-        if prefix.is_prefix_of(v) {
-            Ok(v.remove_prefix_component(&prefix))
-        } else {
-            Ok(None)
-        }
-    }
-
     async fn init(
         fb: FacebookInit,
         direction: CommitSyncDirection,
-    ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+    ) -> Result<
+        (
+            CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+            Arc<TestLiveCommitSyncConfig>,
+        ),
+        Error,
+    > {
         let ctx = CoreContext::test_mock(fb);
         let small_repo: TestRepo =
             Linear::get_custom_test_repo_with_id(fb, RepositoryId::new(0)).await;
@@ -1710,16 +1695,32 @@ mod test {
             },
             version_name: current_version.clone(),
         };
+        let config_with_prefix = CommitSyncConfig {
+            large_repo_id: large_repo.repo_identity().id(),
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
+            small_repos: hashmap! {
+                small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
+                    default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new("prefix/")?),
+                    map: hashmap! { },
+                    submodule_config: Default::default(),
+                },
+            },
+            version_name: CommitSyncConfigVersion("prefix".to_string()),
+        };
 
         lv_cfg_src.add_common_config(common_config);
         lv_cfg_src.add_config(current_version_config);
+        lv_cfg_src.add_config(config_with_prefix);
 
         let live_commit_sync_config = Arc::new(lv_cfg);
 
-        Ok(CommitSyncer::new_with_live_commit_sync_config(
-            &ctx,
-            mapping,
-            repos,
+        Ok((
+            CommitSyncer::new_with_live_commit_sync_config(
+                &ctx,
+                mapping,
+                repos,
+                live_commit_sync_config.clone(),
+            ),
             live_commit_sync_config,
         ))
     }

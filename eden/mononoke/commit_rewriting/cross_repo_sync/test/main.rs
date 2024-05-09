@@ -25,7 +25,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::update_mapping_with_version;
-use cross_repo_sync::verify_working_copy;
+use cross_repo_sync::verify_working_copy_fast_path;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -1238,7 +1238,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
 #[fbinit::test]
 async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (old_version, new_version, large_to_small_syncer) =
+    let (old_version, new_version, large_to_small_syncer, live_commit_sync_config) =
         prepare_commit_syncer_with_mapping_change(fb).await?;
     let megarepo = large_to_small_syncer.get_source_repo();
     let small_repo = large_to_small_syncer.get_target_repo();
@@ -1267,10 +1267,11 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     assert!(synced.is_some());
     let new_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy(
-        ctx.clone(),
-        large_to_small_syncer.clone(),
+    verify_working_copy_fast_path(
+        &ctx,
+        &large_to_small_syncer,
         new_mapping_cs_id,
+        live_commit_sync_config.clone(),
     )
     .await?;
     assert_working_copy(
@@ -1315,10 +1316,11 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     assert!(synced.is_some());
     let old_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy(
-        ctx.clone(),
-        large_to_small_syncer.clone(),
+    verify_working_copy_fast_path(
+        &ctx,
+        &large_to_small_syncer,
         old_mapping_cs_id,
+        live_commit_sync_config,
     )
     .await?;
     assert_working_copy(
@@ -1347,7 +1349,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (old_version, new_version, large_to_small_syncer) =
+    let (old_version, new_version, large_to_small_syncer, live_commit_sync_config) =
         prepare_commit_syncer_with_mapping_change(fb).await?;
     let megarepo = large_to_small_syncer.get_source_repo();
     let small_repo = large_to_small_syncer.get_target_repo();
@@ -1407,10 +1409,11 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     assert!(synced.is_some());
     let new_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy(
-        ctx.clone(),
-        large_to_small_syncer.clone(),
+    verify_working_copy_fast_path(
+        &ctx,
+        &large_to_small_syncer,
         new_mapping_cs_id,
+        live_commit_sync_config.clone(),
     )
     .await?;
     assert_working_copy(
@@ -1462,10 +1465,11 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     assert!(synced.is_some());
     let old_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy(
-        ctx.clone(),
-        large_to_small_syncer.clone(),
+    verify_working_copy_fast_path(
+        &ctx,
+        &large_to_small_syncer,
         old_mapping_cs_id,
+        live_commit_sync_config,
     )
     .await?;
     assert_working_copy(
@@ -1494,7 +1498,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
 #[fbinit::test]
 async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (_, _, large_to_small_syncer) = prepare_commit_syncer_with_mapping_change(fb).await?;
+    let (_, _, large_to_small_syncer, _) = prepare_commit_syncer_with_mapping_change(fb).await?;
     let megarepo = large_to_small_syncer.get_source_repo();
 
     let new_mapping_large_cs_id = resolve_cs_id(&ctx, &megarepo, "new_mapping").await?;
@@ -1640,6 +1644,7 @@ async fn prepare_commit_syncer_with_mapping_change(
         CommitSyncConfigVersion,
         CommitSyncConfigVersion,
         CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+        Arc<dyn LiveCommitSyncConfig>,
     ),
     Error,
 > {
@@ -1678,7 +1683,13 @@ async fn prepare_commit_syncer_with_mapping_change(
     assert!(maybe_small_root_cs_id.is_some());
     let small_root_cs_id = maybe_small_root_cs_id.unwrap();
 
-    verify_working_copy(ctx.clone(), large_to_small_syncer.clone(), root_cs_id).await?;
+    verify_working_copy_fast_path(
+        &ctx,
+        &large_to_small_syncer,
+        root_cs_id,
+        live_commit_sync_config.clone(),
+    )
+    .await?;
     assert_working_copy(
         &ctx,
         &small_repo,
@@ -1748,10 +1759,11 @@ async fn prepare_commit_syncer_with_mapping_change(
     )
     .await?;
 
-    verify_working_copy(
-        ctx.clone(),
-        large_to_small_syncer.clone(),
+    verify_working_copy_fast_path(
+        &ctx,
+        &large_to_small_syncer,
         new_mapping_large_cs_id,
+        live_commit_sync_config.clone(),
     )
     .await?;
     assert_working_copy(
@@ -1762,7 +1774,12 @@ async fn prepare_commit_syncer_with_mapping_change(
     )
     .await?;
 
-    Ok((old_version, new_version, large_to_small_syncer))
+    Ok((
+        old_version,
+        new_version,
+        large_to_small_syncer,
+        live_commit_sync_config,
+    ))
 }
 
 /// Build a test LiveCommitSyncConfig for merge testing purposes.
