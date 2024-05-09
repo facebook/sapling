@@ -38,7 +38,6 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
-use slog::debug;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
@@ -50,6 +49,7 @@ use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
+use crate::reporting::log_debug;
 use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
@@ -117,11 +117,13 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     submodule_repo: &'a R,
     mover: Mover,
 ) -> Result<BonsaiChangeset> {
-    debug!(
-        ctx.logger(),
-        "Validating expansion of submodule {0} while syncing commit {1:?}",
-        submodule_path,
-        bonsai.get_changeset_id()
+    log_debug(
+        ctx,
+        format!(
+            "Validating expansion of submodule {0} while syncing commit {1:?}",
+            submodule_path,
+            bonsai.get_changeset_id()
+        ),
     );
 
     // STEP 1: Check if any changes were made to this submodule's expansion
@@ -462,10 +464,12 @@ async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R: Rep
     expansion_fsnode_id: FsnodeId,
     submodule_fsnode_id: FsnodeId,
 ) -> Result<()> {
-    debug!(
-        ctx.logger(),
-        "Validating expansion working copy of submodule repo {0}",
-        submodule_repo.repo_identity().name()
+    log_debug(
+        ctx,
+        format!(
+            "Validating expansion working copy of submodule repo {0}",
+            submodule_repo.repo_identity().name()
+        ),
     );
     let large_repo = sm_exp_data.large_repo.clone();
     let large_repo_blobstore = large_repo.repo_blobstore_arc();

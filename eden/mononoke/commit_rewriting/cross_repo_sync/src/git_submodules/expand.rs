@@ -40,7 +40,6 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
 use movers::Mover;
-use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
@@ -55,6 +54,7 @@ use crate::git_submodules::utils::list_all_paths;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::git_submodules::validation::validate_all_submodule_expansions;
+use crate::reporting::log_debug;
 use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Large;
 use crate::types::Repo;
@@ -473,18 +473,20 @@ async fn expand_git_submodule<'a, R: Repo>(
     // before the file changes are rewritten, the file content blobs are copied
     // from the appropriate submodule repo into the source repo's blobstore.
 ) -> Result<HashMap<SubmodulePath, Vec<(NonRootMPath, FileChange)>>> {
-    debug!(ctx.logger(), "Expanding submodule {}", &submodule_path);
+    log_debug(ctx, format!("Expanding submodule {}", &submodule_path));
 
     let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;
     let git_submodule_sha1 =
         get_git_hash_from_submodule_file(ctx, small_repo, submodule_file_content_id).await?;
 
-    debug!(
-        ctx.logger(),
-        "submodule_path: {} | git_submodule_hash: {} | submodule_repo name: {}",
-        &submodule_path,
-        &git_submodule_sha1,
-        &submodule_repo.repo_identity().name()
+    log_debug(
+        ctx,
+        format!(
+            "submodule_path: {} | git_submodule_hash: {} | submodule_repo name: {}",
+            &submodule_path,
+            &git_submodule_sha1,
+            &submodule_repo.repo_identity().name()
+        ),
     );
 
     let sm_changeset_id = submodule_repo

@@ -26,6 +26,10 @@ use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::find_toposorted_unsynced_ancestors_with_commit_graph;
 use cross_repo_sync::get_version_and_parent_map_for_sync_via_pushrebase;
+use cross_repo_sync::log_debug;
+use cross_repo_sync::log_info;
+use cross_repo_sync::log_trace;
+use cross_repo_sync::log_warning;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -47,10 +51,6 @@ use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
-use slog::info;
-use slog::trace;
-use slog::warn;
 use strum::IntoEnumIterator;
 use synced_commit_mapping::SyncedCommitMapping;
 use tokio::task;
@@ -95,7 +95,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
 where
     R: Repo,
 {
-    info!(ctx.logger(), "processing log entry #{}", entry.id);
+    log_info(ctx, format!("processing log entry #{}", entry.id));
     let source_bookmark = Source(entry.bookmark_name);
     let target_bookmark = Target(
         commit_syncer.get_bookmark_renamer().await?(&source_bookmark)
@@ -161,11 +161,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
 where
     R: Repo,
 {
-    debug!(
-        ctx.logger(),
-        "Syncing commit {to_cs_id} from commit {0:#?}", from_cs_id
+    log_debug(
+        ctx,
+        format!("Syncing commit {to_cs_id} from commit {0:#?}", from_cs_id),
     );
-    debug!(ctx.logger(), "Targeting bookmark {0:#?}", target_bookmark);
+
+    log_debug(ctx, format!("Targeting bookmark {0:#?}", target_bookmark));
 
     let hint = match target_bookmark {
         Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
@@ -183,10 +184,8 @@ where
         ),
         _ => None,
     };
-    debug!(
-        ctx.logger(),
-        "finding unsynced ancestors from source repo..."
-    );
+    log_debug(ctx, "finding unsynced ancestors from source repo...");
+
     let (unsynced_ancestors, synced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint).await?;
 
@@ -205,7 +204,7 @@ where
     };
 
     let len = unsynced_ancestors.len();
-    info!(ctx.logger(), "{} unsynced ancestors of {}", len, to_cs_id);
+    log_info(ctx, format!("{} unsynced ancestors of {}", len, to_cs_id));
 
     if let Some(target_bookmark) = target_bookmark {
         // This is forward sync. The direction is small to large, so the source bookmark is the small
@@ -221,7 +220,7 @@ where
                 check_forward_move(ctx, commit_syncer, to_cs_id, from_cs_id).await?;
             }
 
-            debug!(ctx.logger(), "obtaining version for the sync...");
+            log_debug(ctx, "obtaining version for the sync...");
             let (version, parent_mapping) = get_version_and_parent_map_for_sync_via_pushrebase(
                 ctx,
                 commit_syncer,
@@ -362,9 +361,9 @@ where
             )
             .await?
         } else {
-            info!(
-                ctx.logger(),
-                "syncing {} via pushrebase for {}", cs_id, &target_bookmark
+            log_info(
+                ctx,
+                format!("syncing {} via pushrebase for {}", cs_id, &target_bookmark),
             );
             let (stats, result) = pushrebase_commit(
                 ctx,
@@ -407,7 +406,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
 where
     R: Repo,
 {
-    info!(ctx.logger(), "syncing {}", cs_id);
+    log_info(ctx, format!("syncing {}", cs_id));
     let bcs = cs_id
         .load(ctx, commit_syncer.get_source_repo().repo_blobstore())
         .await?;
@@ -518,15 +517,17 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
 where
     R: Repo,
 {
-    info!(ctx.logger(), "syncing {}", cs_id);
-    debug!(
-        ctx.logger(),
-        "Automatic derivation is {0}",
-        if no_automatic_derivation {
-            "disabled"
-        } else {
-            "enabled"
-        }
+    log_info(ctx, format!("syncing {}", cs_id));
+    log_debug(
+        ctx,
+        format!(
+            "Automatic derivation is {0}",
+            if no_automatic_derivation {
+                "disabled"
+            } else {
+                "enabled"
+            }
+        ),
     );
 
     // All the synced ancestors of the provided commit should have been synced
@@ -555,15 +556,14 @@ where
 
     let num_unsynced_ancestors: u64 = unsynced_ancestors.len().try_into()?;
 
-    info!(
-        ctx.logger(),
-        "Found {0} unsynced ancestors", num_unsynced_ancestors
+    log_info(
+        ctx,
+        format!("Found {0} unsynced ancestors", num_unsynced_ancestors),
     );
 
-    trace!(
-        ctx.logger(),
-        "Unsynced ancestors: {0:#?}",
-        &unsynced_ancestors
+    log_trace(
+        ctx,
+        format!("Unsynced ancestors: {0:#?}", &unsynced_ancestors),
     );
 
     let mb_prog_bar = if disable_progress_bar {
@@ -600,9 +600,9 @@ where
             .ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
         res.push(synced);
 
-        debug!(
-            ctx.logger(),
-            "Ancestor {ancestor_cs_id} synced successfully as {synced}"
+        log_debug(
+            ctx,
+            format!("Ancestor {ancestor_cs_id} synced successfully as {synced}"),
         );
 
         let large_repo = commit_syncer.get_target_repo();
@@ -615,10 +615,12 @@ where
                 .derive::<RootFsnodeId>(ctx, synced)
                 .await?;
 
-            trace!(
-                ctx.logger(),
-                "Root fsnode id from {synced}: {0}",
-                root_fsnode_id.into_fsnode_id()
+            log_trace(
+                ctx,
+                format!(
+                    "Root fsnode id from {synced}: {0}",
+                    root_fsnode_id.into_fsnode_id()
+                ),
             );
 
             let types_to_derive_asynchronously = DerivableType::iter()
@@ -716,7 +718,7 @@ where
             source_bookmark
         ))
     } else {
-        info!(ctx.logger(), "deleting bookmark {}", target_bookmark);
+        log_info(ctx, format!("deleting bookmark {}", target_bookmark));
         let (stats, result) = delete_bookmark(
             ctx.clone(),
             commit_syncer.get_target_repo(),
@@ -901,9 +903,12 @@ async fn delete_bookmark(
             Err(format_err!("failed to delete a bookmark"))
         }
     } else {
-        warn!(
-            ctx.logger(),
-            "Not deleting '{}' bookmark because it does not exist", bookmark
+        log_warning(
+            &ctx,
+            format!(
+                "Not deleting '{}' bookmark because it does not exist",
+                bookmark
+            ),
         );
         Ok(())
     }

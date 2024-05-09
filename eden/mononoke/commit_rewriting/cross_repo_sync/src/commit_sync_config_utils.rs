@@ -25,7 +25,8 @@ use mononoke_types::RepositoryId;
 use movers::get_movers;
 use movers::Mover;
 use movers::Movers;
-use slog::warn;
+
+use crate::reporting::log_warning;
 
 // TODO(T169306120): rename this module
 
@@ -58,10 +59,12 @@ pub async fn get_strip_git_submodules_by_version(
             .clone();
         // TODO(T179530927): return small repo action instead of default one
         if small_repo_action != GitSubmodulesChangesAction::default() {
-            warn!(
-                ctx.logger(),
-                "Using default submodule action for backsyncing. Actual submodule action configured for small repo is {0:#?}",
-                small_repo_action,
+            log_warning(
+                ctx,
+                format!(
+                    "Using default submodule action for backsyncing. Actual submodule action configured for small repo is {0:#?}",
+                    small_repo_action
+                ),
             );
         };
     };
