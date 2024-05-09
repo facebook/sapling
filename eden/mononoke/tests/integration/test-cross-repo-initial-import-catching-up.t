@@ -40,7 +40,8 @@ Create small repo commits
   Starting session with id * (glob)
   Reloading redacted config from configerator
   Checking if 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 is already synced 1->0
-  syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
+  Syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 for inital import
+  Source repo: small_repo / Target repo: large_repo
   Automatic derivation is enabled
   Found 2 unsynced ancestors
   Unsynced ancestors: [
@@ -105,7 +106,8 @@ Add more commits to small repo
   Starting session with id * (glob)
   Reloading redacted config from configerator
   Checking if d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a is already synced 1->0
-  syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
+  Syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a for inital import
+  Source repo: small_repo / Target repo: large_repo
   Automatic derivation is enabled
   Found 2 unsynced ancestors
   Unsynced ancestors: [

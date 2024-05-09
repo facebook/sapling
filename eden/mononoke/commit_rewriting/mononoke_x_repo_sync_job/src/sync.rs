@@ -30,6 +30,7 @@ use cross_repo_sync::log_debug;
 use cross_repo_sync::log_info;
 use cross_repo_sync::log_trace;
 use cross_repo_sync::log_warning;
+use cross_repo_sync::run_and_log_stats_to_scuba;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -168,6 +169,13 @@ where
 
     log_debug(ctx, format!("Targeting bookmark {0:#?}", target_bookmark));
 
+    if let Some(new_version) = unsafe_change_mapping_version_during_pushrebase {
+        log_info(
+            ctx,
+            format!("Changing mapping version during pushrebase to {new_version}"),
+        );
+    };
+
     let hint = match target_bookmark {
         Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
             CandidateSelectionHint::AncestorOfBookmark(
@@ -296,7 +304,7 @@ where
 /// for setting up the initial configuration for the sync. The validation of the version
 /// applicability to pushrebased bookmarks belongs to caller.
 /// ```
-pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R>(
+async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     target_bookmark: &Target<BookmarkKey>,
@@ -312,6 +320,12 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
 where
     R: Repo,
 {
+    if let Some(new_version) = unsafe_change_mapping_version {
+        log_warning(
+            ctx,
+            format!("UNSAFE: changing mapping version during pushrebase to {new_version}"),
+        );
+    };
     let change_mapping_version =
         if let Some(unsafe_change_mapping_version) = unsafe_change_mapping_version {
             if version != unsafe_change_mapping_version {
@@ -517,7 +531,15 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
 where
     R: Repo,
 {
-    log_info(ctx, format!("syncing {}", cs_id));
+    log_info(ctx, format!("Syncing {cs_id} for inital import"));
+    log_info(
+        ctx,
+        format!(
+            "Source repo: {} / Target repo: {}",
+            commit_syncer.get_source_repo().repo_identity().name(),
+            commit_syncer.get_target_repo().repo_identity().name(),
+        ),
+    );
     log_debug(
         ctx,
         format!(
@@ -533,9 +555,13 @@ where
     // All the synced ancestors of the provided commit should have been synced
     // using the config version that was provided manually, or we can create
     // a broken set of commits.
-    let (unsynced_ancestors, synced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_syncer, cs_id.clone())
-            .await?;
+    let (unsynced_ancestors, synced_ancestors_versions) = run_and_log_stats_to_scuba(
+        ctx,
+        "Finding toposorted unsynced ancestors with commit graph",
+        None,
+        find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_syncer, cs_id.clone()),
+    )
+    .await?;
 
     let synced_ancestors_versions = synced_ancestors_versions
         .versions

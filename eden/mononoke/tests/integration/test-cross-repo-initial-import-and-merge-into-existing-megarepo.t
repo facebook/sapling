@@ -126,7 +126,8 @@ Before config change
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$IC" --version-name "imported_noop"
   Starting session with id * (glob)
   Checking if 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 is already synced 2->0
-  syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
+  Syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 for inital import
+  Source repo: imported_repo / Target repo: large-mon
   Found 3 unsynced ancestors
   changeset 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 synced as ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 in *ms (glob)
   successful sync of head 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
@@ -218,7 +219,9 @@ Before config change
   Starting session with id * (glob)
   changeset resolved as: ChangesetId(Blake2(a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707))
   Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
+  Changing mapping version during pushrebase to new_version
   1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
+  UNSAFE: changing mapping version during pushrebase to new_version
   syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
   changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 402c52f0f2156a83bf5354aae35c3cae55e92b23da3ed61bc10ee7960e172c8e in *ms (glob)
   successful sync
@@ -307,7 +310,8 @@ Before config change
   $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$AC" --version-name "another_noop"
   Starting session with id * (glob)
   Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
-  syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
+  Syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb for inital import
+  Source repo: another_repo / Target repo: large-mon
   Found 3 unsynced ancestors
   changeset 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb synced as 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 in *ms (glob)
   successful sync of head 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
@@ -356,7 +360,9 @@ Before config change
   Starting session with id * (glob)
   changeset resolved as: ChangesetId(Blake2(1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9))
   Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
+  Changing mapping version during pushrebase to another_version
   1 unsynced ancestors of 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
+  UNSAFE: changing mapping version during pushrebase to another_version
   syncing 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 via pushrebase for master_bookmark
   changeset 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 synced as 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e in *ms (glob)
   successful sync

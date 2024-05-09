@@ -113,7 +113,8 @@ Merge repo A into the large repo
   NOTE: Importing repo A commits into large repo
   Starting session with id * (glob)
   Checking if * (glob)
-  syncing * (glob)
+  Syncing eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c for inital import
+  Source repo: small_repo / Target repo: large_repo
   Found * unsynced ancestors (glob)
   changeset * synced as * in * (glob)
   successful sync of head * (glob)
