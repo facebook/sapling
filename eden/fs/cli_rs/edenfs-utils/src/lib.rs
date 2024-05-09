@@ -21,8 +21,6 @@ use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use glob::glob;
 use sysinfo::Pid;
-use sysinfo::ProcessExt;
-use sysinfo::SystemExt;
 use tracing::trace;
 
 pub mod humantime;
@@ -142,7 +140,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
             #[cfg(unix)]
             {
                 // We may get a path ends with (deleted) if the executable is deleted on UNIX.
-                let path = executable
+                let path = executable?
                     .to_str()
                     .unwrap_or("")
                     .trim_end_matches(" (deleted)");
@@ -150,7 +148,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
             }
             #[cfg(not(unix))]
             {
-                return Some(executable.into());
+                return Some(executable?.into());
             }
         } else {
             trace!(%pid, "unable to find process");

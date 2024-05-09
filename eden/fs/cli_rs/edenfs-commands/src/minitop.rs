@@ -40,7 +40,6 @@ use futures::FutureExt;
 use futures::StreamExt;
 use sysinfo::Pid;
 use sysinfo::System;
-use sysinfo::SystemExt;
 use thrift_types::edenfs::pid_t;
 use thrift_types::edenfs::AccessCounts;
 use thrift_types::edenfs::GetAccessCountsResult;
@@ -196,9 +195,9 @@ impl Process {
     /// Test if this `Process` is still running.
     fn is_running(&self, system: &System) -> bool {
         #[cfg(not(windows))]
-        let pid = Pid::from(self.pid);
+        let pid = Pid::from_u32(self.pid as u32);
         #[cfg(windows)]
-        let pid = Pid::from(self.pid as usize);
+        let pid = Pid::from_u32(self.pid as u32);
         system.process(pid).is_some()
     }
 }
