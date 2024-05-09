@@ -30,8 +30,14 @@ impl KeyStore for GitStore {
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
         match self.read_obj(id, git2::ObjectType::Any) {
             Ok(data) => Ok(Some(data.into())),
-            Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
-            Err(e) => Err(e.into()),
+            Err(e) => {
+                if let Some(e) = e.downcast_ref::<git2::Error>() {
+                    if e.code() == git2::ErrorCode::NotFound {
+                        return Ok(None);
+                    }
+                }
+                Err(e.into())
+            }
         }
     }
 

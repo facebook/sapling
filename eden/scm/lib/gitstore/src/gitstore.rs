@@ -14,13 +14,12 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Stdio;
 
+use anyhow::Result;
 use configmodel::Config;
 use gitcompat::rungit::RunGitOptions;
 use progress_model::ProgressBar;
 use tracing::debug;
 use types::HgId;
-
-type Git2Result<T> = Result<T, git2::Error>;
 
 pub struct GitStore {
     odb: git2::Odb<'static>,
@@ -43,7 +42,7 @@ trait Opaque {}
 
 impl GitStore {
     /// `open` a Git bare repo at `git_dir`. Gain access to its odb (object database).
-    pub fn open(git_dir: &Path, config: &dyn Config) -> Git2Result<Self> {
+    pub fn open(git_dir: &Path, config: &dyn Config) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
         let odb = git_repo.odb()?;
 
@@ -100,7 +99,7 @@ impl GitStore {
     }
 
     /// Read an object of the given type.
-    pub fn read_obj(&self, id: HgId, kind: git2::ObjectType) -> Git2Result<Vec<u8>> {
+    pub fn read_obj(&self, id: HgId, kind: git2::ObjectType) -> Result<Vec<u8>> {
         if id.is_null() {
             return Ok(Vec::new());
         }
@@ -115,13 +114,14 @@ impl GitStore {
                 git2::ErrorCode::NotFound,
                 git2::ErrorClass::Object,
                 format!("{} {} not found", kind, oid),
-            ));
+            )
+            .into());
         }
         Ok(obj.data().to_vec())
     }
 
     /// Read the size of an object without its full content.
-    pub fn read_obj_size(&self, id: HgId, kind: git2::ObjectType) -> Git2Result<usize> {
+    pub fn read_obj_size(&self, id: HgId, kind: git2::ObjectType) -> Result<usize> {
         if id.is_null() {
             return Ok(0);
         }
@@ -136,13 +136,14 @@ impl GitStore {
                 git2::ErrorCode::NotFound,
                 git2::ErrorClass::Object,
                 format!("{} {} not found", kind, oid),
-            ));
+            )
+            .into());
         }
         Ok(size)
     }
 
     /// Write object to the odb.
-    pub fn write_obj(&self, kind: git2::ObjectType, data: &[u8]) -> Git2Result<HgId> {
+    pub fn write_obj(&self, kind: git2::ObjectType, data: &[u8]) -> Result<HgId> {
         let oid = self.odb.write(kind, data)?;
         let id = git_oid_to_hgid(oid);
         Ok(id)
@@ -152,7 +153,7 @@ impl GitStore {
     /// If every oid exists locally, then no `git fetch` process is spawned.
     /// Otherwise, block until the `git fetch` command completes.
     /// Currently, does not check the exit code of `git fetch`.
-    pub fn fetch_objs(&self, ids: &[HgId]) -> anyhow::Result<()> {
+    pub fn fetch_objs(&self, ids: &[HgId]) -> Result<()> {
         let mut missing_ids = ids.iter().filter(|id| {
             let id = hgid_to_git_oid(**id);
             // For performance, disable refresh here.
