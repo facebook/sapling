@@ -4,6 +4,12 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+-- Define the large and small repo ids and names before calling any helpers
+  $ export LARGE_REPO_NAME="large_repo"
+  $ export LARGE_REPO_ID=10
+  $ export SUBMODULE_REPO_NAME="small_repo"
+  $ export SUBMODULE_REPO_ID=11
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
@@ -16,7 +22,7 @@ Setup configuration
 # i.e. there are not file changes that should be synced to the large repo.
 # TODO(T169315758): Handle commits changes only to git submodules
 Create commit that modifies git submodule in small repo
-  $ testtool_drawdag -R "$SMALL_REPO_NAME" --no-default-files <<EOF
+  $ testtool_drawdag -R "$SUBMODULE_REPO_NAME" --no-default-files <<EOF
   > A-B-C
   > # modify: A "foo/a.txt" "creating foo directory"
   > # modify: A "bar/b.txt" "creating bar directory"
@@ -28,9 +34,9 @@ Create commit that modifies git submodule in small repo
   B=b51882d566acc1f3979a389e452e2c11ccdd05be65bf777c05924fc412b2cc71
   C=6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
   Starting session with id * (glob)
-  Checking if 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is already synced 1->0
+  Checking if 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is already synced 11->10
   Syncing 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors

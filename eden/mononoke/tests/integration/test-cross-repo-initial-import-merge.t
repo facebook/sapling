@@ -4,6 +4,12 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+-- Define the large and small repo ids and names before calling any helpers
+  $ export LARGE_REPO_NAME="large_repo"
+  $ export LARGE_REPO_ID=10
+  $ export SUBMODULE_REPO_NAME="small_repo"
+  $ export SUBMODULE_REPO_ID=11
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
@@ -14,7 +20,7 @@ Setup configuration
 
 # Simple integration test for the initial-import command in the forward syncer
 Create small repo commits
-  $ testtool_drawdag -R "$SMALL_REPO_NAME" --no-default-files <<EOF
+  $ testtool_drawdag -R "$SUBMODULE_REPO_NAME" --no-default-files <<EOF
   > A-B-C-M
   >  \   /
   >   D-E
@@ -34,9 +40,9 @@ Create small repo commits
   M=3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d
 
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$M" --version-name "$LATEST_CONFIG_VERSION_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$M" --version-name "$LATEST_CONFIG_VERSION_NAME"
   Starting session with id * (glob)
-  Checking if 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d is already synced 1->0
+  Checking if 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d is already synced 11->10
   Syncing 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 6 unsynced ancestors

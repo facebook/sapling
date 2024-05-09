@@ -16,6 +16,12 @@
 # import the new commits and run the forward syncer again, to test the workflow
 # one more time.
 
+-- Define the large and small repo ids and names before calling any helpers
+  $ export LARGE_REPO_NAME="large_repo"
+  $ export LARGE_REPO_ID=10
+  $ export SUBMODULE_REPO_NAME="small_repo"
+  $ export SUBMODULE_REPO_ID=11
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-git-submodule-expansion.sh"
@@ -27,9 +33,9 @@ Avoid local clone error "fatal: transport 'file' not allowed" in new Git version
 
 Run the x-repo with submodules setup  
   $ run_common_xrepo_sync_with_gitsubmodules_setup
-  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SMALL_REPO_ID" 3
+  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
-  > "$SMALL_REPO_ID" '{"git-repo-b": 3, "git-repo-b/git-repo-c": 2, "repo_c": 2}'
+  > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
   $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
   $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
 
@@ -125,7 +131,7 @@ Merge repo A into the large repo
   
   
   NOTE: Creating gradual merge commit
-  using repo "large_repo" repoid RepositoryId(0)
+  using repo "large_repo" repoid RepositoryId(10)
   changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
   changeset resolved as: ChangesetId(Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba))
   Finding all commits to merge...
@@ -284,7 +290,7 @@ Make changes to submodule and make sure they're synced properly
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
 
-  $ mononoke_newadmin bookmarks -R "$SMALL_REPO_NAME" list -S hg
+  $ mononoke_newadmin bookmarks -R "$SUBMODULE_REPO_NAME" list -S hg
   heads/master
 
 Import the changes from the git repos B and C into their Mononoke repos
@@ -297,11 +303,11 @@ Import the changes from the git repos B and C into their Mononoke repos
 Set up live forward syncer, which should sync all commits in small repo's (repo A)
 heads/master bookmark to large repo's master bookmark via pushrebase
   $ touch $TESTTMP/xreposync.out
-  $ with_stripped_logs mononoke_x_repo_sync_forever "$SMALL_REPO_ID" "$LARGE_REPO_ID" 
+  $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" 
 
 Import the changes from git repo A into its Mononoke repo. They should be automatically
 forward synced to the large repo
-  $ REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+  $ REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > $TESTTMP/gitimport_output
 
   $ wait_for_xrepo_sync 2

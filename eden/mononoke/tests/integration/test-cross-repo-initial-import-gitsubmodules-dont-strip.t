@@ -4,6 +4,12 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+-- Define the large and small repo ids and names before calling any helpers
+  $ export LARGE_REPO_NAME="large_repo"
+  $ export LARGE_REPO_ID=10
+  $ export SUBMODULE_REPO_NAME="small_repo"
+  $ export SUBMODULE_REPO_ID=11
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
@@ -12,7 +18,7 @@
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
 # Action 1 is to Keep submodules
-  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SMALL_REPO_ID" 1
+  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 1
 
 
 # Test that if, for some reason, we want to keep the git submodules in the
@@ -21,7 +27,7 @@ Setup configuration
 # when the large repo is cloned, there'll be a failure because hg derived data
 # can't be derived for them.
 Create commit that modifies git submodule in small repo
-  $ testtool_drawdag -R "$SMALL_REPO_NAME" --no-default-files <<EOF
+  $ testtool_drawdag -R "$SUBMODULE_REPO_NAME" --no-default-files <<EOF
   > A-B-C
   > # modify: A "foo/a.txt" "creating foo directory"
   > # modify: A "bar/b.txt" "creating bar directory"
@@ -34,9 +40,9 @@ Create commit that modifies git submodule in small repo
   B=cd6bd41f62adb809024156682965586754610ac4687b2833317151c239a58b71
   C=ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
   Starting session with id * (glob)
-  Checking if ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be is already synced 1->0
+  Checking if ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be is already synced 11->10
   Syncing ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors

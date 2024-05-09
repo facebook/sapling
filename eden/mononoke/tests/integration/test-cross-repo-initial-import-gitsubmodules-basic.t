@@ -4,6 +4,12 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+-- Define the large and small repo ids and names before calling any helpers
+  $ export LARGE_REPO_NAME="large_repo"
+  $ export LARGE_REPO_ID=10
+  $ export SUBMODULE_REPO_NAME="small_repo"
+  $ export SUBMODULE_REPO_ID=11
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
@@ -16,7 +22,7 @@ Setup configuration
 # files and to a git submodule. The latter changes should be dropped when 
 # syncing any commit to the large repo.
 Create commit that modifies git submodule in small repo
-  $ testtool_drawdag -R "$SMALL_REPO_NAME" --no-default-files <<EOF
+  $ testtool_drawdag -R "$SUBMODULE_REPO_NAME" --no-default-files <<EOF
   > A-B-C
   >  \ 
   >   D-E
@@ -37,15 +43,15 @@ Create commit that modifies git submodule in small repo
   D=9a80ec17c5caf2e67b0ae8df26d7a6f111ea5cc3ddc2077731fa2711cf457ea7
   E=54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" --all-bookmarks
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" --all-bookmarks
   Starting session with id * (glob)
-  Checking if 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73 is already synced 1->0
+  Checking if 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73 is already synced 11->10
   Syncing 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors
   changeset 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73 synced as 8443fe4b35302f08abf9ffa53d494b7175d7514c04e4cd52fc78f8369cbd5a83 in *ms (glob)
   successful sync of head 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73
-  Checking if 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 is already synced 1->0
+  Checking if 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 is already synced 11->10
   Syncing 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 2 unsynced ancestors

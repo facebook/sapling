@@ -11,8 +11,8 @@
 GIT_REPO_A="${TESTTMP}/git-repo-a"
 GIT_REPO_B="${TESTTMP}/git-repo-b"
 GIT_REPO_C="${TESTTMP}/git-repo-c"
-REPO_C_ID=2
-REPO_B_ID=3
+REPO_C_ID=12
+REPO_B_ID=13
 
 # Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
 export XDG_CONFIG_HOME=$TESTTMP
@@ -106,7 +106,7 @@ function gitimport_repos_a_b_c {
     --bypass-readonly --generate-bookmarks full-repo
 
   # shellcheck disable=SC2153
-  REPOID="$SMALL_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+  REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
     --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
 
   GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
@@ -117,7 +117,7 @@ function merge_repo_a_to_large_repo {
 
   print_section "Importing repo A commits into large repo"
   # shellcheck disable=SC2153
-  with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" initial-import \
+  with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" initial-import \
     --no-progress-bar -i "$GIT_REPO_A_HEAD" \
     --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
 
@@ -130,9 +130,10 @@ function merge_repo_a_to_large_repo {
 
   print_section "Creating gradual merge commit"
   COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  with_stripped_logs megarepo_tool gradual-merge test_user "gradual merge" \
-    --pre-deletion-commit "$PARENT" --last-deletion-commit "$SYNCED_HEAD" \
-    --bookmark master --limit 1 --commit-date-rfc3339 "$COMMIT_DATE"
+  REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-merge \
+    test_user "gradual merge" --pre-deletion-commit "$PARENT" \
+     --last-deletion-commit "$SYNCED_HEAD"  --bookmark master --limit 1 \
+     --commit-date-rfc3339 "$COMMIT_DATE"
 
 
   printf "\nSYNCHED_HEAD: %s\n\n" "$SYNCED_HEAD"
