@@ -34,7 +34,7 @@ use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_bookmark_diff;
-use cross_repo_sync::verify_working_copy_fast_path;
+use cross_repo_sync::verify_working_copy;
 use cross_repo_sync::BookmarkDiff;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
@@ -198,7 +198,7 @@ pub async fn subcommand_crossrepo<'a>(
                 helpers::csid_resolve(&ctx, large_repo, large_hash).await?
             };
 
-            verify_working_copy_fast_path(&ctx, &commit_syncer, large_hash, live_commit_sync_config)
+            verify_working_copy(&ctx, &commit_syncer, large_hash, live_commit_sync_config)
                 .await
                 .map_err(|e| e.into())
         }

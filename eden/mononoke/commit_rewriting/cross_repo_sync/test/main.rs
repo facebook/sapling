@@ -25,7 +25,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::update_mapping_with_version;
-use cross_repo_sync::verify_working_copy_fast_path;
+use cross_repo_sync::verify_working_copy;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -1267,7 +1267,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     assert!(synced.is_some());
     let new_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy_fast_path(
+    verify_working_copy(
         &ctx,
         &large_to_small_syncer,
         new_mapping_cs_id,
@@ -1316,7 +1316,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     assert!(synced.is_some());
     let old_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy_fast_path(
+    verify_working_copy(
         &ctx,
         &large_to_small_syncer,
         old_mapping_cs_id,
@@ -1409,7 +1409,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     assert!(synced.is_some());
     let new_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy_fast_path(
+    verify_working_copy(
         &ctx,
         &large_to_small_syncer,
         new_mapping_cs_id,
@@ -1465,7 +1465,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     assert!(synced.is_some());
     let old_mapping_small_cs_id = synced.unwrap();
 
-    verify_working_copy_fast_path(
+    verify_working_copy(
         &ctx,
         &large_to_small_syncer,
         old_mapping_cs_id,
@@ -1683,7 +1683,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     assert!(maybe_small_root_cs_id.is_some());
     let small_root_cs_id = maybe_small_root_cs_id.unwrap();
 
-    verify_working_copy_fast_path(
+    verify_working_copy(
         &ctx,
         &large_to_small_syncer,
         root_cs_id,
@@ -1759,7 +1759,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     )
     .await?;
 
-    verify_working_copy_fast_path(
+    verify_working_copy(
         &ctx,
         &large_to_small_syncer,
         new_mapping_large_cs_id,

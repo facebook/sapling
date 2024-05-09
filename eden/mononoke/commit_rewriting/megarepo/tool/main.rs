@@ -26,7 +26,7 @@ use cmdlib_x_repo::get_all_possible_small_repo_submodule_deps_from_matches;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::verify_working_copy_with_version_fast_path;
+use cross_repo_sync::verify_working_copy_with_version;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -782,7 +782,7 @@ async fn run_check_push_redirection_prereqs<'a>(
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
-    verify_working_copy_with_version_fast_path(
+    verify_working_copy_with_version(
         ctx,
         &commit_syncer,
         Source(source_cs_id),

@@ -63,18 +63,14 @@ use crate::types::Target;
 /// NOTE: The implementation is a bit hacky due to the path mover functions
 /// being orignally designed with moving file paths not, directory paths. The
 /// hack is mostly contained to wrap_mover_result functiton.
-pub async fn verify_working_copy_fast_path<
-    'a,
-    M: SyncedCommitMapping + Clone + 'static,
-    R: Repo,
->(
+pub async fn verify_working_copy<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &'a CoreContext,
     commit_syncer: &'a CommitSyncer<M, R>,
     source_hash: ChangesetId,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     let (target_hash, version) = get_synced_commit(ctx.clone(), commit_syncer, source_hash).await?;
-    verify_working_copy_with_version_fast_path(
+    verify_working_copy_with_version(
         ctx,
         commit_syncer,
         Source(source_hash),
@@ -85,7 +81,7 @@ pub async fn verify_working_copy_fast_path<
     .await
 }
 
-pub async fn verify_working_copy_with_version_fast_path<
+pub async fn verify_working_copy_with_version<
     'a,
     M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
@@ -113,8 +109,7 @@ pub async fn verify_working_copy_with_version_fast_path<
     );
 
     let prefixes_to_visit =
-        get_fast_path_prefixes(source_repo, commit_syncer, version, live_commit_sync_config)
-            .await?;
+        get_prefixes(source_repo, commit_syncer, version, live_commit_sync_config).await?;
 
     match prefixes_to_visit {
         PrefixesToVisit {
@@ -122,7 +117,7 @@ pub async fn verify_working_copy_with_version_fast_path<
             target_prefixes_to_visit: None,
         } => {
             let mover = commit_syncer.get_mover_by_version(version).await?;
-            verify_working_copy_fast_path_inner(
+            verify_working_copy_inner(
                 ctx,
                 Source(source_repo),
                 source_root_fsnode_id,
@@ -147,7 +142,7 @@ pub async fn verify_working_copy_with_version_fast_path<
                 .map(|prefix| wrap_mover_result(&mover, &prefix))
                 .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?;
             let target_prefixes_to_visit = target_prefixes_to_visit.into_iter().flatten().collect();
-            verify_working_copy_fast_path_inner(
+            verify_working_copy_inner(
                 ctx,
                 Source(target_repo),
                 target_root_fsnode_id,
@@ -171,7 +166,7 @@ pub async fn verify_working_copy_with_version_fast_path<
                 source_repo.repo_identity().name(),
             );
             info!(ctx.logger(), "###");
-            verify_working_copy_fast_path_inner(
+            verify_working_copy_inner(
                 ctx,
                 Source(target_repo),
                 target_root_fsnode_id,
@@ -189,7 +184,7 @@ pub async fn verify_working_copy_with_version_fast_path<
                 .into_iter()
                 .flatten()
                 .collect();
-            verify_working_copy_fast_path_inner(
+            verify_working_copy_inner(
                 ctx,
                 Source(source_repo),
                 source_root_fsnode_id,
@@ -213,7 +208,7 @@ pub async fn verify_working_copy_with_version_fast_path<
                 target_repo.repo_identity().name(),
             );
             info!(ctx.logger(), "###");
-            verify_working_copy_fast_path_inner(
+            verify_working_copy_inner(
                 ctx,
                 Source(source_repo),
                 source_root_fsnode_id,
@@ -233,7 +228,7 @@ pub async fn verify_working_copy_with_version_fast_path<
             );
             info!(ctx.logger(), "###");
             let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
-            verify_working_copy_fast_path_inner(
+            verify_working_copy_inner(
                 ctx,
                 Source(target_repo),
                 target_root_fsnode_id,
@@ -346,7 +341,7 @@ impl fmt::Display for PrintableValidationOutput {
     }
 }
 
-async fn verify_working_copy_fast_path_inner<'a>(
+async fn verify_working_copy_inner<'a>(
     ctx: &'a CoreContext,
     source_repo: Source<
         &'a (
@@ -634,7 +629,7 @@ async fn verify_dir<'a>(
 
 // Returns list of prefixes that need to be visited in both large and small
 // repositories to establish working copy equivalence.
-async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+async fn get_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     source_repo: &'a impl RepoIdentityRef,
     commit_syncer: &'a CommitSyncer<M, R>,
     version: &'a CommitSyncConfigVersion,
@@ -1087,7 +1082,7 @@ mod test {
             .commit()
             .await?;
 
-        let res = verify_working_copy_with_version_fast_path(
+        let res = verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
             Source(source_cs_id),
@@ -1121,7 +1116,7 @@ mod test {
             .commit()
             .await?;
 
-        let res = verify_working_copy_with_version_fast_path(
+        let res = verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
             Source(source_cs_id),
@@ -1137,7 +1132,7 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_verify_working_copy_fast_path(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_verify_working_copy_fp(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
         let source = factory.with_id(RepositoryId::new(0)).build().await?;
@@ -1188,7 +1183,7 @@ mod test {
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
             println!("version: {}", version);
-            verify_working_copy_with_version_fast_path(
+            verify_working_copy_with_version(
                 &ctx,
                 &commit_syncer,
                 Source(root_source_cs_id),
@@ -1202,7 +1197,7 @@ mod test {
         println!("checking first commit");
         for version in &["first_version", "second_version"] {
             println!("version: {}", version);
-            verify_working_copy_with_version_fast_path(
+            verify_working_copy_with_version(
                 &ctx,
                 &commit_syncer,
                 Source(first_source_cs_id),
@@ -1215,7 +1210,7 @@ mod test {
 
         let version = "second_version";
         println!("checking second commit, version: {}", version);
-        verify_working_copy_with_version_fast_path(
+        verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
             Source(second_source_cs_id),
@@ -1227,7 +1222,7 @@ mod test {
 
         let version = "first_version";
         println!("checking second commit, version: {}", version);
-        let res = verify_working_copy_with_version_fast_path(
+        let res = verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
             Source(second_source_cs_id),
@@ -1240,7 +1235,7 @@ mod test {
 
         let version = "second_version";
         println!("checking first and second commit, version: {}", version);
-        let res = verify_working_copy_with_version_fast_path(
+        let res = verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
             Source(first_source_cs_id),
