@@ -30,30 +30,39 @@ function validate_commit_sync() {
     once --entry-id "$entry_id" "$@"
 }
 
+# First commit sync config version
+function test_version_cfg {
+  jq . << EOF
+   {
+    "large_repo_id": 0,
+    "common_pushrebase_bookmarks": ["master_bookmark"],
+    "small_repos": [
+      {
+        "repoid": 1,
+        "bookmark_prefix": "bookprefix/",
+        "default_action": "prepend_prefix",
+        "default_prefix": "smallrepofolder",
+        "direction": "large_to_small",
+        "mapping": {
+          "non_path_shifting": "non_path_shifting"
+        }
+      }
+    ],
+    "version_name": "test_version"
+  }
+EOF
+}
+
 function large_small_megarepo_config() {
+    TEST_VERSION_CFG=$(test_version_cfg)
+
   if [ -n "$COMMIT_SYNC_CONF" ]; then
     cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
     "megarepo_test": {
       "versions": [
-        {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 1,
-              "bookmark_prefix": "bookprefix/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "smallrepofolder",
-              "direction": "large_to_small",
-              "mapping": {
-                "non_path_shifting": "non_path_shifting"
-              }
-            }
-          ],
-          "version_name": "test_version"
-        },
+        $TEST_VERSION_CFG,
         {
           "large_repo_id": 0,
           "common_pushrebase_bookmarks": [],
@@ -151,28 +160,14 @@ EOF
 }
 
 function update_commit_sync_map_first_option {
+  TEST_VERSION_CFG=$(test_version_cfg)
+
   cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
     "megarepo_test": {
       "versions": [
-        {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 1,
-              "bookmark_prefix": "bookprefix/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "smallrepofolder",
-              "direction": "large_to_small",
-              "mapping": {
-                "non_path_shifting": "non_path_shifting"
-              }
-            }
-          ],
-          "version_name": "test_version"
-        },
+        $TEST_VERSION_CFG,
       {
         "large_repo_id": 0,
         "common_pushrebase_bookmarks": ["master_bookmark"],
@@ -266,138 +261,173 @@ EOF
 
 }
 
-function update_commit_sync_map_for_new_repo_import {
-  cat > "$COMMIT_SYNC_CONF/all" << EOF
-{
-  "repos": {
-    "megarepo_test": {
-      "versions": [
+# Noop config for importing commits from repo 2
+function imported_noop_cfg {
+  jq . << EOF
+    {
+      "large_repo_id": 0,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
         {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 1,
-              "bookmark_prefix": "bookprefix/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "smallrepofolder",
-              "direction": "large_to_small",
-              "mapping": {
-                "non_path_shifting": "non_path_shifting"
-              }
-            }
-          ],
-          "version_name": "test_version"
-        },
-        {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 2,
-              "bookmark_prefix": "imported_repo/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "imported_repo",
-              "direction": "large_to_small",
-              "mapping": {}
-            }
-          ],
-          "version_name": "imported_noop"
-        },
-        {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 3,
-              "bookmark_prefix": "another_repo/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "another_repoo",
-              "direction": "large_to_small",
-              "mapping": {}
-            }
-          ],
-          "version_name": "another_noop"
-        },
-        {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 1,
-              "bookmark_prefix": "bookprefix/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "smallrepofolder",
-              "direction": "large_to_small",
-              "mapping": {
-                "non_path_shifting": "non_path_shifting"
-              }
-            },
-            {
-              "repoid": 2,
-              "bookmark_prefix": "imported_repo/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "imported_repo",
-              "direction": "large_to_small",
-              "mapping": {}
-            }
-          ],
-          "version_name": "new_version"
-        },
-        {
-          "large_repo_id": 0,
-          "common_pushrebase_bookmarks": ["master_bookmark"],
-          "small_repos": [
-            {
-              "repoid": 1,
-              "bookmark_prefix": "bookprefix/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "smallrepofolder",
-              "direction": "large_to_small",
-              "mapping": {
-                "non_path_shifting": "non_path_shifting"
-              }
-            },
-            {
-              "repoid": 2,
-              "bookmark_prefix": "imported_repo/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "imported_repo",
-              "direction": "large_to_small",
-              "mapping": {}
-            },
-            {
-              "repoid": 3,
-              "bookmark_prefix": "another_repo/",
-              "default_action": "prepend_prefix",
-              "default_prefix": "another_repo",
-              "direction": "large_to_small",
-              "mapping": {}
-            }
-          ],
-          "version_name": "another_version"
+          "repoid": 2,
+          "bookmark_prefix": "imported_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "imported_repo",
+          "direction": "large_to_small",
+          "mapping": {}
         }
       ],
-      "common": {
-        "common_pushrebase_bookmarks": ["master_bookmark"],
-        "large_repo_id": 0,
-        "small_repos": {
-          1: {
-            "bookmark_prefix": "bookprefix/"
-          },
-          2: {
-            "bookmark_prefix": "imported_repo/",
-            "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
-          },
-          3: {
-            "bookmark_prefix": "another_repo/",
-            "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+      "version_name": "imported_noop"
+    }
+EOF
+}
+
+# Noop config for importing commits from repo 3
+function another_noop {
+  jq . << EOF
+    {
+      "large_repo_id": 0,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": 3,
+          "bookmark_prefix": "another_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "another_repoo",
+          "direction": "large_to_small",
+          "mapping": {}
+        }
+      ],
+      "version_name": "another_noop"
+    }
+EOF
+}
+
+# Config after merging repo 2
+function new_version {
+  jq . << EOF
+    {
+      "large_repo_id": 0,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": 1,
+          "bookmark_prefix": "bookprefix/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "smallrepofolder",
+          "direction": "large_to_small",
+          "mapping": {
+            "non_path_shifting": "non_path_shifting"
+          }
+        },
+        {
+          "repoid": 2,
+          "bookmark_prefix": "imported_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "imported_repo",
+          "direction": "large_to_small",
+          "mapping": {}
+        }
+      ],
+      "version_name": "new_version"
+    }
+EOF
+}
+
+# Config after merging repos 2 and 3
+function another_version {
+  jq . << EOF
+    {
+      "large_repo_id": 0,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": 1,
+          "bookmark_prefix": "bookprefix/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "smallrepofolder",
+          "direction": "large_to_small",
+          "mapping": {
+            "non_path_shifting": "non_path_shifting"
+          }
+        },
+        {
+          "repoid": 2,
+          "bookmark_prefix": "imported_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "imported_repo",
+          "direction": "large_to_small",
+          "mapping": {}
+        },
+        {
+          "repoid": 3,
+          "bookmark_prefix": "another_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "another_repo",
+          "direction": "large_to_small",
+          "mapping": {}
+        }
+      ],
+      "version_name": "another_version"
+    }
+EOF
+}
+
+# Export all the config versions after the first update, so they can be reused
+# on the second update
+function configs_after_first_update {
+  export TEST_VERSION_CFG
+  export IMPORTED_NOOP_CFG
+  export ANOTHER_NOOP_CFG
+  export NEW_VERSION_CFG
+  export ANOTHER_VERSION_CFG
+
+  TEST_VERSION_CFG=$(test_version_cfg)
+
+  IMPORTED_NOOP_CFG=$(imported_noop_cfg)
+
+  ANOTHER_NOOP_CFG=$(another_noop)
+
+  NEW_VERSION_CFG=$(new_version)
+
+  ANOTHER_VERSION_CFG=$(another_version)
+
+}
+
+function update_commit_sync_map_for_new_repo_import {
+  configs_after_first_update
+
+  cat > "$COMMIT_SYNC_CONF/all" << EOF
+  {
+    "repos": {
+      "megarepo_test": {
+        "versions": [
+          $TEST_VERSION_CFG,
+          $IMPORTED_NOOP_CFG,
+          $ANOTHER_NOOP_CFG,
+          $NEW_VERSION_CFG,
+          $ANOTHER_VERSION_CFG
+        ],
+        "common": {
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "large_repo_id": 0,
+          "small_repos": {
+            1: {
+              "bookmark_prefix": "bookprefix/"
+            },
+            2: {
+              "bookmark_prefix": "imported_repo/",
+              "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+            },
+            3: {
+              "bookmark_prefix": "another_repo/",
+              "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+            }
           }
         }
       }
     }
   }
-}
 EOF
 
 }

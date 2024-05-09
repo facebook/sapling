@@ -8,10 +8,11 @@
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
-  $ LARGE_REPO_ID="0"
-  $ SMALL_REPO_ID="1"
-  $ IMPORTED_REPO_ID="2"
-  $ ANOTHER_REPO_ID="3"
+  $ LARGE_REPO_ID=0
+  $ SMALL_REPO_ID=1
+  $ IMPORTED_REPO_ID=2
+  $ ANOTHER_REPO_ID=3
+
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase =
