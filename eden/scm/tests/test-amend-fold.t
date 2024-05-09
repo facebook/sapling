@@ -71,7 +71,7 @@ Test rebasing of stack after fold.
   rebasing b762560d23fd "r4"
   merging mf
   $ showgraph
-  o  c480ccdc36c0 r4
+  o  222fc5a0f200 r4
   │
   @  fac8d040c80b r2
   │
@@ -95,16 +95,16 @@ Test rebasing of multiple children
   merging mf
   rebasing fac8d040c80b "r2"
   merging mf
-  rebasing c480ccdc36c0 "r4"
+  rebasing 222fc5a0f200 "r4"
   merging mf
   $ showgraph
-  o  6b8dd87db039 r4
+  o  04e715445afa r4
   │
   o  7fd219543f4f r2
   │
-  │ o  31892267fa07 r6
+  │ o  e15c1eeca58e r6
   │ │
-  │ o  c74bb9c4eec9 r5
+  │ o  b8e7ca6ba26e r5
   ├─╯
   @  bfc9ee54b8f4 r0
 
@@ -146,15 +146,15 @@ rebase is not on the topmost folded commit.
   rebasing b762560d23fd "r4"
   merging mf
   $ showgraph
-  o  a78a744630c5 r4
+  o  ff604a92f161 r4
   │
-  o  6032a3d5c310 r3
+  o  d54ce2378978 r3
   │
-  │ o  69b8281910bd r7
+  │ o  502304268c85 r7
   │ │
-  │ o  b494e86b0fcd r6
+  │ o  1f3a3c8ab199 r6
   │ │
-  │ o  3b418b2dcaeb r5
+  │ o  c1195e9b07dc r5
   ├─╯
   @  001b0872b432 r0
 
@@ -182,9 +182,9 @@ Also test that using node hashes instead of rev numbers works.
   rebasing f2987ebe5838 "r5"
   merging mf
   $ showgraph
-  o  064f4cd2992f r5
+  o  30b9661c9b66 r5
   │
-  o  e39a86ad4ff1 r4
+  o  d093dbfa5a2b r4
   │
   o  b36e18e69785 r1
   │
@@ -196,9 +196,9 @@ Test --no-rebase flag.
   $ showgraph
   o  b431410f50a9 r1
   │
-  │ o  064f4cd2992f r5
+  │ o  30b9661c9b66 r5
   │ │
-  │ x  e39a86ad4ff1 r4
+  │ x  d093dbfa5a2b r4
   │ │
   │ x  b36e18e69785 r1
   ├─╯

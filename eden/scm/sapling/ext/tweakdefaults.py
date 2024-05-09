@@ -72,8 +72,6 @@ from sapling import (
 from sapling.i18n import _
 from sapling.node import short
 
-from . import rebase
-
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -138,7 +136,6 @@ def extsetup(ui) -> None:
     wrapblame()
 
     entry = wrapcommand(commands.table, "commit", commitcmd)
-    wrapcommand(rebase.cmdtable, "rebase", _rebase)
     wrapfunction(scmutil, "cleanupnodes", cleanupnodeswrapper)
     entry = wrapcommand(commands.table, "pull", pull)
     options = entry[1]
@@ -521,39 +518,6 @@ def _analyzewrapper(orig, x, ui):
             ui.warn(_("warning: %s\n") % msg)
 
     return result
-
-
-def _rebase(orig, ui, repo, *pats, **opts):
-    if not opts.get("date") and not ui.configbool("tweakdefaults", "rebasekeepdate"):
-        opts["date"] = currentdate(ui)
-
-    if opts.get("continue") or opts.get("abort") or opts.get("restack"):
-        return orig(ui, repo, *pats, **opts)
-
-    # 'hg rebase' w/o args should do nothing
-    if not opts.get("dest"):
-        raise error.Abort("you must specify a destination (-d) for the rebase")
-
-    # 'hg rebase' can fast-forward bookmark
-    prev = repo["."]
-
-    # Only fast-forward the bookmark if no source nodes were explicitly
-    # specified.
-    if not (opts.get("base") or opts.get("source") or opts.get("rev")):
-        dests = opts.get("dest")
-        if dests and len(dests) == 1 and dests[0] != prev:
-            dest = scmutil.revsingle(repo, dests[0])
-            common = dest.ancestor(prev)
-            if prev == common and dest != prev:
-                activebookmark = repo._activebookmark
-                result = hg.updatetotally(ui, repo, dest.node(), activebookmark)
-                if activebookmark:
-                    with repo.wlock():
-                        bookmarks.update(repo, [prev.node()], dest.node())
-                ui.status(_("nothing to rebase - fast-forwarded to %s\n") % dest)
-                return result
-
-    return orig(ui, repo, *pats, **opts)
 
 
 # set of commands which define their own formatter and prints the hash changes

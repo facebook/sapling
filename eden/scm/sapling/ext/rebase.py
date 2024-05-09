@@ -1194,6 +1194,34 @@ def rebase(ui, repo, templ=None, **opts):
     unresolved conflicts.
 
     """
+
+    if not opts.get("date"):
+        opts["date"] = _defaultdate(ui)
+
+    if not (opts.get("continue") or opts.get("abort") or opts.get("restack")):
+        # 'hg rebase' w/o args should do nothing
+        if not opts.get("dest"):
+            raise error.Abort("you must specify a destination (-d) for the rebase")
+
+        # 'hg rebase' can fast-forward bookmark
+        prev = repo["."]
+
+        # Only fast-forward the bookmark if no source nodes were explicitly
+        # specified.
+        if not (opts.get("base") or opts.get("source") or opts.get("rev")):
+            dests = opts.get("dest")
+            if dests and len(dests) == 1 and dests[0] != prev:
+                dest = scmutil.revsingle(repo, dests[0])
+                common = dest.ancestor(prev)
+                if prev == common and dest != prev:
+                    activebookmark = repo._activebookmark
+                    result = hg.updatetotally(ui, repo, dest.node(), activebookmark)
+                    if activebookmark:
+                        with repo.wlock():
+                            bookmarks.update(repo, [prev.node()], dest.node())
+                    ui.status(_("nothing to rebase - fast-forwarded to %s\n") % dest)
+                    return result
+
     inmemory = ui.configbool("rebase", "experimental.inmemory")
 
     # Check for conditions that disable in-memory merge if it was requested.
@@ -1241,6 +1269,19 @@ def rebase(ui, repo, templ=None, **opts):
                 repo.currenttransaction().abort()
     else:
         return _origrebase(ui, repo, rbsrt, **opts)
+
+
+def _defaultdate(ui):
+    if ui.configbool("tweakdefaults", "rebasekeepdate"):
+        # We want to "keep" the source commit's date. We don't actually enable this
+        # anywhere since things like ISL use commit date to infer "liveness", so we want
+        # to bump it on rebase.
+        return None
+
+    if stub := ui.config("devel", "default-date"):
+        return stub
+
+    return "%d %d" % util.makedate()
 
 
 @perftrace.tracefunc("Rebase")

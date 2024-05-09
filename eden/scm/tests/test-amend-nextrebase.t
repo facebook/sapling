@@ -66,7 +66,7 @@ Rebasing single changeset.
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [d5815c] r2
+  [08e8e1] r2
   $ showgraph
   @  r2
   │
@@ -92,7 +92,7 @@ Test --clean flag.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2aaa42] r3
+  [5a7a75] r3
   $ hg status
   ? foo
   $ showgraph
@@ -118,7 +118,7 @@ Rebasing multiple changesets at once.
   rebasing 137d867d71d5 "r3"
   rebasing daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [ce6b85] r4
+  [6d097e] r4
   $ showgraph
   @  r4
   │
@@ -142,11 +142,11 @@ Rebasing a stack one changeset at a time.
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [d5815c] r2
+  [08e8e1] r2
   $ hg next --rebase
   rebasing 137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2aaa42] r3
+  [5a7a75] r3
   $ showgraph
   @  r3
   │
@@ -168,7 +168,7 @@ Rebasing a stack one changeset at a time.
   $ hg next --rebase
   rebasing daa37004f338 "r4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [ce6b85] r4
+  [6d097e] r4
   $ showgraph
   @  r4
   │
@@ -193,7 +193,7 @@ Rebasing a stack two changesets at a time.
   rebasing 776c07fa2b12 "r2"
   rebasing 137d867d71d5 "r3"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2aaa42] r3
+  [5a7a75] r3
   $ showgraph
   @  r3
   │
@@ -217,7 +217,7 @@ Rebasing a stack two changesets at a time.
   rebasing daa37004f338 "r4"
   rebasing 5f333e6f7274 "r5"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [9a9b92] r5
+  [18206c] r5
   $ showgraph
   @  r5
   │
@@ -260,7 +260,7 @@ Rebasing after multiple amends.
   rebasing 137d867d71d5 "r3"
   rebasing daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [8de7e0] r4
+  [ade9e4] r4
   $ showgraph
   @  r4
   │
@@ -303,7 +303,7 @@ Rebasing from below the amended changeset with the --newest flag.
   rebasing daa37004f338 "r4"
   rebasing 5f333e6f7274 "r5"
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [f814a1] r5
+  [8245c1] r5
   $ showgraph
   @  r5
   │
@@ -352,7 +352,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   rebasing 776c07fa2b12 "r2"
   changeset 12d1da2fcedd has multiple children, namely:
   [ee3138] add a
-  [d5815c] r2
+  [08e8e1] r2
   transaction abort!
   rollback completed
   abort: ambiguous next changeset
@@ -455,7 +455,7 @@ Rebase when other predecessors are still visible
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [74274e] r2
+  [006981] r2
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [b97f16] amended 1
@@ -478,9 +478,9 @@ Rebase when other predecessors are still visible
   o  r0
   
   $ hg next --rebase
-  rebasing 74274e275ccf "r2"
+  rebasing 006981db3170 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [f4eead] r2
+  [339d4b] r2
   $ showgraph
   @  r2
   │
