@@ -20,6 +20,7 @@ rust_library(
         "fbsource//third-party/rust:rusoto_core",
         "fbsource//third-party/rust:rusoto_credential",
         "fbsource//third-party/rust:rusoto_s3",
+        "fbsource//third-party/rust:rusoto_sts",
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
