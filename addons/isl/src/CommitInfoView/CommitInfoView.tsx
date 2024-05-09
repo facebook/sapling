@@ -444,6 +444,7 @@ function ShowingRemoteMessageBanner({
           'Viewing the newer commit message from $provider. This message will be used when your code is landed. You can also load the local message instead.',
           {replace: {$provider: provider.label}},
         )}
+        alwaysShowButtons
         buttons={
           <VSCodeButton
             appearance="icon"
