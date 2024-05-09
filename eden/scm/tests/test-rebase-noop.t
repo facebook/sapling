@@ -1,7 +1,7 @@
 #debugruntest-compatible
 
-  $ configure modernclient
-  $ enable rebase amend
+  $ configure modernclient mutation
+  $ enable rebase amend undo
   $ setconfig tweakdefaults.rebasekeepdate=true
 
   $ newclientrepo
@@ -22,30 +22,28 @@
   ├─╯
   o  426bada5c675 'A'
 
-  $ hg rebase -qs $B -d $D -k
+  $ hg rebase -qs $B -d $D
 
   $ tglog
-  o  ffeec75ec603 'C'
+  o  3827d805d9ee 'C'
   │
-  o  1ef11233b74d 'B'
+  o  680dc0c1d0a1 'B'
   │
-  │ o  26805aba1e60 'C'
-  │ │
-  o │  b18e25de2cf5 'D'
-  │ │
-  │ o  112478962961 'B'
-  ├─╯
+  o  b18e25de2cf5 'D'
+  │
   o  426bada5c675 'A'
 
   $ setconfig devel.default-date='1 0'
 
+Undo and then redo the same rebase.
+  $ hg undo -q
   $ hg rebase -qs $B -d $D
 
-B and C have converged back into the same commits:
+FIXME B and C have converged back into the same commits as above:
   $ tglog
-  o  ffeec75ec603 'C'
+  o  2d7470337ad2 'C'
   │
-  o  1ef11233b74d 'B'
+  o  0a2fc1549f72 'B'
   │
   o  b18e25de2cf5 'D'
   │
