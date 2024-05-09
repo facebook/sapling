@@ -25,7 +25,7 @@ import {lazyAtom, writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
-import {useAtomValue} from 'jotai';
+import {atom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {basename} from 'shared/utils';
@@ -60,19 +60,16 @@ function getRepoLabel(repoRoot: AbsolutePath, cwd: string) {
   return repoBasename + repoRelativeCwd;
 }
 
-export const availableCwds = lazyAtom<Array<CwdInfo>>(() => {
-  // Only request `subscribeToAvailableCwds` when first read the atom.
-  registerCleanup(
-    availableCwds,
-    serverAPI.onConnectOrReconnect(() => {
-      serverAPI.postMessage({
-        type: 'platform/subscribeToAvailableCwds',
-      });
-    }),
-    import.meta.hot,
-  );
-  return [];
-}, []);
+export const availableCwds = atom<Array<CwdInfo>>([]);
+registerCleanup(
+  availableCwds,
+  serverAPI.onConnectOrReconnect(() => {
+    serverAPI.postMessage({
+      type: 'platform/subscribeToAvailableCwds',
+    });
+  }),
+  import.meta.hot,
+);
 
 registerDisposable(
   availableCwds,
