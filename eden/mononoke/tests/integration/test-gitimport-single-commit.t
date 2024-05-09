@@ -41,7 +41,7 @@
 
 # Validate if creating the commit also uploaded the raw commit blob
 # The id of the blob should be the same as the commit object id
-  $ ls $TESTTMP/blobstore/blobs | grep "git_object"
+  $ ls $TESTTMP/blobstore/blobs | grep "git_object" | grep "69d481cfc9a21ef59b516c3de04cd742d059d345"
   blob-repo0000.git_object.69d481cfc9a21ef59b516c3de04cd742d059d345
 
 # Set master (gitimport does not do this yet)

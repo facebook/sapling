@@ -64,9 +64,3 @@ Create commit that modifies git submodule in small repo
   
   Deriving all the enabled derived data types
   Error: * (glob)
-  
-  Caused by:
-      0: failed to derive batch dependencies (?)
-      1: failed to derive hgchangesets batch (start:3fa05e617e5bd79190a61e16cc23669825b57f36474df1902a63c071998b181d, end:3fa05e617e5bd79190a61e16cc23669825b57f36474df1902a63c071998b181d) (?)
-      *Git submodules not supported (glob)
-  [1]

@@ -139,6 +139,7 @@ function clone_and_log_large_repo {
 
   printf "\nDeriving all the enabled derived data types\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    quiet mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types -i "$LARGE_BCS_ID"
+    quiet mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types \
+      -i "$LARGE_BCS_ID" 2>&1| rg "Error" || true # filter to keep only Error line if there is an error
   done
 }

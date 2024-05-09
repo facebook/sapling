@@ -1173,7 +1173,23 @@ CONFIG
 else
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [derived_data_config.available_configs.default]
-types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests", "bssm_v3", "test_manifests", "test_sharded_manifests"]
+types=[
+  "blame",
+  "changeset_info",
+  "deleted_manifest",
+  "fastlog",
+  "filenodes",
+  "fsnodes",
+  "git_commits",
+  "git_delta_manifests",
+  "git_trees",
+  "unodes",
+  "hgchangesets",
+  "skeleton_manifests",
+  "bssm_v3",
+  "test_manifests",
+  "test_sharded_manifests"
+]
 CONFIG
 fi
 
@@ -1429,8 +1445,9 @@ function wait_for_bookmark_update() {
   local bookmark="$2"
   local target="$3"
   local scheme="${4:-hg}"
+  local sleep_time="${SLEEP_TIME:-2}"
   local attempt=1
-  sleep 2
+  sleep "$sleep_time"
   while [[ "$(scsc lookup -S "$scheme" -R "$repo" -B "$bookmark")" != "$target" ]]
   do
     attempt=$((attempt + 1))
@@ -1439,7 +1456,7 @@ function wait_for_bookmark_update() {
         echo "bookmark move of $bookmark to $target has not happened"
         return 1
     fi
-    sleep 2
+    sleep "$sleep_time"
   done
 }
 
