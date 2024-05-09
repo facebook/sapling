@@ -28,7 +28,7 @@ impl KeyStore for GitStore {
         _path: &RepoPath,
         id: HgId,
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
-        match self.read_obj(id, git2::ObjectType::Any) {
+        match self.read_obj(id, git2::ObjectType::Any, FetchMode::LocalOnly) {
             Ok(data) => Ok(Some(data.into())),
             Err(e) => {
                 if let Some(e) = e.downcast_ref::<git2::Error>() {
@@ -54,7 +54,7 @@ impl KeyStore for GitStore {
             return Ok(Box::new(std::iter::empty()));
         }
         let iter = keys.into_iter().map(move |k| {
-            let data = self.read_obj(k.hgid, git2::ObjectType::Any)?;
+            let data = self.read_obj(k.hgid, git2::ObjectType::Any, FetchMode::AllowRemote)?;
             Ok((k, data.into()))
         });
         Ok(Box::new(iter))

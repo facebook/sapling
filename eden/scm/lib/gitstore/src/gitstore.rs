@@ -19,6 +19,7 @@ use configmodel::Config;
 use gitcompat::rungit::RunGitOptions;
 use progress_model::ProgressBar;
 use tracing::debug;
+use types::fetch_mode::FetchMode;
 use types::HgId;
 
 pub struct GitStore {
@@ -99,11 +100,15 @@ impl GitStore {
     }
 
     /// Read an object of the given type.
-    pub fn read_obj(&self, id: HgId, kind: git2::ObjectType) -> Result<Vec<u8>> {
+    pub fn read_obj(&self, id: HgId, kind: git2::ObjectType, mode: FetchMode) -> Result<Vec<u8>> {
         if id.is_null() {
             return Ok(Vec::new());
         }
-        let fetch_err = self.fetch_objs(&[id]).err();
+        let fetch_err = if mode.is_local() {
+            None
+        } else {
+            self.fetch_objs(&[id]).err()
+        };
         let oid = hgid_to_git_oid(id);
         let obj = self
             .odb

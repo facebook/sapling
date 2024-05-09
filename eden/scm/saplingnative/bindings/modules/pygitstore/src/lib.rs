@@ -18,6 +18,7 @@ use cpython_ext::convert::Serde;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use storemodel::types::HgId;
+use types::fetch_mode::FetchMode;
 
 mod impl_into;
 
@@ -37,11 +38,11 @@ py_class!(pub class gitstore |py| {
         Self::create_instance(py, Arc::new(store))
     }
 
-    /// readobj(node, kind="any") -> bytes.
+    /// readobj(node, kind="any", mode="AllowRemote") -> bytes.
     /// Read a git object of the given type.
-    def readobj(&self, node: Serde<HgId>, kind: &str = "any") -> PyResult<PyBytes> {
+    def readobj(&self, node: Serde<HgId>, kind: &str = "any", mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyBytes> {
         let kind = str_to_object_type(py, kind)?;
-        let data = self.inner(py).read_obj(node.0, kind).map_pyerr(py)?;
+        let data = self.inner(py).read_obj(node.0, kind, mode.0).map_pyerr(py)?;
         Ok(PyBytes::new(py, &data))
     }
 

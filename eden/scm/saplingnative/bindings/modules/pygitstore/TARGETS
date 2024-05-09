@@ -25,5 +25,6 @@ rust_python_library(
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/gitstore:gitstore",
         "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
     ],
 )
