@@ -111,6 +111,7 @@ pub struct HttpClientBuilder {
     server_url: Option<Url>,
     headers: HashMap<String, String>,
     try_route_consistently: bool,
+    augmented_trees: bool,
     max_files_per_batch: Option<usize>,
     max_trees_per_batch: Option<usize>,
     max_history_per_batch: Option<usize>,
@@ -184,6 +185,8 @@ impl HttpClientBuilder {
         let try_route_consistently =
             get_config(config, "edenapi", "try-route-consistently")?.unwrap_or_default();
 
+        let augmented_trees = get_config(config, "edenapi", "augmented-trees")?.unwrap_or_default();
+
         let min_batch_size = get_config(config, "edenapi", "min-batch-size")?;
         let max_files_per_batch = get_config(config, "edenapi", "maxfiles")?;
         let max_trees_per_batch = get_config(config, "edenapi", "maxtrees")?;
@@ -232,6 +235,7 @@ impl HttpClientBuilder {
             server_url: Some(server_url),
             headers,
             try_route_consistently,
+            augmented_trees,
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
@@ -383,6 +387,7 @@ pub(crate) struct Config {
     pub(crate) server_url: Url,
     pub(crate) headers: HashMap<String, String>,
     pub(crate) try_route_consistently: bool,
+    pub(crate) augmented_trees: bool,
     pub(crate) max_files_per_batch: Option<usize>,
     pub(crate) max_trees_per_batch: Option<usize>,
     pub(crate) max_history_per_batch: Option<usize>,
@@ -410,6 +415,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             server_url,
             headers,
             try_route_consistently,
+            augmented_trees,
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
@@ -448,6 +454,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             server_url,
             headers,
             try_route_consistently,
+            augmented_trees,
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
