@@ -12,6 +12,7 @@ use context::CoreContext;
 use futures::TryStreamExt;
 use mononoke_types::MPathElement;
 
+use crate::manifest::Type as HgManifestType;
 use crate::HgAugmentedManifestEntry;
 /// This is temporary type to preload Augmented Manifest and build manifest blobs in sapling native format
 /// The type will be used to convert an HgAugmentedManifest entry into an EdenApi TreeEntry.
@@ -37,10 +38,26 @@ pub struct HgPreloadedAugmentedManifest {
 // Source: mercurial/parsers.c:parse_manifest()
 
 fn serrialize_manifest(
-    _sharded_augmented_manifest: &[(MPathElement, HgAugmentedManifestMetadata)],
+    sharded_augmented_manifest: &[(MPathElement, HgAugmentedManifestMetadata)],
 ) -> Result<Bytes> {
-    // The serrializion logic in unimplemented
-    Ok(Bytes::new())
+    let mut contents = Vec::new();
+    for (name, subentry) in sharded_augmented_manifest {
+        contents.extend(name.as_ref());
+        let (tag, hash) = match subentry {
+            HgAugmentedManifestEntry::DirectoryNode(directory) => {
+                (HgManifestType::Tree.manifest_suffix()?, directory.treenode)
+            }
+            HgAugmentedManifestEntry::FileNode(file) => {
+                let tag = HgManifestType::File(file.file_type).manifest_suffix()?;
+                (tag, file.filenode)
+            }
+        };
+        contents.push(b'\0');
+        contents.extend(hash.to_hex().as_bytes());
+        contents.extend(tag);
+        contents.push(b'\n')
+    }
+    Ok(contents.into())
 }
 
 impl HgPreloadedAugmentedManifest {
